@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  BellOff,
   CheckCircle2,
   ChevronRight,
   ExternalLink,
@@ -64,10 +65,12 @@ import {
   getChatDateKey,
 } from "@/lib/chatDateSeparators";
 import {
+  acknowledgeActivityAnnouncementAction,
   deleteActivityRoomMessageAction,
   inviteActivityRoomParticipantAction,
   removeActivityRoomParticipantAction,
   sendActivityRoomMessageAction,
+  toggleActivityRoomMuteAction,
   type ActivityRoomChatActionState,
   type ActivityRoomInviteActionState,
   type ActivityRoomMemberActionState,
@@ -118,6 +121,7 @@ const initialLeaveState: CancelParticipationState = {};
 const initialInviteActionState: ActivityRoomInviteActionState = {};
 const initialMemberActionState: ActivityRoomMemberActionState = {};
 const initialAnnouncementDeleteState: DeleteActivityAnnouncementState = {};
+const chatTimeSeparatorIntervalMs = 5 * 60 * 1000;
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
@@ -158,10 +162,14 @@ function getRoomManagementCopy(locale: string) {
       manageTitle: "Discussion",
       members: "Membres",
       membersCount: (count: number) => `${count} membre${count > 1 ? "s" : ""}`,
+      muteDescription:
+        "Les nouveaux messages affichent un point rouge, sans compteur.",
+      muteNotifications: "Mettre en sourdine",
       moreMembers: "Voir plus",
       noAnnouncement: "Aucune annonce",
       removeMember: "Retirer",
       stopRemoving: "Terminé",
+      unmuteNotifications: "Réactiver les alertes",
       viewGroup: "Voir le groupe",
     };
   }
@@ -201,10 +209,14 @@ function getRoomManagementCopy(locale: string) {
       members: "Members",
       membersCount: (count: number) =>
         `${count} member${count === 1 ? "" : "s"}`,
+      muteDescription:
+        "New messages show a red dot and do not count in badges.",
+      muteNotifications: "Mute chat",
       moreMembers: "More members",
       noAnnouncement: "No announcement",
       removeMember: "Remove",
       stopRemoving: "Done",
+      unmuteNotifications: "Unmute chat",
       viewGroup: "View group",
     };
   }
@@ -242,10 +254,13 @@ function getRoomManagementCopy(locale: string) {
     manageTitle: "群聊",
     members: "成员",
     membersCount: (count: number) => `${count} 位成员`,
+    muteDescription: "开启后新消息只显示红点，不计入未读数字。",
+    muteNotifications: "消息免打扰",
     moreMembers: "查看更多成员",
     noAnnouncement: "暂无群公告",
     removeMember: "移除",
     stopRemoving: "完成",
+    unmuteNotifications: "关闭勿扰",
     viewGroup: "查看聚吧",
   };
 }
@@ -894,6 +909,54 @@ function ActivityRoomInfoRow({
   );
 }
 
+function ActivityRoomMuteToggleRow({
+  activityId,
+  isMuted,
+  locale,
+}: {
+  activityId: string;
+  isMuted: boolean;
+  locale: string;
+}) {
+  const copy = getRoomManagementCopy(locale);
+
+  return (
+    <form action={toggleActivityRoomMuteAction}>
+      <input name="activityId" type="hidden" value={activityId} />
+      <input name="locale" type="hidden" value={locale} />
+      <input name="muted" type="hidden" value={isMuted ? "0" : "1"} />
+      <button
+        className="flex min-h-16 w-full items-center justify-between gap-4 border-b border-[#EFEFEA] bg-white px-5 py-3 text-left transition active:bg-[#F7F7F0] last:border-b-0"
+        title={copy.muteDescription}
+        type="submit"
+      >
+        <span className="min-w-0">
+          <span className="block text-[15px] font-bold text-[#111210]">
+            {isMuted ? copy.unmuteNotifications : copy.muteNotifications}
+          </span>
+          <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#8B907F]">
+            {copy.muteDescription}
+          </span>
+        </span>
+        <span
+          className={cn(
+            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 transition",
+            isMuted
+              ? "bg-[#ECF5EF] text-[#156240] ring-[#D8E8DC]"
+              : "bg-white text-[#8B907F] ring-[#E7E2D6]",
+          )}
+        >
+          {isMuted ? (
+            <BellOff className="h-4 w-4" />
+          ) : (
+            <Bell className="h-4 w-4" />
+          )}
+        </span>
+      </button>
+    </form>
+  );
+}
+
 function ActivityRoomInfoContextualLinkRow({
   activityHref,
   activityId,
@@ -1052,14 +1115,40 @@ function ScrollAnchor({ lastMessageId }: { lastMessageId?: string }) {
   return <div ref={anchorRef} aria-hidden="true" />;
 }
 
-function ChatDateSeparator({
+function shouldShowChatTimeSeparator(
+  message: ActivityRoomMessageViewModel,
+  previousMessage?: ActivityRoomMessageViewModel,
+) {
+  if (!previousMessage) {
+    return true;
+  }
+
+  if (getChatDateKey(message.createdAt) !== getChatDateKey(previousMessage.createdAt)) {
+    return true;
+  }
+
+  const messageTime = new Date(message.createdAt).getTime();
+  const previousMessageTime = new Date(previousMessage.createdAt).getTime();
+
+  if (!Number.isFinite(messageTime) || !Number.isFinite(previousMessageTime)) {
+    return false;
+  }
+
+  return messageTime - previousMessageTime >= chatTimeSeparatorIntervalMs;
+}
+
+function ChatTimeSeparator({
   createdAt,
+  showDate,
   locale,
 }: {
   createdAt: string;
+  showDate: boolean;
   locale: string;
 }) {
-  const label = formatChatDateSeparator(createdAt, locale);
+  const dateLabel = showDate ? formatChatDateSeparator(createdAt, locale) : "";
+  const timeLabel = formatChatMessageTime(createdAt, locale);
+  const label = [dateLabel, timeLabel].filter(Boolean).join(" ");
 
   if (!label) {
     return null;
@@ -1159,22 +1248,49 @@ function ActivityRoomAnnouncementNotice({
   activityId,
   announcements,
   canDelete = false,
+  hasUnread = false,
   locale,
   variant = "bar",
 }: {
   activityId?: string;
   announcements: ActivityRoomAnnouncementViewModel[];
   canDelete?: boolean;
+  hasUnread?: boolean;
   locale: string;
   variant?: "bar" | "row";
 }) {
   const [open, setOpen] = useState(false);
+  const [acknowledgedAnnouncementId, setAcknowledgedAnnouncementId] =
+    useState<string | null>(null);
   const copy = getActivityRoomChatCopy(locale).announcements;
   const latestAnnouncement = announcements[0];
   const isRow = variant === "row";
+  const showUnreadDot =
+    hasUnread && latestAnnouncement?.id !== acknowledgedAnnouncementId;
+
+  useEffect(() => {
+    setAcknowledgedAnnouncementId(null);
+  }, [latestAnnouncement?.id]);
 
   if (!latestAnnouncement) {
     return null;
+  }
+
+  function handleAcknowledgeAnnouncement() {
+    if (!activityId) {
+      setOpen(false);
+      setAcknowledgedAnnouncementId(latestAnnouncement.id);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("activityId", activityId);
+    formData.set("announcementId", latestAnnouncement.id);
+    formData.set("locale", locale);
+
+    setAcknowledgedAnnouncementId(latestAnnouncement.id);
+    setOpen(false);
+    void acknowledgeActivityAnnouncementAction(formData);
   }
 
   return (
@@ -1191,10 +1307,12 @@ function ActivityRoomAnnouncementNotice({
       >
         <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
           <Bell className="h-3.5 w-3.5" />
-          <span
-            aria-hidden="true"
-            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
-          />
+          {showUnreadDot ? (
+            <span
+              aria-hidden="true"
+              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+            />
+          ) : null}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
@@ -1275,6 +1393,17 @@ function ActivityRoomAnnouncementNotice({
                     <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
                       {announcement.content}
                     </p>
+                    {index === 0 && showUnreadDot ? (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          className="inline-flex h-9 min-w-20 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white transition active:scale-[0.98]"
+                          onClick={handleAcknowledgeAnnouncement}
+                          type="button"
+                        >
+                          {copy.acknowledge}
+                        </button>
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -1435,11 +1564,17 @@ export function ActivityRoomManagePage({
                 {activity?.title ?? chatCopy.title}
               </span>
             </ActivityRoomInfoRow>
+            <ActivityRoomMuteToggleRow
+              activityId={activity?.id ?? activityId}
+              isMuted={Boolean(activity?.isMuted)}
+              locale={locale}
+            />
             {activity?.announcements.length ? (
               <ActivityRoomAnnouncementNotice
                 activityId={activity?.id ?? activityId}
                 announcements={activity.announcements}
                 canDelete={canManageRoom}
+                hasUnread={activity.hasUnreadAnnouncement}
                 locale={locale}
                 variant="row"
               />
@@ -1644,16 +1779,15 @@ function MessageRow({
           >
             {message.isDeleted ? copy.deletedMessage : message.body}
           </p>
-          <div
-            className={cn(
-              "mt-1 flex items-center gap-2 text-[11px]",
-              message.isMine && !message.isDeleted
-                ? "text-white/68"
-                : "text-[#8B907F]",
-            )}
-          >
-            <span>{formatChatMessageTime(message.createdAt, locale)}</span>
-            {canDelete ? (
+          {canDelete ? (
+            <div
+              className={cn(
+                "mt-1 flex justify-end text-[11px]",
+                message.isMine && !message.isDeleted
+                  ? "text-white/68"
+                  : "text-[#8B907F]",
+              )}
+            >
               <button
                 aria-busy={isDeleting}
                 aria-label={copy.deleteMessage}
@@ -1674,8 +1808,8 @@ function MessageRow({
                   <Trash2 className="h-3.5 w-3.5" />
                 )}
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
       {message.isMine ? (
@@ -1951,6 +2085,7 @@ export function ActivityRoomChatPage({
           activityId={activity.id}
           announcements={activity.announcements}
           canDelete={canManage}
+          hasUnread={activity.hasUnreadAnnouncement}
           locale={locale}
         />
       ) : null}
@@ -1965,12 +2100,17 @@ export function ActivityRoomChatPage({
                   !previousMessage ||
                   getChatDateKey(previousMessage.createdAt) !==
                     getChatDateKey(message.createdAt);
+                const showTimeSeparator = shouldShowChatTimeSeparator(
+                  message,
+                  previousMessage,
+                );
 
                 return (
                   <Fragment key={message.id}>
-                    {showDateSeparator ? (
-                      <ChatDateSeparator
+                    {showTimeSeparator ? (
+                      <ChatTimeSeparator
                         createdAt={message.createdAt}
+                        showDate={showDateSeparator}
                         locale={locale}
                       />
                     ) : null}

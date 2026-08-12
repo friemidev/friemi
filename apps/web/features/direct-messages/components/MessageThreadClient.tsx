@@ -47,6 +47,7 @@ type MessageThreadClientProps = {
   locale: string;
   peer: DirectMessageUserViewModel;
   sendPolicy: DirectConversationThreadViewModel["sendPolicy"];
+  showMutualFollowNotice?: boolean;
 };
 
 function createClientMessageId() {
@@ -87,6 +88,16 @@ function ChatDateSeparator({
   );
 }
 
+function SystemThreadNotice({ label }: { label: string }) {
+  return (
+    <div className="my-1 flex justify-center px-4">
+      <p className="max-w-[82%] rounded-full bg-[#F2F2EF] px-3 py-1 text-center text-[11px] font-semibold leading-5 text-[#6C746A] ring-1 ring-[#E7E2D6]">
+        {label}
+      </p>
+    </div>
+  );
+}
+
 export function MessageThreadClient({
   activityContext,
   canSend,
@@ -97,6 +108,7 @@ export function MessageThreadClient({
   locale,
   peer,
   sendPolicy,
+  showMutualFollowNotice = false,
 }: MessageThreadClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -291,11 +303,16 @@ export function MessageThreadClient({
           />
         ) : null}
         {policyNotice ? <SendPolicyNotice label={policyNotice} /> : null}
+        {showMutualFollowNotice ? (
+          <SystemThreadNotice label={t.mutualFollowSystemNotice} />
+        ) : null}
         {hasMessages ? (
           <div
             className={cn(
               "grid gap-3",
-              activityContext || policyNotice ? "mt-4" : "",
+              activityContext || policyNotice || showMutualFollowNotice
+                ? "mt-4"
+                : "",
             )}
           >
             {messages.map((message, index) => {

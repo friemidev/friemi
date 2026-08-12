@@ -154,7 +154,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (canonicalHostRedirectUrl) {
     return withReferralCookie(
       request,
-      NextResponse.redirect(canonicalHostRedirectUrl),
+      NextResponse.redirect(canonicalHostRedirectUrl, 308),
     );
   }
 
@@ -192,7 +192,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (localeRootHomePath) {
     return withReferralCookie(
       request,
-      NextResponse.redirect(new URL(localeRootHomePath, request.url)),
+      NextResponse.redirect(new URL(localeRootHomePath, request.url), 308),
     );
   }
 

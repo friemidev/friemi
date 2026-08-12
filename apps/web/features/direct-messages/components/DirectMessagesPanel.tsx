@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  Bell,
+  BellOff,
   CalendarDays,
   ChevronDown,
   Gift,
@@ -18,6 +20,7 @@ import { getActivityDetailPath } from "@/features/activities/utils/activityRoute
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import { toggleDirectConversationMuteAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
@@ -115,6 +118,8 @@ function ConversationListItem({
   const lastMessage = conversation.lastMessage;
   const unreadCount = conversation.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !conversation.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && conversation.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -153,7 +158,7 @@ function ConversationListItem({
             <span
               className={cn(
                 "truncate text-sm",
-                unreadCount > 0 ? "font-bold" : "font-semibold",
+                showUnreadBadge ? "font-bold" : "font-semibold",
               )}
             >
               {conversation.peer.nickname}
@@ -166,10 +171,16 @@ function ConversationListItem({
             >
               {formatChatListTimestamp(time, locale)}
             </span>
-            {unreadCount > 0 ? (
+            {showUnreadBadge ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
+            ) : showMutedUnreadDot ? (
+              <span
+                aria-label={t.mutedUnreadLabel}
+                className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                title={t.mutedUnreadLabel}
+              />
             ) : null}
           </span>
           {showPublicNickname ? (
@@ -180,7 +191,7 @@ function ConversationListItem({
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              unreadCount > 0
+              showUnreadBadge
                 ? "font-bold text-ink"
                 : isActive
                   ? "text-[#156240]"
@@ -328,11 +339,13 @@ export function MessageThread({
   backHref = "/messages",
   conversation,
   locale,
+  showMutualFollowNotice = false,
 }: {
   activityContext?: DirectConversationActivityContextViewModel | null;
   backHref?: string;
   conversation: DirectConversationThreadViewModel;
   locale: string;
+  showMutualFollowNotice?: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
   const hasMessages = conversation.messages.length > 0;
@@ -372,6 +385,35 @@ export function MessageThread({
             <MoreVertical className="h-5 w-5" />
           </summary>
           <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
+            <form action={toggleDirectConversationMuteAction}>
+              <input name="locale" type="hidden" value={locale} />
+              <input
+                name="conversationId"
+                type="hidden"
+                value={conversation.id}
+              />
+              <input
+                name="muted"
+                type="hidden"
+                value={conversation.isMuted ? "0" : "1"}
+              />
+              <button
+                className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
+                title={t.muteConversationDescription}
+                type="submit"
+              >
+                {conversation.isMuted ? (
+                  <Bell className="h-4 w-4 shrink-0" />
+                ) : (
+                  <BellOff className="h-4 w-4 shrink-0" />
+                )}
+                <span className="truncate">
+                  {conversation.isMuted
+                    ? t.unmuteConversation
+                    : t.muteConversation}
+                </span>
+              </button>
+            </form>
             <ContextualDetailLink
               className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}
@@ -419,6 +461,7 @@ export function MessageThread({
         locale={locale}
         peer={conversation.peer}
         sendPolicy={conversation.sendPolicy}
+        showMutualFollowNotice={showMutualFollowNotice}
       />
     </section>
   );

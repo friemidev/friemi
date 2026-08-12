@@ -23,13 +23,10 @@ import {
 import type { NotificationType } from "@prisma/client";
 import { formatActivityDate } from "@chill-club/shared";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useState,
-  useTransition,
-  type CSSProperties,
-} from "react";
+import { useEffect, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { createDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import {
   deleteNotificationClientAction,
   deleteNotificationsClientAction,
@@ -141,7 +138,8 @@ function getNotificationText(
   }
 
   if (notification.type === "ACTIVITY_CHECK_IN") {
-    const isCheckInRequest = Boolean(actorName) && !notification.actorActivityRole;
+    const isCheckInRequest =
+      Boolean(actorName) && !notification.actorActivityRole;
 
     if (isCheckInRequest) {
       return locale === "fr"
@@ -1060,26 +1058,26 @@ function NotificationCard({
                       <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   ) : (
-                  <form action={openNotificationActivityAction}>
-                    <input name="locale" type="hidden" value={locale} />
-                    <input
-                      name="notificationId"
-                      type="hidden"
-                      value={notification.id}
-                    />
-                    <button
-                      className={cn(
-                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
-                        isUnread
-                          ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
-                          : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
-                      )}
-                      type="submit"
-                    >
-                      {getNotificationActionLabel(notification, locale)}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
+                    <form action={openNotificationActivityAction}>
+                      <input name="locale" type="hidden" value={locale} />
+                      <input
+                        name="notificationId"
+                        type="hidden"
+                        value={notification.id}
+                      />
+                      <button
+                        className={cn(
+                          "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
+                          isUnread
+                            ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
+                            : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
+                        )}
+                        type="submit"
+                      >
+                        {getNotificationActionLabel(notification, locale)}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
                   )
                 ) : null}
                 {isUnread ? (
@@ -1254,13 +1252,12 @@ export function NotificationsCenterClient({
   const [isSelecting, setIsSelecting] = useState(false);
   const [pendingBulkAction, setPendingBulkAction] =
     useState<NotificationBulkAction | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [giftCelebration, setGiftCelebration] =
     useState<GiftNotificationCelebration | null>(null);
-  const [openingGiftNotificationId, setOpeningGiftNotificationId] =
-    useState<string | null>(null);
+  const [openingGiftNotificationId, setOpeningGiftNotificationId] = useState<
+    string | null
+  >(null);
   const [playedGiftNotificationIds, setPlayedGiftNotificationIds] = useState<
     Set<string>
   >(() => new Set());
@@ -1422,9 +1419,7 @@ export function NotificationsCenterClient({
         notification.readAt === null,
     );
     const sourceNotification = getHighestValueGiftNotification(
-      unreadGiftNotifications.length > 0
-        ? unreadGiftNotifications
-        : [target],
+      unreadGiftNotifications.length > 0 ? unreadGiftNotifications : [target],
       target,
     );
     const celebration = getGiftNotificationCelebration({
@@ -1550,6 +1545,29 @@ export function NotificationsCenterClient({
 
         if (!result.ok) {
           throw new Error("Failed to follow back from notification.");
+        }
+
+        if (result.isMutualFollow && target.actor?.id) {
+          const formData = new FormData();
+          formData.set("locale", locale);
+          formData.set("friendProfileId", target.actor.id);
+          formData.set("redirectPath", "/notifications");
+          saveMessageThreadReturnHref();
+
+          const conversation = await createDirectConversationAction(
+            {},
+            formData,
+          );
+
+          if (conversation.ok && conversation.conversationId) {
+            router.push(
+              withLocale(
+                locale,
+                `/messages/${conversation.conversationId}?mutual=1`,
+              ),
+            );
+            return;
+          }
         }
 
         router.refresh();

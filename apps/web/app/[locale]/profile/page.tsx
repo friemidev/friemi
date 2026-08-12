@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
@@ -12,6 +13,8 @@ import {
   type PublicProfileViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
 import { getUserPresenceState } from "@/features/profile/presence";
+import { buildNoIndexMetadata } from "@/lib/seo";
+import { withLocale } from "@/lib/routes";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -20,6 +23,16 @@ type ProfilePageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: ProfilePageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/profile"),
+  });
+}
 
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {

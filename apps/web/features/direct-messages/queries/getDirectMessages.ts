@@ -142,6 +142,7 @@ export type DirectConversationListItemViewModel = {
   lastMessageAt: string | null;
   createdAt: string;
   recentActivities: DirectConversationActivitySignalViewModel[];
+  isMuted: boolean;
   unreadCount: number;
 };
 
@@ -159,6 +160,7 @@ export type DirectMessageFriendRosterItemViewModel = {
   lastMessageAt: string | null;
   createdAt: string;
   recentActivities: DirectConversationActivitySignalViewModel[];
+  isMuted: boolean;
   unreadCount: number;
 };
 
@@ -272,6 +274,7 @@ function mapConversationListItem(
   currentUserProfileId: string,
   recentActivities: DirectConversationActivitySignalViewModel[] = [],
   unreadCount = 0,
+  isMuted = false,
   canViewPeerPresence = false,
   peerRemarkName?: string | null,
 ): DirectConversationListItemViewModel {
@@ -287,6 +290,7 @@ function mapConversationListItem(
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
     recentActivities,
+    isMuted,
     unreadCount,
   };
 }
@@ -295,6 +299,7 @@ function mapConversationThread(
   conversation: ConversationThreadResult,
   currentUserProfileId: string,
   sendPolicy: DirectMessageSendPolicy,
+  isMuted: boolean,
   canViewPeerPresence: boolean,
   peerRemarkName?: string | null,
 ): DirectConversationThreadViewModel {
@@ -309,6 +314,7 @@ function mapConversationThread(
       currentUserProfileId,
       [],
       0,
+      isMuted,
       canViewPeerPresence,
       peerRemarkName,
     ),
@@ -353,6 +359,34 @@ async function getUnreadDirectMessageCountMap(
 
   return new Map(
     groups.map((group) => [group.conversationId, group._count._all]),
+  );
+}
+
+async function getMutedDirectConversationIdSet(
+  currentUserProfileId: string,
+  conversationIds: string[],
+) {
+  if (conversationIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const preferences = await prisma.conversationPreference.findMany({
+    where: {
+      conversationId: {
+        in: conversationIds,
+      },
+      mutedAt: {
+        not: null,
+      },
+      profileId: currentUserProfileId,
+    },
+    select: {
+      conversationId: true,
+    },
+  });
+
+  return new Set(
+    preferences.map((preference) => preference.conversationId),
   );
 }
 
@@ -445,10 +479,12 @@ export async function getDirectConversations(currentUserProfileId: string) {
     take: 50,
     select: conversationListSelect,
   });
-  const unreadCountByConversationId = await getUnreadDirectMessageCountMap(
-    currentUserProfileId,
-    conversations.map((conversation) => conversation.id),
-  );
+  const conversationIds = conversations.map((conversation) => conversation.id);
+  const [unreadCountByConversationId, mutedConversationIds] =
+    await Promise.all([
+      getUnreadDirectMessageCountMap(currentUserProfileId, conversationIds),
+      getMutedDirectConversationIdSet(currentUserProfileId, conversationIds),
+    ]);
   const peerIds = conversations.map((conversation) =>
     getConversationPeerId(conversation, currentUserProfileId),
   );
@@ -486,6 +522,7 @@ export async function getDirectConversations(currentUserProfileId: string) {
         getConversationPeerId(conversation, currentUserProfileId),
       ) ?? [],
       unreadCountByConversationId.get(conversation.id) ?? 0,
+      mutedConversationIds.has(conversation.id),
       visiblePresencePeerIds.has(
         getConversationPeerId(conversation, currentUserProfileId),
       ),
@@ -575,10 +612,12 @@ export async function getDirectMessageFriendRoster(
       targetProfileIds: rosterProfileIds,
     }),
   ]);
-  const unreadCountByConversationId = await getUnreadDirectMessageCountMap(
-    currentUserProfileId,
-    conversations.map((conversation) => conversation.id),
-  );
+  const conversationIds = conversations.map((conversation) => conversation.id);
+  const [unreadCountByConversationId, mutedConversationIds] =
+    await Promise.all([
+      getUnreadDirectMessageCountMap(currentUserProfileId, conversationIds),
+      getMutedDirectConversationIdSet(currentUserProfileId, conversationIds),
+    ]);
   const conversationsByFriendId = new Map<string, ConversationListResult>();
 
   for (const conversation of conversations) {
@@ -628,6 +667,7 @@ export async function getDirectMessageFriendRoster(
         conversation?.createdAt.toISOString() ??
         profile.createdAt.toISOString(),
       recentActivities: activitiesByFriendId.get(friend.id) ?? [],
+      isMuted: conversation ? mutedConversationIds.has(conversation.id) : false,
       unreadCount: conversation
         ? (unreadCountByConversationId.get(conversation.id) ?? 0)
         : 0,
@@ -640,8 +680,30 @@ export async function getDirectMessageFriendRoster(
 export async function getUnreadDirectMessageCount(
   currentUserProfileId: string,
 ) {
+  const mutedPreferences = await prisma.conversationPreference.findMany({
+    where: {
+      mutedAt: {
+        not: null,
+      },
+      profileId: currentUserProfileId,
+    },
+    select: {
+      conversationId: true,
+    },
+  });
+  const mutedConversationIds = mutedPreferences.map(
+    (preference) => preference.conversationId,
+  );
+
   return prisma.directMessage.count({
     where: {
+      ...(mutedConversationIds.length > 0
+        ? {
+            conversationId: {
+              notIn: mutedConversationIds,
+            },
+          }
+        : {}),
       readAt: null,
       senderId: {
         not: currentUserProfileId,
@@ -703,7 +765,7 @@ export async function getDirectConversationThread(
   }
 
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
-  const [sendPolicy, relation, remarkName] = await Promise.all([
+  const [sendPolicy, relation, remarkName, preference] = await Promise.all([
     getDirectMessageSendPolicy(currentUserProfileId, peerId),
     getFollowRelationState({
       targetProfileId: peerId,
@@ -713,12 +775,24 @@ export async function getDirectConversationThread(
       ownerProfileId: currentUserProfileId,
       targetProfileId: peerId,
     }),
+    prisma.conversationPreference.findUnique({
+      where: {
+        conversationId_profileId: {
+          conversationId: conversation.id,
+          profileId: currentUserProfileId,
+        },
+      },
+      select: {
+        mutedAt: true,
+      },
+    }),
   ]);
 
   return mapConversationThread(
     conversation,
     currentUserProfileId,
     sendPolicy,
+    Boolean(preference?.mutedAt),
     relation.isMutualFollow,
     remarkName,
   );

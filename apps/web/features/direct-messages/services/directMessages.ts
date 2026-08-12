@@ -370,16 +370,34 @@ async function countCurrentUserNonFriendMessages(
 
 async function createDirectMessageNotification({
   activityId,
+  conversationId,
   db,
   recipientId,
   senderId,
 }: {
   activityId?: string | null;
+  conversationId: string;
   db: DbClient;
   recipientId: string;
   senderId: string;
 }) {
   if (recipientId === senderId) {
+    return;
+  }
+
+  const preference = await db.conversationPreference.findUnique({
+    where: {
+      conversationId_profileId: {
+        conversationId,
+        profileId: recipientId,
+      },
+    },
+    select: {
+      mutedAt: true,
+    },
+  });
+
+  if (preference?.mutedAt) {
     return;
   }
 
@@ -853,6 +871,7 @@ export async function sendDirectMessage({
     const notificationStartedAt = Date.now();
     await createDirectMessageNotification({
       activityId,
+      conversationId: conversation.id,
       db: tx,
       recipientId: peerProfileId,
       senderId: currentUserProfileId,
@@ -934,6 +953,7 @@ export async function sendDirectMessageToFriend({
     const updateConversationMs = Date.now() - updateConversationStartedAt;
     const notificationStartedAt = Date.now();
     await createDirectMessageNotification({
+      conversationId: conversation.id,
       db: tx,
       recipientId: friendProfileId,
       senderId: currentUserProfileId,

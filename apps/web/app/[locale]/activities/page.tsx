@@ -7,7 +7,6 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityAgendaList } from "@/features/activities/components/ActivityAgendaList";
-import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import { ActivityResultsFilterBar } from "@/features/activities/components/ActivityResultsFilterBar";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
@@ -187,6 +186,62 @@ function ActivityPagination({
   );
 }
 
+function ActivityEmptyRecommendationSection({
+  activities,
+  isAuthenticated,
+  locale,
+  viewerProfileId,
+}: {
+  activities: ActivityListResult["activities"];
+  isAuthenticated: boolean;
+  locale: string;
+  viewerProfileId: string | null;
+}) {
+  if (activities.length === 0) {
+    return null;
+  }
+
+  const t = getCopy(locale);
+
+  return (
+    <section className="space-y-3 pt-1">
+      <div className="flex items-end justify-between gap-3 px-1">
+        <h2 className="text-lg font-semibold leading-tight text-ink sm:text-xl">
+          {t.activities.otherActivitiesTitle}
+        </h2>
+      </div>
+
+      <div className="activity-card-grid-shell">
+        <div className="activity-card-grid">
+          {activities.map((activity) => (
+            <ActivityCard
+              key={
+                isPublicEventCard(activity) && activity.publicEventId
+                  ? `event-${activity.publicEventId}`
+                  : activity.id
+              }
+              activity={activity}
+              activityListPreview
+              isAuthenticated={isAuthenticated}
+              isOwnActivity={
+                Boolean(viewerProfileId) &&
+                activity.organizerId === viewerProfileId
+              }
+              locale={locale}
+              mobileDense
+              mobileDetailSheet
+              showFavoriteButton
+              showPrimaryAction={false}
+              sourceSurface="activity_list"
+              detailSourceKey="activity_list"
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function ActivitiesPage({
   params,
   searchParams,
@@ -338,12 +393,12 @@ export default async function ActivitiesPage({
     }
   }
 
-  const emptySwipeActivities =
+  const emptyRecommendationActivities =
     !activitiesResult.error &&
     activitiesResult.list &&
     activitiesResult.list.activities.length === 0
       ? await perf
-          .measure("activity.emptySwipe", () =>
+          .measure("activity.emptyRecommendations", () =>
             getActivityList(normalizeActivityFilters(), {
               pageSize: 8,
               publicInfoOnly: true,
@@ -352,7 +407,10 @@ export default async function ActivitiesPage({
           )
           .then((list) => list.activities)
           .catch((error: unknown) => {
-            console.error("Failed to load activity empty swipe", error);
+            console.error(
+              "Failed to load activity empty recommendations",
+              error,
+            );
 
             return [];
           })
@@ -410,6 +468,7 @@ export default async function ActivitiesPage({
               hasFilters ? withLocale(locale, "/activities") : undefined
             }
             actionLabel={hasFilters ? t.activityFilters.reset : undefined}
+            className="border-none bg-white p-4 shadow-none sm:p-6"
             title={
               hasFilters
                 ? t.activities.emptyFilteredTitle
@@ -420,15 +479,18 @@ export default async function ActivitiesPage({
                 ? t.activities.emptyFilteredDescription
                 : t.activities.emptyDescription
             }
+            imageSrc={brand.emptyContentIllustrationPath}
+            imageWidth={2048}
+            imageHeight={2048}
+            imageContainerClassName="h-24 w-24 rounded-none bg-transparent ring-0 sm:h-28 sm:w-28"
+            imageClassName="scale-[1.65] object-contain"
           />
-          {emptySwipeActivities.length > 0 ? (
-            <ActivitySwipeDiscovery
-              activities={emptySwipeActivities}
-              favoriteRedirectPath="/activities"
+          {emptyRecommendationActivities.length > 0 ? (
+            <ActivityEmptyRecommendationSection
+              activities={emptyRecommendationActivities}
               isAuthenticated={Boolean(viewerProfile)}
               locale={locale}
-              shuffleDeck={false}
-              sourceSurface="activity_list"
+              viewerProfileId={viewerProfile?.id ?? null}
             />
           ) : null}
         </section>

@@ -19,6 +19,10 @@ type DirectMessagesCopy = {
   noSelectedDescription: string;
   lastMessageEmpty: string;
   messagePlaceholder: string;
+  muteConversation: string;
+  muteConversationDescription: string;
+  mutualFollowSystemNotice: string;
+  mutedUnreadLabel: string;
   readOnlyTitle: string;
   readOnlyDescription: string;
   send: string;
@@ -26,6 +30,7 @@ type DirectMessagesCopy = {
   sendingStatus: string;
   sendFailedStatus: string;
   retrySend: string;
+  unmuteConversation: string;
   addEmoji: string;
   attachImage: string;
   imageMessage: string;
@@ -92,6 +97,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "Sélectionnez une discussion pour lire ou envoyer un message.",
       lastMessageEmpty: "Aucun message pour le moment",
       messagePlaceholder: "Écrire un message...",
+      muteConversation: "Mettre en sourdine",
+      muteConversationDescription:
+        "Les nouveaux messages affichent un point rouge, sans compteur.",
+      mutualFollowSystemNotice:
+        "Vous vous suivez maintenant. Vous pouvez discuter directement.",
+      mutedUnreadLabel: "Nouveaux messages silencieux",
       readOnlyTitle: "Envoi indisponible",
       readOnlyDescription:
         "Vous pouvez lire cette discussion, mais pas envoyer de nouveau message pour le moment.",
@@ -100,6 +111,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       sendingStatus: "Envoi...",
       sendFailedStatus: "Échec de l'envoi",
       retrySend: "Réessayer",
+      unmuteConversation: "Réactiver les alertes",
       addEmoji: "Ajouter emoji",
       attachImage: "Ajouter une image",
       imageMessage: "Image",
@@ -182,6 +194,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       noSelectedDescription: "Select a chat to read or send messages.",
       lastMessageEmpty: "No messages yet",
       messagePlaceholder: "Write a message...",
+      muteConversation: "Mute chat",
+      muteConversationDescription:
+        "New messages show a red dot and do not count in badges.",
+      mutualFollowSystemNotice: "You follow each other now. Start a chat.",
+      mutedUnreadLabel: "Muted unread messages",
       readOnlyTitle: "Messages paused",
       readOnlyDescription:
         "You can still read this chat, but new messages are unavailable right now.",
@@ -190,6 +207,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       sendingStatus: "Sending...",
       sendFailedStatus: "Send failed",
       retrySend: "Retry",
+      unmuteConversation: "Unmute chat",
       addEmoji: "Add emoji",
       attachImage: "Add image",
       imageMessage: "Image",
@@ -268,6 +286,10 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     noSelectedDescription: "选择一个聊天，查看或发送消息。",
     lastMessageEmpty: "还没有消息",
     messagePlaceholder: "输入消息...",
+    muteConversation: "消息免打扰",
+    muteConversationDescription: "开启后新消息只显示红点，不计入未读数字。",
+    mutualFollowSystemNotice: "你们已经互相关注，快来聊天吧。",
+    mutedUnreadLabel: "勿扰未读消息",
     readOnlyTitle: "暂时不能发送",
     readOnlyDescription: "你可以继续查看聊天记录，暂时不能发送新消息。",
     send: "发送",
@@ -275,6 +297,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     sendingStatus: "发送中...",
     sendFailedStatus: "发送失败",
     retrySend: "重试",
+    unmuteConversation: "关闭勿扰",
     addEmoji: "添加表情",
     attachImage: "添加图片",
     imageMessage: "图片",

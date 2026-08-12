@@ -2233,18 +2233,18 @@ function FootprintsMessageList({
     );
   }, [filteredEntries, normalizedSearchTerm]);
   const directUnreadTotal = friends.reduce(
-    (total, friend) => total + friend.unreadCount,
+    (total, friend) => total + (friend.isMuted ? 0 : friend.unreadCount),
     0,
   );
   const roomUnreadTotal = activityRoomChats.reduce(
-    (total, room) => total + room.unreadCount,
+    (total, room) => total + (room.isMuted ? 0 : room.unreadCount),
     0,
   );
   const mutualUnreadTotal = friends
-    .filter((friend) => friend.isMutualFollow)
+    .filter((friend) => friend.isMutualFollow && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const followingUnreadTotal = friends
-    .filter((friend) => friend.isFollowing)
+    .filter((friend) => friend.isFollowing && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const filters: Array<{
     count: number;
@@ -2428,6 +2428,8 @@ function FootprintsRoomChatRow({
   const lastMessage = room.lastMessage;
   const unreadCount = room.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !room.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && room.isMuted;
   const preview = lastMessage
     ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
         lastMessage.body.trim() || t.imageMessage
@@ -2470,17 +2472,23 @@ function FootprintsRoomChatRow({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[13px] leading-5",
-                unreadCount > 0
+                showUnreadBadge
                   ? "font-bold text-[#111210]"
                   : "font-semibold text-[#5F635E]",
               )}
             >
               {preview}
             </span>
-            {unreadCount > 0 ? (
+            {showUnreadBadge ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
+            ) : showMutedUnreadDot ? (
+              <span
+                aria-label={t.mutedUnreadLabel}
+                className="h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                title={t.mutedUnreadLabel}
+              />
             ) : null}
           </span>
         </span>
@@ -2504,6 +2512,8 @@ function FootprintsMessageRow({
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !friend.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
@@ -2537,17 +2547,23 @@ function FootprintsMessageRow({
           <span
             className={cn(
               "min-w-0 flex-1 truncate text-[13px] leading-5",
-              unreadCount > 0
+              showUnreadBadge
                 ? "font-bold text-[#111210]"
                 : "font-semibold text-[#5F635E]",
             )}
           >
             {preview}
           </span>
-          {unreadCount > 0 ? (
+          {showUnreadBadge ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
+          ) : showMutedUnreadDot ? (
+            <span
+              aria-label={t.mutedUnreadLabel}
+              className="h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+              title={t.mutedUnreadLabel}
+            />
           ) : null}
         </span>
       </span>
@@ -2643,11 +2659,11 @@ export function FootprintsMobilePage({
   const initialUnreadMessageCount = useMemo(
     () =>
       messageFriends.reduce(
-        (total, friend) => total + friend.unreadCount,
+        (total, friend) => total + (friend.isMuted ? 0 : friend.unreadCount),
         0,
       ) +
       activityRoomChats.reduce(
-        (total, room) => total + room.unreadCount,
+        (total, room) => total + (room.isMuted ? 0 : room.unreadCount),
         0,
       ),
     [activityRoomChats, messageFriends],

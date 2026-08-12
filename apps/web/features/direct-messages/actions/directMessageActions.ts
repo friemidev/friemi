@@ -11,6 +11,7 @@ import {
   getCurrentUserProfileForMutation,
 } from "@/lib/auth";
 import { normalizeAuthRedirectTarget } from "@/lib/auth-redirect";
+import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
 import {
@@ -89,6 +90,12 @@ const sendDirectMessageToFriendSchema = z
     path: ["body"],
   });
 
+const toggleDirectConversationMuteSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  conversationId: z.string().min(1),
+  muted: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
 const directMessageTimingEnabled =
   process.env.DEBUG_DIRECT_MESSAGE_TIMING === "1";
 
@@ -136,6 +143,12 @@ function refreshConversation(locale: string, conversationId?: string) {
   }
 }
 
+function refreshDirectMessageSurfaces(locale: string, conversationId?: string) {
+  revalidatePath(withLocale(locale, "/messages"));
+  revalidatePath(withLocale(locale, "/footprints"));
+  refreshConversation(locale, conversationId);
+}
+
 function trackConversationOpened({
   conversationId,
   locale,
@@ -163,6 +176,79 @@ function trackConversationOpened({
       userProfileId,
     },
   );
+}
+
+export async function toggleDirectConversationMuteAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    muted: getString(formData, "muted") || "1",
+  };
+  const result = toggleDirectConversationMuteSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/messages/${result.data.conversationId}`,
+  );
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: result.data.conversationId,
+      OR: [
+        {
+          userAId: profile.id,
+        },
+        {
+          userBId: profile.id,
+        },
+      ],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!conversation) {
+    return;
+  }
+
+  const nextMuted = result.data.muted === "1" || result.data.muted === "true";
+
+  if (nextMuted) {
+    await prisma.conversationPreference.upsert({
+      where: {
+        conversationId_profileId: {
+          conversationId: conversation.id,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        conversationId: conversation.id,
+        mutedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        mutedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.conversationPreference.updateMany({
+      where: {
+        conversationId: conversation.id,
+        profileId: profile.id,
+      },
+      data: {
+        mutedAt: null,
+      },
+    });
+  }
+
+  refreshDirectMessageSurfaces(result.data.locale, conversation.id);
 }
 
 export async function createDirectConversationAction(
