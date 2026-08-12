@@ -4,9 +4,48 @@ import {
   ActivityRoomChatDomainError,
   activityRoomMessageMaxLength,
   canDeleteActivityRoomMessage,
+  hasUnreadActivityAnnouncement,
   normalizeActivityRoomMessageBody,
   resolveActivityRoomChatPolicy,
 } from "./activityRoomChat";
+
+test("activity announcement unread state respects author and read time", () => {
+  const latestAnnouncement = {
+    authorId: "host",
+    createdAt: new Date("2026-08-12T12:00:00Z"),
+  };
+
+  assert.equal(
+    hasUnreadActivityAnnouncement({
+      latestAnnouncement,
+      viewerProfileId: "member",
+    }),
+    true,
+  );
+  assert.equal(
+    hasUnreadActivityAnnouncement({
+      latestAnnouncement,
+      viewerProfileId: "host",
+    }),
+    false,
+  );
+  assert.equal(
+    hasUnreadActivityAnnouncement({
+      announcementReadAt: new Date("2026-08-12T12:00:00Z"),
+      latestAnnouncement,
+      viewerProfileId: "member",
+    }),
+    false,
+  );
+  assert.equal(
+    hasUnreadActivityAnnouncement({
+      announcementReadAt: new Date("2026-08-12T11:59:59Z"),
+      latestAnnouncement,
+      viewerProfileId: "member",
+    }),
+    true,
+  );
+});
 
 test("activity room chat allows organizer, co-manager, joined and approved members", () => {
   const base = {

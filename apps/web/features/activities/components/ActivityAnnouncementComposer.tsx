@@ -14,6 +14,7 @@ type ActivityAnnouncementComposerProps = {
   activityId: string;
   locale: string;
   compact?: boolean;
+  triggerLabel?: string;
 };
 
 const initialState: SendActivityAnnouncementState = {
@@ -87,6 +88,7 @@ export function ActivityAnnouncementComposer({
   activityId,
   locale,
   compact = false,
+  triggerLabel,
 }: ActivityAnnouncementComposerProps) {
   const [formKey, setFormKey] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -115,12 +117,12 @@ export function ActivityAnnouncementComposer({
         <div className="flex w-full shrink-0 flex-col gap-2">
           <Button
             type="button"
-            className="h-10 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F6FAF4]"
+            className="h-11 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F6FAF4]"
             onClick={() => setIsOpen(true)}
             variant="secondary"
           >
             <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            {t.open}
+            {triggerLabel ?? t.open}
           </Button>
 
           {state.ok ? (

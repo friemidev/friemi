@@ -8,7 +8,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, LoaderCircle, MapPin, Trash2, X } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -16,10 +16,13 @@ import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
   formatChatDateSeparator,
+  formatChatMessageTime,
   getChatDateKey,
+  shouldShowChatTimeSeparator,
 } from "@/lib/chatDateSeparators";
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
 import {
+  deleteDirectMessagesAction,
   sendDirectMessageAction,
   type DirectMessageActionState,
 } from "../actions/directMessageActions";
@@ -64,14 +67,18 @@ const defaultActionState: DirectMessageActionState = {
   },
 };
 
-function ChatDateSeparator({
+function ChatTimeSeparator({
   createdAt,
+  showDate,
   locale,
 }: {
   createdAt: string;
+  showDate: boolean;
   locale: string;
 }) {
-  const label = formatChatDateSeparator(createdAt, locale);
+  const dateLabel = showDate ? formatChatDateSeparator(createdAt, locale) : "";
+  const timeLabel = formatChatMessageTime(createdAt, locale);
+  const label = [dateLabel, timeLabel].filter(Boolean).join(" ");
 
   if (!label) {
     return null;
@@ -114,6 +121,11 @@ export function MessageThreadClient({
   const [, startTransition] = useTransition();
   const [messages, setMessages] =
     useState<MessageBubbleViewModel[]>(initialMessages);
+  const [actionMenuMessageId, setActionMenuMessageId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
     useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
@@ -144,6 +156,35 @@ export function MessageThreadClient({
       return [...initialMessages, ...optimisticMessages];
     });
   }, [initialMessages]);
+
+  useEffect(() => {
+    if (!actionMenuMessageId) {
+      return;
+    }
+
+    function dismissActionMenu(event: PointerEvent) {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (event.target.closest("[data-direct-message-action-menu]")) {
+        return;
+      }
+
+      const messageElement = event.target.closest<HTMLElement>(
+        "[data-direct-message-id]",
+      );
+
+      if (messageElement?.dataset.directMessageId === actionMenuMessageId) {
+        return;
+      }
+
+      setActionMenuMessageId("");
+    }
+
+    document.addEventListener("pointerdown", dismissActionMenu);
+    return () => document.removeEventListener("pointerdown", dismissActionMenu);
+  }, [actionMenuMessageId]);
 
   useEffect(() => {
     setLocalRemainingNonFriendMessages(sendPolicy.remainingNonFriendMessages);
@@ -293,6 +334,76 @@ export function MessageThreadClient({
     ],
   );
 
+  function handleOpenActionMenu(messageId: string) {
+    setDeleteError("");
+    setActionMenuMessageId(messageId);
+  }
+
+  function handleStartSelection(messageId: string) {
+    setActionMenuMessageId("");
+    setDeleteError("");
+    setSelectedMessageIds([messageId]);
+    setSelectionMode(true);
+  }
+
+  function handleToggleSelection(messageId: string) {
+    setSelectedMessageIds((current) => {
+      if (current.includes(messageId)) {
+        return current.filter((id) => id !== messageId);
+      }
+
+      return current.length < 50 ? [...current, messageId] : current;
+    });
+  }
+
+  function handleCancelSelection() {
+    setSelectedMessageIds([]);
+    setSelectionMode(false);
+  }
+
+  function handleDelete(messageIds: string[]) {
+    if (deletingMessageIds.length > 0) {
+      return;
+    }
+
+    const uniqueMessageIds = [...new Set(messageIds)].slice(0, 50);
+
+    if (uniqueMessageIds.length === 0) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("conversationId", conversationId);
+    formData.set("locale", locale);
+    uniqueMessageIds.forEach((messageId) =>
+      formData.append("messageId", messageId),
+    );
+
+    setDeleteError("");
+    setDeletingMessageIds(uniqueMessageIds);
+
+    void deleteDirectMessagesAction(defaultActionState, formData)
+      .then((result) => {
+        if (result.ok) {
+          const deletedMessageIds = new Set(
+            result.messageIds ?? uniqueMessageIds,
+          );
+
+          setMessages((current) =>
+            current.filter((message) => !deletedMessageIds.has(message.id)),
+          );
+          setActionMenuMessageId("");
+          handleCancelSelection();
+          startTransition(() => router.refresh());
+          return;
+        }
+
+        setDeleteError(result.formError ?? t.deleteFailed);
+      })
+      .catch(() => setDeleteError(t.deleteFailed))
+      .finally(() => setDeletingMessageIds([]));
+  }
+
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
@@ -321,24 +432,37 @@ export function MessageThreadClient({
                 !previousMessage ||
                 getChatDateKey(previousMessage.createdAt) !==
                   getChatDateKey(message.createdAt);
+              const showTimeSeparator = shouldShowChatTimeSeparator(
+                message.createdAt,
+                previousMessage?.createdAt,
+              );
 
               return (
                 <Fragment key={message.id}>
-                  {showDateSeparator ? (
-                    <ChatDateSeparator
+                  {showTimeSeparator ? (
+                    <ChatTimeSeparator
                       createdAt={message.createdAt}
+                      showDate={showDateSeparator}
                       locale={locale}
                     />
                   ) : null}
                   <MessageBubble
                     {...message}
+                    actionMenuOpen={actionMenuMessageId === message.id}
+                    isDeleting={deletingMessageIds.includes(message.id)}
+                    isSelected={selectedMessageIds.includes(message.id)}
                     locale={locale}
+                    onDelete={handleDelete}
+                    onOpenActionMenu={handleOpenActionMenu}
                     onRetry={
                       message.deliveryStatus === "failed" && canSendNow
                         ? handleRetryMessage
                         : undefined
                     }
+                    onStartSelection={handleStartSelection}
+                    onToggleSelection={handleToggleSelection}
                     sender={message.isMine ? currentUser : peer}
+                    selectionMode={selectionMode}
                   />
                 </Fragment>
               );
@@ -361,7 +485,46 @@ export function MessageThreadClient({
         )}
       </div>
 
-      {canSend ? (
+      {deleteError ? (
+        <p className="border-t border-[#D6D5B2] bg-white px-5 py-2 text-xs font-bold text-[#9A2135]">
+          {deleteError}
+        </p>
+      ) : null}
+
+      {selectionMode ? (
+        <div className="relative z-20 grid shrink-0 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3 border-t border-[#D6D5B2] bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:rounded-b-[1.45rem] md:pb-3">
+          <button
+            aria-label={t.cancelSelection}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#33372F] transition hover:bg-[#F1F2EC] active:scale-95"
+            disabled={deletingMessageIds.length > 0}
+            onClick={handleCancelSelection}
+            title={t.cancelSelection}
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <p className="truncate text-center text-sm font-bold text-[#33372F]">
+            {t.selectedMessages(selectedMessageIds.length)}
+          </p>
+          <button
+            aria-busy={deletingMessageIds.length > 0}
+            aria-label={t.deleteMessage}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#C6283D] transition hover:bg-[#FFF1F3] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={
+              selectedMessageIds.length === 0 || deletingMessageIds.length > 0
+            }
+            onClick={() => handleDelete(selectedMessageIds)}
+            title={t.deleteMessage}
+            type="button"
+          >
+            {deletingMessageIds.length > 0 ? (
+              <LoaderCircle className="h-5 w-5 animate-spin" />
+            ) : (
+              <Trash2 className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      ) : canSend ? (
         <MessageComposer
           activityId={activityContext?.id}
           conversationId={conversationId}

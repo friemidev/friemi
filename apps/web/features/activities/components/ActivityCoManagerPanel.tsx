@@ -1,15 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Plus, Search, UserCog, UserMinus } from "lucide-react";
+import { Plus, UserMinus } from "lucide-react";
 import {
   addActivityCoManagerAction,
   removeActivityCoManagerAction,
   type ManageActivityCoManagersState,
 } from "../actions/manageActivityCoManagers";
-import type { ActivityCoManagerDashboardViewModel } from "../queries/getActivityCoManagerDashboard";
+import type {
+  ActivityCoManagerDashboardViewModel,
+  ActivityCoManagerUserViewModel,
+  ActivityCoManagerViewModel,
+} from "../queries/getActivityCoManagerDashboard";
 
 type ActivityCoManagerPanelProps = {
   dashboard: ActivityCoManagerDashboardViewModel;
@@ -18,16 +22,10 @@ type ActivityCoManagerPanelProps = {
 
 type Copy = {
   add: string;
-  addDisabledFull: string;
   addEmpty: string;
-  availableHint: string;
-  managerRole: string;
-  noCurrent: string;
-  organizerOnly: string;
+  done: string;
   remove: string;
   removing: string;
-  searchEmpty: string;
-  searchPlaceholder: string;
   title: string;
 };
 
@@ -37,50 +35,32 @@ function getCopy(locale: string): Copy {
   if (locale === "fr") {
     return {
       add: "Ajouter",
-      addDisabledFull: "Limite atteinte",
-      addEmpty: "Aucun participant à ajouter.",
-      availableHint: "Choisissez parmi les participants validés.",
-      managerRole: "Gestionnaire",
-      noCurrent: "Aucun gestionnaire.",
-      organizerOnly: "Seul l'organisateur peut modifier cette liste.",
+      addEmpty: "Aucun participant disponible.",
+      done: "Terminer",
       remove: "Retirer",
       removing: "Retrait...",
-      searchEmpty: "Aucun résultat.",
-      searchPlaceholder: "Nom ou ID Friemi",
-      title: "Ajouter un gestionnaire",
+      title: "Gestionnaires",
     };
   }
 
   if (locale === "en") {
     return {
       add: "Add",
-      addDisabledFull: "Limit reached",
-      addEmpty: "No participants available to add.",
-      availableHint: "Choose from confirmed participants.",
-      managerRole: "Manager",
-      noCurrent: "No managers yet.",
-      organizerOnly: "Only the organizer can edit this list.",
+      addEmpty: "No participants available.",
+      done: "Done",
       remove: "Remove",
       removing: "Removing...",
-      searchEmpty: "No matches.",
-      searchPlaceholder: "Name or Friemi ID",
-      title: "Add manager",
+      title: "Managers",
     };
   }
 
   return {
     add: "添加",
-    addDisabledFull: "已达上限",
-    addEmpty: "暂无可添加的参局人。",
-    availableHint: "从已参局的人中选择。",
-    managerRole: "管理员",
-    noCurrent: "暂无管理员。",
-    organizerOnly: "只有聚吧创建人可以调整管理员。",
+    addEmpty: "暂无可添加的参与者。",
+    done: "完成",
     remove: "移除",
     removing: "移除中...",
-    searchEmpty: "没有匹配的用户。",
-    searchPlaceholder: "搜索昵称或个人码",
-    title: "添加聚吧管理员",
+    title: "聚吧管理员",
   };
 }
 
@@ -90,61 +70,26 @@ function getInitial(name: string) {
 
 function Avatar({
   avatarUrl,
+  className,
   nickname,
 }: {
   avatarUrl: string | null;
+  className: string;
   nickname: string;
 }) {
   return avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       alt=""
-      className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-[#8AB68E]/45"
+      className={`${className} shrink-0 rounded-full object-cover`}
       src={avatarUrl}
     />
   ) : (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#156240] text-sm font-bold text-white ring-1 ring-[#8AB68E]/45">
+    <span
+      className={`${className} flex shrink-0 items-center justify-center rounded-full bg-[#156240] text-sm font-bold text-white`}
+    >
       {getInitial(nickname)}
     </span>
-  );
-}
-
-function RemoveButton({
-  disabled,
-  locale,
-}: {
-  disabled: boolean;
-  locale: string;
-}) {
-  const { pending } = useFormStatus();
-  const copy = getCopy(locale);
-
-  return (
-    <button
-      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[#DEAAB3] bg-white px-3.5 text-xs font-bold text-[#B5301F] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-      disabled={disabled || pending}
-      type="submit"
-    >
-      <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
-      {pending ? copy.removing : copy.remove}
-    </button>
-  );
-}
-
-function AddButton({ locale }: { locale: string }) {
-  const { pending } = useFormStatus();
-  const copy = getCopy(locale);
-
-  return (
-    <button
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#156240] text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
-      disabled={pending}
-      title={copy.add}
-      type="submit"
-    >
-      <Plus className="h-4 w-4" aria-hidden="true" />
-      <span className="sr-only">{copy.add}</span>
-    </button>
   );
 }
 
@@ -164,38 +109,85 @@ function AddSlotButton({
   return (
     <button
       aria-expanded={isOpen}
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FF4D57] text-white shadow-[0_10px_22px_rgba(255,77,87,0.22)] transition active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-[#F0C7C9] disabled:shadow-none"
+      aria-label={copy.add}
+      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45 ${
+        isOpen
+          ? "bg-[#156240] text-white ring-4 ring-[#D8E8DC]"
+          : "bg-[#FF4D57] text-white"
+      }`}
       disabled={disabled}
       onClick={onClick}
       title={copy.add}
       type="button"
     >
       <Plus className="h-7 w-7" aria-hidden="true" />
-      <span className="sr-only">{copy.add}</span>
     </button>
   );
 }
 
-function RemoveCoManagerForm({
-  activityId,
-  coManagerId,
-  disabled,
-  formAction,
+function RemoveManagerAvatarButton({
+  coManager,
   locale,
 }: {
-  activityId: string;
-  coManagerId: string;
-  disabled: boolean;
-  formAction: (payload: FormData) => void;
+  coManager: ActivityCoManagerViewModel;
   locale: string;
 }) {
+  const { pending } = useFormStatus();
+  const copy = getCopy(locale);
+
   return (
-    <form action={formAction} noValidate>
-      <input name="activityId" type="hidden" value={activityId} />
-      <input name="coManagerId" type="hidden" value={coManagerId} />
-      <input name="locale" type="hidden" value={locale} />
-      <RemoveButton disabled={disabled} locale={locale} />
-    </form>
+    <button
+      aria-label={`${copy.remove} ${coManager.user.nickname}`}
+      className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-2 ring-[#E7457A] transition active:scale-[0.96] disabled:cursor-wait disabled:opacity-55"
+      disabled={pending}
+      title={`${copy.remove} ${coManager.user.nickname}`}
+      type="submit"
+    >
+      <Avatar
+        avatarUrl={coManager.user.avatarUrl}
+        className="h-12 w-12"
+        nickname={coManager.user.nickname}
+      />
+      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#E7457A] text-white ring-2 ring-white">
+        <UserMinus className="h-3 w-3" aria-hidden="true" />
+      </span>
+      {pending ? <span className="sr-only">{copy.removing}</span> : null}
+    </button>
+  );
+}
+
+function AddParticipantButton({
+  locale,
+  participant,
+}: {
+  locale: string;
+  participant: ActivityCoManagerUserViewModel;
+}) {
+  const { pending } = useFormStatus();
+  const copy = getCopy(locale);
+
+  return (
+    <button
+      aria-label={`${copy.add} ${participant.nickname}`}
+      className="grid min-w-0 justify-items-center gap-1 text-center transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50"
+      disabled={pending}
+      title={`${copy.add} ${participant.nickname}`}
+      type="submit"
+    >
+      <span className="relative">
+        <Avatar
+          avatarUrl={participant.avatarUrl}
+          className="h-11 w-11 ring-1 ring-[#D8E8DC]"
+          nickname={participant.nickname}
+        />
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#156240] text-white ring-2 ring-white">
+          <Plus className="h-2.5 w-2.5" aria-hidden="true" />
+        </span>
+      </span>
+      <span className="w-full truncate text-[10px] font-semibold leading-4 text-[#4F574F]">
+        {participant.nickname}
+      </span>
+    </button>
   );
 }
 
@@ -206,10 +198,7 @@ export function ActivityCoManagerPanel({
   const router = useRouter();
   const copy = getCopy(locale);
   const [isAdding, setIsAdding] = useState(false);
-  const [participantSearch, setParticipantSearch] = useState("");
-  const [selectedCoManagerId, setSelectedCoManagerId] = useState(
-    dashboard.coManagers[0]?.id ?? "",
-  );
+  const [isRemoving, setIsRemoving] = useState(false);
   const [addState, addFormAction] = useActionState(
     addActivityCoManagerAction,
     initialState,
@@ -218,31 +207,9 @@ export function ActivityCoManagerPanel({
     removeActivityCoManagerAction,
     initialState,
   );
-  const isFull = dashboard.coManagers.length >= dashboard.maxManagers;
-  const selectedCoManager =
-    dashboard.coManagers.find(
-      (coManager) => coManager.id === selectedCoManagerId,
-    ) ??
-    dashboard.coManagers[0] ??
-    null;
-  const filteredParticipants = useMemo(() => {
-    const query = participantSearch.trim().toLocaleLowerCase();
-
-    if (!query) {
-      return dashboard.availableParticipants;
-    }
-
-    return dashboard.availableParticipants.filter((participant) => {
-      const nickname = participant.nickname.toLocaleLowerCase();
-      const friendCode = participant.friendCode ?? "";
-
-      return nickname.includes(query) || friendCode.includes(query);
-    });
-  }, [dashboard.availableParticipants, participantSearch]);
 
   useEffect(() => {
     if (addState.successMessage) {
-      setParticipantSearch("");
       setIsAdding(false);
       router.refresh();
     }
@@ -250,189 +217,151 @@ export function ActivityCoManagerPanel({
 
   useEffect(() => {
     if (removeState.successMessage) {
+      setIsRemoving(false);
       router.refresh();
     }
   }, [removeState.successMessage, router]);
 
   useEffect(() => {
-    const hasSelection = dashboard.coManagers.some(
-      (coManager) => coManager.id === selectedCoManagerId,
-    );
-
-    if (!hasSelection) {
-      setSelectedCoManagerId(dashboard.coManagers[0]?.id ?? "");
+    if (dashboard.coManagers.length === 0) {
+      setIsRemoving(false);
     }
-  }, [dashboard.coManagers, selectedCoManagerId]);
+  }, [dashboard.coManagers.length]);
 
   return (
-    <section className="rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-bold text-[#156240]">
-            <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{copy.title}</span>
-          </p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-[#4F574F]">
-            {dashboard.canEditManagers
-              ? copy.availableHint
-              : copy.organizerOnly}
-          </p>
-        </div>
-        <span className="shrink-0 text-sm font-bold text-[#E7457A]">
+    <section className="py-1">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-[#156240]">{copy.title}</h2>
+        <span className="text-xs font-bold text-[#8B907F]">
           {dashboard.coManagers.length}/{dashboard.maxManagers}
         </span>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3 py-2.5">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
-          {dashboard.coManagers.length > 0 ? (
-            dashboard.coManagers.map((coManager) => {
-              const isSelected = coManager.id === selectedCoManager?.id;
+      <div className="mt-3 flex min-w-0 items-center justify-between gap-3">
+        <div className="grid shrink-0 grid-cols-3 gap-3">
+          {Array.from({ length: dashboard.maxManagers }, (_, index) => {
+            const coManager = dashboard.coManagers[index];
 
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={`group flex min-w-0 max-w-[7.25rem] items-center gap-2 rounded-full border bg-white py-1 pl-1 pr-2 text-left transition active:scale-[0.98] ${
-                    isSelected
-                      ? "border-[#156240] shadow-[0_6px_18px_rgba(21,98,64,0.12)]"
-                      : "border-[#EFE8DE]"
-                  }`}
+            if (coManager) {
+              return dashboard.canEditManagers && isRemoving ? (
+                <form action={removeFormAction} key={coManager.id} noValidate>
+                  <input
+                    name="activityId"
+                    type="hidden"
+                    value={dashboard.activityId}
+                  />
+                  <input
+                    name="coManagerId"
+                    type="hidden"
+                    value={coManager.id}
+                  />
+                  <input name="locale" type="hidden" value={locale} />
+                  <RemoveManagerAvatarButton
+                    coManager={coManager}
+                    locale={locale}
+                  />
+                </form>
+              ) : (
+                <span
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1 ring-[#D8E8DC]"
                   key={coManager.id}
-                  onClick={() => setSelectedCoManagerId(coManager.id)}
-                  type="button"
+                  title={coManager.user.nickname}
                 >
                   <Avatar
                     avatarUrl={coManager.user.avatarUrl}
+                    className="h-12 w-12"
                     nickname={coManager.user.nickname}
                   />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-[#111210]">
-                      {coManager.user.nickname}
-                    </p>
-                    <p className="text-[0.68rem] font-bold leading-4 text-[#156240]">
-                      {copy.managerRole}
-                    </p>
-                  </div>
-                </button>
+                  <span className="sr-only">{coManager.user.nickname}</span>
+                </span>
               );
-            })
-          ) : (
-            <p className="py-2 text-xs font-semibold text-[#6C746A]">
-              {copy.noCurrent}
-            </p>
-          )}
+            }
 
-          {dashboard.canEditManagers ? (
-            <AddSlotButton
-              disabled={isFull}
-              isOpen={isAdding}
-              locale={locale}
-              onClick={() => setIsAdding((value) => !value)}
-            />
-          ) : null}
+            return dashboard.canEditManagers && !isRemoving ? (
+              <AddSlotButton
+                disabled={false}
+                isOpen={isAdding}
+                key={`empty-${index}`}
+                locale={locale}
+                onClick={() => {
+                  setIsRemoving(false);
+                  setIsAdding((current) => !current);
+                }}
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-dashed border-[#D5D8D2] text-[#B8BCB5]"
+                key={`empty-${index}`}
+              >
+                {dashboard.canEditManagers ? (
+                  <Plus className="h-5 w-5" />
+                ) : null}
+              </span>
+            );
+          })}
         </div>
 
-        {dashboard.canEditManagers ? (
-          <RemoveCoManagerForm
-            activityId={dashboard.activityId}
-            coManagerId={selectedCoManager?.id ?? ""}
-            disabled={!selectedCoManager}
-            formAction={removeFormAction}
-            locale={locale}
-          />
+        {dashboard.canEditManagers && dashboard.coManagers.length > 0 ? (
+          <button
+            aria-pressed={isRemoving}
+            className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 px-1 text-xs font-bold transition active:scale-[0.97] ${
+              isRemoving ? "text-[#156240]" : "text-[#B5301F]"
+            }`}
+            onClick={() => {
+              setIsAdding(false);
+              setIsRemoving((current) => !current);
+            }}
+            type="button"
+          >
+            <UserMinus className="h-4 w-4" aria-hidden="true" />
+            {isRemoving ? copy.done : copy.remove}
+          </button>
         ) : null}
       </div>
 
-      {dashboard.canEditManagers ? (
-        <div className="mt-3 grid gap-2">
-          {isFull ? (
-            <p className="px-1 text-xs font-semibold leading-5 text-[#B5301F]">
-              {copy.addDisabledFull}
+      {dashboard.canEditManagers && isAdding ? (
+        <div className="mt-4 border-t border-[#EFEFEA] pt-4">
+          {dashboard.availableParticipants.length > 0 ? (
+            <div className="grid max-h-48 grid-cols-4 gap-x-3 gap-y-4 overflow-y-auto pr-1">
+              {dashboard.availableParticipants.map((participant) => (
+                <form action={addFormAction} key={participant.id} noValidate>
+                  <input
+                    name="activityId"
+                    type="hidden"
+                    value={dashboard.activityId}
+                  />
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="managerProfileId"
+                    type="hidden"
+                    value={participant.id}
+                  />
+                  <AddParticipantButton
+                    locale={locale}
+                    participant={participant}
+                  />
+                </form>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs font-semibold leading-5 text-[#6C746A]">
+              {copy.addEmpty}
             </p>
-          ) : null}
-
-          {isAdding && !isFull ? (
-            <>
-              <label className="flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-[#156240]">
-                <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <input
-                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-[#8B907F]"
-                  onChange={(event) => setParticipantSearch(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
-                  type="search"
-                  value={participantSearch}
-                />
-              </label>
-
-              {filteredParticipants.length > 0 ? (
-                <div className="grid max-h-44 gap-1.5 overflow-y-auto pr-1">
-                  {filteredParticipants.map((participant) => (
-                    <form
-                      action={addFormAction}
-                      key={participant.id}
-                      noValidate
-                    >
-                      <input
-                        name="activityId"
-                        type="hidden"
-                        value={dashboard.activityId}
-                      />
-                      <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="managerProfileId"
-                        type="hidden"
-                        value={participant.id}
-                      />
-                      <div className="flex items-center justify-between gap-3 rounded-[0.9rem] border border-[#ECE6DC] bg-white px-2.5 py-2">
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <Avatar
-                            avatarUrl={participant.avatarUrl}
-                            nickname={participant.nickname}
-                          />
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-[#111210]">
-                              {participant.nickname}
-                            </p>
-                            {participant.friendCode ? (
-                              <p className="text-xs font-semibold text-[#6C746A]">
-                                {participant.friendCode}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                        <AddButton locale={locale} />
-                      </div>
-                    </form>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs font-semibold leading-5 text-[#6C746A]">
-                  {dashboard.availableParticipants.length === 0
-                    ? copy.addEmpty
-                    : copy.searchEmpty}
-                </p>
-              )}
-            </>
-          ) : null}
-
-          {addState.formError || removeState.formError ? (
-            <p
-              className="text-xs font-medium leading-5 text-[#B5301F]"
-              role="alert"
-            >
-              {addState.formError ?? removeState.formError}
-            </p>
-          ) : null}
-
-          {addState.successMessage || removeState.successMessage ? (
-            <p
-              className="text-xs font-medium leading-5 text-[#156240]"
-              role="status"
-            >
-              {addState.successMessage ?? removeState.successMessage}
-            </p>
-          ) : null}
+          )}
         </div>
+      ) : null}
+
+      {addState.formError || removeState.formError ? (
+        <p className="mt-3 text-xs font-medium leading-5 text-[#B5301F]" role="alert">
+          {addState.formError ?? removeState.formError}
+        </p>
+      ) : null}
+
+      {addState.successMessage || removeState.successMessage ? (
+        <p className="mt-3 text-xs font-medium leading-5 text-[#156240]" role="status">
+          {addState.successMessage ?? removeState.successMessage}
+        </p>
       ) : null}
     </section>
   );

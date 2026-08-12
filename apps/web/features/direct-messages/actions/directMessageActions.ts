@@ -30,6 +30,7 @@ export type DirectMessageActionState = {
   conversationId?: string;
   createdAt?: string;
   messageId?: string;
+  messageIds?: string[];
   formError?: string;
   fieldErrors?: Record<string, string[]>;
   values?: {
@@ -94,6 +95,18 @@ const toggleDirectConversationMuteSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   conversationId: z.string().min(1),
   muted: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const toggleDirectConversationPinSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  conversationId: z.string().min(1),
+  pinned: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const deleteDirectMessagesSchema = z.object({
+  conversationId: z.string().min(1),
+  locale: z.string().min(1).default("zh-CN"),
+  messageIds: z.array(z.string().min(1).max(80)).min(1).max(50),
 });
 
 const directMessageTimingEnabled =
@@ -249,6 +262,141 @@ export async function toggleDirectConversationMuteAction(
   }
 
   refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+}
+
+export async function toggleDirectConversationPinAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    pinned: getString(formData, "pinned") || "1",
+  };
+  const result = toggleDirectConversationPinSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/messages/${result.data.conversationId}`,
+  );
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: result.data.conversationId,
+      OR: [{ userAId: profile.id }, { userBId: profile.id }],
+    },
+    select: { id: true },
+  });
+
+  if (!conversation) {
+    return;
+  }
+
+  const nextPinned =
+    result.data.pinned === "1" || result.data.pinned === "true";
+
+  if (nextPinned) {
+    await prisma.conversationPreference.upsert({
+      where: {
+        conversationId_profileId: {
+          conversationId: conversation.id,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        conversationId: conversation.id,
+        pinnedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        pinnedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.conversationPreference.updateMany({
+      where: {
+        conversationId: conversation.id,
+        profileId: profile.id,
+      },
+      data: {
+        pinnedAt: null,
+      },
+    });
+  }
+
+  refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+}
+
+export async function deleteDirectMessagesAction(
+  _previousState: DirectMessageActionState,
+  formData: FormData,
+): Promise<DirectMessageActionState> {
+  const rawInput = {
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    messageIds: formData
+      .getAll("messageId")
+      .filter((value): value is string => typeof value === "string"),
+  };
+  const result = deleteDirectMessagesSchema.safeParse(rawInput);
+  const t = getDirectMessagesCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  try {
+    const profile = await getCurrentUserProfileForMutation(
+      result.data.locale,
+      `/messages/${result.data.conversationId}`,
+    );
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: result.data.conversationId,
+        OR: [{ userAId: profile.id }, { userBId: profile.id }],
+      },
+      select: { id: true },
+    });
+
+    if (!conversation) {
+      return { formError: t.invalidRequest };
+    }
+
+    const uniqueMessageIds = [...new Set(result.data.messageIds)];
+    const messages = await prisma.directMessage.findMany({
+      where: {
+        conversationId: conversation.id,
+        id: { in: uniqueMessageIds },
+      },
+      select: { id: true },
+    });
+    const messageIds = messages.map((message) => message.id);
+
+    if (messageIds.length === 0) {
+      return { formError: t.invalidRequest };
+    }
+
+    await prisma.directMessageDeletion.createMany({
+      data: messageIds.map((messageId) => ({
+        messageId,
+        profileId: profile.id,
+      })),
+      skipDuplicates: true,
+    });
+
+    refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+
+    return {
+      ok: true,
+      messageIds,
+    };
+  } catch (error) {
+    console.error("Failed to delete direct messages", error);
+
+    return { formError: t.deleteFailed };
+  }
 }
 
 export async function createDirectConversationAction(

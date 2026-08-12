@@ -16,6 +16,7 @@ type ActivityRoomChatCopy = {
   deletedMessage: string;
   deleteFailed: string;
   deleteMessage: string;
+  cancelSelection: string;
   emptyDescription: string;
   emptyTitle: string;
   errors: Record<ActivityRoomChatErrorCode, string>;
@@ -35,6 +36,8 @@ type ActivityRoomChatCopy = {
   };
   send: string;
   sendFailed: string;
+  selectMessage: string;
+  selectedMessages: (count: number) => string;
   sending: string;
   title: string;
   viewActivity: string;
@@ -58,6 +61,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       deletedMessage: "Message supprimé",
       deleteFailed: "Message impossible à supprimer pour le moment.",
       deleteMessage: "Supprimer",
+      cancelSelection: "Annuler la sélection",
       emptyDescription: "Dites bonjour quand vous êtes prêt.",
       emptyTitle: "Aucun message",
       invalidRequest: "Réessayez avec un message valide.",
@@ -76,6 +80,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       },
       send: "Envoyer",
       sendFailed: "Message non envoyé.",
+      selectMessage: "Sélectionner",
+      selectedMessages: (count) => `${count} sélectionné${count > 1 ? "s" : ""}`,
       sending: "Envoi...",
       title: "Discussion",
       viewActivity: "Voir le groupe",
@@ -115,6 +121,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       deletedMessage: "Message deleted",
       deleteFailed: "Could not delete the message.",
       deleteMessage: "Delete",
+      cancelSelection: "Cancel selection",
       emptyDescription: "Say hello when you are ready.",
       emptyTitle: "No messages yet",
       invalidRequest: "Try again with a valid message.",
@@ -133,6 +140,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       },
       send: "Send",
       sendFailed: "Message not sent.",
+      selectMessage: "Select",
+      selectedMessages: (count) => `${count} selected`,
       sending: "Sending...",
       title: "Room chat",
       viewActivity: "View group",
@@ -168,6 +177,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
     deletedMessage: "消息已删除",
     deleteFailed: "消息暂时无法删除。",
     deleteMessage: "删除",
+    cancelSelection: "取消多选",
     emptyDescription: "可以先和大家打个招呼。",
     emptyTitle: "还没有消息",
     invalidRequest: "请重新输入一条消息。",
@@ -186,6 +196,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
     },
     send: "发送",
     sendFailed: "消息没有发出去。",
+    selectMessage: "多选",
+    selectedMessages: (count) => `已选择 ${count} 条`,
     sending: "发送中...",
     title: "局内群聊",
     viewActivity: "查看聚吧",

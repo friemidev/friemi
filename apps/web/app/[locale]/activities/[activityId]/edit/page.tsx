@@ -22,75 +22,37 @@ type EditActivityPageProps = {
 
 export const dynamic = "force-dynamic";
 
-type EditActivityUnavailableReason = "cancelled" | "ended" | "forbidden";
-
-function getUnavailablePageCopy(
-  locale: string,
-  reason: EditActivityUnavailableReason,
-) {
+function getUnavailableBackLabel(locale: string) {
   if (locale === "fr") {
-    return {
-      back: "Retour au détail",
-      eyebrow: "Modification indisponible",
-      reasonLabel: "Raison",
-      reasonText:
-        reason === "forbidden"
-          ? "Vous n'avez pas les droits de gestion de ce plan."
-          : reason === "cancelled"
-            ? "Ce plan a été annulé."
-            : "Ce plan est déjà terminé.",
-    };
+    return "Retour au détail";
   }
 
   if (locale === "en") {
-    return {
-      back: "Back to detail",
-      eyebrow: "Editing unavailable",
-      reasonLabel: "Reason",
-      reasonText:
-        reason === "forbidden"
-          ? "You do not have management access to this plan."
-          : reason === "cancelled"
-            ? "This plan has been cancelled."
-            : "This plan has already ended.",
-    };
+    return "Back to detail";
   }
 
-  return {
-    back: "返回详情",
-    eyebrow: "暂时不能编辑",
-    reasonLabel: "原因",
-    reasonText:
-      reason === "forbidden"
-        ? "你不是这个活动的发起人或管理人。"
-        : reason === "cancelled"
-          ? "这个活动已经取消，编辑入口已锁定。"
-          : "这个活动已经结束，编辑入口已锁定。",
-  };
+  return "返回详情";
 }
 
 function EditActivityUnavailablePage({
   activityId,
   description,
   locale,
-  reason,
   title,
 }: {
   activityId: string;
   description: string;
   locale: string;
-  reason: EditActivityUnavailableReason;
   title: string;
 }) {
   const detailHref = withLocale(locale, getActivityDetailPath(activityId));
-  const pageCopy = getUnavailablePageCopy(locale, reason);
-  const reasonSeparator = locale === "zh-CN" ? "：" : ": ";
+  const backLabel = getUnavailableBackLabel(locale);
 
   return (
     <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:3.25rem] [--app-mobile-page-bottom-gap:1rem] max-w-3xl max-md:px-5 max-md:py-0 md:py-14">
       <div className="space-y-7">
         <Link
-          aria-label={pageCopy.back}
+          aria-label={backLabel}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#111210] ring-1 ring-[#D6D5B2] transition active:scale-95"
           href={detailHref}
         >
@@ -109,22 +71,12 @@ function EditActivityUnavailablePage({
             />
           </div>
 
-          <div className="mt-3 w-full space-y-3 rounded-[1.35rem] bg-white px-5 py-5 text-center shadow-none ring-1 ring-[#E7E1CA]">
-            <p className="text-xs font-bold text-[#156240]">
-              {pageCopy.eyebrow}
-            </p>
+          <div className="mt-3 w-full space-y-2 rounded-[1.35rem] bg-white px-5 py-6 text-center shadow-none ring-1 ring-[#E7E1CA]">
             <h1 className="text-[1.35rem] font-bold leading-tight text-[#111210]">
               {title}
             </h1>
             <p className="text-sm font-medium leading-6 text-zinc-500">
               {description}
-            </p>
-            <p className="rounded-2xl bg-[#F7F7F0] px-3 py-2 text-sm font-semibold leading-6 text-[#5F635E]">
-              <span className="text-[#156240]">
-                {pageCopy.reasonLabel}
-                {reasonSeparator}
-              </span>
-              {pageCopy.reasonText}
             </p>
           </div>
         </section>
@@ -174,7 +126,6 @@ export default async function EditActivityPage({
         activityId={activityId}
         description={t.editActivity.forbiddenDescription}
         locale={locale}
-        reason="forbidden"
         title={t.editActivity.forbiddenTitle}
       />
     );
@@ -188,7 +139,6 @@ export default async function EditActivityPage({
         activityId={activityId}
         description={lockedCopy.description}
         locale={locale}
-        reason={editableActivity.reason}
         title={lockedCopy.title}
       />
     );
