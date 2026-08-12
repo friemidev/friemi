@@ -469,6 +469,8 @@ function getActivityRoomEntryCopy(locale: string) {
 function getActivityOperatorActionCopy(locale: string) {
   if (locale === "fr") {
     return {
+      announcement: "Annonce",
+      checkIn: "Présences",
       edit: "Modifier",
       manage: "Discussion",
     };
@@ -476,12 +478,16 @@ function getActivityOperatorActionCopy(locale: string) {
 
   if (locale === "en") {
     return {
+      announcement: "Notice",
+      checkIn: "Check-in",
       edit: "Edit",
       manage: "Chat",
     };
   }
 
   return {
+    announcement: "公告",
+    checkIn: "签到",
     edit: "编辑聚吧",
     manage: "群聊",
   };
@@ -2122,19 +2128,30 @@ export async function ActivityDetailPageContent({
                   />
                 ) : null}
               </div>
-              {canSendActivityAnnouncement ? (
-                <ActivityAnnouncementComposer
-                  activityId={activity.id}
-                  compact
-                  locale={locale}
-                />
-              ) : null}
-              <div className="[&>button]:w-full">
-                <ActivityCheckInReviewPanel
-                  activityId={activity.id}
-                  locale={locale}
-                  participants={activityCheckInRoster}
-                />
+              <div
+                className={cn(
+                  "grid gap-2",
+                  canSendActivityAnnouncement
+                    ? "grid-cols-2"
+                    : "grid-cols-1",
+                )}
+              >
+                {canSendActivityAnnouncement ? (
+                  <ActivityAnnouncementComposer
+                    activityId={activity.id}
+                    compact
+                    locale={locale}
+                    triggerLabel={operatorActionCopy.announcement}
+                  />
+                ) : null}
+                <div className="min-w-0 [&>button]:w-full">
+                  <ActivityCheckInReviewPanel
+                    activityId={activity.id}
+                    locale={locale}
+                    participants={activityCheckInRoster}
+                    triggerLabel={operatorActionCopy.checkIn}
+                  />
+                </div>
               </div>
             </>
           ) : showActivityRoomEntry ? (
