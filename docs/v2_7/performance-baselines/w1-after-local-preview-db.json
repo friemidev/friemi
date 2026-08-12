@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-08-12T13:14:58.619Z",
+  "target": "http://127.0.0.1:3100",
+  "routes": [
+    "/zh-CN/mobile-home",
+    "/api/lobby/swipe?limit=8"
+  ],
+  "settings": {
+    "durationSeconds": 30,
+    "levels": [
+      20,
+      50,
+      100
+    ],
+    "thinkMaxMs": 1200,
+    "thinkMinMs": 400,
+    "timeoutMs": 15000
+  },
+  "stages": [
+    {
+      "concurrency": 20,
+      "durationSeconds": 30.97,
+      "requests": 720,
+      "requestsPerSecond": 23.25,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 31.3,
+        "p95": 144.5,
+        "p99": 574.3,
+        "max": 584.9
+      },
+      "responseMegabytes": 75.96,
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 361,
+        "/zh-CN/mobile-home": 359
+      },
+      "statusCounts": {
+        "200": 720
+      }
+    },
+    {
+      "concurrency": 50,
+      "durationSeconds": 35.51,
+      "requests": 1374,
+      "requestsPerSecond": 38.69,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 56,
+        "p95": 1085.8,
+        "p99": 1414.6,
+        "max": 8782.4
+      },
+      "responseMegabytes": 144.36,
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 692,
+        "/zh-CN/mobile-home": 682
+      },
+      "statusCounts": {
+        "200": 1374
+      }
+    },
+    {
+      "concurrency": 100,
+      "durationSeconds": 30.84,
+      "requests": 1735,
+      "requestsPerSecond": 56.26,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 411.2,
+        "p95": 2518.9,
+        "p99": 2644.7,
+        "max": 2730.1
+      },
+      "responseMegabytes": 183.02,
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 870,
+        "/zh-CN/mobile-home": 865
+      },
+      "statusCounts": {
+        "200": 1735
+      }
+    }
+  ]
+}

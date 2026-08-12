@@ -1,13 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
 import {
   analyticsEventInputSchema,
   assertAnalyticsEventRequirements,
+  getAnalyticsEnvironment,
   normalizeAnalyticsProperties,
 } from "@/features/analytics/events";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { sampleAnalyticsEvent } from "@/features/analytics/policy";
+import { trackAnalyticsEvents } from "@/features/analytics/server";
+
+const maxAnalyticsBatchSize = 25;
 
 async function getViewerProfileId() {
   if (!hasClerkKeys()) {
@@ -38,7 +43,7 @@ async function getViewerProfileId() {
   }
 }
 
-export async function POST(request: Request) {
+async function acceptAnalyticsEvents(request: Request) {
   let body: unknown;
 
   try {
@@ -50,38 +55,72 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = analyticsEventInputSchema.safeParse(body);
+  const rawEvents = Array.isArray(body) ? body : [body];
 
-  if (!parsed.success) {
+  if (rawEvents.length === 0 || rawEvents.length > maxAnalyticsBatchSize) {
     return NextResponse.json(
-      { ok: false, error: "INVALID_ANALYTICS_EVENT" },
+      { ok: false, error: "INVALID_ANALYTICS_BATCH" },
       { status: 400 },
     );
   }
 
-  const properties = normalizeAnalyticsProperties(parsed.data.properties);
+  const parsedEvents = [];
 
-  try {
-    assertAnalyticsEventRequirements({
-      name: parsed.data.name,
-      entityType: parsed.data.entityType,
-      entityId: parsed.data.entityId,
-      sourceSurface: parsed.data.sourceSurface,
+  for (const rawEvent of rawEvents) {
+    const parsed = analyticsEventInputSchema.safeParse(rawEvent);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "INVALID_ANALYTICS_EVENT" },
+        { status: 400 },
+      );
+    }
+
+    const properties = normalizeAnalyticsProperties(parsed.data.properties);
+
+    try {
+      assertAnalyticsEventRequirements({
+        name: parsed.data.name,
+        entityType: parsed.data.entityType,
+        entityId: parsed.data.entityId,
+        sourceSurface: parsed.data.sourceSurface,
+        properties,
+      });
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: "MISSING_REQUIRED_ANALYTICS_FIELDS" },
+        { status: 400 },
+      );
+    }
+
+    parsedEvents.push({
+      ...parsed.data,
       properties,
     });
-  } catch {
+  }
+
+  const environment = getAnalyticsEnvironment();
+  const sampledEvents = parsedEvents.flatMap((event) => {
+    const sampledEvent = sampleAnalyticsEvent(event, environment);
+
+    return sampledEvent ? [sampledEvent] : [];
+  });
+
+  if (sampledEvents.length === 0) {
     return NextResponse.json(
-      { ok: false, error: "MISSING_REQUIRED_ANALYTICS_FIELDS" },
-      { status: 400 },
+      {
+        ok: true,
+        accepted: true,
+        received: rawEvents.length,
+        stored: 0,
+      },
+      { status: 202 },
     );
   }
 
   const viewerProfileId = await getViewerProfileId();
-  const result = await trackAnalyticsEvent(
-    {
-      ...parsed.data,
-      properties,
-    },
+  const result = await trackAnalyticsEvents(
+    sampledEvents,
     {
       userProfileId: viewerProfileId,
       referrer: request.headers.get("referer"),
@@ -93,7 +132,15 @@ export async function POST(request: Request) {
     {
       ok: result.ok,
       accepted: result.ok,
+      received: rawEvents.length,
+      stored: result.stored,
     },
     { status: 202 },
+  );
+}
+
+export async function POST(request: Request) {
+  return withApiRequestMetrics(request, "/api/analytics/events", async () =>
+    acceptAnalyticsEvents(request),
   );
 }
