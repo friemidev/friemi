@@ -12,6 +12,7 @@
     "monitor:site": "playwright test -c playwright.monitoring.config.ts",
     "monitor:site:headed": "playwright test -c playwright.monitoring.config.ts --headed",
     "monitor:site:report": "playwright show-report playwright-report",
+    "perf:http-baseline": "node scripts/run-http-load-baseline.mjs",
     "db:generate": "prisma generate --schema=prisma/schema.prisma && node scripts/verify-prisma-client.cjs",
     "verify:prisma-client": "node scripts/verify-prisma-client.cjs",
     "db:push": "prisma db push",

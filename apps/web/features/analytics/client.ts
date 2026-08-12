@@ -8,6 +8,17 @@ type ClientAnalyticsEventInput = Omit<
   locale?: "zh-CN" | "en" | "fr";
 };
 
+type ClientAnalyticsPayload = AnalyticsEventInput & {
+  route: string;
+  locale: "zh-CN" | "en" | "fr";
+};
+
+const analyticsBatchWindowMs = 1_500;
+const maxAnalyticsBatchSize = 20;
+let analyticsQueue: ClientAnalyticsPayload[] = [];
+let analyticsFlushTimer: ReturnType<typeof setTimeout> | null = null;
+let analyticsFlushListenersAttached = false;
+
 function getLocaleFromPath(pathname: string) {
   const locale = pathname.split("/").filter(Boolean)[0];
 
@@ -72,21 +83,17 @@ function sanitizeClientRoute(route: string) {
   }
 }
 
-export function trackClientAnalyticsEvent(input: ClientAnalyticsEventInput) {
-  if (typeof window === "undefined") {
+function deliverAnalyticsBatch(
+  payloads: ClientAnalyticsPayload[],
+  preferBeacon: boolean,
+) {
+  if (payloads.length === 0) {
     return;
   }
 
-  const payload = {
-    ...input,
-    anonymousId: input.anonymousId ?? getAnonymousId(),
-    sessionId: input.sessionId ?? getSessionId(),
-    locale: input.locale ?? getLocaleFromPath(window.location.pathname),
-    route: sanitizeClientRoute(input.route ?? window.location.pathname),
-  };
-  const body = JSON.stringify(payload);
+  const body = JSON.stringify(payloads);
 
-  if (navigator.sendBeacon) {
+  if (preferBeacon && navigator.sendBeacon) {
     const accepted = navigator.sendBeacon(
       "/api/analytics/events",
       new Blob([body], { type: "application/json" }),
@@ -107,4 +114,59 @@ export function trackClientAnalyticsEvent(input: ClientAnalyticsEventInput) {
   }).catch(() => {
     // Analytics must not affect the user flow.
   });
+}
+
+function flushClientAnalyticsQueue(preferBeacon = false) {
+  if (analyticsFlushTimer) {
+    clearTimeout(analyticsFlushTimer);
+    analyticsFlushTimer = null;
+  }
+
+  const payloads = analyticsQueue;
+  analyticsQueue = [];
+  deliverAnalyticsBatch(payloads, preferBeacon);
+}
+
+function attachAnalyticsFlushListeners() {
+  if (analyticsFlushListenersAttached) {
+    return;
+  }
+
+  analyticsFlushListenersAttached = true;
+  window.addEventListener("pagehide", () => {
+    flushClientAnalyticsQueue(true);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushClientAnalyticsQueue(true);
+    }
+  });
+}
+
+export function trackClientAnalyticsEvent(input: ClientAnalyticsEventInput) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const payload: ClientAnalyticsPayload = {
+    ...input,
+    anonymousId: input.anonymousId ?? getAnonymousId(),
+    sessionId: input.sessionId ?? getSessionId(),
+    locale: input.locale ?? getLocaleFromPath(window.location.pathname),
+    route: sanitizeClientRoute(input.route ?? window.location.pathname),
+  };
+  attachAnalyticsFlushListeners();
+  analyticsQueue.push(payload);
+
+  if (analyticsQueue.length >= maxAnalyticsBatchSize) {
+    flushClientAnalyticsQueue();
+    return;
+  }
+
+  if (!analyticsFlushTimer) {
+    analyticsFlushTimer = setTimeout(
+      () => flushClientAnalyticsQueue(),
+      analyticsBatchWindowMs,
+    );
+  }
 }

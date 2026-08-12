@@ -932,3 +932,269 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 7. 100 CCU 可重复压测。
 
 然后再开 Pro 做同脚本对照。若优化后 Free 已满足延迟但缺少生产可靠性、备份或商业使用资格，升级是运营与可靠性决策；若优化后仍由 CPU/内存/连接限制导致 P95/P99 不达标，升级才是明确的性能决策。
+
+## 24. 基于当前代码的第二轮降载审计
+
+本节更新于 2026-08-12。目标不是缩减现有功能，而是在保持页面结果、权限、消息可靠性和交互反馈不变的前提下，减少 Vercel Function 调用、数据库 round trip、长事务、历史表扫描和无效 RSC 重算。
+
+### 24.1 已确认的现状
+
+| 位置 | 当前实现 | 负载影响 | 判断 |
+| ---- | -------- | -------- | ---- |
+| 用户档案初始化 | `finalizeUserProfile()` 在补 friend code 后会异步调用 `linkGuestParticipationsForProfile()`；相关认证 helper 在 67 个文件中有 155 个静态调用点 | 普通只读页面和高频 API 可能额外启动游客参与记录扫描及事务 | 优先拆出只读热路径 |
+| Presence | `/api/profile/presence` 先读取完整 Profile，再更新 `lastActiveAt` | 每次心跳至少一次完整读取和一次写入，还可能触发游客记录关联 | 可在不改 UI 语义下收敛为一次条件更新 |
+| 私聊刷新 | `MessageThreadAutoRefresh` 每 6 秒执行 `router.refresh()` | 每位可见私聊用户约 10 次整页 RSC 刷新/分钟 | 固定请求税较高 |
+| 聚吧群聊刷新 | `ActivityRoomChatAutoRefresh` 每 8 秒执行 `router.refresh()` | 每位可见群聊用户约 7.5 次整页 RSC 刷新/分钟 | 固定请求税较高 |
+| 狼人杀同步 | 已先查 `syncVersion`，变化后才取完整房间；probe 仍查询 `GameToolRoom` 和最新 `GameToolEvent` 两次 | 方向正确，但探测成本和 RPS 仍随房间人数线性增长 | 保留协议，继续把 revision 单字段化 |
+| 全局未读 | 已合并为一个 45 秒聚合请求；群聊未读仍对最多 100 个房间构造 `OR` 后 `groupBy` | HTTP 已明显下降，SQL 成本仍随房间数和消息历史增长 | 需要 read model，但不能直接切换 |
+| Analytics | 每个事件写一行 `AnalyticsEvent`，服务端使用进程内串行 Promise 队列；该表有 5 组二级索引 | 高峰时非关键统计会与消息、报名、送礼争用同一数据库连接，并产生索引写放大 | 先采样、批量和有界丢弃 |
+| 通知 fan-out | `createNotifications()` 在业务事务内逐个执行“查重 + 插入” | N 个接收人可产生约 2N 次串行 SQL，延长取消活动、公告等事务 | 需要批量化和幂等键 |
+| Profile 聚合 | Dashboard 同时启动约 15 个查询；关注关系和狼人杀记录会读取全部历史行后在 Node 端统计 | 用户历史越长，行数、内存和连接等待越高 | 改为数据库聚合和有限预览 |
+| 缓存失效 | 当前有 168 个 `revalidatePath()` 静态调用点；部分操作会失效 locale 根 layout | 根 layout 失效会覆盖其下页面，后续访问可能重复计算大量数据 | 先建立依赖清单，再收窄 |
+| 客户端刷新 | 当前有 47 个 `router.refresh()` 静态调用点；多数是操作成功后的正确性刷新，少数是周期刷新 | 不能统一删除；周期刷新和重复刷新才是目标 | 按触发来源区分处理 |
+| 图片上传 | 头像、活动封面、晒晒、私聊图片和 Top News 共 5 个 API 读取 `FormData`；存储 helper 将文件转为 Buffer 后再上传 | 并发多图会同时占用 Function 带宽、内存和执行时间 | 最终改为 signed direct upload |
+| Prisma 连接 | 单例 `PrismaClient` 使用 transaction pooler，当前 `connection_limit=1` | 可防止实例抢占过多连接，但同一实例的并发查询和大量 `Promise.all()` 会排队 | 只能在压测后小步调参 |
+
+现有实现中值得保留的部分：聊天初始消息限制为 50 条、聊天列表限制为 50/80 条、搜索和活动列表大多已有 `take`、匿名活动数据已有短时缓存、未读轮询已合并并支持后台暂停、狼人杀已有 in-flight guard 和版本探测。这些不应在后续优化中被推倒重做。
+
+### 24.2 从中高风险方案中吸取的约束
+
+1. **PostgreSQL 始终是事实源。** Realtime、Redis 和本地状态只能用于通知“有变化”、短期 Presence、缓存或限流，不能成为消息、余额、报名、角色和游戏结果的唯一记录。
+2. **不做一次性替换。** 新 read model、新 revision 和新通知写法先双写或影子计算，旧查询保留为 fallback，核对一致后才逐步切读。
+3. **实时事件不携带敏感业务数据。** 事件只发送 `{ type, entityId, revision }`；客户端收到后按权限请求增量，不能广播消息正文、角色、余额或私人资料。
+4. **轮询不能直接删除。** 实时通道必须配合 focus/online 校准、cursor 补齐和 45 至 60 秒低频 fallback；否则断网、休眠和漏事件会造成用户看到旧状态。
+5. **缓存必须区分公共数据与用户 overlay。** 公共活动可缓存；收藏、关注、报名、未读、管理权限和私人活动不能进入共享缓存对象。
+6. **索引只根据真实执行计划添加。** 每个索引都会增加写入和存储成本；必须先保存 `EXPLAIN (ANALYZE, BUFFERS)`，再在预览数据库验证。
+7. **连接数不是越大越好。** `connection_limit=1` 只作为起点；只有在查询数量已经下降且数据库连接余量明确时，才在预览环境测试 2、3 等小幅配置。
+8. **一次只改变一个容量变量。** 查询、连接池、实时协议和套餐不能同一轮同时切换，否则无法判断收益来源，也难以回滚。
+9. **用户操作先本地反馈，服务端结果最终校准。** 发送消息、点赞、关注等保持当前 optimistic UI；失败必须恢复状态并给出原因，不能用“降载”换取静默失败。
+10. **批处理不能削弱幂等与权限。** 批量通知、消息补齐和上传 finalize 都必须有唯一键、接收人校验及可重试语义。
+
+### 24.3 第一组：可优先实施，功能风险低
+
+#### A1. 扩大观测覆盖
+
+- [ ] 将 `withApiRequestMetrics` 扩展到私聊增量、群聊增量、发送消息、通知读取和上传签名接口。
+- [ ] 在预览环境以 5% 至 10% 采样记录 Prisma query count、DB duration、响应字节；不记录 SQL 参数和消息正文。
+- [ ] 为 `P2024`、事务冲突、5xx 和上传失败建立按 route 聚合的告警。
+- **预期：** 不直接降低负载，但能区分 Function 排队、数据库排队、慢 SQL 和客户端渲染，防止错误扩容。
+- **风险：极低。** 日志过多会增加成本。
+- **保护：** 仅采样成功请求，慢请求和错误全量记录；设置日志字段白名单。
+- **验收：** 同一 request ID 能关联 route、总耗时和 DB 阶段；日志中无正文、token、邮箱和手机号。
+
+#### A2. Presence 使用轻量条件更新
+
+- [x] 生产路径由“完整 Profile 查询 + `finalizeUserProfile` + update”改为 Clerk `userId` 后按 `clerkUserId + ACTIVE` 执行一次 `updateMany`。
+- [x] 保留当前 90 秒间隔、前台立即 online、后台 best-effort offline 和 5 分钟在线判定窗口。
+- [ ] 给 Presence 增加每 route 的写入数和 P95 对比。
+- **预期：** 每次心跳从至少两次数据库操作收敛为一次写入，并彻底避免心跳触发游客参与关联事务；页面表现不变。
+- **风险：低。** 本地开发账号和被停用账号的返回值处理可能出现差异。
+- **保护：** 单测覆盖无 Clerk、本地账号、ACTIVE、DELETED、online 和 offline；返回 `count=0` 时保持 401。
+- **验收：** 相同在线/离线 UI；Presence route DB round trip 目标下降约 50%，不再出现 guest-link 日志。
+
+#### A3. 非关键 Analytics 限流、采样和有界队列
+
+- [x] 将 `page_load_timed`、`operation_latency_recorded`、列表曝光和滑动曝光列为可采样事件。
+- [x] 报名、消息发送、举报、管理操作等业务审计不依赖 AnalyticsEvent，继续以业务表为准。
+- [x] 将无上限 Promise 链改为有最大深度的队列；队列满或出现 `P2024` 时优先丢弃可采样事件。
+- [x] 客户端按短时间窗口批量提交事件，服务端使用批量插入；`pagehide` 时 best-effort flush。
+- **预期：** Preview 性能事件采样率设为 10% 时，对应写入目标减少约 90%；曝光事件先通过批量降低 round trip，业务操作成功率不受统计系统影响。
+- **风险：低。** 统计样本量下降，短窗口报表会有波动。
+- **保护：** 采样事件属性记录采样率；Dashboard 完成加权前曝光事件运行时固定保留 100%；重要管理审计不得采样。
+- **验收：** Analytics 故障或队列满时消息、报名、关注、送礼仍成功；报表能识别采样数据。
+
+#### A4. 将 Profile 全量历史统计改为数据库聚合
+
+- [x] 狼人杀胜/负/法官次数由加载全部 `GameToolPlayerRecord` 改为 `groupBy`/条件 count。
+- [ ] 旧 Node 计算在预览环境作为 shadow 结果保留一轮，记录但不展示不一致。
+- [x] 关注预览继续限制条数；先把总数与预览列表分开查询，不再为计数加载全部边。
+- **预期：** Profile 响应大小和 Node 内存不再随游戏历史线性增长；关注数增长时避免把全部关注边传入应用层。
+- **风险：低至中。** 聚合条件若与旧逻辑不完全一致，会显示错误统计数字。
+- **保护：** 用生产数据副本影子比对至少 7 天，差异率必须为 0 后切换；保留旧函数开关。
+- **验收：** Profile 数字与修改前完全一致；查询返回行数固定，不随历史局数增长。
+
+#### A5. 只对已证实慢查询补索引
+
+- [x] 对游客手机号关联查询执行真实参数 `EXPLAIN`；当前 112 行、约 2.87 ms，不足以证明新增索引收益。
+- [x] 对群聊未读、私聊未读、关注网络、最新游戏事件和通知列表保存执行计划。
+- [x] 审计结果不支持新增索引，本轮不创建 migration，避免无证据的写放大；详见 [W0/W1 报告](./w0-w1-performance-report.md)。
+- **预期：** 降低已确认扫描路径的 DB duration；不会改变 API 和 UI。
+- **风险：低至中。** 无效索引增加写放大；大表建索引可能占用 I/O 或锁资源。
+- **保护：** 无执行计划不建索引；生产使用适合在线发布的方式并选择低峰窗口；准备对应 drop migration。
+- **验收：** 目标查询执行计划使用新索引且 P95 改善，相关写入 P95 不恶化超过 10%。
+
+### 24.4 第二组：收益高，但必须影子验证和灰度
+
+#### B1. 游客参与关联退出通用认证读路径
+
+- [ ] 先记录 guest-link 调用次数、匹配数、事务耗时和触发 route。
+- [ ] 新增联系人 fingerprint/最近检查状态，只有新用户创建、验证邮箱/手机号/微信变化时触发关联。
+- [ ] 增加每日低频 reconciliation，处理 webhook 丢失或旧数据补录。
+- [ ] 切换期保留旧读路径开关，但设置最短重查间隔，禁止每次页面读取都扫描。
+- **预期：** 155 个认证 helper 静态调用点不再附带游客表事务；只读页面和高频 API 的尾延迟下降。
+- **风险：中。** 触发遗漏会让历史游客报名不能及时出现在账号中。
+- **保护：** 事件触发 + 定时 reconciliation 双保险；关联操作继续幂等；先 shadow 记录“旧路径本可关联多少条”。
+- **验收：** 关联准确率 100%；正常 Profile/Presence/未读请求不启动 guest-link 事务；遗漏最长在约定 reconciliation 窗口内恢复。
+
+#### B2. 批量通知写入，缩短业务事务
+
+- [ ] 为通知设计“每个业务事件 occurrence + recipient”稳定 `dedupeKey`，覆盖当前 actor/activity/comment/gift 等身份字段，同时允许同类事件在不同时间合法重复发生。
+- [ ] 同一 fan-out 先批量查询已存在键，再 `createMany`；最终依靠唯一约束和 `skipDuplicates` 保证重试安全。
+- [ ] 数据库通知记录仍与业务操作处于同一可靠边界；移动 Push 可以事务提交后批量入队。
+- [ ] 对活动取消、活动更新、公告和签到分别比较接收人数、通知行数与旧实现。
+- **预期：** N 人通知从约 2N 次串行 SQL 收敛到常数级批量 SQL，缩短活动管理事务并减少连接占用。
+- **风险：中。** dedupeKey 设计错误可能漏通知或重复通知；批量 Push 可能延迟。
+- **保护：** 先双算 dedupeKey 不启用约束；回填前检查冲突；站内通知同步成功优先于 Push；Push 可重试且不影响业务提交。
+- **验收：** 接收人集合与旧实现完全一致；重复执行不新增重复行；100 人 fan-out 的 SQL 次数不随人数线性增长。
+
+#### B3. 聊天改为 cursor 增量读取，保留低频校准
+
+- [ ] 私聊和聚吧群聊分别增加 `after=<createdAt,id>` 或单调 sequence 的增量 API。
+- [ ] 首屏仍由 Server Component 返回最近 50 条，布局、时间分隔、长按删除和 optimistic send 保持不变。
+- [ ] 可见页面用事件唤醒增量 fetch；无事件时 45 至 60 秒 fallback，focus/online 强制补齐。
+- [ ] 只有增量接口失败或发现 revision 缺口时才执行完整 `router.refresh()`。
+- [ ] 用消息 ID 去重，按 `(createdAt,id)` 稳定排序，并验证删除、撤回、已读和勿扰状态。
+- **预期：** 空闲私聊固定整页刷新目标从约 10 次/分钟降到不超过 1 次轻量校准；群聊从约 7.5 次/分钟降到不超过 1 次，RSC 和重复 Profile 查询显著下降。
+- **风险：中。** cursor 边界、乱序、删除事件或休眠恢复处理错误会漏消息、重复消息或短暂显示旧状态。
+- **保护：** 数据库消息表为事实源；低频全量校准保留；增量路径按会话 feature flag 灰度；检测到 gap 自动回退最近 50 条快照。
+- **验收：** 50 人群聊和 20 对私聊压测无漏/重/乱序；P95 接收延迟 `<1.5s`；断网 2 分钟恢复后消息完整。
+
+#### B4. 狼人杀 revision 单字段化
+
+- [ ] 给 `GameToolRoom` 增加单调 `revision` 或不可回退的 `syncVersion` 字段。
+- [ ] 所有房间状态、座位、成员和事件事务同步更新 revision；先与现有 derived version 影子比对。
+- [ ] probe 最终只按 room 主键读取 `status + revision`，不再每轮额外查询最新事件。
+- [ ] 保留当前 in-flight guard、页面隐藏暂停、弱网降频、BroadcastChannel 和完整快照 fallback。
+- **预期：** 每次 probe 由两条查询降为一次主键读取，且版本生成成本固定；同房人数增加时数据库查询更可预测。
+- **风险：中。** 某个 mutation 忘记递增 revision 会导致其他玩家不刷新；并发 mutation 可能覆盖版本。
+- **保护：** revision 在同一数据库事务内原子递增；为每个狼人杀 action 增加 revision 测试；旧 derived version 在灰度期继续校验。
+- **验收：** 所有游戏动作都使 revision 单调增加；10 个 12 人房间压测无角色/座位/阶段滞后。
+
+#### B5. 聊天和通知未读 read model
+
+- [ ] 新增用户级未读汇总表或按会话 read-state 计数，不修改现有消息、通知和 read state 表。
+- [ ] 消息写入、标记已读、勿扰切换、删除和退群同时更新 read model。
+- [ ] 聚合接口先同时执行旧查询和新查询，只返回旧值并记录 mismatch。
+- [ ] 原始瞬时 mismatch 连续 7 天低于 0.1%，且重试/校准后的持久 mismatch 为 0，才按用户灰度切换新读路径。
+- [ ] 保留一键回退旧聚合和定时重建 read model 的任务。
+- **预期：** `/api/navigation/unread-counts` 从扫描历史消息和最多 100 个群聊条件，变为少量按用户主键/索引读取；成本主要随当前会话变化，不随历史消息总量增长。
+- **风险：中高。** 双写遗漏会造成角标错误；勿扰、删除和已读的边界最多，不能直接替换。
+- **保护：** additive migration、shadow read、自动 reconciliation、feature flag、旧路径 fallback；消息正文和业务状态不复制到 read model。
+- **验收：** 重试/校准后的新旧结果 mismatch 为 0 才灰度；切换后角标准确，聚合 DB duration P95 目标下降至少 60%。
+
+#### B6. 收窄 `revalidatePath`，避免根 layout 广域失效
+
+- [ ] 先生成“action -> 实体 -> 受影响页面/tag”依赖表，区分公共列表和用户私有 overlay。
+- [ ] 同一 action 内去重相同 path；只移除确认重复的调用。
+- [ ] 公共活动查询使用实体/list tag；收藏、关注、未读等私有数据继续按用户请求读取。
+- [ ] 优先处理当前调用 `revalidatePath(withLocale(locale, "/"), "layout")` 的活动创建、更新和取消路径。
+- **预期：** 单次业务写入不再让 locale 下大量页面在后续访问时重新计算，降低突发发布活动后的缓存击穿。
+- **风险：中高。** 依赖遗漏会出现旧页面；错误缓存用户 overlay 会造成隐私或权限问题。
+- **保护：** 先保留 path revalidation 作为 fallback；公共 DTO 字段白名单；E2E 覆盖创建、更新、取消、收藏、参与和跨账号查看。
+- **验收：** 相关页面在操作后立即正确，非相关页面不被失效；不同账号之间无收藏、报名、权限串读。
+
+#### B7. 图片改为 signed direct upload
+
+- [ ] 服务端只签发短期、限定 bucket/path/MIME/大小的上传凭证。
+- [ ] 浏览器直接上传 Storage，成功后调用 finalize API；服务端重新校验 object metadata 后才写业务表。
+- [ ] 多图上传限制客户端并发数，弱网和大文件使用可恢复上传；失败项可以单独重试。
+- [ ] 定时清理超时未 finalize 的孤儿对象。
+- [ ] 五个现有代理上传 API 在灰度期保留 fallback。
+- **预期：** 图片字节不再经过 Vercel Function，显著降低多图并发时的 Function 内存、带宽和执行时长；上传 UI 和多选体验保持不变或更稳定。
+- **风险：中高。** 签名权限过宽会造成越权上传；失败流程会留下孤儿文件； finalize 顺序错误会引用不存在对象。
+- **保护：** 每用户不可预测 object key、短 TTL、服务端 MIME/大小复核、限额、孤儿清理、旧 API fallback。
+- **验收：** 20 人并发多图时 Function 不接收文件正文；越权 path/MIME/大小均拒绝；中断恢复和失败重试可用。
+
+### 24.5 第三组：达到门槛后才引入服务或调整基础设施
+
+#### C1. Supabase Realtime 先做失效通知 POC
+
+- [ ] 使用 Clerk 与 Supabase third-party auth/private channel 完成授权 POC。
+- [ ] 只发布 `type/entityId/revision`，客户端仍经 Friemi API 按 cursor 取数据。
+- [ ] 验证 token 续期、撤权、退群、后台恢复、连接上限和消息速率。
+- **预期：** 将活跃聊天和游戏从固定轮询改为事件唤醒，无需迁移主数据库。
+- **风险：中高。** 授权或重连错误会漏事件/越权订阅；套餐连接限制可能先于数据库成为瓶颈。
+- **采用门槛：** B3/B4 的 cursor、revision 和 fallback 已完成；50 人群聊及 10 个狼人杀房间 POC 通过。
+
+#### C2. Redis/Upstash 只承接临时热状态
+
+- [ ] 仅评估 Presence TTL、rate limit、短期去重和热点 revision；不保存唯一消息、余额或游戏结果。
+- [ ] 所有 key 设置 TTL、命名空间和最大尺寸；缓存失效时允许回源 PostgreSQL。
+- **预期：** 减少主库 Presence 写入和热点读取，并保护昂贵接口免受突发重试。
+- **风险：中高。** 双系统一致性、额外网络延迟和供应商故障。
+- **采用门槛：** 轻量 Presence 和 HTTP 降频完成后，主库仍因 Presence/限流类流量超 SLO。
+
+#### C3. Queue/Worker 承接非阻塞副作用
+
+- [ ] 候选任务仅包括移动 Push、图片处理、Analytics、清理和 reconciliation。
+- [ ] 报名、消息落库、余额扣减、角色状态和站内通知记录不先异步化。
+- [ ] 每个任务包含 idempotency key、重试上限、死信和可观测状态。
+- **预期：** 缩短业务事务和 Function 尾延迟，第三方 Push/图片处理故障不阻塞用户操作。
+- **风险：中高。** 延迟、重复执行和队列积压。
+- **采用门槛：** 同步副作用已经成为 P95/P99 主要部分，并且有可验证的幂等设计。
+
+#### C4. 调整 Prisma pool 或升级套餐
+
+- [ ] 先完成 A/B 组并取得同脚本 20/50/100 CCU 数据。
+- [ ] 记录 Supabase active connections、pool wait、CPU、I/O、cache hit 和 P2024。
+- [ ] 只在预览环境将 `connection_limit` 从 1 小步测试到 2/3，计算“最大 Function 实例数 × 每实例连接数”。
+- [ ] 优化后 Free 与优化后 Pro 使用完全相同脚本、数据量和区域对比。
+- **预期：** 如果瓶颈确实是单实例连接排队，小幅连接池可降低并行查询等待；Pro/compute 升级可提供可靠性和资源余量。
+- **风险：高。** 盲目加连接会耗尽数据库连接或内存，只把应用排队转移到数据库。
+- **采用门槛：** 查询数已收敛、无慢 SQL/长事务主导、数据库有明确连接余量，且预览压测证明 P95 改善。
+
+#### C5. 暂不采用的方案
+
+- [ ] 不把所有后端迁出 Vercel。
+- [ ] 不因为当前卡顿改换非 PostgreSQL 主数据库。
+- [ ] 不把私聊、余额、角色或报名只存在 Redis/Realtime。
+- [ ] 不直接删除所有轮询和 `router.refresh()`。
+- [ ] 不给所有外键和筛选字段批量加索引。
+- [ ] 不在同一次发布中同时更改消息协议、连接池和数据库套餐。
+- [ ] 不在没有 100 CCU 基线和成本数据时引入 Kafka、Kubernetes 或数据库分片。
+
+### 24.6 推荐执行顺序
+
+| 波次 | 内容 | 风险 | 预期用户影响 | 进入下一波条件 |
+| ---- | ---- | ---- | ------------ | ------------ |
+| W0 | A1 观测、真实基线、慢 SQL 计划 | 极低 | 无视觉变化 | 20/50/100 CCU 指标可重复 |
+| W1 | A2 Presence、A3 Analytics、A4 Profile 聚合、A5 已证实索引 | 低至中 | 功能和布局不变 | 正确性测试通过，P95 不恶化 |
+| W2 | B1 guest-link、B2 通知批量 | 中 | 游客报名和通知结果必须不变 | shadow 差异为 0，支持一键回退 |
+| W3 | B3 聊天增量、B4 狼人杀 revision | 中 | 更新更及时、页面跳动更少 | 断网恢复和并发压测无漏/重/乱序 |
+| W4 | B5 未读 read model、B6 精确失效 | 中高 | 角标与页面新鲜度必须不变 | mismatch 达标，跨账号 E2E 通过 |
+| W5 | B7 直接上传、C1/C2/C3 按瓶颈选用 | 中高 | 上传/实时体验改善 | 安全、故障降级和成本验证通过 |
+| W6 | C4 连接池与套餐 | 高 | 理论上无 UI 变化 | 只有指标证明资源仍是瓶颈时执行 |
+
+### 24.7 每个任务统一回滚条件
+
+以下任一条件出现即停止扩大灰度并切回旧路径：
+
+- 5xx 比基线增加超过 0.5 个百分点。
+- 目标 route P95 连续两个观测窗口恶化超过 20%。
+- 出现任何消息丢失、重复扣款、重复报名、角色越权或跨用户缓存泄漏。
+- shadow 数据 mismatch 超过该任务阈值，且无法自动 reconciliation。
+- P2024 从 0 变为持续出现，或数据库连接稳态超过 70%、峰值超过 85%。
+- 客户端操作需要手动大刷新才能看到正确结果。
+
+灰度建议固定为内部账号 -> 5% -> 25% -> 100%，每档至少覆盖一个高峰窗口。数据库 migration 必须 additive；删除旧字段、旧查询和 fallback 只能在 100% 稳定一个发布周期后另行执行。
+
+### 24.8 本轮总 Checklist
+
+- [x] 复核认证/Profile 初始化和 guest-link 隐性事务。
+- [x] 复核私聊、群聊、狼人杀和全局未读的固定请求模型。
+- [x] 复核 Profile、关注网络、通知 fan-out 和 Analytics 写入放大。
+- [x] 复核上传数据是否经过 Vercel Function。
+- [x] 复核 `router.refresh()` 与 `revalidatePath()` 静态调用范围。
+- [x] 列出每项预期、风险、保护措施和验收标准。
+- [ ] 完成 W0 **Vercel Preview** 20/50/100 CCU 基线。当前只完成本机生产构建 + Preview DB 基线，Vercel 账号缺少 Friemi 项目权限，不能冒充远端验收。
+- [x] 实施 W1 并提交[修改前后报告](./w0-w1-performance-report.md)。
+- [x] 执行 W2 门禁：W1 远端验收前不批准 W2，本轮未实施任何 W2 内容。
+- [x] 更新 W0/W1 checkbox、[原始指标](./performance-baselines/)、灰度比例 `0%` 和回滚结果。
+
+相关官方边界：
+
+- [Next.js `revalidatePath`](https://nextjs.org/docs/15/app/api-reference/functions/revalidatePath)
+- [Prisma serverless database connections](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections)
+- [Supabase database connection methods](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- [Supabase Realtime limits](https://supabase.com/docs/guides/realtime/limits)
+- [Vercel Fluid Compute](https://vercel.com/docs/fluid-compute)
