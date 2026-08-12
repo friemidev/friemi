@@ -13,7 +13,6 @@ import {
   Film,
   Footprints,
   LayoutGrid,
-  MapPin,
   Music2,
   Palette,
   Plane,
@@ -27,7 +26,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
-import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
   getActivityDateLabel,
@@ -36,6 +34,7 @@ import {
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
+import { brand } from "@/lib/brand";
 import { getCategoryLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -75,6 +74,7 @@ type MobileLobbyV23Copy = {
   friendEmptyTitle: string;
   friendEmptyDescription: string;
   friendGoing: (count: number) => string;
+  recommendationTitle: string;
   loadingLabel: string;
   loadFailedTitle: string;
   mineEmptyTitle: string;
@@ -229,6 +229,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       friendEmptyDescription:
         "Connectez-vous pour voir les sorties des personnes que vous suivez.",
       friendGoing: (count) => `${count} suivi${count > 1 ? "s" : ""}`,
+      recommendationTitle: "Groupes susceptibles de vous plaire",
       loadingLabel: "Chargement...",
       loadFailedTitle: "Chargement impossible",
       endedLabel: "Terminé",
@@ -258,6 +259,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
         "Sign in to see plans joined by people you follow.",
       friendGoing: (count) =>
         `${count} ${count === 1 ? "followed person" : "followed people"}`,
+      recommendationTitle: "Plans you may like",
       loadingLabel: "Loading...",
       loadFailedTitle: "Could not load",
       endedLabel: "Ended",
@@ -283,6 +285,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     friendEmptyTitle: "暂无关注动态",
     friendEmptyDescription: "登录后可以看到你关注的人参加的聚吧。",
     friendGoing: (count) => `${count} 位关注的人`,
+    recommendationTitle: "可能感兴趣的聚吧",
     loadingLabel: "加载中...",
     loadFailedTitle: "加载失败",
     endedLabel: "已结束",
@@ -812,6 +815,40 @@ function MobileLobbyV23ActivityRow({
   );
 }
 
+function MobileLobbyV23RecommendationSection({
+  activities,
+  className,
+  copy,
+  locale,
+}: {
+  activities: ActivityCardViewModel[];
+  className?: string;
+  copy: MobileLobbyV23Copy;
+  locale: string;
+}) {
+  if (activities.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className={cn("grid gap-4", className)}>
+      <h2 className="px-1 text-[18px] font-bold leading-tight text-[#111210]">
+        {copy.recommendationTitle}
+      </h2>
+      <div className="grid gap-4">
+        {activities.map((activity) => (
+          <MobileLobbyV23ActivityRow
+            activity={activity}
+            copy={copy}
+            key={getActivityKey(activity)}
+            locale={locale}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function MobileLobbyV23View({
   activeTab,
   activities,
@@ -1114,21 +1151,24 @@ export function MobileLobbyV23View({
             </div>
             {coldStartSwipeActivities.length > 0 ? (
               <div className="mt-7 border-t border-[#EEEDE4] pb-10 pt-5">
-                <ActivitySwipeDiscovery
+                <MobileLobbyV23RecommendationSection
                   activities={coldStartSwipeActivities}
-                  favoriteRedirectPath="/lobby"
-                  isAuthenticated={isSignedIn}
+                  copy={copy}
                   locale={locale}
-                  shuffleDeck={false}
-                  sourceSurface="activity_list"
                 />
               </div>
             ) : null}
           </>
         ) : (
           <>
-            <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
-              <MapPin className="mx-auto h-7 w-7 text-[#096B45]" />
+            <div className="mt-10 bg-white px-5 py-6 text-center">
+              <Image
+                alt=""
+                className="mx-auto h-28 w-28 scale-[1.45] object-contain"
+                height={2048}
+                src={brand.emptyContentIllustrationPath}
+                width={2048}
+              />
               <p className="mt-3 text-[18px] font-bold">{emptyTitle}</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
                 {emptyDescription}
@@ -1136,13 +1176,10 @@ export function MobileLobbyV23View({
             </div>
             {coldStartSwipeActivities.length > 0 ? (
               <div className="mt-7 pb-10">
-                <ActivitySwipeDiscovery
+                <MobileLobbyV23RecommendationSection
                   activities={coldStartSwipeActivities}
-                  favoriteRedirectPath="/lobby"
-                  isAuthenticated={isSignedIn}
+                  copy={copy}
                   locale={locale}
-                  shuffleDeck={false}
-                  sourceSurface="activity_list"
                 />
               </div>
             ) : null}

@@ -1,6 +1,7 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileNetworkMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 import {
   getProfileDashboard,
   type ProfileDashboardViewModel,
@@ -17,6 +18,8 @@ type ProfileNetworkPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
     charmScore: 0,

@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileAchievementsPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileAchievementsPageProps = {
   params: Promise<{
@@ -10,6 +11,8 @@ type ProfileAchievementsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 export default async function ProfileAchievementsPage({
   params,
 }: ProfileAchievementsPageProps) {

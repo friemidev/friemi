@@ -5,6 +5,7 @@ import {
   getRecentProfileVisitors,
 } from "@/features/profile-visits/queries/getProfileVisitors";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileVisitorsPageProps = {
   params: Promise<{
@@ -13,6 +14,8 @@ type ProfileVisitorsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 const emptyVisitSummary = {
   todayViewCount: 0,
   totalViewCount: 0,

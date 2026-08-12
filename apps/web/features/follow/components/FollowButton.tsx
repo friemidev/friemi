@@ -7,8 +7,13 @@ import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
-import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import {
+  createDirectConversationAction,
+  openDirectConversationAction,
+} from "@/features/direct-messages/actions/directMessageActions";
+import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import { getSignInHref } from "@/lib/auth-redirect";
+import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import {
   toggleFollowUserAction,
@@ -109,6 +114,7 @@ export function FollowButton({
   const Icon = icon;
   const formRef = useRef<HTMLFormElement | null>(null);
   const skipConfirmRef = useRef(false);
+  const openingMutualConversationRef = useRef(false);
   const [optimisticIsFollowing, setOptimisticIsFollowing] =
     useState(isFollowing);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -129,14 +135,49 @@ export function FollowButton({
     if (state.formError) {
       setOptimisticIsFollowing(isFollowing);
       setIsSubmitting(false);
+      openingMutualConversationRef.current = false;
       return;
     }
 
     if (typeof state.isFollowing === "boolean") {
       onStateChange?.(state.isFollowing);
-      if (state.becameMutualFollow) {
-        setMutualPromptOpen(true);
+
+      if (state.becameMutualFollow && !openingMutualConversationRef.current) {
+        openingMutualConversationRef.current = true;
+        const formData = new FormData();
+        formData.set("locale", locale);
+        formData.set("friendProfileId", targetUserProfileId);
+        formData.set("redirectPath", redirectPath);
+        saveMessageThreadReturnHref();
+
+        void createDirectConversationAction({}, formData)
+          .then((result) => {
+            if (result.ok && result.conversationId) {
+              router.push(
+                withLocale(
+                  locale,
+                  `/messages/${result.conversationId}?mutual=1`,
+                ),
+              );
+              return;
+            }
+
+            openingMutualConversationRef.current = false;
+            setMutualPromptOpen(true);
+            setIsSubmitting(false);
+            router.refresh();
+          })
+          .catch((error: unknown) => {
+            console.error("Failed to open mutual follow conversation", error);
+            openingMutualConversationRef.current = false;
+            setMutualPromptOpen(true);
+            setIsSubmitting(false);
+            router.refresh();
+          });
+
+        return;
       }
+
       setIsSubmitting(false);
       router.refresh();
       return;
@@ -153,6 +194,9 @@ export function FollowButton({
     state.isFollowing,
     state.becameMutualFollow,
     state.ok,
+    locale,
+    redirectPath,
+    targetUserProfileId,
   ]);
 
   if (!isAuthenticated) {

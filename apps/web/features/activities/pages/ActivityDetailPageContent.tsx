@@ -7,7 +7,9 @@ import type { ReactNode } from "react";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ArrowLeft,
+  Bell,
   CalendarDays,
+  ChevronDown,
   CheckCircle2,
   ExternalLink,
   MapPin,
@@ -39,6 +41,7 @@ import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/compo
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
+import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
@@ -82,7 +85,7 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
-import { getUnreadActivityRoomMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
+import { getActivityRoomUnreadState } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
@@ -120,6 +123,7 @@ import {
   getActivityDetailPath,
   getLegacyActivityDetailPath,
 } from "@/features/activities/utils/activityRoutes";
+import type { ActivityAnnouncementViewModel } from "@/features/activities/types";
 
 type ActivityDetailPageProps = {
   params: Promise<{
@@ -445,6 +449,7 @@ function getActivityRoomEntryCopy(locale: string) {
     return {
       description: "Les messages du groupe restent ici.",
       label: "Discussion",
+      mutedUnreadLabel: "Nouveaux messages silencieux",
     };
   }
 
@@ -452,12 +457,14 @@ function getActivityRoomEntryCopy(locale: string) {
     return {
       description: "Group messages stay here.",
       label: "Chat",
+      mutedUnreadLabel: "Muted unread messages",
     };
   }
 
   return {
     description: "聚吧消息都在这里。",
     label: "群聊",
+    mutedUnreadLabel: "勿扰未读消息",
   };
 }
 
@@ -482,12 +489,129 @@ function getActivityOperatorActionCopy(locale: string) {
   };
 }
 
+function getActivityAnnouncementDetailCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      collapse: "Réduire",
+      latest: "Dernière",
+      title: "Annonce de groupe",
+      viewAll: "Voir les annonces",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      collapse: "Collapse",
+      latest: "Latest",
+      title: "Group announcement",
+      viewAll: "View announcements",
+    };
+  }
+
+  return {
+    collapse: "收起公告",
+    latest: "最新",
+    title: "群公告",
+    viewAll: "查看公告列表",
+  };
+}
+
+function formatAnnouncementTimestamp(locale: string, value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function ActivityAnnouncementDetailPanel({
+  announcements,
+  locale,
+}: {
+  announcements: ActivityAnnouncementViewModel[];
+  locale: string;
+}) {
+  const latestAnnouncement = announcements[0];
+  const copy = getActivityAnnouncementDetailCopy(locale);
+
+  if (!latestAnnouncement) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[1.25rem] border border-[#D6D5B2] bg-white px-4 py-4 shadow-[0_10px_26px_rgba(21,98,64,0.06)] sm:px-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          <Bell className="h-5 w-5" />
+          <span
+            aria-hidden="true"
+            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="text-base font-bold text-ink">{copy.title}</h2>
+            <span className="rounded-full bg-[#E7457A] px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
+              {copy.latest}
+            </span>
+            <span className="text-[11px] font-semibold text-[#8B907F]">
+              {formatAnnouncementTimestamp(
+                locale,
+                latestAnnouncement.createdAt,
+              )}
+            </span>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
+            {latestAnnouncement.content}
+          </p>
+        </div>
+      </div>
+
+      {announcements.length > 1 ? (
+        <details className="group mt-3">
+          <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-xs font-bold text-[#156240] transition active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">{copy.viewAll}</span>
+            <span className="hidden group-open:inline">{copy.collapse}</span>
+            <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
+          </summary>
+          <div className="mt-3 grid gap-2">
+            {announcements.map((announcement) => (
+              <article
+                className="rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3.5 py-3"
+                key={announcement.id}
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
+                  <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
+                    {announcement.authorName}
+                  </span>
+                  <span>
+                    {formatAnnouncementTimestamp(locale, announcement.createdAt)}
+                  </span>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
+                  {announcement.content}
+                </p>
+              </article>
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
 function ActivityRoomEntryLink({
   className,
   href,
   labelOverride,
   locale,
   showDescription = false,
+  isMuted = false,
   unreadCount = 0,
 }: {
   className?: string;
@@ -495,11 +619,14 @@ function ActivityRoomEntryLink({
   labelOverride?: string;
   locale: string;
   showDescription?: boolean;
+  isMuted?: boolean;
   unreadCount?: number;
 }) {
   const copy = getActivityRoomEntryCopy(locale);
   const label = labelOverride ?? copy.label;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && isMuted;
 
   return (
     <Link
@@ -516,10 +643,16 @@ function ActivityRoomEntryLink({
           {copy.description}
         </span>
       ) : null}
-      {unreadCount > 0 ? (
+      {showUnreadBadge ? (
         <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">
           {unreadBadgeText}
         </span>
+      ) : showMutedUnreadDot ? (
+        <span
+          aria-label={copy.mutedUnreadLabel}
+          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+          title={copy.mutedUnreadLabel}
+        />
       ) : null}
     </Link>
   );
@@ -1496,18 +1629,30 @@ export async function ActivityDetailPageContent({
     activity.type !== "PUBLIC_EVENT" &&
     Boolean(viewerProfile) &&
     (isTeamOperator || hasRoomRelevantParticipation);
-  const activityRoomUnreadCount =
+  const canUseActivityAnnouncement =
+    !activity.isActivityInfo && activity.type !== "PUBLIC_EVENT";
+  const canSendActivityAnnouncement =
+    canUseActivityAnnouncement && isTeamOperator;
+  const canShowActivityAnnouncements =
+    canUseActivityAnnouncement && activity.announcements.length > 0;
+  const activityRoomUnreadState =
     showActivityRoomEntry && viewerProfile?.id
       ? await perf
-          .measure("activity.roomUnreadCount", () =>
-            getUnreadActivityRoomMessageCount(viewerProfile.id, activity.id),
+          .measure("activity.roomUnreadState", () =>
+            getActivityRoomUnreadState(viewerProfile.id, activity.id),
           )
           .catch((error: unknown) => {
             console.error("Failed to load activity room unread count", error);
 
-            return 0;
+            return {
+              isMuted: false,
+              unreadCount: 0,
+            };
           })
-      : 0;
+      : {
+          isMuted: false,
+          unreadCount: 0,
+        };
   const mobileDetailTitle = getLobbyLayerTitle(locale);
   const mobileShareLabel =
     locale === "fr"
@@ -1951,6 +2096,14 @@ export async function ActivityDetailPageContent({
             {renderMobilePriceAndLinkedEventRow()}
           </div>
         </div>
+        {canShowActivityAnnouncements ? (
+          <div className="md:hidden">
+            <ActivityAnnouncementDetailPanel
+              announcements={activity.announcements}
+              locale={locale}
+            />
+          </div>
+        ) : null}
         <div className="space-y-4 md:hidden">
           <div>
             <div className="flex items-center justify-between gap-3">
@@ -2075,12 +2228,20 @@ export async function ActivityDetailPageContent({
                   <ActivityRoomEntryLink
                     className="min-h-11 px-3 shadow-none"
                     href={activityRoomHref}
+                    isMuted={activityRoomUnreadState.isMuted}
                     labelOverride={operatorActionCopy.manage}
                     locale={locale}
-                    unreadCount={activityRoomUnreadCount}
+                    unreadCount={activityRoomUnreadState.unreadCount}
                   />
                 ) : null}
               </div>
+              {canSendActivityAnnouncement ? (
+                <ActivityAnnouncementComposer
+                  activityId={activity.id}
+                  compact
+                  locale={locale}
+                />
+              ) : null}
               <div className="[&>button]:w-full">
                 <ActivityCheckInReviewPanel
                   activityId={activity.id}
@@ -2094,8 +2255,9 @@ export async function ActivityDetailPageContent({
               <ActivityRoomEntryLink
                 className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
                 href={activityRoomHref}
+                isMuted={activityRoomUnreadState.isMuted}
                 locale={locale}
-                unreadCount={activityRoomUnreadCount}
+                unreadCount={activityRoomUnreadState.unreadCount}
               />
             </>
           ) : null}
@@ -2156,6 +2318,13 @@ export async function ActivityDetailPageContent({
 
       <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
+          {canShowActivityAnnouncements ? (
+            <ActivityAnnouncementDetailPanel
+              announcements={activity.announcements}
+              locale={locale}
+            />
+          ) : null}
+
           {protectedLocationNotice ? (
             <ProtectedDetailNotice
               icon={protectedLocationIsOnline ? "link" : "address"}
@@ -2279,9 +2448,17 @@ export async function ActivityDetailPageContent({
                 {showActivityRoomEntry ? (
                   <ActivityRoomEntryLink
                     href={activityRoomHref}
+                    isMuted={activityRoomUnreadState.isMuted}
                     labelOverride={operatorActionCopy.manage}
                     locale={locale}
-                    unreadCount={activityRoomUnreadCount}
+                    unreadCount={activityRoomUnreadState.unreadCount}
+                  />
+                ) : null}
+                {canSendActivityAnnouncement ? (
+                  <ActivityAnnouncementComposer
+                    activityId={activity.id}
+                    compact
+                    locale={locale}
                   />
                 ) : null}
                 <div className="[&>button]:w-full">
@@ -2337,8 +2514,9 @@ export async function ActivityDetailPageContent({
                     {showActivityRoomEntry ? (
                       <ActivityRoomEntryLink
                         href={activityRoomHref}
+                        isMuted={activityRoomUnreadState.isMuted}
                         locale={locale}
-                        unreadCount={activityRoomUnreadCount}
+                        unreadCount={activityRoomUnreadState.unreadCount}
                       />
                     ) : null}
                     {canCheckInViewerParticipation ? (

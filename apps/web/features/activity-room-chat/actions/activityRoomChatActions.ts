@@ -15,6 +15,7 @@ import { getActivityRoomChatCopy } from "../copy";
 import {
   ActivityRoomChatDomainError,
   activityRoomMessageMaxLength,
+  canViewActivityRoomChat,
   deleteActivityRoomMessage,
   sendActivityRoomMessage,
 } from "../services/activityRoomChat";
@@ -63,6 +64,18 @@ const removeActivityRoomParticipantSchema = z.object({
 const inviteActivityRoomParticipantSchema = z.object({
   activityId: z.string().min(1).max(80),
   inviteeProfileId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+});
+
+const toggleActivityRoomMuteSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  muted: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const acknowledgeActivityAnnouncementSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  announcementId: z.string().min(1).max(80),
   locale: z.string().min(1).max(16).default("zh-CN"),
 });
 
@@ -270,6 +283,149 @@ export async function deleteActivityRoomMessageAction(
           : t.deleteFailed,
     };
   }
+}
+
+export async function toggleActivityRoomMuteAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    muted: getString(formData, "muted") || "1",
+  };
+  const result = toggleActivityRoomMuteSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const nextMuted = result.data.muted === "1" || result.data.muted === "true";
+
+  if (nextMuted) {
+    await prisma.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        lastReadAt: new Date(0),
+        mutedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        mutedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.activityRoomReadState.updateMany({
+      where: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+      data: {
+        mutedAt: null,
+      },
+    });
+  }
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function acknowledgeActivityAnnouncementAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    announcementId: getString(formData, "announcementId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  };
+  const result = acknowledgeActivityAnnouncementSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const announcement = await prisma.activityAnnouncement.findFirst({
+    where: {
+      activityId: result.data.activityId,
+      id: result.data.announcementId,
+    },
+    select: {
+      createdAt: true,
+    },
+  });
+
+  if (!announcement) {
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.activityRoomReadState.findUnique({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      select: {
+        announcementReadAt: true,
+      },
+    });
+    const announcementReadAt =
+      existing?.announcementReadAt &&
+      existing.announcementReadAt.getTime() > announcement.createdAt.getTime()
+        ? existing.announcementReadAt
+        : announcement.createdAt;
+
+    await tx.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        announcementReadAt,
+        lastReadAt: new Date(0),
+        profileId: profile.id,
+      },
+      update: {
+        announcementReadAt,
+      },
+    });
+  });
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
 }
 
 export async function inviteActivityRoomParticipantAction(

@@ -7,6 +7,7 @@ import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
+import { noIndexMetadata } from "@/lib/seo";
 
 type MessagesPageProps = {
   params: Promise<{
@@ -15,6 +16,7 @@ type MessagesPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
 
 export default async function MessagesPage({ params }: MessagesPageProps) {
   const { locale } = await params;

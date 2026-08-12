@@ -2,6 +2,7 @@ import type { ActivityRoomChatErrorCode } from "./services/activityRoomChat";
 
 type ActivityRoomChatCopy = {
   announcements: {
+    acknowledge: string;
     close: string;
     delete: string;
     deleteFailed: string;
@@ -43,6 +44,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
   if (locale === "fr") {
     return {
       announcements: {
+        acknowledge: "Compris",
         close: "Fermer",
         delete: "Supprimer",
         deleteFailed: "Impossible de supprimer cette annonce.",
@@ -99,6 +101,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
   if (locale === "en") {
     return {
       announcements: {
+        acknowledge: "Got it",
         close: "Close",
         delete: "Delete",
         deleteFailed: "Could not delete this announcement.",
@@ -151,6 +154,7 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
 
   return {
     announcements: {
+      acknowledge: "知道了",
       close: "关闭",
       delete: "删除",
       deleteFailed: "这条公告暂时无法删除。",

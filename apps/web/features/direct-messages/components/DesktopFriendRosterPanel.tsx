@@ -139,6 +139,8 @@ function DesktopFriendRosterRow({
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !friend.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -171,7 +173,7 @@ function DesktopFriendRosterRow({
           <span
             className={cn(
               "truncate text-sm",
-              unreadCount > 0 ? "font-bold" : "font-semibold",
+              showUnreadBadge ? "font-bold" : "font-semibold",
             )}
           >
             {friend.friend.nickname}
@@ -184,10 +186,16 @@ function DesktopFriendRosterRow({
           >
             {formatChatListTimestamp(time, locale)}
           </span>
-          {unreadCount > 0 ? (
+          {showUnreadBadge ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
+          ) : showMutedUnreadDot ? (
+            <span
+              aria-label={t.mutedUnreadLabel}
+              className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+              title={t.mutedUnreadLabel}
+            />
           ) : null}
         </span>
         {showPublicNickname ? (
@@ -198,7 +206,7 @@ function DesktopFriendRosterRow({
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",
-            unreadCount > 0
+            showUnreadBadge
               ? "font-bold text-ink"
               : isActive
                 ? "text-[#156240]"

@@ -20,6 +20,7 @@ import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
+import { noIndexMetadata } from "@/lib/seo";
 
 type MessageThreadPageProps = {
   params: Promise<{
@@ -29,17 +30,19 @@ type MessageThreadPageProps = {
   searchParams: Promise<{
     access?: string;
     activityId?: string;
+    mutual?: string;
   }>;
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
 
 export default async function MessageThreadPage({
   params,
   searchParams,
 }: MessageThreadPageProps) {
   const { locale, conversationId } = await params;
-  const { access: accessToken, activityId } = await searchParams;
+  const { access: accessToken, activityId, mutual } = await searchParams;
   const requestHeaders = await headers();
   const userAgent = requestHeaders.get("user-agent");
   const isMobileRequest = isMobileUserAgent(userAgent);
@@ -159,6 +162,7 @@ export default async function MessageThreadPage({
           backHref="/footprints?tab=message"
           conversation={conversation}
           locale={locale}
+          showMutualFollowNotice={mutual === "1"}
         />
       </div>
       {isMobileRequest ? null : (

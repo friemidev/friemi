@@ -68,7 +68,9 @@ export type ActivityRoomMessageViewModel = {
 export type ActivityRoomChatActivityViewModel = {
   announcements: ActivityRoomAnnouncementViewModel[];
   endAt: string | null;
+  hasUnreadAnnouncement: boolean;
   id: string;
+  isMuted: boolean;
   publicEventId: string | null;
   requiresApproval: boolean;
   startAt: string;
@@ -108,6 +110,12 @@ export type ActivityRoomChatRosterItemViewModel = {
   startAt: string;
   status: ActivityStatus;
   title: string;
+  isMuted: boolean;
+  unreadCount: number;
+};
+
+export type ActivityRoomUnreadStateViewModel = {
+  isMuted: boolean;
   unreadCount: number;
 };
 
@@ -252,6 +260,7 @@ const activityRoomRosterSelect = {
   roomReadStates: {
     select: {
       lastReadAt: true,
+      mutedAt: true,
     },
     take: 1,
   },
@@ -437,8 +446,21 @@ function mapActivityRoomMessage(
 function mapActivityRoomActivity(
   activity: ActivityRoomActivityForView,
   policy: ActivityRoomChatPolicy,
+  options: {
+    announcementReadAt?: Date | null;
+    isMuted?: boolean;
+    viewerProfileId?: string | null;
+  } = {},
 ): ActivityRoomChatActivityViewModel {
   const canShowTitle = policy.canView || activity.visibility === "PUBLIC";
+  const latestAnnouncement = policy.canView ? activity.announcements[0] : null;
+  const hasUnreadAnnouncement = Boolean(
+    latestAnnouncement &&
+      latestAnnouncement.authorId !== options.viewerProfileId &&
+      (!options.announcementReadAt ||
+        options.announcementReadAt.getTime() <
+          latestAnnouncement.createdAt.getTime()),
+  );
 
   return {
     announcements: policy.canView
@@ -454,7 +476,9 @@ function mapActivityRoomActivity(
         }))
       : [],
     endAt: activity.endAt?.toISOString() ?? null,
+    hasUnreadAnnouncement,
     id: activity.id,
+    isMuted: Boolean(options.isMuted),
     publicEventId: activity.publicEventId,
     requiresApproval: activity.requiresApproval,
     startAt: activity.startAt.toISOString(),
@@ -569,6 +593,7 @@ function mapActivityRoomRosterItem(
     startAt: room.startAt.toISOString(),
     status: room.status,
     title: room.title,
+    isMuted: Boolean(room.roomReadStates[0]?.mutedAt),
     unreadCount,
   };
 }
@@ -733,6 +758,16 @@ export async function getActivityRoomChatPageData({
         },
         take: 1,
       },
+      roomReadStates: {
+        where: {
+          profileId: viewerProfileId,
+        },
+        select: {
+          announcementReadAt: true,
+          mutedAt: true,
+        },
+        take: 1,
+      },
     },
   });
 
@@ -768,7 +803,15 @@ export async function getActivityRoomChatPageData({
     : [];
 
   return {
-    activity: mapActivityRoomActivity(activity, policy),
+    activity: mapActivityRoomActivity(
+      activity,
+      policy,
+      {
+        announcementReadAt: activity.roomReadStates[0]?.announcementReadAt,
+        isMuted: Boolean(activity.roomReadStates[0]?.mutedAt),
+        viewerProfileId,
+      },
+    ),
     messages: [...messages]
       .reverse()
       .map((message) => mapActivityRoomMessage(message, viewerProfileId)),
@@ -1027,6 +1070,7 @@ export async function getActivityRoomChatRoster(
         },
         select: {
           lastReadAt: true,
+          mutedAt: true,
         },
         take: 1,
       },
@@ -1079,13 +1123,17 @@ export async function getUnreadActivityRoomTotalMessageCount(
         },
         select: {
           lastReadAt: true,
+          mutedAt: true,
         },
         take: 1,
       },
     },
   });
+  const unmutedRooms = rooms.filter(
+    (room) => !room.roomReadStates[0]?.mutedAt,
+  );
   const unreadCountByActivityId = await getActivityRoomUnreadCountMap(
-    rooms,
+    unmutedRooms,
     viewerProfileId,
   );
 
@@ -1099,6 +1147,15 @@ export async function getUnreadActivityRoomMessageCount(
   viewerProfileId: string,
   activityId: string,
 ) {
+  const state = await getActivityRoomUnreadState(viewerProfileId, activityId);
+
+  return state.unreadCount;
+}
+
+export async function getActivityRoomUnreadState(
+  viewerProfileId: string,
+  activityId: string,
+): Promise<ActivityRoomUnreadStateViewModel> {
   const policy = await getActivityRoomPolicy(
     prisma,
     viewerProfileId,
@@ -1106,7 +1163,10 @@ export async function getUnreadActivityRoomMessageCount(
   );
 
   if (!policy.canView) {
-    return 0;
+    return {
+      isMuted: false,
+      unreadCount: 0,
+    };
   }
 
   const readState = await prisma.activityRoomReadState.findUnique({
@@ -1118,10 +1178,11 @@ export async function getUnreadActivityRoomMessageCount(
     },
     select: {
       lastReadAt: true,
+      mutedAt: true,
     },
   });
 
-  return prisma.activityRoomMessage.count({
+  const unreadCount = await prisma.activityRoomMessage.count({
     where: {
       activityId,
       deletedAt: null,
@@ -1137,6 +1198,11 @@ export async function getUnreadActivityRoomMessageCount(
         : {}),
     },
   });
+
+  return {
+    isMuted: Boolean(readState?.mutedAt),
+    unreadCount,
+  };
 }
 
 export async function markActivityRoomChatRead({

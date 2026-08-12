@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
@@ -11,6 +12,8 @@ import {
 } from "@/lib/auth-redirect";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,16 @@ type SignUpPageProps = {
     [authRedirectParamName]?: string | string[];
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: SignUpPageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/sign-up"),
+  });
+}
 
 function isWechatWebView(userAgent: string | null) {
   return /MicroMessenger/i.test(userAgent ?? "");

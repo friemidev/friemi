@@ -2,6 +2,7 @@ export const brand = {
   appleIconPath: "/brand/v2_1/friemi-icon-apple-180.png",
   desktopBandImagePath: "/brand/v2_1/friemi-bg-desktop-soft-band.png",
   desktopWideImagePath: "/brand/v2_1/friemi-bg-desktop-wide.png",
+  emptyContentIllustrationPath: "/illustrations/ui/empty-content.png",
   emptyStateIconPath: "/全背景logo.png",
   description:
     "Friemi helps overseas Chinese-speaking users discover activities, bring friends, and start plans nearby.",

@@ -289,6 +289,7 @@ model UserProfile {
   friendshipsAsUserB      Friendship[]                  @relation("FriendshipUserB")
   conversationsAsUserA    Conversation[]                @relation("ConversationUserA")
   conversationsAsUserB    Conversation[]                @relation("ConversationUserB")
+  conversationPreferences ConversationPreference[]       @relation("ConversationPreferenceProfile")
   sentDirectMessages      DirectMessage[]               @relation("DirectMessageSender")
   activityRoomMessages    ActivityRoomMessage[]         @relation("ActivityRoomMessageSender")
   deletedRoomMessages     ActivityRoomMessage[]         @relation("ActivityRoomMessageDeletedBy")
@@ -583,16 +584,19 @@ model ActivityRoomMessage {
 }
 
 model ActivityRoomReadState {
-  id         String      @id @default(cuid())
-  activityId String
-  profileId  String
-  lastReadAt DateTime    @default(now())
-  activity   Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  profile    UserProfile @relation("ActivityRoomReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id                 String      @id @default(cuid())
+  activityId         String
+  profileId          String
+  lastReadAt         DateTime    @default(now())
+  mutedAt            DateTime?
+  announcementReadAt DateTime?
+  activity           Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  profile            UserProfile @relation("ActivityRoomReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@unique([activityId, profileId])
+  @@index([profileId, mutedAt])
   @@index([profileId, updatedAt])
   @@index([activityId, lastReadAt])
 }
@@ -1249,6 +1253,7 @@ model Conversation {
   userA         UserProfile     @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
   userB         UserProfile     @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
   messages      DirectMessage[]
+  preferences   ConversationPreference[]
   lastMessageAt DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -1257,6 +1262,21 @@ model Conversation {
   @@index([userAId, lastMessageAt])
   @@index([userBId, lastMessageAt])
   @@index([lastMessageAt])
+}
+
+model ConversationPreference {
+  id             String       @id @default(cuid())
+  conversationId String
+  profileId      String
+  mutedAt        DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  profile        UserProfile  @relation("ConversationPreferenceProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([conversationId, profileId])
+  @@index([profileId, mutedAt])
+  @@index([conversationId, mutedAt])
 }
 
 model DirectMessage {
