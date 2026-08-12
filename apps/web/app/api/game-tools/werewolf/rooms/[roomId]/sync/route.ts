@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRoom";
+import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -28,7 +29,7 @@ function buildSyncVersion({
   ].join(":");
 }
 
-export async function GET(
+async function getWerewolfRoomSync(
   request: Request,
   context: { params: Promise<{ roomId: string }> },
 ) {
@@ -218,4 +219,15 @@ export async function GET(
       },
     );
   }
+}
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ roomId: string }> },
+) {
+  return withApiRequestMetrics(
+    request,
+    "/api/game-tools/werewolf/rooms/[roomId]/sync",
+    async () => getWerewolfRoomSync(request, context),
+  );
 }

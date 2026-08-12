@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -14,7 +15,7 @@ async function getPresenceEvent(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function updateProfilePresence(request: Request) {
   try {
     const profile = await getOptionalCurrentUserProfileSnapshot();
 
@@ -37,12 +38,17 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       state: presenceEvent,
-      updatedAt:
-        presenceEvent === "offline" ? null : updatedAt.toISOString(),
+      updatedAt: presenceEvent === "offline" ? null : updatedAt.toISOString(),
     });
   } catch (error) {
     console.error("Failed to update profile presence", error);
 
     return NextResponse.json({ ok: false }, { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return withApiRequestMetrics(request, "/api/profile/presence", async () =>
+    updateProfilePresence(request),
+  );
 }

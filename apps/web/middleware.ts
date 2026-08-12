@@ -52,6 +52,7 @@ const isProfileVisitsApiRoute = createRouteMatcher(["/api/profile-visits(.*)"]);
 const isProfileApiRoute = createRouteMatcher(["/api/profile(.*)"]);
 const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
+const isNavigationApiRoute = createRouteMatcher(["/api/navigation(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
@@ -277,6 +278,10 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isNavigationApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isAnalyticsApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -312,6 +317,7 @@ export const config = {
     "/api/profile-visits/:path*",
     "/api/referrals/:path*",
     "/api/lobby/:path*",
+    "/api/navigation/:path*",
     "/api/analytics/:path*",
     "/api/search/:path*",
     "/api/translations/:path*",

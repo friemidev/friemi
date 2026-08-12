@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const heartbeatIntervalMs = 60 * 1000;
+const heartbeatIntervalMs = 90 * 1000;
 const heartbeatDedupeMs = 10 * 1000;
 const foregroundEvents = [
   "focus",
@@ -29,7 +29,8 @@ export function PresenceHeartbeat() {
     let lastOfflineAt = 0;
 
     const isActiveSurface = () =>
-      document.visibilityState !== "hidden" && window.navigator.onLine !== false;
+      document.visibilityState !== "hidden" &&
+      window.navigator.onLine !== false;
 
     const sendPresence = (state: "online" | "offline") =>
       JSON.stringify({ state });
@@ -109,7 +110,9 @@ export function PresenceHeartbeat() {
       heartbeatTimer = null;
     };
 
-    const startHeartbeat = ({ forcePing = false }: { forcePing?: boolean } = {}) => {
+    const startHeartbeat = ({
+      forcePing = false,
+    }: { forcePing?: boolean } = {}) => {
       if (!isActiveSurface()) {
         stopHeartbeat();
         return;
