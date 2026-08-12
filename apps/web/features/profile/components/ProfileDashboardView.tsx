@@ -1735,9 +1735,12 @@ function getProfileRemarkCopy(locale: string) {
     return {
       clear: "Effacer",
       cleared: "Note effacee.",
+      close: "Fermer",
+      edit: "Modifier la note",
       label: "Note privee",
       originalName: "Nom public",
       placeholder: "Ex. partenaire jeux",
+      privateHint: "Visible uniquement par vous",
       save: "Enregistrer",
       saved: "Note enregistree.",
       saving: "Enregistrement...",
@@ -1748,9 +1751,12 @@ function getProfileRemarkCopy(locale: string) {
     return {
       clear: "Clear",
       cleared: "Remark cleared.",
+      close: "Close",
+      edit: "Edit remark",
       label: "Private remark",
       originalName: "Public name",
       placeholder: "E.g. board game friend",
+      privateHint: "Only visible to you",
       save: "Save",
       saved: "Remark saved.",
       saving: "Saving...",
@@ -1760,9 +1766,12 @@ function getProfileRemarkCopy(locale: string) {
   return {
     clear: "清除",
     cleared: "备注已清除。",
+    close: "关闭",
+    edit: "修改备注名",
     label: "备注名",
     originalName: "公开昵称",
     placeholder: "例如：桌游搭子",
+    privateHint: "仅自己可见",
     save: "保存",
     saved: "备注已保存。",
     saving: "保存中...",
@@ -1823,7 +1832,7 @@ function ProfileRemarkEditor({
   return (
     <div
       className={cn(
-        "grid gap-2 rounded-[1rem] bg-[#F7F7F0] px-3 py-3 ring-1 ring-[#E7E2D6]",
+        "grid gap-3",
         className,
       )}
     >
@@ -1886,6 +1895,157 @@ function ProfileRemarkEditor({
   );
 }
 
+function PublicProfileMoreMenu({
+  buttonClassName,
+  isAuthenticated,
+  locale,
+  profile,
+}: {
+  buttonClassName?: string;
+  isAuthenticated: boolean;
+  locale: string;
+  profile: PublicProfileViewModel;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  const remarkCopy = getProfileRemarkCopy(locale);
+  const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const menuId = `public-profile-more-menu-${profile.id}`;
+  const dialogTitleId = `profile-remark-dialog-title-${profile.id}`;
+
+  useEffect(() => {
+    if (!menuOpen && !remarkOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (remarkOpen) {
+        setRemarkOpen(false);
+      } else {
+        setMenuOpen(false);
+      }
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        menuOpen &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [menuOpen, remarkOpen]);
+
+  const openRemarkEditor = () => {
+    setMenuOpen(false);
+
+    if (!isAuthenticated) {
+      router.push(getSignInHref(locale, `/profile/${profile.id}`));
+      return;
+    }
+
+    setRemarkOpen(true);
+  };
+
+  return (
+    <>
+      <div className="relative" ref={menuRef}>
+        <button
+          aria-controls={menuOpen ? menuId : undefined}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-label={copy.more}
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[#1D1D1B] transition active:scale-95",
+            buttonClassName,
+          )}
+          onClick={() => setMenuOpen((current) => !current)}
+          type="button"
+        >
+          <MoreHorizontal className="h-5 w-5" strokeWidth={2.3} />
+        </button>
+
+        {menuOpen ? (
+          <div
+            className="absolute right-0 top-11 z-[80] w-44 overflow-hidden rounded-lg bg-white py-1 shadow-[0_16px_42px_rgba(17,18,16,0.18)] ring-1 ring-[#E7E2D6]"
+            id={menuId}
+            role="menu"
+          >
+            <button
+              className="flex h-11 w-full items-center gap-2.5 px-3 text-left text-sm font-semibold text-[#1D1D1B] transition hover:bg-[#F5F7F1] active:bg-[#EEF3EA]"
+              onClick={openRemarkEditor}
+              role="menuitem"
+              type="button"
+            >
+              <PencilLine className="h-4 w-4 text-[#156240]" />
+              <span>{remarkCopy.edit}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {remarkOpen ? (
+        <div
+          aria-labelledby={dialogTitleId}
+          aria-modal="true"
+          className="fixed inset-0 z-[10001] flex items-end bg-[#111210]/30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center sm:justify-center sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setRemarkOpen(false);
+            }
+          }}
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-[1.35rem] bg-white p-4 shadow-[0_24px_70px_rgba(17,18,16,0.24)] ring-1 ring-[#D6D5B2] sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2
+                  className="text-lg font-bold leading-6 text-[#111210]"
+                  id={dialogTitleId}
+                >
+                  {remarkCopy.edit}
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-[#7A8276]">
+                  {remarkCopy.privateHint}
+                </p>
+              </div>
+              <button
+                aria-label={remarkCopy.close}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#4F574F] transition hover:bg-[#F5F7F1] active:scale-95"
+                onClick={() => setRemarkOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <ProfileRemarkEditor
+              className="mt-5"
+              locale={locale}
+              profile={profile}
+            />
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function PublicMobileProfileHome({
   dashboard,
   isAuthenticated,
@@ -1928,14 +2088,11 @@ function PublicMobileProfileHome({
           >
             <Share2 className="h-4 w-4" strokeWidth={2.3} />
           </button>
-          <button
-            aria-label={copy.more}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[#1D1D1B]"
-            onClick={() => window.alert(copy.soon)}
-            type="button"
-          >
-            <MoreHorizontal className="h-5 w-5" strokeWidth={2.3} />
-          </button>
+          <PublicProfileMoreMenu
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            profile={profile}
+          />
         </div>
       </header>
 
@@ -1990,14 +2147,6 @@ function PublicMobileProfileHome({
             relationship={dashboard.viewerRelationship}
           />
         </div>
-
-        {isAuthenticated ? (
-          <ProfileRemarkEditor
-            className="mt-3"
-            locale={locale}
-            profile={profile}
-          />
-        ) : null}
 
         <CharmProgressPanel
           className="mt-5 border-b border-[#E3DCC5] pb-5"
@@ -3239,6 +3388,14 @@ export function ProfileDashboardView({
                 </div>
               </div>
               <div className="grid gap-2">
+                <div className="flex justify-end">
+                  <PublicProfileMoreMenu
+                    buttonClassName="bg-white/85 ring-1 ring-[#D6D5B2] hover:bg-white"
+                    isAuthenticated={isAuthenticated}
+                    locale={locale}
+                    profile={profile}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     className={cn(
@@ -3281,9 +3438,6 @@ export function ProfileDashboardView({
                   profileId={profile.id}
                   relationship={dashboard.viewerRelationship}
                 />
-                {isAuthenticated ? (
-                  <ProfileRemarkEditor locale={locale} profile={profile} />
-                ) : null}
                 <CharmProgressPanel
                   className="border-t border-[#D6D5B2]/55 pt-2"
                   dashboard={dashboard}

@@ -2316,11 +2316,7 @@ export function ActivityRoomChatPage({
           label={copy.backToActivity}
         />
         <div className="min-w-0 text-center">
-          <p className="mx-auto flex max-w-full items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-normal text-[#156240]">
-            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{copy.title}</span>
-          </p>
-          <h1 className="mt-1 truncate text-lg font-bold text-[#111210]">
+          <h1 className="truncate text-lg font-bold text-[#111210]">
             {activity?.title ?? copy.title}
           </h1>
         </div>
