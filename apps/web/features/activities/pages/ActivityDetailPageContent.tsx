@@ -7,9 +7,7 @@ import type { ReactNode } from "react";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
-  ChevronDown,
   CheckCircle2,
   ExternalLink,
   MapPin,
@@ -37,6 +35,7 @@ import {
   inferAnalyticsSourceSurfaceFromReferrer,
 } from "@/features/analytics/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
+import { ActivityAnnouncementDetailPanel } from "@/features/activities/components/ActivityAnnouncementDetailPanel";
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
@@ -123,7 +122,6 @@ import {
   getActivityDetailPath,
   getLegacyActivityDetailPath,
 } from "@/features/activities/utils/activityRoutes";
-import type { ActivityAnnouncementViewModel } from "@/features/activities/types";
 
 type ActivityDetailPageProps = {
   params: Promise<{
@@ -489,122 +487,6 @@ function getActivityOperatorActionCopy(locale: string) {
   };
 }
 
-function getActivityAnnouncementDetailCopy(locale: string) {
-  if (locale === "fr") {
-    return {
-      collapse: "Réduire",
-      latest: "Dernière",
-      title: "Annonce de groupe",
-      viewAll: "Voir les annonces",
-    };
-  }
-
-  if (locale === "en") {
-    return {
-      collapse: "Collapse",
-      latest: "Latest",
-      title: "Group announcement",
-      viewAll: "View announcements",
-    };
-  }
-
-  return {
-    collapse: "收起公告",
-    latest: "最新",
-    title: "群公告",
-    viewAll: "查看公告列表",
-  };
-}
-
-function formatAnnouncementTimestamp(locale: string, value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function ActivityAnnouncementDetailPanel({
-  announcements,
-  locale,
-}: {
-  announcements: ActivityAnnouncementViewModel[];
-  locale: string;
-}) {
-  const latestAnnouncement = announcements[0];
-  const copy = getActivityAnnouncementDetailCopy(locale);
-
-  if (!latestAnnouncement) {
-    return null;
-  }
-
-  return (
-    <section className="rounded-[1.25rem] border border-[#D6D5B2] bg-white px-4 py-4 shadow-[0_10px_26px_rgba(21,98,64,0.06)] sm:px-5">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
-          <Bell className="h-5 w-5" />
-          <span
-            aria-hidden="true"
-            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
-          />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="text-base font-bold text-ink">{copy.title}</h2>
-            <span className="rounded-full bg-[#E7457A] px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
-              {copy.latest}
-            </span>
-            <span className="text-[11px] font-semibold text-[#8B907F]">
-              {formatAnnouncementTimestamp(
-                locale,
-                latestAnnouncement.createdAt,
-              )}
-            </span>
-          </div>
-          <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
-            {latestAnnouncement.content}
-          </p>
-        </div>
-      </div>
-
-      {announcements.length > 1 ? (
-        <details className="group mt-3">
-          <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-xs font-bold text-[#156240] transition active:scale-[0.98] [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">{copy.viewAll}</span>
-            <span className="hidden group-open:inline">{copy.collapse}</span>
-            <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
-          </summary>
-          <div className="mt-3 grid gap-2">
-            {announcements.map((announcement) => (
-              <article
-                className="rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3.5 py-3"
-                key={announcement.id}
-              >
-                <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
-                  <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
-                    {announcement.authorName}
-                  </span>
-                  <span>
-                    {formatAnnouncementTimestamp(locale, announcement.createdAt)}
-                  </span>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
-                  {announcement.content}
-                </p>
-              </article>
-            ))}
-          </div>
-        </details>
-      ) : null}
-    </section>
-  );
-}
-
 function ActivityRoomEntryLink({
   className,
   href,
@@ -635,6 +517,7 @@ function ActivityRoomEntryLink({
         className,
       )}
       href={href}
+      target="_top"
     >
       <MessageCircle className="h-4 w-4" />
       <span className="truncate">{label}</span>
@@ -1645,11 +1528,13 @@ export async function ActivityDetailPageContent({
             console.error("Failed to load activity room unread count", error);
 
             return {
+              hasUnreadAnnouncement: false,
               isMuted: false,
               unreadCount: 0,
             };
           })
       : {
+          hasUnreadAnnouncement: false,
           isMuted: false,
           unreadCount: 0,
         };
@@ -2099,7 +1984,9 @@ export async function ActivityDetailPageContent({
         {canShowActivityAnnouncements ? (
           <div className="md:hidden">
             <ActivityAnnouncementDetailPanel
+              activityId={activity.id}
               announcements={activity.announcements}
+              hasUnread={activityRoomUnreadState.hasUnreadAnnouncement}
               locale={locale}
             />
           </div>
@@ -2320,7 +2207,9 @@ export async function ActivityDetailPageContent({
         <article className="min-w-0 space-y-6 lg:order-1">
           {canShowActivityAnnouncements ? (
             <ActivityAnnouncementDetailPanel
+              activityId={activity.id}
               announcements={activity.announcements}
+              hasUnread={activityRoomUnreadState.hasUnreadAnnouncement}
               locale={locale}
             />
           ) : null}

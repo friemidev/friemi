@@ -6,10 +6,10 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
-  BellOff,
   CheckCircle2,
   ChevronRight,
   ExternalLink,
+  ListChecks,
   LoaderCircle,
   Lock,
   LogOut,
@@ -30,9 +30,11 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
@@ -63,14 +65,16 @@ import {
   formatChatListTimestamp,
   formatChatMessageTime,
   getChatDateKey,
+  shouldShowChatTimeSeparator,
 } from "@/lib/chatDateSeparators";
 import {
   acknowledgeActivityAnnouncementAction,
-  deleteActivityRoomMessageAction,
+  deleteActivityRoomMessagesAction,
   inviteActivityRoomParticipantAction,
   removeActivityRoomParticipantAction,
   sendActivityRoomMessageAction,
   toggleActivityRoomMuteAction,
+  toggleActivityRoomPinAction,
   type ActivityRoomChatActionState,
   type ActivityRoomInviteActionState,
   type ActivityRoomMemberActionState,
@@ -121,7 +125,6 @@ const initialLeaveState: CancelParticipationState = {};
 const initialInviteActionState: ActivityRoomInviteActionState = {};
 const initialMemberActionState: ActivityRoomMemberActionState = {};
 const initialAnnouncementDeleteState: DeleteActivityAnnouncementState = {};
-const chatTimeSeparatorIntervalMs = 5 * 60 * 1000;
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
@@ -135,6 +138,7 @@ function getRoomManagementCopy(locale: string) {
       close: "Fermer",
       contactParticipants: "Contacter",
       groupAnnouncement: "Annonce",
+      checkIn: "Pointage",
       groupName: "Nom du groupe",
       infoTitle: "Membres",
       invite: "Inviter",
@@ -165,6 +169,7 @@ function getRoomManagementCopy(locale: string) {
       muteDescription:
         "Les nouveaux messages affichent un point rouge, sans compteur.",
       muteNotifications: "Mettre en sourdine",
+      pinChat: "Épingler la discussion",
       moreMembers: "Voir plus",
       noAnnouncement: "Aucune annonce",
       removeMember: "Retirer",
@@ -180,7 +185,8 @@ function getRoomManagementCopy(locale: string) {
       addMember: "Add",
       close: "Close",
       contactParticipants: "Contact",
-      groupAnnouncement: "Group announcement",
+      groupAnnouncement: "Announcement",
+      checkIn: "Check-in",
       groupName: "Group name",
       infoTitle: "Members",
       invite: "Invite",
@@ -212,6 +218,7 @@ function getRoomManagementCopy(locale: string) {
       muteDescription:
         "New messages show a red dot and do not count in badges.",
       muteNotifications: "Mute chat",
+      pinChat: "Pin chat",
       moreMembers: "More members",
       noAnnouncement: "No announcement",
       removeMember: "Remove",
@@ -226,7 +233,8 @@ function getRoomManagementCopy(locale: string) {
     addMember: "添加",
     close: "关闭",
     contactParticipants: "联系成员",
-    groupAnnouncement: "群公告",
+    groupAnnouncement: "公告",
+    checkIn: "签到",
     groupName: "群聊名称",
     infoTitle: "成员",
     invite: "邀请",
@@ -256,6 +264,7 @@ function getRoomManagementCopy(locale: string) {
     membersCount: (count: number) => `${count} 位成员`,
     muteDescription: "开启后新消息只显示红点，不计入未读数字。",
     muteNotifications: "消息免打扰",
+    pinChat: "置顶聊天",
     moreMembers: "查看更多成员",
     noAnnouncement: "暂无群公告",
     removeMember: "移除",
@@ -909,48 +918,46 @@ function ActivityRoomInfoRow({
   );
 }
 
-function ActivityRoomMuteToggleRow({
+function ActivityRoomPreferenceToggleRow({
+  action,
   activityId,
-  isMuted,
+  checked,
+  fieldName,
+  label,
   locale,
 }: {
+  action: (formData: FormData) => Promise<void>;
   activityId: string;
-  isMuted: boolean;
+  checked: boolean;
+  fieldName: "muted" | "pinned";
+  label: string;
   locale: string;
 }) {
-  const copy = getRoomManagementCopy(locale);
-
   return (
-    <form action={toggleActivityRoomMuteAction}>
+    <form action={action}>
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
-      <input name="muted" type="hidden" value={isMuted ? "0" : "1"} />
+      <input name={fieldName} type="hidden" value={checked ? "0" : "1"} />
       <button
-        className="flex min-h-16 w-full items-center justify-between gap-4 border-b border-[#EFEFEA] bg-white px-5 py-3 text-left transition active:bg-[#F7F7F0] last:border-b-0"
-        title={copy.muteDescription}
+        aria-checked={checked}
+        className="flex min-h-14 w-full items-center justify-between gap-4 border-b border-[#EFEFEA] bg-white px-5 py-3 text-left transition active:bg-[#F7F7F0] last:border-b-0"
+        role="switch"
         type="submit"
       >
-        <span className="min-w-0">
-          <span className="block text-[15px] font-bold text-[#111210]">
-            {isMuted ? copy.unmuteNotifications : copy.muteNotifications}
-          </span>
-          <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#8B907F]">
-            {copy.muteDescription}
-          </span>
-        </span>
+        <span className="text-[15px] font-bold text-[#111210]">{label}</span>
         <span
+          aria-hidden="true"
           className={cn(
-            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 transition",
-            isMuted
-              ? "bg-[#ECF5EF] text-[#156240] ring-[#D8E8DC]"
-              : "bg-white text-[#8B907F] ring-[#E7E2D6]",
+            "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
+            checked ? "bg-[#1DB96A]" : "bg-[#D8DAD5]",
           )}
         >
-          {isMuted ? (
-            <BellOff className="h-4 w-4" />
-          ) : (
-            <Bell className="h-4 w-4" />
-          )}
+          <span
+            className={cn(
+              "block h-6 w-6 rounded-full bg-white shadow-[0_1px_4px_rgba(17,18,16,0.24)] transition-transform",
+              checked && "translate-x-5",
+            )}
+          />
         </span>
       </button>
     </form>
@@ -1115,28 +1122,6 @@ function ScrollAnchor({ lastMessageId }: { lastMessageId?: string }) {
   return <div ref={anchorRef} aria-hidden="true" />;
 }
 
-function shouldShowChatTimeSeparator(
-  message: ActivityRoomMessageViewModel,
-  previousMessage?: ActivityRoomMessageViewModel,
-) {
-  if (!previousMessage) {
-    return true;
-  }
-
-  if (getChatDateKey(message.createdAt) !== getChatDateKey(previousMessage.createdAt)) {
-    return true;
-  }
-
-  const messageTime = new Date(message.createdAt).getTime();
-  const previousMessageTime = new Date(previousMessage.createdAt).getTime();
-
-  if (!Number.isFinite(messageTime) || !Number.isFinite(previousMessageTime)) {
-    return false;
-  }
-
-  return messageTime - previousMessageTime >= chatTimeSeparatorIntervalMs;
-}
-
 function ChatTimeSeparator({
   createdAt,
   showDate,
@@ -1260,6 +1245,7 @@ function ActivityRoomAnnouncementNotice({
   variant?: "bar" | "row";
 }) {
   const [open, setOpen] = useState(false);
+  const [portalMounted, setPortalMounted] = useState(false);
   const [acknowledgedAnnouncementId, setAcknowledgedAnnouncementId] =
     useState<string | null>(null);
   const copy = getActivityRoomChatCopy(locale).announcements;
@@ -1271,6 +1257,31 @@ function ActivityRoomAnnouncementNotice({
   useEffect(() => {
     setAcknowledgedAnnouncementId(null);
   }, [latestAnnouncement?.id]);
+
+  useEffect(() => {
+    setPortalMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   if (!latestAnnouncement) {
     return null;
@@ -1292,6 +1303,99 @@ function ActivityRoomAnnouncementNotice({
     setOpen(false);
     void acknowledgeActivityAnnouncementAction(formData);
   }
+
+  const dialog =
+    open && portalMounted
+      ? createPortal(
+          <div
+            className="friemi-alert-overlay fixed inset-0 z-[120] grid place-items-center overflow-y-auto bg-[#111210]/48 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] sm:p-6"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setOpen(false);
+              }
+            }}
+            role="presentation"
+          >
+            <section
+              aria-labelledby="activity-room-announcement-title"
+              aria-modal="true"
+              className="friemi-alert-card max-h-[min(78svh,32rem)] w-full max-w-sm overflow-hidden rounded-[1.15rem] bg-white shadow-[0_26px_80px_rgba(17,18,16,0.3)]"
+              role="dialog"
+            >
+              <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240]">
+                    <Bell className="h-4 w-4" />
+                  </span>
+                  <h2
+                    className="truncate text-base font-bold text-[#111210]"
+                    id="activity-room-announcement-title"
+                  >
+                    {copy.title}
+                  </h2>
+                </div>
+                <button
+                  aria-label={copy.close}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6C746A] transition hover:bg-[#F2F2EF] active:scale-95"
+                  onClick={() => setOpen(false)}
+                  title={copy.close}
+                  type="button"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="max-h-[calc(min(78svh,32rem)-3.75rem)] overflow-y-auto px-5 pb-4">
+                <div className="divide-y divide-[#EFEFEA]">
+                  {announcements.map((announcement, index) => (
+                    <article className="py-4 first:pt-2 last:pb-1" key={announcement.id}>
+                      <div className="flex min-w-0 items-start gap-2">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-[#8B907F]">
+                          <span className="font-bold text-[#156240]">
+                            {announcement.authorName}
+                          </span>
+                          {index === 0 ? (
+                            <span className="rounded-full bg-[#FFE6EE] px-2 py-0.5 font-bold text-[#D6245F]">
+                              {copy.latest}
+                            </span>
+                          ) : null}
+                          <span>
+                            {formatChatListTimestamp(
+                              announcement.createdAt,
+                              locale,
+                            )}
+                          </span>
+                        </div>
+                        {canDelete && activityId ? (
+                          <DeleteActivityAnnouncementForm
+                            activityId={activityId}
+                            announcementId={announcement.id}
+                            locale={locale}
+                          />
+                        ) : null}
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
+                        {announcement.content}
+                      </p>
+                      {index === 0 && showUnreadDot ? (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            className="inline-flex h-9 min-w-20 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white transition active:scale-[0.98]"
+                            onClick={handleAcknowledgeAnnouncement}
+                            type="button"
+                          >
+                            {copy.acknowledge}
+                          </button>
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <>
@@ -1327,90 +1431,7 @@ function ActivityRoomAnnouncementNotice({
         <ChevronRight className="h-4 w-4 shrink-0 text-[#8B907F] transition group-active:translate-x-0.5" />
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-end bg-[#111210]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:justify-center sm:p-6"
-          role="presentation"
-        >
-          <section
-            aria-labelledby="activity-room-announcement-title"
-            aria-modal="true"
-            className="max-h-[min(82svh,34rem)] w-full max-w-md overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
-            role="dialog"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#E9E1CD] px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
-                  <Bell className="h-4 w-4" />
-                </span>
-                <h2
-                  className="truncate text-base font-bold text-[#111210]"
-                  id="activity-room-announcement-title"
-                >
-                  {copy.title}
-                </h2>
-              </div>
-              <button
-                className="h-8 shrink-0 rounded-full px-3 text-xs font-bold text-[#6C746A] transition active:bg-[#F7F7F0]"
-                onClick={() => setOpen(false)}
-                type="button"
-              >
-                {copy.close}
-              </button>
-            </div>
-            <div className="max-h-[calc(min(82svh,34rem)-3.5rem)] overflow-y-auto px-4 py-3">
-              <div className="grid gap-3">
-                {announcements.map((announcement, index) => (
-                  <article
-                    className="rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3.5 py-3"
-                    key={announcement.id}
-                  >
-                    <div className="flex min-w-0 items-start gap-2">
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
-                        <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
-                          {announcement.authorName}
-                        </span>
-                        {index === 0 ? (
-                          <span className="rounded-full bg-[#E7457A] px-2 py-1 text-white">
-                            {copy.latest}
-                          </span>
-                        ) : null}
-                        <span>
-                          {formatChatListTimestamp(
-                            announcement.createdAt,
-                            locale,
-                          )}
-                        </span>
-                      </div>
-                      {canDelete && activityId ? (
-                        <DeleteActivityAnnouncementForm
-                          activityId={activityId}
-                          announcementId={announcement.id}
-                          locale={locale}
-                        />
-                      ) : null}
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
-                      {announcement.content}
-                    </p>
-                    {index === 0 && showUnreadDot ? (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          className="inline-flex h-9 min-w-20 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white transition active:scale-[0.98]"
-                          onClick={handleAcknowledgeAnnouncement}
-                          type="button"
-                        >
-                          {copy.acknowledge}
-                        </button>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      {dialog}
     </>
   );
 }
@@ -1564,9 +1585,20 @@ export function ActivityRoomManagePage({
                 {activity?.title ?? chatCopy.title}
               </span>
             </ActivityRoomInfoRow>
-            <ActivityRoomMuteToggleRow
+            <ActivityRoomPreferenceToggleRow
+              action={toggleActivityRoomMuteAction}
               activityId={activity?.id ?? activityId}
-              isMuted={Boolean(activity?.isMuted)}
+              checked={Boolean(activity?.isMuted)}
+              fieldName="muted"
+              label={copy.muteNotifications}
+              locale={locale}
+            />
+            <ActivityRoomPreferenceToggleRow
+              action={toggleActivityRoomPinAction}
+              activityId={activity?.id ?? activityId}
+              checked={Boolean(activity?.isPinned)}
+              fieldName="pinned"
+              label={copy.pinChat}
               locale={locale}
             />
             {activity?.announcements.length ? (
@@ -1592,27 +1624,30 @@ export function ActivityRoomManagePage({
             <>
               <div className="h-2 bg-[#F2F2EF]" />
               <section className="bg-white px-4 py-4">
-                <p className="mb-3 px-1 text-xs font-bold uppercase tracking-normal text-[#8B907F]">
-                  {canManageRoom ? copy.manageTitle : copy.label}
-                </p>
-                <div className="grid gap-3">
-                  <ActivityAnnouncementComposer
-                    activityId={activity?.id ?? activityId}
-                    locale={locale}
-                    compact
-                  />
-                  <ActivityCheckInReviewPanel
-                    activityId={activity?.id ?? activityId}
-                    locale={locale}
-                    participants={management.checkInRoster}
-                  />
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <ActivityAnnouncementComposer
+                      activityId={activity?.id ?? activityId}
+                      locale={locale}
+                      compact
+                      triggerLabel={copy.groupAnnouncement}
+                    />
+                    <div className="[&>button]:w-full">
+                      <ActivityCheckInReviewPanel
+                        activityId={activity?.id ?? activityId}
+                        locale={locale}
+                        participants={management.checkInRoster}
+                        triggerLabel={copy.checkIn}
+                      />
+                    </div>
+                  </div>
                   {management.coManagerDashboard ? (
                     <ActivityCoManagerPanel
                       dashboard={management.coManagerDashboard}
                       locale={locale}
                     />
                   ) : null}
-                  <div className="rounded-[1rem] border border-[#F0D6D1] bg-white p-2">
+                  <div>
                     <CancelActivityForm
                       activityId={activity?.id ?? activityId}
                       activityTitle={management.activityTitle}
@@ -1621,7 +1656,7 @@ export function ActivityRoomManagePage({
                     />
                   </div>
                   {policy.role === "ORGANIZER" ? (
-                    <div className="rounded-[1rem] border border-red-100 bg-white p-2">
+                    <div>
                       <DeleteActivityForm
                         activityId={activity?.id ?? activityId}
                         activityTitle={management.activityTitle}
@@ -1720,23 +1755,169 @@ function getPolicyNotice(
 }
 
 function MessageRow({
+  actionMenuOpen,
   canManage,
   isDeleting,
+  isSelected,
   locale,
   message,
   onDelete,
+  onOpenActionMenu,
+  onStartSelection,
+  onToggleSelection,
+  selectionMode,
   viewer,
 }: {
+  actionMenuOpen: boolean;
   canManage: boolean;
   isDeleting: boolean;
+  isSelected: boolean;
   locale: string;
   message: ActivityRoomMessageViewModel;
-  onDelete: (messageId: string) => void;
+  onDelete: (messageIds: string[]) => void;
+  onOpenActionMenu: (messageId: string) => void;
+  onStartSelection: (messageId: string) => void;
+  onToggleSelection: (messageId: string) => void;
+  selectionMode: boolean;
   viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
   const sender = message.isMine && viewer ? viewer : message.sender;
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressNextClickRef = useRef(false);
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  useEffect(
+    () => () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
+      return;
+    }
+
+    clearLongPressTimer();
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      suppressNextClickRef.current = true;
+      longPressTimerRef.current = null;
+      onOpenActionMenu(message.id);
+    }, 450);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStartRef.current;
+
+    if (
+      start &&
+      (Math.abs(event.clientX - start.x) > 8 ||
+        Math.abs(event.clientY - start.y) > 8)
+    ) {
+      clearLongPressTimer();
+      pointerStartRef.current = null;
+    }
+  }
+
+  function handlePointerEnd() {
+    clearLongPressTimer();
+    pointerStartRef.current = null;
+  }
+
+  function handleMessageClick() {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+
+    if (selectionMode && canDelete && !isDeleting) {
+      onToggleSelection(message.id);
+    }
+  }
+
+  function handleMessageKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (
+      !canDelete ||
+      isDeleting ||
+      (event.key !== "Enter" && event.key !== " ")
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (selectionMode) {
+      onToggleSelection(message.id);
+      return;
+    }
+
+    onOpenActionMenu(message.id);
+  }
+
+  const selectionControl = selectionMode && canDelete ? (
+    <button
+      aria-label={copy.selectMessage}
+      aria-pressed={isSelected}
+      className={cn(
+        "mb-1 inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border transition active:scale-95",
+        isSelected
+          ? "border-[#156240] bg-[#156240] text-white"
+          : "border-[#C9CBBE] bg-white text-transparent",
+      )}
+      disabled={isDeleting}
+      onClick={() => onToggleSelection(message.id)}
+      title={copy.selectMessage}
+      type="button"
+    >
+      <CheckCircle2 className="h-4 w-4" />
+    </button>
+  ) : null;
+
+  const actionMenu = actionMenuOpen && canDelete && !selectionMode ? (
+    <div
+      aria-label={`${copy.selectMessage} / ${copy.deleteMessage}`}
+      className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
+      data-room-message-action-menu
+      role="toolbar"
+    >
+      <button
+        aria-label={copy.selectMessage}
+        className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+        onClick={() => onStartSelection(message.id)}
+        title={copy.selectMessage}
+        type="button"
+      >
+        <ListChecks className="h-4 w-4" />
+      </button>
+      <button
+        aria-busy={isDeleting}
+        aria-label={copy.deleteMessage}
+        className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
+        disabled={isDeleting}
+        onClick={() => onDelete([message.id])}
+        title={copy.deleteMessage}
+        type="button"
+      >
+        {isDeleting ? (
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4" />
+        )}
+      </button>
+    </div>
+  ) : null;
 
   return (
     <div
@@ -1750,9 +1931,15 @@ function MessageRow({
           <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
         </span>
       ) : null}
+      {message.isMine ? actionMenu ?? selectionControl : null}
       <div
         className={cn(
-          "grid max-w-[76%] gap-0.5 sm:max-w-[64%]",
+          "grid gap-0.5",
+          actionMenuOpen
+            ? "max-w-[56%] sm:max-w-[58%]"
+            : selectionMode && canDelete
+              ? "max-w-[65%] sm:max-w-[60%]"
+              : "max-w-[76%] sm:max-w-[64%]",
           message.isMine ? "justify-items-end" : "justify-items-start",
         )}
       >
@@ -1762,14 +1949,38 @@ function MessageRow({
           </p>
         ) : null}
         <div
+          aria-pressed={selectionMode && canDelete ? isSelected : undefined}
           className={cn(
-            "rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)]",
+            "relative touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+            canDelete && "select-none [-webkit-touch-callout:none]",
+            selectionMode && canDelete && "cursor-pointer",
+            isSelected &&
+              "outline outline-2 outline-offset-2 outline-[#36A15F]",
             message.isDeleted
-              ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5]"
+              ? message.isMine
+                ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-right-1 before:border-r before:border-t before:border-[#DFDAC5] before:bg-[#F1F2EC]"
+                : "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-left-1 before:border-b before:border-l before:border-[#DFDAC5] before:bg-[#F1F2EC]"
               : message.isMine
-                ? "rounded-br-[0.35rem] bg-[#156240] text-white"
-                : "rounded-tl-[0.35rem] bg-white text-[#111210] ring-1 ring-[#D6D5B2]",
+                ? "rounded-tr-[0.35rem] bg-[#156240] text-white before:-right-1 before:bg-[#156240]"
+                : "rounded-tl-[0.35rem] bg-white text-[#111210] ring-1 ring-[#D6D5B2] before:-left-1 before:border-b before:border-l before:border-[#D6D5B2] before:bg-white",
           )}
+          data-room-message-id={message.id}
+          onClick={handleMessageClick}
+          onContextMenu={(event) => {
+            if (!canDelete || isDeleting || selectionMode) {
+              return;
+            }
+
+            event.preventDefault();
+            onOpenActionMenu(message.id);
+          }}
+          onKeyDown={handleMessageKeyDown}
+          onPointerCancel={handlePointerEnd}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          role={canDelete ? "button" : undefined}
+          tabIndex={canDelete ? 0 : undefined}
         >
           <p
             className={cn(
@@ -1779,39 +1990,9 @@ function MessageRow({
           >
             {message.isDeleted ? copy.deletedMessage : message.body}
           </p>
-          {canDelete ? (
-            <div
-              className={cn(
-                "mt-1 flex justify-end text-[11px]",
-                message.isMine && !message.isDeleted
-                  ? "text-white/68"
-                  : "text-[#8B907F]",
-              )}
-            >
-              <button
-                aria-busy={isDeleting}
-                aria-label={copy.deleteMessage}
-                className={cn(
-                  "inline-flex h-6 w-6 items-center justify-center rounded-full opacity-100 transition active:scale-95 disabled:cursor-wait disabled:opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-                  message.isMine
-                    ? "bg-white/14 text-white hover:bg-white/22"
-                    : "bg-[#F1F2EC] text-[#6C746A] hover:bg-[#E8E1CF]",
-                )}
-                disabled={isDeleting}
-                onClick={() => onDelete(message.id)}
-                title={copy.deleteMessage}
-                type="button"
-              >
-                {isDeleting ? (
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-          ) : null}
         </div>
       </div>
+      {!message.isMine ? actionMenu ?? selectionControl : null}
       {message.isMine ? (
         <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
       ) : null}
@@ -1987,9 +2168,12 @@ export function ActivityRoomChatPage({
   const copy = getActivityRoomChatCopy(locale);
   const [messages, setMessages] =
     useState<ActivityRoomMessageViewModel[]>(initialMessages);
+  const [actionMenuMessageId, setActionMenuMessageId] = useState("");
   const [deleteError, setDeleteError] = useState("");
-  const [deletingId, setDeletingId] = useState("");
+  const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
   const [manageSheetOpen, setManageSheetOpen] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
   const activityHref = withLocale(
@@ -2010,6 +2194,35 @@ export function ActivityRoomChatPage({
     setMessages(initialMessages);
   }, [initialMessages]);
 
+  useEffect(() => {
+    if (!actionMenuMessageId) {
+      return;
+    }
+
+    function dismissActionMenu(event: PointerEvent) {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (event.target.closest("[data-room-message-action-menu]")) {
+        return;
+      }
+
+      const messageElement = event.target.closest<HTMLElement>(
+        "[data-room-message-id]",
+      );
+
+      if (messageElement?.dataset.roomMessageId === actionMenuMessageId) {
+        return;
+      }
+
+      setActionMenuMessageId("");
+    }
+
+    document.addEventListener("pointerdown", dismissActionMenu);
+    return () => document.removeEventListener("pointerdown", dismissActionMenu);
+  }, [actionMenuMessageId]);
+
   useMobileChatViewportGuard();
 
   function handleSent(message: ActivityRoomMessageViewModel) {
@@ -2017,29 +2230,70 @@ export function ActivityRoomChatPage({
     router.refresh();
   }
 
-  function handleDelete(messageId: string) {
-    if (deletingId) {
+  function handleOpenActionMenu(messageId: string) {
+    setDeleteError("");
+    setActionMenuMessageId(messageId);
+  }
+
+  function handleStartSelection(messageId: string) {
+    setActionMenuMessageId("");
+    setDeleteError("");
+    setSelectedMessageIds([messageId]);
+    setSelectionMode(true);
+  }
+
+  function handleToggleSelection(messageId: string) {
+    setSelectedMessageIds((current) => {
+      if (current.includes(messageId)) {
+        return current.filter((id) => id !== messageId);
+      }
+
+      return current.length < 50 ? [...current, messageId] : current;
+    });
+  }
+
+  function handleCancelSelection() {
+    setSelectedMessageIds([]);
+    setSelectionMode(false);
+  }
+
+  function handleDelete(messageIds: string[]) {
+    if (deletingMessageIds.length > 0 || !activity) {
+      return;
+    }
+
+    const uniqueMessageIds = [...new Set(messageIds)].slice(0, 50);
+
+    if (uniqueMessageIds.length === 0) {
       return;
     }
 
     const formData = new FormData();
-    formData.set("activityId", activity?.id ?? "");
+    formData.set("activityId", activity.id);
     formData.set("locale", locale);
-    formData.set("messageId", messageId);
+    uniqueMessageIds.forEach((messageId) =>
+      formData.append("messageId", messageId),
+    );
 
     setDeleteError("");
-    setDeletingId(messageId);
+    setDeletingMessageIds(uniqueMessageIds);
 
-    void deleteActivityRoomMessageAction(initialActionState, formData)
+    void deleteActivityRoomMessagesAction(initialActionState, formData)
       .then((result) => {
         if (result.ok) {
+          const deletedMessageIds = new Set(
+            result.messageIds ?? uniqueMessageIds,
+          );
+
           setMessages((current) =>
             current.map((message) =>
-              message.id === messageId
+              deletedMessageIds.has(message.id)
                 ? { ...message, body: "", isDeleted: true }
                 : message,
             ),
           );
+          setActionMenuMessageId("");
+          handleCancelSelection();
           router.refresh();
           return;
         }
@@ -2047,7 +2301,7 @@ export function ActivityRoomChatPage({
         setDeleteError(result.formError ?? copy.deleteFailed);
       })
       .catch(() => setDeleteError(copy.deleteFailed))
-      .finally(() => setDeletingId(""));
+      .finally(() => setDeletingMessageIds([]));
   }
 
   return (
@@ -2101,8 +2355,8 @@ export function ActivityRoomChatPage({
                   getChatDateKey(previousMessage.createdAt) !==
                     getChatDateKey(message.createdAt);
                 const showTimeSeparator = shouldShowChatTimeSeparator(
-                  message,
-                  previousMessage,
+                  message.createdAt,
+                  previousMessage?.createdAt,
                 );
 
                 return (
@@ -2115,11 +2369,17 @@ export function ActivityRoomChatPage({
                       />
                     ) : null}
                     <MessageRow
+                      actionMenuOpen={actionMenuMessageId === message.id}
                       canManage={canManage}
-                      isDeleting={deletingId === message.id}
+                      isDeleting={deletingMessageIds.includes(message.id)}
+                      isSelected={selectedMessageIds.includes(message.id)}
                       locale={locale}
                       message={message}
                       onDelete={handleDelete}
+                      onOpenActionMenu={handleOpenActionMenu}
+                      onStartSelection={handleStartSelection}
+                      onToggleSelection={handleToggleSelection}
+                      selectionMode={selectionMode}
                       viewer={viewer}
                     />
                   </Fragment>
@@ -2155,10 +2415,43 @@ export function ActivityRoomChatPage({
         </p>
       ) : null}
 
-      {activity && policy.canSend ? (
+      {selectionMode ? (
+        <div className="relative z-20 grid shrink-0 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3 border-t border-[#D6D5B2] bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:rounded-b-[1.45rem] md:pb-3">
+          <button
+            aria-label={copy.cancelSelection}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#33372F] transition hover:bg-[#F1F2EC] active:scale-95"
+            disabled={deletingMessageIds.length > 0}
+            onClick={handleCancelSelection}
+            title={copy.cancelSelection}
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <p className="truncate text-center text-sm font-bold text-[#33372F]">
+            {copy.selectedMessages(selectedMessageIds.length)}
+          </p>
+          <button
+            aria-busy={deletingMessageIds.length > 0}
+            aria-label={copy.deleteMessage}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#C6283D] transition hover:bg-[#FFF1F3] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={
+              selectedMessageIds.length === 0 || deletingMessageIds.length > 0
+            }
+            onClick={() => handleDelete(selectedMessageIds)}
+            title={copy.deleteMessage}
+            type="button"
+          >
+            {deletingMessageIds.length > 0 ? (
+              <LoaderCircle className="h-5 w-5 animate-spin" />
+            ) : (
+              <Trash2 className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      ) : activity && policy.canSend ? (
         <RoomComposer
           activityId={activity.id}
-          disabled={Boolean(deletingId)}
+          disabled={deletingMessageIds.length > 0}
           locale={locale}
           onSent={handleSent}
           viewer={viewer}

@@ -5,11 +5,16 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
-  type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+
+const collapsedHeightRatio = 0.85;
+const sheetSnapDistance = 48;
+const sheetCloseDistance = 64;
 
 type MobileBottomSheetProps = {
   ariaLabel: string;
@@ -34,10 +39,18 @@ export function MobileBottomSheet({
   open,
   zIndexClassName = "z-[70]",
 }: MobileBottomSheetProps) {
+  const clickResetTimeoutRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
+  const dragDeltaYRef = useRef(0);
+  const dragPointerIdRef = useRef<number | null>(null);
+  const dragStartYRef = useRef<number | null>(null);
+  const dragViewportHeightRef = useRef(0);
+  const suppressNextClickRef = useRef(false);
+  const [dragDeltaY, setDragDeltaY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const touchStartYRef = useRef<number | null>(null);
 
   const requestClose = useCallback(() => {
     if (isClosing || closeTimeoutRef.current !== null) {
@@ -57,6 +70,9 @@ export function MobileBottomSheet({
 
   useEffect(() => {
     if (open) {
+      setDragDeltaY(0);
+      setIsDragging(false);
+      setIsExpanded(false);
       setIsClosing(false);
     }
   }, [open]);
@@ -65,6 +81,10 @@ export function MobileBottomSheet({
     return () => {
       if (closeTimeoutRef.current !== null) {
         window.clearTimeout(closeTimeoutRef.current);
+      }
+
+      if (clickResetTimeoutRef.current !== null) {
+        window.clearTimeout(clickResetTimeoutRef.current);
       }
     };
   }, []);
@@ -100,23 +120,125 @@ export function MobileBottomSheet({
     };
   }, [open, requestClose]);
 
-  function handleSheetTouchStart(event: TouchEvent<HTMLDivElement>) {
-    touchStartYRef.current = event.touches[0]?.clientY ?? null;
-  }
-
-  function handleSheetTouchEnd(event: TouchEvent<HTMLDivElement>) {
-    const startY = touchStartYRef.current;
-    touchStartYRef.current = null;
-
-    if (startY === null) {
+  function handleDragStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0 || isClosing) {
       return;
     }
 
-    const endY = event.changedTouches[0]?.clientY ?? startY;
+    dragPointerIdRef.current = event.pointerId;
+    dragStartYRef.current = event.clientY;
+    dragViewportHeightRef.current = window.innerHeight;
+    dragDeltaYRef.current = 0;
+    setDragDeltaY(0);
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
 
-    if (endY - startY > 48) {
+  function handleDragMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      dragPointerIdRef.current !== event.pointerId ||
+      dragStartYRef.current === null
+    ) {
+      return;
+    }
+
+    const nextDeltaY = event.clientY - dragStartYRef.current;
+    dragDeltaYRef.current = nextDeltaY;
+    setDragDeltaY(nextDeltaY);
+  }
+
+  function resetDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      dragPointerIdRef.current === event.pointerId &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    dragPointerIdRef.current = null;
+    dragStartYRef.current = null;
+    dragDeltaYRef.current = 0;
+    setDragDeltaY(0);
+    setIsDragging(false);
+  }
+
+  function handleDragEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    const deltaY = dragDeltaYRef.current;
+
+    if (Math.abs(deltaY) > 8) {
+      suppressNextClickRef.current = true;
+
+      if (clickResetTimeoutRef.current !== null) {
+        window.clearTimeout(clickResetTimeoutRef.current);
+      }
+
+      clickResetTimeoutRef.current = window.setTimeout(() => {
+        suppressNextClickRef.current = false;
+        clickResetTimeoutRef.current = null;
+      }, 0);
+    }
+
+    resetDrag(event);
+
+    if (isExpanded) {
+      if (deltaY > sheetSnapDistance) {
+        setIsExpanded(false);
+      }
+
+      return;
+    }
+
+    if (deltaY < -sheetSnapDistance) {
+      setIsExpanded(true);
+      return;
+    }
+
+    if (deltaY > sheetCloseDistance) {
       requestClose();
     }
+  }
+
+  function handleDragCancel(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragPointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    resetDrag(event);
+  }
+
+  let sheetStyle: CSSProperties | undefined;
+
+  if (isDragging) {
+    const viewportHeight = dragViewportHeightRef.current;
+    const collapsedHeight = viewportHeight * collapsedHeightRatio;
+    const expansionRange = viewportHeight - collapsedHeight;
+
+    if (isExpanded) {
+      const contraction = Math.min(
+        Math.max(dragDeltaY, 0),
+        expansionRange,
+      );
+
+      sheetStyle = {
+        height: `calc(100svh - ${contraction}px)`,
+      };
+    } else if (dragDeltaY < 0) {
+      const expansion = Math.min(-dragDeltaY, expansionRange);
+
+      sheetStyle = {
+        height: `calc(85svh + ${expansion}px)`,
+      };
+    } else {
+      sheetStyle = {
+        transform: `translateY(${dragDeltaY}px)`,
+      };
+    }
+  } else if (isExpanded) {
+    sheetStyle = { height: "100svh" };
   }
 
   if (!open || !mounted) {
@@ -126,7 +248,7 @@ export function MobileBottomSheet({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 flex items-end bg-[#111210]/42 pt-[15svh]",
+        "fixed inset-0 flex items-end bg-[#111210]/42",
         isClosing
           ? "animate-[mobile-bottom-sheet-overlay-out_160ms_ease-in_forwards]"
           : null,
@@ -143,25 +265,37 @@ export function MobileBottomSheet({
         aria-label={ariaLabel}
         aria-modal="true"
         className={cn(
-          "flex w-full min-w-0 flex-col overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-18px_54px_rgba(17,18,16,0.22)] motion-reduce:animate-none",
+          "flex w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-18px_54px_rgba(17,18,16,0.22)] transition-[height,border-radius,transform] duration-200 ease-out motion-reduce:animate-none motion-reduce:transition-none",
           isClosing
             ? "animate-[activity-room-sheet-out_160ms_ease-in_forwards]"
             : "animate-[activity-room-sheet-in_180ms_ease-out]",
+          isDragging ? "transition-none" : null,
+          isExpanded ? "!rounded-none" : null,
           heightClassName,
           className,
         )}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
+        style={sheetStyle}
       >
         <div
-          className="shrink-0 bg-white px-4 pb-1 pt-2"
-          onTouchEnd={handleSheetTouchEnd}
-          onTouchStart={handleSheetTouchStart}
+          className="shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2"
+          onPointerCancel={handleDragCancel}
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
         >
           <button
             aria-label={closeLabel ?? ariaLabel}
-            className="mx-auto flex h-6 w-20 items-center justify-center rounded-full transition active:scale-95"
-            onClick={requestClose}
+            className="mx-auto flex h-6 w-20 cursor-grab items-center justify-center rounded-full transition active:cursor-grabbing active:scale-95"
+            onClick={() => {
+              if (suppressNextClickRef.current) {
+                suppressNextClickRef.current = false;
+                return;
+              }
+
+              requestClose();
+            }}
             type="button"
           >
             <span className="h-1.5 w-12 rounded-full bg-[#D6D5B2]" />

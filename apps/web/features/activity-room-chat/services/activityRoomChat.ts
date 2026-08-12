@@ -71,6 +71,7 @@ export type ActivityRoomChatActivityViewModel = {
   hasUnreadAnnouncement: boolean;
   id: string;
   isMuted: boolean;
+  isPinned: boolean;
   publicEventId: string | null;
   requiresApproval: boolean;
   startAt: string;
@@ -111,10 +112,12 @@ export type ActivityRoomChatRosterItemViewModel = {
   status: ActivityStatus;
   title: string;
   isMuted: boolean;
+  isPinned: boolean;
   unreadCount: number;
 };
 
 export type ActivityRoomUnreadStateViewModel = {
+  hasUnreadAnnouncement: boolean;
   isMuted: boolean;
   unreadCount: number;
 };
@@ -261,6 +264,7 @@ const activityRoomRosterSelect = {
     select: {
       lastReadAt: true,
       mutedAt: true,
+      pinnedAt: true,
     },
     take: 1,
   },
@@ -443,24 +447,43 @@ function mapActivityRoomMessage(
   };
 }
 
+export function hasUnreadActivityAnnouncement({
+  announcementReadAt,
+  latestAnnouncement,
+  viewerProfileId,
+}: {
+  announcementReadAt?: Date | null;
+  latestAnnouncement?: {
+    authorId: string;
+    createdAt: Date;
+  } | null;
+  viewerProfileId?: string | null;
+}) {
+  return Boolean(
+    latestAnnouncement &&
+      latestAnnouncement.authorId !== viewerProfileId &&
+      (!announcementReadAt ||
+        announcementReadAt.getTime() < latestAnnouncement.createdAt.getTime()),
+  );
+}
+
 function mapActivityRoomActivity(
   activity: ActivityRoomActivityForView,
   policy: ActivityRoomChatPolicy,
   options: {
     announcementReadAt?: Date | null;
     isMuted?: boolean;
+    isPinned?: boolean;
     viewerProfileId?: string | null;
   } = {},
 ): ActivityRoomChatActivityViewModel {
   const canShowTitle = policy.canView || activity.visibility === "PUBLIC";
   const latestAnnouncement = policy.canView ? activity.announcements[0] : null;
-  const hasUnreadAnnouncement = Boolean(
-    latestAnnouncement &&
-      latestAnnouncement.authorId !== options.viewerProfileId &&
-      (!options.announcementReadAt ||
-        options.announcementReadAt.getTime() <
-          latestAnnouncement.createdAt.getTime()),
-  );
+  const hasUnreadAnnouncement = hasUnreadActivityAnnouncement({
+    announcementReadAt: options.announcementReadAt,
+    latestAnnouncement,
+    viewerProfileId: options.viewerProfileId,
+  });
 
   return {
     announcements: policy.canView
@@ -479,6 +502,7 @@ function mapActivityRoomActivity(
     hasUnreadAnnouncement,
     id: activity.id,
     isMuted: Boolean(options.isMuted),
+    isPinned: Boolean(options.isPinned),
     publicEventId: activity.publicEventId,
     requiresApproval: activity.requiresApproval,
     startAt: activity.startAt.toISOString(),
@@ -524,7 +548,10 @@ function getActivityRoomAccessWhere(
 }
 
 async function getActivityRoomUnreadCountMap(
-  rooms: Array<Pick<ActivityRoomRosterResult, "id" | "roomReadStates">>,
+  rooms: Array<{
+    id: string;
+    roomReadStates: Array<{ lastReadAt: Date }>;
+  }>,
   viewerProfileId: string,
 ) {
   if (rooms.length === 0) {
@@ -594,6 +621,7 @@ function mapActivityRoomRosterItem(
     status: room.status,
     title: room.title,
     isMuted: Boolean(room.roomReadStates[0]?.mutedAt),
+    isPinned: Boolean(room.roomReadStates[0]?.pinnedAt),
     unreadCount,
   };
 }
@@ -765,6 +793,7 @@ export async function getActivityRoomChatPageData({
         select: {
           announcementReadAt: true,
           mutedAt: true,
+          pinnedAt: true,
         },
         take: 1,
       },
@@ -809,6 +838,7 @@ export async function getActivityRoomChatPageData({
       {
         announcementReadAt: activity.roomReadStates[0]?.announcementReadAt,
         isMuted: Boolean(activity.roomReadStates[0]?.mutedAt),
+        isPinned: Boolean(activity.roomReadStates[0]?.pinnedAt),
         viewerProfileId,
       },
     ),
@@ -1071,6 +1101,7 @@ export async function getActivityRoomChatRoster(
         select: {
           lastReadAt: true,
           mutedAt: true,
+          pinnedAt: true,
         },
         take: 1,
       },
@@ -1090,6 +1121,10 @@ export async function getActivityRoomChatRoster(
       ),
     )
     .sort((roomA, roomB) => {
+      if (roomA.isPinned !== roomB.isPinned) {
+        return roomA.isPinned ? -1 : 1;
+      }
+
       const timeA = new Date(
         roomA.lastMessage?.createdAt ?? roomA.startAt,
       ).getTime();
@@ -1164,23 +1199,39 @@ export async function getActivityRoomUnreadState(
 
   if (!policy.canView) {
     return {
+      hasUnreadAnnouncement: false,
       isMuted: false,
       unreadCount: 0,
     };
   }
 
-  const readState = await prisma.activityRoomReadState.findUnique({
-    where: {
-      activityId_profileId: {
+  const [latestAnnouncement, readState] = await Promise.all([
+    prisma.activityAnnouncement.findFirst({
+      where: {
         activityId,
-        profileId: viewerProfileId,
       },
-    },
-    select: {
-      lastReadAt: true,
-      mutedAt: true,
-    },
-  });
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        authorId: true,
+        createdAt: true,
+      },
+    }),
+    prisma.activityRoomReadState.findUnique({
+      where: {
+        activityId_profileId: {
+          activityId,
+          profileId: viewerProfileId,
+        },
+      },
+      select: {
+        announcementReadAt: true,
+        lastReadAt: true,
+        mutedAt: true,
+      },
+    }),
+  ]);
 
   const unreadCount = await prisma.activityRoomMessage.count({
     where: {
@@ -1200,6 +1251,11 @@ export async function getActivityRoomUnreadState(
   });
 
   return {
+    hasUnreadAnnouncement: hasUnreadActivityAnnouncement({
+      announcementReadAt: readState?.announcementReadAt,
+      latestAnnouncement,
+      viewerProfileId,
+    }),
     isMuted: Boolean(readState?.mutedAt),
     unreadCount,
   };
@@ -1346,5 +1402,89 @@ export async function deleteActivityRoomMessage({
         deletedAt: true,
       },
     });
+  });
+}
+
+export async function deleteActivityRoomMessages({
+  activityId,
+  actorId,
+  messageIds,
+}: {
+  activityId: string;
+  actorId: string;
+  messageIds: string[];
+}) {
+  const uniqueMessageIds = [...new Set(messageIds)];
+
+  if (uniqueMessageIds.length === 0) {
+    throw new ActivityRoomChatDomainError("MESSAGE_NOT_FOUND");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const messages = await tx.activityRoomMessage.findMany({
+      where: {
+        activityId,
+        deletedAt: null,
+        id: {
+          in: uniqueMessageIds,
+        },
+      },
+      select: {
+        id: true,
+        senderId: true,
+        activity: {
+          select: {
+            organizerId: true,
+            coManagers: {
+              where: {
+                managerProfileId: actorId,
+              },
+              select: {
+                id: true,
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (messages.length !== uniqueMessageIds.length) {
+      throw new ActivityRoomChatDomainError("MESSAGE_NOT_FOUND");
+    }
+
+    const hasForbiddenMessage = messages.some(
+      (message) =>
+        !canDeleteActivityRoomMessage({
+          actorId,
+          isCoManager: message.activity.coManagers.length > 0,
+          isOrganizer: message.activity.organizerId === actorId,
+          senderId: message.senderId,
+        }),
+    );
+
+    if (hasForbiddenMessage) {
+      throw new ActivityRoomChatDomainError("DELETE_FORBIDDEN");
+    }
+
+    const result = await tx.activityRoomMessage.updateMany({
+      where: {
+        activityId,
+        deletedAt: null,
+        id: {
+          in: uniqueMessageIds,
+        },
+      },
+      data: {
+        deletedAt: new Date(),
+        deletedById: actorId,
+      },
+    });
+
+    if (result.count !== uniqueMessageIds.length) {
+      throw new ActivityRoomChatDomainError("MESSAGE_NOT_FOUND");
+    }
+
+    return result;
   });
 }

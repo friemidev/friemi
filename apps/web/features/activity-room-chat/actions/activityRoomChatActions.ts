@@ -17,6 +17,7 @@ import {
   activityRoomMessageMaxLength,
   canViewActivityRoomChat,
   deleteActivityRoomMessage,
+  deleteActivityRoomMessages,
   sendActivityRoomMessage,
 } from "../services/activityRoomChat";
 
@@ -25,6 +26,7 @@ export type ActivityRoomChatActionState = {
   formError?: string;
   fieldErrors?: Record<string, string[]>;
   messageId?: string;
+  messageIds?: string[];
   values?: {
     body?: string;
   };
@@ -55,6 +57,12 @@ const deleteActivityRoomMessageSchema = z.object({
   messageId: z.string().min(1).max(80),
 });
 
+const deleteActivityRoomMessagesSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  messageIds: z.array(z.string().min(1).max(80)).min(1).max(50),
+});
+
 const removeActivityRoomParticipantSchema = z.object({
   activityId: z.string().min(1).max(80),
   locale: z.string().min(1).max(16).default("zh-CN"),
@@ -71,6 +79,12 @@ const toggleActivityRoomMuteSchema = z.object({
   activityId: z.string().min(1).max(80),
   locale: z.string().min(1).max(16).default("zh-CN"),
   muted: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const toggleActivityRoomPinSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  pinned: z.enum(["0", "1", "false", "true"]).default("1"),
 });
 
 const acknowledgeActivityAnnouncementSchema = z.object({
@@ -285,6 +299,57 @@ export async function deleteActivityRoomMessageAction(
   }
 }
 
+export async function deleteActivityRoomMessagesAction(
+  _previousState: ActivityRoomChatActionState,
+  formData: FormData,
+): Promise<ActivityRoomChatActionState> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    messageIds: formData
+      .getAll("messageId")
+      .filter((value): value is string => typeof value === "string"),
+  };
+  const result = deleteActivityRoomMessagesSchema.safeParse(rawInput);
+  const t = getActivityRoomChatCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  try {
+    const profile = await getCurrentUserProfileForMutation(
+      result.data.locale,
+      `/lobby/${result.data.activityId}/room`,
+    );
+    const messageIds = [...new Set(result.data.messageIds)];
+
+    await deleteActivityRoomMessages({
+      activityId: result.data.activityId,
+      actorId: profile.id,
+      messageIds,
+    });
+    revalidateActivityRoom(result.data.locale, result.data.activityId);
+
+    return {
+      ok: true,
+      messageIds,
+    };
+  } catch (error) {
+    console.error("Failed to delete activity room messages", error);
+
+    return {
+      formError:
+        error instanceof ActivityRoomChatDomainError
+          ? t.errors[error.code]
+          : t.deleteFailed,
+    };
+  }
+}
+
 export async function toggleActivityRoomMuteAction(
   formData: FormData,
 ): Promise<void> {
@@ -340,6 +405,69 @@ export async function toggleActivityRoomMuteAction(
       },
       data: {
         mutedAt: null,
+      },
+    });
+  }
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function toggleActivityRoomPinAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    pinned: getString(formData, "pinned") || "1",
+  };
+  const result = toggleActivityRoomPinSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const nextPinned =
+    result.data.pinned === "1" || result.data.pinned === "true";
+
+  if (nextPinned) {
+    await prisma.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        lastReadAt: new Date(),
+        pinnedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        pinnedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.activityRoomReadState.updateMany({
+      where: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+      data: {
+        pinnedAt: null,
       },
     });
   }

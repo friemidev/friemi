@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  MessageCircle,
+  Pin,
+  Search,
+} from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
@@ -184,7 +190,15 @@ function DesktopFriendRosterRow({
               isActive ? "text-[#8E8383]" : "text-[#8E8383]",
             )}
           >
-            {formatChatListTimestamp(time, locale)}
+            <span className="inline-flex items-center gap-1">
+              {friend.isPinned ? (
+                <Pin
+                  aria-label={t.pinConversation}
+                  className="h-3 w-3"
+                />
+              ) : null}
+              {formatChatListTimestamp(time, locale)}
+            </span>
           </span>
           {showUnreadBadge ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">

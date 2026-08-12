@@ -23,6 +23,12 @@ type DirectMessagesCopy = {
   muteConversationDescription: string;
   mutualFollowSystemNotice: string;
   mutedUnreadLabel: string;
+  pinConversation: string;
+  cancelSelection: string;
+  deleteFailed: string;
+  deleteMessage: string;
+  selectMessage: string;
+  selectedMessages: (count: number) => string;
   readOnlyTitle: string;
   readOnlyDescription: string;
   send: string;
@@ -103,6 +109,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       mutualFollowSystemNotice:
         "Vous vous suivez maintenant. Vous pouvez discuter directement.",
       mutedUnreadLabel: "Nouveaux messages silencieux",
+      pinConversation: "Épingler la discussion",
+      cancelSelection: "Annuler la sélection",
+      deleteFailed: "Impossible de supprimer les messages.",
+      deleteMessage: "Supprimer",
+      selectMessage: "Sélectionner",
+      selectedMessages: (count) =>
+        `${count} sélectionné${count > 1 ? "s" : ""}`,
       readOnlyTitle: "Envoi indisponible",
       readOnlyDescription:
         "Vous pouvez lire cette discussion, mais pas envoyer de nouveau message pour le moment.",
@@ -199,6 +212,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "New messages show a red dot and do not count in badges.",
       mutualFollowSystemNotice: "You follow each other now. Start a chat.",
       mutedUnreadLabel: "Muted unread messages",
+      pinConversation: "Pin chat",
+      cancelSelection: "Cancel selection",
+      deleteFailed: "Could not delete the messages.",
+      deleteMessage: "Delete",
+      selectMessage: "Select",
+      selectedMessages: (count) => `${count} selected`,
       readOnlyTitle: "Messages paused",
       readOnlyDescription:
         "You can still read this chat, but new messages are unavailable right now.",
@@ -290,6 +309,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     muteConversationDescription: "开启后新消息只显示红点，不计入未读数字。",
     mutualFollowSystemNotice: "你们已经互相关注，快来聊天吧。",
     mutedUnreadLabel: "勿扰未读消息",
+    pinConversation: "置顶聊天",
+    cancelSelection: "取消多选",
+    deleteFailed: "消息暂时无法删除。",
+    deleteMessage: "删除",
+    selectMessage: "多选",
+    selectedMessages: (count) => `已选择 ${count} 条`,
     readOnlyTitle: "暂时不能发送",
     readOnlyDescription: "你可以继续查看聊天记录，暂时不能发送新消息。",
     send: "发送",

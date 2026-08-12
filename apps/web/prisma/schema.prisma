@@ -291,6 +291,7 @@ model UserProfile {
   conversationsAsUserB    Conversation[]                @relation("ConversationUserB")
   conversationPreferences ConversationPreference[]       @relation("ConversationPreferenceProfile")
   sentDirectMessages      DirectMessage[]               @relation("DirectMessageSender")
+  directMessageDeletions  DirectMessageDeletion[]       @relation("DirectMessageDeletionProfile")
   activityRoomMessages    ActivityRoomMessage[]         @relation("ActivityRoomMessageSender")
   deletedRoomMessages     ActivityRoomMessage[]         @relation("ActivityRoomMessageDeletedBy")
   activityRoomReadStates  ActivityRoomReadState[]       @relation("ActivityRoomReadStateProfile")
@@ -589,6 +590,7 @@ model ActivityRoomReadState {
   profileId          String
   lastReadAt         DateTime    @default(now())
   mutedAt            DateTime?
+  pinnedAt           DateTime?
   announcementReadAt DateTime?
   activity           Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
   profile            UserProfile @relation("ActivityRoomReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
@@ -597,6 +599,7 @@ model ActivityRoomReadState {
 
   @@unique([activityId, profileId])
   @@index([profileId, mutedAt])
+  @@index([profileId, pinnedAt])
   @@index([profileId, updatedAt])
   @@index([activityId, lastReadAt])
 }
@@ -1269,6 +1272,7 @@ model ConversationPreference {
   conversationId String
   profileId      String
   mutedAt        DateTime?
+  pinnedAt       DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   profile        UserProfile  @relation("ConversationPreferenceProfile", fields: [profileId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
@@ -1276,6 +1280,7 @@ model ConversationPreference {
 
   @@unique([conversationId, profileId])
   @@index([profileId, mutedAt])
+  @@index([profileId, pinnedAt])
   @@index([conversationId, mutedAt])
 }
 
@@ -1290,6 +1295,7 @@ model DirectMessage {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   activity       Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  deletions      DirectMessageDeletion[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -1297,6 +1303,18 @@ model DirectMessage {
   @@index([conversationId, senderId, readAt])
   @@index([senderId, createdAt])
   @@index([activityId])
+}
+
+model DirectMessageDeletion {
+  id        String        @id @default(cuid())
+  messageId String
+  profileId String
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  profile   UserProfile   @relation("DirectMessageDeletionProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  deletedAt DateTime      @default(now())
+
+  @@unique([messageId, profileId])
+  @@index([profileId, deletedAt])
 }
 
 model AnalyticsEvent {

@@ -22,6 +22,7 @@ type ActivityCheckInReviewPanelProps = {
   activityId: string;
   locale: string;
   participants: ActivityCheckInParticipantViewModel[];
+  triggerLabel?: string;
 };
 
 const initialState: ReviewActivityCheckInState = {};
@@ -167,6 +168,7 @@ export function ActivityCheckInReviewPanel({
   activityId,
   locale,
   participants,
+  triggerLabel,
 }: ActivityCheckInReviewPanelProps) {
   const copy = getCopy(locale);
   const [isOpen, setIsOpen] = useState(false);
@@ -283,7 +285,7 @@ export function ActivityCheckInReviewPanel({
         variant="secondary"
       >
         <CheckCircle2 className="mr-2 h-4 w-4" />
-        {copy.open}
+        {triggerLabel ?? copy.open}
         {pendingRequestCount > 0 ? (
           <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
             {pendingRequestCount}

@@ -1,13 +1,12 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  Bell,
-  BellOff,
   CalendarDays,
   ChevronDown,
   Gift,
   MessageCircle,
   MoreVertical,
+  Pin,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -20,7 +19,10 @@ import { getActivityDetailPath } from "@/features/activities/utils/activityRoute
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
-import { toggleDirectConversationMuteAction } from "../actions/directMessageActions";
+import {
+  toggleDirectConversationMuteAction,
+  toggleDirectConversationPinAction,
+} from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
@@ -169,7 +171,15 @@ function ConversationListItem({
                 isActive ? "text-[#8E8383]" : "text-[#8E8383]",
               )}
             >
-              {formatChatListTimestamp(time, locale)}
+              <span className="inline-flex items-center gap-1">
+                {conversation.isPinned ? (
+                  <Pin
+                    aria-label={t.pinConversation}
+                    className="h-3 w-3"
+                  />
+                ) : null}
+                {formatChatListTimestamp(time, locale)}
+              </span>
             </span>
             {showUnreadBadge ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
@@ -334,6 +344,52 @@ export function NoConversationSelected({ locale }: { locale: string }) {
   );
 }
 
+function ConversationPreferenceToggle({
+  action,
+  checked,
+  conversationId,
+  fieldName,
+  label,
+  locale,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  checked: boolean;
+  conversationId: string;
+  fieldName: "muted" | "pinned";
+  label: string;
+  locale: string;
+}) {
+  return (
+    <form action={action}>
+      <input name="locale" type="hidden" value={locale} />
+      <input name="conversationId" type="hidden" value={conversationId} />
+      <input name={fieldName} type="hidden" value={checked ? "0" : "1"} />
+      <button
+        aria-checked={checked}
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium text-[#111210] transition hover:bg-[#F7F7F0] focus:outline-none focus-visible:bg-[#F7F7F0]"
+        role="switch"
+        type="submit"
+      >
+        <span className="truncate">{label}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "relative h-6 w-10 shrink-0 rounded-full p-0.5 transition-colors",
+            checked ? "bg-[#1DB96A]" : "bg-[#D8DAD5]",
+          )}
+        >
+          <span
+            className={cn(
+              "block h-5 w-5 rounded-full bg-white shadow-[0_1px_4px_rgba(17,18,16,0.24)] transition-transform",
+              checked && "translate-x-4",
+            )}
+          />
+        </span>
+      </button>
+    </form>
+  );
+}
+
 export function MessageThread({
   activityContext,
   backHref = "/messages",
@@ -385,35 +441,22 @@ export function MessageThread({
             <MoreVertical className="h-5 w-5" />
           </summary>
           <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
-            <form action={toggleDirectConversationMuteAction}>
-              <input name="locale" type="hidden" value={locale} />
-              <input
-                name="conversationId"
-                type="hidden"
-                value={conversation.id}
-              />
-              <input
-                name="muted"
-                type="hidden"
-                value={conversation.isMuted ? "0" : "1"}
-              />
-              <button
-                className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
-                title={t.muteConversationDescription}
-                type="submit"
-              >
-                {conversation.isMuted ? (
-                  <Bell className="h-4 w-4 shrink-0" />
-                ) : (
-                  <BellOff className="h-4 w-4 shrink-0" />
-                )}
-                <span className="truncate">
-                  {conversation.isMuted
-                    ? t.unmuteConversation
-                    : t.muteConversation}
-                </span>
-              </button>
-            </form>
+            <ConversationPreferenceToggle
+              action={toggleDirectConversationMuteAction}
+              checked={conversation.isMuted}
+              conversationId={conversation.id}
+              fieldName="muted"
+              label={t.muteConversation}
+              locale={locale}
+            />
+            <ConversationPreferenceToggle
+              action={toggleDirectConversationPinAction}
+              checked={conversation.isPinned}
+              conversationId={conversation.id}
+              fieldName="pinned"
+              label={t.pinConversation}
+              locale={locale}
+            />
             <ContextualDetailLink
               className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}

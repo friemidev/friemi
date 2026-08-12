@@ -71,87 +71,19 @@ export async function generateMetadata({
 }
 
 function SearchSectionHeader({
-  action,
   count,
   title,
 }: {
-  action?: ReactNode;
   count: number;
   title: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-normal text-ink">
-          {title}
-        </h2>
-        <span className="shrink-0 text-xs font-semibold leading-5 text-[#156240]">
-          {count}
-        </span>
-      </div>
-      {action ? <div className="sm:shrink-0">{action}</div> : null}
-    </div>
-  );
-}
-
-function SearchEndedFilterBar({
-  hiddenEndedCount,
-  includeEnded,
-  locale,
-  query,
-}: {
-  hiddenEndedCount: number;
-  includeEnded: boolean;
-  locale: string;
-  query: string;
-}) {
-  const t = getCopy(locale).globalSearch;
-  const nextHref = getGlobalSearchHref(locale, query, {
-    includeEnded: !includeEnded,
-  });
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <AnalyticsLink
-        href={nextHref}
-        aria-pressed={includeEnded}
-        className={
-          includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#F1F2EC] px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F1F2EC]"
-            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
-        }
-        event={{
-          name: "filter_applied",
-          sourceSurface: "global_search",
-          properties: {
-            filter_count: includeEnded ? 0 : 1,
-            filter_names: ["include_ended"],
-            hidden_ended_count: hiddenEndedCount,
-            next_include_ended: !includeEnded,
-            scope: "global_search",
-          },
-        }}
-      >
-        <span
-          className={
-            includeEnded
-              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#369758] text-white shadow-sm"
-              : "h-4 w-4 rounded-[0.32rem] border border-[#8AB68E] bg-white shadow-inner"
-          }
-          aria-hidden="true"
-        >
-          {includeEnded ? (
-            <span className="text-[11px] font-bold leading-none">✓</span>
-          ) : null}
-        </span>
-        {includeEnded ? t.hideEndedResults : t.showEndedResults}
-      </AnalyticsLink>
-      <span className="text-xs leading-5 text-zinc-500">
-        {includeEnded
-          ? t.endedResultsShownHint
-          : hiddenEndedCount > 0
-            ? t.endedResultsHiddenWithCount(hiddenEndedCount)
-            : t.endedResultsHiddenHint}
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold tracking-normal text-ink">
+        {title}
+      </h2>
+      <span className="shrink-0 text-xs font-semibold leading-5 text-[#156240]">
+        {count}
       </span>
     </div>
   );
@@ -769,16 +701,6 @@ export default async function SearchPage({
           {mixedActivityResultCount > 0 || relatedActivityCount > 0 ? (
             <section className="space-y-3">
               <SearchSectionHeader
-                action={
-                  query ? (
-                    <SearchEndedFilterBar
-                      hiddenEndedCount={hiddenEndedMainCount}
-                      includeEnded={includeEnded}
-                      locale={locale}
-                      query={query}
-                    />
-                  ) : null
-                }
                 title={t.mainResultsTitle}
                 count={
                   mixedActivityResultCount > 0

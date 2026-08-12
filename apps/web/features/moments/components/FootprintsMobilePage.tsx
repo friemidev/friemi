@@ -20,14 +20,19 @@ import {
 import { createPortal, useFormStatus } from "react-dom";
 import { formatActivityDate } from "@chill-club/shared";
 import {
+  BadgeCheck,
   ChevronDown,
   ChevronRight,
   Eye,
   Gift,
   Globe2,
   Heart,
+  ImagePlus,
+  Loader2,
   MessageCircle,
   MoreHorizontal,
+  Pin,
+  RefreshCw,
   Search,
   SendHorizontal,
   Share2,
@@ -36,7 +41,6 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
@@ -62,6 +66,10 @@ import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMome
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -70,8 +78,8 @@ type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING" | "MINE";
 type MessageRosterFilter =
   | "all"
   | "following"
-  | "followers"
   | "mutual"
+  | "official"
   | "rooms";
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
@@ -196,6 +204,15 @@ const copyByLocale = {
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
+    photoInvalidContentError: "图片内容无效，请重新选择原始图片。",
+    photoLimitError: "一次晒晒最多可以上传 6 张照片。",
+    photoRemove: "移除照片",
+    photoRetry: "重新上传",
+    photoSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
+    photoStorageError: "照片存储暂时不可用，请稍后再试。",
+    photoTypeError: "请选择常见图片格式。",
+    photoUploadFailed: "部分照片上传失败，请重试或移除。",
+    photoUploading: (count: number) => `正在上传 ${count} 张照片...`,
     composerTitle: "此刻想说什么？",
     composerSubmit: "发布",
     composerSubmitting: "发布中...",
@@ -240,8 +257,8 @@ const copyByLocale = {
     messageFilters: {
       all: "聊聊",
       following: "我关注的",
-      followers: "关注我的",
       mutual: "互相关注",
+      official: "官方",
       rooms: "群聊",
     },
     openMessages: "进入聊聊",
@@ -286,6 +303,18 @@ const copyByLocale = {
     },
     composer: "Share a mood or a bright little moment...",
     addPhoto: "Add photo",
+    photoInvalidContentError: "This image is invalid. Choose the original file.",
+    photoLimitError: "You can upload up to 6 photos per moment.",
+    photoRemove: "Remove photo",
+    photoRetry: "Retry upload",
+    photoSizeError:
+      "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
+    photoStorageError:
+      "Photo storage is temporarily unavailable. Try again later.",
+    photoTypeError: "Choose a common image format.",
+    photoUploadFailed: "Some photos failed to upload. Retry or remove them.",
+    photoUploading: (count: number) =>
+      `Uploading ${count} photo${count === 1 ? "" : "s"}...`,
     composerTitle: "What's happening?",
     composerSubmit: "Post",
     composerSubmitting: "Posting...",
@@ -329,10 +358,10 @@ const copyByLocale = {
     messageTitle: "Messages",
     messageDescription: "Chats and plan details stay here.",
     messageFilters: {
-      all: "Chats",
+      all: "All chats",
       following: "Following",
-      followers: "Followers",
       mutual: "Mutual",
+      official: "Official",
       rooms: "Groups",
     },
     openMessages: "Open messages",
@@ -379,6 +408,20 @@ const copyByLocale = {
     },
     composer: "Partage une humeur ou un instant à garder...",
     addPhoto: "Ajouter une photo",
+    photoInvalidContentError:
+      "Cette image est invalide. Choisissez le fichier original.",
+    photoLimitError: "Vous pouvez ajouter jusqu'à 6 photos par publication.",
+    photoRemove: "Retirer la photo",
+    photoRetry: "Réessayer",
+    photoSizeError:
+      "Les images doivent faire 10 Mo maximum, ou 20 Mo pour un GIF.",
+    photoStorageError:
+      "Le stockage des photos est indisponible. Réessayez plus tard.",
+    photoTypeError: "Choisissez un format d'image courant.",
+    photoUploadFailed:
+      "Certaines photos n'ont pas été envoyées. Réessayez ou retirez-les.",
+    photoUploading: (count: number) =>
+      `Envoi de ${count} photo${count > 1 ? "s" : ""}...`,
     composerTitle: "Quoi de neuf ?",
     composerSubmit: "Publier",
     composerSubmitting: "Publication...",
@@ -424,10 +467,10 @@ const copyByLocale = {
     messageTitle: "Messages",
     messageDescription: "Les échanges et messages de plans restent ici.",
     messageFilters: {
-      all: "Messages",
+      all: "Tous",
       following: "Suivis",
-      followers: "Me suivent",
       mutual: "Mutuels",
+      official: "Officiel",
       rooms: "Groupes",
     },
     openMessages: "Ouvrir les messages",
@@ -1836,52 +1879,388 @@ const createMomentInitialState: CreateMomentState = {
   },
 };
 
+const maxMomentImageCount = 6;
+const momentImageUploadConcurrency = 3;
+
+type MomentImageUploadErrorCode =
+  | "BUCKET_NOT_AVAILABLE"
+  | "FILE_TOO_LARGE"
+  | "INVALID_IMAGE_CONTENT"
+  | "MISSING_FILE"
+  | "STORAGE_NOT_CONFIGURED"
+  | "UNAUTHORIZED"
+  | "UNSUPPORTED_FILE_TYPE"
+  | "UPLOAD_FAILED";
+
+type MomentImageUploadItem =
+  | {
+      id: string;
+      status: "uploaded";
+      url: string;
+    }
+  | {
+      error?: string;
+      file: File;
+      id: string;
+      previewUrl: string;
+      status: "failed" | "uploading";
+    };
+
 function MomentImageUploadGrid({
   className,
   copy,
   initialUrls,
-  locale,
+  onPendingChange,
 }: {
   className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   initialUrls: string[];
-  locale: string;
+  onPendingChange: (hasPendingUploads: boolean) => void;
 }) {
-  const [urls, setUrls] = useState(initialUrls);
-  const slotCount = Math.min(6, Math.max(1, urls.length + 1));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrlsRef = useRef(new Set<string>());
+  const uploadControllersRef = useRef(new Map<string, AbortController>());
+  const [error, setError] = useState("");
+  const [items, setItems] = useState<MomentImageUploadItem[]>(() =>
+    initialUrls.slice(0, maxMomentImageCount).map((url, index) => ({
+      id: `initial-${index}-${url}`,
+      status: "uploaded",
+      url,
+    })),
+  );
+  const uploadingCount = items.filter(
+    (item) => item.status === "uploading",
+  ).length;
+  const failedUploadItem = items.find((item) => item.status === "failed");
+  const failedUploadError =
+    failedUploadItem?.status === "failed" ? failedUploadItem.error : undefined;
+  const hasPendingUploads = items.some((item) => item.status !== "uploaded");
 
-  function updateUrl(index: number, url: string) {
-    setUrls((current) => {
-      const next = [...current];
+  useEffect(() => {
+    onPendingChange(hasPendingUploads);
+  }, [hasPendingUploads, onPendingChange]);
 
-      next[index] = url;
+  useEffect(
+    () => () => {
+      uploadControllersRef.current.forEach((controller) => controller.abort());
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      uploadControllersRef.current.clear();
+      previewUrlsRef.current.clear();
+    },
+    [],
+  );
 
-      return next.filter(Boolean);
+  function getUploadErrorMessage(code?: string) {
+    if (code === "UNSUPPORTED_FILE_TYPE") {
+      return copy.photoTypeError;
+    }
+
+    if (code === "FILE_TOO_LARGE") {
+      return copy.photoSizeError;
+    }
+
+    if (code === "INVALID_IMAGE_CONTENT") {
+      return copy.photoInvalidContentError;
+    }
+
+    if (
+      code === "STORAGE_NOT_CONFIGURED" ||
+      code === "BUCKET_NOT_AVAILABLE"
+    ) {
+      return copy.photoStorageError;
+    }
+
+    return copy.photoUploadFailed;
+  }
+
+  function releasePreview(previewUrl: string) {
+    if (!previewUrlsRef.current.has(previewUrl)) {
+      return;
+    }
+
+    URL.revokeObjectURL(previewUrl);
+    previewUrlsRef.current.delete(previewUrl);
+  }
+
+  async function uploadItem(
+    item: Extract<MomentImageUploadItem, { file: File }>,
+  ) {
+    const controller = new AbortController();
+    uploadControllersRef.current.set(item.id, controller);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      const response = await fetch("/api/uploads/moment-image", {
+        body: formData,
+        method: "POST",
+        signal: controller.signal,
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: MomentImageUploadErrorCode;
+        url?: string;
+      } | null;
+
+      if (!response.ok || !payload?.url) {
+        const message = getUploadErrorMessage(payload?.error);
+        setItems((current) =>
+          current.map((currentItem) =>
+            currentItem.id === item.id && currentItem.status !== "uploaded"
+              ? { ...currentItem, error: message, status: "failed" }
+              : currentItem,
+          ),
+        );
+        setError(message);
+        return;
+      }
+
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id
+            ? { id: item.id, status: "uploaded", url: payload.url! }
+            : currentItem,
+        ),
+      );
+      window.setTimeout(() => releasePreview(item.previewUrl), 0);
+    } catch (uploadError) {
+      if (
+        uploadError instanceof DOMException &&
+        uploadError.name === "AbortError"
+      ) {
+        return;
+      }
+
+      const message = copy.photoUploadFailed;
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id && currentItem.status !== "uploaded"
+            ? { ...currentItem, error: message, status: "failed" }
+            : currentItem,
+        ),
+      );
+      setError(message);
+    } finally {
+      uploadControllersRef.current.delete(item.id);
+    }
+  }
+
+  async function uploadBatch(
+    batch: Array<Extract<MomentImageUploadItem, { file: File }>>,
+  ) {
+    let nextIndex = 0;
+
+    async function worker() {
+      while (nextIndex < batch.length) {
+        const item = batch[nextIndex];
+        nextIndex += 1;
+
+        if (item) {
+          await uploadItem(item);
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from(
+        { length: Math.min(momentImageUploadConcurrency, batch.length) },
+        () => worker(),
+      ),
+    );
+  }
+
+  function addFiles(fileList: FileList | null) {
+    if (!fileList || uploadingCount > 0) {
+      return;
+    }
+
+    const remainingCount = maxMomentImageCount - items.length;
+
+    if (remainingCount <= 0) {
+      setError(copy.photoLimitError);
+      return;
+    }
+
+    const selectedFiles = Array.from(fileList);
+    const acceptedFiles: File[] = [];
+    const selectionErrors = new Set<string>();
+
+    selectedFiles.forEach((file) => {
+      const validationError = getImageUploadClientValidationError(file);
+
+      if (validationError === "UNSUPPORTED_FILE_TYPE") {
+        selectionErrors.add(copy.photoTypeError);
+        return;
+      }
+
+      if (validationError === "FILE_TOO_LARGE") {
+        selectionErrors.add(copy.photoSizeError);
+        return;
+      }
+
+      if (acceptedFiles.length < remainingCount) {
+        acceptedFiles.push(file);
+      } else {
+        selectionErrors.add(copy.photoLimitError);
+      }
     });
+
+    if (acceptedFiles.length === 0) {
+      setError([...selectionErrors][0] ?? copy.photoUploadFailed);
+      return;
+    }
+
+    const timestamp = Date.now();
+    const uploadItems = acceptedFiles.map((file, index) => {
+      const previewUrl = URL.createObjectURL(file);
+      previewUrlsRef.current.add(previewUrl);
+
+      return {
+        file,
+        id: `${timestamp}-${index}-${file.name}-${file.lastModified}`,
+        previewUrl,
+        status: "uploading" as const,
+      };
+    });
+
+    setError([...selectionErrors].join(" "));
+    setItems((current) => [...current, ...uploadItems]);
+    void uploadBatch(uploadItems);
+  }
+
+  function removeItem(item: MomentImageUploadItem) {
+    if (item.status === "uploading") {
+      return;
+    }
+
+    if (item.status === "failed") {
+      releasePreview(item.previewUrl);
+    }
+
+    setItems((current) =>
+      current.filter((currentItem) => currentItem.id !== item.id),
+    );
+    setError("");
+  }
+
+  function retryItem(item: Extract<MomentImageUploadItem, { file: File }>) {
+    if (item.status !== "failed" || uploadingCount > 0) {
+      return;
+    }
+
+    const retryingItem = {
+      ...item,
+      error: undefined,
+      status: "uploading" as const,
+    };
+    setError("");
+    setItems((current) =>
+      current.map((currentItem) =>
+        currentItem.id === item.id ? retryingItem : currentItem,
+      ),
+    );
+    void uploadBatch([retryingItem]);
   }
 
   return (
-    <div className={cn("flex min-w-0 flex-wrap gap-2", className)}>
-      {Array.from({ length: slotCount }).map((_, index) => (
-        <ActivityCoverUpload
-          key={index}
-          buttonOnlyUntilUploaded
-          splitPreviewBelow
-          initialUrl={urls[index] ?? ""}
-          label={copy.addPhoto}
-          locale={locale}
-          name="imageUrls"
-          onChange={(url) => updateUrl(index, url)}
-          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-bold text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
-          splitEmptyContainerClassName="contents"
-          splitEmptyIconClassName="h-7 w-7 text-[#156240]/62 shadow-none"
-          splitPreviewButtonClassName="h-20 sm:h-20"
-          splitPreviewCardClassName="shadow-none"
-          splitPreviewClassName="h-20 w-20 shrink-0"
-          splitRemoveButtonClassName="right-1 top-1 bg-white/92 px-2 py-1 text-[10px] text-[#9A2135] shadow-none ring-1 ring-[#E3DCC5] backdrop-blur-0 hover:bg-white"
-          uploadEndpoint="/api/uploads/moment-image"
-        />
-      ))}
+    <div className={cn("min-w-0", className)}>
+      <input
+        ref={inputRef}
+        accept={acceptedImageInputTypes}
+        className="hidden"
+        disabled={uploadingCount > 0 || items.length >= maxMomentImageCount}
+        multiple
+        onChange={(event) => {
+          addFiles(event.target.files);
+          event.target.value = "";
+        }}
+        type="file"
+      />
+      {items
+        .filter((item) => item.status === "uploaded")
+        .map((item) => (
+          <input key={item.id} name="imageUrls" type="hidden" value={item.url} />
+        ))}
+
+      <div className="flex min-w-0 flex-wrap gap-2">
+        {items.map((item) => {
+          const imageUrl =
+            item.status === "uploaded" ? item.url : item.previewUrl;
+
+          return (
+            <div
+              key={item.id}
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F1F2EC] ring-1 ring-[#E3DCC5]"
+            >
+              {/* Local previews and uploaded photos both need native URL support. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                src={imageUrl}
+              />
+
+              {item.status === "uploading" ? (
+                <span className="absolute inset-0 grid place-items-center bg-[#111210]/38 text-white">
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                </span>
+              ) : null}
+
+              {item.status === "failed" ? (
+                <button
+                  aria-label={copy.photoRetry}
+                  className="absolute inset-0 grid place-items-center bg-[#9A2135]/58 text-white transition hover:bg-[#9A2135]/68"
+                  onClick={() => retryItem(item)}
+                  title={copy.photoRetry}
+                  type="button"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </button>
+              ) : null}
+
+              {item.status !== "uploading" ? (
+                <button
+                  aria-label={copy.photoRemove}
+                  className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/92 text-[#9A2135] shadow-sm ring-1 ring-[#E3DCC5] transition active:scale-95"
+                  onClick={() => removeItem(item)}
+                  title={copy.photoRemove}
+                  type="button"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {items.length < maxMomentImageCount ? (
+          <button
+            aria-label={copy.addPhoto}
+            className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-bold text-[#156240] transition hover:bg-[#F1F2EC] active:scale-[0.98] disabled:cursor-wait disabled:opacity-55"
+            disabled={uploadingCount > 0}
+            onClick={() => inputRef.current?.click()}
+            title={copy.addPhoto}
+            type="button"
+          >
+            {uploadingCount > 0 ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImagePlus className="h-4 w-4" />
+            )}
+            <span>{copy.addPhoto}</span>
+          </button>
+        ) : null}
+      </div>
+
+      {uploadingCount > 0 ? (
+        <p className="mt-2 text-xs font-semibold text-[#6C746A]" role="status">
+          {copy.photoUploading(uploadingCount)}
+        </p>
+      ) : error || failedUploadError ? (
+        <p className="mt-2 text-xs font-semibold text-[#9A2135]" role="alert">
+          {error || failedUploadError}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1976,6 +2355,7 @@ function MomentComposer({
   profile: FootprintsViewerProfile | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasPendingImageUploads, setHasPendingImageUploads] = useState(false);
   const [visibility, setVisibility] = useState<"FRIENDS" | "PUBLIC">("PUBLIC");
   const [state, formAction, isPending] = useActionState(
     createMomentAction,
@@ -2038,7 +2418,8 @@ function MomentComposer({
       <div className="flex w-full items-center gap-3">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-wait disabled:opacity-60"
+          disabled={hasPendingImageUploads}
           onClick={() => setIsExpanded(false)}
           aria-label={copy.composer}
         >
@@ -2075,20 +2456,21 @@ function MomentComposer({
           className="flex-1"
           copy={copy}
           initialUrls={state.ok ? [] : (state.values?.imageUrls ?? [])}
-          locale={locale}
+          onPendingChange={setHasPendingImageUploads}
         />
 
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#1D1D1B]/70 transition active:scale-[0.98]"
+            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#1D1D1B]/70 transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
+            disabled={hasPendingImageUploads}
             onClick={() => setIsExpanded(false)}
           >
             {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
           </button>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || hasPendingImageUploads}
             className="h-10 rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
           >
             {isPending ? copy.composerSubmitting : copy.composerSubmit}
@@ -2166,6 +2548,7 @@ function FootprintsMessageList({
           friend.lastMessageAt ??
           friend.createdAt,
       ).getTime(),
+      isPinned: friend.isPinned,
       friend,
     }));
     const roomEntries = activityRoomChats.map((room) => ({
@@ -2180,20 +2563,23 @@ function FootprintsMessageList({
         .filter(Boolean)
         .join(" "),
       sortTime: new Date(room.lastMessage?.createdAt ?? room.startAt).getTime(),
+      isPinned: room.isPinned,
       room,
     }));
 
     return [...directEntries, ...roomEntries].sort(
       (entryA, entryB) =>
-        entryB.sortTime - entryA.sortTime || entryA.id.localeCompare(entryB.id),
+        Number(entryB.isPinned) - Number(entryA.isPinned) ||
+        entryB.sortTime - entryA.sortTime ||
+        entryA.id.localeCompare(entryB.id),
     );
   }, [activityRoomChats, friends]);
   const defaultVisibleEntries = useMemo(
     () =>
       sortedEntries.filter((entry) =>
         entry.kind === "direct"
-          ? Boolean(entry.friend.lastMessage)
-          : Boolean(entry.room.lastMessage),
+          ? Boolean(entry.friend.lastMessage) || entry.friend.isPinned
+          : Boolean(entry.room.lastMessage) || entry.room.isPinned,
       ),
     [sortedEntries],
   );
@@ -2204,9 +2590,9 @@ function FootprintsMessageList({
       );
     }
 
-    if (activeFilter === "followers") {
+    if (activeFilter === "official") {
       return sortedEntries.filter(
-        (entry) => entry.kind === "direct" && entry.friend.targetFollowsViewer,
+        (entry) => entry.kind === "direct" && entry.friend.friend.isOfficial,
       );
     }
 
@@ -2245,6 +2631,9 @@ function FootprintsMessageList({
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const followingUnreadTotal = friends
     .filter((friend) => friend.isFollowing && !friend.isMuted)
+    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const officialUnreadTotal = friends
+    .filter((friend) => friend.friend.isOfficial && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const filters: Array<{
     count: number;
@@ -2285,6 +2674,14 @@ function FootprintsMessageList({
       iconFrameClassName: "bg-[#FFF0F5]",
       key: "following",
       label: pageCopy.messageFilters.following,
+    },
+    {
+      count: officialUnreadTotal,
+      icon: BadgeCheck,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "official",
+      label: pageCopy.messageFilters.official,
     },
   ];
   const toolbar = (
@@ -2397,7 +2794,7 @@ function FootprintsMessageList({
                 currentUserProfileId={currentUserProfileId}
                 friend={entry.friend}
                 locale={locale}
-                showBackFollowAction={activeFilter === "followers"}
+                showBackFollowAction={false}
               />
             ) : (
               <FootprintsRoomChatRow
@@ -2438,7 +2835,14 @@ function FootprintsRoomChatRow({
   const time = lastMessage?.createdAt ?? room.startAt;
 
   return (
-    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+    <article
+      className={cn(
+        "min-w-0 transition-colors",
+        room.isPinned
+          ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
+          : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
+      )}
+    >
       <Link
         aria-label={t.openRoomChat(room.title)}
         className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
@@ -2465,7 +2869,15 @@ function FootprintsRoomChatRow({
               </span>
             </span>
             <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-              {formatChatListTimestamp(time, locale)}
+              <span className="inline-flex items-center gap-1">
+                {room.isPinned ? (
+                  <Pin
+                    aria-label={t.pinConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {formatChatListTimestamp(time, locale)}
+              </span>
             </span>
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -2540,7 +2952,15 @@ function FootprintsMessageRow({
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-            {formatChatListTimestamp(time, locale)}
+            <span className="inline-flex items-center gap-1">
+              {friend.isPinned ? (
+                <Pin
+                  aria-label={t.pinConversation}
+                  className="h-3 w-3 text-[#8F9189]"
+                />
+              ) : null}
+              {formatChatListTimestamp(time, locale)}
+            </span>
           </span>
         </span>
         <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -2587,7 +3007,14 @@ function FootprintsMessageRow({
   ) : null;
 
   return (
-    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+    <article
+      className={cn(
+        "min-w-0 transition-colors",
+        friend.isPinned
+          ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
+          : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
+      )}
+    >
       {friend.conversationId ? (
         <div className="flex min-w-0 items-center gap-2">
           <Link
