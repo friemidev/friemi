@@ -54,6 +54,7 @@ const requiredFields = [
   ["UserProfile", "activityRoomReadStates"],
   ["ActivityRoomReadState", "lastReadAt"],
   ["UserProfile", "homeCity"],
+  ["UserProfile", "nicknameChangedAt"],
   ["UserProfile", "presenceStatus"],
   ["UserProfile", "lastActiveAt"],
   ["UserProfile", "achievements"],

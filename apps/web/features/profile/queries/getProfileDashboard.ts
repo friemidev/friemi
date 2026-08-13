@@ -91,11 +91,14 @@ const canSelectUserProfileHomeCity = hasGeneratedPrismaField(
   "UserProfile",
   "homeCity",
 );
+const canSelectUserProfileNicknameChangedAt = hasGeneratedPrismaField(
+  "UserProfile",
+  "nicknameChangedAt",
+);
 
 const publicProfileBaseSelect = {
   id: true,
   nickname: true,
-  nicknameChangedAt: true,
   friendCode: true,
   avatarUrl: true,
   bio: true,
@@ -107,6 +110,7 @@ const publicProfileBaseSelect = {
 
 const publicProfileSelect = {
   ...publicProfileBaseSelect,
+  ...(canSelectUserProfileNicknameChangedAt ? { nicknameChangedAt: true } : {}),
   ...(canSelectUserProfileHomeCity ? { homeCity: true } : {}),
 } satisfies Prisma.UserProfileSelect;
 
@@ -322,7 +326,7 @@ function mapPublicProfile(
   profile: {
     id: string;
     nickname: string;
-    nicknameChangedAt: Date | null;
+    nicknameChangedAt?: Date | null;
     friendCode: string | null;
     avatarUrl: string | null;
     bio: string | null;
