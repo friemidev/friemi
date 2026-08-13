@@ -5,6 +5,7 @@ import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries
 import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import { getPlanetSquare } from "@/features/planets/queries/planetQueries";
+import { getPlanetChatRoster } from "@/features/planets/services/planetChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -76,6 +77,7 @@ export default async function FootprintsPage({
     momentsResult,
     messageFriendsResult,
     activityRoomChatsResult,
+    planetChatsResult,
     planetsResult,
     canCreateResult,
   ] = await Promise.all([
@@ -120,6 +122,21 @@ export default async function FootprintsPage({
               };
             })
         : Promise.resolve({ rooms: [], error: null }),
+      profile && initialTab === "message"
+        ? perf
+            .measure("messages.planetChats", () =>
+              getPlanetChatRoster(profile.id, locale),
+            )
+            .then((planetChats) => ({ planetChats, error: null }))
+            .catch((error: unknown) => {
+              console.error("Failed to load footprints planet chat roster", error);
+
+              return {
+                planetChats: [],
+                error,
+              };
+            })
+        : Promise.resolve({ planetChats: [], error: null }),
       perf
         .measure("planets.square", () => getPlanetSquare(viewerProfileId))
         .then((planets) => ({ planets, error: null }))
@@ -148,6 +165,7 @@ export default async function FootprintsPage({
       initialTab,
       activityRoomChatCount: activityRoomChatsResult.rooms.length,
       messageFriendCount: messageFriendsResult.friends.length,
+      planetChatCount: planetChatsResult.planetChats.length,
       momentCount: momentsResult.moments.length,
       planetCount: planetsResult.planets.length,
       planetCreationEligibilityLoaded: !canCreateResult.error,
@@ -169,8 +187,12 @@ export default async function FootprintsPage({
       momentFeedError={Boolean(momentsResult.error)}
       messageFriends={messageFriendsResult.friends}
       activityRoomChats={activityRoomChatsResult.rooms}
+      planetChats={planetChatsResult.planetChats}
+      planetChatRosterLoaded={!profile || initialTab === "message"}
       messageRosterError={Boolean(
-        messageFriendsResult.error || activityRoomChatsResult.error,
+        messageFriendsResult.error ||
+          activityRoomChatsResult.error ||
+          planetChatsResult.error,
       )}
       profile={
         profile

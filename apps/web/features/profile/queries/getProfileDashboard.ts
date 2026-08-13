@@ -95,6 +95,7 @@ const canSelectUserProfileHomeCity = hasGeneratedPrismaField(
 const publicProfileBaseSelect = {
   id: true,
   nickname: true,
+  nicknameChangedAt: true,
   friendCode: true,
   avatarUrl: true,
   bio: true,
@@ -274,6 +275,7 @@ export type ProfileCharmGiftViewModel = {
 export type PublicProfileViewModel = {
   id: string;
   nickname: string;
+  nicknameChangedAt: string | null;
   publicNickname: string;
   remarkName: string | null;
   friendCode: string | null;
@@ -320,6 +322,7 @@ function mapPublicProfile(
   profile: {
     id: string;
     nickname: string;
+    nicknameChangedAt: Date | null;
     friendCode: string | null;
     avatarUrl: string | null;
     bio: string | null;
@@ -330,6 +333,7 @@ function mapPublicProfile(
   },
   options: {
     canViewPresence?: boolean;
+    includePrivateFields?: boolean;
     remarkName?: string | null;
   } = {},
 ): PublicProfileViewModel {
@@ -352,6 +356,9 @@ function mapPublicProfile(
       publicNickname,
       remarkName,
     }),
+    nicknameChangedAt: options.includePrivateFields
+      ? (profile.nicknameChangedAt?.toISOString() ?? null)
+      : null,
     publicNickname,
     remarkName,
     friendCode: profile.friendCode,
@@ -478,13 +485,16 @@ function mapProfileCharmGift(
   };
 }
 
-function mapFollowUser(user: {
-  id: string;
-  nickname: string;
-  bio: string | null;
-  avatarUrl: string | null;
-  isCoCreator: boolean;
-}, remarkName?: string | null): ProfileFollowUserViewModel {
+function mapFollowUser(
+  user: {
+    id: string;
+    nickname: string;
+    bio: string | null;
+    avatarUrl: string | null;
+    isCoCreator: boolean;
+  },
+  remarkName?: string | null,
+): ProfileFollowUserViewModel {
   const publicNickname = user.nickname.trim() || "NF";
   const normalizedRemarkName = remarkName?.trim() || null;
 
@@ -849,11 +859,9 @@ async function getProfileFollowNetwork(
   const followingUsers = following.map((item) => item.following);
   const remarkMap = await getProfileRemarkMap({
     ownerProfileId: remarkOwnerProfileId,
-    targetProfileIds: [
-      ...mutualUsers,
-      ...followerUsers,
-      ...followingUsers,
-    ].map((user) => user.id),
+    targetProfileIds: [...mutualUsers, ...followerUsers, ...followingUsers].map(
+      (user) => user.id,
+    ),
   });
 
   if (process.env.PROFILE_FOLLOW_NETWORK_SHADOW_COMPARE === "1") {
@@ -875,7 +883,9 @@ async function getProfileFollowNetwork(
     mutualCount: counts.mutualCount,
     followersCount: counts.followersCount,
     followingCount: counts.followingCount,
-    mutual: mutualUsers.map((user) => mapFollowUser(user, remarkMap.get(user.id))),
+    mutual: mutualUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
     followers: followerUsers.map((user) =>
       mapFollowUser(user, remarkMap.get(user.id)),
     ),
@@ -1226,5 +1236,9 @@ export async function getPublicProfileById(
   const canViewPresence =
     options.viewerProfileId === profileId || Boolean(relation?.isMutualFollow);
 
-  return mapPublicProfile(profile, { canViewPresence, remarkName });
+  return mapPublicProfile(profile, {
+    canViewPresence,
+    includePrivateFields: options.includePrivateFields,
+    remarkName,
+  });
 }

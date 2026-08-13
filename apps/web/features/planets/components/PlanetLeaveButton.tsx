@@ -12,7 +12,7 @@ type PlanetLeaveButtonProps = {
 export function PlanetLeaveButton({ locale, planetId, planetSlug }: PlanetLeaveButtonProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const copy = locale === "fr"
-    ? { leave: "Quitter", title: "Quitter cette planete ?", body: "Vous devrez la rejoindre a nouveau pour participer.", cancel: "Annuler", confirm: "Confirmer" }
+    ? { leave: "Quitter", title: "Quitter cette planète ?", body: "Vous devrez la rejoindre à nouveau pour participer.", cancel: "Annuler", confirm: "Confirmer" }
     : locale === "en"
       ? { leave: "Leave", title: "Leave this planet?", body: "You will need to join again to participate.", cancel: "Cancel", confirm: "Leave planet" }
       : { leave: "退出星球", title: "确定退出这个星球？", body: "退出后将无法参与群聊和发布动态，需要重新加入才能参与。", cancel: "暂不退出", confirm: "确认退出" };

@@ -76,6 +76,7 @@ import {
 } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
+import { useViewerProfile } from "./ViewerProfileProvider";
 import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
@@ -90,6 +91,7 @@ import {
   type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
+import { getNicknameChangeAvailableAt } from "../nicknameChangePolicy";
 import type {
   ProfileDashboardViewModel,
   PublicProfileViewModel,
@@ -472,7 +474,8 @@ function getMobileProfileCopy(locale: string) {
     charm: "魅力值",
     charmLevelsClose: "知道了",
     charmLevelsCurrent: "当前等级",
-    charmLevelsIntro: "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
+    charmLevelsIntro:
+      "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
     charmLevelsOpen: "查看魅力等级",
     charmLevelsScore: "魅力值",
     charmLevelsStartingAt: "达到",
@@ -1024,14 +1027,16 @@ function ProfilePreviewTabs({
     ...dashboard.createdActivities,
     ...dashboard.participations.map((participation) => participation.activity),
     ...dashboard.favoriteActivities.map((favorite) => favorite.activity),
-  ].filter((activity) => {
-    if (seenActivityIds.has(activity.id)) {
-      return false;
-    }
+  ]
+    .filter((activity) => {
+      if (seenActivityIds.has(activity.id)) {
+        return false;
+      }
 
-    seenActivityIds.add(activity.id);
-    return true;
-  }).slice(0, 3);
+      seenActivityIds.add(activity.id);
+      return true;
+    })
+    .slice(0, 3);
   const badgeItems = achievementPreviewItems;
   const activeHref = getProfilePreviewTabHref(locale, activeTab);
 
@@ -1186,13 +1191,7 @@ function PreviewImage({
   );
 }
 
-function ProfilePreviewEmpty({
-  href,
-  label,
-}: {
-  href: string;
-  label: string;
-}) {
+function ProfilePreviewEmpty({ href, label }: { href: string; label: string }) {
   return (
     <Link
       className="col-span-3 flex min-h-[7.5rem] items-center justify-center rounded-xl bg-[#F8F7F2] px-4 text-center text-[12px] font-semibold text-[#6C746A] transition active:scale-[0.98]"
@@ -1220,10 +1219,9 @@ function ProfileFeatureLink({
   status?: string;
   tone?: "green" | "pink" | "blue" | "gold" | "gray";
 }) {
-  const toneClass =
-    locked
-      ? "bg-[#F5F4EF] text-[#9A9A90]"
-      : tone === "pink"
+  const toneClass = locked
+    ? "bg-[#F5F4EF] text-[#9A9A90]"
+    : tone === "pink"
       ? "bg-[#FFF1F6] text-[#F05B91]"
       : tone === "blue"
         ? "bg-[#F1F6FF] text-[#4D83E9]"
@@ -1815,7 +1813,9 @@ function ProfileRemarkEditor({
   );
   const router = useRouter();
   const [value, setValue] = useState(profile.remarkName ?? "");
-  const savedRemark = state.ok ? (state.remarkName ?? "") : (profile.remarkName ?? "");
+  const savedRemark = state.ok
+    ? (state.remarkName ?? "")
+    : (profile.remarkName ?? "");
   const hasSavedRemark = savedRemark.trim().length > 0;
 
   useEffect(() => {
@@ -1830,12 +1830,7 @@ function ProfileRemarkEditor({
   }, [router, state.ok, state.remarkName]);
 
   return (
-    <div
-      className={cn(
-        "grid gap-3",
-        className,
-      )}
-    >
+    <div className={cn("grid gap-3", className)}>
       <div className="flex min-w-0 items-center justify-between gap-3">
         <label
           className="text-xs font-semibold text-[#156240]"
@@ -1851,7 +1846,11 @@ function ProfileRemarkEditor({
       </div>
       <form action={formAction} className="flex min-w-0 items-center gap-2">
         <input name="locale" type="hidden" value={locale} />
-        <input name="redirectPath" type="hidden" value={`/profile/${profile.id}`} />
+        <input
+          name="redirectPath"
+          type="hidden"
+          value={`/profile/${profile.id}`}
+        />
         <input name="targetProfileId" type="hidden" value={profile.id} />
         <input
           className="h-10 min-w-0 flex-1 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20"
@@ -1871,7 +1870,11 @@ function ProfileRemarkEditor({
           onSubmit={() => setValue("")}
         >
           <input name="locale" type="hidden" value={locale} />
-          <input name="redirectPath" type="hidden" value={`/profile/${profile.id}`} />
+          <input
+            name="redirectPath"
+            type="hidden"
+            value={`/profile/${profile.id}`}
+          />
           <input name="targetProfileId" type="hidden" value={profile.id} />
           <input name="remarkName" type="hidden" value="" />
           <button
@@ -2429,6 +2432,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
       city: "Ville",
       cityPickerSearch: "Rechercher ou saisir une ville",
       cityPickerTitle: "Choisir une ville",
+      nickname: "Pseudo",
+      nicknameHint: "Modifiable une fois toutes les 24 heures",
+      nicknameLocked: "À nouveau modifiable le",
       save: "Enregistrer",
       saving: "Enregistrement...",
       status: "Statut",
@@ -2444,6 +2450,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
       city: "City",
       cityPickerSearch: "Search or enter a city",
       cityPickerTitle: "Choose city",
+      nickname: "Nickname",
+      nicknameHint: "Can be changed once every 24 hours",
+      nicknameLocked: "Available again",
       save: "Save",
       saving: "Saving...",
       status: "Status",
@@ -2458,6 +2467,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
     city: "城市",
     cityPickerSearch: "搜索或输入城市",
     cityPickerTitle: "选择城市",
+    nickname: "昵称",
+    nicknameHint: "每24小时可修改一次",
+    nicknameLocked: "可再次修改：",
     save: "保存",
     saving: "保存中...",
     status: "状态",
@@ -2587,9 +2599,9 @@ function ProfileCityPickerField({
                   const cities = normalizedQueryKey
                     ? country.cities.filter(
                         (city) =>
-                          city.toLocaleLowerCase().includes(
-                            normalizedQueryKey,
-                          ) ||
+                          city
+                            .toLocaleLowerCase()
+                            .includes(normalizedQueryKey) ||
                           countryLabel
                             .toLocaleLowerCase()
                             .includes(normalizedQueryKey),
@@ -2647,6 +2659,7 @@ function MobileProfileAvatarEditor({
   locale,
   name,
   nickname,
+  nicknameChangedAt,
   onPresenceStatusChange,
   onSaved,
   presenceDisplayStatus,
@@ -2660,16 +2673,20 @@ function MobileProfileAvatarEditor({
   locale: string;
   name: string;
   nickname: string;
+  nicknameChangedAt: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   onSaved: (nextValue: {
     avatarUrl: string | null;
     homeCity: string | null;
+    nickname: string;
+    nicknameChangedAt: string | null;
   }) => void;
   presenceDisplayStatus?: UserPresenceDisplayStatus;
   presenceStatus: UserPresenceStatusValue;
 }) {
   const copy = getMobileProfileAvatarEditorCopy(locale);
   const router = useRouter();
+  const { setNickname } = useViewerProfile();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     mobileAvatarInitialState,
@@ -2677,7 +2694,12 @@ function MobileProfileAvatarEditor({
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
-  const [cityValue, setCityValue] = useState(normalizeProfileHomeCity(homeCity));
+  const [cityValue, setCityValue] = useState(
+    normalizeProfileHomeCity(homeCity),
+  );
+  const [nicknameValue, setNicknameValue] = useState(nickname);
+  const [currentNicknameChangedAt, setCurrentNicknameChangedAt] =
+    useState(nicknameChangedAt);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   useEffect(() => {
@@ -2690,13 +2712,32 @@ function MobileProfileAvatarEditor({
   }, [homeCity]);
 
   useEffect(() => {
+    setNicknameValue(nickname);
+  }, [nickname]);
+
+  useEffect(() => {
+    setCurrentNicknameChangedAt(nicknameChangedAt);
+  }, [nicknameChangedAt]);
+
+  useEffect(() => {
     if (!state.success) {
       return;
     }
 
+    const savedNickname = state.nickname ?? nicknameValue;
+    const savedNicknameChangedAt =
+      state.nicknameChangedAt === undefined
+        ? currentNicknameChangedAt
+        : state.nicknameChangedAt;
+
+    setNickname(savedNickname);
+    setNicknameValue(savedNickname);
+    setCurrentNicknameChangedAt(savedNicknameChangedAt);
     onSaved({
       avatarUrl: state.avatarUrl === undefined ? avatarValue : state.avatarUrl,
       homeCity: state.homeCity === undefined ? cityValue : state.homeCity,
+      nickname: savedNickname,
+      nicknameChangedAt: savedNicknameChangedAt,
     });
     setAvatarDirty(false);
     setOpen(false);
@@ -2704,14 +2745,32 @@ function MobileProfileAvatarEditor({
   }, [
     avatarValue,
     cityValue,
+    currentNicknameChangedAt,
+    nicknameValue,
     onSaved,
     router,
+    setNickname,
     state.avatarUrl,
     state.homeCity,
+    state.nickname,
+    state.nicknameChangedAt,
     state.success,
   ]);
 
   const cityDirty = cityValue !== normalizeProfileHomeCity(homeCity);
+  const nicknameDirty = nicknameValue.trim() !== nickname;
+  const nicknameAvailableAt = getNicknameChangeAvailableAt(
+    currentNicknameChangedAt,
+  );
+  const nicknameLocked = Boolean(
+    nicknameAvailableAt && nicknameAvailableAt.getTime() > Date.now(),
+  );
+  const nicknameHint = nicknameLocked
+    ? `${copy.nicknameLocked} ${nicknameAvailableAt!.toLocaleString(locale, {
+        dateStyle: "short",
+        timeStyle: "short",
+      })}`
+    : copy.nicknameHint;
 
   return (
     <>
@@ -2744,9 +2803,7 @@ function MobileProfileAvatarEditor({
         >
           <div className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-bold text-[#111210]">
-                {copy.title}
-              </h3>
+              <h3 className="text-lg font-bold text-[#111210]">{copy.title}</h3>
               <button
                 className="h-9 rounded-full bg-white px-4 text-xs font-semibold text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
                 type="button"
@@ -2759,9 +2816,11 @@ function MobileProfileAvatarEditor({
             <div className="mt-4">
               <ProfileAvatarPicker
                 hideUploadAction
-                initial={initial}
+                initial={
+                  nicknameValue.trim().charAt(0).toUpperCase() || initial
+                }
                 locale={locale}
-                name={name}
+                name={nicknameValue || name}
                 onChange={(nextAvatarUrl) => {
                   setAvatarValue(nextAvatarUrl);
                   setAvatarDirty(true);
@@ -2785,7 +2844,6 @@ function MobileProfileAvatarEditor({
                     <form action={formAction} className="grid gap-2" noValidate>
                       <input name="locale" type="hidden" value={locale} />
                       <input name="afterSave" type="hidden" value="refresh" />
-                      <input name="nickname" type="hidden" value={nickname} />
                       <input name="bio" type="hidden" value={bio ?? ""} />
                       <input name="homeCity" type="hidden" value={cityValue} />
                       {avatarDirty && avatarValue ? (
@@ -2795,6 +2853,25 @@ function MobileProfileAvatarEditor({
                           value={avatarValue}
                         />
                       ) : null}
+
+                      <label className="grid gap-1.5">
+                        <span className="text-[11px] font-semibold text-[#4F574F]">
+                          {copy.nickname}
+                        </span>
+                        <input
+                          className="h-10 w-full rounded-full bg-white px-3 text-sm font-semibold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A7A99D] focus:ring-[#8AB68E] read-only:bg-[#F4F5F1] read-only:text-[#7B8178]"
+                          maxLength={24}
+                          name="nickname"
+                          onChange={(event) =>
+                            setNicknameValue(event.currentTarget.value)
+                          }
+                          readOnly={nicknameLocked}
+                          value={nicknameValue}
+                        />
+                        <span className="text-[10px] font-medium text-[#7B8178]">
+                          {nicknameHint}
+                        </span>
+                      </label>
 
                       <ProfileCityPickerField
                         label={copy.city}
@@ -2811,7 +2888,9 @@ function MobileProfileAvatarEditor({
                       <div className="flex justify-end">
                         <MobileProfileAvatarSubmitButton
                           disabled={
-                            (!avatarDirty && !cityDirty) || isAvatarUploading
+                            (!avatarDirty && !cityDirty && !nicknameDirty) ||
+                            !nicknameValue.trim() ||
+                            isAvatarUploading
                           }
                           label={copy.save}
                           pendingLabel={copy.saving}
@@ -2873,6 +2952,10 @@ function SelfMobileProfileHome({
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
+  const [currentNickname, setCurrentNickname] = useState(profile.nickname);
+  const [currentNicknameChangedAt, setCurrentNicknameChangedAt] = useState(
+    profile.nicknameChangedAt,
+  );
   const [currentHomeCity, setCurrentHomeCity] = useState(
     normalizeProfileHomeCity(profile.homeCity),
   );
@@ -2882,6 +2965,11 @@ function SelfMobileProfileHome({
   useEffect(() => {
     setCurrentAvatarUrl(profile.avatarUrl);
   }, [profile.avatarUrl]);
+
+  useEffect(() => {
+    setCurrentNickname(profile.nickname);
+    setCurrentNicknameChangedAt(profile.nicknameChangedAt);
+  }, [profile.nickname, profile.nicknameChangedAt]);
 
   useEffect(() => {
     setCurrentHomeCity(normalizeProfileHomeCity(profile.homeCity));
@@ -2979,15 +3067,23 @@ function SelfMobileProfileHome({
               avatarUrl={currentAvatarUrl}
               bio={profile.bio}
               homeCity={currentHomeCity}
-              initial={profileInitial}
+              initial={
+                currentNickname.trim().slice(0, 1).toUpperCase() ||
+                profileInitial
+              }
               isOnline={presenceStatus === "ONLINE"}
               locale={locale}
-              name={profile.nickname}
-              nickname={profile.nickname}
+              name={currentNickname}
+              nickname={currentNickname}
+              nicknameChangedAt={currentNicknameChangedAt}
               onPresenceStatusChange={onPresenceStatusChange}
               onSaved={(nextValue) => {
                 setCurrentAvatarUrl(nextValue.avatarUrl);
-                setCurrentHomeCity(normalizeProfileHomeCity(nextValue.homeCity));
+                setCurrentHomeCity(
+                  normalizeProfileHomeCity(nextValue.homeCity),
+                );
+                setCurrentNickname(nextValue.nickname);
+                setCurrentNicknameChangedAt(nextValue.nicknameChangedAt);
               }}
               presenceDisplayStatus={
                 presenceStatus === "INVISIBLE" ? null : presenceStatus
@@ -2998,7 +3094,7 @@ function SelfMobileProfileHome({
             <div className="min-w-0 flex-1 pt-2">
               <div className="flex min-w-0 items-center gap-2">
                 <h2 className="truncate text-[22px] font-bold leading-tight text-[#111210]">
-                  {profile.nickname}
+                  {currentNickname}
                 </h2>
                 <ProfileAchievementBadgeStrip
                   className="min-w-0 shrink-0"
@@ -3041,7 +3137,6 @@ function SelfMobileProfileHome({
               </button>
             </div>
           </div>
-
         </div>
 
         <MobileProfileSummaryStrip dashboard={dashboard} locale={locale} />
@@ -3103,7 +3198,7 @@ function SelfMobileProfileHome({
       <MobileProfileBioEditor
         bio={profile.bio}
         locale={locale}
-        nickname={profile.nickname}
+        nickname={currentNickname}
       />
     </div>
   );
@@ -3303,6 +3398,7 @@ export function ProfileDashboardView({
                       friendCode={profile.friendCode}
                       locale={locale}
                       nickname={profile.nickname}
+                      nicknameChangedAt={profile.nicknameChangedAt}
                     />
                   </div>
                 ) : null}

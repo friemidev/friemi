@@ -247,6 +247,7 @@ model UserProfile {
   normalizedPhone         String?
   friendCode              String?                       @unique @db.Char(6)
   nickname                String
+  nicknameChangedAt       DateTime?
   firstName               String?
   lastName                String?
   username                String?
@@ -289,7 +290,7 @@ model UserProfile {
   friendshipsAsUserB      Friendship[]                  @relation("FriendshipUserB")
   conversationsAsUserA    Conversation[]                @relation("ConversationUserA")
   conversationsAsUserB    Conversation[]                @relation("ConversationUserB")
-  conversationPreferences ConversationPreference[]       @relation("ConversationPreferenceProfile")
+  conversationPreferences ConversationPreference[]      @relation("ConversationPreferenceProfile")
   sentDirectMessages      DirectMessage[]               @relation("DirectMessageSender")
   directMessageDeletions  DirectMessageDeletion[]       @relation("DirectMessageDeletionProfile")
   activityRoomMessages    ActivityRoomMessage[]         @relation("ActivityRoomMessageSender")
@@ -324,6 +325,7 @@ model UserProfile {
   ownedPlanets            Planet[]                      @relation("PlanetOwner")
   planetMemberships       PlanetMember[]
   planetMessages          PlanetMessage[]               @relation("PlanetMessageAuthor")
+  planetChatReadStates    PlanetChatReadState[]         @relation("PlanetChatReadStateProfile")
   planetMoments           PlanetMoment[]                @relation("PlanetMomentAuthor")
   planetMomentComments    PlanetMomentComment[]         @relation("PlanetMomentCommentAuthor")
   planetMomentLikes       PlanetMomentLike[]            @relation("PlanetMomentLikeProfile")
@@ -344,22 +346,23 @@ model UserProfile {
 }
 
 model Planet {
-  id               String           @id @default(cuid())
-  slug             String           @unique
-  inviteCode       String           @unique @db.VarChar(16)
+  id               String                @id @default(cuid())
+  slug             String                @unique
+  inviteCode       String                @unique @db.VarChar(16)
   name             String
   nameTranslations Json?
-  description      String?          @db.Text
+  description      String?               @db.Text
   coverImageUrl    String?
-  tags             String[]         @default([])
-  visibility       PlanetVisibility @default(PUBLIC)
+  tags             String[]              @default([])
+  visibility       PlanetVisibility      @default(PUBLIC)
   ownerId          String
-  owner            UserProfile      @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner            UserProfile           @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members          PlanetMember[]
   messages         PlanetMessage[]
+  chatReadStates   PlanetChatReadState[]
   moments          PlanetMoment[]
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([visibility, createdAt])
   @@index([ownerId, createdAt])
@@ -392,6 +395,25 @@ model PlanetMessage {
 
   @@index([planetId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PlanetChatReadState {
+  id         String      @id @default(cuid())
+  planetId   String
+  profileId  String
+  lastReadAt DateTime    @default(now())
+  mutedAt    DateTime?
+  pinnedAt   DateTime?
+  planet     Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  profile    UserProfile @relation("PlanetChatReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([planetId, profileId])
+  @@index([profileId, mutedAt])
+  @@index([profileId, pinnedAt])
+  @@index([profileId, updatedAt])
+  @@index([planetId, lastReadAt])
 }
 
 model PlanetMoment {
@@ -1250,16 +1272,16 @@ model Friendship {
 }
 
 model Conversation {
-  id            String          @id @default(cuid())
+  id            String                   @id @default(cuid())
   userAId       String
   userBId       String
-  userA         UserProfile     @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB         UserProfile     @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  userA         UserProfile              @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB         UserProfile              @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
   messages      DirectMessage[]
   preferences   ConversationPreference[]
   lastMessageAt DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
 
   @@unique([userAId, userBId])
   @@index([userAId, lastMessageAt])
@@ -1285,19 +1307,19 @@ model ConversationPreference {
 }
 
 model DirectMessage {
-  id             String       @id @default(cuid())
+  id             String                  @id @default(cuid())
   conversationId String
   senderId       String
   activityId     String?
   body           String
-  imageUrls      String[]     @default([])
+  imageUrls      String[]                @default([])
   readAt         DateTime?
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  activity       Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  activity       Activity?               @relation(fields: [activityId], references: [id], onDelete: SetNull)
   deletions      DirectMessageDeletion[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
 
   @@index([conversationId, createdAt])
   @@index([conversationId, senderId, readAt])

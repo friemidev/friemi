@@ -8,10 +8,33 @@ import {
 } from "@/lib/image-upload-policy";
 
 export function PlanetCoverUpload({
+  locale,
   name = "coverImageUrl",
 }: {
+  locale: string;
   name?: string;
 }) {
+  const copy =
+    locale === "fr"
+      ? {
+          alt: "Couverture de la planète",
+          change: "Changer la couverture",
+          upload: "Ajouter une couverture",
+          uploading: "Importation...",
+        }
+      : locale === "en"
+        ? {
+            alt: "Planet cover",
+            change: "Change cover",
+            upload: "Upload cover",
+            uploading: "Uploading...",
+          }
+        : {
+            alt: "星球封面",
+            change: "点击更换封面",
+            upload: "点击上传封面",
+            uploading: "上传中...",
+          };
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,7 +90,11 @@ export function PlanetCoverUpload({
         type="button"
       >
         {url ? (
-          <img alt="星球封面" className="h-full w-full object-cover" src={url} />
+          <img
+            alt={copy.alt}
+            className="h-full w-full object-cover"
+            src={url}
+          />
         ) : (
           <ImagePlus className="mx-auto h-6 w-6 text-white" />
         )}
@@ -77,7 +104,7 @@ export function PlanetCoverUpload({
         onClick={() => inputRef.current?.click()}
         type="button"
       >
-        {busy ? "上传中..." : url ? "点击更换封面" : "点击上传封面"}
+        {busy ? copy.uploading : url ? copy.change : copy.upload}
       </button>
     </div>
   );
