@@ -11,6 +11,7 @@ import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 import { referralCookieName } from "@/features/referrals/referralCode";
 import { consumeReferralCodeOnProfileCreate } from "@/features/referrals/services/referrals";
+import { resolveProfileAvatarUrlForClerkSync } from "@/features/profile/profileAvatarSync";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
@@ -235,6 +236,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
   const existing = await prisma.userProfile.findUnique({
     where: { clerkUserId: user.id },
     select: {
+      avatarUrl: true,
       email: true,
       emailVerifiedAt: true,
       nickname: true,
@@ -275,7 +277,10 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
         ? {}
         : { nickname: profileFields.nickname }),
       username: profileFields.username,
-      avatarUrl: profileFields.avatarUrl,
+      avatarUrl: resolveProfileAvatarUrlForClerkSync({
+        clerkAvatarUrl: profileFields.avatarUrl,
+        storedAvatarUrl: existing?.avatarUrl,
+      }),
       status: profileFields.status,
       clerkDeletedAt: profileFields.clerkDeletedAt,
       syncedAt: profileFields.syncedAt,

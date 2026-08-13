@@ -24,17 +24,17 @@ type PlanetRoomFloatingActionsProps = {
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      copyFailed: "Copie impossible. Selectionnez le lien manuellement.",
+      copyFailed: "Copie impossible. Sélectionnez le lien manuellement.",
       copyInvite: "Copier le lien d'invitation",
-      copied: "Lien copie",
+      copied: "Lien copié",
       empty: "Aucune nouvelle demande.",
       reviewTitle: "Demandes en attente",
       reviewHint: "Validez ou refusez en un geste.",
       close: "Fermer",
       approve: "Approuver",
       reject: "Refuser",
-      manage: "Gerer",
-      manageTitle: "Actions du createur",
+      manage: "Gérer",
+      manageTitle: "Actions du créateur",
       pendingCount: "Demandes",
     };
   }
@@ -103,7 +103,7 @@ export function PlanetRoomFloatingActions({
 
   return (
     <>
-      <div className="pointer-events-none fixed right-[max(1rem,calc((100vw-28rem)/2+1rem))] top-[calc(env(safe-area-inset-top)+5.25rem)] z-[60] md:top-24">
+      <div className="pointer-events-none fixed right-[max(1rem,calc((100vw-28rem)/2+1rem))] top-[calc(env(safe-area-inset-top)+1.15rem)] z-[60] md:right-8 md:top-24 xl:right-[calc((100vw-64rem)/2+2rem)]">
         {menuOpen ? (
           <button
             type="button"
@@ -156,15 +156,13 @@ export function PlanetRoomFloatingActions({
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-[#d6d5b2] bg-white/96 px-3 py-2 text-[#6f5c34] shadow-[0_18px_38px_rgba(29,29,27,0.14)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#6f5c34] ring-1 ring-[#e7e1ca] transition active:scale-95 md:h-auto md:w-auto md:gap-2 md:px-3 md:py-2"
               aria-label={copy.manageTitle}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff4df] text-[#9a6a21]">
-                <ShieldCheck className="h-4 w-4" />
-              </span>
-              <span className="text-sm font-bold">{copy.manage}</span>
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden text-sm font-bold md:inline">{copy.manage}</span>
               {pendingMembers.length ? (
-                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-bold leading-none text-[#8d641f]">
+                <span className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#ef476f] px-1 text-[9px] font-bold leading-none text-white md:static md:min-h-0 md:min-w-0 md:bg-[#f3e4c5] md:px-2 md:py-1 md:text-[11px] md:text-[#8d641f]">
                   {pendingMembers.length}
                 </span>
               ) : null}

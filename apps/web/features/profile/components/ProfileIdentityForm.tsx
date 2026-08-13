@@ -12,6 +12,7 @@ import {
 } from "../actions/updateProfileIdentity";
 import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
 import { useViewerProfile } from "./ViewerProfileProvider";
+import { getNicknameChangeAvailableAt } from "../nicknameChangePolicy";
 
 type ProfileIdentityFormProps = {
   avatarUrl?: string | null;
@@ -19,6 +20,7 @@ type ProfileIdentityFormProps = {
   friendCode: string;
   locale: string;
   nickname: string;
+  nicknameChangedAt?: string | null;
 };
 
 const initialState: UpdateProfileIdentityState = {};
@@ -29,6 +31,7 @@ export function ProfileIdentityForm({
   friendCode,
   locale,
   nickname,
+  nicknameChangedAt = null,
 }: ProfileIdentityFormProps) {
   const { setNickname } = useViewerProfile();
   const router = useRouter();
@@ -43,6 +46,10 @@ export function ProfileIdentityForm({
   const [bioValue, setBioValue] = useState(bio ?? "");
   const [nicknameValue, setNicknameValue] = useState(nickname);
   const [copied, setCopied] = useState(false);
+  const nicknameAvailableAt = getNicknameChangeAvailableAt(nicknameChangedAt);
+  const nicknameLocked = Boolean(
+    nicknameAvailableAt && nicknameAvailableAt.getTime() > Date.now(),
+  );
   const t = getCopy(locale).profile;
   const editLabel =
     locale === "en"
@@ -52,14 +59,24 @@ export function ProfileIdentityForm({
         : "编辑昵称";
   const cancelLabel =
     locale === "en" ? "Cancel" : locale === "fr" ? "Annuler" : "取消";
-  const bioLabel =
-    locale === "en" ? "Bio" : locale === "fr" ? "Bio" : "简介";
+  const bioLabel = locale === "en" ? "Bio" : locale === "fr" ? "Bio" : "简介";
   const bioPlaceholder =
     locale === "en"
       ? "Write a short intro"
       : locale === "fr"
         ? "Ajoutez une courte présentation"
         : "简单介绍一下自己";
+  const nicknameChangeHint = nicknameLocked
+    ? locale === "en"
+      ? `Available again ${nicknameAvailableAt!.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}`
+      : locale === "fr"
+        ? `Disponible à nouveau le ${nicknameAvailableAt!.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}`
+        : `${nicknameAvailableAt!.toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })} 后可再次修改`
+    : locale === "en"
+      ? "Nickname can be changed once every 24 hours."
+      : locale === "fr"
+        ? "Le pseudo peut être modifié une fois toutes les 24 heures."
+        : "昵称每24小时可修改一次。";
 
   useEffect(() => {
     setNicknameValue(nickname);
@@ -183,11 +200,15 @@ export function ProfileIdentityForm({
             <Input
               name="nickname"
               value={nicknameValue}
+              readOnly={nicknameLocked}
               maxLength={24}
               placeholder={t.nicknamePlaceholder}
               className="h-10 bg-white"
               onChange={(event) => setNicknameValue(event.target.value)}
             />
+            <span className="text-[11px] font-medium text-zinc-500">
+              {nicknameChangeHint}
+            </span>
           </label>
           <label className="grid gap-1.5">
             <span className="text-xs font-medium text-zinc-500">

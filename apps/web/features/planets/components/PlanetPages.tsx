@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Lock, MessageCircle, Orbit, Plus, Send, Sparkles, Trash2, UsersRound } from "lucide-react";
+import { ArrowLeft, MessageCircle, Orbit, Plus, Send, Sparkles, Trash2, UsersRound } from "lucide-react";
 import {
   createPlanetAction,
   createPlanetMomentCommentAction,
@@ -9,12 +9,14 @@ import {
 } from "@/features/planets/actions/planetActions";
 import { withLocale } from "@/lib/routes";
 import { buildCanonicalSiteUrl } from "@/lib/site-url";
-import { PlanetRoomComposer } from "./PlanetRoomComposer";
+import { cn } from "@/lib/utils";
+import { PlanetMomentComposer } from "./PlanetMomentComposer";
 import { PlanetRoomFloatingActions } from "./PlanetRoomFloatingActions";
 import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
 import type { getPlanetMoment, getPlanetRoom, getPlanetSquare } from "../queries/planetQueries";
+import { canInteractWithPlanetMoment } from "../utils/planetMomentPolicy";
 
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 type PlanetRoom = NonNullable<Awaited<ReturnType<typeof getPlanetRoom>>>;
@@ -31,35 +33,22 @@ const colorPairs = [
 
 const planetCopy = {
   "zh-CN": {
-    chat: "\u661f\u7403\u7fa4\u804a",
-    comments: "\u8bc4\u8bba",
+    openChat: "\u524d\u5f80\u7fa4\u804a",
+    pendingChatAction: "\u7b49\u5f85\u5ba1\u6838\u540e\u53ef\u7fa4\u804a",
+    joinChatAction: "\u52a0\u5165\u540e\u53ef\u7fa4\u804a",
     create: "\u521b\u5efa\u661f\u7403",
     createHint: "\u5f00\u59cb\u4e00\u6761\u65b0\u7684\u8f68\u9053",
-    creator: "\u521b\u5efa\u4eba",
-    emptyChat: "\u8fd8\u6ca1\u6709\u6d88\u606f\uff0c\u548c\u5927\u5bb6\u6253\u4e2a\u62db\u547c\u5427\u3002",
     memberUnit: "\u4f4d\u6210\u5458",
-    moment: "\u7cbe\u5f69\u77ac\u95f4",
     orbit: "\u661f\u7403\u8f68\u8ff9",
-    send: "\u8f93\u5165\u6d88\u606f...",
+    detailTitle: "\u661f\u7403\u8be6\u60c5",
+    hostedBy: "\u521b\u5efa\u4eba",
     subtitle: "\u627e\u5230\u9002\u5408\u4f60\u7684\u661f\u7403\u8f68\u9053",
     title: "\u661f\u9645\u4e4b\u95f4",
     apply: "\u7533\u8bf7\u52a0\u5165",
-    applied: "\u7b49\u5f85\u5ba1\u6838",
     cancelRequest: "\u53d6\u6d88\u7533\u8bf7",
     pendingNotice: "\u4f60\u7684\u7533\u8bf7\u5df2\u63d0\u4ea4\uff0c\u521b\u5efa\u4eba\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u5e76\u53c2\u4e0e\u4e92\u52a8\u3002",
-    joinNotice: "\u52a0\u5165\u8fd9\u4e2a\u661f\u7403\u9700\u8981\u521b\u5efa\u4eba\u5ba1\u6838\uff0c\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u3002",
-    pendingChatHint: "\u7b49\u5f85\u901a\u8fc7",
-    pendingChatBody: "\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u53ef\u4ee5\u5728\u8fd9\u91cc\u770b\u5230\u7fa4\u804a\uff0c\u4e5f\u80fd\u4e00\u8d77\u804a\u5929\u4e86\u3002",
-    joinChatHint: "\u901a\u8fc7\u540e\u53ef\u89c1",
-    joinChatBody: "\u7533\u8bf7\u901a\u8fc7\u540e\uff0c\u5c31\u80fd\u5728\u8fd9\u91cc\u804a\u5929\u3002",
-    reviewTitle: "\u5f85\u5ba1\u6838\u7533\u8bf7",
-    reviewEmpty: "\u6682\u65f6\u6ca1\u6709\u65b0\u7684\u7533\u8bf7\u3002",
-    approve: "\u901a\u8fc7",
-    reject: "\u62d2\u7edd",
-    inviteLink: "\u9080\u8bf7\u94fe\u63a5",
     createLocked: "\u5171\u521b\u4e3b\u7406\u4eba\u53ef\u4ee5\u521b\u5efa\u5e76\u7ba1\u7406\u81ea\u5df1\u7684\u661f\u7403\u3002",
     firstMoment: "\u8fd8\u6ca1\u6709\u8f68\u8ff9\uff0c\u53d1\u5e03\u7b2c\u4e00\u6761\u7cbe\u5f69\u77ac\u95f4\u5427\u3002",
-    chatLocked: "\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u67e5\u770b\u548c\u53c2\u4e0e\u7fa4\u804a\u3002",
     backToSquare: "\u8fd4\u56de\u661f\u7403\u5e7f\u573a",
     backToPlanet: "\u8fd4\u56de\u661f\u7403",
     createTitle: "\u521b\u5efa\u4f60\u7684\u661f\u7403",
@@ -71,42 +60,29 @@ const planetCopy = {
     tagsLabel: "\u6807\u7b7e",
     tagsPlaceholder: "\u684c\u6e38\uff0c\u5468\u672b\uff0c\u65b0\u624b\u53cb\u597d",
     createButton: "\u521b\u5efa\u5e76\u8fdb\u5165\u661f\u7403",
-    momentLabel: "\u7cbe\u5f69\u77ac\u95f4",
     danmaku: "\u5f39\u5e55",
     danmakuPlaceholder: "\u53d1\u5e03\u5f39\u5e55...",
     delete: "\u5220\u9664",
-    planetMoment: "\u661f\u7403\u7cbe\u5f69\u77ac\u95f4",
+    empty: "还没有星球，成为第一个创建它的人吧。",
+    momentUnavailable: "\u8be5\u6761\u8f68\u8ff9\u5df2\u5220\u9664\u6216\u6682\u65f6\u4e0d\u53ef\u89c1\uff0c\u5df2\u4e3a\u4f60\u663e\u793a\u6700\u65b0\u5185\u5bb9\u3002",
   },
   en: {
-    chat: "Planet chat",
-    comments: "Comments",
+    openChat: "Open group chat",
+    pendingChatAction: "Chat available after approval",
+    joinChatAction: "Join to open chat",
     create: "Create planet",
     createHint: "Start a new orbit",
-    creator: "Creator",
-    emptyChat: "No messages yet. Say hello to the planet.",
     memberUnit: "members",
-    moment: "Moments",
     orbit: "Planet orbit",
-    send: "Write a message...",
+    detailTitle: "Planet Detail",
+    hostedBy: "Created by",
     subtitle: "Find the orbit that fits you",
     title: "Between Planets",
     apply: "Request to join",
-    applied: "Pending review",
     cancelRequest: "Cancel request",
     pendingNotice: "Your request is pending. You can view the chat after the creator approves it.",
-    joinNotice: "Joining this planet requires creator approval before chat becomes visible.",
-    pendingChatHint: "Pending approval",
-    pendingChatBody: "Once the creator approves you, the messages and composer will appear here automatically.",
-    joinChatHint: "Join to view chat",
-    joinChatBody: "Send a join request first. After approval, you will be able to read and join the chat.",
-    reviewTitle: "Pending requests",
-    reviewEmpty: "No pending requests right now.",
-    approve: "Approve",
-    reject: "Reject",
-    inviteLink: "Invite link",
     createLocked: "Co-creators can create and manage their own planets.",
     firstMoment: "No orbit yet. Share the first moment.",
-    chatLocked: "Chat becomes available after approval.",
     backToSquare: "Back to planets",
     backToPlanet: "Back to planet",
     createTitle: "Create your planet",
@@ -118,58 +94,45 @@ const planetCopy = {
     tagsLabel: "Tags",
     tagsPlaceholder: "board games, weekend, beginner-friendly",
     createButton: "Create planet",
-    momentLabel: "Moments",
     danmaku: "Comments",
     danmakuPlaceholder: "Write a comment...",
     delete: "Delete",
-    planetMoment: "Planet moment",
+    empty: "No planets yet. Be the first to create one.",
+    momentUnavailable: "That moment was removed or is unavailable. The latest content is shown instead.",
   },
   fr: {
-    chat: "Discussion de la planete",
-    comments: "Commentaires",
-    create: "Creer une planete",
+    openChat: "Ouvrir la discussion",
+    pendingChatAction: "Discussion disponible après validation",
+    joinChatAction: "Rejoindre pour discuter",
+    create: "Créer une planète",
     createHint: "Lancer une nouvelle orbite",
-    creator: "Createur",
-    emptyChat: "Aucun message. Dites bonjour a la planete.",
     memberUnit: "membres",
-    moment: "Moments",
-    orbit: "Trajectoire de la planete",
-    send: "Ecrire un message...",
+    orbit: "Trajectoire de la planète",
+    detailTitle: "Détail de la planète",
+    hostedBy: "Créée par",
     subtitle: "Trouvez l'orbite qui vous ressemble",
-    title: "Entre planetes",
-    apply: "Demander a rejoindre",
-    applied: "En attente",
+    title: "Entre planètes",
+    apply: "Demander à rejoindre",
     cancelRequest: "Annuler la demande",
-    pendingNotice: "Votre demande est en attente. Le chat sera visible apres validation du createur.",
-    joinNotice: "Rejoindre cette planete necessite l'accord du createur avant d'acceder au chat.",
-    pendingChatHint: "En attente de validation",
-    pendingChatBody: "Des que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici.",
-    joinChatHint: "Rejoignez la planete",
-    joinChatBody: "Commencez par envoyer une demande. Apres validation, vous pourrez lire et rejoindre le chat.",
-    reviewTitle: "Demandes en attente",
-    reviewEmpty: "Aucune nouvelle demande pour le moment.",
-    approve: "Valider",
-    reject: "Refuser",
-    inviteLink: "Lien d'invitation",
-    createLocked: "Les co-createurs peuvent creer et gerer leurs propres planetes.",
+    pendingNotice: "Votre demande est en attente. Le chat sera visible après validation du créateur.",
+    createLocked: "Les co-créateurs peuvent créer et gérer leurs propres planètes.",
     firstMoment: "Pas encore de trajectoire. Partagez le premier moment.",
-    chatLocked: "Le chat devient disponible apres validation.",
-    backToSquare: "Retour aux planetes",
-    backToPlanet: "Retour a la planete",
-    createTitle: "Creer votre planete",
-    createSubtitle: "Faites se rencontrer interets, relations et inspirations.",
-    nameLabel: "Nom de la planete",
+    backToSquare: "Retour aux planètes",
+    backToPlanet: "Retour à la planète",
+    createTitle: "Créer votre planète",
+    createSubtitle: "Faites se rencontrer intérêts, relations et inspirations.",
+    nameLabel: "Nom de la planète",
     namePlaceholder: "Exemple : Jeux du week-end",
     descriptionLabel: "Description",
-    descriptionPlaceholder: "Expliquez ce que l'on trouve sur cette planete.",
+    descriptionPlaceholder: "Expliquez ce que l'on trouve sur cette planète.",
     tagsLabel: "Tags",
-    tagsPlaceholder: "jeux, week-end, debutants",
-    createButton: "Creer la planete",
-    momentLabel: "Moments",
+    tagsPlaceholder: "jeux, week-end, débutants",
+    createButton: "Créer la planète",
     danmaku: "Commentaires",
-    danmakuPlaceholder: "Ecrire un commentaire...",
+    danmakuPlaceholder: "Écrire un commentaire...",
     delete: "Supprimer",
-    planetMoment: "Moment de la planete",
+    empty: "Aucune planète pour le moment. Créez la première.",
+    momentUnavailable: "Ce moment a été supprimé ou n'est plus disponible. Le contenu le plus récent est affiché.",
   },
 } as const;
 
@@ -184,21 +147,9 @@ function getPlanetName(planet: { name: string; nameTranslations?: unknown }, loc
   return typeof translated === "string" && translated.trim() ? translated : planet.name;
 }
 
-function Avatar({ avatarUrl, name }: { avatarUrl: string | null; name: string }) {
-  if (avatarUrl) {
-    return <img alt="" className="h-8 w-8 rounded-full object-cover" src={avatarUrl} />;
-  }
-
-  return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9ead8] text-xs font-bold text-[#246044]">
-      {name.slice(0, 1).toUpperCase()}
-    </span>
-  );
-}
-
 function PlanetCover({ coverImageUrl, index }: { coverImageUrl: string | null; index: number }) {
   return (
-    <div className={`relative h-24 overflow-hidden rounded-2xl bg-gradient-to-br ${colorPairs[index % colorPairs.length]}`}>
+    <div className={`relative h-24 overflow-hidden rounded-2xl bg-gradient-to-br md:h-32 lg:h-36 ${colorPairs[index % colorPairs.length]}`}>
       {coverImageUrl ? <img alt="" className="absolute inset-0 h-full w-full object-cover" src={coverImageUrl} /> : null}
       {!coverImageUrl ? (
         <>
@@ -212,9 +163,22 @@ function PlanetCover({ coverImageUrl, index }: { coverImageUrl: string | null; i
   );
 }
 
-function PageShell({ children }: { children: React.ReactNode }) {
+function PageShell({
+  children,
+  detail = false,
+}: {
+  children: React.ReactNode;
+  detail?: boolean;
+}) {
   return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:0.8rem] [--app-mobile-page-bottom-gap:1.25rem] bg-[#f6f1ea] text-[#151713] md:bg-[#edf4fa] md:py-10">
+    <main
+      className={cn(
+        "app-mobile-page-shell [--app-mobile-page-bottom-gap:1.25rem] text-[#151713]",
+        detail
+          ? "planet-detail-page [--app-mobile-page-top-gap:1.15rem] bg-white md:py-8"
+          : "[--app-mobile-page-top-gap:0.8rem] bg-[#f6f1ea] md:bg-[#edf4fa] md:py-10",
+      )}
+    >
       {children}
     </main>
   );
@@ -248,7 +212,12 @@ export function PlanetSquarePage({
         </div>
       </div>
       {planets.length ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-3",
+            embedded && "md:grid-cols-3 md:gap-5 lg:grid-cols-4",
+          )}
+        >
           {planets.map((planet, index) => (
             <Link className="group min-w-0" href={withLocale(locale, `/planets/${planet.slug}`)} key={planet.id}>
               <PlanetCover coverImageUrl={planet.coverImageUrl} index={index} />
@@ -263,7 +232,7 @@ export function PlanetSquarePage({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-[#d9d4b5] p-8 text-center text-sm text-[#7e827d]">
-          {"\u8FD8\u6CA1\u6709\u661F\u7403\uFF0C\u6210\u4E3A\u7B2C\u4E00\u4E2A\u521B\u5EFA\u5B83\u7684\u4EBA\u5427\u3002"}
+          {copy.empty}
         </div>
       )}
       {canCreate ? (
@@ -325,34 +294,14 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
   );
 }
 
-function PlanetChatLockedNotice({
-  body,
-  hint,
-}: {
-  body: string;
-  hint: string;
-}) {
-  return (
-    <div className="mt-3 rounded-2xl border border-[#f1d7b5] bg-[#fff8ef] p-4">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ffe8c9] text-[#9a6a21]">
-          <Lock className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-normal text-[#9a6a21]">{hint}</p>
-          <p className="mt-1 text-sm font-semibold leading-6 text-[#7d5d2d]">{body}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MomentOrbitCard({
+  active,
   index,
   locale,
   moment,
   planetSlug,
 }: {
+  active: boolean;
   index: number;
   locale: string;
   moment: PlanetRoom["moments"][number];
@@ -367,9 +316,14 @@ function MomentOrbitCard({
   ];
 
   return (
-    <Link className="group w-14 shrink-0 text-center" href={withLocale(locale, `/planets/${planetSlug}/moments/${moment.id}`)}>
+    <Link
+      aria-current={active ? "true" : undefined}
+      className="group w-14 shrink-0 text-center"
+      href={`${withLocale(locale, `/planets/${planetSlug}`)}?moment=${moment.id}#planet-moment`}
+      scroll={false}
+    >
       <span
-        className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-[#d9e3d5] bg-gradient-to-br ${orbitColors[index % orbitColors.length]} p-1 shadow-sm transition group-active:scale-95`}
+        className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br ${orbitColors[index % orbitColors.length]} p-1 shadow-sm transition group-active:scale-95 ${active ? "border-[#1f6a4a] ring-2 ring-[#b7d7c1] ring-offset-2" : "border-[#d9e3d5]"}`}
       >
         {moment.imageUrls[0] ? (
           <img alt="" className="h-full w-full rounded-full object-cover" src={moment.imageUrls[0]} />
@@ -382,24 +336,118 @@ function MomentOrbitCard({
   );
 }
 
-export function PlanetRoomPage({ locale, planet }: { locale: string; planet: PlanetRoom }) {
+function PlanetChatEntry({
+  locale,
+  planet,
+  selectedMomentId,
+}: {
+  locale: string;
+  planet: PlanetRoom;
+  selectedMomentId?: string;
+}) {
   const copy = getPlanetCopy(locale);
+  const planetHref = `${withLocale(locale, `/planets/${planet.slug}`)}${
+    selectedMomentId ? `?moment=${selectedMomentId}#planet-moment` : ""
+  }`;
+  const chatHref = `${withLocale(locale, `/planets/${planet.slug}/chat`)}?returnTo=${encodeURIComponent(planetHref)}`;
+
+  if (!planet.canViewChat) return null;
+
+  return (
+    <Link
+      className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-bold text-white transition active:scale-[0.99] md:mt-0 md:w-auto md:min-w-52"
+      href={chatHref}
+    >
+      <MessageCircle className="h-4 w-4" />
+      {copy.openChat}
+      {planet.chatUnreadCount > 0 ? (
+        planet.isChatMuted ? (
+          <span aria-label={`${planet.chatUnreadCount}`} className="h-2 w-2 rounded-full bg-[#FF496F]" />
+        ) : (
+          <span className="flex min-w-5 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#155F40]">
+            {planet.chatUnreadCount > 99 ? "99+" : planet.chatUnreadCount}
+          </span>
+        )
+      ) : null}
+    </Link>
+  );
+}
+
+function PlanetMomentPanel({ locale, moment }: { locale: string; moment: PlanetMoment }) {
+  const copy = getPlanetCopy(locale);
+  const canInteract = canInteractWithPlanetMoment(moment.viewerMembership);
+
+  return (
+    <section className="scroll-mt-4 pt-5" id="planet-moment">
+      <PlanetMomentCarousel
+        authorName={moment.author.nickname}
+        canLike={canInteract}
+        comments={moment.comments}
+        content={moment.content}
+        createdAtLabel={moment.createdAt.toLocaleDateString(locale)}
+        imageUrls={moment.imageUrls.slice(0, 12)}
+        isLiked={Boolean(moment.likes?.length)}
+        likeCount={moment._count?.likes ?? 0}
+        locale={locale}
+        momentId={moment.id}
+        planetId={moment.planet.id}
+        planetSlug={moment.planet.slug}
+      />
+      {moment.isViewerAuthor ? (
+        <form action={deletePlanetMomentAction} className="mt-3 px-2">
+          <input name="locale" type="hidden" value={locale} />
+          <input name="planetId" type="hidden" value={moment.planet.id} />
+          <input name="planetSlug" type="hidden" value={moment.planet.slug} />
+          <input name="momentId" type="hidden" value={moment.id} />
+          <button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit">
+            <Trash2 className="h-3.5 w-3.5" />
+            {copy.delete}
+          </button>
+        </form>
+      ) : null}
+
+      {canInteract ? (
+        <form action={createPlanetMomentCommentAction} className="mt-5 flex gap-2 border-t border-[#ece8dc] pt-4">
+          <input name="locale" type="hidden" value={locale} />
+          <input name="planetId" type="hidden" value={moment.planet.id} />
+          <input name="planetSlug" type="hidden" value={moment.planet.slug} />
+          <input name="momentId" type="hidden" value={moment.id} />
+          <input
+            className="min-w-0 flex-1 rounded-full border border-[#e7e0d5] bg-white px-4 py-3 text-sm outline-none placeholder:text-[#9aa29b]"
+            maxLength={1000}
+            name="content"
+            placeholder={copy.danmakuPlaceholder}
+            required
+          />
+          <button
+            aria-label={copy.danmaku}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#246c4b] text-white"
+            type="submit"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+export function PlanetRoomPage({
+  locale,
+  momentUnavailable,
+  planet,
+  selectedMoment,
+}: {
+  locale: string;
+  momentUnavailable: boolean;
+  planet: PlanetRoom;
+  selectedMoment: PlanetMoment | null;
+}) {
+  const copy = getPlanetCopy(locale);
+  const planetSquareHref = withLocale(locale, "/footprints?tab=planet");
   const membership = planet.viewerMembership;
-  const canViewChat = planet.canViewChat;
   const isPending = membership?.status === "PENDING";
   const inviteUrl = buildCanonicalSiteUrl(withLocale(locale, `/planets/invite/${planet.inviteCode}`));
-  const pendingChatHint = locale === "fr" ? "En attente de validation" : locale === "en" ? "Pending approval" : "\u7b49\u5f85\u901a\u8fc7";
-  const pendingChatBody = locale === "fr"
-    ? "Des que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici."
-    : locale === "en"
-      ? "Once the creator approves you, the messages and composer will appear here automatically."
-      : "\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u53ef\u4ee5\u5728\u8fd9\u91cc\u770b\u5230\u7fa4\u804a\uff0c\u4e5f\u80fd\u4e00\u8d77\u804a\u5929\u4e86\u3002";
-  const joinChatHint = locale === "fr" ? "Rejoignez la planete" : locale === "en" ? "Join to view chat" : "\u901a\u8fc7\u540e\u53ef\u89c1";
-  const joinChatBody = locale === "fr"
-    ? "Commencez par envoyer une demande. Apres validation, vous pourrez lire et rejoindre le chat."
-    : locale === "en"
-      ? "Send a join request first. After approval, you will be able to read and join the chat."
-      : "\u7533\u8bf7\u901a\u8fc7\u540e\uff0c\u5c31\u80fd\u5728\u8fd9\u91cc\u804a\u5929\u3002";
   const reviewerRole = membership?.role === "OWNER" || membership?.role === "ADMIN" ? membership.role : null;
   const pendingMembers = planet.pendingMembers.map((member) => ({
     avatarUrl: member.profile.avatarUrl,
@@ -409,74 +457,155 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
   }));
 
   return (
-    <PageShell>
-      <section className="mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl">
-        <header className="grid grid-cols-[2rem_1fr_auto] items-center gap-2">
-          <Link aria-label={copy.backToSquare} href={withLocale(locale, "/planets")}>
-            <ArrowLeft className="h-5 w-5" />
+    <PageShell detail>
+      <section className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
+        <header className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
+          <Link
+            aria-label={copy.backToSquare}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95"
+            href={planetSquareHref}
+          >
+            <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
           </Link>
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">{"\u{1F680}"}</span>
-            <div className="min-w-0">
-              <h1 className="truncate text-sm font-bold">{getPlanetName(planet, locale)}</h1>
-              <p className="text-[10px] text-[#7d877e]">
-                {planet._count.members} {copy.memberUnit}
-              </p>
-            </div>
-          </div>
-          <MembershipButton locale={locale} planet={planet} />
+          <p className="truncate text-center text-[18px] font-bold leading-none text-[#111210]">
+            {getPlanetName(planet, locale)}
+          </p>
+          <span aria-hidden="true" />
         </header>
 
+        <Link
+          className="hidden items-center gap-2 text-sm font-bold text-[#156240] md:inline-flex"
+          href={planetSquareHref}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {copy.backToSquare}
+        </Link>
+
+        <div className="mt-6 flex min-w-0 items-start justify-between gap-4 md:mt-5">
+          <div className="min-w-0">
+            <h1 className="break-words text-[1.75rem] font-bold leading-[1.08] text-[#111210] sm:text-4xl md:text-5xl">
+              {getPlanetName(planet, locale)}
+            </h1>
+            <p className="mt-2 text-xs font-semibold text-[#6C746A] sm:text-sm">
+              {planet._count.members} {copy.memberUnit} · {copy.hostedBy} {planet.owner.nickname}
+            </p>
+          </div>
+          <div className="shrink-0 pt-0.5">
+            <MembershipButton locale={locale} planet={planet} />
+          </div>
+        </div>
+
+        <div className="relative mt-5 aspect-[1.72/1] overflow-hidden rounded-[1.35rem] bg-[#156240] sm:aspect-[16/8] md:aspect-[2.35/1]">
+          {planet.coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={getPlanetName(planet, locale)}
+              className="h-full w-full object-cover"
+              src={planet.coverImageUrl}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-white/90">
+              <Orbit className="h-20 w-20 sm:h-24 sm:w-24" strokeWidth={1.25} />
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-8">
+          <div className="min-w-0">
+            {planet.description ? (
+              <p className="whitespace-pre-wrap text-sm font-semibold leading-7 text-[#4F5750]">
+                {planet.description}
+              </p>
+            ) : null}
+
+            {planet.members.length > 0 ? (
+              <div className={cn("flex items-center", planet.description ? "mt-4" : null)}>
+                <div className="flex -space-x-2">
+                  {planet.members.map((member) => (
+                    <Link
+                      aria-label={member.profile.nickname}
+                      className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#ECF5EF] text-xs font-bold text-[#156240] ring-1 ring-[#D8E8DC] transition hover:z-10 hover:-translate-y-0.5 hover:ring-[#156240] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156240]"
+                      href={withLocale(locale, `/profile/${member.profileId}`)}
+                      key={member.profileId}
+                      title={member.profile.nickname}
+                    >
+                      {member.profile.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          alt=""
+                          className="h-full w-full object-cover"
+                          src={member.profile.avatarUrl}
+                        />
+                      ) : (
+                        member.profile.nickname.slice(0, 1).toUpperCase()
+                      )}
+                    </Link>
+                  ))}
+                </div>
+                <span className="ml-3 text-xs font-semibold text-[#6C746A]">
+                  {planet._count.members} {copy.memberUnit}
+                </span>
+              </div>
+            ) : null}
+
+            {planet.tags.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
+                {planet.tags.map((tag) => (
+                  <span className="text-xs font-bold text-[#156240]" key={tag}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <PlanetChatEntry
+            locale={locale}
+            planet={planet}
+            selectedMomentId={selectedMoment?.id}
+          />
+        </div>
+
         {isPending ? (
-          <p className="mt-4 rounded-2xl bg-[#fff5de] px-4 py-3 text-xs font-semibold leading-5 text-[#91661f]">
+          <p className="mt-5 border-l-2 border-[#D4A95B] pl-3 text-xs font-semibold leading-5 text-[#83642F]">
             {copy.pendingNotice}
           </p>
         ) : null}
 
-        <section className="mt-5">
-          <p className="text-sm font-bold text-[#17583d]">{copy.orbit}</p>
+        <div className="mx-auto mt-8 max-w-2xl border-t border-[#E9E9E4] pt-6 md:mt-10 md:pt-8">
           {planet.moments.length ? (
-            <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
-              {planet.moments.map((moment, index) => (
-                <MomentOrbitCard index={index} key={moment.id} locale={locale} moment={moment} planetSlug={planet.slug} />
-              ))}
-            </div>
-          ) : (
-            <p className="mt-2 text-xs text-[#889188]">{copy.firstMoment}</p>
-          )}
-        </section>
+            <section>
+              <p className="text-sm font-bold text-[#17583d]">{copy.orbit}</p>
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {planet.moments.map((moment, index) => (
+                  <MomentOrbitCard
+                    active={moment.id === selectedMoment?.id}
+                    index={index}
+                    key={moment.id}
+                    locale={locale}
+                    moment={moment}
+                    planetSlug={planet.slug}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-        <section className="mt-5 border-t border-[#ece8dc] pt-4">
-          <h2 className="text-sm font-bold">{copy.chat}</h2>
-          {canViewChat ? (
-            <div className="mt-3 space-y-3">
-              {planet.messages.length ? (
-                planet.messages.map((message) => (
-                  <div className="flex gap-2" key={message.id}>
-                    <Avatar avatarUrl={message.author.avatarUrl} name={message.author.nickname} />
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold">
-                        {message.author.nickname}
-                        <span className="ml-1 font-normal text-[#929892]">
-                          {message.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </p>
-                      <p className="mt-1 inline-block rounded-2xl bg-[#f2f2ed] px-3 py-2 text-sm leading-5">{message.content}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="py-4 text-center text-sm text-[#858b84]">{copy.emptyChat}</p>
-              )}
-            </div>
-          ) : (
-            <PlanetChatLockedNotice body={isPending ? pendingChatBody : joinChatBody} hint={isPending ? pendingChatHint : joinChatHint} />
-          )}
-        </section>
+          {momentUnavailable ? (
+            <p className="mt-4 border-l-2 border-[#d4a95b] pl-3 text-xs font-semibold leading-5 text-[#83642f]">
+              {copy.momentUnavailable}
+            </p>
+          ) : null}
 
-        {canViewChat ? (
-          <PlanetRoomComposer
-            canCreateMoment={String(planet.viewerMembership?.role) === "OWNER"}
+          {selectedMoment ? (
+            <PlanetMomentPanel locale={locale} moment={selectedMoment} />
+          ) : (
+            <p className="py-10 text-center text-sm font-semibold text-[#889188]">{copy.firstMoment}</p>
+          )}
+        </div>
+
+        {membership?.role === "OWNER" && membership.status === "APPROVED" ? (
+          <PlanetMomentComposer
             locale={locale}
             planetId={planet.id}
             planetSlug={planet.slug}
@@ -493,75 +622,6 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
             viewerRole={reviewerRole}
           />
         ) : null}
-      </section>
-    </PageShell>
-  );
-}
-
-export function PlanetMomentPage({ locale, moment }: { locale: string; moment: PlanetMoment }) {
-  const copy = getPlanetCopy(locale);
-  const photoUrls = moment.imageUrls.slice(0, 12);
-  const canInteract = moment.viewerMembership?.status === "APPROVED";
-  const danmakuDisabledHint = locale === "fr"
-    ? "Rejoignez cette planete et attendez la validation pour envoyer un commentaire."
-    : locale === "en"
-      ? "Join this planet and wait for approval before sending a comment."
-      : "\u52A0\u5165\u661F\u7403\u5E76\u901A\u8FC7\u5BA1\u6838\u540E\uFF0C\u624D\u53EF\u4EE5\u53D1\u9001\u5F39\u5E55\u3002";
-
-  return (
-    <PageShell>
-      <section className="mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl">
-        <header className="flex items-center gap-3">
-          <Link aria-label={copy.backToPlanet} href={withLocale(locale, `/planets/${moment.planet.slug}`)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-sm font-bold">{getPlanetName(moment.planet, locale)}</h1>
-            <p className="text-[10px] text-[#778178]">{copy.planetMoment}</p>
-          </div>
-        </header>
-        <article className="mt-4">
-          <PlanetMomentCarousel
-            authorName={moment.author.nickname}
-            comments={moment.comments}
-            content={moment.content}
-            createdAtLabel={moment.createdAt.toLocaleDateString()}
-            imageUrls={photoUrls}
-            isLiked={Boolean(moment.likes?.length)}
-            likeCount={moment._count?.likes ?? 0}
-            locale={locale}
-            momentId={moment.id}
-            planetId={moment.planet.id}
-            planetSlug={moment.planet.slug}
-          />
-          {moment.isViewerAuthor ? (
-            <form action={deletePlanetMomentAction} className="mt-3 px-2">
-              <input name="locale" type="hidden" value={locale} />
-              <input name="planetId" type="hidden" value={moment.planet.id} />
-              <input name="planetSlug" type="hidden" value={moment.planet.slug} />
-              <input name="momentId" type="hidden" value={moment.id} />
-              <button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit">
-                <Trash2 className="h-3.5 w-3.5" />
-                {copy.delete}
-              </button>
-            </form>
-          ) : null}
-        </article>
-        <div className="mt-5">
-          <form action={createPlanetMomentCommentAction} className="flex gap-2 rounded-[1.4rem] border border-[#e7e0d5] bg-[#fffefa] p-2 shadow-[0_10px_24px_rgba(54,47,35,0.06)]">
-            <input name="locale" type="hidden" value={locale} />
-            <input name="planetId" type="hidden" value={moment.planet.id} />
-            <input name="planetSlug" type="hidden" value={moment.planet.slug} />
-            <input name="momentId" type="hidden" value={moment.id} />
-            <input className="min-w-0 flex-1 rounded-full bg-[#f7f3ec] px-4 py-3 text-sm outline-none placeholder:text-[#9aa29b] disabled:cursor-not-allowed disabled:opacity-65" disabled={!canInteract} maxLength={1000} name="content" placeholder={copy.danmakuPlaceholder} required />
-            <button aria-label={copy.danmaku} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#246c4b] text-white disabled:cursor-not-allowed disabled:opacity-55" disabled={!canInteract} type="submit">
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
-          {!canInteract ? (
-            <p className="mt-2 px-2 text-xs font-semibold text-[#8b8578]">{danmakuDisabledHint}</p>
-          ) : null}
-        </div>
       </section>
     </PageShell>
   );
@@ -596,7 +656,7 @@ export function PlanetCreatePage({ locale }: { locale: string }) {
             {copy.tagsLabel}
             <input className="mt-2 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none" maxLength={160} name="tags" placeholder={copy.tagsPlaceholder} />
           </label>
-          <PlanetCoverUpload name="coverImageUrl" />
+          <PlanetCoverUpload locale={locale} name="coverImageUrl" />
           <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#246c4b] py-3 font-bold text-white">
             <UsersRound className="h-4 w-4" />
             {copy.createButton}

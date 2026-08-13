@@ -76,6 +76,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Visiteur",
+      nicknameChangedAt: null,
       publicNickname: "Visiteur",
       remarkName: null,
       friendCode: null,
@@ -93,6 +94,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Guest",
+      nicknameChangedAt: null,
       publicNickname: "Guest",
       remarkName: null,
       friendCode: null,
@@ -109,6 +111,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
   return {
     id: "guest",
     nickname: "游客",
+    nicknameChangedAt: null,
     publicNickname: "游客",
     remarkName: null,
     friendCode: null,
@@ -167,6 +170,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     ? {
         id: profile.id,
         nickname: profile.nickname,
+        nicknameChangedAt: profile.nicknameChangedAt?.toISOString() ?? null,
         publicNickname: profile.nickname,
         remarkName: null,
         friendCode: profile.friendCode,

@@ -452,6 +452,10 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.planet-detail-page) {
+    padding-bottom: 0;
+  }
+
   .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) {
     padding-bottom: 0;
   }
@@ -474,6 +478,9 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
+  .app-layout-shell:has(.planet-detail-page) > .app-header,
+  .app-layout-shell:has(.planet-detail-page) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.planet-detail-page) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) > .app-mobile-nav,
   .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
   .app-layout-shell:has(.mobile-v23-admin-priority) [data-mobile-scroll-progress],

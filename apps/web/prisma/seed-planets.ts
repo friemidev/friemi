@@ -3,10 +3,10 @@ import { PrismaClient, type PlanetMemberRole } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const profiles = [
-  { clerkUserId: "demo-planet-kevin", nickname: "Kevin", isCoCreator: true },
-  { clerkUserId: "demo-planet-chloe", nickname: "Chloe", isCoCreator: false },
-  { clerkUserId: "demo-planet-tom", nickname: "Tom", isCoCreator: false },
-  { clerkUserId: "demo-planet-amy", nickname: "Amy", isCoCreator: false },
+  { clerkUserId: "demo-planet-kevin", nickname: "Kevin", avatarUrl: "/avatar/male-01.png", isCoCreator: true },
+  { clerkUserId: "demo-planet-chloe", nickname: "Chloe", avatarUrl: "/avatar/female-01.png", isCoCreator: false },
+  { clerkUserId: "demo-planet-tom", nickname: "Tom", avatarUrl: "/avatar/male-02.png", isCoCreator: false },
+  { clerkUserId: "demo-planet-amy", nickname: "Amy", avatarUrl: "/avatar/female-02.png", isCoCreator: false },
 ] as const;
 
 const planets = [
@@ -23,7 +23,11 @@ async function main() {
     profiles.map((profile) =>
       prisma.userProfile.upsert({
         where: { clerkUserId: profile.clerkUserId },
-        update: { isCoCreator: profile.isCoCreator, nickname: profile.nickname },
+        update: {
+          avatarUrl: profile.avatarUrl,
+          isCoCreator: profile.isCoCreator,
+          nickname: profile.nickname,
+        },
         create: profile,
       }),
     ),
@@ -32,8 +36,13 @@ async function main() {
   const profileByName = new Map(seededProfiles.map((profile) => [profile.nickname, profile]));
   const owner = await prisma.userProfile.upsert({
     where: { clerkUserId: "seed_user_next_fun_club" },
-    update: { isCoCreator: true, nickname: "Friemi" },
+    update: {
+      avatarUrl: "/icon.png",
+      isCoCreator: true,
+      nickname: "Friemi",
+    },
     create: {
+      avatarUrl: "/icon.png",
       clerkUserId: "seed_user_next_fun_club",
       nickname: "Friemi",
       isCoCreator: true,

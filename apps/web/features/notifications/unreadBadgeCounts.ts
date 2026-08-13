@@ -3,6 +3,7 @@ export type UnreadBadgeCounts = {
   unreadDirectMessageCount: number;
   unreadMessageCount: number;
   unreadNotificationCount: number;
+  unreadPlanetChatCount: number;
 };
 
 function parseUnreadCount(value: unknown) {
@@ -17,12 +18,22 @@ export function createUnreadBadgeCounts({
   unreadActivityRoomCount,
   unreadDirectMessageCount,
   unreadNotificationCount,
-}: Omit<UnreadBadgeCounts, "unreadMessageCount">): UnreadBadgeCounts {
+  unreadPlanetChatCount = 0,
+}: Omit<
+  UnreadBadgeCounts,
+  "unreadMessageCount" | "unreadPlanetChatCount"
+> & {
+  unreadPlanetChatCount?: number;
+}): UnreadBadgeCounts {
   return {
     unreadActivityRoomCount,
     unreadDirectMessageCount,
-    unreadMessageCount: unreadDirectMessageCount + unreadActivityRoomCount,
+    unreadMessageCount:
+      unreadDirectMessageCount +
+      unreadActivityRoomCount +
+      unreadPlanetChatCount,
     unreadNotificationCount,
+    unreadPlanetChatCount,
   };
 }
 
@@ -43,11 +54,16 @@ export function parseUnreadBadgeCountsPayload(
   const unreadNotificationCount = parseUnreadCount(
     candidate.unreadNotificationCount,
   );
+  const unreadPlanetChatCount =
+    candidate.unreadPlanetChatCount === undefined
+      ? 0
+      : parseUnreadCount(candidate.unreadPlanetChatCount);
 
   if (
     unreadActivityRoomCount === null ||
     unreadDirectMessageCount === null ||
-    unreadNotificationCount === null
+    unreadNotificationCount === null ||
+    unreadPlanetChatCount === null
   ) {
     return null;
   }
@@ -56,5 +72,6 @@ export function parseUnreadBadgeCountsPayload(
     unreadActivityRoomCount,
     unreadDirectMessageCount,
     unreadNotificationCount,
+    unreadPlanetChatCount,
   });
 }

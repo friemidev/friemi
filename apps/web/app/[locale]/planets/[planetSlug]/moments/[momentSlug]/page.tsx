@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
-import { PlanetMomentPage } from "@/features/planets/components/PlanetPages";
-import { getPlanetMoment } from "@/features/planets/queries/planetQueries";
+import { notFound, redirect } from "next/navigation";
+import { getPlanetMomentRedirectTarget } from "@/features/planets/queries/planetQueries";
+import { buildPlanetMomentRedirectHref } from "@/features/planets/utils/planetMomentRoute";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 
 type PlanetMomentPageProps = { params: Promise<{ locale: string; planetSlug: string; momentSlug: string }> };
@@ -8,7 +8,11 @@ type PlanetMomentPageProps = { params: Promise<{ locale: string; planetSlug: str
 export default async function PlanetMomentRoute({ params }: PlanetMomentPageProps) {
   const { locale, planetSlug, momentSlug } = await params;
   const profile = await getOptionalCurrentUserProfile();
-  const moment = await getPlanetMoment(momentSlug, planetSlug, profile?.id ?? null);
+  const moment = await getPlanetMomentRedirectTarget(
+    momentSlug,
+    planetSlug,
+    profile?.id ?? null,
+  );
   if (!moment) notFound();
-  return <PlanetMomentPage locale={locale} moment={moment} />;
+  redirect(buildPlanetMomentRedirectHref({ locale, momentId: moment.id, planetSlug }));
 }

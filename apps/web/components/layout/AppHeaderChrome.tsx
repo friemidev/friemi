@@ -20,6 +20,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
   const localizedFootprintsPrefix = `${withLocale(locale, "/footprints")}/`;
   const localizedGameToolsPrefix = `${withLocale(locale, "/game-tools")}/`;
   const localizedMessagesPrefix = `${withLocale(locale, "/messages")}/`;
+  const localizedPlanetsPrefix = `${withLocale(locale, "/planets")}/`;
   const localizedProfilePrefix = `${withLocale(locale, "/profile")}/`;
   const localizedAccountPrefix = `${withLocale(locale, "/account")}/`;
   const localizedPublicEventsPrefix = `${withLocale(locale, "/public-events")}/`;
@@ -38,6 +39,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
     pathname.startsWith(localizedFootprintsPrefix) ||
     pathname.startsWith(localizedLobbyPrefix) ||
     pathname.startsWith(localizedMessagesPrefix) ||
+    pathname.startsWith(localizedPlanetsPrefix) ||
     pathname.startsWith(localizedProfilePrefix) ||
     pathname.startsWith(localizedAccountPrefix) ||
     pathname.startsWith(localizedPublicEventsPrefix) ||

@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
 import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { resolveProfileAvatarUrlForClerkSync } from "@/features/profile/profileAvatarSync";
 
 type ClerkEmailAddressLike = {
   id: string;
@@ -102,6 +103,7 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
       clerkUserId: user.id,
     },
     select: {
+      avatarUrl: true,
       email: true,
       emailVerifiedAt: true,
       status: true,
@@ -149,7 +151,10 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
-      avatarUrl: user.image_url,
+      avatarUrl: resolveProfileAvatarUrlForClerkSync({
+        clerkAvatarUrl: user.image_url,
+        storedAvatarUrl: existing?.avatarUrl,
+      }),
       status: "ACTIVE",
       lastSignInAt: fromUnixMs(user.last_sign_in_at),
       clerkUpdatedAt: fromUnixMs(user.updated_at),

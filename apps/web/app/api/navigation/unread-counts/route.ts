@@ -4,6 +4,7 @@ import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room
 import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { createUnreadBadgeCounts } from "@/features/notifications/unreadBadgeCounts";
+import { getUnreadPlanetChatTotalMessageCount } from "@/features/planets/services/planetChat";
 import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -46,16 +47,19 @@ async function loadUnreadBadgeCounts(profileId: string) {
     unreadNotificationCount,
     unreadDirectMessageCount,
     unreadActivityRoomCount,
+    unreadPlanetChatCount,
   ] = await Promise.all([
     getUnreadNotificationCount(profileId),
     getUnreadDirectMessageCount(profileId),
     getUnreadActivityRoomTotalMessageCount(profileId),
+    getUnreadPlanetChatTotalMessageCount(profileId),
   ]);
 
   return createUnreadBadgeCounts({
     unreadActivityRoomCount,
     unreadDirectMessageCount,
     unreadNotificationCount,
+    unreadPlanetChatCount,
   });
 }
 
@@ -74,6 +78,7 @@ export async function GET(request: Request) {
                 unreadActivityRoomCount: 0,
                 unreadDirectMessageCount: 0,
                 unreadNotificationCount: 0,
+                unreadPlanetChatCount: 0,
               }),
               requestId,
               updatedAt: new Date().toISOString(),
