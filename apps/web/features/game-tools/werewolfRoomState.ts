@@ -7,12 +7,17 @@ export type WerewolfRoomPhase =
 
 export type WerewolfWinner = "GOOD" | "WEREWOLF" | null;
 
+export type WerewolfFinishSelection =
+  | Exclude<WerewolfWinner, null>
+  | "TERMINATED";
+
 export type WerewolfRoomState = {
   deadSeatNumbers: number[];
   finishedAt?: string | null;
   lockedAt?: string | null;
   phase: WerewolfRoomPhase;
   resultRecordedAt?: string | null;
+  sheriffSeatNumber?: number | null;
   startedAt?: string | null;
   winner?: WerewolfWinner;
 };
@@ -24,9 +29,16 @@ export function createInitialWerewolfRoomState(): WerewolfRoomState {
     lockedAt: null,
     phase: "LOBBY",
     resultRecordedAt: null,
+    sheriffSeatNumber: null,
     startedAt: null,
     winner: null,
   };
+}
+
+export function getWerewolfWinnerFromFinishSelection(
+  selection: WerewolfFinishSelection,
+): WerewolfWinner {
+  return selection === "TERMINATED" ? null : selection;
 }
 
 function getPhase(value: unknown): WerewolfRoomPhase {
@@ -52,6 +64,14 @@ function getWinner(value: unknown): WerewolfWinner {
 
 function getOptionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function getOptionalSeatNumber(value: unknown) {
+  const seatNumber = typeof value === "number" ? value : Number(value);
+
+  return Number.isInteger(seatNumber) && seatNumber > 0 && seatNumber <= 20
+    ? seatNumber
+    : null;
 }
 
 function getDeadSeatNumbers(value: unknown) {
@@ -81,6 +101,7 @@ export function normalizeWerewolfRoomState(value: unknown): WerewolfRoomState {
     lockedAt: getOptionalString(state.lockedAt),
     phase: getPhase(state.phase),
     resultRecordedAt: getOptionalString(state.resultRecordedAt),
+    sheriffSeatNumber: getOptionalSeatNumber(state.sheriffSeatNumber),
     startedAt: getOptionalString(state.startedAt),
     winner: getWinner(state.winner),
   };

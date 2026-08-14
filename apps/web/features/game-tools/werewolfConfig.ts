@@ -1,10 +1,14 @@
-export type WerewolfRoleKey =
-  | "hunter"
-  | "idiot"
-  | "seer"
-  | "villager"
-  | "werewolf"
-  | "witch";
+export const werewolfRoleKeys = [
+  "hunter",
+  "idiot",
+  "seer",
+  "villager",
+  "werewolf",
+  "witch",
+] as const;
+
+export type WerewolfRoleKey = (typeof werewolfRoleKeys)[number];
+export type WerewolfRoleLocale = "en" | "fr" | "zh-CN";
 
 export type WerewolfAlignment = "good" | "werewolf";
 
@@ -346,7 +350,37 @@ export const werewolfRoleAlignments: Record<
   witch: "good",
 };
 
-const roleCopy: Record<string, WerewolfRoleCopy> = {
+export const werewolfRoleLabels = {
+  "zh-CN": {
+    hunter: "猎人",
+    idiot: "白痴",
+    seer: "预言家",
+    villager: "平民",
+    werewolf: "狼人",
+    witch: "女巫",
+  },
+  en: {
+    hunter: "Hunter",
+    idiot: "Idiot",
+    seer: "Seer",
+    villager: "Villager",
+    werewolf: "Werewolf",
+    witch: "Witch",
+  },
+  fr: {
+    hunter: "Chasseur",
+    idiot: "Idiot",
+    seer: "Voyante",
+    villager: "Villageois",
+    werewolf: "Loup-garou",
+    witch: "Sorcière",
+  },
+} satisfies Record<
+  WerewolfRoleLocale,
+  Record<WerewolfRoleKey, string>
+>;
+
+const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
   "zh-CN": {
     alignmentLabels: {
       good: "好人阵营",
@@ -360,14 +394,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
       werewolf: "你是狼人。夜晚和同伴行动，白天别露馅。",
       witch: "你是女巫。夜晚用药，什么时候出手看你判断。",
     },
-    roleLabels: {
-      hunter: "猎人",
-      idiot: "白痴",
-      seer: "预言家",
-      villager: "平民",
-      werewolf: "狼人",
-      witch: "女巫",
-    },
+    roleLabels: werewolfRoleLabels["zh-CN"],
   },
   en: {
     alignmentLabels: {
@@ -382,14 +409,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
       werewolf: "You are a werewolf. Move with the pack at night and stay clean by day.",
       witch: "You are the witch. Use your potions when the table gives you the moment.",
     },
-    roleLabels: {
-      hunter: "Hunter",
-      idiot: "Idiot",
-      seer: "Seer",
-      villager: "Villager",
-      werewolf: "Werewolf",
-      witch: "Witch",
-    },
+    roleLabels: werewolfRoleLabels.en,
   },
   fr: {
     alignmentLabels: {
@@ -410,29 +430,18 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
       witch:
         "Vous êtes sorcière. Utilisez vos potions au bon moment.",
     },
-    roleLabels: {
-      hunter: "Chasseur",
-      idiot: "Idiot",
-      seer: "Voyante",
-      villager: "Villageois",
-      werewolf: "Loup-garou",
-      witch: "Sorcière",
-    },
+    roleLabels: werewolfRoleLabels.fr,
   },
 };
 
 export function getWerewolfRoleCopy(locale: string) {
-  return roleCopy[locale] ?? roleCopy.en;
+  return roleCopy[locale as WerewolfRoleLocale] ?? roleCopy.en;
 }
 
 export function isWerewolfRoleKey(value: string | null | undefined): value is WerewolfRoleKey {
   return (
-    value === "hunter" ||
-    value === "idiot" ||
-    value === "seer" ||
-    value === "villager" ||
-    value === "werewolf" ||
-    value === "witch"
+    typeof value === "string" &&
+    (werewolfRoleKeys as readonly string[]).includes(value)
   );
 }
 
