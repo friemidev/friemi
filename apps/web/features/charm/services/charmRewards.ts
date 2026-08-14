@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { syncCharmGiftAchievements } from "@/features/achievements/services/achievements";
 import {
   blindBoxFragmentExchangeCount,
   calculateCharmDeltaFromGift,
@@ -198,7 +199,7 @@ export async function recordReceivedCharmGift({
 
   const now = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const totalCoinCost = Math.max(
       0,
       (giftDelta.gift.coinCost ?? 0) * giftDelta.quantity,
@@ -337,6 +338,17 @@ export async function recordReceivedCharmGift({
       senderBalance: senderCoinBalance,
     };
   });
+
+  await syncCharmGiftAchievements({
+    recipientCharmScore: result.balance.score,
+    recipientGiftCount: result.balance.giftCount,
+    recipientProfileId,
+    senderProfileId,
+  }).catch((error: unknown) => {
+    console.error("Failed to sync charm gift achievements", error);
+  });
+
+  return result;
 }
 
 export async function grantWelcomeFriemiCheck(profileId: string) {
