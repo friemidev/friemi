@@ -4,7 +4,9 @@
 
 分支：`perf/v2-7-concurrency-scalability-analysis`
 
-状态：静态分析、平台容量研究和两轮低风险请求降载完成，预览环境压测与容量验收待执行
+状态：静态分析、平台容量研究和两轮低风险请求降载完成；Supabase 已升级 Micro，R0 Vercel Preview 三轮基线已完成但因 `P2024` 未通过容量门禁，详细结果见 [R0 Micro 基线报告](./r0-micro-baseline.md)
+
+Supabase 升级为 Micro 后的 Vercel 截图解读、对照基线和补充取证清单见 [Supabase Micro 后的页面加载性能分析](./micro-page-loading-analysis.md)。
 
 ## 1. 问题定义
 
@@ -114,7 +116,7 @@
 - 查询最多 100 个可访问聚吧。
 - 使用最多 100 组 OR 条件聚合群聊未读。
 
-按源码中的独立 Prisma 调用估算，仅两类未读接口就可能达到约 24 次数据库操作/用户/分钟，即 100 名空闲用户约 2,400 次数据库操作/分钟。实际数量需要 Prisma query 日志验证。
+2026-08-14 已用当前配置数据库的 Prisma query event 做只读验证：有可访问聚吧房间的样本中，旧私聊未读接口执行 6 条业务 SQL，旧通知接口执行 1 条业务 SQL；transaction pooler 下分别产生 21 和 4 条包含事务控制的 protocol statements。具体步骤、调用频率和边界见 [Supabase Micro 后的页面加载性能分析](./micro-page-loading-analysis.md#11-未读接口专项代码审计)。
 
 ### 5.2 私聊页面
 
@@ -532,6 +534,231 @@
 - [Supabase Compute and Disk](https://supabase.com/docs/guides/platform/compute-and-disk)
 - [Supabase Compute usage and pricing](https://supabase.com/docs/guides/platform/manage-your-usage/compute)
 - [Supabase Production Checklist](https://supabase.com/docs/guides/deployment/going-into-prod)
+
+## Micro 升级后的实际落实路线
+
+本节更新于 2026-08-14，用于把前述长期方案收敛为下一阶段可以逐次发布、验证和回滚的工作。详细截图分析和未读 SQL 验证见 [Supabase Micro 后的页面加载性能分析](./micro-page-loading-analysis.md)。
+
+### 执行原则
+
+本轮不能直接从 W1 跳到 W4 read model，也不能把所有性能修改放进一个 PR。固定采用以下顺序：
+
+1. 先确认 Production 实际运行的接口和调用频率。
+2. 先减少无效请求，再减少每个请求的 SQL。
+3. 先处理固定轮询和整页刷新，再建立新的未读数据模型。
+4. 代码负载收敛后，才比较 Vercel/Supabase 规格和连接池。
+5. 每个发布只改变一个主要变量，保留旧路径和回滚开关。
+
+当前工作区已通过独立 global config 关联 Friemi Vercel project；CLI 可以读取 deployment、build/runtime logs，但不能替代 Dashboard 的 route Duration/TTFB、CPU throttle、cold start 和 External APIs 图表。R0 已直接压测固定 commit 的 Vercel Preview，不再用本地结果冒充远端指标。
+
+### 发布路线总览
+
+| 发布 | 内容 | 风险 | 是否迁移数据库 | 主要目标 |
+| --- | --- | --- | --- | --- |
+| R0 | Micro 后基线与 Production 请求取证 | 极低 | 否 | 锁定真实 route、频率和等待位置 |
+| R1 | 未读请求 freshness guard | 低 | 否 | 连续切页不重复查询未读 |
+| R2 | 私聊未读 SQL 合并与接口指标 | 低至中 | 否 | 每次聚合少一条业务 SQL |
+| R3 | 私聊/聚吧/Planet cursor 增量更新 | 中 | 视 sequence 设计决定 | 去除 6/8 秒整页刷新 |
+| R4 | 聊天未读 read model | 中高 | 是，additive | 角标读取不再扫描历史消息 |
+| R5 | Pool、Dedicated Pooler、Vercel 规格 A/B | 高 | 否 | 只处理指标证明的资源瓶颈 |
+
+不得将 R1、R2、R4 和连接池调整合并发布，否则无法判断收益来源，也会失去可靠回滚点。
+
+### R0：先完成 Micro 后基线
+
+#### 项目管理员需要提供
+
+- [ ] Micro 升级完成的准确时间和时区。数据库重启时间为 2026-08-14 10:07:47 CEST，但仍需 Dashboard 确认它就是升级时间。
+- [x] 当前 Production deployment commit SHA 和发布时间：`0a29c21`，2026-08-05 19:22:34 CEST 创建。
+- [x] Vercel Runtime Logs 已核对 `/api/navigation/unread-counts` 与两个旧 unread 接口；当前 Production 聚合接口为 0，旧接口仍有流量。
+- [ ] `/lobby`、`/activities`、`/mobile-home` 的 Duration/TTFB、CPU throttle、cold start 路由详情。
+- [ ] Vercel External APIs 按 P75 latency 排序的 Supabase/Clerk 截图。
+- [ ] Supabase 同一时间窗 CPU、memory、Disk IOPS、connections 和 Query Performance 前 10。
+- [ ] 真机或浏览器一次慢导航的 Network 记录，至少保留 RSC/Document 的 Waiting TTFB 和总耗时。
+
+#### 开发需要执行
+
+- [x] 用固定 commit `f0fe38e` 在 Vercel Preview 重跑现有 20/50/100 CCU，每档 3 次。
+- [x] 保存每档 p50/p75/p95/p99、RPS、HTTP 错误、`P2024` 和数据库指标。
+- [ ] 用 Vercel `Server-Timing` 核对聚合未读的总耗时；慢于 750ms 的日志必须带 request ID。
+- [x] 判断截图中的旧接口流量来自当前旧 Production deployment，而不是 `f0fe38e` 聚合接口 fallback。
+- [x] 输出 [R0 Micro 基线报告](./r0-micro-baseline.md)和[原始 JSON](./performance-baselines/)，不选择最好的一次，以三次中位数为结论。
+
+#### R0 完成标准
+
+- [ ] 能回答一次慢导航的时间分别花在客户端、Function CPU、认证、数据库等待和传输中的哪一段。
+- [x] 能回答 Production 每分钟每个可见登录用户实际产生几个 unread GET：静止固定约 8 次，另加首次加载、导航和重新聚焦触发。
+- [ ] 能回答聚合接口 P50/P75/P95 和每次逻辑 SQL 数量。
+- [x] 基线使用 Micro，且测试窗口内没有混入另一个代码版本。
+
+R0 不改功能。即使截图暂时不齐，也可以开发 R1/R2，但不得宣称 Production 优化比例，也不得批准 R4/R5。
+
+### R1：阻止连续切页重复查询未读
+
+#### 修改范围
+
+- `apps/web/features/notifications/components/NotificationBadgeProvider.tsx`
+- `apps/web/features/notifications/unreadBadgePolling.ts`
+- 对应单元测试
+
+#### 实现方式
+
+- [ ] 增加 `lastSuccessfulRefreshAtRef`，记录最近一次聚合接口成功时间。
+- [ ] pathname、focus、visibility、online 触发刷新前统一经过 freshness 判断。
+- [ ] 最近 30 秒内已有成功结果时，pathname 变化只重排下一次定时器，不访问数据库。
+- [ ] 首次登录加载继续在约 1.2 秒后校准。
+- [ ] 页面从后台恢复或恢复联网时，仅在结果已超过 freshness 窗口时请求。
+- [ ] 45 至 50 秒兜底周期、页面隐藏暂停、失败退避和 in-flight 去重全部保留。
+- [ ] 业务操作若已经携带新未读数，继续直接更新本地状态，不额外 fetch。
+- [ ] 用可快速关闭的配置开关控制 freshness guard，默认先在 Preview 开启。
+
+#### 必测场景
+
+- [ ] 10 秒内连续切换 5 个页面，最多产生 1 次聚合 unread 请求。
+- [ ] 停留 50 秒后自动校准一次。
+- [ ] 后台停留 2 分钟再回来，立即校准。
+- [ ] 请求失败后保留旧角标并按 45/90/180 秒退避。
+- [ ] 登录、退出、换账号后不能继承上一个账号的 freshness 和角标。
+
+#### 预期、风险和回滚
+
+- **预期：** 活跃切页用户的 unread 请求不再与页面数量线性增长；空闲用户仍约 45 至 50 秒一次。
+- **风险：低。** 被动角标最多延后 freshness 窗口；聊天消息本身不受影响。
+- **回滚：** 关闭 guard 配置，恢复当前触发方式；无需数据库迁移。
+- **放行门槛：** 角标准确率不变，unread GET/用户下降，核心页面 P95 不恶化超过 10%。
+
+### R2：减少私聊未读 SQL
+
+#### 修改范围
+
+- `apps/web/features/direct-messages/queries/getDirectMessages.ts`
+- `apps/web/app/api/direct-messages/unread-count/route.ts`
+- `apps/web/app/api/notifications/unread-count/route.ts`
+- 聚合 unread 指标与 shadow compare 测试
+
+#### 实现方式
+
+- [ ] 将“先读取 muted conversation IDs，再 `notIn` COUNT”改为一条关系过滤 COUNT。
+- [ ] 关系条件使用当前用户的 `ConversationPreference.mutedAt`，保持勿扰消息不计入总角标。
+- [ ] 新旧算法在 Preview 对所有 ACTIVE profile 执行只读全量比对，结果只记录计数和 mismatch，不记录用户资料。
+- [ ] Preview 请求可按 10% 同时计算新旧值，响应仍返回旧值。
+- [ ] mismatch 为 0 后切换新 COUNT；保留旧 helper 开关至少一个发布周期。
+- [ ] 给两个旧接口补齐与聚合接口一致的 request ID、`Server-Timing`、慢请求和 5xx 语义。
+- [ ] 旧接口发生数据库错误时不得再用 HTTP 200 + `unreadCount: 0` 掩盖故障；兼容期返回 503 并让客户端保留最后有效值。
+
+#### 预期、风险和回滚
+
+- **预期：** direct unread 从“勿扰查询 + COUNT”两条业务 SQL 收敛为一条；有聚吧房间的旧接口常见从 6 条降到 5 条，聚合接口常见从 9 至 11 条降到 8 至 10 条。
+- **风险：低至中。** relation filter 语义错误可能把勿扰会话计入角标，错误状态码调整可能暴露之前被掩盖的故障。
+- **保护：** 全量离线比对 + Preview 影子计算 + feature flag；不删除旧实现。
+- **回滚：** 切回旧 helper；接口指标包装可以保留。
+- **放行门槛：** 新旧结果 mismatch 为 0；direct count DB duration P95 改善；消息发送和勿扰逻辑完全一致。
+
+R2 是减量，不是终点。即使少一条 SQL，聚吧/Planet 对 read state 和消息表的 groupBy 仍然存在。
+
+### R3：先去掉聊天整页周期刷新
+
+当前私聊每 6 秒、聚吧与 Planet 群聊每 8 秒执行 `router.refresh()`。这类整页刷新会重复读取 Profile、权限、会话和消息，比 unread 角标更容易在多人在线时形成持续负载。
+
+#### 实现方式
+
+- [ ] 先为私聊实现 `(createdAt,id)` cursor 增量 API，返回新增、删除和已读变化。
+- [ ] 聚吧和 Planet 复用统一 cursor 协议，但权限查询继续由各自服务负责。
+- [ ] 首屏最近 50 条、optimistic send、时间分隔、图片、emoji、@ 和删除交互保持不变。
+- [ ] 可见聊天页先使用 3 至 5 秒轻量增量请求作为过渡；验证稳定后改为事件唤醒加 45 至 60 秒 fallback。
+- [ ] 增量请求没有变化时不得触发 RSC refresh。
+- [ ] 发现 cursor gap、权限变化或恢复联网时回退最近 50 条完整快照。
+
+#### 放行门槛
+
+- [ ] 双账号私聊与 50 人群聊无漏、重、乱序。
+- [ ] 断网 2 分钟恢复后自动补齐。
+- [ ] 删除、勿扰、置顶、@、图片和已读状态正确。
+- [ ] 空闲聊天页不再每 6/8 秒请求完整 RSC。
+- [ ] P95 接收延迟小于 1.5 秒，数据库查询/分钟显著下降。
+
+R3 风险为中。按“私聊 -> 内部聚吧 -> Planet -> 全量聚吧”依次灰度，每种聊天独立开关，不能一次全部切换。
+
+### R4：建立聊天未读 read model
+
+只有 R1/R2/R3 通过远端验收后才开始 R4。
+
+#### 数据结构策略
+
+- [ ] 优先在每用户/每会话 read state 保存 `unreadCount` 和最后处理 sequence，不直接复制消息正文。
+- [ ] 私聊可扩展 `ConversationPreference` 或新增独立 `ConversationReadState`；必须确保双方各有一行状态。
+- [ ] 聚吧扩展 `ActivityRoomReadState`，Planet 扩展对应 chat read state。
+- [ ] 通知现有 indexed COUNT 若仍足够快，先不引入通知 counter，避免扩大双写范围。
+- [ ] 只有“按会话 SUM”仍成为热点时，再增加用户级 `UnreadSummary`。
+
+#### 上线顺序
+
+- [ ] additive migration，只新增表/字段/索引，不删除旧字段。
+- [ ] 用现有消息与 read state 回填计数，保存回填版本和校验时间。
+- [ ] 发送、标记已读、勿扰切换、删除、退群在同一业务事务更新 read state。
+- [ ] 新旧算法 shadow read，响应继续返回旧值。
+- [ ] 定时 reconciliation 从事实表重建计数，修复漏事件。
+- [ ] 持久 mismatch 为 0 后按内部账号、5%、25%、100% 切读。
+
+#### 回滚与验收
+
+- **回滚：** feature flag 切回旧聚合；新增字段和双写暂时保留，不做紧急 down migration。
+- **验收：** 发送/已读/勿扰/删除/退群/重试全部覆盖；reconciliation 后 mismatch 为 0；聚合接口 DB duration P95 至少下降 60%。
+
+### R5：最后才调整基础设施
+
+Supabase 已升级 Micro，所以 R5 必须使用 Micro 作为新基线，不再与 Nano 的不同代码版本直接比较。
+
+- [ ] 先以相同 commit、数据量和流量比较 Shared Transaction Pooler 与 Pro Dedicated Pooler。
+- [ ] Dedicated Pooler 测试必须确认 Vercel 出站 IPv4/IPv6、区域、TLS、prepared statement 设置和连接上限。
+- [ ] `pgbouncer=true` 是当前 Supavisor transaction mode 的兼容要求，不直接删除。
+- [ ] 只有查询数收敛且数据库 connections 有余量时，Preview 才测试 `connection_limit=2`；不直接上 3。
+- [ ] 只有目标路由 CPU throttle 与 Duration 同时指向 Function CPU 时，才比较 Vercel Pro/更高内存。
+- [ ] 每次只改变 Pool、连接数、Vercel 规格中的一个变量。
+
+R5 的结论只能有三种：
+
+1. 代码优化后已经达标，不因性能继续加配。
+2. Dedicated Pooler 或 `connection_limit=2` 有可重复收益，保留最小有效配置。
+3. 数据库 CPU/IO 或 Function CPU 明确触顶，才升级对应资源。
+
+### 当前立即执行清单
+
+项目管理员：
+
+- [ ] 提供 R0 中三组最高优先级数据：Vercel route detail、Supabase Database Reports、慢导航 Network。
+- [ ] 提供 Micro 升级 Dashboard 时间；Production commit 已由 CLI 确认。
+- [x] 本机 Vercel CLI 已使用 Friemi 独立 global config 关联正确项目，可读 deployment/build/runtime logs。
+
+开发：
+
+- [x] 已生成 [R0 基线报告](./r0-micro-baseline.md)，未修改连接池。
+- [ ] 单独 PR 实施 R1 freshness guard。
+- [ ] R1 Preview 验收后，单独 PR 实施 R2 SQL 合并和错误可观测性。
+- [ ] R1/R2 Production 至少覆盖一个高峰窗口后，再批准 R3。
+- [ ] R4/R5 保持未开始状态，直到对应门槛满足。
+
+### 每轮报告模板
+
+每个发布必须在 `docs/v2_7` 留下报告，至少包含：
+
+```text
+发布编号 / commit：
+环境 / 灰度比例：
+测试时间窗：
+唯一主要变量：
+修改前 p50/p75/p95/p99：
+修改后 p50/p75/p95/p99：
+Function invocations / CPU throttle / cold start：
+DB CPU / memory / IOPS / connections / P2024：
+每用户每分钟请求数：
+正确性与 shadow mismatch：
+是否触发回滚条件：
+回滚结果：
+是否批准下一轮：
+```
+
+没有这些字段的“感觉变快了”不能作为下一轮批准依据。
 
 ## 16. Pro 能不能让大量用户都用得舒服
 
@@ -1186,7 +1413,7 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 - [x] 复核上传数据是否经过 Vercel Function。
 - [x] 复核 `router.refresh()` 与 `revalidatePath()` 静态调用范围。
 - [x] 列出每项预期、风险、保护措施和验收标准。
-- [ ] 完成 W0 **Vercel Preview** 20/50/100 CCU 基线。当前只完成本机生产构建 + Preview DB 基线，Vercel 账号缺少 Friemi 项目权限，不能冒充远端验收。
+- [x] 完成 W0 **Vercel Preview** 20/50/100 CCU 三轮基线；基线采集完成，但至少 150 个 `P2024` 日志条目被 HTTP 200 fallback 掩盖，因此容量门禁未通过。
 - [x] 实施 W1 并提交[修改前后报告](./w0-w1-performance-report.md)。
 - [x] 执行 W2 门禁：W1 远端验收前不批准 W2，本轮未实施任何 W2 内容。
 - [x] 更新 W0/W1 checkbox、[原始指标](./performance-baselines/)、灰度比例 `0%` 和回滚结果。

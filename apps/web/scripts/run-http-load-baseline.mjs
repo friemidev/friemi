@@ -102,6 +102,42 @@ function wait(delayMs) {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
+function summarizeResults(results, durationMs) {
+  const durations = results
+    .map((result) => result.durationMs)
+    .sort((left, right) => left - right);
+  const statusCounts = {};
+  const errorCounts = {};
+
+  for (const result of results) {
+    statusCounts[result.status] = (statusCounts[result.status] ?? 0) + 1;
+
+    if (result.error) {
+      errorCounts[result.error] = (errorCounts[result.error] ?? 0) + 1;
+    }
+  }
+
+  const failed = results.filter((result) => !result.ok).length;
+  const totalBytes = results.reduce((total, result) => total + result.bytes, 0);
+
+  return {
+    requests: results.length,
+    requestsPerSecond: round(results.length / (durationMs / 1000), 2),
+    failed,
+    errorRate: round(results.length > 0 ? failed / results.length : 0, 4),
+    latencyMs: {
+      p50: round(percentile(durations, 50)),
+      p75: round(percentile(durations, 75)),
+      p95: round(percentile(durations, 95)),
+      p99: round(percentile(durations, 99)),
+      max: round(durations.at(-1) ?? 0),
+    },
+    responseMegabytes: round(totalBytes / 1024 / 1024, 2),
+    statusCounts,
+    errorCounts,
+  };
+}
+
 async function requestRoute({ baseUrl, path, timeoutMs }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -144,36 +180,28 @@ async function requestRoute({ baseUrl, path, timeoutMs }) {
 }
 
 function summarizeStage({ concurrency, durationMs, results }) {
-  const durations = results
-    .map((result) => result.durationMs)
-    .sort((left, right) => left - right);
-  const statusCounts = {};
   const routeCounts = {};
 
   for (const result of results) {
-    statusCounts[result.status] = (statusCounts[result.status] ?? 0) + 1;
     routeCounts[result.path] = (routeCounts[result.path] ?? 0) + 1;
   }
 
-  const failed = results.filter((result) => !result.ok).length;
-  const totalBytes = results.reduce((total, result) => total + result.bytes, 0);
+  const routes = Object.fromEntries(
+    Object.keys(routeCounts).map((path) => [
+      path,
+      summarizeResults(
+        results.filter((result) => result.path === path),
+        durationMs,
+      ),
+    ]),
+  );
 
   return {
     concurrency,
     durationSeconds: round(durationMs / 1000, 2),
-    requests: results.length,
-    requestsPerSecond: round(results.length / (durationMs / 1000), 2),
-    failed,
-    errorRate: round(results.length > 0 ? failed / results.length : 0, 4),
-    latencyMs: {
-      p50: round(percentile(durations, 50)),
-      p95: round(percentile(durations, 95)),
-      p99: round(percentile(durations, 99)),
-      max: round(durations.at(-1) ?? 0),
-    },
-    responseMegabytes: round(totalBytes / 1024 / 1024, 2),
+    ...summarizeResults(results, durationMs),
     routeCounts,
-    statusCounts,
+    routes,
   };
 }
 

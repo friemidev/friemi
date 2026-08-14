@@ -1,0 +1,207 @@
+{
+  "generatedAt": "2026-08-14T09:23:47.870Z",
+  "target": "https://friemi-7gbyailcx-friemi.vercel.app",
+  "routes": [
+    "/zh-CN/mobile-home",
+    "/api/lobby/swipe?limit=8"
+  ],
+  "settings": {
+    "durationSeconds": 30,
+    "levels": [
+      20,
+      50,
+      100
+    ],
+    "thinkMaxMs": 1200,
+    "thinkMinMs": 400,
+    "timeoutMs": 15000
+  },
+  "stages": [
+    {
+      "concurrency": 20,
+      "durationSeconds": 31.15,
+      "requests": 644,
+      "requestsPerSecond": 20.67,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 100.7,
+        "p75": 146.3,
+        "p95": 284.4,
+        "p99": 1651.7,
+        "max": 2443.1
+      },
+      "responseMegabytes": 68.53,
+      "statusCounts": {
+        "200": 644
+      },
+      "errorCounts": {},
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 322,
+        "/zh-CN/mobile-home": 322
+      },
+      "routes": {
+        "/api/lobby/swipe?limit=8": {
+          "requests": 322,
+          "requestsPerSecond": 10.34,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 59.2,
+            "p75": 69.6,
+            "p95": 160.5,
+            "p99": 836.3,
+            "max": 1236.6
+          },
+          "responseMegabytes": 3.44,
+          "statusCounts": {
+            "200": 322
+          },
+          "errorCounts": {}
+        },
+        "/zh-CN/mobile-home": {
+          "requests": 322,
+          "requestsPerSecond": 10.34,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 138.8,
+            "p75": 186.4,
+            "p95": 330.6,
+            "p99": 2190.9,
+            "max": 2443.1
+          },
+          "responseMegabytes": 65.09,
+          "statusCounts": {
+            "200": 322
+          },
+          "errorCounts": {}
+        }
+      }
+    },
+    {
+      "concurrency": 50,
+      "durationSeconds": 30.99,
+      "requests": 1672,
+      "requestsPerSecond": 53.95,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 87.8,
+        "p75": 121.6,
+        "p95": 247.1,
+        "p99": 681.2,
+        "max": 3044.2
+      },
+      "responseMegabytes": 177.53,
+      "statusCounts": {
+        "200": 1672
+      },
+      "errorCounts": {},
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 838,
+        "/zh-CN/mobile-home": 834
+      },
+      "routes": {
+        "/api/lobby/swipe?limit=8": {
+          "requests": 838,
+          "requestsPerSecond": 27.04,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 53.4,
+            "p75": 60.3,
+            "p95": 215.5,
+            "p99": 1074.3,
+            "max": 3044.2
+          },
+          "responseMegabytes": 8.96,
+          "statusCounts": {
+            "200": 838
+          },
+          "errorCounts": {}
+        },
+        "/zh-CN/mobile-home": {
+          "requests": 834,
+          "requestsPerSecond": 26.91,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 114.5,
+            "p75": 148.1,
+            "p95": 264.9,
+            "p99": 454.3,
+            "max": 1259.7
+          },
+          "responseMegabytes": 168.58,
+          "statusCounts": {
+            "200": 834
+          },
+          "errorCounts": {}
+        }
+      }
+    },
+    {
+      "concurrency": 100,
+      "durationSeconds": 31.18,
+      "requests": 3357,
+      "requestsPerSecond": 107.65,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 86,
+        "p75": 131.4,
+        "p95": 246.8,
+        "p99": 529.1,
+        "max": 958.2
+      },
+      "responseMegabytes": 357.31,
+      "statusCounts": {
+        "200": 3357
+      },
+      "errorCounts": {},
+      "routeCounts": {
+        "/api/lobby/swipe?limit=8": 1678,
+        "/zh-CN/mobile-home": 1679
+      },
+      "routes": {
+        "/api/lobby/swipe?limit=8": {
+          "requests": 1678,
+          "requestsPerSecond": 53.81,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 51.1,
+            "p75": 57.4,
+            "p95": 106.2,
+            "p99": 468.7,
+            "max": 669.6
+          },
+          "responseMegabytes": 17.94,
+          "statusCounts": {
+            "200": 1678
+          },
+          "errorCounts": {}
+        },
+        "/zh-CN/mobile-home": {
+          "requests": 1679,
+          "requestsPerSecond": 53.84,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 125,
+            "p75": 174.6,
+            "p95": 285.4,
+            "p99": 608.3,
+            "max": 958.2
+          },
+          "responseMegabytes": 339.37,
+          "statusCounts": {
+            "200": 1679
+          },
+          "errorCounts": {}
+        }
+      }
+    }
+  ]
+}

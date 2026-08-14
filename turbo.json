@@ -14,8 +14,11 @@
       "cache": false,
       "persistent": true
     },
+    "db:generate": {
+      "cache": false
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["db:generate", "^build"],
       "outputs": [".next/**", "dist/**"]
     },
     "lint": {
