@@ -112,6 +112,37 @@ export default async function VersionUpdateDetailPage({
           ))}
         </section>
 
+        {update.mergedPullRequests?.length ? (
+          <section className="mt-8 border-y border-[#D6D5B2] py-6">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-normal text-[#156240]">
+                  合并范围
+                </p>
+                <h2 className="mt-2 font-serif text-2xl leading-tight text-[#1D1D1B]">
+                  本版本包含的 Pull Requests
+                </h2>
+              </div>
+              <span className="text-sm text-[#156240]">
+                共 {update.mergedPullRequests.length} 个
+              </span>
+            </div>
+            <ul className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              {update.mergedPullRequests.map((pullRequest) => (
+                <li
+                  key={pullRequest.number}
+                  className="flex min-w-0 items-baseline gap-2 text-sm leading-6"
+                >
+                  <span className="shrink-0 font-semibold text-[#156240]">
+                    #{pullRequest.number}
+                  </span>
+                  <span className="text-[#1D1D1B]">{pullRequest.title}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         <section className="mt-8 space-y-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-normal text-[#156240]">
