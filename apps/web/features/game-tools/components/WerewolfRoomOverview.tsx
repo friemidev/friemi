@@ -40,6 +40,7 @@ import {
   type StoredActiveGameToolRoom,
 } from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
+import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
 import {
   defaultWerewolfAtmosphere,
   getWerewolfAtmosphereById,
@@ -666,6 +667,7 @@ export function WerewolfRoomOverview({
   locale,
   notice,
   room: initialRoom,
+  testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
   const router = useRouter();
   const [room, setRoom] = useState(initialRoom);
@@ -1832,6 +1834,12 @@ export function WerewolfRoomOverview({
                 </div>
               </div>
             </div>
+
+            {testBotsEnabled && room.isHost ? (
+              <div className="relative z-30 px-2 pb-3">
+                <WerewolfTestBotPanel locale={locale} room={room} />
+              </div>
+            ) : null}
           </div>
 
           <div className="relative z-10 mt-2 shrink-0 space-y-2">
