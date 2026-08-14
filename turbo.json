@@ -6,7 +6,9 @@
     "CLERK_SECRET_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_STORAGE_BUCKET"
+    "SUPABASE_STORAGE_BUCKET",
+    "UNREAD_BADGE_FRESHNESS_GUARD_ENABLED",
+    "VERCEL_ENV"
   ],
   "globalDependencies": ["apps/web/prisma/schema.prisma"],
   "tasks": {

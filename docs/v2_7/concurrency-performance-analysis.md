@@ -599,26 +599,39 @@ R0 不改功能。即使截图暂时不齐，也可以开发 R1/R2，但不得�
 
 - `apps/web/features/notifications/components/NotificationBadgeProvider.tsx`
 - `apps/web/features/notifications/unreadBadgePolling.ts`
+- `apps/web/app/[locale]/layout.tsx`（仅传入 Preview 开关并按用户隔离 Provider）
+- `turbo.json`（仅保证 Preview/Production 开关参与构建缓存哈希）
 - 对应单元测试
 
 #### 实现方式
 
-- [ ] 增加 `lastSuccessfulRefreshAtRef`，记录最近一次聚合接口成功时间。
-- [ ] pathname、focus、visibility、online 触发刷新前统一经过 freshness 判断。
-- [ ] 最近 30 秒内已有成功结果时，pathname 变化只重排下一次定时器，不访问数据库。
-- [ ] 首次登录加载继续在约 1.2 秒后校准。
-- [ ] 页面从后台恢复或恢复联网时，仅在结果已超过 freshness 窗口时请求。
-- [ ] 45 至 50 秒兜底周期、页面隐藏暂停、失败退避和 in-flight 去重全部保留。
-- [ ] 业务操作若已经携带新未读数，继续直接更新本地状态，不额外 fetch。
-- [ ] 用可快速关闭的配置开关控制 freshness guard，默认先在 Preview 开启。
+- [x] 增加 `lastSuccessfulRefreshAtRef`，记录最近一次聚合接口成功时间。
+- [x] pathname、focus、visibility、online 触发刷新前统一经过 freshness 判断。
+- [x] 最近 30 秒内已有成功结果时，pathname 变化只重排下一次定时器，不访问数据库。
+- [x] 首次登录加载继续在约 1.2 秒后校准，包括首次进入通知页。
+- [x] 页面从后台恢复或恢复联网时，仅在结果已超过 freshness 窗口时请求。
+- [x] 45 至 50 秒兜底周期、页面隐藏暂停、失败退避和 in-flight 去重全部保留。
+- [x] 业务操作若已经携带新未读数，继续直接更新本地状态，不额外 fetch。
+- [x] 用 `UNREAD_BADGE_FRESHNESS_GUARD_ENABLED` 控制 freshness guard；未显式配置时 Preview 开启、Production 关闭，设置 `0`/`false`/`off` 可关闭。
+- [x] Provider 使用当前 Profile ID 作为 React key，登录、退出或换账号时丢弃前一个用户的 freshness、失败次数和角标状态。
+- [x] 失败后的下一次允许刷新时间跨 pathname 重建保留，连续切页不会绕过 45/90/180 秒退避。
 
 #### 必测场景
 
-- [ ] 10 秒内连续切换 5 个页面，最多产生 1 次聚合 unread 请求。
+- [x] 单元测试模拟 10 秒内连续 5 次 pathname 触发，刷新决策最多放行 1 次。
 - [ ] 停留 50 秒后自动校准一次。
 - [ ] 后台停留 2 分钟再回来，立即校准。
 - [ ] 请求失败后保留旧角标并按 45/90/180 秒退避。
 - [ ] 登录、退出、换账号后不能继承上一个账号的 freshness 和角标。
+
+#### 本地自动验收（2026-08-14）
+
+- [x] freshness 开关覆盖 Preview 默认开启、Production 默认关闭和显式开关覆盖。
+- [x] freshness 决策覆盖首次请求、30 秒内跳过、30 秒到期和关闭 guard 后恢复旧行为。
+- [x] 既有退避测试覆盖 45/90/180 秒、5 分钟上限和随机抖动。
+- [x] `npm run typecheck --workspace=apps/web` 通过。
+- [x] `npm test --workspace=apps/web` 通过，共 244 项。
+- [ ] 部署 R1 Preview 后，用登录态浏览器和 Vercel Runtime Logs 完成上述其余四个场景，并记录 10 秒连续切页的聚合 unread 请求数。
 
 #### 预期、风险和回滚
 
