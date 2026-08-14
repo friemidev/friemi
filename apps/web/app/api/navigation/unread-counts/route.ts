@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
+import { getUnreadOfficialMessageCount } from "@/features/official-messages/services/officialMessages";
 import { createUnreadBadgeCounts } from "@/features/notifications/unreadBadgeCounts";
 import { getUnreadPlanetChatTotalMessageCount } from "@/features/planets/services/planetChat";
 import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
@@ -46,18 +47,21 @@ async function loadUnreadBadgeCounts(profileId: string) {
   const [
     unreadNotificationCount,
     unreadDirectMessageCount,
+    unreadOfficialMessageCount,
     unreadActivityRoomCount,
     unreadPlanetChatCount,
   ] = await Promise.all([
     getUnreadNotificationCount(profileId),
     getUnreadDirectMessageCount(profileId),
+    getUnreadOfficialMessageCount(profileId),
     getUnreadActivityRoomTotalMessageCount(profileId),
     getUnreadPlanetChatTotalMessageCount(profileId),
   ]);
 
   return createUnreadBadgeCounts({
     unreadActivityRoomCount,
-    unreadDirectMessageCount,
+    unreadDirectMessageCount:
+      unreadDirectMessageCount + unreadOfficialMessageCount,
     unreadNotificationCount,
     unreadPlanetChatCount,
   });

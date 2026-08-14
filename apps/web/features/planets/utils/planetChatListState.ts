@@ -13,7 +13,7 @@ export type UnifiedChatRosterFilterEntry = {
   isMutual: boolean;
   isOfficial: boolean;
   isPinned: boolean;
-  kind: "direct" | "room" | "planet";
+  kind: "direct" | "official" | "room" | "planet";
   searchText: string;
 };
 
@@ -77,7 +77,7 @@ export function filterUnifiedChatRosterEntries<
     }
 
     if (filter === "official") {
-      return entry.kind === "direct" && entry.isOfficial;
+      return entry.kind === "official" && entry.isOfficial;
     }
 
     if (filter === "mutual") {

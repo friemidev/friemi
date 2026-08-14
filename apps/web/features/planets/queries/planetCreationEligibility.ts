@@ -3,6 +3,7 @@ import type { ParticipantStatus } from "@prisma/client";
 
 const effectiveParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 const minimumEffectiveParticipants = 15;
+export const maximumOwnedPlanets = 3;
 
 type PlanetCreationProfile = {
   id: string;
@@ -12,6 +13,12 @@ type PlanetCreationProfile = {
 /** Returns whether a user can create a planet under the platform's eligibility rules. */
 export async function canCreatePlanet(profile: PlanetCreationProfile | null | undefined) {
   if (!profile) return false;
+
+  const ownedPlanetCount = await prisma.planet.count({
+    where: { ownerId: profile.id },
+  });
+
+  if (ownedPlanetCount >= maximumOwnedPlanets) return false;
   if (profile.isCoCreator) return true;
 
   const [registeredParticipants, guestParticipants] = await Promise.all([
@@ -44,4 +51,4 @@ export async function canCreatePlanet(profile: PlanetCreationProfile | null | un
   return [...participantCounts.values()].some(
     (count) => count >= minimumEffectiveParticipants,
   );
-}
+}

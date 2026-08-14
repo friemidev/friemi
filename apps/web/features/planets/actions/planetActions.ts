@@ -6,9 +6,13 @@ import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
-import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
+import {
+  canCreatePlanet,
+  maximumOwnedPlanets,
+} from "@/features/planets/queries/planetCreationEligibility";
 import {
   PlanetChatDomainError,
+  hidePlanetChatFromRoster,
   planetChatMessageImageMaxCount,
   sendPlanetChatMessage,
   setPlanetChatMuted,
@@ -65,6 +69,8 @@ const togglePlanetChatMuteSchema = planetIdSchema.extend({
 const togglePlanetChatPinSchema = planetIdSchema.extend({
   pinned: z.enum(["0", "1", "false", "true"]),
 });
+
+const hidePlanetChatSchema = planetIdSchema;
 
 const momentSchema = planetIdSchema.extend({
   content: z.string().trim().max(2000),
@@ -140,6 +146,7 @@ function getPlanetChatError(locale: string, error?: unknown) {
 
 function revalidatePlanet(locale: string, planetSlug?: string) {
   revalidatePath(withLocale(locale, "/planets"));
+  revalidatePath(withLocale(locale, "/footprints"));
   if (planetSlug) {
     revalidatePath(withLocale(locale, `/planets/${planetSlug}`));
     revalidatePath(withLocale(locale, `/planets/${planetSlug}/chat`));
@@ -238,21 +245,40 @@ export async function createPlanetAction(formData: FormData) {
     .filter(Boolean)
     .slice(0, 5);
 
-  await prisma.planet.create({
-    data: {
-      slug,
-      inviteCode,
-      name: result.data.name,
-      description: result.data.description || null,
-      coverImageUrl: result.data.coverImageUrl || null,
-      tags,
-      visibility: "PUBLIC",
-      ownerId: profile.id,
-      members: {
-        create: { profileId: profile.id, role: "OWNER", status: "APPROVED" },
+  const planet = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`planet-owner:${profile.id}`}))`;
+    const ownedPlanetCount = await tx.planet.count({
+      where: { ownerId: profile.id },
+    });
+
+    if (ownedPlanetCount >= maximumOwnedPlanets) {
+      return null;
+    }
+
+    return tx.planet.create({
+      data: {
+        slug,
+        inviteCode,
+        name: result.data.name,
+        description: result.data.description || null,
+        coverImageUrl: result.data.coverImageUrl || null,
+        tags,
+        visibility: "PUBLIC",
+        ownerId: profile.id,
+        members: {
+          create: {
+            profileId: profile.id,
+            role: "OWNER",
+            status: "APPROVED",
+          },
+        },
       },
-    },
+    });
   });
+
+  if (!planet) {
+    redirect(withLocale(result.data.locale, "/planets"));
+  }
 
   revalidatePlanet(result.data.locale, slug);
   redirect(withLocale(result.data.locale, `/planets/${slug}`));
@@ -509,6 +535,30 @@ export async function togglePlanetChatPinAction(formData: FormData) {
     revalidatePlanet(result.data.locale, result.data.planetSlug);
   } catch (error) {
     console.error("Failed to update planet chat pin setting", error);
+  }
+}
+
+export async function hidePlanetChatConversationAction(formData: FormData) {
+  const result = hidePlanetChatSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+  });
+  if (!result.success) return;
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    "/footprints?tab=message",
+  );
+
+  try {
+    await hidePlanetChatFromRoster({
+      planetId: result.data.planetId,
+      profileId: profile.id,
+    });
+    revalidatePlanet(result.data.locale, result.data.planetSlug);
+  } catch (error) {
+    console.error("Failed to hide planet chat", error);
   }
 }
 

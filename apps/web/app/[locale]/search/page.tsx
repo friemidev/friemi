@@ -2,13 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Image from "next/image";
 import type { Metadata } from "next";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Clock3,
-  MapPin,
-  Store,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock3, MapPin, Store } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -32,10 +26,7 @@ import {
   type GlobalSearchUserViewModel,
 } from "@/features/search/queries/getGlobalSearchResults";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { ActivityCardMasonryGrid } from "@/features/activities/components/ActivityCardMasonryGrid";
-import { getActivityCardMasonryWeight } from "@/features/activities/utils/activityCardMasonry";
-import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import { ResponsiveSearchActivityCards } from "@/features/search/components/ResponsiveSearchActivityCards";
 import {
   getGlobalSearchHref,
   getSingleGlobalSearchParam,
@@ -312,40 +303,14 @@ function SearchRecommendedActivities({
     return null;
   }
 
-  const mobileColumnWeights = activities.map((activity) =>
-    getActivityCardMasonryWeight(activity, {
-      showPrimaryAction: !isPublicEventCard(activity),
-    }),
-  );
-
   return (
     <SearchRecommendationSection title={title}>
-      <ActivityCardMasonryGrid
-        gridClassName="lg:grid-cols-3 xl:grid-cols-3"
-        mobileColumnWeights={mobileColumnWeights}
-      >
-        {activities.map((activity) => (
-          <ActivityCard
-            key={
-              isPublicEventCard(activity) && activity.publicEventId
-                ? `event-${activity.publicEventId}`
-                : activity.id
-            }
-            activity={activity}
-            isAuthenticated={isAuthenticated}
-            isOwnActivity={
-              Boolean(viewerProfileId) &&
-              activity.organizerId === viewerProfileId
-            }
-            locale={locale}
-            searchResultStyle
-            showFavoriteButton
-            showPrimaryAction={!isPublicEventCard(activity)}
-            sourceSurface="global_search"
-            detailSourceKey="search"
-          />
-        ))}
-      </ActivityCardMasonryGrid>
+      <ResponsiveSearchActivityCards
+        activities={activities}
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        viewerProfileId={viewerProfileId}
+      />
     </SearchRecommendationSection>
   );
 }
@@ -483,9 +448,7 @@ export default async function SearchPage({
         { result: null, error: null },
       ];
   const shouldLoadInitialRelatedResults =
-    query &&
-    mainActivityResult.result &&
-    !mainActivityResult.result.hasMore;
+    query && mainActivityResult.result && !mainActivityResult.result.hasMore;
   const relatedActivityResult = shouldLoadInitialRelatedResults
     ? await perf.measure("search.relatedActivityResults", () =>
         getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
@@ -524,7 +487,10 @@ export default async function SearchPage({
         getGlobalSearchRecommendations(viewerProfile?.id)
           .then((result) => ({ result, error: null }))
           .catch((error: unknown) => {
-            console.error("Failed to load global search recommendations", error);
+            console.error(
+              "Failed to load global search recommendations",
+              error,
+            );
             return { result: null, error };
           }),
       )
@@ -684,6 +650,7 @@ export default async function SearchPage({
               {searchResult.result.users.length > 0 ? (
                 <>
                   <GlobalSearchUserResults
+                    isAuthenticated={Boolean(viewerProfile)}
                     locale={locale}
                     query={query}
                     totalCount={searchResult.result.userCount}

@@ -6,7 +6,6 @@ import type { ActivityCategory } from "@chill-club/shared";
 import type { CSSProperties } from "react";
 import {
   ChevronRight,
-  Clock3,
   CircleEllipsis,
   Dice5,
   Dumbbell,
@@ -19,24 +18,17 @@ import {
   Rows3,
   Sprout,
   Utensils,
-  UsersRound,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
-import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
+import { MobileActivityListRow } from "@/features/activities/components/MobileActivityListRow";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import {
-  getActivityDateLabel,
-  getActivityDisplayStatus,
-} from "@/features/activities/utils/activityDisplay";
+import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
-import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
 import { getCategoryLabel } from "@/lib/copy";
-import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 export type MobileLobbyV23TabId =
@@ -305,14 +297,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
   };
 }
 
-function getActivityHref(activity: ActivityCardViewModel, locale: string) {
-  if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
-    return withLocale(locale, `/public-events/${activity.publicEventId}`);
-  }
-
-  return withLocale(locale, getActivityDetailPath(activity.id));
-}
-
 function getActivityKey(activity: ActivityCardViewModel) {
   return `${activity.type}:${activity.id}`;
 }
@@ -411,45 +395,6 @@ function getTodayActivities(activities: ActivityCardViewModel[]) {
   return activities.filter(
     (activity) => getParisDateKey(activity.startAt) === todayKey,
   );
-}
-
-function getMobileLobbyDateOnly(value: string, locale: string) {
-  const date = new Date(value);
-
-  if (locale === "zh-CN") {
-    const parts = new Intl.DateTimeFormat("zh-CN", {
-      day: "numeric",
-      month: "numeric",
-      timeZone: "Europe/Paris",
-    }).formatToParts(date);
-    const month = parts.find((part) => part.type === "month")?.value;
-    const day = parts.find((part) => part.type === "day")?.value;
-
-    return month && day ? `${month}月${day}日` : "";
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: locale === "zh-CN" ? "numeric" : "short",
-    timeZone: "Europe/Paris",
-  }).format(date);
-}
-
-function getMobileLobbyDateLabel(
-  activity: ActivityCardViewModel,
-  locale: string,
-) {
-  if (
-    activity.endAt &&
-    getParisDateKey(activity.startAt) !== getParisDateKey(activity.endAt)
-  ) {
-    return `${getMobileLobbyDateOnly(activity.startAt, locale)} - ${getMobileLobbyDateOnly(
-      activity.endAt,
-      locale,
-    )}`;
-  }
-
-  return getActivityDateLabel(activity, locale);
 }
 
 function getPopularActivities(activities: ActivityCardViewModel[]) {
@@ -699,122 +644,6 @@ function MobileLobbyV23CategoryRail({
   );
 }
 
-function MobileLobbyV23ActivityRow({
-  activity,
-  copy,
-  locale,
-  showHostedBadge = false,
-}: {
-  activity: ActivityCardViewModel;
-  copy: MobileLobbyV23Copy;
-  locale: string;
-  showHostedBadge?: boolean;
-}) {
-  const participantText =
-    activity.capacity > 0
-      ? `${activity.participantCount} / ${activity.capacity}`
-      : `${activity.participantCount}`;
-  const friendCount = activity.friendSignal?.count ?? 0;
-  const displayStatus = getActivityDisplayStatus(activity);
-  const isInactiveActivity =
-    displayStatus === "ENDED" || displayStatus === "CANCELLED";
-
-  return (
-    <MobileActivityDetailSheetLink
-      className={cn(
-        "group grid grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
-        isInactiveActivity ? "bg-zinc-50 text-zinc-500" : "bg-white",
-      )}
-      href={getActivityHref(activity, locale)}
-      label={activity.title}
-    >
-      <div
-        className={cn(
-          "relative aspect-square overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]",
-          isInactiveActivity ? "bg-zinc-200 shadow-none grayscale" : null,
-        )}
-      >
-        <ActivityCoverImage
-          alt={activity.title}
-          overlayClassName={cn(
-            "bg-gradient-to-t to-transparent",
-            isInactiveActivity ? "from-zinc-900/24" : "from-black/10",
-          )}
-          src={activity.coverImageUrl}
-        />
-      </div>
-
-      <div className="flex min-w-0 flex-col justify-center py-0.5 pr-0.5">
-        <h2
-          className={cn(
-            "line-clamp-2 text-[15px] font-bold leading-[1.18] tracking-normal",
-            isInactiveActivity ? "text-zinc-600" : "text-[#111210]",
-          )}
-        >
-          {activity.title}
-        </h2>
-        <p
-          className={cn(
-            "mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold",
-            isInactiveActivity ? "text-zinc-500" : "text-[#111210]/58",
-          )}
-        >
-          <UsersRound
-            className={cn(
-              "h-3.5 w-3.5 shrink-0",
-              isInactiveActivity ? "text-zinc-400" : null,
-            )}
-          />
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="min-w-0 truncate">
-              {participantText} · {activity.city || copy.participants}
-            </span>
-            {showHostedBadge ? (
-              <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-semibold leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
-                {copy.hostedBadge}
-              </span>
-            ) : null}
-          </span>
-        </p>
-        <p
-          className={cn(
-            "mt-3 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold",
-            isInactiveActivity ? "text-zinc-500" : "text-[#111210]/54",
-          )}
-        >
-          <Clock3
-            className={cn(
-              "h-3.5 w-3.5 shrink-0",
-              isInactiveActivity ? "text-zinc-400" : null,
-            )}
-          />
-          <span className="truncate">
-            {getMobileLobbyDateLabel(activity, locale)}
-          </span>
-        </p>
-      </div>
-
-      <div className="flex h-full flex-col items-end justify-between py-1">
-        <ChevronRight
-          className={cn(
-            "mt-0.5 h-4 w-4 transition group-active:translate-x-0.5",
-            isInactiveActivity ? "text-zinc-400" : "text-[#111210]/70",
-          )}
-        />
-        {isInactiveActivity ? (
-          <span className="max-w-[5.9rem] truncate rounded-full bg-zinc-200 px-2 py-1 text-[10px] font-semibold leading-none text-zinc-600">
-            {copy.endedLabel}
-          </span>
-        ) : friendCount > 0 ? (
-          <span className="max-w-[5.9rem] truncate rounded-full bg-[#EAF7EA] px-2 py-1 text-[10px] font-semibold leading-none text-[#138456]">
-            {copy.friendGoing(friendCount)}
-          </span>
-        ) : null}
-      </div>
-    </MobileActivityDetailSheetLink>
-  );
-}
-
 function MobileLobbyV23RecommendationSection({
   activities,
   className,
@@ -837,9 +666,8 @@ function MobileLobbyV23RecommendationSection({
       </h2>
       <div className="grid gap-4">
         {activities.map((activity) => (
-          <MobileLobbyV23ActivityRow
+          <MobileActivityListRow
             activity={activity}
-            copy={copy}
             key={getActivityKey(activity)}
             locale={locale}
           />
@@ -1136,9 +964,8 @@ export function MobileLobbyV23View({
           <>
             <div className="mt-5 grid gap-5">
               {visibleActivities.map((activity) => (
-                <MobileLobbyV23ActivityRow
+                <MobileActivityListRow
                   activity={activity}
-                  copy={copy}
                   key={getActivityKey(activity)}
                   locale={locale}
                   showHostedBadge={

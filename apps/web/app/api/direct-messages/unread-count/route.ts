@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
+import { getUnreadOfficialMessageCount } from "@/features/official-messages/services/officialMessages";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
@@ -17,16 +18,24 @@ export async function GET() {
         return NextResponse.json({ unreadCount: 0 });
       }
 
-      const [unreadDirectMessageCount, unreadActivityRoomCount] =
-        await Promise.all([
-          getUnreadDirectMessageCount(localProfile.id),
-          getUnreadActivityRoomTotalMessageCount(localProfile.id),
-        ]);
+      const [
+        unreadDirectMessageCount,
+        unreadActivityRoomCount,
+        unreadOfficialMessageCount,
+      ] = await Promise.all([
+        getUnreadDirectMessageCount(localProfile.id),
+        getUnreadActivityRoomTotalMessageCount(localProfile.id),
+        getUnreadOfficialMessageCount(localProfile.id),
+      ]);
 
       return NextResponse.json({
         unreadActivityRoomCount,
-        unreadCount: unreadDirectMessageCount + unreadActivityRoomCount,
-        unreadDirectMessageCount,
+        unreadCount:
+          unreadDirectMessageCount +
+          unreadActivityRoomCount +
+          unreadOfficialMessageCount,
+        unreadDirectMessageCount:
+          unreadDirectMessageCount + unreadOfficialMessageCount,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -51,16 +60,24 @@ export async function GET() {
       return NextResponse.json({ unreadCount: 0 }, { status: 401 });
     }
 
-    const [unreadDirectMessageCount, unreadActivityRoomCount] =
-      await Promise.all([
-        getUnreadDirectMessageCount(profile.id),
-        getUnreadActivityRoomTotalMessageCount(profile.id),
-      ]);
+    const [
+      unreadDirectMessageCount,
+      unreadActivityRoomCount,
+      unreadOfficialMessageCount,
+    ] = await Promise.all([
+      getUnreadDirectMessageCount(profile.id),
+      getUnreadActivityRoomTotalMessageCount(profile.id),
+      getUnreadOfficialMessageCount(profile.id),
+    ]);
 
     return NextResponse.json({
       unreadActivityRoomCount,
-      unreadCount: unreadDirectMessageCount + unreadActivityRoomCount,
-      unreadDirectMessageCount,
+      unreadCount:
+        unreadDirectMessageCount +
+        unreadActivityRoomCount +
+        unreadOfficialMessageCount,
+      unreadDirectMessageCount:
+        unreadDirectMessageCount + unreadOfficialMessageCount,
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {

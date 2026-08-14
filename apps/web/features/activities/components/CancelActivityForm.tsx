@@ -72,15 +72,12 @@ function CancelActivityConfirmDialog({
         aria-describedby="cancel-activity-confirm-description"
         aria-labelledby="cancel-activity-confirm-title"
         aria-modal="true"
-        className="w-full max-w-md overflow-hidden rounded-[1.25rem] border border-[#D6D5B2] bg-[#FFF5E6] shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
+        className="w-full max-w-md overflow-hidden rounded-[1.25rem] border border-[#D6D5B2] bg-white shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
         role="alertdialog"
       >
         <div className="border-b border-[#D6D5B2] px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
-            {t.title}
-          </p>
           <h2
-            className="mt-1 text-xl font-semibold text-ink"
+            className="text-xl font-semibold text-ink"
             id="cancel-activity-confirm-title"
           >
             {t.cancelConfirmTitle}
@@ -93,11 +90,8 @@ function CancelActivityConfirmDialog({
           >
             {t.cancelConfirmDescription}
           </p>
-          <div className="mt-4 rounded-xl border border-[#D6D5B2] bg-white/70 px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
-              {t.cancelContextLabel}
-            </p>
-            <p className="mt-1 break-words text-sm font-semibold leading-5 text-ink">
+          <div className="mt-4 border-l-2 border-[#8AB68E] px-3 py-1">
+            <p className="break-words text-sm font-semibold leading-5 text-ink">
               {activityTitle}
             </p>
           </div>
@@ -118,7 +112,10 @@ function CancelActivityConfirmDialog({
               aria-busy={pending}
             >
               {pending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <LoaderCircle
+                  className="h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
               ) : null}
               <span className="truncate">
                 {pending ? t.cancelling : t.cancelConfirmSubmit}
@@ -299,7 +296,10 @@ function DeleteActivityConfirmDialog({
               aria-busy={pending}
             >
               {pending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <LoaderCircle
+                  className="h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               )}

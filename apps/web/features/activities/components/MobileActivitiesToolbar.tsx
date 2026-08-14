@@ -111,9 +111,7 @@ function isActivityDetailReferrer(referrer: string) {
     return (
       /\/public-events\/[^/?#]+(?:[/?#]|$)/.test(url.pathname) ||
       /\/lobby\/[^/?#]+(?:[/?#]|$)/.test(url.pathname) ||
-      /\/activities\/(?!new(?:[/?#]|$))[^/?#]+(?:[/?#]|$)/.test(
-        url.pathname,
-      )
+      /\/activities\/(?!new(?:[/?#]|$))[^/?#]+(?:[/?#]|$)/.test(url.pathname)
     );
   } catch {
     return false;
@@ -371,12 +369,9 @@ export function MobileActivitiesToolbar({
           <aside className="absolute inset-y-0 right-0 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-l border-[#D6D5B2] bg-[#FEFFF9] pb-[calc(1.1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[-26px_0_48px_rgba(17,18,16,0.16)]">
             <div className="flex items-center justify-between gap-3 px-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-normal text-[#096B45]/62">
-                  Friemi
-                </p>
                 <p
                   id="mobile-activities-filter-title"
-                  className="mt-1 truncate text-[22px] font-bold leading-none text-[#111210]"
+                  className="truncate text-[22px] font-bold leading-none text-[#111210]"
                 >
                   {copy.filters}
                 </p>
@@ -546,9 +541,9 @@ export function MobileActivitiesToolbar({
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     <FilterChipButton
-                      active={!hasPartialActivityTimeStatesFilter(
-                        filters.timeStates,
-                      )}
+                      active={
+                        !hasPartialActivityTimeStatesFilter(filters.timeStates)
+                      }
                       label={t.activityFilters.allTimeStates}
                       onClick={() =>
                         pushFilter({

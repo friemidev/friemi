@@ -5,6 +5,7 @@ import type {
 } from "@/features/chat/types";
 import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
 import { prisma } from "@/lib/prisma";
+import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
 
 export const planetChatMessageMaxLength = 1000;
 export const planetChatMessageImageMaxCount = 4;
@@ -541,6 +542,7 @@ export async function markPlanetChatRead({
         profileId,
       },
       update: {
+        hiddenAt: null,
         lastReadAt: readAt,
       },
     });
@@ -693,6 +695,35 @@ export function setPlanetChatPinned({
   });
 }
 
+export async function hidePlanetChatFromRoster({
+  planetId,
+  profileId,
+}: {
+  planetId: string;
+  profileId: string;
+}) {
+  return prisma.$transaction(async (tx) => {
+    await requireApprovedMembership(tx, planetId, profileId);
+    const hiddenAt = new Date();
+
+    return tx.planetChatReadState.upsert({
+      where: {
+        planetId_profileId: { planetId, profileId },
+      },
+      create: {
+        hiddenAt,
+        lastReadAt: hiddenAt,
+        planetId,
+        profileId,
+      },
+      update: {
+        hiddenAt,
+        lastReadAt: hiddenAt,
+      },
+    });
+  });
+}
+
 export async function getPlanetChatRoster(
   viewerProfileId: string,
   locale: string,
@@ -720,6 +751,7 @@ export async function getPlanetChatRoster(
               profileId: viewerProfileId,
             },
             select: {
+              hiddenAt: true,
               lastReadAt: true,
               mutedAt: true,
               pinnedAt: true,
@@ -749,7 +781,13 @@ export async function getPlanetChatRoster(
       },
     },
   });
-  const planets = memberships.map((membership) => ({
+  const visibleMemberships = memberships.filter((membership) => {
+    const hiddenAt = membership.planet.chatReadStates[0]?.hiddenAt;
+    const lastMessageAt = membership.planet.messages[0]?.createdAt;
+
+    return !isChatRosterEntryHidden(hiddenAt, lastMessageAt);
+  });
+  const planets = visibleMemberships.map((membership) => ({
     ...membership.planet,
     joinedAt: membership.joinedAt,
   }));
@@ -759,7 +797,7 @@ export async function getPlanetChatRoster(
   ]);
 
   return sortPlanetChatRosterItems(
-    memberships.map((membership) => {
+    visibleMemberships.map((membership) => {
       const planet = membership.planet;
       const lastMessage = planet.messages[0] ?? null;
       const readState = planet.chatReadStates[0] ?? null;

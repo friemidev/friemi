@@ -185,7 +185,10 @@ export function TeamDetailMobileCtaSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.title}
-        className="group relative inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#F09182] px-12 py-2.5 text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] transition active:scale-[0.98]"
+        className={cn(
+          "group relative inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#F09182] px-12 py-2.5 text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] transition active:scale-[0.98]",
+          open && "pointer-events-none invisible",
+        )}
         title={copy.title}
         type="button"
         onClick={() => {
@@ -206,7 +209,10 @@ export function TeamDetailMobileCtaSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.title}
-        className="group fixed right-3 z-50 flex min-h-14 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-[1.15rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 px-2.5 py-2 text-[#156240] shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-1 ring-white/80 backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.96]"
+        className={cn(
+          "group fixed right-3 z-50 flex min-h-14 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-[1.15rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 px-2.5 py-2 text-[#156240] shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-1 ring-white/80 backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.96]",
+          open && "pointer-events-none invisible",
+        )}
         style={{
           bottom: "calc(6rem + env(safe-area-inset-bottom))",
         }}

@@ -83,6 +83,7 @@ export default async function MessageThreadPage({
   await perf.measure("messages.markRead", () =>
     markDirectConversationRead({
       conversationId: conversation.id,
+      currentUserProfileId: profile.id,
       peerProfileId: conversation.peer.id,
     }),
   );

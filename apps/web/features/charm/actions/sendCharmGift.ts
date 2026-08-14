@@ -17,11 +17,19 @@ const sendCharmGiftSchema = z.object({
   attemptId: z.string().min(1),
   giftId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
+  quantity: z.coerce.number().int().min(1).max(99).default(1),
   recipientProfileId: z.string().min(1),
   redirectPath: z.string().min(1),
   sourceContextId: z.string().min(1).optional(),
   sourceSurface: z
-    .enum(["PROFILE", "ACTIVITY", "MOMENT", "PLANET", "DIRECT_MESSAGE", "OTHER"])
+    .enum([
+      "PROFILE",
+      "ACTIVITY",
+      "MOMENT",
+      "PLANET",
+      "DIRECT_MESSAGE",
+      "OTHER",
+    ])
     .default("PROFILE"),
 });
 
@@ -100,6 +108,7 @@ export async function sendCharmGiftAction(
     attemptId: getString(formData, "attemptId"),
     giftId: getString(formData, "giftId"),
     locale: fallbackLocale,
+    quantity: getString(formData, "quantity") || "1",
     recipientProfileId: getString(formData, "recipientProfileId"),
     redirectPath: getString(formData, "redirectPath"),
     sourceContextId: getString(formData, "sourceContextId") || undefined,
@@ -117,6 +126,7 @@ export async function sendCharmGiftAction(
     attemptId,
     giftId,
     locale,
+    quantity,
     recipientProfileId,
     redirectPath,
     sourceContextId,
@@ -169,6 +179,7 @@ export async function sendCharmGiftAction(
     const giftResult = await recordReceivedCharmGift({
       giftId,
       locale,
+      quantity,
       recipientProfileId,
       senderProfileId: senderProfile.id,
       sourceContextId: sourceContextId ?? recipientProfileId,

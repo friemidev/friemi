@@ -52,6 +52,7 @@ export const visibleActivityStatuses: ActivityStatus[] = [
 const visibleArchivedActivityStatuses: ActivityStatus[] = [
   ...visibleActivityStatuses,
   "ENDED",
+  "CANCELLED",
 ];
 const visibleActivityStatusSet = new Set<string>(visibleActivityStatuses);
 const participantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
@@ -1146,6 +1147,9 @@ export function getActivityTimeStateWhere(
     OR: [
       {
         status: "ENDED",
+      },
+      {
+        status: "CANCELLED",
       },
       {
         endAt: {
