@@ -50,6 +50,7 @@ import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode"
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
 import {
   countAliveWerewolfPlayers,
+  getWerewolfViewerPrivateToken,
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
 import {
@@ -944,6 +945,10 @@ export function WerewolfRoomOverview({
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
   const currentMemberToken = room.currentMember?.memberToken ?? "";
+  const currentSeatPrivateToken = getWerewolfViewerPrivateToken({
+    currentMemberPrivateToken: room.currentMember?.seatedPrivateToken,
+    viewerSeat: room.seats.find((seat) => seat.isViewerSeat),
+  });
   const canChooseSeat = Boolean(room.currentMember) && isLobby;
   const winnerLabel =
     room.state.winner === "GOOD"
@@ -951,7 +956,6 @@ export function WerewolfRoomOverview({
       : room.state.winner === "WEREWOLF"
         ? t.winnerWerewolf
         : null;
-  const currentSeatPrivateToken = room.currentMember?.seatedPrivateToken;
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
 
@@ -1868,7 +1872,7 @@ export function WerewolfRoomOverview({
               aria-label={t.back}
               className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
               onClick={() => {
-                if (room.currentMember && room.status !== "FINISHED") {
+                if (canExitRoom && room.status !== "FINISHED") {
                   setExitDialogOpen(true);
                   return;
                 }
@@ -2235,7 +2239,7 @@ export function WerewolfRoomOverview({
               </form>
             ) : null}
 
-            {room.currentMember && currentViewerSeat ? (
+            {canExitRoom && currentViewerSeat ? (
               <div className="grid gap-2">
                 {isLobby ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -2387,7 +2391,7 @@ export function WerewolfRoomOverview({
               </div>
             ) : null}
 
-            {!room.currentMember && !isLobby ? (
+            {!canExitRoom && !isLobby ? (
               <p className="rounded-2xl border border-[#D8A84E]/25 bg-[#F8DDA8]/10 px-3 py-2 text-center text-xs font-bold text-[#F8DDA8]">
                 {t.locked}
               </p>

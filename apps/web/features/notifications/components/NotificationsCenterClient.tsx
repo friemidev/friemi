@@ -25,6 +25,10 @@ import { formatActivityDate } from "@chill-club/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  formatGiftNotificationQuantity,
+  formatGiftNotificationText,
+} from "@/features/charm/giftNotificationText";
 import { createDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import {
@@ -182,7 +186,7 @@ function getNotificationText(
           title: copy.title,
           body: copy.body(
             notification.charmGiftEvent
-              ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+              ? formatGiftNotificationText(notification.charmGiftEvent)
               : activityTitle,
             actorName,
           ),
@@ -496,10 +500,6 @@ const giftNotificationParticlePositions = [
   { x: "5.8rem", y: "4rem" },
 ] as const;
 
-function getCharmUnitLabel(locale: string) {
-  return locale === "en" ? "Charm" : locale === "fr" ? "charme" : "魅力值";
-}
-
 function getGiftNotificationEffectTheme(giftId: string) {
   return (
     giftNotificationEffectThemes[giftId] ?? defaultGiftNotificationEffectTheme
@@ -562,7 +562,7 @@ function getGiftNotificationCelebration({
 
   return {
     accent: theme.accent,
-    detail: `+${gift.totalCharmDelta} ${getCharmUnitLabel(locale)}`,
+    detail: formatGiftNotificationQuantity(gift.quantity),
     emoji: gift.giftEmoji,
     giftLabel: gift.giftLabel,
     id: `${notification.id}-${Date.now()}`,

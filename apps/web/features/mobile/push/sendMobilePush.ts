@@ -1,8 +1,9 @@
 import { createSign } from "node:crypto";
 import { connect } from "node:http2";
-import { prisma } from "@/lib/prisma";
 import type { NotificationType } from "@prisma/client";
+import { formatGiftNotificationText } from "@/features/charm/giftNotificationText";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
+import { prisma } from "@/lib/prisma";
 import {
   getNotificationCopy,
   getNotificationPath,
@@ -273,7 +274,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
         select: {
           giftEmoji: true,
           giftLabel: true,
-          totalCharmDelta: true,
+          quantity: true,
         },
       },
       momentId: true,
@@ -357,7 +358,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       actorName:
         notification.actor?.nickname ?? notification.actorDisplayName ?? null,
       giftText: notification.charmGiftEvent
-        ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+        ? formatGiftNotificationText(notification.charmGiftEvent)
         : null,
       locale,
       messageBody,

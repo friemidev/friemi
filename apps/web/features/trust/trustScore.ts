@@ -1,4 +1,4 @@
-export const initialTrustScore = 80;
+export const initialTrustScore = 95;
 export const lowTrustScoreThreshold = 60;
 export const largeActivityCapacityThreshold = 15;
 

@@ -1727,9 +1727,10 @@ html[data-home-motion-ready="true"]
   display: grid;
   width: min(18rem, calc(100vw - 3rem));
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--gift-accent) 30%, white);
+  border: 1px solid #e9e8e0;
   border-radius: 1.35rem;
-  background-color: var(--gift-surface);
+  background-color: #ffffff;
+  box-shadow: 0 1.2rem 3rem rgba(17, 18, 16, 0.14);
   padding: 1.15rem 1.25rem 1.2rem;
   color: #111210;
   text-align: center;

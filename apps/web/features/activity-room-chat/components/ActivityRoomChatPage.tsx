@@ -1813,6 +1813,7 @@ function MessageRow({
   const copy = getActivityRoomChatCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
   const sender = message.isMine && viewer ? viewer : message.sender;
+  const senderProfileHref = withLocale(locale, `/profile/${sender.id}`);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressNextClickRef = useRef(false);
@@ -1965,9 +1966,15 @@ function MessageRow({
       )}
     >
       {!message.isMine ? (
-        <span className="pt-[1.25rem]">
+        <Link
+          aria-label={sender.nickname}
+          className="rounded-full pt-[1.25rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
+          href={senderProfileHref}
+          prefetch={false}
+          title={sender.nickname}
+        >
           <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
-        </span>
+        </Link>
       ) : null}
       {message.isMine ? (actionMenu ?? selectionControl) : null}
       <div
@@ -2055,7 +2062,15 @@ function MessageRow({
       </div>
       {!message.isMine ? (actionMenu ?? selectionControl) : null}
       {message.isMine ? (
-        <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        <Link
+          aria-label={sender.nickname}
+          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
+          href={senderProfileHref}
+          prefetch={false}
+          title={sender.nickname}
+        >
+          <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        </Link>
       ) : null}
     </div>
   );

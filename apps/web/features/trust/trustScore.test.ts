@@ -10,7 +10,8 @@ import {
   lowTrustScoreThreshold,
 } from "./trustScore";
 
-test("trust score starts at 80 and clamps between 0 and 100", () => {
+test("trust score starts at 95 and clamps between 0 and 100", () => {
+  assert.equal(initialTrustScore, 95);
   assert.equal(calculateTrustScore(null), initialTrustScore);
   assert.equal(calculateTrustScore(50), 100);
   assert.equal(calculateTrustScore(-200), 0);

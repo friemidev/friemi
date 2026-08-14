@@ -9,6 +9,25 @@ type PlayerLifeState = {
   isPlayerSeat: boolean;
 };
 
+type ViewerSeatIdentity = {
+  isViewerSeat: boolean;
+  privateToken: string | null;
+};
+
+export function getWerewolfViewerPrivateToken({
+  currentMemberPrivateToken,
+  viewerSeat,
+}: {
+  currentMemberPrivateToken: string | null | undefined;
+  viewerSeat: ViewerSeatIdentity | null | undefined;
+}) {
+  if (currentMemberPrivateToken) {
+    return currentMemberPrivateToken;
+  }
+
+  return viewerSeat?.isViewerSeat ? viewerSeat.privateToken : null;
+}
+
 export function isWerewolfJudgeViewer({
   currentMemberSeatNumber,
   judgeSeat,

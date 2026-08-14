@@ -1,8 +1,9 @@
 "use client";
 
 import { registerPlugin } from "@capacitor/core";
-import { SignIn, SignUp, useSignIn } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { SignIn, SignUp, useAuth, useSignIn } from "@clerk/nextjs";
+import { ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
 
 type NativeAuthProvider = "apple" | "google";
@@ -33,6 +34,7 @@ type FriemiNavigationPlugin = {
 const FriemiNavigation = registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
 
 type ClerkAuthMountGuardProps = {
+  exitUrl: string;
   fallbackRedirectUrl: string;
   forceRedirectUrl: string;
   mode: "sign-in" | "sign-up";
@@ -87,6 +89,7 @@ const sharedAuthAppearance = {
 };
 
 export function ClerkAuthMountGuard({
+  exitUrl,
   fallbackRedirectUrl,
   forceRedirectUrl,
   mode,
@@ -94,13 +97,43 @@ export function ClerkAuthMountGuard({
   secondaryUrl,
   locale,
 }: ClerkAuthMountGuardProps) {
+  const { isLoaded: isAuthLoaded, isSignedIn } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isFriemiIOSApp, setIsFriemiIOSApp] = useState(false);
+  const [isFriemiNativeApp, setIsFriemiNativeApp] = useState(false);
+  const completionStartedRef = useRef(false);
 
   useEffect(() => {
+    const userAgent = window.navigator.userAgent;
     setMounted(true);
-    setIsFriemiIOSApp(/\bFriemiIOS\//i.test(window.navigator.userAgent));
+    setIsFriemiIOSApp(/\bFriemiIOS\//i.test(userAgent));
+    setIsFriemiNativeApp(/\bFriemi(?:Android|IOS)\//i.test(userAgent));
   }, []);
+
+  useEffect(() => {
+    if (
+      !mounted ||
+      !isFriemiNativeApp ||
+      !isAuthLoaded ||
+      !isSignedIn ||
+      completionStartedRef.current
+    ) {
+      return;
+    }
+
+    completionStartedRef.current = true;
+    const completionTimer = window.setTimeout(() => {
+      window.location.replace(forceRedirectUrl);
+    }, 80);
+
+    return () => window.clearTimeout(completionTimer);
+  }, [
+    forceRedirectUrl,
+    isAuthLoaded,
+    isFriemiNativeApp,
+    isSignedIn,
+    mounted,
+  ]);
 
   const authAppearance = {
     ...sharedAuthAppearance,
@@ -130,9 +163,24 @@ export function ClerkAuthMountGuard({
     );
   }
 
+  if (isFriemiNativeApp && isAuthLoaded && isSignedIn) {
+    return (
+      <div className="fixed inset-0 z-[180] flex items-center justify-center bg-white px-6">
+        <BrandLoader
+          label={getNativeCompletionLabel(locale)}
+          showLabel
+          size="md"
+        />
+      </div>
+    );
+  }
+
   if (mode === "sign-in") {
     return (
       <>
+        {isFriemiNativeApp ? (
+          <NativeAuthExitButton exitUrl={exitUrl} locale={locale} />
+        ) : null}
         {isFriemiIOSApp ? (
           <NativeIOSAuthButtons
             forceRedirectUrl={forceRedirectUrl}
@@ -156,6 +204,9 @@ export function ClerkAuthMountGuard({
 
   return (
     <>
+      {isFriemiNativeApp ? (
+        <NativeAuthExitButton exitUrl={exitUrl} locale={locale} />
+      ) : null}
       {isFriemiIOSApp ? (
         <NativeIOSAuthButtons
           forceRedirectUrl={forceRedirectUrl}
@@ -175,6 +226,42 @@ export function ClerkAuthMountGuard({
       />
     </>
   );
+}
+
+function NativeAuthExitButton({
+  exitUrl,
+  locale,
+}: {
+  exitUrl: string;
+  locale: string;
+}) {
+  const label = locale.startsWith("zh")
+    ? "返回 Friemi"
+    : locale.startsWith("fr")
+      ? "Retour a Friemi"
+      : "Back to Friemi";
+
+  return (
+    <button
+      aria-label={label}
+      className="mb-5 inline-flex h-11 items-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-bold text-[#156240] shadow-sm transition active:scale-[0.98]"
+      onClick={() => window.location.replace(exitUrl)}
+      type="button"
+    >
+      <ArrowLeft aria-hidden="true" className="h-4 w-4" strokeWidth={2.2} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function getNativeCompletionLabel(locale: string) {
+  if (locale.startsWith("zh")) {
+    return "登录成功，正在返回";
+  }
+  if (locale.startsWith("fr")) {
+    return "Connexion reussie";
+  }
+  return "Signed in, returning";
 }
 
 function NativeIOSAuthButtons({
