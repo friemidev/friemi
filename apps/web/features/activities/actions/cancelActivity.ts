@@ -195,7 +195,7 @@ export async function cancelActivityAction(
           },
         });
 
-        await tx.activityManagementLog.create({
+        const cancellationLog = await tx.activityManagementLog.create({
           data: {
             activityId: activity.id,
             actorId: profile.id,
@@ -204,6 +204,9 @@ export async function cancelActivityAction(
               role: permission.role,
             },
           },
+          select: {
+            id: true,
+          },
         });
 
         await createNotifications(
@@ -211,6 +214,7 @@ export async function cancelActivityAction(
           activity.participants.map((participant) => ({
             actorId: profile.id,
             activityId: activity.id,
+            occurrenceId: `activity-cancel:${cancellationLog.id}`,
             recipientId: participant.userProfileId,
             type: "ACTIVITY_CANCELLED",
           })),

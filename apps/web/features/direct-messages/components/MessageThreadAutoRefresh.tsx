@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 
 type MessageThreadAutoRefreshProps = {
   conversationId: string;
@@ -13,8 +14,13 @@ export function MessageThreadAutoRefresh({
   intervalMs = 6000,
 }: MessageThreadAutoRefreshProps) {
   const router = useRouter();
+  const mode = getPerformanceRolloutMode("chatCursor", conversationId);
 
   useEffect(() => {
+    if (mode === "canary") {
+      return;
+    }
+
     const timer = window.setInterval(() => {
       const activeElement = document.activeElement;
       const draftTextarea = document.querySelector<HTMLTextAreaElement>(
@@ -31,7 +37,7 @@ export function MessageThreadAutoRefresh({
     }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [conversationId, intervalMs, router]);
+  }, [conversationId, intervalMs, mode, router]);
 
   return null;
 }

@@ -82,8 +82,7 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       deleteFailed: "Could not delete this announcement.",
-      deleteForbidden:
-        "Only the host or a manager can delete an announcement.",
+      deleteForbidden: "Only the host or a manager can delete an announcement.",
       deleteInvalid: "This announcement is no longer available.",
       failed: "The announcement could not be sent right now.",
       forbidden: "Only the host or a manager can send an announcement.",
@@ -187,7 +186,8 @@ export async function sendActivityAnnouncementAction(
         new Set(
           activity.participants
             .map(
-              (participant: { userProfileId: string }) => participant.userProfileId,
+              (participant: { userProfileId: string }) =>
+                participant.userProfileId,
             )
             .filter((userProfileId: string) => userProfileId !== profile.id),
         ),
@@ -200,6 +200,7 @@ export async function sendActivityAnnouncementAction(
           activityAnnouncementId: announcement.id,
           activityId: activity.id,
           dedupe: false,
+          occurrenceId: `activity-announcement:${announcement.id}`,
           recipientId,
           type: "ACTIVITY_ANNOUNCEMENT" as const,
         })),
@@ -307,7 +308,10 @@ export async function deleteActivityAnnouncementAction(
     });
 
     revalidatePath(
-      withLocale(result.data.locale, getActivityDetailPath(result.data.activityId)),
+      withLocale(
+        result.data.locale,
+        getActivityDetailPath(result.data.activityId),
+      ),
     );
     revalidatePath(
       withLocale(result.data.locale, `/lobby/${result.data.activityId}/room`),

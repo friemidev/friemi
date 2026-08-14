@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/chatDateSeparators";
 import { getAvatarInitial } from "@/lib/display-text";
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
+import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 
 export type PlanetChatThreadMessage = {
   author: {
@@ -79,7 +80,7 @@ function TimeSeparator({
 
 export function PlanetChatThread({
   locale,
-  messages,
+  messages: initialMessages,
   planetId,
   viewerProfileId,
 }: {
@@ -89,6 +90,14 @@ export function PlanetChatThread({
   viewerProfileId: string;
 }) {
   const router = useRouter();
+  const [messages, setMessages] =
+    useState<PlanetChatThreadMessage[]>(initialMessages);
+  const chatCursorMode = useChatCursorSync({
+    endpoint: `/api/planets/${encodeURIComponent(planetId)}/messages`,
+    messages,
+    setMessages,
+    subjectKey: planetId,
+  });
   const anchorRef = useRef<HTMLDivElement>(null);
   const lastMessageId = messages.at(-1)?.id;
   const emptyLabel =
@@ -122,10 +131,18 @@ export function PlanetChatThread({
   useMobileChatViewportGuard();
 
   useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
+
+  useEffect(() => {
     anchorRef.current?.scrollIntoView({ block: "end" });
   }, [lastMessageId]);
 
   useEffect(() => {
+    if (chatCursorMode === "canary") {
+      return;
+    }
+
     const timer = window.setInterval(() => {
       const composer = document.querySelector("[data-planet-chat-composer]");
       const input = composer?.querySelector("input[name='content']");
@@ -141,7 +158,7 @@ export function PlanetChatThread({
     }, 8000);
 
     return () => window.clearInterval(timer);
-  }, [planetId, router]);
+  }, [chatCursorMode, planetId, router]);
 
   if (!messages.length) {
     return (

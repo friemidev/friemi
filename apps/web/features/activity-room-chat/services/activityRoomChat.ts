@@ -203,6 +203,7 @@ const messageSelect = {
   mentionLabels: true,
   mentionsEveryone: true,
   senderId: true,
+  updatedAt: true,
   sender: {
     select: {
       id: true,
@@ -1035,6 +1036,78 @@ export async function getActivityRoomMessages(
 
   return [...messages]
     .reverse()
+    .map((message) => mapActivityRoomMessage(message, viewerProfileId));
+}
+
+export async function getActivityRoomMessageChanges({
+  activityId,
+  afterCreatedAt,
+  afterId,
+  changedAfter,
+  limit = 50,
+  viewerProfileId,
+}: {
+  activityId: string;
+  afterCreatedAt: Date | null;
+  afterId: string | null;
+  changedAfter: Date;
+  limit?: number;
+  viewerProfileId: string;
+}) {
+  const policy = await getActivityRoomPolicy(
+    prisma,
+    viewerProfileId,
+    activityId,
+  );
+
+  if (!policy.canView) {
+    throw new ActivityRoomChatDomainError(
+      getDeniedActivityRoomChatReason(policy),
+    );
+  }
+
+  const cursorWhere =
+    afterCreatedAt && afterId
+      ? {
+          OR: [
+            { createdAt: { gt: afterCreatedAt } },
+            { createdAt: afterCreatedAt, id: { gt: afterId } },
+          ],
+        }
+      : {};
+  const [createdMessages, changedMessages] = await Promise.all([
+    prisma.activityRoomMessage.findMany({
+      where: {
+        activityId,
+        ...cursorWhere,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: Math.min(Math.max(limit, 1), 50),
+      select: messageSelect,
+    }),
+    prisma.activityRoomMessage.findMany({
+      where: {
+        activityId,
+        updatedAt: { gt: changedAfter },
+      },
+      orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+      take: 50,
+      select: messageSelect,
+    }),
+  ]);
+  const messagesById = new Map(
+    [...createdMessages, ...changedMessages].map((message) => [
+      message.id,
+      message,
+    ]),
+  );
+
+  return [...messagesById.values()]
+    .sort(
+      (left, right) =>
+        left.createdAt.getTime() - right.createdAt.getTime() ||
+        left.id.localeCompare(right.id),
+    )
     .map((message) => mapActivityRoomMessage(message, viewerProfileId));
 }
 

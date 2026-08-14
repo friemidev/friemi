@@ -553,14 +553,14 @@ Supabase 升级为 Micro 后的 Vercel 截图解读、对照基线和补充取�
 
 ### 发布路线总览
 
-| 发布 | 内容 | 风险 | 是否迁移数据库 | 主要目标 |
-| --- | --- | --- | --- | --- |
-| R0 | Micro 后基线与 Production 请求取证 | 极低 | 否 | 锁定真实 route、频率和等待位置 |
-| R1 | 未读请求 freshness guard | 低 | 否 | 连续切页不重复查询未读 |
-| R2 | 私聊未读 SQL 合并与接口指标 | 低至中 | 否 | 每次聚合少一条业务 SQL |
-| R3 | 私聊/聚吧/Planet cursor 增量更新 | 中 | 视 sequence 设计决定 | 去除 6/8 秒整页刷新 |
-| R4 | 聊天未读 read model | 中高 | 是，additive | 角标读取不再扫描历史消息 |
-| R5 | Pool、Dedicated Pooler、Vercel 规格 A/B | 高 | 否 | 只处理指标证明的资源瓶颈 |
+| 发布 | 内容                                    | 风险   | 是否迁移数据库       | 主要目标                       |
+| ---- | --------------------------------------- | ------ | -------------------- | ------------------------------ |
+| R0   | Micro 后基线与 Production 请求取证      | 极低   | 否                   | 锁定真实 route、频率和等待位置 |
+| R1   | 未读请求 freshness guard                | 低     | 否                   | 连续切页不重复查询未读         |
+| R2   | 私聊未读 SQL 合并与接口指标             | 低至中 | 否                   | 每次聚合少一条业务 SQL         |
+| R3   | 私聊/聚吧/Planet cursor 增量更新        | 中     | 视 sequence 设计决定 | 去除 6/8 秒整页刷新            |
+| R4   | 聊天未读 read model                     | 中高   | 是，additive         | 角标读取不再扫描历史消息       |
+| R5   | Pool、Dedicated Pooler、Vercel 规格 A/B | 高     | 否                   | 只处理指标证明的资源瓶颈       |
 
 不得将 R1、R2、R4 和连接池调整合并发布，否则无法判断收益来源，也会失去可靠回滚点。
 
@@ -1179,21 +1179,21 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 ### 24.1 已确认的现状
 
-| 位置 | 当前实现 | 负载影响 | 判断 |
-| ---- | -------- | -------- | ---- |
-| 用户档案初始化 | `finalizeUserProfile()` 在补 friend code 后会异步调用 `linkGuestParticipationsForProfile()`；相关认证 helper 在 67 个文件中有 155 个静态调用点 | 普通只读页面和高频 API 可能额外启动游客参与记录扫描及事务 | 优先拆出只读热路径 |
-| Presence | `/api/profile/presence` 先读取完整 Profile，再更新 `lastActiveAt` | 每次心跳至少一次完整读取和一次写入，还可能触发游客记录关联 | 可在不改 UI 语义下收敛为一次条件更新 |
-| 私聊刷新 | `MessageThreadAutoRefresh` 每 6 秒执行 `router.refresh()` | 每位可见私聊用户约 10 次整页 RSC 刷新/分钟 | 固定请求税较高 |
-| 聚吧群聊刷新 | `ActivityRoomChatAutoRefresh` 每 8 秒执行 `router.refresh()` | 每位可见群聊用户约 7.5 次整页 RSC 刷新/分钟 | 固定请求税较高 |
-| 狼人杀同步 | 已先查 `syncVersion`，变化后才取完整房间；probe 仍查询 `GameToolRoom` 和最新 `GameToolEvent` 两次 | 方向正确，但探测成本和 RPS 仍随房间人数线性增长 | 保留协议，继续把 revision 单字段化 |
-| 全局未读 | 已合并为一个 45 秒聚合请求；群聊未读仍对最多 100 个房间构造 `OR` 后 `groupBy` | HTTP 已明显下降，SQL 成本仍随房间数和消息历史增长 | 需要 read model，但不能直接切换 |
-| Analytics | 每个事件写一行 `AnalyticsEvent`，服务端使用进程内串行 Promise 队列；该表有 5 组二级索引 | 高峰时非关键统计会与消息、报名、送礼争用同一数据库连接，并产生索引写放大 | 先采样、批量和有界丢弃 |
-| 通知 fan-out | `createNotifications()` 在业务事务内逐个执行“查重 + 插入” | N 个接收人可产生约 2N 次串行 SQL，延长取消活动、公告等事务 | 需要批量化和幂等键 |
-| Profile 聚合 | Dashboard 同时启动约 15 个查询；关注关系和狼人杀记录会读取全部历史行后在 Node 端统计 | 用户历史越长，行数、内存和连接等待越高 | 改为数据库聚合和有限预览 |
-| 缓存失效 | 当前有 168 个 `revalidatePath()` 静态调用点；部分操作会失效 locale 根 layout | 根 layout 失效会覆盖其下页面，后续访问可能重复计算大量数据 | 先建立依赖清单，再收窄 |
-| 客户端刷新 | 当前有 47 个 `router.refresh()` 静态调用点；多数是操作成功后的正确性刷新，少数是周期刷新 | 不能统一删除；周期刷新和重复刷新才是目标 | 按触发来源区分处理 |
-| 图片上传 | 头像、活动封面、晒晒、私聊图片和 Top News 共 5 个 API 读取 `FormData`；存储 helper 将文件转为 Buffer 后再上传 | 并发多图会同时占用 Function 带宽、内存和执行时间 | 最终改为 signed direct upload |
-| Prisma 连接 | 单例 `PrismaClient` 使用 transaction pooler，当前 `connection_limit=1` | 可防止实例抢占过多连接，但同一实例的并发查询和大量 `Promise.all()` 会排队 | 只能在压测后小步调参 |
+| 位置           | 当前实现                                                                                                                                       | 负载影响                                                                  | 判断                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
+| 用户档案初始化 | `finalizeUserProfile()` 在补 friend code 后会异步调用 `linkGuestParticipationsForProfile()`；相关认证 helper 在 67 个文件中有 155 个静态调用点 | 普通只读页面和高频 API 可能额外启动游客参与记录扫描及事务                 | 优先拆出只读热路径                   |
+| Presence       | `/api/profile/presence` 先读取完整 Profile，再更新 `lastActiveAt`                                                                              | 每次心跳至少一次完整读取和一次写入，还可能触发游客记录关联                | 可在不改 UI 语义下收敛为一次条件更新 |
+| 私聊刷新       | `MessageThreadAutoRefresh` 每 6 秒执行 `router.refresh()`                                                                                      | 每位可见私聊用户约 10 次整页 RSC 刷新/分钟                                | 固定请求税较高                       |
+| 聚吧群聊刷新   | `ActivityRoomChatAutoRefresh` 每 8 秒执行 `router.refresh()`                                                                                   | 每位可见群聊用户约 7.5 次整页 RSC 刷新/分钟                               | 固定请求税较高                       |
+| 狼人杀同步     | 已先查 `syncVersion`，变化后才取完整房间；probe 仍查询 `GameToolRoom` 和最新 `GameToolEvent` 两次                                              | 方向正确，但探测成本和 RPS 仍随房间人数线性增长                           | 保留协议，继续把 revision 单字段化   |
+| 全局未读       | 已合并为一个 45 秒聚合请求；群聊未读仍对最多 100 个房间构造 `OR` 后 `groupBy`                                                                  | HTTP 已明显下降，SQL 成本仍随房间数和消息历史增长                         | 需要 read model，但不能直接切换      |
+| Analytics      | 每个事件写一行 `AnalyticsEvent`，服务端使用进程内串行 Promise 队列；该表有 5 组二级索引                                                        | 高峰时非关键统计会与消息、报名、送礼争用同一数据库连接，并产生索引写放大  | 先采样、批量和有界丢弃               |
+| 通知 fan-out   | `createNotifications()` 在业务事务内逐个执行“查重 + 插入”                                                                                      | N 个接收人可产生约 2N 次串行 SQL，延长取消活动、公告等事务                | 需要批量化和幂等键                   |
+| Profile 聚合   | Dashboard 同时启动约 15 个查询；关注关系和狼人杀记录会读取全部历史行后在 Node 端统计                                                           | 用户历史越长，行数、内存和连接等待越高                                    | 改为数据库聚合和有限预览             |
+| 缓存失效       | 当前有 168 个 `revalidatePath()` 静态调用点；部分操作会失效 locale 根 layout                                                                   | 根 layout 失效会覆盖其下页面，后续访问可能重复计算大量数据                | 先建立依赖清单，再收窄               |
+| 客户端刷新     | 当前有 47 个 `router.refresh()` 静态调用点；多数是操作成功后的正确性刷新，少数是周期刷新                                                       | 不能统一删除；周期刷新和重复刷新才是目标                                  | 按触发来源区分处理                   |
+| 图片上传       | 头像、活动封面、晒晒、私聊图片和 Top News 共 5 个 API 读取 `FormData`；存储 helper 将文件转为 Buffer 后再上传                                  | 并发多图会同时占用 Function 带宽、内存和执行时间                          | 最终改为 signed direct upload        |
+| Prisma 连接    | 单例 `PrismaClient` 使用 transaction pooler，当前 `connection_limit=1`                                                                         | 可防止实例抢占过多连接，但同一实例的并发查询和大量 `Promise.all()` 会排队 | 只能在压测后小步调参                 |
 
 现有实现中值得保留的部分：聊天初始消息限制为 50 条、聊天列表限制为 50/80 条、搜索和活动列表大多已有 `take`、匿名活动数据已有短时缓存、未读轮询已合并并支持后台暂停、狼人杀已有 in-flight guard 和版本探测。这些不应在后续优化中被推倒重做。
 
@@ -1267,10 +1267,10 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 #### B1. 游客参与关联退出通用认证读路径
 
-- [ ] 先记录 guest-link 调用次数、匹配数、事务耗时和触发 route。
-- [ ] 新增联系人 fingerprint/最近检查状态，只有新用户创建、验证邮箱/手机号/微信变化时触发关联。
-- [ ] 增加每日低频 reconciliation，处理 webhook 丢失或旧数据补录。
-- [ ] 切换期保留旧读路径开关，但设置最短重查间隔，禁止每次页面读取都扫描。
+- [x] 先记录 guest-link 调用次数、匹配数、事务耗时和触发 route。
+- [x] 新增联系人 fingerprint/最近检查状态，只有新用户创建、验证邮箱/手机号/微信变化时触发关联。
+- [x] 增加每日低频 reconciliation，处理 webhook 丢失或旧数据补录。
+- [x] 切换期保留旧读路径开关，但设置最短重查间隔，禁止每次页面读取都扫描。
 - **预期：** 155 个认证 helper 静态调用点不再附带游客表事务；只读页面和高频 API 的尾延迟下降。
 - **风险：中。** 触发遗漏会让历史游客报名不能及时出现在账号中。
 - **保护：** 事件触发 + 定时 reconciliation 双保险；关联操作继续幂等；先 shadow 记录“旧路径本可关联多少条”。
@@ -1278,10 +1278,10 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 #### B2. 批量通知写入，缩短业务事务
 
-- [ ] 为通知设计“每个业务事件 occurrence + recipient”稳定 `dedupeKey`，覆盖当前 actor/activity/comment/gift 等身份字段，同时允许同类事件在不同时间合法重复发生。
-- [ ] 同一 fan-out 先批量查询已存在键，再 `createMany`；最终依靠唯一约束和 `skipDuplicates` 保证重试安全。
-- [ ] 数据库通知记录仍与业务操作处于同一可靠边界；移动 Push 可以事务提交后批量入队。
-- [ ] 对活动取消、活动更新、公告和签到分别比较接收人数、通知行数与旧实现。
+- [x] 为通知设计“每个业务事件 occurrence + recipient”稳定 `dedupeKey`，覆盖当前 actor/activity/comment/gift 等身份字段，同时允许同类事件在不同时间合法重复发生。
+- [x] 同一 fan-out 先批量查询已存在键，再 `createMany`；最终依靠唯一约束和 `skipDuplicates` 保证重试安全。
+- [x] 数据库通知记录仍与业务操作处于同一可靠边界；移动 Push 在事务返回后由 Next.js `after()` 触发，不阻塞业务响应。
+- [x] 活动取消、活动更新、公告和签到均已接入稳定 occurrence；shadow 日志比较批量预计行数与旧路径实际行数。
 - **预期：** N 人通知从约 2N 次串行 SQL 收敛到常数级批量 SQL，缩短活动管理事务并减少连接占用。
 - **风险：中。** dedupeKey 设计错误可能漏通知或重复通知；批量 Push 可能延迟。
 - **保护：** 先双算 dedupeKey 不启用约束；回填前检查冲突；站内通知同步成功优先于 Push；Push 可重试且不影响业务提交。
@@ -1289,11 +1289,11 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 #### B3. 聊天改为 cursor 增量读取，保留低频校准
 
-- [ ] 私聊和聚吧群聊分别增加 `after=<createdAt,id>` 或单调 sequence 的增量 API。
-- [ ] 首屏仍由 Server Component 返回最近 50 条，布局、时间分隔、长按删除和 optimistic send 保持不变。
-- [ ] 可见页面用事件唤醒增量 fetch；无事件时 45 至 60 秒 fallback，focus/online 强制补齐。
-- [ ] 只有增量接口失败或发现 revision 缺口时才执行完整 `router.refresh()`。
-- [ ] 用消息 ID 去重，按 `(createdAt,id)` 稳定排序，并验证删除、撤回、已读和勿扰状态。
+- [x] 私聊、聚吧群聊和星球群聊分别增加 `(createdAt,id)` 增量 API。
+- [x] 首屏仍由 Server Component 返回最近 40/50 条，布局、时间分隔、长按删除和 optimistic send 保持不变。
+- [ ] 本地发送、focus、online 已支持事件唤醒；跨设备事件源需等待 C1，当前 canary 以 1.5 秒轻量增量请求保证消息时效。
+- [x] 完整 `router.refresh()` 已降为 60 秒低频事实源校准；legacy/shadow 继续保留旧刷新路径。
+- [x] 用消息 ID 去重，按 `(createdAt,id)` 稳定排序；私聊删除、聚吧软删除和私聊已读已纳入增量路径。
 - **预期：** 空闲私聊固定整页刷新目标从约 10 次/分钟降到不超过 1 次轻量校准；群聊从约 7.5 次/分钟降到不超过 1 次，RSC 和重复 Profile 查询显著下降。
 - **风险：中。** cursor 边界、乱序、删除事件或休眠恢复处理错误会漏消息、重复消息或短暂显示旧状态。
 - **保护：** 数据库消息表为事实源；低频全量校准保留；增量路径按会话 feature flag 灰度；检测到 gap 自动回退最近 50 条快照。
@@ -1301,14 +1301,36 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 #### B4. 狼人杀 revision 单字段化
 
-- [ ] 给 `GameToolRoom` 增加单调 `revision` 或不可回退的 `syncVersion` 字段。
-- [ ] 所有房间状态、座位、成员和事件事务同步更新 revision；先与现有 derived version 影子比对。
-- [ ] probe 最终只按 room 主键读取 `status + revision`，不再每轮额外查询最新事件。
-- [ ] 保留当前 in-flight guard、页面隐藏暂停、弱网降频、BroadcastChannel 和完整快照 fallback。
+- [x] 给 `GameToolRoom` 增加单调 `revision` 字段。
+- [x] 数据库触发器覆盖房间状态、座位、成员和事件变更，原子递增 revision；shadow 继续输出 derived version 和 revision。
+- [x] canary probe 只按 room 主键读取 `status + revision`，不再每轮额外查询最新事件。
+- [x] 保留当前 in-flight guard、页面隐藏暂停、弱网降频、BroadcastChannel 和完整快照 fallback。
 - **预期：** 每次 probe 由两条查询降为一次主键读取，且版本生成成本固定；同房人数增加时数据库查询更可预测。
 - **风险：中。** 某个 mutation 忘记递增 revision 会导致其他玩家不刷新；并发 mutation 可能覆盖版本。
 - **保护：** revision 在同一数据库事务内原子递增；为每个狼人杀 action 增加 revision 测试；旧 derived version 在灰度期继续校验。
 - **验收：** 所有游戏动作都使 revision 单调增加；10 个 12 人房间压测无角色/座位/阶段滞后。
+
+#### B1-B4 本分支落实与灰度状态（2026-08-14）
+
+本分支只完成 additive code path，不会在未配置环境变量时替换线上读取。四项默认均为 `legacy`，可分别回滚，禁止同时直接开到 100%。
+
+| 模块 | 模式变量                               | 比例变量                                     | 当前代码状态                                                  | 远端验收                            |
+| ---- | -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- | ----------------------------------- |
+| B1   | `PERF_B1_GUEST_LINK_MODE`              | `PERF_B1_GUEST_LINK_PERCENTAGE`              | fingerprint、24 小时间隔、联系人触发和 reconciliation 已完成  | 迁移完成；待 shadow、5%/25% canary  |
+| B2   | `PERF_B2_NOTIFICATION_BATCH_MODE`      | `PERF_B2_NOTIFICATION_BATCH_PERCENTAGE`      | 唯一 dedupeKey、批量预查、`createMany` 和四类扇出接入已完成   | 待 shadow mismatch=0、100 人扇出    |
+| B3   | `NEXT_PUBLIC_PERF_B3_CHAT_CURSOR_MODE` | `NEXT_PUBLIC_PERF_B3_CHAT_CURSOR_PERCENTAGE` | 三类增量 API、稳定合并、删除同步和 60 秒校准已完成            | 待跨设备事件源、50 人群聊/20 对私聊 |
+| B4   | `PERF_B4_WEREWOLF_REVISION_MODE`       | `PERF_B4_WEREWOLF_REVISION_PERCENTAGE`       | revision、原子触发器、单查询 probe 和 derived fallback 已完成 | 迁移完成；待动作矩阵和 10×12 人压测 |
+
+代码验证：
+
+- [x] Prisma schema validate/client generate 通过。
+- [x] TypeScript `tsc --noEmit` 通过。
+- [x] Node 测试 266/266 通过，包含 rollout、fingerprint、dedupeKey、cursor merge 和 sync version。
+- [x] `20260814150000_add_b1_b2_b4_shadow_fields` 已应用到当前配置的开发/Preview Supabase 项目 `dryhbxognbrljslzciuh`；字段、索引和触发器已复查。
+- [x] B4 房间、座位、成员和事件触发器已在回滚事务中逐项验证 revision 恰好 `+1`，未保留测试改动。
+- [ ] Preview 先将 B1/B2/B4 设置为 `shadow`，至少覆盖一个高峰窗口并保存 mismatch 指标。
+- [ ] B3 先对内部测试会话设置 `canary=5%`，验证消息、删除、已读、断网恢复后再扩大。
+- [ ] B1-B4 分别按内部账号 -> 5% -> 25% -> 100% 灰度；任一回滚条件触发时仅回退对应模块。
 
 #### B5. 聊天和通知未读 read model
 
@@ -1395,15 +1417,15 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 
 ### 24.6 推荐执行顺序
 
-| 波次 | 内容 | 风险 | 预期用户影响 | 进入下一波条件 |
-| ---- | ---- | ---- | ------------ | ------------ |
-| W0 | A1 观测、真实基线、慢 SQL 计划 | 极低 | 无视觉变化 | 20/50/100 CCU 指标可重复 |
-| W1 | A2 Presence、A3 Analytics、A4 Profile 聚合、A5 已证实索引 | 低至中 | 功能和布局不变 | 正确性测试通过，P95 不恶化 |
-| W2 | B1 guest-link、B2 通知批量 | 中 | 游客报名和通知结果必须不变 | shadow 差异为 0，支持一键回退 |
-| W3 | B3 聊天增量、B4 狼人杀 revision | 中 | 更新更及时、页面跳动更少 | 断网恢复和并发压测无漏/重/乱序 |
-| W4 | B5 未读 read model、B6 精确失效 | 中高 | 角标与页面新鲜度必须不变 | mismatch 达标，跨账号 E2E 通过 |
-| W5 | B7 直接上传、C1/C2/C3 按瓶颈选用 | 中高 | 上传/实时体验改善 | 安全、故障降级和成本验证通过 |
-| W6 | C4 连接池与套餐 | 高 | 理论上无 UI 变化 | 只有指标证明资源仍是瓶颈时执行 |
+| 波次 | 内容                                                      | 风险   | 预期用户影响               | 进入下一波条件                 |
+| ---- | --------------------------------------------------------- | ------ | -------------------------- | ------------------------------ |
+| W0   | A1 观测、真实基线、慢 SQL 计划                            | 极低   | 无视觉变化                 | 20/50/100 CCU 指标可重复       |
+| W1   | A2 Presence、A3 Analytics、A4 Profile 聚合、A5 已证实索引 | 低至中 | 功能和布局不变             | 正确性测试通过，P95 不恶化     |
+| W2   | B1 guest-link、B2 通知批量                                | 中     | 游客报名和通知结果必须不变 | shadow 差异为 0，支持一键回退  |
+| W3   | B3 聊天增量、B4 狼人杀 revision                           | 中     | 更新更及时、页面跳动更少   | 断网恢复和并发压测无漏/重/乱序 |
+| W4   | B5 未读 read model、B6 精确失效                           | 中高   | 角标与页面新鲜度必须不变   | mismatch 达标，跨账号 E2E 通过 |
+| W5   | B7 直接上传、C1/C2/C3 按瓶颈选用                          | 中高   | 上传/实时体验改善          | 安全、故障降级和成本验证通过   |
+| W6   | C4 连接池与套餐                                           | 高     | 理论上无 UI 变化           | 只有指标证明资源仍是瓶颈时执行 |
 
 ### 24.7 每个任务统一回滚条件
 
@@ -1428,7 +1450,8 @@ Friemi 当前广泛依赖 Clerk。认证也是容量、成本和可迁移性的�
 - [x] 列出每项预期、风险、保护措施和验收标准。
 - [x] 完成 W0 **Vercel Preview** 20/50/100 CCU 三轮基线；基线采集完成，但至少 150 个 `P2024` 日志条目被 HTTP 200 fallback 掩盖，因此容量门禁未通过。
 - [x] 实施 W1 并提交[修改前后报告](./w0-w1-performance-report.md)。
-- [x] 执行 W2 门禁：W1 远端验收前不批准 W2，本轮未实施任何 W2 内容。
+- [x] 保留此前 W2 门禁和基线记录；B1-B4 现已在独立分支完成默认关闭的 additive 实现。
+- [ ] 完成 B1-B4 Preview 迁移、shadow 与分阶段 canary 验收后，才批准进入 100%。
 - [x] 更新 W0/W1 checkbox、[原始指标](./performance-baselines/)、灰度比例 `0%` 和回滚结果。
 
 相关官方边界：

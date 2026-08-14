@@ -3,31 +3,17 @@ import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRo
 import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildWerewolfDerivedSyncVersion,
+  buildWerewolfRevisionSyncVersion,
+  getWerewolfSyncVersion,
+} from "@/features/game-tools/werewolfSyncVersion";
+import {
+  getPerformanceRolloutMode,
+  logPerformanceShadow,
+} from "@/lib/performanceRollouts";
 
 export const dynamic = "force-dynamic";
-
-function buildSyncVersion({
-  finishedAt,
-  latestEvent,
-  startedAt,
-  status,
-  updatedAt,
-}: {
-  finishedAt: Date | null;
-  latestEvent: { createdAt: Date; id: string } | null;
-  startedAt: Date | null;
-  status: string;
-  updatedAt: Date;
-}) {
-  return [
-    status,
-    updatedAt.toISOString(),
-    startedAt?.toISOString() ?? "",
-    finishedAt?.toISOString() ?? "",
-    latestEvent?.id ?? "",
-    latestEvent?.createdAt.toISOString() ?? "",
-  ].join(":");
-}
 
 async function getWerewolfRoomSync(
   request: Request,
@@ -61,7 +47,7 @@ async function getWerewolfRoomSync(
         );
       }
 
-      const syncVersion = buildSyncVersion({
+      const derivedVersion = buildWerewolfDerivedSyncVersion({
         finishedAt: room.finishedAt,
         latestEvent: room.events[0]
           ? {
@@ -73,6 +59,22 @@ async function getWerewolfRoomSync(
         status: room.status,
         updatedAt: room.updatedAt,
       });
+      const version = getWerewolfSyncVersion({
+        derived: derivedVersion,
+        revision: room.revision,
+        roomId,
+        status: room.status,
+      });
+      const syncVersion = version.value;
+
+      if (version.mode === "shadow") {
+        logPerformanceShadow("b4_werewolf_revision", {
+          derivedVersion,
+          revision: room.revision,
+          roomId,
+          status: room.status,
+        });
+      }
 
       return NextResponse.json(
         {
@@ -145,6 +147,36 @@ async function getWerewolfRoomSync(
         {
           headers: {
             "Cache-Control": "no-store",
+            "X-Friemi-Sync-Source": version.source,
+          },
+        },
+      );
+    }
+
+    const mode = getPerformanceRolloutMode("werewolfRevision", roomId);
+
+    if (mode === "canary") {
+      const room = await prisma.gameToolRoom.findFirst({
+        where: { id: roomId, kind: "WEREWOLF" },
+        select: { revision: true, status: true },
+      });
+
+      if (!room) {
+        return NextResponse.json(
+          { error: "ROOM_NOT_FOUND" },
+          { headers: { "Cache-Control": "no-store" }, status: 404 },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          status: room.status,
+          syncVersion: buildWerewolfRevisionSyncVersion(room),
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Friemi-Sync-Source": "revision",
           },
         },
       );
@@ -158,6 +190,7 @@ async function getWerewolfRoomSync(
         },
         select: {
           finishedAt: true,
+          revision: true,
           startedAt: true,
           status: true,
           updatedAt: true,
@@ -189,20 +222,32 @@ async function getWerewolfRoomSync(
       );
     }
 
+    const derivedVersion = buildWerewolfDerivedSyncVersion({
+      finishedAt: room.finishedAt,
+      latestEvent,
+      startedAt: room.startedAt,
+      status: room.status,
+      updatedAt: room.updatedAt,
+    });
+
+    if (mode === "shadow") {
+      logPerformanceShadow("b4_werewolf_revision", {
+        derivedVersion,
+        revision: room.revision,
+        roomId,
+        status: room.status,
+      });
+    }
+
     return NextResponse.json(
       {
         status: room.status,
-        syncVersion: buildSyncVersion({
-          finishedAt: room.finishedAt,
-          latestEvent,
-          startedAt: room.startedAt,
-          status: room.status,
-          updatedAt: room.updatedAt,
-        }),
+        syncVersion: derivedVersion,
       },
       {
         headers: {
           "Cache-Control": "no-store",
+          "X-Friemi-Sync-Source": "derived",
         },
       },
     );

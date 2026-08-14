@@ -63,6 +63,27 @@ function getGuestMatchWhere(profile: {
   return matches;
 }
 
+export async function countGuestLinkCandidatesForProfile(
+  prismaClient: PrismaClient,
+  profile: Parameters<typeof getGuestMatchWhere>[0],
+) {
+  const matchWhere = getGuestMatchWhere(profile);
+
+  if (matchWhere.length === 0) {
+    return 0;
+  }
+
+  return prismaClient.guestActivityParticipant.count({
+    where: {
+      linkedParticipantId: null,
+      status: {
+        in: linkableGuestStatuses,
+      },
+      OR: matchWhere,
+    },
+  });
+}
+
 async function linkGuestParticipation(
   tx: PrismaTx,
   guest: {

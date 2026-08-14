@@ -196,6 +196,7 @@ export const getWerewolfRoomById = cache(
         };
       }),
       playerCount: room.playerCount,
+      revision: room.revision,
       seats: room.seats.map((seat) => {
         const canViewPrivateSeat = viewerSeat?.id === seat.id;
         const canViewRole =
