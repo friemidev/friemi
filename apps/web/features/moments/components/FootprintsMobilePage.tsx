@@ -21,6 +21,7 @@ import { createPortal, useFormStatus } from "react-dom";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   BadgeCheck,
+  BellOff,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -43,6 +44,7 @@ import {
   X,
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
@@ -51,7 +53,9 @@ import { StartDirectConversationButton } from "@/features/direct-messages/compon
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import type { OfficialMessageRosterViewModel } from "@/features/official-messages/services/officialMessages";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import type { PlanetChatRosterItemViewModel } from "@/features/planets/services/planetChat";
@@ -101,6 +105,7 @@ type FootprintsMobilePageProps = {
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
+  officialMessages: OfficialMessageRosterViewModel | null;
   messageRosterError?: boolean;
   momentFeedError?: boolean;
   moments: MomentFeedItemViewModel[];
@@ -819,19 +824,22 @@ export function FeedCard({
       >
         <div>
           <div className="flex items-start gap-3 px-0 pb-2 pt-1">
-            <Link
-              href={withLocale(locale, `/profile/${moment.author.id}`)}
-              className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-              aria-label={moment.author.nickname}
+            <UserProfilePreviewPopover
+              avatarUrl={moment.author.avatarUrl}
+              giftSourceContextId={moment.id}
+              giftSourceSurface="MOMENT"
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              nickname={moment.author.nickname}
+              profileId={moment.author.id}
+              triggerClassName="shrink-0 rounded-full"
             >
               <ProfileAvatar
                 avatarUrl={moment.author.avatarUrl}
                 name={moment.author.nickname}
                 className={hasImages ? "h-10 w-10" : undefined}
               />
-            </Link>
+            </UserProfilePreviewPopover>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0">
@@ -972,16 +980,21 @@ export function MomentDetailContent({
     <>
       <article className="pb-5">
         <header className="flex items-start gap-3">
-          <Link
-            href={withLocale(locale, `/profile/${moment.author.id}`)}
-            className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
-            aria-label={moment.author.nickname}
+          <UserProfilePreviewPopover
+            avatarUrl={moment.author.avatarUrl}
+            giftSourceContextId={moment.id}
+            giftSourceSurface="MOMENT"
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            nickname={moment.author.nickname}
+            profileId={moment.author.id}
+            triggerClassName="shrink-0 rounded-full"
           >
             <ProfileAvatar
               avatarUrl={moment.author.avatarUrl}
               name={moment.author.nickname}
             />
-          </Link>
+          </UserProfilePreviewPopover>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-bold leading-5 text-[#111210]">
               {moment.author.nickname}
@@ -2524,6 +2537,7 @@ function FootprintsMessageList({
   friends,
   hasError,
   locale,
+  officialMessages,
   planetChats,
 }: {
   currentUserProfileId: string;
@@ -2531,6 +2545,7 @@ function FootprintsMessageList({
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
+  officialMessages: OfficialMessageRosterViewModel | null;
   planetChats: PlanetChatRosterItemViewModel[];
 }) {
   const t = getDirectMessagesCopy(locale);
@@ -2650,14 +2665,39 @@ function FootprintsMessageList({
       isPinned: planet.isPinned,
       planet,
     }));
+    const officialEntries = officialMessages
+      ? [
+          {
+            kind: "official" as const,
+            id: officialMessages.id,
+            searchText: [
+              officialMessages.title,
+              officialMessages.preview,
+              "Friemi official 官方 officiel",
+            ].join(" "),
+            sortTime: new Date(officialMessages.publishedAt).getTime(),
+            hasContent: true,
+            isFollowing: false,
+            isMutual: false,
+            isOfficial: true,
+            isPinned: false,
+            official: officialMessages,
+          },
+        ]
+      : [];
 
-    return [...directEntries, ...roomEntries, ...planetEntries].sort(
+    return [
+      ...directEntries,
+      ...roomEntries,
+      ...planetEntries,
+      ...officialEntries,
+    ].sort(
       (entryA, entryB) =>
         Number(entryB.isPinned) - Number(entryA.isPinned) ||
         entryB.sortTime - entryA.sortTime ||
         entryA.id.localeCompare(entryB.id),
     );
-  }, [activityRoomChats, friends, planetChats]);
+  }, [activityRoomChats, friends, officialMessages, planetChats]);
   const visibleEntries = useMemo(
     () =>
       filterUnifiedChatRosterEntries(sortedEntries, activeFilter, searchTerm),
@@ -2681,9 +2721,7 @@ function FootprintsMessageList({
   const followingUnreadTotal = friends
     .filter((friend) => friend.isFollowing && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
-  const officialUnreadTotal = friends
-    .filter((friend) => friend.friend.isOfficial && !friend.isMuted)
-    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
   const filters: Array<{
     count: number;
     icon: ComponentType<{ className?: string }>;
@@ -2693,7 +2731,11 @@ function FootprintsMessageList({
     label: string;
   }> = [
     {
-      count: directUnreadTotal + roomUnreadTotal + planetUnreadTotal,
+      count:
+        directUnreadTotal +
+        roomUnreadTotal +
+        planetUnreadTotal +
+        officialUnreadTotal,
       icon: MessageCircle,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2818,6 +2860,7 @@ function FootprintsMessageList({
   if (
     friends.length === 0 &&
     activityRoomChats.length === 0 &&
+    !officialMessages &&
     planetChats.length === 0
   ) {
     return (
@@ -2849,6 +2892,12 @@ function FootprintsMessageList({
                 locale={locale}
                 showBackFollowAction={false}
               />
+            ) : entry.kind === "official" ? (
+              <FootprintsOfficialMessageRow
+                key={entry.id}
+                locale={locale}
+                official={entry.official}
+              />
             ) : entry.kind === "room" ? (
               <FootprintsRoomChatRow
                 key={entry.id}
@@ -2871,6 +2920,57 @@ function FootprintsMessageList({
         </div>
       )}
     </section>
+  );
+}
+
+function FootprintsOfficialMessageRow({
+  locale,
+  official,
+}: {
+  locale: string;
+  official: OfficialMessageRosterViewModel;
+}) {
+  const unreadBadgeText =
+    official.unreadCount > 99 ? "99+" : String(official.unreadCount);
+
+  return (
+    <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
+      <Link
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={withLocale(locale, "/official-messages")}
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#156240] text-white">
+          <BadgeCheck className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
+              {official.title}
+            </span>
+            <span className="shrink-0 text-[11px] font-semibold text-[#8F9189]">
+              {formatChatListTimestamp(official.publishedAt, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                official.unreadCount > 0
+                  ? "font-bold text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {official.preview}
+            </span>
+            {official.unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
   );
 }
 
@@ -2914,7 +3014,7 @@ function FootprintsRoomChatRow({
   return (
     <article
       className={cn(
-        "min-w-0 transition-colors",
+        "group flex min-w-0 items-center transition-colors",
         room.isPinned
           ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
           : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
@@ -2922,7 +3022,7 @@ function FootprintsRoomChatRow({
     >
       <Link
         aria-label={t.openRoomChat(room.title)}
-        className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
@@ -2950,6 +3050,12 @@ function FootprintsRoomChatRow({
                 {room.isPinned ? (
                   <Pin
                     aria-label={t.pinConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {room.isMuted ? (
+                  <BellOff
+                    aria-label={t.muteConversation}
                     className="h-3 w-3 text-[#8F9189]"
                   />
                 ) : null}
@@ -2984,6 +3090,12 @@ function FootprintsRoomChatRow({
           </span>
         </span>
       </Link>
+      <ChatRosterDismissButton
+        activityId={room.id}
+        className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        kind="activity"
+        locale={locale}
+      />
     </article>
   );
 }
@@ -3031,7 +3143,7 @@ function FootprintsPlanetChatRow({
   return (
     <article
       className={cn(
-        "min-w-0 transition-colors",
+        "group flex min-w-0 items-center transition-colors",
         planet.isPinned
           ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
           : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
@@ -3039,7 +3151,7 @@ function FootprintsPlanetChatRow({
     >
       <Link
         aria-label={`${planetLabel}: ${planet.name}`}
-        className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={href}
         onClick={() => {
           window.sessionStorage.setItem(
@@ -3085,6 +3197,12 @@ function FootprintsPlanetChatRow({
                     className="h-3 w-3 text-[#8F9189]"
                   />
                 ) : null}
+                {planet.isMuted ? (
+                  <BellOff
+                    aria-label={t.muteConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
                 {formatChatListTimestamp(time, locale)}
               </span>
             </span>
@@ -3116,6 +3234,13 @@ function FootprintsPlanetChatRow({
           </span>
         </span>
       </Link>
+      <ChatRosterDismissButton
+        className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        kind="planet"
+        locale={locale}
+        planetId={planet.id}
+        planetSlug={planet.slug}
+      />
     </article>
   );
 }
@@ -3170,6 +3295,12 @@ function FootprintsMessageRow({
                   className="h-3 w-3 text-[#8F9189]"
                 />
               ) : null}
+              {friend.isMuted ? (
+                <BellOff
+                  aria-label={t.muteConversation}
+                  className="h-3 w-3 text-[#8F9189]"
+                />
+              ) : null}
               {formatChatListTimestamp(time, locale)}
             </span>
           </span>
@@ -3220,7 +3351,7 @@ function FootprintsMessageRow({
   return (
     <article
       className={cn(
-        "min-w-0 transition-colors",
+        "group min-w-0 transition-colors",
         friend.isPinned
           ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
           : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
@@ -3236,6 +3367,12 @@ function FootprintsMessageRow({
             {content}
           </Link>
           {backFollowAction}
+          <ChatRosterDismissButton
+            className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+            conversationId={friend.conversationId}
+            kind="direct"
+            locale={locale}
+          />
         </div>
       ) : (
         <div className="flex min-w-0 items-center gap-2">
@@ -3275,6 +3412,7 @@ export function FootprintsMobilePage({
   initialTab = "moment",
   locale,
   messageFriends,
+  officialMessages,
   messageRosterError = false,
   momentFeedError = false,
   moments,
@@ -3309,8 +3447,9 @@ export function FootprintsMobilePage({
       planetChats.reduce(
         (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
         0,
-      ),
-    [activityRoomChats, messageFriends, planetChats],
+      ) +
+      (officialMessages?.unreadCount ?? 0),
+    [activityRoomChats, messageFriends, officialMessages, planetChats],
   );
   const { unreadDirectMessageCount } = useNotificationBadge(
     initialUnreadMessageCount,
@@ -3572,6 +3711,7 @@ export function FootprintsMobilePage({
                   friends={messageFriends}
                   hasError={messageRosterError}
                   locale={locale}
+                  officialMessages={officialMessages}
                   planetChats={planetChats}
                 />
               ) : (

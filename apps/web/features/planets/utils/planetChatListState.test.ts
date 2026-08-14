@@ -22,13 +22,13 @@ const entries: TestEntry[] = [
     searchText: "Alice hello",
   },
   {
-    hasContent: false,
-    id: "direct-official",
+    hasContent: true,
+    id: "official",
     isFollowing: false,
     isMutual: false,
     isOfficial: true,
     isPinned: false,
-    kind: "direct",
+    kind: "official",
     searchText: "Friemi official",
   },
   {
@@ -111,7 +111,7 @@ test("planet chat scroll state is isolated by complete return URL", () => {
 test("unified chat all filter keeps conversations with content or pinning", () => {
   assert.deepEqual(
     filterUnifiedChatRosterEntries(entries, "all", "").map((entry) => entry.id),
-    ["direct-mutual", "room", "planet-pinned"],
+    ["direct-mutual", "official", "room", "planet-pinned"],
   );
 });
 
@@ -139,7 +139,7 @@ test("unified chat search matches planet name tags messages and sender text", ()
   );
 });
 
-test("unified chat relationship filters stay limited to direct chats", () => {
+test("unified chat relationship and official filters use distinct entry kinds", () => {
   assert.deepEqual(
     filterUnifiedChatRosterEntries(entries, "mutual", "").map(
       (entry) => entry.id,
@@ -150,6 +150,6 @@ test("unified chat relationship filters stay limited to direct chats", () => {
     filterUnifiedChatRosterEntries(entries, "official", "").map(
       (entry) => entry.id,
     ),
-    ["direct-official"],
+    ["official"],
   );
 });

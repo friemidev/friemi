@@ -22,6 +22,7 @@ import type {
 } from "@/features/chat/types";
 import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
 import { prisma } from "@/lib/prisma";
+import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
 
 export const activityRoomMessageMaxLength = 500;
 export const activityRoomMessageImageMaxCount = 4;
@@ -1452,6 +1453,7 @@ export async function getActivityRoomChatRoster(
           profileId: viewerProfileId,
         },
         select: {
+          hiddenAt: true,
           lastReadAt: true,
           mutedAt: true,
           pinnedAt: true,
@@ -1460,13 +1462,19 @@ export async function getActivityRoomChatRoster(
       },
     },
   });
+  const visibleRooms = rooms.filter((room) => {
+    const hiddenAt = room.roomReadStates[0]?.hiddenAt;
+    const lastMessageAt = room.roomMessages[0]?.createdAt;
+
+    return !isChatRosterEntryHidden(hiddenAt, lastMessageAt);
+  });
   const [unreadCountByActivityId, unreadMentionByActivityId] =
     await Promise.all([
-      getActivityRoomUnreadCountMap(rooms, viewerProfileId),
-      getActivityRoomUnreadMentionMap(rooms, viewerProfileId),
+      getActivityRoomUnreadCountMap(visibleRooms, viewerProfileId),
+      getActivityRoomUnreadMentionMap(visibleRooms, viewerProfileId),
     ]);
 
-  return rooms
+  return visibleRooms
     .map((room) =>
       mapActivityRoomRosterItem(
         room,
@@ -1636,6 +1644,7 @@ export async function markActivityRoomChatRead({
       profileId,
     },
     update: {
+      hiddenAt: null,
       lastReadAt: readAt,
     },
   });

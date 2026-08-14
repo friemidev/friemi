@@ -282,6 +282,8 @@ model UserProfile {
   momentComments          MomentComment[]               @relation("MomentCommentAuthor")
   notifications           Notification[]                @relation("NotificationRecipient")
   sentNotifications       Notification[]                @relation("NotificationActor")
+  officialMessages        OfficialMessage[]             @relation("OfficialMessageAuthor")
+  officialReadState       OfficialMessageReadState?
   favoriteActivities      ActivityFavorite[]
   following               UserFollow[]                  @relation("UserFollowing")
   followers               UserFollow[]                  @relation("UserFollowers")
@@ -414,6 +416,7 @@ model PlanetChatReadState {
   lastReadAt DateTime    @default(now())
   mutedAt    DateTime?
   pinnedAt   DateTime?
+  hiddenAt   DateTime?
   planet     Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
   profile    UserProfile @relation("PlanetChatReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
   createdAt  DateTime    @default(now())
@@ -422,6 +425,7 @@ model PlanetChatReadState {
   @@unique([planetId, profileId])
   @@index([profileId, mutedAt])
   @@index([profileId, pinnedAt])
+  @@index([profileId, hiddenAt])
   @@index([profileId, updatedAt])
   @@index([planetId, lastReadAt])
 }
@@ -631,6 +635,7 @@ model ActivityRoomReadState {
   lastReadAt         DateTime    @default(now())
   mutedAt            DateTime?
   pinnedAt           DateTime?
+  hiddenAt           DateTime?
   announcementReadAt DateTime?
   activity           Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
   profile            UserProfile @relation("ActivityRoomReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
@@ -640,6 +645,7 @@ model ActivityRoomReadState {
   @@unique([activityId, profileId])
   @@index([profileId, mutedAt])
   @@index([profileId, pinnedAt])
+  @@index([profileId, hiddenAt])
   @@index([profileId, updatedAt])
   @@index([activityId, lastReadAt])
 }
@@ -1195,6 +1201,30 @@ model Notification {
   @@index([momentCommentId])
 }
 
+model OfficialMessage {
+  id              String       @id @default(cuid())
+  title           String       @db.VarChar(120)
+  content         String       @db.Text
+  authorProfileId String?
+  author          UserProfile? @relation("OfficialMessageAuthor", fields: [authorProfileId], references: [id], onDelete: SetNull)
+  publishedAt     DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([publishedAt])
+  @@index([authorProfileId, publishedAt])
+}
+
+model OfficialMessageReadState {
+  profileId  String      @id
+  profile    UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([lastReadAt])
+}
+
 model ActivityAnnouncement {
   id            String         @id @default(cuid())
   activityId    String
@@ -1314,6 +1344,7 @@ model ConversationPreference {
   profileId      String
   mutedAt        DateTime?
   pinnedAt       DateTime?
+  hiddenAt       DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   profile        UserProfile  @relation("ConversationPreferenceProfile", fields: [profileId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
@@ -1322,6 +1353,7 @@ model ConversationPreference {
   @@unique([conversationId, profileId])
   @@index([profileId, mutedAt])
   @@index([profileId, pinnedAt])
+  @@index([profileId, hiddenAt])
   @@index([conversationId, mutedAt])
 }
 

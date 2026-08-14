@@ -16,6 +16,7 @@ type AccountSettingsActionListProps = {
   accountSecurityLabel: string;
   accountSettingsLabel: string;
   adminActivityPriorityLabel?: string;
+  adminOfficialMessagesLabel?: string;
   adminTopNewsLabel?: string;
   locale: string;
   signOutLabel: string;
@@ -25,6 +26,7 @@ export function AccountSettingsActionList({
   accountSecurityLabel,
   accountSettingsLabel,
   adminActivityPriorityLabel,
+  adminOfficialMessagesLabel,
   adminTopNewsLabel,
   locale,
   signOutLabel,
@@ -70,6 +72,21 @@ export function AccountSettingsActionList({
           </span>
           <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
             {adminTopNewsLabel}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
+        </Link>
+      ) : null}
+
+      {adminOfficialMessagesLabel ? (
+        <Link
+          href={withLocale(locale, "/admin/official-messages")}
+          className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7F0EA] text-[#0F6D46] ring-1 ring-[#8AB68E]/56 transition group-hover:bg-[#FEFFF9]">
+            <Newspaper className="h-[1.125rem] w-[1.125rem]" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
+            {adminOfficialMessagesLabel}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
         </Link>

@@ -103,6 +103,11 @@ const toggleDirectConversationPinSchema = z.object({
   pinned: z.enum(["0", "1", "false", "true"]).default("1"),
 });
 
+const hideDirectConversationSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  conversationId: z.string().min(1),
+});
+
 const deleteDirectMessagesSchema = z.object({
   conversationId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
@@ -329,6 +334,65 @@ export async function toggleDirectConversationPinAction(
   refreshDirectMessageSurfaces(result.data.locale, conversation.id);
 }
 
+export async function hideDirectConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const result = hideDirectConversationSchema.safeParse({
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  });
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    "/footprints?tab=message",
+  );
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: result.data.conversationId,
+      OR: [{ userAId: profile.id }, { userBId: profile.id }],
+    },
+    select: { id: true },
+  });
+
+  if (!conversation) {
+    return;
+  }
+
+  const hiddenAt = new Date();
+  await prisma.$transaction([
+    prisma.conversationPreference.upsert({
+      where: {
+        conversationId_profileId: {
+          conversationId: conversation.id,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        conversationId: conversation.id,
+        hiddenAt,
+        profileId: profile.id,
+      },
+      update: {
+        hiddenAt,
+      },
+    }),
+    prisma.directMessage.updateMany({
+      where: {
+        conversationId: conversation.id,
+        readAt: null,
+        senderId: { not: profile.id },
+      },
+      data: { readAt: hiddenAt },
+    }),
+  ]);
+
+  refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+}
+
 export async function deleteDirectMessagesAction(
   _previousState: DirectMessageActionState,
   formData: FormData,
@@ -465,10 +529,7 @@ export async function openDirectConversationAction(
 
   if (!result.success) {
     redirect(
-      getDirectConversationRedirectPath(
-        rawInput.locale,
-        rawInput.redirectPath,
-      ),
+      getDirectConversationRedirectPath(rawInput.locale, rawInput.redirectPath),
     );
   }
 

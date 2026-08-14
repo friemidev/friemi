@@ -3,13 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import {
-  Compass,
-  MessageCircle,
-  Plus,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { Compass, Globe2, Plus, UserRound, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -61,7 +55,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       {
         href: "/footprints?tab=moment",
         label: t.nav.footprintsShort,
-        icon: MessageCircle,
+        icon: Globe2,
       },
       {
         href: "/profile",

@@ -76,6 +76,7 @@ import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfi
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
 import type { ProfileShopGiftRecipient } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
+import { UserProfilePreviewPopover } from "./UserProfilePreviewPopover";
 import { ProfileAchievementIcon } from "./ProfilePublicAchievementWall";
 
 type ReferralStatsViewModel = {
@@ -2231,17 +2232,26 @@ export function ProfileVisitorsPageView({
 
       <section className="mt-6">
         {visitors.length > 0 ? (
-          <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
+          <div className="divide-y divide-[#E8E1CF]">
             {visitors.map((visit) => (
               <div className="flex items-center gap-2 py-3" key={visit.id}>
-                <Link
-                  href={withLocale(locale, `/profile/${visit.visitor.id}`)}
-                  className="flex min-w-0 flex-1 items-center gap-3 transition active:opacity-80"
+                <UserProfilePreviewPopover
+                  avatarUrl={visit.visitor.avatarUrl}
+                  isAuthenticated
+                  locale={locale}
+                  nickname={visit.visitor.nickname}
+                  profileId={visit.visitor.id}
+                  triggerClassName="shrink-0 rounded-full"
                 >
                   <Avatar
                     avatarUrl={visit.visitor.avatarUrl}
                     name={visit.visitor.nickname}
                   />
+                </UserProfilePreviewPopover>
+                <Link
+                  href={withLocale(locale, `/profile/${visit.visitor.id}`)}
+                  className="flex min-w-0 flex-1 items-center transition active:opacity-80"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="truncate text-sm font-bold text-[#111210]">

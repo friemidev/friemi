@@ -174,9 +174,10 @@ export function ProfileAvatarPicker({
         method: "POST",
         body: formData,
       });
-      const json = (await response.json().catch(() => null)) as
-        | { error?: string; url?: string }
-        | null;
+      const json = (await response.json().catch(() => null)) as {
+        error?: string;
+        url?: string;
+      } | null;
 
       if (!response.ok || !json?.url) {
         setError(getUploadErrorMessage(locale, json?.error));
@@ -216,7 +217,12 @@ export function ProfileAvatarPicker({
           event.currentTarget.value = "";
         }}
       />
-      <div className="flex items-start gap-3">
+      <div
+        className={cn(
+          "flex items-start gap-3",
+          variant === "sheet" ? "order-2" : null,
+        )}
+      >
         <button
           type="button"
           className={cn(
@@ -272,7 +278,7 @@ export function ProfileAvatarPicker({
         ) : null}
       </div>
 
-      <div className="grid gap-2">
+      <div className={cn("grid gap-2", variant === "sheet" ? "order-1" : null)}>
         <div className="grid gap-2">
           <span className="text-xs font-bold text-[#767A70]">
             {copy.gender}

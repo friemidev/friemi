@@ -50,6 +50,7 @@ import { ActivityShareDialogButton } from "@/features/activities/components/Acti
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { getActivityPriorityAdminSnapshot } from "@/features/activities/priority/adminActivityPriority";
 import { CancelParticipationForm } from "@/features/activities/components/CancelParticipationForm";
+import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
 import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
@@ -1435,6 +1436,11 @@ export async function ActivityDetailPageContent({
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
   const isTeamOperator = Boolean(activity.viewerCanManage) || isOrganizer;
+  const canCancelActivity =
+    isOrganizer &&
+    !isCancelled &&
+    !isEndedByTime &&
+    ["OPEN", "FULL", "RECRUITING", "CONFIRMED"].includes(activity.status);
   const canManageCrewCover =
     isTeamOperator &&
     !activity.isActivityInfo &&
@@ -2153,6 +2159,13 @@ export async function ActivityDetailPageContent({
                   />
                 </div>
               </div>
+              {canCancelActivity ? (
+                <CancelActivityForm
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  locale={locale}
+                />
+              ) : null}
             </>
           ) : showActivityRoomEntry ? (
             <>
@@ -2374,6 +2387,13 @@ export async function ActivityDetailPageContent({
                     participants={activityCheckInRoster}
                   />
                 </div>
+                {canCancelActivity ? (
+                  <CancelActivityForm
+                    activityId={activity.id}
+                    activityTitle={activity.title}
+                    locale={locale}
+                  />
+                ) : null}
               </div>
               {showActivityRoomEntry ? (
                 <ActivityPlayAgainLink

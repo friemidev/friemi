@@ -1,11 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { ActivityCardMasonryGrid } from "@/features/activities/components/ActivityCardMasonryGrid";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { getActivityCardMasonryWeight } from "@/features/activities/utils/activityCardMasonry";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import {
   getDetailSourceTargetSelector,
@@ -14,7 +11,7 @@ import {
   type DetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
-import { SearchHighlightedText } from "./SearchHighlightedText";
+import { ResponsiveSearchActivityCards } from "./ResponsiveSearchActivityCards";
 
 type SearchActivityResultsFeedProps = {
   initialActivities: ActivityCardViewModel[];
@@ -152,24 +149,6 @@ export function SearchActivityResultsFeed({
     query,
   ]);
 
-  const mobileColumnWeights = useMemo(
-    () =>
-      activities.map((activity) =>
-        getActivityCardMasonryWeight(activity, {
-          showPrimaryAction: !isPublicEventCard(activity),
-        }),
-      ),
-    [activities],
-  );
-  const relatedMobileColumnWeights = useMemo(
-    () =>
-      relatedActivities.map((activity) =>
-        getActivityCardMasonryWeight(activity, {
-          showPrimaryAction: !isPublicEventCard(activity),
-        }),
-      ),
-    [relatedActivities],
-  );
   const loadMore = useCallback(async (forceRetry = false) => {
     if (loading || !hasMore || (!forceRetry && loadFailed)) {
       return;
@@ -389,59 +368,24 @@ export function SearchActivityResultsFeed({
   return (
     <div className="space-y-5">
       {activities.length > 0 ? (
-        <ActivityCardMasonryGrid
-          gridClassName="lg:grid-cols-3 xl:grid-cols-3"
-          mobileColumnWeights={mobileColumnWeights}
-        >
-          {activities.map((activity) => (
-            <ActivityCard
-              key={getSearchActivityKey(activity)}
-              activity={activity}
-              isAuthenticated={isAuthenticated}
-              isOwnActivity={
-                Boolean(viewerProfileId) && activity.organizerId === viewerProfileId
-              }
-              locale={locale}
-              searchResultStyle
-              showFavoriteButton
-              showPrimaryAction={!isPublicEventCard(activity)}
-              sourceSurface="global_search"
-              detailSourceKey="search"
-              titleContent={
-                <SearchHighlightedText text={activity.title} query={query} />
-              }
-            />
-          ))}
-        </ActivityCardMasonryGrid>
+        <ResponsiveSearchActivityCards
+          activities={activities}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          query={query}
+          viewerProfileId={viewerProfileId}
+        />
       ) : null}
 
       {relatedStarted && relatedActivities.length > 0 ? (
         <section className="border-t border-sand pt-4">
-          <ActivityCardMasonryGrid
-            gridClassName="lg:grid-cols-3 xl:grid-cols-3"
-            mobileColumnWeights={relatedMobileColumnWeights}
-          >
-            {relatedActivities.map((activity) => (
-              <ActivityCard
-                key={getSearchActivityKey(activity)}
-                activity={activity}
-                isAuthenticated={isAuthenticated}
-                isOwnActivity={
-                  Boolean(viewerProfileId) &&
-                  activity.organizerId === viewerProfileId
-                }
-                locale={locale}
-                searchResultStyle
-                showFavoriteButton
-                showPrimaryAction={!isPublicEventCard(activity)}
-                sourceSurface="global_search"
-                detailSourceKey="search"
-                titleContent={
-                  <SearchHighlightedText text={activity.title} query={query} />
-                }
-              />
-            ))}
-          </ActivityCardMasonryGrid>
+          <ResponsiveSearchActivityCards
+            activities={relatedActivities}
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            query={query}
+            viewerProfileId={viewerProfileId}
+          />
         </section>
       ) : null}
 

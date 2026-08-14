@@ -622,7 +622,8 @@ const copy = {
       title: "发起人操作",
       cancel: "取消聚吧",
       cancelling: "取消中...",
-      cancelDescription: "取消后这场聚吧会停止报名，并从可参与列表中隐藏。",
+      cancelDescription:
+        "取消后这场聚吧会停止报名，并以已取消状态排在进行中聚吧之后。",
       cancelConfirm: "确定要取消这个聚吧吗？取消后用户将不能继续报名。",
       cancelConfirmTitle: "确认取消聚吧？",
       cancelConfirmDescription:
@@ -1630,7 +1631,7 @@ const copy = {
       cancel: "Cancel crew",
       cancelling: "Cancelling...",
       cancelDescription:
-        "After cancellation, this crew stops taking new join requests and is hidden from joinable lists.",
+        "After cancellation, this crew stops taking new join requests and remains listed after active crews with a cancelled status.",
       cancelConfirm: "Cancel this crew? Users will no longer be able to join.",
       cancelConfirmTitle: "Cancel this crew?",
       cancelConfirmDescription:
@@ -2691,7 +2692,7 @@ const copy = {
       cancel: "Annuler l'équipe",
       cancelling: "Annulation...",
       cancelDescription:
-        "Après annulation, cette équipe n'accepte plus de demandes et disparaît des listes à rejoindre.",
+        "Après annulation, cette équipe n'accepte plus de demandes et reste listée après les équipes actives avec le statut annulé.",
       cancelConfirm:
         "Annuler cette équipe ? Les utilisateurs ne pourront plus la rejoindre.",
       cancelConfirmTitle: "Annuler cette équipe ?",

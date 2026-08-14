@@ -103,6 +103,11 @@ const toggleActivityRoomPinSchema = z.object({
   pinned: z.enum(["0", "1", "false", "true"]).default("1"),
 });
 
+const hideActivityRoomConversationSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+});
+
 const acknowledgeActivityAnnouncementSchema = z.object({
   activityId: z.string().min(1).max(80),
   announcementId: z.string().min(1).max(80),
@@ -503,6 +508,54 @@ export async function toggleActivityRoomPinAction(
       },
     });
   }
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function hideActivityRoomConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const result = hideActivityRoomConversationSchema.safeParse({
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  });
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    "/footprints?tab=message",
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const hiddenAt = new Date();
+  await prisma.activityRoomReadState.upsert({
+    where: {
+      activityId_profileId: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+    },
+    create: {
+      activityId: result.data.activityId,
+      hiddenAt,
+      lastReadAt: hiddenAt,
+      profileId: profile.id,
+    },
+    update: {
+      hiddenAt,
+      lastReadAt: hiddenAt,
+    },
+  });
 
   revalidateActivityRoom(result.data.locale, result.data.activityId);
 }

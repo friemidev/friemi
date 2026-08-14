@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  BellOff,
   CalendarDays,
   ChevronDown,
   Gift,
@@ -31,6 +32,7 @@ import type {
   DirectConversationThreadViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { MessageThreadBackButton } from "./MessageThreadBackButton";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadClient } from "./MessageThreadClient";
@@ -138,80 +140,91 @@ function ConversationListItem({
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-[1.05rem] p-2.5 transition duration-200",
+        "group rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
           ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
           : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
-      <Link
-        aria-label={t.openConversation(conversation.peer.nickname)}
-        className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-        href={withLocale(locale, `/messages/${conversation.id}`)}
-      >
-        <MessageAvatar
-          avatarUrl={conversation.peer.avatarUrl}
-          isOnline={conversation.peer.isOnline}
-          name={conversation.peer.nickname}
-          presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
-        />
-        <span className="min-w-0">
-          <span className="flex min-w-0 items-start gap-2">
-            <span
-              className={cn(
-                "truncate text-sm",
-                showUnreadBadge ? "font-bold" : "font-semibold",
-              )}
-            >
-              {conversation.peer.nickname}
-            </span>
-            <span
-              className={cn(
-                "ml-auto shrink-0 whitespace-nowrap text-xs",
-                isActive ? "text-[#8E8383]" : "text-[#8E8383]",
-              )}
-            >
-              <span className="inline-flex items-center gap-1">
-                {conversation.isPinned ? (
-                  <Pin
-                    aria-label={t.pinConversation}
-                    className="h-3 w-3"
-                  />
-                ) : null}
-                {formatChatListTimestamp(time, locale)}
-              </span>
-            </span>
-            {showUnreadBadge ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
-                {unreadBadgeText}
-              </span>
-            ) : showMutedUnreadDot ? (
+      <div className="flex min-w-0 items-center gap-1">
+        <Link
+          aria-label={t.openConversation(conversation.peer.nickname)}
+          className="grid min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+          href={withLocale(locale, `/messages/${conversation.id}`)}
+        >
+          <MessageAvatar
+            avatarUrl={conversation.peer.avatarUrl}
+            isOnline={conversation.peer.isOnline}
+            name={conversation.peer.nickname}
+            presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
+          />
+          <span className="min-w-0">
+            <span className="flex min-w-0 items-start gap-2">
               <span
-                aria-label={t.mutedUnreadLabel}
-                className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
-                title={t.mutedUnreadLabel}
-              />
-            ) : null}
-          </span>
-          {showPublicNickname ? (
-            <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
-              {conversation.peer.publicNickname}
+                className={cn(
+                  "truncate text-sm",
+                  showUnreadBadge ? "font-bold" : "font-semibold",
+                )}
+              >
+                {conversation.peer.nickname}
+              </span>
+              <span
+                className={cn(
+                  "ml-auto shrink-0 whitespace-nowrap text-xs",
+                  isActive ? "text-[#8E8383]" : "text-[#8E8383]",
+                )}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {conversation.isPinned ? (
+                    <Pin aria-label={t.pinConversation} className="h-3 w-3" />
+                  ) : null}
+                  {conversation.isMuted ? (
+                    <BellOff
+                      aria-label={t.muteConversation}
+                      className="h-3 w-3"
+                    />
+                  ) : null}
+                  {formatChatListTimestamp(time, locale)}
+                </span>
+              </span>
+              {showUnreadBadge ? (
+                <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                  {unreadBadgeText}
+                </span>
+              ) : showMutedUnreadDot ? (
+                <span
+                  aria-label={t.mutedUnreadLabel}
+                  className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                  title={t.mutedUnreadLabel}
+                />
+              ) : null}
             </span>
-          ) : null}
-          <span
-            className={cn(
-              "mt-1 block truncate text-xs leading-5",
-              showUnreadBadge
-                ? "font-bold text-ink"
-                : isActive
-                  ? "text-[#156240]"
-                  : "text-[#156240]",
-            )}
-          >
-            {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
+            {showPublicNickname ? (
+              <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+                {conversation.peer.publicNickname}
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "mt-1 block truncate text-xs leading-5",
+                showUnreadBadge
+                  ? "font-bold text-ink"
+                  : isActive
+                    ? "text-[#156240]"
+                    : "text-[#156240]",
+              )}
+            >
+              {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
+            </span>
           </span>
-        </span>
-      </Link>
+        </Link>
+        <ChatRosterDismissButton
+          className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+          conversationId={conversation.id}
+          kind="direct"
+          locale={locale}
+        />
+      </div>
       <ConversationActivitySignals
         activities={conversation.recentActivities}
         isActive={isActive}

@@ -11,6 +11,7 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import type { GlobalSearchUserViewModel } from "@/features/search/queries/getGlobalSearchResults";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { SearchHighlightedText } from "./SearchHighlightedText";
 
 type GlobalSearchUserResultsProps = {
+  isAuthenticated: boolean;
   locale: string;
   query: string;
   totalCount: number;
@@ -25,6 +27,7 @@ type GlobalSearchUserResultsProps = {
 };
 
 export function GlobalSearchUserResults({
+  isAuthenticated,
   locale,
   query,
   totalCount,
@@ -42,6 +45,7 @@ export function GlobalSearchUserResults({
         {visibleUsers.map((user) => (
           <GlobalSearchUserCard
             key={user.id}
+            isAuthenticated={isAuthenticated}
             locale={locale}
             query={query}
             user={user}
@@ -93,10 +97,12 @@ export function GlobalSearchUserResults({
 }
 
 function GlobalSearchUserCard({
+  isAuthenticated,
   locale,
   query,
   user,
 }: {
+  isAuthenticated: boolean;
   locale: string;
   query: string;
   user: GlobalSearchUserViewModel;
@@ -108,57 +114,65 @@ function GlobalSearchUserCard({
 
   return (
     <article className="flex min-w-0 flex-col gap-2 py-4 sm:flex-row sm:items-center">
-      <ContextualDetailLink
-        href={profileHref}
-        detailSource={{
-          sourceKey: "search",
-          targetKey: `profile:${user.id}`,
-          targetKind: "profile",
-        }}
-        data-detail-source-target={`profile:${user.id}`}
-        className="group flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
-        aria-label={t.openUserProfile(user.nickname)}
-      >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ECF5EF] text-[#156240]">
-          {user.avatarUrl ? (
-            // Avatar URLs come from Clerk/Google and are already thumbnail-sized.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <UserRound className="h-5 w-5" aria-hidden="true" />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-base font-semibold text-ink">
-              <SearchHighlightedText text={user.nickname} query={query} />
-            </span>
-            <ArrowRight
-              className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
-              aria-hidden="true"
-            />
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <UserProfilePreviewPopover
+          avatarUrl={user.avatarUrl}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          nickname={user.nickname}
+          profileId={user.id}
+          triggerClassName="shrink-0 rounded-full"
+        >
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#ECF5EF] text-[#156240]">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound className="h-5 w-5" aria-hidden="true" />
+            )}
           </span>
-          {showPublicNickname ? (
-            <span className="mt-0.5 block truncate text-xs font-semibold text-zinc-500">
-              <SearchHighlightedText
-                text={user.publicNickname}
-                query={query}
+        </UserProfilePreviewPopover>
+        <ContextualDetailLink
+          href={profileHref}
+          detailSource={{
+            sourceKey: "search",
+            targetKey: `profile:${user.id}`,
+            targetKind: "profile",
+          }}
+          data-detail-source-target={`profile:${user.id}`}
+          className="group flex min-w-0 flex-1 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
+          aria-label={t.openUserProfile(user.nickname)}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate text-base font-semibold text-ink">
+                <SearchHighlightedText text={user.nickname} query={query} />
+              </span>
+              {user.friendCode ? (
+                <span className="shrink-0 text-xs font-semibold text-zinc-400">
+                  ID: {user.friendCode}
+                </span>
+              ) : null}
+              <ArrowRight
+                className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
+                aria-hidden="true"
               />
             </span>
-          ) : null}
-          <span className="mt-1 block max-w-full text-xs font-medium leading-5 text-[#156240]">
-            <span className="truncate">
-              {user.friendCode
-                ? `${t.friendCodeLabel} ${user.friendCode}`
-                : t.friendCodeMissing}
-            </span>
+            {showPublicNickname ? (
+              <span className="mt-0.5 block truncate text-xs font-semibold text-zinc-500">
+                <SearchHighlightedText
+                  text={user.publicNickname}
+                  query={query}
+                />
+              </span>
+            ) : null}
           </span>
-        </span>
-      </ContextualDetailLink>
+        </ContextualDetailLink>
+      </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 pl-[3.75rem] sm:w-auto sm:pl-0">
         <FollowCta
@@ -238,9 +252,7 @@ function RelationshipStatusPill({
     <span
       className={cn(
         "inline-flex h-8 w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-2 text-xs font-semibold",
-        tone === "good"
-          ? "text-moss"
-          : "text-zinc-500",
+        tone === "good" ? "text-moss" : "text-zinc-500",
       )}
     >
       <CheckCircle2 className="h-4 w-4" aria-hidden="true" />

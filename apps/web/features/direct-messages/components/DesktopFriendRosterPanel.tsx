@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  BellOff,
   CalendarDays,
   ChevronDown,
   MessageCircle,
@@ -20,6 +21,7 @@ import type {
   DirectMessageFriendRosterItemViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 
 type DesktopFriendRosterPanelProps = {
   activityContextQuery?: {
@@ -192,10 +194,10 @@ function DesktopFriendRosterRow({
           >
             <span className="inline-flex items-center gap-1">
               {friend.isPinned ? (
-                <Pin
-                  aria-label={t.pinConversation}
-                  className="h-3 w-3"
-                />
+                <Pin aria-label={t.pinConversation} className="h-3 w-3" />
+              ) : null}
+              {friend.isMuted ? (
+                <BellOff aria-label={t.muteConversation} className="h-3 w-3" />
               ) : null}
               {formatChatListTimestamp(time, locale)}
             </span>
@@ -237,23 +239,31 @@ function DesktopFriendRosterRow({
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-[1.05rem] p-2.5 transition duration-200",
+        "group rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
           ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
           : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
       {friend.conversationId ? (
-        <Link
-          aria-label={t.openConversation(friend.friend.nickname)}
-          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={
-            conversationHref ??
-            withLocale(locale, `/messages/${friend.conversationId}`)
-          }
-        >
-          {content}
-        </Link>
+        <div className="flex min-w-0 items-center gap-1">
+          <Link
+            aria-label={t.openConversation(friend.friend.nickname)}
+            className="grid min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            href={
+              conversationHref ??
+              withLocale(locale, `/messages/${friend.conversationId}`)
+            }
+          >
+            {content}
+          </Link>
+          <ChatRosterDismissButton
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+            conversationId={friend.conversationId}
+            kind="direct"
+            locale={locale}
+          />
+        </div>
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />

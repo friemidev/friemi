@@ -713,6 +713,9 @@ function getArchivedLobbyActivityWhere(
   return {
     OR: [
       {
+        status: "CANCELLED",
+      },
+      {
         status: "ENDED",
       },
       {
