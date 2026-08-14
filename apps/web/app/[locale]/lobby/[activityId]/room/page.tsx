@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
 import {
   getActivityRoomChatPageData,
+  getActivityRoomManagementData,
   getUnreadActivityRoomTotalMessageCount,
   markActivityRoomChatRead,
 } from "@/features/activity-room-chat/services/activityRoomChat";
@@ -56,6 +57,8 @@ export default async function ActivityRoomPage({
       };
 
   let unreadMessageCount: number | null = null;
+  let management: Awaited<ReturnType<typeof getActivityRoomManagementData>> | null =
+    null;
 
   if (viewerProfile && roomData.policy.canView) {
     await markActivityRoomChatRead({
@@ -78,6 +81,15 @@ export default async function ActivityRoomPage({
 
         return null;
       });
+
+    management = await getActivityRoomManagementData({
+      activityId,
+      viewerProfileId: viewerProfile.id,
+    }).catch((error: unknown) => {
+      console.error("Failed to load activity room management sheet", error);
+
+      return null;
+    });
   }
 
   return (
@@ -89,6 +101,7 @@ export default async function ActivityRoomPage({
         activity={roomData.activity}
         activityId={activityId}
         locale={locale}
+        management={management}
         messages={roomData.messages}
         policy={roomData.policy}
         signInHref={getSignInHref(locale, redirectPath)}

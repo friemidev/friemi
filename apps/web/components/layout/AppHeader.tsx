@@ -40,7 +40,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <AppHeaderChrome locale={locale}>
-      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto] lg:gap-3 lg:px-8">
+      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-4 md:grid-cols-[auto_auto_minmax(0,1fr)_auto] lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
           className="group flex shrink-0 items-center gap-2"

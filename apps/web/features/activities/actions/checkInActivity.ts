@@ -37,7 +37,8 @@ function getCopy(locale: string) {
       forbidden: "Seuls les participants approuves peuvent pointer.",
       invalid: "Ce groupe est introuvable.",
       operator: "Les organisateurs n'ont pas besoin de pointer.",
-      window: "Le pointage ouvre 6 h avant le debut et ferme 24 h apres la fin.",
+      window:
+        "Le pointage ouvre 6 h avant le debut et ferme 24 h apres la fin.",
     };
   }
 
@@ -46,11 +47,13 @@ function getCopy(locale: string) {
       already: "Your check-in has already been sent.",
       closed: "This plan cannot be checked in.",
       failed: "Could not check in right now.",
-      setup: "Check-in is still being set up. Try again after the database update.",
+      setup:
+        "Check-in is still being set up. Try again after the database update.",
       forbidden: "Only approved participants can check in.",
       invalid: "This plan was not found.",
       operator: "Organizers do not need to check in.",
-      window: "Check-in opens 6 hours before start and closes 24 hours after the end.",
+      window:
+        "Check-in opens 6 hours before start and closes 24 hours after the end.",
     };
   }
 
@@ -195,6 +198,7 @@ export async function checkInActivityAction(
         managerIds.map((recipientId) => ({
           actorId: profile.id,
           activityId: result.data.activityId,
+          occurrenceId: `check-in-request:${participation.id}:${now.toISOString()}`,
           recipientId,
           type: "ACTIVITY_CHECK_IN" as const,
         })),
@@ -215,9 +219,9 @@ export async function checkInActivityAction(
               ? copy.operator
               : checkInResult.reason === "invalid"
                 ? copy.invalid
-            : checkInResult.reason === "closed"
-              ? copy.closed
-              : copy.forbidden,
+                : checkInResult.reason === "closed"
+                  ? copy.closed
+                  : copy.forbidden,
       };
     }
 

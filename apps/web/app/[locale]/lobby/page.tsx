@@ -270,6 +270,7 @@ export default async function ActivityLobbyPage({
           initialStatusFilter={initialStatusFilter}
           starterActivities={lobby.starterActivities}
           locale={locale}
+          viewerProfileId={profile.id}
         />
       </PageContainer>
     </>

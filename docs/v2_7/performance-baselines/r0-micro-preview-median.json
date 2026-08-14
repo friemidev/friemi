@@ -1,0 +1,167 @@
+{
+  "generatedAt": "2026-08-14T09:36:22.079Z",
+  "target": "https://friemi-7gbyailcx-friemi.vercel.app",
+  "routes": [
+    "/zh-CN/mobile-home",
+    "/api/lobby/swipe?limit=8"
+  ],
+  "settings": {
+    "durationSeconds": 30,
+    "levels": [
+      20,
+      50,
+      100
+    ],
+    "thinkMaxMs": 1200,
+    "thinkMinMs": 400,
+    "timeoutMs": 15000
+  },
+  "sourceFiles": [
+    "docs/v2_7/performance-baselines/r0-micro-preview-run-1.json",
+    "docs/v2_7/performance-baselines/r0-micro-preview-run-2.json",
+    "docs/v2_7/performance-baselines/r0-micro-preview-run-3.json"
+  ],
+  "calculation": "Median of all runs for each metric; no best-run selection.",
+  "totalRequests": 17083,
+  "totalFailed": 0,
+  "medianStages": [
+    {
+      "concurrency": 20,
+      "durationSeconds": 30.95,
+      "requests": 685,
+      "requestsPerSecond": 22.26,
+      "failed": 0,
+      "errorRate": 0,
+      "responseMegabytes": 72.79,
+      "latencyMs": {
+        "p50": 85.2,
+        "p75": 107.3,
+        "p95": 196,
+        "p99": 670.4,
+        "max": 1245.4
+      },
+      "routes": {
+        "/zh-CN/mobile-home": {
+          "requests": 342,
+          "requestsPerSecond": 11.11,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 69.13,
+          "latencyMs": {
+            "p50": 100.7,
+            "p75": 120.9,
+            "p95": 209.7,
+            "p99": 382.2,
+            "max": 574
+          }
+        },
+        "/api/lobby/swipe?limit=8": {
+          "requests": 343,
+          "requestsPerSecond": 11.14,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 3.67,
+          "latencyMs": {
+            "p50": 53.3,
+            "p75": 61.4,
+            "p95": 160.5,
+            "p99": 836.3,
+            "max": 1236.6
+          }
+        }
+      }
+    },
+    {
+      "concurrency": 50,
+      "durationSeconds": 31.04,
+      "requests": 1691,
+      "requestsPerSecond": 54.48,
+      "failed": 0,
+      "errorRate": 0,
+      "responseMegabytes": 178.69,
+      "latencyMs": {
+        "p50": 82.7,
+        "p75": 114.9,
+        "p95": 226.6,
+        "p99": 449.6,
+        "max": 3044.2
+      },
+      "routes": {
+        "/zh-CN/mobile-home": {
+          "requests": 839,
+          "requestsPerSecond": 27.03,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 169.59,
+          "latencyMs": {
+            "p50": 110.7,
+            "p75": 146.7,
+            "p95": 264.2,
+            "p99": 454.3,
+            "max": 555.4
+          }
+        },
+        "/api/lobby/swipe?limit=8": {
+          "requests": 852,
+          "requestsPerSecond": 27.45,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 9.11,
+          "latencyMs": {
+            "p50": 50.4,
+            "p75": 57.7,
+            "p95": 179.3,
+            "p99": 1074.3,
+            "max": 3044.2
+          }
+        }
+      }
+    },
+    {
+      "concurrency": 100,
+      "durationSeconds": 31.1,
+      "requests": 3357,
+      "requestsPerSecond": 107.65,
+      "failed": 0,
+      "errorRate": 0,
+      "responseMegabytes": 357.31,
+      "latencyMs": {
+        "p50": 84.5,
+        "p75": 127.3,
+        "p95": 246.8,
+        "p99": 529.1,
+        "max": 958.2
+      },
+      "routes": {
+        "/zh-CN/mobile-home": {
+          "requests": 1679,
+          "requestsPerSecond": 53.84,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 339.37,
+          "latencyMs": {
+            "p50": 117.5,
+            "p75": 165.4,
+            "p95": 285.4,
+            "p99": 608.3,
+            "max": 958.2
+          }
+        },
+        "/api/lobby/swipe?limit=8": {
+          "requests": 1678,
+          "requestsPerSecond": 53.81,
+          "failed": 0,
+          "errorRate": 0,
+          "responseMegabytes": 17.94,
+          "latencyMs": {
+            "p50": 49.5,
+            "p75": 55.9,
+            "p95": 111.1,
+            "p99": 480.7,
+            "max": 674.7
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
@@ -323,7 +330,7 @@ function SubmitButton({
     <button
       className={
         className ??
-        "inline-flex h-11 items-center justify-center rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
+        "inline-flex h-11 items-center justify-center rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
       }
       disabled={pending || disabled}
       type="submit"
@@ -390,6 +397,38 @@ function getPrivateRoleIcon(payload: WerewolfPrivatePayload | null) {
   return UsersRound;
 }
 
+function SafeWerewolfImage({
+  alt,
+  className,
+  fallback,
+  src,
+}: {
+  alt: string;
+  className: string;
+  fallback: ReactNode;
+  src: string | null | undefined;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <img
+      alt={alt}
+      className={className}
+      draggable={false}
+      onError={() => setFailed(true)}
+      src={src}
+    />
+  );
+}
+
 export function WerewolfPrivateSeatCard({
   allReady,
   isDead,
@@ -403,7 +442,6 @@ export function WerewolfPrivateSeatCard({
   roomHref,
   roomState,
   roomStatus,
-  roomUpdatedAt,
   seatDisplayName,
   seatNumber,
   seats,
@@ -460,6 +498,35 @@ export function WerewolfPrivateSeatCard({
     [seats],
   );
   const RoleIcon = getPrivateRoleIcon(payload);
+  const renderRoleFallback = (size: "compact" | "large") => (
+    <div
+      className={`grid h-full place-items-center text-center ${
+        size === "large" ? "p-5" : "p-3"
+      }`}
+    >
+      <div>
+        <RoleIcon
+          className={`mx-auto mb-4 text-white/86 ${
+            size === "large" ? "h-16 w-16" : "h-12 w-12"
+          }`}
+        />
+        <p
+          className={`font-bold ${
+            size === "large" ? "text-3xl" : "text-2xl"
+          }`}
+        >
+          {payload?.roleLabel ?? t.roleHidden}
+        </p>
+        <p
+          className={`mt-2 font-bold text-white/72 ${
+            size === "large" ? "text-sm" : "text-xs"
+          }`}
+        >
+          {payload?.alignmentLabel ?? variantLabel}
+        </p>
+      </div>
+    </div>
+  );
   const showInGamePlayerCard =
     !isJudgeSeat && roomStatus === "IN_PROGRESS" && Boolean(payload);
 
@@ -491,29 +558,11 @@ export function WerewolfPrivateSeatCard({
       return;
     }
 
-    const storageKey = `friemi:werewolf:death-intro:${privateToken}:${roomUpdatedAt}:${roomState.deadSeatNumbers.join("-")}`;
-
-    if (window.sessionStorage.getItem(storageKey)) {
-      return;
-    }
-
-    window.sessionStorage.setItem(storageKey, "1");
-    window.navigator.vibrate?.([80, 40, 80]);
+    window.navigator.vibrate?.(80);
     setRevealed(false);
     setShowRevealConfirm(false);
-    setShowDeathIntro(true);
-    const timer = window.setTimeout(() => {
-      setShowDeathIntro(false);
-    }, 2000);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    isDead,
-    isJudgeSeat,
-    privateToken,
-    roomState.deadSeatNumbers,
-    roomUpdatedAt,
-  ]);
+    setShowDeathIntro(false);
+  }, [isDead, isJudgeSeat]);
 
   function handleRevealToggle() {
     if (isDead) {
@@ -743,12 +792,12 @@ export function WerewolfPrivateSeatCard({
                   }
                 />
               </span>
-              <p className="mt-4 text-2xl font-black">
+              <p className="mt-4 text-2xl font-bold">
                 {resultKind === "WIN" ? t.resultVictory : t.resultDefeat}
               </p>
             </div>
             <div className="p-5">
-              <p className="text-sm font-black text-[#1E1718]">
+              <p className="text-sm font-bold text-[#1E1718]">
                 {payload?.roleLabel ?? "-"}
               </p>
               <p className="mt-1 text-xs font-bold text-[#7A1F2B]/72">
@@ -765,7 +814,7 @@ export function WerewolfPrivateSeatCard({
               <span className="grid h-14 w-14 place-items-center rounded-full border border-white/18 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
                 <Eye className="h-7 w-7 text-[#F0C36A]" />
               </span>
-              <p className="mt-4 text-xl font-black tracking-normal">
+              <p className="mt-4 text-xl font-bold tracking-normal">
                 {t.revealConfirmTitle}
               </p>
               <p className="mt-2 max-w-[16rem] text-sm font-bold leading-6 text-white/70">
@@ -774,14 +823,14 @@ export function WerewolfPrivateSeatCard({
             </div>
             <div className="grid grid-cols-2 gap-3 p-4">
               <button
-                className="h-11 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1]"
+                className="h-11 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-semibold text-[#7A1F2B] transition hover:bg-[#FFF7F1]"
                 onClick={() => setShowRevealConfirm(false)}
                 type="button"
               >
                 {t.cancel}
               </button>
               <button
-                className="h-11 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white shadow-[0_14px_32px_rgba(122,31,43,0.22)] transition hover:bg-[#9B2D3C]"
+                className="h-11 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(122,31,43,0.22)] transition hover:bg-[#9B2D3C]"
                 onClick={handleRevealConfirm}
                 type="button"
               >
@@ -828,13 +877,13 @@ export function WerewolfPrivateSeatCard({
 
           <div className="relative flex min-h-[100svh] flex-col p-0 md:min-h-[calc(100svh-5.5rem)] md:p-5">
             <div className="hidden flex-wrap items-center justify-between gap-2 md:flex">
-              <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-white/86 backdrop-blur">
+              <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal text-white/86 backdrop-blur">
                 <Moon className="h-3.5 w-3.5 text-[#F0C36A]" />
                 <span className="truncate">{variantLabel}</span>
               </span>
               <div className="flex items-center gap-2">
                 {isDead ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1E1718]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]">
                     <img
                       alt=""
                       aria-hidden="true"
@@ -845,7 +894,7 @@ export function WerewolfPrivateSeatCard({
                     {t.deathTitle}
                   </span>
                 ) : null}
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-black text-[#1E1718]">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#1E1718] friemi-tabular">
                   {t.seat} {seatNumber}
                 </span>
               </div>
@@ -875,7 +924,7 @@ export function WerewolfPrivateSeatCard({
                       src={seatBackImage}
                     />
                     <div className="werewolf-live-card-bottom-fade absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/86 to-transparent px-4 pb-5 pt-16 text-center">
-                      <p className="hidden items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black text-white backdrop-blur md:inline-flex">
+                      <p className="hidden items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur md:inline-flex">
                         <EyeOff className="h-4 w-4" />
                         {t.hiddenTitle}
                       </p>
@@ -888,28 +937,14 @@ export function WerewolfPrivateSeatCard({
                       revealed ? "opacity-100" : "opacity-0 md:opacity-100"
                     }`}
                   >
-                    {roleCardImage ? (
-                      <img
-                        alt={payload.roleLabel}
-                        className="werewolf-live-card-image h-full w-full object-cover"
-                        draggable={false}
-                        src={roleCardImage}
-                      />
-                    ) : (
-                      <div className="grid h-full place-items-center p-5 text-center">
-                        <div>
-                          <RoleIcon className="mx-auto mb-4 h-16 w-16 text-white/86" />
-                          <p className="text-3xl font-black">
-                            {payload.roleLabel}
-                          </p>
-                          <p className="mt-2 text-sm font-bold text-white/72">
-                            {payload.alignmentLabel}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                    <SafeWerewolfImage
+                      alt={payload.roleLabel}
+                      className="werewolf-live-card-image h-full w-full object-cover"
+                      fallback={renderRoleFallback("large")}
+                      src={roleCardImage}
+                    />
                     <div className="werewolf-live-card-bottom-fade absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/86 to-transparent px-4 pb-5 pt-16 text-center">
-                      <p className="hidden items-center gap-1.5 rounded-full bg-white/16 px-3 py-1.5 text-xs font-black text-white backdrop-blur md:inline-flex">
+                      <p className="hidden items-center gap-1.5 rounded-full bg-white/16 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur md:inline-flex">
                         <TimerReset className="h-4 w-4" />
                         {t.visibleFor} {revealSecondsLeft}s
                       </p>
@@ -954,7 +989,7 @@ export function WerewolfPrivateSeatCard({
 
             <div className="hidden justify-center pb-1 md:flex">
               <button
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#1E1718] shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition hover:bg-[#F4ECE6]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#1E1718] shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition hover:bg-[#F4ECE6]"
                 onClick={handleRevealToggle}
                 type="button"
               >
@@ -980,7 +1015,7 @@ export function WerewolfPrivateSeatCard({
       <section className="overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-[0_18px_48px_rgba(30,23,24,0.08)]">
         <div className={`bg-gradient-to-br ${getRoleTone(payload)} p-5 text-white sm:p-7`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal backdrop-blur">
               {isJudgeSeat ? (
                 <Crown className="h-3.5 w-3.5" />
               ) : (
@@ -988,16 +1023,16 @@ export function WerewolfPrivateSeatCard({
               )}
               {variantLabel}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-black text-[#1E1718]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#1E1718] friemi-tabular">
               {t.seat} {seatNumber}
             </span>
           </div>
 
           <div className="mt-6 grid place-items-center text-center sm:mt-8">
-            <div className="grid h-20 w-20 place-items-center rounded-full border border-white/30 bg-white/12 text-4xl font-black shadow-[0_22px_48px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24 sm:text-5xl">
+            <div className="grid h-20 w-20 place-items-center rounded-full border border-white/30 bg-white/12 text-4xl font-bold shadow-[0_22px_48px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24 sm:text-5xl friemi-tabular">
               {seatNumber}
             </div>
-            <h1 className="mt-4 text-2xl font-black tracking-normal sm:mt-5 sm:text-3xl">
+            <h1 className="mt-4 text-2xl font-bold tracking-normal sm:mt-5 sm:text-3xl">
               {seatDisplayName}
             </h1>
             {isJudgeSeat ? (
@@ -1022,14 +1057,14 @@ export function WerewolfPrivateSeatCard({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p
-                    className={`text-xs font-black uppercase tracking-[0.14em] ${
+                    className={`text-xs font-semibold uppercase tracking-normal ${
                       resultKind ? "text-[#7A1F2B]/70" : "text-white/62"
                     }`}
                   >
                     {t.finished}
                   </p>
                   <p
-                    className={`mt-1 text-2xl font-black ${
+                    className={`mt-1 text-2xl font-bold ${
                       resultKind === "WIN"
                         ? "text-[#36624A]"
                         : resultKind === "LOSE"
@@ -1094,7 +1129,7 @@ export function WerewolfPrivateSeatCard({
                   <p className="leading-6">{t.resultJudgeBody}</p>
                 )}
                 <Link
-                  className={`mt-2 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-black ${
+                  className={`mt-2 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
                     resultKind
                       ? "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
                       : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
@@ -1110,11 +1145,11 @@ export function WerewolfPrivateSeatCard({
           {roomStatus === "LOBBY" ? (
             <div className="grid gap-3 rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">
+                <span className="inline-flex items-center gap-2 text-sm font-bold text-[#1E1718]">
                   <UsersRound className="h-4 w-4 text-[#7A1F2B]" />
                   {readySeats}/{seats.length}
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-black text-[#7A1F2B]">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-semibold text-[#7A1F2B]">
                   {isReady ? (
                     <img
                       alt=""
@@ -1143,7 +1178,7 @@ export function WerewolfPrivateSeatCard({
                 <input name="locale" type="hidden" value={locale} />
                 <input name="privateToken" type="hidden" value={privateToken} />
                 <SubmitButton
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-semibold text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
                   label={t.leaveSeat}
                 />
               </form>
@@ -1177,7 +1212,7 @@ export function WerewolfPrivateSeatCard({
                 <input name="locale" type="hidden" value={locale} />
                 <input name="privateToken" type="hidden" value={privateToken} />
                 <SubmitButton
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
                   disabled={!canStart}
                   label={t.start}
                 />
@@ -1193,11 +1228,11 @@ export function WerewolfPrivateSeatCard({
           {!isJudgeSeat ? (
             <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-black text-[#7A1F2B]">
+                <span className="text-sm font-bold text-[#7A1F2B]">
                   {t.role}
                 </span>
                 {isDead ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E1718] px-3 py-1 text-xs font-black text-white">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E1718] px-3 py-1 text-xs font-semibold text-white">
                     <img
                       alt=""
                       aria-hidden="true"
@@ -1238,7 +1273,7 @@ export function WerewolfPrivateSeatCard({
                             src={seatBackImage}
                           />
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/82 to-transparent px-3 pb-3 pt-8 text-center">
-                            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur">
+                            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                               <EyeOff className="h-3.5 w-3.5" />
                               {t.hiddenTitle}
                             </p>
@@ -1248,28 +1283,14 @@ export function WerewolfPrivateSeatCard({
                           aria-live="polite"
                           className={`absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
                         >
-                          {roleCardImage ? (
-                            <img
-                              alt={payload.roleLabel}
-                              className="h-full w-full object-cover"
-                              draggable={false}
-                              src={roleCardImage}
-                            />
-                          ) : (
-                            <div className="grid h-full place-items-center p-3 text-center">
-                              <div>
-                                <RoleIcon className="mx-auto mb-4 h-12 w-12 text-white/86" />
-                                <p className="text-2xl font-black">
-                                  {payload.roleLabel}
-                                </p>
-                                <p className="mt-2 text-xs font-bold text-white/72">
-                                  {payload.alignmentLabel}
-                                </p>
-                              </div>
-                            </div>
-                          )}
+                          <SafeWerewolfImage
+                            alt={payload.roleLabel}
+                            className="h-full w-full object-cover"
+                            fallback={renderRoleFallback("compact")}
+                            src={roleCardImage}
+                          />
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/84 to-transparent px-3 pb-3 pt-10">
-                            <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur">
+                            <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                               <TimerReset className="h-3.5 w-3.5" />
                               {t.visibleFor} {revealSecondsLeft}s
                             </p>
@@ -1300,7 +1321,7 @@ export function WerewolfPrivateSeatCard({
                       ) : null}
                     </div>
                     <button
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C]"
                       onClick={handleRevealToggle}
                       type="button"
                     >
@@ -1321,7 +1342,7 @@ export function WerewolfPrivateSeatCard({
                       <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
                         {revealed ? (
                           <>
-                            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A1F2B]/62">
+                            <p className="text-xs font-semibold uppercase tracking-normal text-[#7A1F2B]/62">
                               {payload.variantLabel}
                             </p>
                             <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
@@ -1330,7 +1351,7 @@ export function WerewolfPrivateSeatCard({
                           </>
                         ) : null}
                       {isDead ? (
-                        <p className="mt-2 rounded-2xl bg-[#F4ECE6] px-3 py-2 text-sm font-black text-[#1E1718]">
+                        <p className="mt-2 rounded-2xl bg-[#F4ECE6] px-3 py-2 text-sm font-semibold text-[#1E1718]">
                           {t.deathBody}
                         </p>
                       ) : null}
@@ -1346,7 +1367,7 @@ export function WerewolfPrivateSeatCard({
                       draggable={false}
                       src={werewolfUiAssets.revealConfirmMark}
                     />
-                    <p className="mt-3 text-base font-black text-[#1E1718]">
+                    <p className="mt-3 text-base font-bold text-[#1E1718]">
                       {t.noRole}
                     </p>
                   </div>
@@ -1357,11 +1378,11 @@ export function WerewolfPrivateSeatCard({
             <div className="grid gap-4">
               <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-2 text-sm font-black text-[#7A1F2B]">
+                  <span className="inline-flex items-center gap-2 text-sm font-bold text-[#7A1F2B]">
                     <ShieldCheck className="h-4 w-4" />
                     {t.judgeStatus}
                   </span>
-                  <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-black text-[#7A1F2B]">
+                  <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-semibold text-[#7A1F2B]">
                     {roomState.phase === "FINISHED" ? t.finished : t.started}
                   </span>
                 </div>
@@ -1394,29 +1415,27 @@ export function WerewolfPrivateSeatCard({
                             seat.isDead ? "grayscale" : ""
                           }`}
                         >
-                          {roleCard ? (
-                            <img
-                              alt={seat.roleLabel ?? ""}
-                              className="h-full w-full object-cover"
-                              draggable={false}
-                              src={roleCard}
-                            />
-                          ) : (
-                            <div className="grid h-full place-items-center bg-[#1E1718] text-xs font-black text-white">
-                              {seat.seatNumber}
-                            </div>
-                          )}
+                          <SafeWerewolfImage
+                            alt={seat.roleLabel ?? ""}
+                            className="h-full w-full object-cover"
+                            fallback={
+                              <div className="grid h-full place-items-center bg-[#1E1718] px-1 text-center text-xs font-bold text-white">
+                                {seat.roleLabel ?? seat.seatNumber}
+                              </div>
+                            }
+                            src={roleCard}
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
+                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white friemi-tabular">
                               {seat.seatNumber}
                             </span>
                             <span className="min-w-0 truncate">
                               {seat.displayName}
                             </span>
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-black ${
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
                                 seat.isDead
                                   ? "bg-[#1E1718] text-white"
                                   : "bg-white text-[#36624A]"
@@ -1442,7 +1461,7 @@ export function WerewolfPrivateSeatCard({
                               {seat.isDead ? t.dead : t.alive}
                             </span>
                           </div>
-                          <p className="mt-2 text-xs font-black text-[#7A1F2B]">
+                          <p className="mt-2 text-xs font-semibold text-[#7A1F2B]">
                             {roomStatus === "IN_PROGRESS" ||
                             roomStatus === "FINISHED"
                               ? (seat.roleLabel ?? "-")
@@ -1484,7 +1503,7 @@ export function WerewolfPrivateSeatCard({
                             value={seat.isDead ? "revive" : "mark_dead"}
                           />
                           <SubmitButton
-                            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
+                            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${
                               seat.isDead
                                 ? "bg-white text-[#1E1718] hover:bg-[#FFF7F1]"
                                 : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
@@ -1500,13 +1519,13 @@ export function WerewolfPrivateSeatCard({
               </div>
 
               <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4">
-                <span className="text-sm font-black text-[#7A1F2B]">
+                <span className="text-sm font-bold text-[#7A1F2B]">
                   {t.judgeHelper}
                 </span>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {t.judgePrompts.map((prompt) => (
                     <span
-                      className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-black text-[#1E1718]"
+                      className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]"
                       key={prompt}
                     >
                       {prompt}
@@ -1518,7 +1537,7 @@ export function WerewolfPrivateSeatCard({
               {roomStatus === "IN_PROGRESS" ? (
                 <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-2 text-sm font-black">
+                    <span className="inline-flex items-center gap-2 text-sm font-bold">
                       <Flag className="h-4 w-4 text-[#F0C36A]" />
                       {t.finishGame}
                     </span>
@@ -1541,7 +1560,7 @@ export function WerewolfPrivateSeatCard({
                       />
                       <input name="winner" type="hidden" value="GOOD" />
                       <SubmitButton
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.finishGood}
                       />
                     </form>
@@ -1561,7 +1580,7 @@ export function WerewolfPrivateSeatCard({
                       />
                       <input name="winner" type="hidden" value="WEREWOLF" />
                       <SubmitButton
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.finishWerewolf}
                       />
                     </form>

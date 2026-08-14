@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { isLegacyActivityInfoSource } from "@/features/activities/queries/getActivities";
 import { assertCanManageActivity } from "../utils/activityManagement";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
@@ -32,6 +33,10 @@ const cancelActivitySchema = z.object({
 });
 
 export type CancelActivityState = {
+  formError?: string;
+};
+
+export type DeleteActivityState = {
   formError?: string;
 };
 
@@ -64,6 +69,24 @@ function refreshActivityViews(locale: string, activityId: string) {
   revalidatePath(withLocale(locale, "/"), "layout");
 
   return activityPath;
+}
+
+function refreshDeletedActivityViews(locale: string, activityId: string) {
+  const activityPath = withLocale(locale, getActivityDetailPath(activityId));
+
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
+  revalidatePath(activityPath);
+  revalidatePath(withLocale(locale, `/lobby/${activityId}`));
+  revalidatePath(withLocale(locale, `/lobby/${activityId}/room`));
+  revalidatePath(withLocale(locale, `/lobby/${activityId}/room/manage`));
+  revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/"));
+  revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+
+  return withLocale(locale, "/lobby");
 }
 
 function isPrismaTransactionConflictError(error: unknown) {
@@ -172,7 +195,7 @@ export async function cancelActivityAction(
           },
         });
 
-        await tx.activityManagementLog.create({
+        const cancellationLog = await tx.activityManagementLog.create({
           data: {
             activityId: activity.id,
             actorId: profile.id,
@@ -181,6 +204,9 @@ export async function cancelActivityAction(
               role: permission.role,
             },
           },
+          select: {
+            id: true,
+          },
         });
 
         await createNotifications(
@@ -188,6 +214,7 @@ export async function cancelActivityAction(
           activity.participants.map((participant) => ({
             actorId: profile.id,
             activityId: activity.id,
+            occurrenceId: `activity-cancel:${cancellationLog.id}`,
             recipientId: participant.userProfileId,
             type: "ACTIVITY_CANCELLED",
           })),
@@ -225,4 +252,114 @@ export async function cancelActivityAction(
   }
 
   redirect(refreshActivityViews(result.data.locale, cancelledActivityId));
+}
+
+export async function deleteActivityAction(
+  _previousState: DeleteActivityState,
+  formData: FormData,
+): Promise<DeleteActivityState> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  };
+  const result = cancelActivitySchema.safeParse(rawInput);
+  const t = getCopy(rawInput.locale).activityOwner;
+
+  if (!result.success) {
+    return {
+      formError: t.refreshError,
+    };
+  }
+
+  const actionCopy = getCopy(result.data.locale).activityOwner;
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    getActivityDetailPath(result.data.activityId),
+  );
+  let deletedActivityId: string;
+
+  try {
+    const deleteResult = await prisma.$transaction(
+      async (tx): Promise<CancelActivityResult> => {
+        const activity = await tx.activity.findUnique({
+          where: {
+            id: result.data.activityId,
+          },
+          select: {
+            id: true,
+            externalId: true,
+            externalSource: true,
+            externalUrl: true,
+            importedAt: true,
+            organizerId: true,
+            publicEventId: true,
+            source: true,
+            sourcePayload: true,
+            sourceUrl: true,
+            type: true,
+          },
+        });
+
+        if (!activity) {
+          return {
+            ok: false,
+            error: actionCopy.deletePermissionError,
+          };
+        }
+
+        if (activity.organizerId !== profile.id) {
+          return {
+            ok: false,
+            error: actionCopy.deletePermissionError,
+          };
+        }
+
+        if (
+          activity.type === "PUBLIC_EVENT" ||
+          isLegacyActivityInfoSource(activity)
+        ) {
+          return {
+            ok: false,
+            error: actionCopy.deleteStatusError,
+          };
+        }
+
+        await tx.activity.delete({
+          where: {
+            id: activity.id,
+          },
+        });
+
+        return {
+          ok: true,
+          activityId: activity.id,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    if (!deleteResult.ok) {
+      return {
+        formError: deleteResult.error,
+      };
+    }
+
+    deletedActivityId = deleteResult.activityId;
+  } catch (error) {
+    if (isPrismaTransactionConflictError(error)) {
+      return {
+        formError: actionCopy.conflictError,
+      };
+    }
+
+    console.error("Failed to delete activity", error);
+
+    return {
+      formError: actionCopy.deleteFailedError,
+    };
+  }
+
+  redirect(refreshDeletedActivityViews(result.data.locale, deletedActivityId));
 }

@@ -1,10 +1,12 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileNetworkMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 import {
   getProfileDashboard,
   type ProfileDashboardViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import { initialTrustScore } from "@/features/trust/trustScore";
 import {
   getProfileVisitSummary,
   getRecentProfileVisitors,
@@ -17,6 +19,8 @@ type ProfileNetworkPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
     charmScore: 0,
@@ -27,7 +31,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followersCount: 0,
     followingCount: 0,
     momentCount: 0,
-    trustScore: 80,
+    trustScore: initialTrustScore,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
@@ -11,7 +12,10 @@ import {
   type ProfileDashboardViewModel,
   type PublicProfileViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import { initialTrustScore } from "@/features/trust/trustScore";
 import { getUserPresenceState } from "@/features/profile/presence";
+import { buildNoIndexMetadata } from "@/lib/seo";
+import { withLocale } from "@/lib/routes";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -20,6 +24,16 @@ type ProfilePageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: ProfilePageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/profile"),
+  });
+}
 
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
@@ -31,7 +45,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followersCount: 0,
     followingCount: 0,
     momentCount: 0,
-    trustScore: 80,
+    trustScore: initialTrustScore,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
@@ -63,6 +77,9 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Visiteur",
+      nicknameChangedAt: null,
+      publicNickname: "Visiteur",
+      remarkName: null,
       friendCode: null,
       avatarUrl: null,
       bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et relations.",
@@ -78,6 +95,9 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Guest",
+      nicknameChangedAt: null,
+      publicNickname: "Guest",
+      remarkName: null,
       friendCode: null,
       avatarUrl: null,
       bio: "Sign in when you want to keep your plans, traces, and follows together.",
@@ -92,6 +112,9 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
   return {
     id: "guest",
     nickname: "游客",
+    nicknameChangedAt: null,
+    publicNickname: "游客",
+    remarkName: null,
     friendCode: null,
     avatarUrl: null,
     bio: "登录后可以同步你的聚吧、足迹和关注关系。",
@@ -148,6 +171,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     ? {
         id: profile.id,
         nickname: profile.nickname,
+        nicknameChangedAt: profile.nicknameChangedAt?.toISOString() ?? null,
+        publicNickname: profile.nickname,
+        remarkName: null,
         friendCode: profile.friendCode,
         avatarUrl: profile.avatarUrl,
         bio: profile.bio,

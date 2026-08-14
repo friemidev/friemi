@@ -1,4 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
@@ -11,6 +14,8 @@ import {
 } from "@/lib/auth-redirect";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +27,16 @@ type SignUpPageProps = {
     [authRedirectParamName]?: string | string[];
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: SignUpPageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/sign-up"),
+  });
+}
 
 function isWechatWebView(userAgent: string | null) {
   return /MicroMessenger/i.test(userAgent ?? "");
@@ -54,6 +69,10 @@ export default async function SignUpPage({
       ? getNativeAuthCompleteHref(locale, redirectTarget)
       : redirectTarget;
 
+  if (hasClerkKeys() && (await auth()).userId) {
+    redirect(forceRedirectUrl);
+  }
+
   if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
@@ -80,6 +99,7 @@ export default async function SignUpPage({
   return (
     <PageContainer className="flex min-h-[70vh] items-center justify-center">
       <ClerkAuthMountGuard
+        exitUrl={withLocale(locale, "/mobile-home")}
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={forceRedirectUrl}
         locale={locale}

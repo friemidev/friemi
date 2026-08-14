@@ -23,12 +23,19 @@ import {
 import type { NotificationType } from "@prisma/client";
 import { formatActivityDate } from "@chill-club/shared";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  formatGiftNotificationQuantity,
+  formatGiftNotificationText,
+} from "@/features/charm/giftNotificationText";
+import { createDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import {
   deleteNotificationClientAction,
   deleteNotificationsClientAction,
   deleteReadNotificationsClientAction,
+  followBackFromNotificationClientAction,
   markAllNotificationsReadClientAction,
   markNotificationReadClientAction,
   markNotificationsReadClientAction,
@@ -63,7 +70,9 @@ function getNotificationCategory(
     return "activity";
   }
 
-  if (type === "FRIEND_REQUEST") return "friends";
+  if (type === "FRIEND_REQUEST" || type === "PLANET_JOIN_REQUEST") {
+    return "friends";
+  }
   if (type === "CHARM_GIFT_RECEIVED") return "gift";
   if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
@@ -135,7 +144,8 @@ function getNotificationText(
   }
 
   if (notification.type === "ACTIVITY_CHECK_IN") {
-    const isCheckInRequest = Boolean(actorName) && !notification.actorActivityRole;
+    const isCheckInRequest =
+      Boolean(actorName) && !notification.actorActivityRole;
 
     if (isCheckInRequest) {
       return locale === "fr"
@@ -178,7 +188,7 @@ function getNotificationText(
           title: copy.title,
           body: copy.body(
             notification.charmGiftEvent
-              ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+              ? formatGiftNotificationText(notification.charmGiftEvent)
               : activityTitle,
             actorName,
           ),
@@ -228,7 +238,17 @@ function getNotificationText(
     return { title: copy.title, body: copy.body(activityTitle, actorName) };
   }
 
-  const copy = t.types[notification.type];
+  const copy = (
+    t.types as Record<
+      string,
+      { title: string; body: (...args: string[]) => string } | undefined
+    >
+  )[notification.type];
+
+  if (!copy) {
+    return { title: t.title, body: "" };
+  }
+
   return { title: copy.title, body: copy.body(activityTitle) };
 }
 
@@ -261,11 +281,33 @@ function getNotificationActionLabel(
     return t.openComments;
   }
   if (notification.type === "DIRECT_MESSAGE") return t.openMessages;
+  if (notification.type === "PLANET_JOIN_REQUEST") return t.openReview;
   if (notification.type === "PARTICIPATION_PENDING" && notification.actor) {
     return t.openReview;
   }
 
   return t.openActivity;
+}
+
+function getNotificationFollowBackCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      done: "Suivi",
+      followBack: "Suivre en retour",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      done: "Following",
+      followBack: "Follow back",
+    };
+  }
+
+  return {
+    done: "已回关",
+    followBack: "回关",
+  };
 }
 
 function getNotificationFilterCopy(locale: string): {
@@ -316,6 +358,232 @@ function getNotificationDeleteCopy(locale: string) {
   }
 
   return { clearRead: "批量删除已读", delete: "删除" };
+}
+
+type GiftNotificationEffectTheme = {
+  accent: string;
+  particles: string[];
+  surface: string;
+};
+
+type GiftNotificationCelebration = {
+  accent: string;
+  detail: string;
+  emoji: string;
+  giftLabel: string;
+  id: string;
+  particles: string[];
+  reducedMotion: boolean;
+  surface: string;
+  title: string;
+};
+
+const giftNotificationEffectThemes: Record<
+  string,
+  GiftNotificationEffectTheme
+> = {
+  art: {
+    accent: "#3B7A8F",
+    particles: ["🎨", "✦", "·"],
+    surface: "#F1F8FA",
+  },
+  birthday_cake: {
+    accent: "#E7457A",
+    particles: ["🎂", "✦", "·"],
+    surface: "#FFF2F7",
+  },
+  board_game: {
+    accent: "#B68B2E",
+    particles: ["👑", "✦", "·"],
+    surface: "#FFF8E6",
+  },
+  bomb: {
+    accent: "#393735",
+    particles: ["💣", "✦", "·"],
+    surface: "#F2F2EF",
+  },
+  bouquet: {
+    accent: "#D86B8C",
+    particles: ["💐", "✦", "·"],
+    surface: "#FFF3F6",
+  },
+  christmas: {
+    accent: "#156240",
+    particles: ["🎄", "✦", "·"],
+    surface: "#F0F8F1",
+  },
+  diamond: {
+    accent: "#3478A9",
+    particles: ["💎", "✦", "·"],
+    surface: "#EEF8FF",
+  },
+  egg: {
+    accent: "#C29A41",
+    particles: ["🥚", "✦", "·"],
+    surface: "#FFF8E7",
+  },
+  fireworks: {
+    accent: "#C65B1E",
+    particles: ["🎆", "✦", "·"],
+    surface: "#FFF5EC",
+  },
+  growth: {
+    accent: "#4D7E43",
+    particles: ["📖", "✦", "·"],
+    surface: "#F3FAEF",
+  },
+  halloween: {
+    accent: "#D15D21",
+    particles: ["🎃", "✦", "·"],
+    surface: "#FFF1E8",
+  },
+  heart: {
+    accent: "#D52E3F",
+    particles: ["❤️", "✦", "·"],
+    surface: "#FFF0F0",
+  },
+  meal: {
+    accent: "#B66A2E",
+    particles: ["🧋", "✦", "·"],
+    surface: "#FFF4EA",
+  },
+  movie: {
+    accent: "#8A4F9E",
+    particles: ["🍿", "✦", "·"],
+    surface: "#F9F1FC",
+  },
+  music: {
+    accent: "#1F6C8E",
+    particles: ["🎙️", "✦", "·"],
+    surface: "#EFF8FB",
+  },
+  police_car: {
+    accent: "#315B9A",
+    particles: ["🚓", "✦", "·"],
+    surface: "#F0F4FF",
+  },
+  rose: {
+    accent: "#D52E3F",
+    particles: ["🌹", "✦", "·"],
+    surface: "#FFF0F0",
+  },
+  sports: {
+    accent: "#55812E",
+    particles: ["🏅", "✦", "·"],
+    surface: "#F5FAEE",
+  },
+  spring_festival: {
+    accent: "#D52E3F",
+    particles: ["🧧", "✦", "·"],
+    surface: "#FFF0EC",
+  },
+  travel: {
+    accent: "#487E7A",
+    particles: ["📷", "✦", "·"],
+    surface: "#F0FAF8",
+  },
+  werewolf: {
+    accent: "#6A6F7D",
+    particles: ["🐺", "✦", "·"],
+    surface: "#F3F4F7",
+  },
+  werewolf_crystal: {
+    accent: "#6A57A8",
+    particles: ["🔮", "✦", "·"],
+    surface: "#F6F1FF",
+  },
+};
+
+const defaultGiftNotificationEffectTheme: GiftNotificationEffectTheme = {
+  accent: "#156240",
+  particles: ["🎁", "✦", "·"],
+  surface: "#F4FAF4",
+};
+
+const giftNotificationParticlePositions = [
+  { x: "-7.2rem", y: "-5.4rem" },
+  { x: "-3.8rem", y: "-7rem" },
+  { x: "0rem", y: "-7.8rem" },
+  { x: "4.2rem", y: "-6.6rem" },
+  { x: "7.4rem", y: "-4.8rem" },
+  { x: "-7.8rem", y: "-0.8rem" },
+  { x: "7.6rem", y: "-0.6rem" },
+  { x: "-5.6rem", y: "4.2rem" },
+  { x: "0.4rem", y: "5.8rem" },
+  { x: "5.8rem", y: "4rem" },
+] as const;
+
+function getGiftNotificationEffectTheme(giftId: string) {
+  return (
+    giftNotificationEffectThemes[giftId] ?? defaultGiftNotificationEffectTheme
+  );
+}
+
+function getGiftNotificationScore(notification: NotificationViewModel) {
+  const gift = notification.charmGiftEvent;
+
+  if (!gift) {
+    return -1;
+  }
+
+  const quantity = Math.max(1, gift.quantity);
+  const totalCoinCost = Math.max(0, gift.coinCost ?? 0) * quantity;
+
+  return totalCoinCost > 0 ? totalCoinCost : Math.abs(gift.totalCharmDelta);
+}
+
+function getHighestValueGiftNotification(
+  notifications: NotificationViewModel[],
+  fallbackNotification: NotificationViewModel,
+) {
+  return notifications.reduce((highest, notification) => {
+    if (notification.type !== "CHARM_GIFT_RECEIVED") {
+      return highest;
+    }
+
+    return getGiftNotificationScore(notification) >
+      getGiftNotificationScore(highest)
+      ? notification
+      : highest;
+  }, fallbackNotification);
+}
+
+function prefersReducedGiftMotion() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function getGiftNotificationCelebration({
+  locale,
+  notification,
+  reducedMotion,
+}: {
+  locale: string;
+  notification: NotificationViewModel;
+  reducedMotion: boolean;
+}): GiftNotificationCelebration | null {
+  const gift = notification.charmGiftEvent;
+
+  if (!gift) {
+    return null;
+  }
+
+  const theme = getGiftNotificationEffectTheme(gift.giftId);
+  const text = getNotificationText(notification, locale);
+
+  return {
+    accent: theme.accent,
+    detail: formatGiftNotificationQuantity(gift.quantity),
+    emoji: gift.giftEmoji,
+    giftLabel: gift.giftLabel,
+    id: `${notification.id}-${Date.now()}`,
+    particles: theme.particles,
+    reducedMotion,
+    surface: theme.surface,
+    title: text.title,
+  };
 }
 
 function getNotificationSelectionCopy(locale: string) {
@@ -491,7 +759,7 @@ function getNotificationVisual(
     };
   }
 
-  if (type === "FRIEND_REQUEST") {
+  if (type === "FRIEND_REQUEST" || type === "PLANET_JOIN_REQUEST") {
     return {
       icon: UserPlus,
       iconClassName: isUnread ? "bg-ink text-paper" : "bg-fog text-ink/55",
@@ -609,6 +877,9 @@ function NotificationCard({
   selected = false,
   selectionMode = false,
   onDelete,
+  onFollowBack,
+  onGiftActivate,
+  onOpenGift,
   onMarkRead,
   onToggleSelected,
 }: {
@@ -618,26 +889,33 @@ function NotificationCard({
   selected?: boolean;
   selectionMode?: boolean;
   onDelete: (notificationId: string) => void;
+  onFollowBack: (notificationId: string) => void;
+  onGiftActivate: (notificationId: string) => void;
+  onOpenGift: (notificationId: string) => void;
   onMarkRead: (notificationId: string) => void;
   onToggleSelected?: (notificationId: string) => void;
 }) {
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
   const text = getNotificationText(notification, locale);
+  const followBackCopy = getNotificationFollowBackCopy(locale);
   const isUnread = notification.readAt === null;
   const visual = getNotificationVisual(notification.type, isUnread);
   const NotificationIcon = visual.icon;
   const hasAction =
     notification.type === "FRIEND_REQUEST"
-      ? false
+      ? Boolean(notification.actor)
       : Boolean(notification.activity) ||
         notification.type === "REPORT_CREATED" ||
         notification.type === "DIRECT_MESSAGE" ||
+        notification.type === "PLANET_JOIN_REQUEST" ||
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||
         notification.type === "MOMENT_REPOSTED";
+  const canFollowBack =
+    notification.type === "FRIEND_REQUEST" && Boolean(notification.actor);
 
   const mobileDeleteAction = (
     <button
@@ -672,15 +950,23 @@ function NotificationCard({
         <div
           className="flex gap-3 pl-1"
           onClick={(event) => {
-            if (
-              selectionMode &&
-              !isNotificationInteractiveTarget(event.target)
-            ) {
+            const isInteractiveTarget = isNotificationInteractiveTarget(
+              event.target,
+            );
+
+            if (selectionMode && !isInteractiveTarget) {
               onToggleSelected?.(notification.id);
               return;
             }
 
-            if (isUnread && !isNotificationInteractiveTarget(event.target)) {
+            if (
+              notification.type === "CHARM_GIFT_RECEIVED" &&
+              !isInteractiveTarget
+            ) {
+              onGiftActivate(notification.id);
+            }
+
+            if (isUnread && !isInteractiveTarget) {
               onMarkRead(notification.id);
             }
           }}
@@ -726,7 +1012,7 @@ function NotificationCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-[15px] font-black leading-5 text-ink sm:text-base">
+                <h2 className="text-[15px] font-bold leading-5 text-ink sm:text-base">
                   {text.title}
                 </h2>
                 <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6C746A]">
@@ -747,27 +1033,66 @@ function NotificationCard({
 
             {!selectionMode ? (
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {canFollowBack ? (
+                  <button
+                    className={cn(
+                      "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
+                      notification.viewerFollowsActor
+                        ? "bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]"
+                        : "bg-[#156240] text-white shadow-[0_10px_22px_rgba(21,98,64,0.12)] hover:bg-[#0F5134]",
+                    )}
+                    disabled={pending || notification.viewerFollowsActor}
+                    onClick={() => onFollowBack(notification.id)}
+                    type="button"
+                  >
+                    {notification.viewerFollowsActor ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <UserPlus className="h-3.5 w-3.5" />
+                    )}
+                    {notification.viewerFollowsActor
+                      ? followBackCopy.done
+                      : followBackCopy.followBack}
+                  </button>
+                ) : null}
                 {hasAction ? (
-                  <form action={openNotificationActivityAction}>
-                    <input name="locale" type="hidden" value={locale} />
-                    <input
-                      name="notificationId"
-                      type="hidden"
-                      value={notification.id}
-                    />
+                  notification.type === "CHARM_GIFT_RECEIVED" ? (
                     <button
                       className={cn(
-                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
+                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
                         isUnread
                           ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
                           : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
                       )}
-                      type="submit"
+                      disabled={pending}
+                      onClick={() => onOpenGift(notification.id)}
+                      type="button"
                     >
                       {getNotificationActionLabel(notification, locale)}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </button>
-                  </form>
+                  ) : (
+                    <form action={openNotificationActivityAction}>
+                      <input name="locale" type="hidden" value={locale} />
+                      <input
+                        name="notificationId"
+                        type="hidden"
+                        value={notification.id}
+                      />
+                      <button
+                        className={cn(
+                          "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
+                          isUnread
+                            ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
+                            : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
+                        )}
+                        type="submit"
+                      >
+                        {getNotificationActionLabel(notification, locale)}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  )
                 ) : null}
                 {isUnread ? (
                   <button
@@ -795,6 +1120,61 @@ function NotificationCard({
         </div>
       </article>
     </NotificationSwipeCard>
+  );
+}
+
+function GiftNotificationBurst({
+  celebration,
+}: {
+  celebration: GiftNotificationCelebration;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className={cn(
+        "gift-notification-burst",
+        celebration.reducedMotion ? "gift-notification-burst--reduced" : null,
+      )}
+      role="status"
+      style={
+        {
+          "--gift-accent": celebration.accent,
+          "--gift-surface": celebration.surface,
+        } as CSSProperties
+      }
+    >
+      <div className="gift-notification-burst__stage" aria-hidden="true">
+        {giftNotificationParticlePositions.map((position, index) => (
+          <span
+            className="gift-notification-burst__particle"
+            key={`${position.x}-${position.y}`}
+            style={
+              {
+                "--particle-delay": `${index * 62}ms`,
+                "--particle-x": position.x,
+                "--particle-y": position.y,
+              } as CSSProperties
+            }
+          >
+            {celebration.particles[index % celebration.particles.length]}
+          </span>
+        ))}
+      </div>
+      <div className="gift-notification-burst__card">
+        <span className="gift-notification-burst__emoji" aria-hidden="true">
+          {celebration.emoji}
+        </span>
+        <span className="gift-notification-burst__title">
+          {celebration.title}
+        </span>
+        <span className="gift-notification-burst__gift">
+          {celebration.giftLabel}
+        </span>
+        <span className="gift-notification-burst__detail">
+          {celebration.detail}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -833,7 +1213,7 @@ function NotificationBulkConfirmDialog({
             <AlertTriangle className="h-5 w-5" strokeWidth={2.6} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-black leading-6 text-[#111210]">
+            <h2 className="text-lg font-bold leading-6 text-[#111210]">
               {copy.title}
             </h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]">
@@ -843,7 +1223,7 @@ function NotificationBulkConfirmDialog({
         </div>
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button
-            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-[0.98]"
             disabled={pending}
             onClick={onCancel}
             type="button"
@@ -851,7 +1231,7 @@ function NotificationBulkConfirmDialog({
             {copy.cancel}
           </button>
           <button
-            className="inline-flex h-11 items-center justify-center rounded-full bg-[#D52E3F] px-4 text-sm font-black text-white transition hover:bg-[#B82434] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#D52E3F] px-4 text-sm font-semibold text-white transition hover:bg-[#B82434] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={pending}
             onClick={onConfirm}
             type="button"
@@ -886,9 +1266,15 @@ export function NotificationsCenterClient({
   const [isSelecting, setIsSelecting] = useState(false);
   const [pendingBulkAction, setPendingBulkAction] =
     useState<NotificationBulkAction | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [giftCelebration, setGiftCelebration] =
+    useState<GiftNotificationCelebration | null>(null);
+  const [openingGiftNotificationId, setOpeningGiftNotificationId] = useState<
+    string | null
+  >(null);
+  const [playedGiftNotificationIds, setPlayedGiftNotificationIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [isPending, startTransition] = useTransition();
 
   const filters: NotificationFilter[] = [
@@ -993,6 +1379,22 @@ export function NotificationsCenterClient({
     }
   }, [notifications]);
 
+  useEffect(() => {
+    if (!giftCelebration) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () =>
+        setGiftCelebration((current) =>
+          current?.id === giftCelebration.id ? null : current,
+        ),
+      giftCelebration.reducedMotion ? 900 : 1750,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [giftCelebration]);
+
   function runOptimisticMutation(
     nextNotifications: NotificationViewModel[],
     mutation: () => Promise<unknown>,
@@ -1008,6 +1410,52 @@ export function NotificationsCenterClient({
         router.refresh();
       }
     });
+  }
+
+  function playGiftNotificationEffect(notificationId: string) {
+    const target = notifications.find(
+      (notification) => notification.id === notificationId,
+    );
+
+    if (
+      !target?.charmGiftEvent ||
+      target.type !== "CHARM_GIFT_RECEIVED" ||
+      giftCelebration ||
+      playedGiftNotificationIds.has(notificationId)
+    ) {
+      return 0;
+    }
+
+    const unreadGiftNotifications = notifications.filter(
+      (notification) =>
+        notification.type === "CHARM_GIFT_RECEIVED" &&
+        notification.charmGiftEvent &&
+        notification.readAt === null,
+    );
+    const sourceNotification = getHighestValueGiftNotification(
+      unreadGiftNotifications.length > 0 ? unreadGiftNotifications : [target],
+      target,
+    );
+    const celebration = getGiftNotificationCelebration({
+      locale,
+      notification: sourceNotification,
+      reducedMotion: prefersReducedGiftMotion(),
+    });
+
+    if (!celebration) {
+      return 0;
+    }
+
+    setPlayedGiftNotificationIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(notificationId);
+      nextIds.add(sourceNotification.id);
+
+      return nextIds;
+    });
+    setGiftCelebration(celebration);
+
+    return celebration.reducedMotion ? 760 : 1450;
   }
 
   function handleMarkRead(notificationId: string) {
@@ -1032,6 +1480,38 @@ export function NotificationsCenterClient({
     );
   }
 
+  function handleGiftActivate(notificationId: string) {
+    playGiftNotificationEffect(notificationId);
+  }
+
+  function handleOpenGiftNotification(notificationId: string) {
+    const target = notifications.find(
+      (notification) => notification.id === notificationId,
+    );
+
+    if (!target || target.type !== "CHARM_GIFT_RECEIVED") {
+      return;
+    }
+
+    const delayMs = playGiftNotificationEffect(notificationId);
+
+    if (target.readAt === null) {
+      handleMarkRead(notificationId);
+    }
+
+    setOpeningGiftNotificationId(notificationId);
+    window.setTimeout(() => {
+      const formData = new FormData();
+      formData.set("locale", locale);
+      formData.set("notificationId", notificationId);
+
+      startTransition(async () => {
+        await openNotificationActivityAction(formData);
+        setOpeningGiftNotificationId(null);
+      });
+    }, delayMs);
+  }
+
   function handleDelete(notificationId: string) {
     if (
       !notifications.some((notification) => notification.id === notificationId)
@@ -1044,6 +1524,68 @@ export function NotificationsCenterClient({
         (notification) => notification.id !== notificationId,
       ),
       () => deleteNotificationClientAction(locale, notificationId),
+    );
+  }
+
+  function handleFollowBack(notificationId: string) {
+    const target = notifications.find(
+      (notification) => notification.id === notificationId,
+    );
+
+    if (
+      !target ||
+      target.type !== "FRIEND_REQUEST" ||
+      !target.actor ||
+      target.viewerFollowsActor
+    ) {
+      return;
+    }
+
+    runOptimisticMutation(
+      notifications.map((notification) =>
+        notification.id === notificationId
+          ? {
+              ...notification,
+              readAt: notification.readAt ?? new Date().toISOString(),
+              viewerFollowsActor: true,
+            }
+          : notification,
+      ),
+      async () => {
+        const result = await followBackFromNotificationClientAction(
+          locale,
+          notificationId,
+        );
+
+        if (!result.ok) {
+          throw new Error("Failed to follow back from notification.");
+        }
+
+        if (result.isMutualFollow && target.actor?.id) {
+          const formData = new FormData();
+          formData.set("locale", locale);
+          formData.set("friendProfileId", target.actor.id);
+          formData.set("redirectPath", "/notifications");
+          saveMessageThreadReturnHref();
+
+          const conversation = await createDirectConversationAction(
+            {},
+            formData,
+          );
+
+          if (conversation.ok && conversation.conversationId) {
+            router.push(
+              withLocale(
+                locale,
+                `/messages/${conversation.conversationId}?mutual=1`,
+              ),
+            );
+            return;
+          }
+        }
+
+        router.refresh();
+      },
     );
   }
 
@@ -1177,14 +1719,21 @@ export function NotificationsCenterClient({
 
   return (
     <>
+      {giftCelebration ? (
+        <GiftNotificationBurst
+          key={giftCelebration.id}
+          celebration={giftCelebration}
+        />
+      ) : null}
+
       <section className="space-y-4 border-b border-[#EEEDE4] pb-4">
         <div className="relative flex items-center justify-between gap-3">
-          <h1 className="min-w-0 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
+          <h1 className="min-w-0 text-3xl font-bold tracking-normal text-[#111210] sm:text-4xl">
             {t.title}
           </h1>
           {isSelecting ? (
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
               onClick={handleCancelSelection}
               type="button"
             >
@@ -1211,7 +1760,7 @@ export function NotificationsCenterClient({
           {!isSelecting && isActionMenuOpen ? (
             <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-2 rounded-[1rem] border border-[#D6D5B2] bg-white p-2 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || notifications.length === 0}
                 onClick={() => {
                   setIsSelecting(true);
@@ -1224,7 +1773,7 @@ export function NotificationsCenterClient({
                 {selectionCopy.select}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || unreadCount === 0}
                 onClick={() => {
                   setPendingBulkAction("mark-all-read");
@@ -1236,7 +1785,7 @@ export function NotificationsCenterClient({
                 {t.markAllRead}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || readNotifications.length === 0}
                 onClick={() => {
                   setPendingBulkAction("delete-read");
@@ -1256,11 +1805,11 @@ export function NotificationsCenterClient({
             className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
             data-no-swipe
           >
-            <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#156240] px-3 text-xs font-black text-white">
+            <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#156240] px-3 text-xs font-semibold text-white">
               {selectedCountLabel}
             </span>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
               disabled={visibleNotificationIds.length === 0 || isPending}
               onClick={handleToggleVisibleSelection}
               type="button"
@@ -1270,7 +1819,7 @@ export function NotificationsCenterClient({
                 : selectionCopy.selectAll}
             </button>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
               disabled={selectedUnreadCount === 0 || isPending}
               onClick={() => setPendingBulkAction("mark-selected-read")}
               type="button"
@@ -1279,7 +1828,7 @@ export function NotificationsCenterClient({
               {selectionCopy.markRead}
             </button>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#B5301F] ring-1 ring-[#F09182]/50 transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-semibold text-[#B5301F] ring-1 ring-[#F09182]/50 transition active:scale-95 disabled:opacity-45"
               disabled={selectedCount === 0 || isPending}
               onClick={() => setPendingBulkAction("delete-selected")}
               type="button"
@@ -1302,7 +1851,7 @@ export function NotificationsCenterClient({
               <button
                 key={filter}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                   active
                     ? "bg-[#156240] text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
                     : "bg-white text-[#111210] ring-1 ring-[#EEEDE4] hover:bg-[#F7F7F0]",
@@ -1345,9 +1894,14 @@ export function NotificationsCenterClient({
               locale={locale}
               notification={notification}
               onDelete={handleDelete}
+              onFollowBack={handleFollowBack}
+              onGiftActivate={handleGiftActivate}
               onMarkRead={handleMarkRead}
+              onOpenGift={handleOpenGiftNotification}
               onToggleSelected={handleToggleSelection}
-              pending={isPending}
+              pending={
+                isPending || openingGiftNotificationId === notification.id
+              }
               selected={selectedIds.has(notification.id)}
               selectionMode={isSelecting}
             />

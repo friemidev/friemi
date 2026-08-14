@@ -1,6 +1,12 @@
-import { Prisma, type ParticipantStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import {
+  Prisma,
+  type ActivityStatus,
+  type ActivityType,
+  type ParticipantStatus,
+} from "@prisma/client";
+import { getActivityFloatingNow } from "@/features/activities/utils/activityDisplay";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { prisma } from "@/lib/prisma";
 import {
   achievementCatalog,
   isAchievementKey,
@@ -17,10 +23,30 @@ export type AchievementSource = {
 };
 
 export type AchievementProgressSnapshot = {
+  authoredMomentCount: number;
+  charmScore: number;
+  completedHostedActivityCount: number;
+  distinctGiftRecipientCount: number;
   hostedActivityCount: number;
   isCoCreator: boolean;
   participationCount: number;
+  punctualAttendanceStreak: number;
+  receivedGiftCount: number;
+  successfulReferralCount: number;
   trustScore: number;
+};
+
+export type PunctualityParticipationRecord = {
+  activity: {
+    checkInSignalCount: number;
+    startAt: Date;
+    status: ActivityStatus;
+    type: ActivityType;
+  };
+  cancelledAt: Date | null;
+  checkedInAt: Date | null;
+  checkInCancelledAt: Date | null;
+  status: ParticipantStatus;
 };
 
 export type UserAchievementProgressItem = {
@@ -60,8 +86,14 @@ const participationAchievementStatuses: ParticipantStatus[] = [
   "APPROVED",
   "JOINED",
 ];
+const punctualityLateCancellationWindowMs = 24 * 60 * 60 * 1000;
+const punctualityTarget = 20;
 
 function getEndedActivityWhere(now: Date): Prisma.ActivityWhereInput {
+  const floatingNow = getActivityFloatingNow(now);
+  const floatingDayStart = new Date(floatingNow);
+  floatingDayStart.setUTCHours(0, 0, 0, 0);
+
   return {
     OR: [
       {
@@ -69,13 +101,13 @@ function getEndedActivityWhere(now: Date): Prisma.ActivityWhereInput {
       },
       {
         endAt: {
-          lte: now,
+          lte: floatingNow,
         },
       },
       {
         endAt: null,
         startAt: {
-          lte: now,
+          lt: floatingDayStart,
         },
       },
     ],
@@ -110,6 +142,56 @@ function getNoActivityCheckInSignalWhere(): Prisma.ActivityWhereInput {
 
 function clampProgress(progress: number, target: number) {
   return Math.max(0, Math.min(target, progress));
+}
+
+export function getPunctualAttendanceStreak(
+  records: PunctualityParticipationRecord[],
+) {
+  let streak = 0;
+
+  for (const record of records) {
+    if (
+      record.activity.status === "CANCELLED" ||
+      record.activity.type === "PUBLIC_EVENT"
+    ) {
+      continue;
+    }
+
+    const cancelledTooLate =
+      record.status === "CANCELLED" &&
+      (!record.cancelledAt ||
+        record.cancelledAt.getTime() >=
+          record.activity.startAt.getTime() -
+            punctualityLateCancellationWindowMs);
+
+    if (record.checkInCancelledAt || cancelledTooLate) {
+      break;
+    }
+
+    const attended =
+      Boolean(record.checkedInAt) ||
+      (participationAchievementStatuses.includes(record.status) &&
+        record.activity.checkInSignalCount === 0);
+
+    if (!attended) {
+      if (
+        record.status !== "CANCELLED" &&
+        record.activity.checkInSignalCount > 0
+      ) {
+        break;
+      }
+
+      continue;
+    }
+
+    streak += 1;
+
+    if (streak >= punctualityTarget) {
+      return punctualityTarget;
+    }
+  }
+
+  return streak;
 }
 
 export function getAchievementProgressValue(
@@ -172,21 +254,30 @@ async function getEquippedAchievementKeySet(db: DbClient, profileId: string) {
   );
 }
 
-async function getAchievementSnapshot(
-  db: DbClient,
-  profileId: string,
-): Promise<AchievementProgressSnapshot> {
+function getCompletedActivityWhere(
+  now = new Date(),
+): Prisma.ActivityWhereInput {
+  const floatingNow = getActivityFloatingNow(now);
+  const floatingDayStart = new Date(floatingNow);
+  floatingDayStart.setUTCHours(0, 0, 0, 0);
+
+  return {
+    OR: [
+      { status: "ENDED" },
+      { endAt: { lte: floatingNow } },
+      {
+        endAt: null,
+        startAt: { lt: floatingDayStart },
+      },
+    ],
+  };
+}
+
+async function getActivityAchievementMetrics(db: DbClient, profileId: string) {
   const now = new Date();
-  const [profile, participationCount, hostedActivityCount, trustScore] =
+  const completedActivityWhere = getCompletedActivityWhere(now);
+  const [participationCount, completedHostedActivityCount, punctualityRecords] =
     await Promise.all([
-      db.userProfile.findUnique({
-        where: {
-          id: profileId,
-        },
-        select: {
-          isCoCreator: true,
-        },
-      }),
       db.activityParticipant.count({
         where: {
           OR: [
@@ -220,22 +311,175 @@ async function getAchievementSnapshot(
       }),
       db.activity.count({
         where: {
+          AND: [completedActivityWhere],
           organizerId: profileId,
           status: {
-            not: "DRAFT",
+            notIn: ["CANCELLED", "DRAFT"],
           },
           type: {
             not: "PUBLIC_EVENT",
           },
         },
       }),
-      getTrustScore(db, profileId),
+      db.activityParticipant.findMany({
+        where: {
+          activity: {
+            AND: [completedActivityWhere],
+            status: {
+              not: "CANCELLED",
+            },
+            type: {
+              not: "PUBLIC_EVENT",
+            },
+          },
+          status: {
+            in: [...participationAchievementStatuses, "CANCELLED"],
+          },
+          userProfileId: profileId,
+        },
+        orderBy: [
+          {
+            activity: {
+              startAt: "desc",
+            },
+          },
+          { id: "desc" },
+        ],
+        take: 100,
+        select: {
+          cancelledAt: true,
+          checkedInAt: true,
+          checkInCancelledAt: true,
+          status: true,
+          activity: {
+            select: {
+              startAt: true,
+              status: true,
+              type: true,
+              _count: {
+                select: {
+                  participants: {
+                    where: {
+                      OR: [
+                        { checkInCancelledAt: { not: null } },
+                        { checkInRequestedAt: { not: null } },
+                        { checkedInAt: { not: null } },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
   return {
+    completedHostedActivityCount,
+    participationCount,
+    punctualAttendanceStreak: getPunctualAttendanceStreak(
+      punctualityRecords.map((record) => ({
+        activity: {
+          checkInSignalCount: record.activity._count.participants,
+          startAt: record.activity.startAt,
+          status: record.activity.status,
+          type: record.activity.type,
+        },
+        cancelledAt: record.cancelledAt,
+        checkedInAt: record.checkedInAt,
+        checkInCancelledAt: record.checkInCancelledAt,
+        status: record.status,
+      })),
+    ),
+  };
+}
+
+async function getAchievementSnapshot(
+  db: DbClient,
+  profileId: string,
+): Promise<AchievementProgressSnapshot> {
+  const [
+    profile,
+    activityMetrics,
+    hostedActivityCount,
+    successfulReferralCount,
+    authoredMomentCount,
+    charmBalance,
+    distinctGiftRecipients,
+    trustScore,
+  ] = await Promise.all([
+    db.userProfile.findUnique({
+      where: {
+        id: profileId,
+      },
+      select: {
+        isCoCreator: true,
+      },
+    }),
+    getActivityAchievementMetrics(db, profileId),
+    db.activity.count({
+      where: {
+        organizerId: profileId,
+        status: {
+          not: "DRAFT",
+        },
+        type: {
+          not: "PUBLIC_EVENT",
+        },
+      },
+    }),
+    db.userReferral.count({
+      where: {
+        firstParticipationAt: {
+          not: null,
+        },
+        inviterId: profileId,
+      },
+    }),
+    db.moment.count({
+      where: {
+        authorId: profileId,
+        deletedAt: null,
+        resharedMomentId: null,
+      },
+    }),
+    db.userCharmBalance.findUnique({
+      where: {
+        profileId,
+      },
+      select: {
+        giftCount: true,
+        score: true,
+      },
+    }),
+    db.charmGiftEvent.groupBy({
+      by: ["recipientProfileId"],
+      where: {
+        senderProfileId: profileId,
+      },
+      orderBy: {
+        recipientProfileId: "asc",
+      },
+      take: 20,
+      _count: {
+        _all: true,
+      },
+    }),
+    getTrustScore(db, profileId),
+  ]);
+
+  return {
+    authoredMomentCount,
+    charmScore: charmBalance?.score ?? 0,
+    completedHostedActivityCount: activityMetrics.completedHostedActivityCount,
+    distinctGiftRecipientCount: distinctGiftRecipients.length,
     hostedActivityCount,
     isCoCreator: Boolean(profile?.isCoCreator),
-    participationCount,
+    participationCount: activityMetrics.participationCount,
+    punctualAttendanceStreak: activityMetrics.punctualAttendanceStreak,
+    receivedGiftCount: charmBalance?.giftCount ?? 0,
+    successfulReferralCount,
     trustScore,
   };
 }
@@ -326,6 +570,134 @@ export async function grantAchievement(
 
     throw error;
   }
+}
+
+export async function syncContentContributorAchievement(profileId: string) {
+  const authoredMomentCount = await prisma.moment.count({
+    where: {
+      authorId: profileId,
+      deletedAt: null,
+      resharedMomentId: null,
+    },
+  });
+
+  if (authoredMomentCount < 50) return null;
+
+  return grantAchievement(profileId, "content_contributor", {
+    sourceType: "moment_count",
+  });
+}
+
+export async function syncActivityAchievements(profileId: string) {
+  const metrics = await getActivityAchievementMetrics(prisma, profileId);
+  const grants: Array<Promise<unknown>> = [];
+
+  if (metrics.participationCount >= 1) {
+    grants.push(
+      grantAchievement(profileId, "hello_world", {
+        sourceType: "activity_participation",
+      }),
+    );
+  }
+
+  if (metrics.participationCount >= 20) {
+    grants.push(
+      grantAchievement(profileId, "active_guest_20", {
+        sourceType: "activity_participation_count",
+      }),
+    );
+  }
+
+  if (metrics.completedHostedActivityCount >= 1) {
+    grants.push(
+      grantAchievement(profileId, "open_minded", {
+        sourceType: "completed_hosted_activity",
+      }),
+    );
+  }
+
+  if (metrics.punctualAttendanceStreak >= punctualityTarget) {
+    grants.push(
+      grantAchievement(profileId, "punctuality_star", {
+        sourceType: "attendance_streak",
+      }),
+    );
+  }
+
+  return Promise.all(grants);
+}
+
+export async function syncInvitationExpertAchievement(profileId: string) {
+  const successfulReferralCount = await prisma.userReferral.count({
+    where: {
+      firstParticipationAt: {
+        not: null,
+      },
+      inviterId: profileId,
+    },
+  });
+
+  if (successfulReferralCount < 15) return null;
+
+  return grantAchievement(profileId, "invitation_expert", {
+    sourceType: "referral_count",
+  });
+}
+
+export async function syncCharmGiftAchievements({
+  recipientCharmScore,
+  recipientGiftCount,
+  recipientProfileId,
+  senderProfileId,
+}: {
+  recipientCharmScore: number;
+  recipientGiftCount: number;
+  recipientProfileId: string;
+  senderProfileId?: string | null;
+}) {
+  const grants: Array<Promise<unknown>> = [];
+
+  if (recipientGiftCount >= 1) {
+    grants.push(
+      grantAchievement(recipientProfileId, "first_gift", {
+        sourceType: "charm_gift",
+      }),
+    );
+  }
+
+  if (recipientCharmScore >= 1000) {
+    grants.push(
+      grantAchievement(recipientProfileId, "popularity_star", {
+        sourceType: "charm_score",
+      }),
+    );
+  }
+
+  if (senderProfileId && senderProfileId !== recipientProfileId) {
+    const distinctRecipients = await prisma.charmGiftEvent.groupBy({
+      by: ["recipientProfileId"],
+      where: {
+        senderProfileId,
+      },
+      orderBy: {
+        recipientProfileId: "asc",
+      },
+      take: 20,
+      _count: {
+        _all: true,
+      },
+    });
+
+    if (distinctRecipients.length >= 20) {
+      grants.push(
+        grantAchievement(senderProfileId, "gift_ambassador", {
+          sourceType: "gift_recipient_count",
+        }),
+      );
+    }
+  }
+
+  return Promise.all(grants);
 }
 
 export async function syncProfileAchievements(profileId: string) {

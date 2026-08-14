@@ -1,11 +1,13 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  BellOff,
   CalendarDays,
   ChevronDown,
   Gift,
   MessageCircle,
   MoreVertical,
+  Pin,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -18,6 +20,10 @@ import { getActivityDetailPath } from "@/features/activities/utils/activityRoute
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import {
+  toggleDirectConversationMuteAction,
+  toggleDirectConversationPinAction,
+} from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
@@ -26,6 +32,7 @@ import type {
   DirectConversationThreadViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { MessageThreadBackButton } from "./MessageThreadBackButton";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadClient } from "./MessageThreadClient";
@@ -115,6 +122,8 @@ function ConversationListItem({
   const lastMessage = conversation.lastMessage;
   const unreadCount = conversation.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !conversation.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && conversation.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -123,66 +132,99 @@ function ConversationListItem({
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.lastMessageEmpty;
   const time = lastMessage?.createdAt ?? conversation.createdAt;
+  const showPublicNickname =
+    Boolean(conversation.peer.remarkName) &&
+    conversation.peer.publicNickname !== conversation.peer.nickname;
 
   return (
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-[1.05rem] p-2.5 transition duration-200",
+        "group rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
           ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
           : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
-      <Link
-        aria-label={t.openConversation(conversation.peer.nickname)}
-        className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-        href={withLocale(locale, `/messages/${conversation.id}`)}
-      >
-        <MessageAvatar
-          avatarUrl={conversation.peer.avatarUrl}
-          isOnline={conversation.peer.isOnline}
-          name={conversation.peer.nickname}
-          presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
-        />
-        <span className="min-w-0">
-          <span className="flex min-w-0 items-start gap-2">
-            <span
-              className={cn(
-                "truncate text-sm",
-                unreadCount > 0 ? "font-black" : "font-semibold",
-              )}
-            >
-              {conversation.peer.nickname}
+      <div className="flex min-w-0 items-center gap-1">
+        <Link
+          aria-label={t.openConversation(conversation.peer.nickname)}
+          className="grid min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+          href={withLocale(locale, `/messages/${conversation.id}`)}
+        >
+          <MessageAvatar
+            avatarUrl={conversation.peer.avatarUrl}
+            isOnline={conversation.peer.isOnline}
+            name={conversation.peer.nickname}
+            presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
+          />
+          <span className="min-w-0">
+            <span className="flex min-w-0 items-start gap-2">
+              <span
+                className={cn(
+                  "truncate text-sm",
+                  showUnreadBadge ? "font-bold" : "font-semibold",
+                )}
+              >
+                {conversation.peer.nickname}
+              </span>
+              <span
+                className={cn(
+                  "ml-auto shrink-0 whitespace-nowrap text-xs",
+                  isActive ? "text-[#8E8383]" : "text-[#8E8383]",
+                )}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {conversation.isPinned ? (
+                    <Pin aria-label={t.pinConversation} className="h-3 w-3" />
+                  ) : null}
+                  {conversation.isMuted ? (
+                    <BellOff
+                      aria-label={t.muteConversation}
+                      className="h-3 w-3"
+                    />
+                  ) : null}
+                  {formatChatListTimestamp(time, locale)}
+                </span>
+              </span>
+              {showUnreadBadge ? (
+                <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                  {unreadBadgeText}
+                </span>
+              ) : showMutedUnreadDot ? (
+                <span
+                  aria-label={t.mutedUnreadLabel}
+                  className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                  title={t.mutedUnreadLabel}
+                />
+              ) : null}
             </span>
-            <span
-              className={cn(
-                "ml-auto shrink-0 whitespace-nowrap text-xs",
-                isActive ? "text-[#8E8383]" : "text-[#8E8383]",
-              )}
-            >
-              {formatChatListTimestamp(time, locale)}
-            </span>
-            {unreadCount > 0 ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
-                {unreadBadgeText}
+            {showPublicNickname ? (
+              <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+                {conversation.peer.publicNickname}
               </span>
             ) : null}
+            <span
+              className={cn(
+                "mt-1 block truncate text-xs leading-5",
+                showUnreadBadge
+                  ? "font-bold text-ink"
+                  : isActive
+                    ? "text-[#156240]"
+                    : "text-[#156240]",
+              )}
+            >
+              {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
+            </span>
           </span>
-          <span
-            className={cn(
-              "mt-1 block truncate text-xs leading-5",
-              unreadCount > 0
-                ? "font-black text-ink"
-                : isActive
-                  ? "text-[#156240]"
-                  : "text-[#156240]",
-            )}
-          >
-            {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
-          </span>
-        </span>
-      </Link>
+        </Link>
+        <ChatRosterDismissButton
+          className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+          conversationId={conversation.id}
+          kind="direct"
+          locale={locale}
+        />
+      </div>
       <ConversationActivitySignals
         activities={conversation.recentActivities}
         isActive={isActive}
@@ -315,16 +357,64 @@ export function NoConversationSelected({ locale }: { locale: string }) {
   );
 }
 
+function ConversationPreferenceToggle({
+  action,
+  checked,
+  conversationId,
+  fieldName,
+  label,
+  locale,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  checked: boolean;
+  conversationId: string;
+  fieldName: "muted" | "pinned";
+  label: string;
+  locale: string;
+}) {
+  return (
+    <form action={action}>
+      <input name="locale" type="hidden" value={locale} />
+      <input name="conversationId" type="hidden" value={conversationId} />
+      <input name={fieldName} type="hidden" value={checked ? "0" : "1"} />
+      <button
+        aria-checked={checked}
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium text-[#111210] transition hover:bg-[#F7F7F0] focus:outline-none focus-visible:bg-[#F7F7F0]"
+        role="switch"
+        type="submit"
+      >
+        <span className="truncate">{label}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "relative h-6 w-10 shrink-0 rounded-full p-0.5 transition-colors",
+            checked ? "bg-[#1DB96A]" : "bg-[#D8DAD5]",
+          )}
+        >
+          <span
+            className={cn(
+              "block h-5 w-5 rounded-full bg-white shadow-[0_1px_4px_rgba(17,18,16,0.24)] transition-transform",
+              checked && "translate-x-4",
+            )}
+          />
+        </span>
+      </button>
+    </form>
+  );
+}
+
 export function MessageThread({
   activityContext,
   backHref = "/messages",
   conversation,
   locale,
+  showMutualFollowNotice = false,
 }: {
   activityContext?: DirectConversationActivityContextViewModel | null;
   backHref?: string;
   conversation: DirectConversationThreadViewModel;
   locale: string;
+  showMutualFollowNotice?: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
   const hasMessages = conversation.messages.length > 0;
@@ -344,9 +434,17 @@ export function MessageThread({
             <ArrowLeft className="h-5 w-5" />
           </MessageThreadBackButton>
         </div>
-        <h1 className="min-w-0 truncate text-center text-lg font-semibold text-ink">
-          {conversation.peer.nickname}
-        </h1>
+        <div className="min-w-0 text-center">
+          <h1 className="truncate text-lg font-semibold leading-tight text-ink">
+            {conversation.peer.nickname}
+          </h1>
+          {conversation.peer.remarkName &&
+          conversation.peer.publicNickname !== conversation.peer.nickname ? (
+            <p className="mt-0.5 truncate text-[11px] font-semibold leading-none text-[#6C746A]">
+              {conversation.peer.publicNickname}
+            </p>
+          ) : null}
+        </div>
         <details className="group relative justify-self-end">
           <summary
             aria-label={t.viewProfile}
@@ -356,6 +454,22 @@ export function MessageThread({
             <MoreVertical className="h-5 w-5" />
           </summary>
           <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
+            <ConversationPreferenceToggle
+              action={toggleDirectConversationMuteAction}
+              checked={conversation.isMuted}
+              conversationId={conversation.id}
+              fieldName="muted"
+              label={t.muteConversation}
+              locale={locale}
+            />
+            <ConversationPreferenceToggle
+              action={toggleDirectConversationPinAction}
+              checked={conversation.isPinned}
+              conversationId={conversation.id}
+              fieldName="pinned"
+              label={t.pinConversation}
+              locale={locale}
+            />
             <ContextualDetailLink
               className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}
@@ -403,6 +517,7 @@ export function MessageThread({
         locale={locale}
         peer={conversation.peer}
         sendPolicy={conversation.sendPolicy}
+        showMutualFollowNotice={showMutualFollowNotice}
       />
     </section>
   );

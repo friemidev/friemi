@@ -12,6 +12,7 @@ type AndroidBridge = {
   openMap?: (url: string) => void;
   registerPushToken?: () => string;
   saveLocale?: (locale: string) => void;
+  saveImageToGallery?: (url: string) => void;
   scanQrCode?: () => string;
   setBackBehavior?: (payloadJson: string) => void;
   share?: (payloadJson: string) => void;
@@ -52,7 +53,7 @@ type AndroidAppBridgeProps = {
 
 const dialogSelectors = [
   '[role="dialog"][aria-modal="true"]',
-  'dialog[open]',
+  "dialog[open]",
   '[data-android-back-sheet="true"]',
 ].join(",");
 
@@ -117,7 +118,9 @@ function closeTopDialog() {
   return openDialogs.length > 0;
 }
 
-function parsePushTokenPayload(detail: unknown): AndroidPushTokenPayload | null {
+function parsePushTokenPayload(
+  detail: unknown,
+): AndroidPushTokenPayload | null {
   if (!detail) {
     return null;
   }
@@ -137,7 +140,9 @@ function parsePushTokenPayload(detail: unknown): AndroidPushTokenPayload | null 
   return null;
 }
 
-function parseAndroidAppInfoPayload(detail: unknown): AndroidAppInfoPayload | null {
+function parseAndroidAppInfoPayload(
+  detail: unknown,
+): AndroidAppInfoPayload | null {
   if (!detail) {
     return null;
   }
@@ -273,7 +278,10 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
         (event as CustomEvent<unknown>).detail,
       );
 
-      if (!payload?.fcmToken || payload.fcmToken === lastRegisteredTokenRef.current) {
+      if (
+        !payload?.fcmToken ||
+        payload.fcmToken === lastRegisteredTokenRef.current
+      ) {
         return;
       }
 
@@ -287,7 +295,10 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
     window.addEventListener("friemi:android-ready", handleAndroidReady);
     window.addEventListener("friemi:android-safe-area", handleAndroidSafeArea);
     window.addEventListener("friemi:android-back", handleAndroidBack);
-    window.addEventListener("friemi:android-push-token", handleAndroidPushToken);
+    window.addEventListener(
+      "friemi:android-push-token",
+      handleAndroidPushToken,
+    );
     document.addEventListener("click", scheduleBackBehaviorUpdate, true);
     document.addEventListener("keyup", scheduleBackBehaviorUpdate, true);
 

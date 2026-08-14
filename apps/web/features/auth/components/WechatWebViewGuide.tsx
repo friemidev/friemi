@@ -124,7 +124,7 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
           </div>
 
           <header className="relative z-10 space-y-3 pr-14">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-forest">
+            <p className="text-xs font-bold uppercase tracking-normal text-forest">
               {copy.eyebrow}
             </p>
             <h1 className="text-[1.75rem] font-semibold leading-[1.08] tracking-normal text-ink">

@@ -196,7 +196,7 @@ function SubpageShell({
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="min-w-0 flex-1 text-center text-xl font-black text-[#111210]">
+        <h1 className="min-w-0 flex-1 text-center text-xl font-bold text-[#111210]">
           {title}
         </h1>
         <div className="flex h-10 min-w-10 items-center justify-end">
@@ -229,7 +229,7 @@ function SegmentTabs<T extends string>({
             <button
               key={item.key}
               className={cn(
-                "relative inline-flex h-10 min-w-0 items-center justify-center gap-1 px-1 text-[13px] font-black transition active:scale-[0.98]",
+                "relative inline-flex h-10 min-w-0 items-center justify-center gap-1 px-1 text-[13px] font-bold transition active:scale-[0.98]",
                 selected ? "text-[#111210]" : "text-[#4F574F]",
               )}
               onClick={() => onChange(item.key)}
@@ -265,7 +265,7 @@ function SegmentTabs<T extends string>({
           <button
             key={item.key}
             className={cn(
-              "inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-xs font-black transition",
+              "inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-xs font-bold transition",
               selected
                 ? "bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-[#8AB68E]"
                 : "text-[#1D1D1B]",
@@ -327,7 +327,7 @@ function MomentProfileTabs({
           <button
             key={item.key}
             className={cn(
-              "relative h-10 min-w-0 px-2 text-center text-[12px] font-black transition active:scale-[0.98]",
+              "relative h-10 min-w-0 px-2 text-center text-[12px] font-bold transition active:scale-[0.98]",
               selected ? "text-[#111210]" : "text-[#6C746A]",
             )}
             onClick={() => onChange(item.key)}
@@ -384,7 +384,7 @@ function ProfileMomentRow({
             moment.image ? "mt-2.5" : "",
           )}
         >
-          <p className="min-w-0 flex-1 line-clamp-2 text-[13px] font-black leading-5 text-[#111210]">
+          <p className="min-w-0 flex-1 line-clamp-2 text-[13px] font-bold leading-5 text-[#111210]">
             {content}
           </p>
           <span className="shrink-0 pt-0.5 text-[11px] font-bold leading-none text-[#8B907F]">
@@ -392,7 +392,7 @@ function ProfileMomentRow({
           </span>
         </div>
 
-        <div className="mt-2.5 flex items-center gap-5 text-[12px] font-black text-[#6C746A]">
+        <div className="mt-2.5 flex items-center gap-5 text-[12px] font-bold text-[#6C746A]">
           <span className="inline-flex items-center gap-1.5">
             <Heart className="h-4 w-4 text-[#E7457A]" />
             <span>{moment.likeCount}</span>
@@ -497,7 +497,7 @@ function ActivityThumb({ activity }: { activity: ActivityCardViewModel }) {
 
   return (
     <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_18%,#EAF4DC,#F6EFE4_48%,#FDFCF5)]">
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg font-black text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
+      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg font-bold text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
         F
       </span>
     </div>
@@ -528,7 +528,7 @@ function CompactHangoutRow({
       </div>
 
       <div className="min-w-0">
-        <h2 className="line-clamp-2 text-[14.5px] font-black leading-[1.18] text-[#111210]">
+        <h2 className="line-clamp-2 text-[14.5px] font-bold leading-[1.18] text-[#111210]">
           {activity.title}
         </h2>
 
@@ -550,7 +550,7 @@ function CompactHangoutRow({
               {getActivityDateLabel(activity, locale)}
             </span>
           </span>
-          <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-[#156240]">
+          <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-[#156240]">
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {resolvedStatusLabel}
           </span>
@@ -724,6 +724,8 @@ function NetworkUserRow({
   const isFollowing = activeTab !== "followers";
   const inactiveLabel =
     activeTab === "followers" ? copy.followBack : copy.follow;
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
     <div className="flex items-center gap-3 border-b border-[#E8E1CF] py-4 last:border-b-0">
@@ -740,28 +742,33 @@ function NetworkUserRow({
             className="h-[3.25rem] w-[3.25rem] shrink-0 rounded-full object-cover shadow-sm"
           />
         ) : (
-          <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[#DCEBDE] text-base font-black text-[#156240] shadow-sm">
+          <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[#DCEBDE] text-base font-bold text-[#156240] shadow-sm">
             {initial}
           </span>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate text-sm font-black text-[#111210]">
+            <p className="truncate text-sm font-bold text-[#111210]">
               {user.nickname}
             </p>
             {user.isCoCreator ? (
               <CoCreatorIdentityBadge locale={locale} variant="icon" />
             ) : null}
           </div>
+          {showPublicNickname ? (
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[#8B907F]">
+              {user.publicNickname}
+            </p>
+          ) : null}
           <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-[#7A8276]">
             {user.bio ?? copy.noBio}
           </p>
         </div>
       </Link>
       <FollowButton
-        activeButtonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeButtonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-bold text-[#156240] shadow-none active:scale-[0.98]"
         activeLabel={copy.unfollow}
-        buttonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-black text-[#156240] shadow-none active:scale-[0.98]"
+        buttonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-bold text-[#156240] shadow-none active:scale-[0.98]"
         fullWidth={false}
         inactiveLabel={inactiveLabel}
         isAuthenticated
@@ -838,7 +845,12 @@ export function ProfileNetworkMobilePage({
     }
 
     return activeUsers.filter((friend) => {
-      const searchableText = [friend.nickname, friend.bio ?? ""]
+      const searchableText = [
+        friend.nickname,
+        friend.publicNickname,
+        friend.remarkName ?? "",
+        friend.bio ?? "",
+      ]
         .join(" ")
         .toLocaleLowerCase();
 
@@ -926,7 +938,7 @@ export function ProfileNetworkMobilePage({
         <div className="flex items-center gap-1.5">
           <Link
             aria-label={copy.findPeople}
-            className="inline-flex h-9 max-w-[6rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-black text-[#E83F83] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
+            className="inline-flex h-9 max-w-[6rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-bold text-[#E83F83] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
             href={withLocale(locale, "/search")}
             title={copy.findPeople}
           >
@@ -935,7 +947,7 @@ export function ProfileNetworkMobilePage({
           </Link>
           <Link
             aria-label={copy.invite}
-            className="inline-flex h-9 max-w-[5.4rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-black text-[#156240] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
+            className="inline-flex h-9 max-w-[5.4rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-bold text-[#156240] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
             href={withLocale(locale, "/profile/invite")}
             title={copy.invite}
           >
@@ -955,7 +967,7 @@ export function ProfileNetworkMobilePage({
             placeholder={copy.searchPeople}
             className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[#111210] outline-none placeholder:text-[#A3A48F]"
           />
-          <span className="shrink-0 text-xs font-black text-[#156240]">
+          <span className="shrink-0 text-xs font-bold text-[#156240]">
             {networkTabs.find((tab) => tab.key === activeTab)?.count ?? 0}
           </span>
         </label>
@@ -967,7 +979,7 @@ export function ProfileNetworkMobilePage({
             <Eye className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-black">
+            <span className="block truncate text-sm font-bold">
               {copy.visitors}
             </span>
             <span className="block truncate text-xs font-semibold text-[#6C746A]">
@@ -992,7 +1004,7 @@ export function ProfileNetworkMobilePage({
                   />
                 ) : (
                   <span
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#DCEBDE] text-[10px] font-black text-[#156240]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#DCEBDE] text-[10px] font-bold text-[#156240]"
                     key={visit.id}
                   >
                     {initial}

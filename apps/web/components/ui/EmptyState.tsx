@@ -8,16 +8,26 @@ type EmptyStateProps = {
   actionHref?: string;
   actionLabel?: string;
   className?: string;
-  title: string;
   description?: string;
+  imageClassName?: string;
+  imageContainerClassName?: string;
+  imageHeight?: number;
+  imageSrc?: string;
+  imageWidth?: number;
+  title: string;
 };
 
 export function EmptyState({
   actionHref,
   actionLabel,
   className,
-  title,
   description,
+  imageClassName,
+  imageContainerClassName,
+  imageHeight = 56,
+  imageSrc = brand.emptyStateIconPath,
+  imageWidth = 56,
+  title,
 }: EmptyStateProps) {
   return (
     <div
@@ -30,13 +40,21 @@ export function EmptyState({
         className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2EC]/55 blur-2xl"
         aria-hidden="true"
       />
-      <span className="relative mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-fog ring-1 ring-sand sm:h-14 sm:w-14">
+      <span
+        className={cn(
+          "relative mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-fog ring-1 ring-sand sm:h-14 sm:w-14",
+          imageContainerClassName,
+        )}
+      >
         <Image
-          src={brand.emptyStateIconPath}
+          src={imageSrc}
           alt=""
-          width={56}
-          height={56}
-          className="h-full w-full scale-[1.55] object-cover"
+          width={imageWidth}
+          height={imageHeight}
+          className={cn(
+            "h-full w-full scale-[1.55] object-cover",
+            imageClassName,
+          )}
         />
       </span>
       <h2 className="relative mt-3 text-base font-semibold text-ink sm:mt-4">

@@ -46,7 +46,7 @@ function createEmptyItem(index: number): TopNewsEditorItem {
   const order = (index + 1) * 10;
 
   return {
-    href: "/updates/v2_5",
+    href: "/updates/v2_7",
     id: `new-${Date.now()}-${index}`,
     imageUrl: "/brand/v2_1/friemi-og-default-1200x630.png",
     isActive: true,
@@ -304,7 +304,7 @@ export function TopNewsManagementClient({
               <div className="min-w-0 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    <p className="text-xs font-semibold uppercase tracking-normal text-zinc-400">
                       #{index + 1} · {item.slug}
                     </p>
                     <h2 className="mt-1 truncate text-xl font-semibold tracking-normal text-ink">
@@ -383,7 +383,7 @@ export function TopNewsManagementClient({
                   <FormField label="站内链接">
                     <Input
                       className="h-10"
-                      placeholder="/updates/v2_5"
+                      placeholder="/updates/v2_7"
                       value={item.href}
                       onChange={(event) =>
                         updateItem(item.id, { href: event.target.value })
@@ -508,7 +508,7 @@ export function TopNewsManagementClient({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/54 via-black/12 to-black/4" />
                     <div className="absolute bottom-3 left-3 right-3">
-                      <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
+                      <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-bold text-[#123D31] shadow-sm">
                         <span className="truncate">{item.titleZh}</span>
                       </span>
                     </div>

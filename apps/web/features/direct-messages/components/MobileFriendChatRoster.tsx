@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
+import {
+  BellOff,
+  CalendarDays,
+  ChevronDown,
+  MessageCircle,
+  Pin,
+  Search,
+} from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
@@ -16,6 +23,7 @@ import type {
 } from "../queries/getDirectMessages";
 import { saveMessageThreadReturnHref } from "../utils/messageThreadReturn";
 import { MessageAvatar } from "./MessageAvatar";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 
 type MobileFriendChatRosterProps = {
   currentUserProfileId: string;
@@ -51,7 +59,7 @@ export function MobileFriendChatRoster({
           </Link>
         </div>
         <div className="min-w-0">
-          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-moss">
+          <p className="mt-4 text-xs font-semibold uppercase tracking-normal text-moss">
             {t.friendListTitle}
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
@@ -108,6 +116,8 @@ function MobileFriendChatRow({
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !friend.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -117,6 +127,9 @@ function MobileFriendChatRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const showPublicNickname =
+    Boolean(friend.friend.remarkName) &&
+    friend.friend.publicNickname !== friend.friend.nickname;
   const content = (
     <>
       <MessageAvatar
@@ -130,24 +143,43 @@ function MobileFriendChatRow({
           <span
             className={cn(
               "truncate text-sm text-ink",
-              unreadCount > 0 ? "font-black" : "font-semibold",
+              showUnreadBadge ? "font-bold" : "font-semibold",
             )}
           >
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#8E8383]">
-            {formatChatListTimestamp(time, locale)}
+            <span className="inline-flex items-center gap-1">
+              {friend.isPinned ? (
+                <Pin aria-label={t.pinConversation} className="h-3 w-3" />
+              ) : null}
+              {friend.isMuted ? (
+                <BellOff aria-label={t.muteConversation} className="h-3 w-3" />
+              ) : null}
+              {formatChatListTimestamp(time, locale)}
+            </span>
           </span>
-          {unreadCount > 0 ? (
-            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+          {showUnreadBadge ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
+          ) : showMutedUnreadDot ? (
+            <span
+              aria-label={t.mutedUnreadLabel}
+              className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+              title={t.mutedUnreadLabel}
+            />
           ) : null}
         </span>
+        {showPublicNickname ? (
+          <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+            {friend.friend.publicNickname}
+          </span>
+        ) : null}
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",
-            unreadCount > 0 ? "font-black text-ink" : "text-[#156240]",
+            showUnreadBadge ? "font-bold text-ink" : "text-[#156240]",
           )}
         >
           {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
@@ -157,17 +189,25 @@ function MobileFriendChatRow({
   );
 
   return (
-    <article className="min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:translate-y-px">
+    <article className="group min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:translate-y-px">
       {friend.conversationId ? (
-        <IntentPrefetchLink
-          aria-label={t.openConversation(friend.friend.nickname)}
-          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={withLocale(locale, `/messages/${friend.conversationId}`)}
-          onClick={() => saveMessageThreadReturnHref()}
-          prefetchOnVisible
-        >
-          {content}
-        </IntentPrefetchLink>
+        <div className="flex min-w-0 items-center gap-1">
+          <IntentPrefetchLink
+            aria-label={t.openConversation(friend.friend.nickname)}
+            className="grid min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            href={withLocale(locale, `/messages/${friend.conversationId}`)}
+            onClick={() => saveMessageThreadReturnHref()}
+            prefetchOnVisible
+          >
+            {content}
+          </IntentPrefetchLink>
+          <ChatRosterDismissButton
+            className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+            conversationId={friend.conversationId}
+            kind="direct"
+            locale={locale}
+          />
+        </div>
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />

@@ -40,6 +40,11 @@ final class FriemiAndroidBridge {
     }
 
     @JavascriptInterface
+    public void saveImageToGallery(String url) {
+        activity.saveImageToGalleryFromBridge(url);
+    }
+
+    @JavascriptInterface
     public void share(String payloadJson) {
         activity.shareFromBridge(payloadJson);
     }

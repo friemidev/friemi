@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 
 const RAISED_HAND_SIGNUP_ICON_SRC =
   "/brand/v2_1/team-detail-join-raised-hand.svg";
-const TeamDetailMobileCtaSheetCloseContext = createContext<
-  (() => void) | null
->(null);
+const TeamDetailMobileCtaSheetCloseContext = createContext<(() => void) | null>(
+  null,
+);
 
 export function useTeamDetailMobileCtaSheetClose() {
   return useContext(TeamDetailMobileCtaSheetCloseContext);
@@ -133,7 +133,7 @@ export function TeamDetailMobileCtaSheet({
   const sheet = (
     <div
       aria-modal="true"
-      className="fixed inset-x-0 top-0 bottom-[calc(5.05rem+env(safe-area-inset-bottom))] z-[90] md:hidden"
+      className="fixed inset-0 z-[90] md:hidden"
       role="dialog"
     >
       <button
@@ -147,7 +147,7 @@ export function TeamDetailMobileCtaSheet({
       />
       <div
         className={cn(
-          "absolute inset-x-3 bottom-3 max-h-[min(78svh,40rem)] overflow-hidden rounded-[1.55rem] border border-coral/35 bg-paper text-left shadow-[0_-18px_55px_rgba(29,29,27,0.18)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "absolute inset-x-3 bottom-0 max-h-[min(78svh,40rem)] overflow-hidden rounded-t-[1.55rem] border border-b-0 border-coral/35 bg-paper pb-[env(safe-area-inset-bottom)] text-left shadow-[0_-18px_55px_rgba(29,29,27,0.18)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
         )}
       >
@@ -155,7 +155,7 @@ export function TeamDetailMobileCtaSheet({
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-coral/40" />
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
-              <h2 className="line-clamp-2 text-base font-extrabold leading-tight text-ink">
+              <h2 className="line-clamp-2 text-base font-bold leading-tight text-ink">
                 {activityTitle}
               </h2>
             </div>
@@ -185,18 +185,21 @@ export function TeamDetailMobileCtaSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.title}
-        className="group relative inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#F09182] px-12 py-2.5 text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] transition active:scale-[0.98]"
+        className={cn(
+          "group relative inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#F09182] px-12 py-2.5 text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] transition active:scale-[0.98]",
+          open && "pointer-events-none invisible",
+        )}
         title={copy.title}
         type="button"
         onClick={() => {
           setOpen(true);
         }}
       >
-        <span className="min-w-0 truncate text-center text-[15px] font-black leading-none">
+        <span className="min-w-0 truncate text-center text-[15px] font-bold leading-none">
           {triggerLabel}
         </span>
         <span className="absolute right-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/42 transition group-active:translate-x-0.5">
-          <span className="text-sm font-black leading-none" aria-hidden="true">
+          <span className="text-sm font-bold leading-none" aria-hidden="true">
             &gt;
           </span>
         </span>
@@ -206,7 +209,10 @@ export function TeamDetailMobileCtaSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.title}
-        className="group fixed right-3 z-50 flex min-h-14 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-[1.15rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 px-2.5 py-2 text-[#156240] shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-1 ring-white/80 backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.96]"
+        className={cn(
+          "group fixed right-3 z-50 flex min-h-14 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-[1.15rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 px-2.5 py-2 text-[#156240] shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-1 ring-white/80 backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.96]",
+          open && "pointer-events-none invisible",
+        )}
         style={{
           bottom: "calc(6rem + env(safe-area-inset-bottom))",
         }}
@@ -237,7 +243,7 @@ export function TeamDetailMobileCtaSheet({
           )}
         </span>
         <span className="grid min-w-0 text-left">
-          <span className="text-sm font-extrabold leading-tight text-[#156240]">
+          <span className="text-sm font-bold leading-tight text-[#156240]">
             {triggerLabel}
           </span>
         </span>

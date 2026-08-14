@@ -40,6 +40,8 @@ const config: Config = {
         "team-border": "rgb(var(--friemi-sage-rgb) / <alpha-value>)"
       },
       fontFamily: {
+        cjk: ["var(--friemi-font-cjk)", "ui-sans-serif", "system-ui"],
+        latin: ["var(--friemi-font-latin)", "ui-sans-serif", "system-ui"],
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"]
       }
     }

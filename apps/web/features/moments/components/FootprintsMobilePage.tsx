@@ -20,14 +20,21 @@ import {
 import { createPortal, useFormStatus } from "react-dom";
 import { formatActivityDate } from "@chill-club/shared";
 import {
+  BadgeCheck,
+  BellOff,
   ChevronDown,
   ChevronRight,
   Eye,
   Gift,
   Globe2,
   Heart,
+  ImagePlus,
+  Loader2,
   MessageCircle,
   MoreHorizontal,
+  Orbit,
+  Pin,
+  RefreshCw,
   Search,
   SendHorizontal,
   Share2,
@@ -36,8 +43,8 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
@@ -46,9 +53,19 @@ import { StartDirectConversationButton } from "@/features/direct-messages/compon
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import type { OfficialMessageRosterViewModel } from "@/features/official-messages/services/officialMessages";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
+import type { PlanetChatRosterItemViewModel } from "@/features/planets/services/planetChat";
+import {
+  buildPlanetChatListReturnHref,
+  filterUnifiedChatRosterEntries,
+  getPlanetChatListScrollStorageKey,
+  getPlanetChatListState,
+  type PlanetChatListFilter,
+} from "@/features/planets/utils/planetChatListState";
 import {
   createMomentAction,
   createMomentCommentAction,
@@ -62,17 +79,15 @@ import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMome
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
 type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING" | "MINE";
-type MessageRosterFilter =
-  | "all"
-  | "following"
-  | "followers"
-  | "mutual"
-  | "rooms";
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
 type FootprintsViewerProfile = {
@@ -90,10 +105,13 @@ type FootprintsMobilePageProps = {
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
+  officialMessages: OfficialMessageRosterViewModel | null;
   messageRosterError?: boolean;
   momentFeedError?: boolean;
   moments: MomentFeedItemViewModel[];
   canCreatePlanet: boolean;
+  planetChatRosterLoaded: boolean;
+  planetChats: PlanetChatRosterItemViewModel[];
   planets: PlanetSquare;
   planetSquareError?: boolean;
   profile: FootprintsViewerProfile | null;
@@ -196,6 +214,15 @@ const copyByLocale = {
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
+    photoInvalidContentError: "图片内容无效，请重新选择原始图片。",
+    photoLimitError: "一次晒晒最多可以上传 6 张照片。",
+    photoRemove: "移除照片",
+    photoRetry: "重新上传",
+    photoSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
+    photoStorageError: "照片存储暂时不可用，请稍后再试。",
+    photoTypeError: "请选择常见图片格式。",
+    photoUploadFailed: "部分照片上传失败，请重试或移除。",
+    photoUploading: (count: number) => `正在上传 ${count} 张照片...`,
     composerTitle: "此刻想说什么？",
     composerSubmit: "发布",
     composerSubmitting: "发布中...",
@@ -240,8 +267,8 @@ const copyByLocale = {
     messageFilters: {
       all: "聊聊",
       following: "我关注的",
-      followers: "关注我的",
       mutual: "互相关注",
+      official: "官方",
       rooms: "群聊",
     },
     openMessages: "进入聊聊",
@@ -286,6 +313,19 @@ const copyByLocale = {
     },
     composer: "Share a mood or a bright little moment...",
     addPhoto: "Add photo",
+    photoInvalidContentError:
+      "This image is invalid. Choose the original file.",
+    photoLimitError: "You can upload up to 6 photos per moment.",
+    photoRemove: "Remove photo",
+    photoRetry: "Retry upload",
+    photoSizeError:
+      "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
+    photoStorageError:
+      "Photo storage is temporarily unavailable. Try again later.",
+    photoTypeError: "Choose a common image format.",
+    photoUploadFailed: "Some photos failed to upload. Retry or remove them.",
+    photoUploading: (count: number) =>
+      `Uploading ${count} photo${count === 1 ? "" : "s"}...`,
     composerTitle: "What's happening?",
     composerSubmit: "Post",
     composerSubmitting: "Posting...",
@@ -329,10 +369,10 @@ const copyByLocale = {
     messageTitle: "Messages",
     messageDescription: "Chats and plan details stay here.",
     messageFilters: {
-      all: "Chats",
+      all: "All chats",
       following: "Following",
-      followers: "Followers",
       mutual: "Mutual",
+      official: "Official",
       rooms: "Groups",
     },
     openMessages: "Open messages",
@@ -379,6 +419,20 @@ const copyByLocale = {
     },
     composer: "Partage une humeur ou un instant à garder...",
     addPhoto: "Ajouter une photo",
+    photoInvalidContentError:
+      "Cette image est invalide. Choisissez le fichier original.",
+    photoLimitError: "Vous pouvez ajouter jusqu'à 6 photos par publication.",
+    photoRemove: "Retirer la photo",
+    photoRetry: "Réessayer",
+    photoSizeError:
+      "Les images doivent faire 10 Mo maximum, ou 20 Mo pour un GIF.",
+    photoStorageError:
+      "Le stockage des photos est indisponible. Réessayez plus tard.",
+    photoTypeError: "Choisissez un format d'image courant.",
+    photoUploadFailed:
+      "Certaines photos n'ont pas été envoyées. Réessayez ou retirez-les.",
+    photoUploading: (count: number) =>
+      `Envoi de ${count} photo${count > 1 ? "s" : ""}...`,
     composerTitle: "Quoi de neuf ?",
     composerSubmit: "Publier",
     composerSubmitting: "Publication...",
@@ -424,10 +478,10 @@ const copyByLocale = {
     messageTitle: "Messages",
     messageDescription: "Les échanges et messages de plans restent ici.",
     messageFilters: {
-      all: "Messages",
+      all: "Tous",
       following: "Suivis",
-      followers: "Me suivent",
       mutual: "Mutuels",
+      official: "Officiel",
       rooms: "Groupes",
     },
     openMessages: "Ouvrir les messages",
@@ -501,7 +555,7 @@ function ProfileAvatar({
   return (
     <span
       className={cn(
-        "inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#E7457A] text-sm font-black text-white shadow-[0_6px_16px_rgba(21,98,64,0.14)]",
+        "inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#E7457A] text-sm font-bold text-white shadow-[0_6px_16px_rgba(21,98,64,0.14)]",
         className,
       )}
     >
@@ -511,7 +565,7 @@ function ProfileAvatar({
 }
 
 const momentActionButtonClassName =
-  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
+  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-bold text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
 
 function MomentActionBar({
   className,
@@ -537,7 +591,7 @@ function MomentActionBar({
   const commentContent = (
     <>
       <MessageCircle className="h-[18px] w-[18px] shrink-0" />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {moment.commentCount}
       </span>
     </>
@@ -650,7 +704,7 @@ function MomentMoreMenu({
             tabIndex={-1}
             type="button"
           />
-          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
+          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-bold text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
             {showDetailAction ? (
               <Link
                 className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
@@ -697,7 +751,7 @@ function MomentMoreMenu({
               </form>
             ) : (
               <ReportDialog
-                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
+                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-bold text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
                 isAuthenticated={isAuthenticated}
                 locale={locale}
                 redirectPath={`/footprints/${moment.id}`}
@@ -770,23 +824,26 @@ export function FeedCard({
       >
         <div>
           <div className="flex items-start gap-3 px-0 pb-2 pt-1">
-            <Link
-              href={withLocale(locale, `/profile/${moment.author.id}`)}
-              className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-              aria-label={moment.author.nickname}
+            <UserProfilePreviewPopover
+              avatarUrl={moment.author.avatarUrl}
+              giftSourceContextId={moment.id}
+              giftSourceSurface="MOMENT"
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              nickname={moment.author.nickname}
+              profileId={moment.author.id}
+              triggerClassName="shrink-0 rounded-full"
             >
               <ProfileAvatar
                 avatarUrl={moment.author.avatarUrl}
                 name={moment.author.nickname}
                 className={hasImages ? "h-10 w-10" : undefined}
               />
-            </Link>
+            </UserProfilePreviewPopover>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
+                  <p className="truncate text-[15px] font-bold leading-5 text-[#111210]">
                     {moment.author.nickname}
                   </p>
                   <p className="text-xs font-semibold text-[#6C746A]">
@@ -860,7 +917,7 @@ export function FeedCard({
                 key={comment.id}
                 className="block truncate text-[12px] font-semibold leading-5 text-[#1D1D1B]/78"
               >
-                <span className="font-black text-[#156240]">
+                <span className="font-bold text-[#156240]">
                   {comment.author.nickname}
                 </span>
                 <span className="mx-1">:</span>
@@ -868,7 +925,7 @@ export function FeedCard({
               </span>
             ))}
             {moment.commentCount > 2 ? (
-              <span className="mt-1 block text-[12px] font-black text-[#156240]">
+              <span className="mt-1 block text-[12px] font-bold text-[#156240]">
                 {copy.loadMoreComments}
               </span>
             ) : null}
@@ -923,18 +980,23 @@ export function MomentDetailContent({
     <>
       <article className="pb-5">
         <header className="flex items-start gap-3">
-          <Link
-            href={withLocale(locale, `/profile/${moment.author.id}`)}
-            className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
-            aria-label={moment.author.nickname}
+          <UserProfilePreviewPopover
+            avatarUrl={moment.author.avatarUrl}
+            giftSourceContextId={moment.id}
+            giftSourceSurface="MOMENT"
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            nickname={moment.author.nickname}
+            profileId={moment.author.id}
+            triggerClassName="shrink-0 rounded-full"
           >
             <ProfileAvatar
               avatarUrl={moment.author.avatarUrl}
               name={moment.author.nickname}
             />
-          </Link>
+          </UserProfilePreviewPopover>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
+            <p className="truncate text-[15px] font-bold leading-5 text-[#111210]">
               {moment.author.nickname}
             </p>
             <p className="text-xs font-semibold text-[#6C746A]">
@@ -993,10 +1055,10 @@ export function MomentDetailContent({
 
       <section id="moment-comments" className="border-t border-[#E8E4D4] pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[18px] font-black leading-none text-[#111210]">
+          <h2 className="text-[18px] font-bold leading-none text-[#111210]">
             {copy.commentSheetTitle}
           </h2>
-          <span className="rounded-full bg-[#F3F8EB] px-2.5 py-1 text-xs font-black text-[#156240]">
+          <span className="rounded-full bg-[#F3F8EB] px-2.5 py-1 text-xs font-bold text-[#156240]">
             {moment.commentCount}
           </span>
         </div>
@@ -1012,7 +1074,7 @@ export function MomentDetailContent({
             <div className="bg-white/88 px-4 py-3">
               <Link
                 href={signInHref}
-                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
               >
                 {copy.signInToInteract}
               </Link>
@@ -1031,7 +1093,7 @@ export function MomentDetailContent({
                 />
                 <div className="min-w-0 flex-1 border-b border-[#E8E4D4]/72 pb-4">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-[13px] font-black text-[#111210]">
+                    <p className="truncate text-[13px] font-bold text-[#111210]">
                       {comment.author.nickname}
                     </p>
                     <span className="shrink-0 text-[11px] font-semibold text-[#A49A8E]">
@@ -1059,7 +1121,7 @@ export function MomentDetailContent({
           </div>
         ) : (
           <div className="rounded-[1.15rem] border border-[#E3DCC5] bg-white/72 px-4 py-7 text-center">
-            <p className="text-sm font-black text-[#111210]">
+            <p className="text-sm font-bold text-[#111210]">
               {copy.emptyComments}
             </p>
             <p className="mt-1 text-xs font-semibold text-[#8E8383]">
@@ -1116,7 +1178,7 @@ function OptimisticMomentLikeButton({
           optimisticLike.isLiked ? "fill-current" : null,
         )}
       />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {optimisticLike.count}
       </span>
     </>
@@ -1184,7 +1246,7 @@ function MomentGiftAction({
   const triggerContent = (
     <>
       <Gift className="h-[18px] w-[18px] shrink-0" />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {moment.giftCount}
       </span>
     </>
@@ -1252,7 +1314,7 @@ function SharedMomentPreview({
         </span>
       ) : null}
       <span className="min-w-0 flex-1">
-        <span className="block text-[11px] font-black text-[#156240]">
+        <span className="block text-[11px] font-bold text-[#156240]">
           {copy.originalMoment} · {moment.author.nickname}
         </span>
         <span className="mt-1 line-clamp-2 block text-[13px] font-semibold leading-5 text-[#1D1D1B]/82">
@@ -1296,7 +1358,7 @@ function MomentCommentSheet({
         <header className="px-4 pb-2 pt-3">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#D9D4BE]" />
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-black text-[#111210]">
+            <h2 className="text-[15px] font-bold text-[#111210]">
               {copy.commentSheetTitle}
               <span className="ml-1 text-xs font-bold text-[#8E8383]">
                 {moment.commentCount}
@@ -1323,7 +1385,7 @@ function MomentCommentSheet({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[13px] font-black text-[#111210]">
+                      <p className="truncate text-[13px] font-bold text-[#111210]">
                         {comment.author.nickname}
                       </p>
                       <span className="shrink-0 text-[11px] font-semibold text-[#A49A8E]">
@@ -1357,7 +1419,7 @@ function MomentCommentSheet({
           {hasMore ? (
             <Link
               href={withLocale(locale, `/footprints/${moment.id}`)}
-              className="mx-auto mt-5 flex h-9 w-fit items-center justify-center rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#156240]"
+              className="mx-auto mt-5 flex h-9 w-fit items-center justify-center rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#156240]"
             >
               {copy.loadMoreComments}
             </Link>
@@ -1369,7 +1431,7 @@ function MomentCommentSheet({
           <div className="border-t border-[#E8E4D4]/70 bg-white/88 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             <Link
               href={signInHref}
-              className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+              className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
             >
               {copy.signInToInteract}
             </Link>
@@ -1415,11 +1477,7 @@ function MomentImageGrid({
         <MomentImageFrame
           imageUrl={image.url}
           ratio={
-            isWide
-              ? "aspect-[4/3]"
-              : isTall
-                ? "aspect-[3/4]"
-                : "aspect-square"
+            isWide ? "aspect-[4/3]" : isTall ? "aspect-[3/4]" : "aspect-square"
           }
           onClick={() => onImageClick(0)}
         />
@@ -1490,7 +1548,7 @@ function MomentImageFrame({
         className="absolute inset-0 h-full w-full object-cover"
       />
       {moreCount > 0 ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-[#1D1D1B]/42 text-2xl font-black text-white">
+        <span className="absolute inset-0 flex items-center justify-center bg-[#1D1D1B]/42 text-2xl font-bold text-white">
           +{moreCount}
         </span>
       ) : null}
@@ -1579,7 +1637,7 @@ function MomentImagePreview({
       onClick={onClose}
     >
       <header className="flex h-[calc(env(safe-area-inset-top)+3.5rem)] shrink-0 items-end justify-between px-4 pb-3">
-        <span className="text-sm font-black">
+        <span className="text-sm font-bold">
           {activeIndex + 1}/{images.length}
         </span>
         <button
@@ -1752,7 +1810,7 @@ function MomentCommentInlineAction({
         <input name="momentId" type="hidden" value={momentId} />
         <button
           type="submit"
-          className="text-[11px] font-black text-[#9A2135]/82"
+          className="text-[11px] font-bold text-[#9A2135]/82"
         >
           {copy.delete}
         </button>
@@ -1762,7 +1820,7 @@ function MomentCommentInlineAction({
 
   return (
     <ReportDialog
-      className="h-auto rounded-none bg-transparent px-0 text-[11px] font-black text-[#9A2135]/82 ring-0"
+      className="h-auto rounded-none bg-transparent px-0 text-[11px] font-bold text-[#9A2135]/82 ring-0"
       isAuthenticated={isAuthenticated}
       locale={locale}
       redirectPath={`/footprints/${momentId}`}
@@ -1836,52 +1894,390 @@ const createMomentInitialState: CreateMomentState = {
   },
 };
 
+const maxMomentImageCount = 6;
+const momentImageUploadConcurrency = 3;
+
+type MomentImageUploadErrorCode =
+  | "BUCKET_NOT_AVAILABLE"
+  | "FILE_TOO_LARGE"
+  | "INVALID_IMAGE_CONTENT"
+  | "MISSING_FILE"
+  | "STORAGE_NOT_CONFIGURED"
+  | "UNAUTHORIZED"
+  | "UNSUPPORTED_FILE_TYPE"
+  | "UPLOAD_FAILED";
+
+type MomentImageUploadItem =
+  | {
+      id: string;
+      status: "uploaded";
+      url: string;
+    }
+  | {
+      error?: string;
+      file: File;
+      id: string;
+      previewUrl: string;
+      status: "failed" | "uploading";
+    };
+
 function MomentImageUploadGrid({
   className,
   copy,
   initialUrls,
-  locale,
+  onPendingChange,
 }: {
   className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   initialUrls: string[];
-  locale: string;
+  onPendingChange: (hasPendingUploads: boolean) => void;
 }) {
-  const [urls, setUrls] = useState(initialUrls);
-  const slotCount = Math.min(6, Math.max(1, urls.length + 1));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrlsRef = useRef(new Set<string>());
+  const uploadControllersRef = useRef(new Map<string, AbortController>());
+  const [error, setError] = useState("");
+  const [items, setItems] = useState<MomentImageUploadItem[]>(() =>
+    initialUrls.slice(0, maxMomentImageCount).map((url, index) => ({
+      id: `initial-${index}-${url}`,
+      status: "uploaded",
+      url,
+    })),
+  );
+  const uploadingCount = items.filter(
+    (item) => item.status === "uploading",
+  ).length;
+  const failedUploadItem = items.find((item) => item.status === "failed");
+  const failedUploadError =
+    failedUploadItem?.status === "failed" ? failedUploadItem.error : undefined;
+  const hasPendingUploads = items.some((item) => item.status !== "uploaded");
 
-  function updateUrl(index: number, url: string) {
-    setUrls((current) => {
-      const next = [...current];
+  useEffect(() => {
+    onPendingChange(hasPendingUploads);
+  }, [hasPendingUploads, onPendingChange]);
 
-      next[index] = url;
+  useEffect(
+    () => () => {
+      uploadControllersRef.current.forEach((controller) => controller.abort());
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      uploadControllersRef.current.clear();
+      previewUrlsRef.current.clear();
+    },
+    [],
+  );
 
-      return next.filter(Boolean);
+  function getUploadErrorMessage(code?: string) {
+    if (code === "UNSUPPORTED_FILE_TYPE") {
+      return copy.photoTypeError;
+    }
+
+    if (code === "FILE_TOO_LARGE") {
+      return copy.photoSizeError;
+    }
+
+    if (code === "INVALID_IMAGE_CONTENT") {
+      return copy.photoInvalidContentError;
+    }
+
+    if (code === "STORAGE_NOT_CONFIGURED" || code === "BUCKET_NOT_AVAILABLE") {
+      return copy.photoStorageError;
+    }
+
+    return copy.photoUploadFailed;
+  }
+
+  function releasePreview(previewUrl: string) {
+    if (!previewUrlsRef.current.has(previewUrl)) {
+      return;
+    }
+
+    URL.revokeObjectURL(previewUrl);
+    previewUrlsRef.current.delete(previewUrl);
+  }
+
+  async function uploadItem(
+    item: Extract<MomentImageUploadItem, { file: File }>,
+  ) {
+    const controller = new AbortController();
+    uploadControllersRef.current.set(item.id, controller);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      const response = await fetch("/api/uploads/moment-image", {
+        body: formData,
+        method: "POST",
+        signal: controller.signal,
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: MomentImageUploadErrorCode;
+        url?: string;
+      } | null;
+
+      if (!response.ok || !payload?.url) {
+        const message = getUploadErrorMessage(payload?.error);
+        setItems((current) =>
+          current.map((currentItem) =>
+            currentItem.id === item.id && currentItem.status !== "uploaded"
+              ? { ...currentItem, error: message, status: "failed" }
+              : currentItem,
+          ),
+        );
+        setError(message);
+        return;
+      }
+
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id
+            ? { id: item.id, status: "uploaded", url: payload.url! }
+            : currentItem,
+        ),
+      );
+      window.setTimeout(() => releasePreview(item.previewUrl), 0);
+    } catch (uploadError) {
+      if (
+        uploadError instanceof DOMException &&
+        uploadError.name === "AbortError"
+      ) {
+        return;
+      }
+
+      const message = copy.photoUploadFailed;
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id && currentItem.status !== "uploaded"
+            ? { ...currentItem, error: message, status: "failed" }
+            : currentItem,
+        ),
+      );
+      setError(message);
+    } finally {
+      uploadControllersRef.current.delete(item.id);
+    }
+  }
+
+  async function uploadBatch(
+    batch: Array<Extract<MomentImageUploadItem, { file: File }>>,
+  ) {
+    let nextIndex = 0;
+
+    async function worker() {
+      while (nextIndex < batch.length) {
+        const item = batch[nextIndex];
+        nextIndex += 1;
+
+        if (item) {
+          await uploadItem(item);
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from(
+        { length: Math.min(momentImageUploadConcurrency, batch.length) },
+        () => worker(),
+      ),
+    );
+  }
+
+  function addFiles(fileList: FileList | null) {
+    if (!fileList || uploadingCount > 0) {
+      return;
+    }
+
+    const remainingCount = maxMomentImageCount - items.length;
+
+    if (remainingCount <= 0) {
+      setError(copy.photoLimitError);
+      return;
+    }
+
+    const selectedFiles = Array.from(fileList);
+    const acceptedFiles: File[] = [];
+    const selectionErrors = new Set<string>();
+
+    selectedFiles.forEach((file) => {
+      const validationError = getImageUploadClientValidationError(file);
+
+      if (validationError === "UNSUPPORTED_FILE_TYPE") {
+        selectionErrors.add(copy.photoTypeError);
+        return;
+      }
+
+      if (validationError === "FILE_TOO_LARGE") {
+        selectionErrors.add(copy.photoSizeError);
+        return;
+      }
+
+      if (acceptedFiles.length < remainingCount) {
+        acceptedFiles.push(file);
+      } else {
+        selectionErrors.add(copy.photoLimitError);
+      }
     });
+
+    if (acceptedFiles.length === 0) {
+      setError([...selectionErrors][0] ?? copy.photoUploadFailed);
+      return;
+    }
+
+    const timestamp = Date.now();
+    const uploadItems = acceptedFiles.map((file, index) => {
+      const previewUrl = URL.createObjectURL(file);
+      previewUrlsRef.current.add(previewUrl);
+
+      return {
+        file,
+        id: `${timestamp}-${index}-${file.name}-${file.lastModified}`,
+        previewUrl,
+        status: "uploading" as const,
+      };
+    });
+
+    setError([...selectionErrors].join(" "));
+    setItems((current) => [...current, ...uploadItems]);
+    void uploadBatch(uploadItems);
+  }
+
+  function removeItem(item: MomentImageUploadItem) {
+    if (item.status === "uploading") {
+      return;
+    }
+
+    if (item.status === "failed") {
+      releasePreview(item.previewUrl);
+    }
+
+    setItems((current) =>
+      current.filter((currentItem) => currentItem.id !== item.id),
+    );
+    setError("");
+  }
+
+  function retryItem(item: Extract<MomentImageUploadItem, { file: File }>) {
+    if (item.status !== "failed" || uploadingCount > 0) {
+      return;
+    }
+
+    const retryingItem = {
+      ...item,
+      error: undefined,
+      status: "uploading" as const,
+    };
+    setError("");
+    setItems((current) =>
+      current.map((currentItem) =>
+        currentItem.id === item.id ? retryingItem : currentItem,
+      ),
+    );
+    void uploadBatch([retryingItem]);
   }
 
   return (
-    <div className={cn("flex min-w-0 flex-wrap gap-2", className)}>
-      {Array.from({ length: slotCount }).map((_, index) => (
-        <ActivityCoverUpload
-          key={index}
-          buttonOnlyUntilUploaded
-          splitPreviewBelow
-          initialUrl={urls[index] ?? ""}
-          label={copy.addPhoto}
-          locale={locale}
-          name="imageUrls"
-          onChange={(url) => updateUrl(index, url)}
-          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-black text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
-          splitEmptyContainerClassName="contents"
-          splitEmptyIconClassName="h-7 w-7 text-[#156240]/62 shadow-none"
-          splitPreviewButtonClassName="h-20 sm:h-20"
-          splitPreviewCardClassName="shadow-none"
-          splitPreviewClassName="h-20 w-20 shrink-0"
-          splitRemoveButtonClassName="right-1 top-1 bg-white/92 px-2 py-1 text-[10px] text-[#9A2135] shadow-none ring-1 ring-[#E3DCC5] backdrop-blur-0 hover:bg-white"
-          uploadEndpoint="/api/uploads/moment-image"
-        />
-      ))}
+    <div className={cn("min-w-0", className)}>
+      <input
+        ref={inputRef}
+        accept={acceptedImageInputTypes}
+        className="hidden"
+        disabled={uploadingCount > 0 || items.length >= maxMomentImageCount}
+        multiple
+        onChange={(event) => {
+          addFiles(event.target.files);
+          event.target.value = "";
+        }}
+        type="file"
+      />
+      {items
+        .filter((item) => item.status === "uploaded")
+        .map((item) => (
+          <input
+            key={item.id}
+            name="imageUrls"
+            type="hidden"
+            value={item.url}
+          />
+        ))}
+
+      <div className="flex min-w-0 flex-wrap gap-2">
+        {items.map((item) => {
+          const imageUrl =
+            item.status === "uploaded" ? item.url : item.previewUrl;
+
+          return (
+            <div
+              key={item.id}
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F1F2EC] ring-1 ring-[#E3DCC5]"
+            >
+              {/* Local previews and uploaded photos both need native URL support. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                src={imageUrl}
+              />
+
+              {item.status === "uploading" ? (
+                <span className="absolute inset-0 grid place-items-center bg-[#111210]/38 text-white">
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                </span>
+              ) : null}
+
+              {item.status === "failed" ? (
+                <button
+                  aria-label={copy.photoRetry}
+                  className="absolute inset-0 grid place-items-center bg-[#9A2135]/58 text-white transition hover:bg-[#9A2135]/68"
+                  onClick={() => retryItem(item)}
+                  title={copy.photoRetry}
+                  type="button"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </button>
+              ) : null}
+
+              {item.status !== "uploading" ? (
+                <button
+                  aria-label={copy.photoRemove}
+                  className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/92 text-[#9A2135] shadow-sm ring-1 ring-[#E3DCC5] transition active:scale-95"
+                  onClick={() => removeItem(item)}
+                  title={copy.photoRemove}
+                  type="button"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {items.length < maxMomentImageCount ? (
+          <button
+            aria-label={copy.addPhoto}
+            className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-bold text-[#156240] transition hover:bg-[#F1F2EC] active:scale-[0.98] disabled:cursor-wait disabled:opacity-55"
+            disabled={uploadingCount > 0}
+            onClick={() => inputRef.current?.click()}
+            title={copy.addPhoto}
+            type="button"
+          >
+            {uploadingCount > 0 ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImagePlus className="h-4 w-4" />
+            )}
+            <span>{copy.addPhoto}</span>
+          </button>
+        ) : null}
+      </div>
+
+      {uploadingCount > 0 ? (
+        <p className="mt-2 text-xs font-semibold text-[#6C746A]" role="status">
+          {copy.photoUploading(uploadingCount)}
+        </p>
+      ) : error || failedUploadError ? (
+        <p className="mt-2 text-xs font-semibold text-[#9A2135]" role="alert">
+          {error || failedUploadError}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1918,7 +2314,7 @@ function MomentVisibilitySelector({
     >
       <button
         type="button"
-        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-2.5 text-[11px] font-black text-[#156240]/82 transition active:scale-[0.98]"
+        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-2.5 text-[11px] font-bold text-[#156240]/82 transition active:scale-[0.98]"
         onClick={() => setIsOpen((current) => !current)}
         aria-label={copy.visibilityLabel}
       >
@@ -1938,7 +2334,7 @@ function MomentVisibilitySelector({
 
       {isOpen ? (
         <div className="absolute right-0 z-20 mt-2 w-32 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 shadow-[0_16px_34px_rgba(21,98,64,0.14)]">
-          <p className="px-3 py-1.5 text-[10px] font-black text-[#8E8383]">
+          <p className="px-3 py-1.5 text-[10px] font-bold text-[#8E8383]">
             {copy.visibilityLabel}
           </p>
           {options.map((option) => (
@@ -1946,7 +2342,7 @@ function MomentVisibilitySelector({
               key={option.value}
               type="button"
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-black transition",
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
                 value === option.value
                   ? "bg-[#F3F8EB] text-[#156240]"
                   : "text-[#1D1D1B]/72",
@@ -1976,6 +2372,7 @@ function MomentComposer({
   profile: FootprintsViewerProfile | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasPendingImageUploads, setHasPendingImageUploads] = useState(false);
   const [visibility, setVisibility] = useState<"FRIENDS" | "PUBLIC">("PUBLIC");
   const [state, formAction, isPending] = useActionState(
     createMomentAction,
@@ -2038,7 +2435,8 @@ function MomentComposer({
       <div className="flex w-full items-center gap-3">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-wait disabled:opacity-60"
+          disabled={hasPendingImageUploads}
           onClick={() => setIsExpanded(false)}
           aria-label={copy.composer}
         >
@@ -2047,7 +2445,7 @@ function MomentComposer({
             name={profile.nickname}
           />
           <div className="min-w-0 flex-1">
-            <p className="min-w-0 text-[15px] font-black leading-5 text-[#111210]">
+            <p className="min-w-0 text-[15px] font-bold leading-5 text-[#111210]">
               {copy.composerTitle}
             </p>
           </div>
@@ -2075,21 +2473,22 @@ function MomentComposer({
           className="flex-1"
           copy={copy}
           initialUrls={state.ok ? [] : (state.values?.imageUrls ?? [])}
-          locale={locale}
+          onPendingChange={setHasPendingImageUploads}
         />
 
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70 transition active:scale-[0.98]"
+            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#1D1D1B]/70 transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
+            disabled={hasPendingImageUploads}
             onClick={() => setIsExpanded(false)}
           >
             {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
           </button>
           <button
             type="submit"
-            disabled={isPending}
-            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
+            disabled={isPending || hasPendingImageUploads}
+            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
           >
             {isPending ? copy.composerSubmitting : copy.composerSubmit}
           </button>
@@ -2118,13 +2517,13 @@ function FootprintsAuthPrompt({
 }) {
   return (
     <section className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-5 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)]">
-      <p className="text-[16px] font-black leading-6 text-[#111210]">{title}</p>
+      <p className="text-[16px] font-bold leading-6 text-[#111210]">{title}</p>
       <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-[#8E8383]">
         {description}
       </p>
       <Link
         href={href}
-        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
       >
         {actionLabel}
       </Link>
@@ -2138,17 +2537,70 @@ function FootprintsMessageList({
   friends,
   hasError,
   locale,
+  officialMessages,
+  planetChats,
 }: {
   currentUserProfileId: string;
   activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
+  officialMessages: OfficialMessageRosterViewModel | null;
+  planetChats: PlanetChatRosterItemViewModel[];
 }) {
   const t = getDirectMessagesCopy(locale);
   const pageCopy = getFootprintsCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState<MessageRosterFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<PlanetChatListFilter>("all");
+  const [hasRestoredListState, setHasRestoredListState] = useState(false);
+  const returnHref = useMemo(
+    () =>
+      buildPlanetChatListReturnHref({
+        filter: activeFilter,
+        locale,
+        query: searchTerm,
+      }),
+    [activeFilter, locale, searchTerm],
+  );
+
+  useEffect(() => {
+    const restoredState = getPlanetChatListState(window.location.search);
+    const restoredHref = buildPlanetChatListReturnHref({
+      ...restoredState,
+      locale,
+    });
+    const savedScrollPosition = window.sessionStorage.getItem(
+      getPlanetChatListScrollStorageKey(restoredHref),
+    );
+
+    setActiveFilter(restoredState.filter);
+    setSearchTerm(restoredState.query);
+    setHasRestoredListState(true);
+
+    if (savedScrollPosition) {
+      window.sessionStorage.removeItem(
+        getPlanetChatListScrollStorageKey(restoredHref),
+      );
+      window.requestAnimationFrame(() => {
+        window.scrollTo({
+          behavior: "instant",
+          top: Number(savedScrollPosition) || 0,
+        });
+      });
+    }
+  }, [locale]);
+
+  useEffect(() => {
+    if (!hasRestoredListState) {
+      return;
+    }
+
+    const currentHref = window.location.pathname + window.location.search;
+
+    if (currentHref !== returnHref) {
+      window.history.replaceState(window.history.state, "", returnHref);
+    }
+  }, [hasRestoredListState, returnHref]);
   const sortedEntries = useMemo(() => {
     const directEntries = friends.map((friend) => ({
       kind: "direct" as const,
@@ -2166,6 +2618,11 @@ function FootprintsMessageList({
           friend.lastMessageAt ??
           friend.createdAt,
       ).getTime(),
+      hasContent: Boolean(friend.lastMessage),
+      isFollowing: friend.isFollowing,
+      isMutual: friend.isMutualFollow,
+      isOfficial: friend.friend.isOfficial,
+      isPinned: friend.isPinned,
       friend,
     }));
     const roomEntries = activityRoomChats.map((room) => ({
@@ -2180,82 +2637,105 @@ function FootprintsMessageList({
         .filter(Boolean)
         .join(" "),
       sortTime: new Date(room.lastMessage?.createdAt ?? room.startAt).getTime(),
+      hasContent: Boolean(room.lastMessage),
+      isFollowing: false,
+      isMutual: false,
+      isOfficial: false,
+      isPinned: room.isPinned,
       room,
     }));
+    const planetEntries = planetChats.map((planet) => ({
+      kind: "planet" as const,
+      id: `planet:${planet.id}`,
+      searchText: [
+        planet.name,
+        ...planet.tags,
+        planet.lastMessage?.body,
+        planet.lastMessage?.senderName,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      sortTime: new Date(
+        planet.lastMessage?.createdAt ?? planet.joinedAt,
+      ).getTime(),
+      hasContent: Boolean(planet.lastMessage),
+      isFollowing: false,
+      isMutual: false,
+      isOfficial: false,
+      isPinned: planet.isPinned,
+      planet,
+    }));
+    const officialEntries = officialMessages
+      ? [
+          {
+            kind: "official" as const,
+            id: officialMessages.id,
+            searchText: [
+              officialMessages.title,
+              officialMessages.preview,
+              "Friemi official 官方 officiel",
+            ].join(" "),
+            sortTime: new Date(officialMessages.publishedAt).getTime(),
+            hasContent: true,
+            isFollowing: false,
+            isMutual: false,
+            isOfficial: true,
+            isPinned: false,
+            official: officialMessages,
+          },
+        ]
+      : [];
 
-    return [...directEntries, ...roomEntries].sort(
+    return [
+      ...directEntries,
+      ...roomEntries,
+      ...planetEntries,
+      ...officialEntries,
+    ].sort(
       (entryA, entryB) =>
-        entryB.sortTime - entryA.sortTime || entryA.id.localeCompare(entryB.id),
+        Number(entryB.isPinned) - Number(entryA.isPinned) ||
+        entryB.sortTime - entryA.sortTime ||
+        entryA.id.localeCompare(entryB.id),
     );
-  }, [activityRoomChats, friends]);
-  const defaultVisibleEntries = useMemo(
+  }, [activityRoomChats, friends, officialMessages, planetChats]);
+  const visibleEntries = useMemo(
     () =>
-      sortedEntries.filter((entry) =>
-        entry.kind === "direct"
-          ? Boolean(entry.friend.lastMessage)
-          : Boolean(entry.room.lastMessage),
-      ),
-    [sortedEntries],
+      filterUnifiedChatRosterEntries(sortedEntries, activeFilter, searchTerm),
+    [activeFilter, searchTerm, sortedEntries],
   );
-  const filteredEntries = useMemo(() => {
-    if (activeFilter === "following") {
-      return sortedEntries.filter(
-        (entry) => entry.kind === "direct" && entry.friend.isFollowing,
-      );
-    }
-
-    if (activeFilter === "followers") {
-      return sortedEntries.filter(
-        (entry) => entry.kind === "direct" && entry.friend.targetFollowsViewer,
-      );
-    }
-
-    if (activeFilter === "mutual") {
-      return sortedEntries.filter(
-        (entry) => entry.kind === "direct" && entry.friend.isMutualFollow,
-      );
-    }
-
-    if (activeFilter === "rooms") {
-      return sortedEntries.filter((entry) => entry.kind === "room");
-    }
-
-    return defaultVisibleEntries;
-  }, [activeFilter, defaultVisibleEntries, sortedEntries]);
-  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
-  const visibleEntries = useMemo(() => {
-    if (!normalizedSearchTerm) {
-      return filteredEntries;
-    }
-
-    return filteredEntries.filter((entry) =>
-      entry.searchText.toLocaleLowerCase().includes(normalizedSearchTerm),
-    );
-  }, [filteredEntries, normalizedSearchTerm]);
   const directUnreadTotal = friends.reduce(
-    (total, friend) => total + friend.unreadCount,
+    (total, friend) => total + (friend.isMuted ? 0 : friend.unreadCount),
     0,
   );
   const roomUnreadTotal = activityRoomChats.reduce(
-    (total, room) => total + room.unreadCount,
+    (total, room) => total + (room.isMuted ? 0 : room.unreadCount),
+    0,
+  );
+  const planetUnreadTotal = planetChats.reduce(
+    (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
     0,
   );
   const mutualUnreadTotal = friends
-    .filter((friend) => friend.isMutualFollow)
+    .filter((friend) => friend.isMutualFollow && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const followingUnreadTotal = friends
-    .filter((friend) => friend.isFollowing)
+    .filter((friend) => friend.isFollowing && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
+  const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
   const filters: Array<{
     count: number;
     icon: ComponentType<{ className?: string }>;
     iconClassName: string;
     iconFrameClassName: string;
-    key: MessageRosterFilter;
+    key: PlanetChatListFilter;
     label: string;
   }> = [
     {
-      count: directUnreadTotal + roomUnreadTotal,
+      count:
+        directUnreadTotal +
+        roomUnreadTotal +
+        planetUnreadTotal +
+        officialUnreadTotal,
       icon: MessageCircle,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2263,7 +2743,7 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.all,
     },
     {
-      count: roomUnreadTotal,
+      count: roomUnreadTotal + planetUnreadTotal,
       icon: UsersRound,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2286,9 +2766,17 @@ function FootprintsMessageList({
       key: "following",
       label: pageCopy.messageFilters.following,
     },
+    {
+      count: officialUnreadTotal,
+      icon: BadgeCheck,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "official",
+      label: pageCopy.messageFilters.official,
+    },
   ];
   const toolbar = (
-    <div className="mt-4">
+    <div className="mt-4 lg:sticky lg:top-24 lg:mt-0 lg:self-start">
       <div className="flex items-center gap-2.5">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
           <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
@@ -2309,7 +2797,7 @@ function FootprintsMessageList({
           <Search className="h-4 w-4" />
         </Link>
       </div>
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] lg:grid lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
         {filters.map((filter) => {
           const isActive = activeFilter === filter.key;
           const Icon = filter.icon;
@@ -2319,7 +2807,7 @@ function FootprintsMessageList({
               key={filter.key}
               type="button"
               className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-black transition duration-150 active:scale-[0.98]",
+                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-bold transition duration-150 active:scale-[0.98] lg:w-full lg:justify-start",
                 isActive
                   ? "border-[#156240] bg-[#156240] text-white"
                   : "border border-[#E7E2D6] bg-white text-[#111210]",
@@ -2360,21 +2848,26 @@ function FootprintsMessageList({
   );
   if (hasError) {
     return (
-      <section>
+      <section className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         {toolbar}
-        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-4 text-sm font-semibold leading-6 text-[#777A74]">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-4 text-sm font-semibold leading-6 text-[#777A74] lg:mt-0">
           {t.emptyListDescription}
         </div>
       </section>
     );
   }
 
-  if (friends.length === 0 && activityRoomChats.length === 0) {
+  if (
+    friends.length === 0 &&
+    activityRoomChats.length === 0 &&
+    !officialMessages &&
+    planetChats.length === 0
+  ) {
     return (
-      <section>
+      <section className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         {toolbar}
-        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6">
-          <h2 className="text-[16px] font-black leading-6 text-[#111210]">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 lg:mt-0">
+          <h2 className="text-[16px] font-bold leading-6 text-[#111210]">
             {t.emptyFriendListTitle}
           </h2>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#777A74]">
@@ -2386,10 +2879,10 @@ function FootprintsMessageList({
   }
 
   return (
-    <section>
+    <section className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
       {toolbar}
       {visibleEntries.length > 0 ? (
-        <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent">
+        <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent lg:mt-0">
           {visibleEntries.map((entry) =>
             entry.kind === "direct" ? (
               <FootprintsMessageRow
@@ -2397,24 +2890,100 @@ function FootprintsMessageList({
                 currentUserProfileId={currentUserProfileId}
                 friend={entry.friend}
                 locale={locale}
-                showBackFollowAction={activeFilter === "followers"}
+                showBackFollowAction={false}
               />
-            ) : (
+            ) : entry.kind === "official" ? (
+              <FootprintsOfficialMessageRow
+                key={entry.id}
+                locale={locale}
+                official={entry.official}
+              />
+            ) : entry.kind === "room" ? (
               <FootprintsRoomChatRow
                 key={entry.id}
                 locale={locale}
                 room={entry.room}
               />
+            ) : (
+              <FootprintsPlanetChatRow
+                key={entry.id}
+                locale={locale}
+                planet={entry.planet}
+                returnHref={returnHref}
+              />
             ),
           )}
         </div>
       ) : (
-        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74] lg:mt-0">
           {t.emptyListTitle}
         </div>
       )}
     </section>
   );
+}
+
+function FootprintsOfficialMessageRow({
+  locale,
+  official,
+}: {
+  locale: string;
+  official: OfficialMessageRosterViewModel;
+}) {
+  const unreadBadgeText =
+    official.unreadCount > 99 ? "99+" : String(official.unreadCount);
+
+  return (
+    <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
+      <Link
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={withLocale(locale, "/official-messages")}
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#156240] text-white">
+          <BadgeCheck className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
+              {official.title}
+            </span>
+            <span className="shrink-0 text-[11px] font-semibold text-[#8F9189]">
+              {formatChatListTimestamp(official.publishedAt, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                official.unreadCount > 0
+                  ? "font-bold text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {official.preview}
+            </span>
+            {official.unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
+  );
+}
+
+function getUnreadMentionPreview(locale: string, kind: "ALL" | "ME") {
+  if (locale === "fr") {
+    return kind === "ALL" ? "[@tout le monde]" : "[Vous avez été mentionné]";
+  }
+
+  if (locale === "en") {
+    return kind === "ALL" ? "[@everyone]" : "[Mentioned you]";
+  }
+
+  return kind === "ALL" ? "[@所有人]" : "[有人@我]";
 }
 
 function FootprintsRoomChatRow({
@@ -2428,18 +2997,32 @@ function FootprintsRoomChatRow({
   const lastMessage = room.lastMessage;
   const unreadCount = room.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
-  const preview = lastMessage
-    ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
-        lastMessage.body.trim() || t.imageMessage
-      }`
-    : t.roomChatEmptyPreview;
+  const showUnreadBadge = unreadCount > 0 && !room.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && room.isMuted;
+  const mentionPreview = room.unreadMention
+    ? getUnreadMentionPreview(locale, room.unreadMention.kind)
+    : null;
+  const preview =
+    mentionPreview ??
+    (lastMessage
+      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+          lastMessage.body.trim() || t.imageMessage
+        }`
+      : t.roomChatEmptyPreview);
   const time = lastMessage?.createdAt ?? room.startAt;
 
   return (
-    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+    <article
+      className={cn(
+        "group flex min-w-0 items-center transition-colors",
+        room.isPinned
+          ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
+          : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
+      )}
+    >
       <Link
         aria-label={t.openRoomChat(room.title)}
-        className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
@@ -2458,33 +3041,206 @@ function FootprintsRoomChatRow({
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-start gap-2">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[14px] font-black leading-5 text-[#111210]">
+              <span className="block truncate text-[14px] font-bold leading-5 text-[#111210]">
                 {room.title}
               </span>
             </span>
             <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-              {formatChatListTimestamp(time, locale)}
+              <span className="inline-flex items-center gap-1">
+                {room.isPinned ? (
+                  <Pin
+                    aria-label={t.pinConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {room.isMuted ? (
+                  <BellOff
+                    aria-label={t.muteConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {formatChatListTimestamp(time, locale)}
+              </span>
             </span>
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-2">
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[13px] leading-5",
-                unreadCount > 0
-                  ? "font-black text-[#111210]"
-                  : "font-semibold text-[#5F635E]",
+                mentionPreview
+                  ? "font-bold text-[#D63B68]"
+                  : showUnreadBadge
+                    ? "font-bold text-[#111210]"
+                    : "font-semibold text-[#5F635E]",
               )}
             >
               {preview}
             </span>
-            {unreadCount > 0 ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+            {showUnreadBadge ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
+            ) : showMutedUnreadDot ? (
+              <span
+                aria-label={t.mutedUnreadLabel}
+                className="h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                title={t.mutedUnreadLabel}
+              />
             ) : null}
           </span>
         </span>
       </Link>
+      <ChatRosterDismissButton
+        activityId={room.id}
+        className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        kind="activity"
+        locale={locale}
+      />
+    </article>
+  );
+}
+
+function FootprintsPlanetChatRow({
+  locale,
+  planet,
+  returnHref,
+}: {
+  locale: string;
+  planet: PlanetChatRosterItemViewModel;
+  returnHref: string;
+}) {
+  const t = getDirectMessagesCopy(locale);
+  const lastMessage = planet.lastMessage;
+  const unreadCount = planet.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !planet.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && planet.isMuted;
+  const mentionPreview = planet.unreadMention
+    ? getUnreadMentionPreview(locale, planet.unreadMention.kind)
+    : null;
+  const planetLabel =
+    locale === "fr"
+      ? "Discussion de planète"
+      : locale === "en"
+        ? "Planet chat"
+        : "星球群聊";
+  const emptyPreview =
+    locale === "fr"
+      ? "Aucun message"
+      : locale === "en"
+        ? "No messages yet"
+        : "还没有消息";
+  const preview =
+    mentionPreview ??
+    (lastMessage
+      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+          lastMessage.body.trim() || t.imageMessage
+        }`
+      : emptyPreview);
+  const time = lastMessage?.createdAt ?? planet.joinedAt;
+  const href = `${withLocale(locale, `/planets/${planet.slug}/chat`)}?returnTo=${encodeURIComponent(returnHref)}`;
+
+  return (
+    <article
+      className={cn(
+        "group flex min-w-0 items-center transition-colors",
+        planet.isPinned
+          ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
+          : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
+      )}
+    >
+      <Link
+        aria-label={`${planetLabel}: ${planet.name}`}
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={href}
+        onClick={() => {
+          window.sessionStorage.setItem(
+            getPlanetChatListScrollStorageKey(returnHref),
+            String(window.scrollY),
+          );
+        }}
+      >
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
+            {planet.coverImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt=""
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+                src={planet.coverImageUrl}
+              />
+            ) : (
+              <Globe2 className="h-5 w-5" />
+            )}
+          </span>
+          <span
+            aria-label={planetLabel}
+            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-[#156240] text-white"
+            title={planetLabel}
+          >
+            <Orbit className="h-3 w-3" />
+          </span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-bold leading-5 text-[#111210]">
+                {planet.name}
+              </span>
+            </span>
+            <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
+              <span className="inline-flex items-center gap-1">
+                {planet.isPinned ? (
+                  <Pin
+                    aria-label={t.pinConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {planet.isMuted ? (
+                  <BellOff
+                    aria-label={t.muteConversation}
+                    className="h-3 w-3 text-[#8F9189]"
+                  />
+                ) : null}
+                {formatChatListTimestamp(time, locale)}
+              </span>
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                mentionPreview
+                  ? "font-bold text-[#D63B68]"
+                  : showUnreadBadge
+                    ? "font-bold text-[#111210]"
+                    : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {preview}
+            </span>
+            {showUnreadBadge ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : showMutedUnreadDot ? (
+              <span
+                aria-label={t.mutedUnreadLabel}
+                className="h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+                title={t.mutedUnreadLabel}
+              />
+            ) : null}
+          </span>
+        </span>
+      </Link>
+      <ChatRosterDismissButton
+        className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        kind="planet"
+        locale={locale}
+        planetId={planet.id}
+        planetSlug={planet.slug}
+      />
     </article>
   );
 }
@@ -2504,6 +3260,8 @@ function FootprintsMessageRow({
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !friend.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
@@ -2526,28 +3284,48 @@ function FootprintsMessageRow({
       />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 flex-1 truncate text-[14px] font-black leading-5 text-[#111210]">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-            {formatChatListTimestamp(time, locale)}
+            <span className="inline-flex items-center gap-1">
+              {friend.isPinned ? (
+                <Pin
+                  aria-label={t.pinConversation}
+                  className="h-3 w-3 text-[#8F9189]"
+                />
+              ) : null}
+              {friend.isMuted ? (
+                <BellOff
+                  aria-label={t.muteConversation}
+                  className="h-3 w-3 text-[#8F9189]"
+                />
+              ) : null}
+              {formatChatListTimestamp(time, locale)}
+            </span>
           </span>
         </span>
         <span className="mt-1 flex min-w-0 items-center gap-2">
           <span
             className={cn(
               "min-w-0 flex-1 truncate text-[13px] leading-5",
-              unreadCount > 0
-                ? "font-black text-[#111210]"
+              showUnreadBadge
+                ? "font-bold text-[#111210]"
                 : "font-semibold text-[#5F635E]",
             )}
           >
             {preview}
           </span>
-          {unreadCount > 0 ? (
-            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+          {showUnreadBadge ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
+          ) : showMutedUnreadDot ? (
+            <span
+              aria-label={t.mutedUnreadLabel}
+              className="h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+              title={t.mutedUnreadLabel}
+            />
           ) : null}
         </span>
       </span>
@@ -2556,9 +3334,9 @@ function FootprintsMessageRow({
   const backFollowAction = shouldShowBackFollow ? (
     <div className="shrink-0 self-center">
       <FollowButton
-        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-bold text-[#156240] shadow-none"
         activeLabel={mutualLabel}
-        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-bold text-[#156240] shadow-none"
         fullWidth={false}
         inactiveLabel={followBackLabel}
         isAuthenticated
@@ -2571,7 +3349,14 @@ function FootprintsMessageRow({
   ) : null;
 
   return (
-    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+    <article
+      className={cn(
+        "group min-w-0 transition-colors",
+        friend.isPinned
+          ? "bg-[#F1F1EF] hover:bg-[#ECEDE9] active:bg-[#E6E7E3]"
+          : "hover:bg-[#FAFAF8] active:bg-[#F7F7F0]",
+      )}
+    >
       {friend.conversationId ? (
         <div className="flex min-w-0 items-center gap-2">
           <Link
@@ -2582,6 +3367,12 @@ function FootprintsMessageRow({
             {content}
           </Link>
           {backFollowAction}
+          <ChatRosterDismissButton
+            className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+            conversationId={friend.conversationId}
+            kind="direct"
+            locale={locale}
+          />
         </div>
       ) : (
         <div className="flex min-w-0 items-center gap-2">
@@ -2621,10 +3412,13 @@ export function FootprintsMobilePage({
   initialTab = "moment",
   locale,
   messageFriends,
+  officialMessages,
   messageRosterError = false,
   momentFeedError = false,
   moments,
   canCreatePlanet,
+  planetChatRosterLoaded,
+  planetChats,
   planets,
   planetSquareError = false,
   profile,
@@ -2643,14 +3437,19 @@ export function FootprintsMobilePage({
   const initialUnreadMessageCount = useMemo(
     () =>
       messageFriends.reduce(
-        (total, friend) => total + friend.unreadCount,
+        (total, friend) => total + (friend.isMuted ? 0 : friend.unreadCount),
         0,
       ) +
       activityRoomChats.reduce(
-        (total, room) => total + room.unreadCount,
+        (total, room) => total + (room.isMuted ? 0 : room.unreadCount),
         0,
-      ),
-    [activityRoomChats, messageFriends],
+      ) +
+      planetChats.reduce(
+        (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
+        0,
+      ) +
+      (officialMessages?.unreadCount ?? 0),
+    [activityRoomChats, messageFriends, officialMessages, planetChats],
   );
   const { unreadDirectMessageCount } = useNotificationBadge(
     initialUnreadMessageCount,
@@ -2747,6 +3546,15 @@ export function FootprintsMobilePage({
 
   function handleTopTabChange(nextTab: FootprintsTab) {
     setActiveTab(nextTab);
+
+    if (nextTab === "message" && profile && !planetChatRosterLoaded) {
+      router.push(
+        withLocale(locale, getFootprintsTabPath(nextTab, feedScope)),
+        { scroll: false },
+      );
+      return;
+    }
+
     updateFootprintsHistoryUrl(locale, nextTab, feedScope, "push");
   }
 
@@ -2794,13 +3602,13 @@ export function FootprintsMobilePage({
       <DirectMessageUnreadCountHydrator
         unreadCount={initialUnreadMessageCount}
       />
-      <main className="min-h-screen bg-white pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
-        <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5">
-            <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
+      <main className="min-h-screen bg-white pb-28 text-[#111210] md:pb-12">
+        <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-7xl md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
+          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5 lg:flex lg:items-end lg:justify-between lg:gap-10 lg:pb-0">
+            <h1 className="pb-3 text-[30px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
               {copy.title}
             </h1>
-            <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center">
+            <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center lg:flex lg:w-[30rem] lg:self-stretch lg:translate-y-0">
               {tabs.map((tab) => {
                 const active = activeTab === tab.key;
 
@@ -2809,7 +3617,7 @@ export function FootprintsMobilePage({
                     key={tab.key}
                     type="button"
                     className={cn(
-                      "relative min-w-0 px-1 pb-3 text-[13px] font-black tracking-normal transition",
+                      "relative min-w-0 px-1 pb-3 text-[13px] font-bold tracking-normal transition lg:flex lg:flex-1 lg:items-end lg:justify-center lg:px-5 lg:pb-5 lg:pt-3 lg:text-sm",
                       active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                     )}
                     onClick={() => handleTopTabChange(tab.key)}
@@ -2818,7 +3626,8 @@ export function FootprintsMobilePage({
                       <span className="block truncate whitespace-nowrap">
                         {tab.label}
                       </span>
-                      {tab.key === "message" && displayedUnreadMessageCount > 0 ? (
+                      {tab.key === "message" &&
+                      displayedUnreadMessageCount > 0 ? (
                         <span
                           aria-label={unreadMessageBadgeText}
                           className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-[#E7457A] ring-2 ring-[#FEFFF9]"
@@ -2838,61 +3647,63 @@ export function FootprintsMobilePage({
           </header>
 
           {activeTab === "moment" ? (
-            <section className="mt-5 space-y-5 md:mt-8">
-              <div className="md:mx-auto md:max-w-2xl">
+            <section className="mt-5 space-y-5 md:mt-8 lg:grid lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+              <div className="space-y-4 lg:sticky lg:top-24">
                 <MomentComposer copy={copy} locale={locale} profile={profile} />
-              </div>
 
-              <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-black text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {feedScopeTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    className={cn(
-                      "h-7 shrink-0 rounded-full px-3.5 transition",
-                      feedScope === tab.key
-                        ? "bg-[#156240] text-white"
-                        : "bg-[#F7F8F4] text-[#156240]",
-                    )}
-                    onClick={() => handleFeedScopeChange(tab.key)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {momentFeedError ? (
-                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
-                  {copy.feedError}
-                </div>
-              ) : scopedMoments.length > 0 ? (
-                <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
-                  {scopedMoments.map((moment) => (
-                    <FeedCard
-                      key={moment.id}
-                      isAuthenticated={isAuthenticated}
-                      locale={locale}
-                      moment={moment}
-                      copy={copy}
-                      viewerProfileId={profile?.id ?? null}
-                    />
+                <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] lg:grid lg:w-full lg:grid-cols-2 lg:gap-2 lg:overflow-visible lg:rounded-none lg:p-0 lg:ring-0 [&::-webkit-scrollbar]:hidden">
+                  {feedScopeTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={cn(
+                        "h-7 shrink-0 rounded-full px-3.5 transition lg:w-full",
+                        feedScope === tab.key
+                          ? "bg-[#156240] text-white"
+                          : "bg-[#F7F8F4] text-[#156240]",
+                      )}
+                      onClick={() => handleFeedScopeChange(tab.key)}
+                    >
+                      {tab.label}
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
-                  <p className="text-[15px] font-black text-[#111210]">
-                    {copy.emptyFeedTitle}
-                  </p>
-                  <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
-                    {copy.emptyFeedDescription}
-                  </p>
-                </div>
-              )}
+              </div>
+
+              <div className="min-w-0">
+                {momentFeedError ? (
+                  <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl lg:max-w-none">
+                    {copy.feedError}
+                  </div>
+                ) : scopedMoments.length > 0 ? (
+                  <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+                    {scopedMoments.map((moment) => (
+                      <FeedCard
+                        key={moment.id}
+                        isAuthenticated={isAuthenticated}
+                        locale={locale}
+                        moment={moment}
+                        copy={copy}
+                        viewerProfileId={profile?.id ?? null}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl lg:max-w-none">
+                    <p className="text-[15px] font-bold text-[#111210]">
+                      {copy.emptyFeedTitle}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
+                      {copy.emptyFeedDescription}
+                    </p>
+                  </div>
+                )}
+              </div>
             </section>
           ) : null}
 
           {activeTab === "message" ? (
-            <section className="md:mx-auto md:max-w-2xl">
+            <section className="md:mx-auto md:max-w-5xl lg:mt-8">
               {profile ? (
                 <FootprintsMessageList
                   currentUserProfileId={profile.id}
@@ -2900,9 +3711,11 @@ export function FootprintsMobilePage({
                   friends={messageFriends}
                   hasError={messageRosterError}
                   locale={locale}
+                  officialMessages={officialMessages}
+                  planetChats={planetChats}
                 />
               ) : (
-                <div className="mt-5">
+                <div className="mt-5 lg:mx-auto lg:max-w-2xl">
                   <FootprintsAuthPrompt
                     actionLabel={copy.signIn}
                     description={copy.guestMessageDescription}
@@ -2915,7 +3728,7 @@ export function FootprintsMobilePage({
           ) : null}
 
           {activeTab === "planet" ? (
-            <section className="mt-5 md:mx-auto md:max-w-3xl">
+            <section className="mt-5 md:mx-auto md:max-w-6xl lg:mt-8">
               {planetSquareError ? (
                 <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
                   {locale === "fr"

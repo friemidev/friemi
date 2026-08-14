@@ -87,6 +87,8 @@ function CompactUserRow({
   const t = getProfileFollowCopy(locale);
   const userInitial = user.nickname.trim().slice(0, 1) || "N";
   const profileHref = withLocale(locale, `/profile/${user.id}`);
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white/88 px-3 py-3 shadow-sm">
@@ -110,6 +112,11 @@ function CompactUserRow({
             <CoCreatorIdentityBadge locale={locale} variant="icon" />
           ) : null}
         </div>
+        {showPublicNickname ? (
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-zinc-500">
+            {user.publicNickname}
+          </p>
+        ) : null}
         <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
           {user.bio ?? t.noBio}
         </p>

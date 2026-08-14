@@ -22,6 +22,7 @@ const accountSettingsCopy = {
     accountSettings: "账号设置",
     accountSecurity: "账号与安全",
     activityPriorityAdmin: "活动权重管理",
+    officialMessagesAdmin: "官方消息发布",
     topNewsAdmin: "Top News 管理",
     language: "语言",
     signOut: "退出登录",
@@ -34,6 +35,7 @@ const accountSettingsCopy = {
     accountSettings: "Account settings",
     accountSecurity: "Account & security",
     activityPriorityAdmin: "Activity priority admin",
+    officialMessagesAdmin: "Official messages",
     topNewsAdmin: "Top News admin",
     language: "Language",
     signOut: "Sign out",
@@ -45,6 +47,7 @@ const accountSettingsCopy = {
     accountSettings: "Parametres du compte",
     accountSecurity: "Compte et securite",
     activityPriorityAdmin: "Priorite des activites",
+    officialMessagesAdmin: "Messages officiels",
     topNewsAdmin: "Admin Top News",
     language: "Langue",
     signOut: "Deconnexion",
@@ -97,7 +100,7 @@ export default async function AccountSettingsPage({
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-        <h1 className="mt-8 text-[2.75rem] font-black leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
+        <h1 className="mt-8 text-[2.75rem] font-bold leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
           {copy.title}
         </h1>
         <p className="mt-3 max-w-[24rem] text-[15px] font-semibold leading-7 text-[#156240]/78 md:text-base">
@@ -114,6 +117,9 @@ export default async function AccountSettingsPage({
             accountSettingsLabel={copy.accountSettings}
             adminActivityPriorityLabel={
               isAdmin ? copy.activityPriorityAdmin : undefined
+            }
+            adminOfficialMessagesLabel={
+              isAdmin ? copy.officialMessagesAdmin : undefined
             }
             adminTopNewsLabel={isAdmin ? copy.topNewsAdmin : undefined}
             locale={locale}

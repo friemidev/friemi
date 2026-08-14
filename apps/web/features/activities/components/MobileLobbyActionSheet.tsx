@@ -140,10 +140,10 @@ export function MobileLobbyActionSheet({
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-sand" />
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-forest">
+            <p className="text-[10px] font-semibold uppercase leading-none tracking-normal text-forest">
               {copy.eyebrow}
             </p>
-            <p className="mt-2 line-clamp-2 text-sm font-extrabold leading-snug text-ink">
+            <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug text-ink">
               {activityTitle}
             </p>
           </div>

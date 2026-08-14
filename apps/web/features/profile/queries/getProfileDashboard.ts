@@ -1,9 +1,9 @@
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
-import type {
-  ActivityVisibility,
-  MomentVisibility,
-  ParticipantStatus,
+import {
   Prisma,
+  type ActivityVisibility,
+  type MomentVisibility,
+  type ParticipantStatus,
 } from "@prisma/client";
 import {
   activityCardSelect,
@@ -27,6 +27,15 @@ import {
   type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
+import {
+  getProfileRemarkMap,
+  getProfileRemarkName,
+  resolveRemarkedProfileName,
+} from "../services/profileRemarks";
+import {
+  buildWerewolfStatsFromGroups,
+  buildWerewolfStatsFromRecords,
+} from "./profileAggregates";
 
 export const profileActivityListLimit = 12;
 export const profileCharmGiftListLimit = 6;
@@ -70,17 +79,39 @@ const publicPastParticipationStatuses: ParticipantStatus[] = [
   "APPROVED",
 ];
 
-const publicProfileSelect = {
+function hasGeneratedPrismaField(modelName: string, fieldName: string) {
+  return Prisma.dmmf.datamodel.models.some(
+    (model) =>
+      model.name === modelName &&
+      model.fields.some((field) => field.name === fieldName),
+  );
+}
+
+const canSelectUserProfileHomeCity = hasGeneratedPrismaField(
+  "UserProfile",
+  "homeCity",
+);
+const canSelectUserProfileNicknameChangedAt = hasGeneratedPrismaField(
+  "UserProfile",
+  "nicknameChangedAt",
+);
+
+const publicProfileBaseSelect = {
   id: true,
   nickname: true,
   friendCode: true,
   avatarUrl: true,
   bio: true,
-  homeCity: true,
   isCoCreator: true,
   presenceStatus: true,
   lastActiveAt: true,
   status: true,
+} satisfies Prisma.UserProfileSelect;
+
+const publicProfileSelect = {
+  ...publicProfileBaseSelect,
+  ...(canSelectUserProfileNicknameChangedAt ? { nicknameChangedAt: true } : {}),
+  ...(canSelectUserProfileHomeCity ? { homeCity: true } : {}),
 } satisfies Prisma.UserProfileSelect;
 
 const profileParticipationSelect = {
@@ -248,6 +279,9 @@ export type ProfileCharmGiftViewModel = {
 export type PublicProfileViewModel = {
   id: string;
   nickname: string;
+  nicknameChangedAt: string | null;
+  publicNickname: string;
+  remarkName: string | null;
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
@@ -261,6 +295,8 @@ export type PublicProfileViewModel = {
 export type ProfileFollowUserViewModel = {
   id: string;
   nickname: string;
+  publicNickname: string;
+  remarkName: string | null;
   bio: string | null;
   avatarUrl: string | null;
   isCoCreator: boolean;
@@ -290,19 +326,28 @@ function mapPublicProfile(
   profile: {
     id: string;
     nickname: string;
+    nicknameChangedAt?: Date | null;
     friendCode: string | null;
     avatarUrl: string | null;
     bio: string | null;
-    homeCity: string | null;
+    homeCity?: string | null;
     isCoCreator: boolean;
     lastActiveAt: Date | null;
     presenceStatus: string | null;
   },
   options: {
     canViewPresence?: boolean;
+    includePrivateFields?: boolean;
+    remarkName?: string | null;
   } = {},
 ): PublicProfileViewModel {
   const hasPublicNickname = profile.nickname.trim().length > 0;
+  const publicNickname = hasPublicNickname
+    ? profile.nickname
+    : profile.friendCode
+      ? `NF ${profile.friendCode}`
+      : "NF";
+  const remarkName = options.remarkName?.trim() || null;
   const presence = getUserPresenceState({
     lastActiveAt: profile.lastActiveAt,
     status: profile.presenceStatus,
@@ -311,11 +356,15 @@ function mapPublicProfile(
 
   return {
     id: profile.id,
-    nickname: hasPublicNickname
-      ? profile.nickname
-      : profile.friendCode
-        ? `NF ${profile.friendCode}`
-        : "NF",
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName,
+    }),
+    nicknameChangedAt: options.includePrivateFields
+      ? (profile.nicknameChangedAt?.toISOString() ?? null)
+      : null,
+    publicNickname,
+    remarkName,
     friendCode: profile.friendCode,
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
@@ -440,46 +489,67 @@ function mapProfileCharmGift(
   };
 }
 
-function mapFollowUser(user: {
-  id: string;
-  nickname: string;
-  bio: string | null;
-  avatarUrl: string | null;
-  isCoCreator: boolean;
-}): ProfileFollowUserViewModel {
+function mapFollowUser(
+  user: {
+    id: string;
+    nickname: string;
+    bio: string | null;
+    avatarUrl: string | null;
+    isCoCreator: boolean;
+  },
+  remarkName?: string | null,
+): ProfileFollowUserViewModel {
+  const publicNickname = user.nickname.trim() || "NF";
+  const normalizedRemarkName = remarkName?.trim() || null;
+
   return {
     id: user.id,
-    nickname: user.nickname,
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName: normalizedRemarkName,
+    }),
+    publicNickname,
+    remarkName: normalizedRemarkName,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     isCoCreator: user.isCoCreator,
   };
 }
 
-function buildWerewolfStats(
-  records: Array<{
-    isJudge: boolean;
-    result: string | null;
-  }>,
-): ProfileWerewolfStatsViewModel {
-  const judgeCount = records.filter((record) => record.isJudge).length;
-  const playerRecords = records.filter((record) => !record.isJudge);
-  const winCount = playerRecords.filter(
-    (record) => record.result === "WIN",
-  ).length;
-  const lossCount = playerRecords.filter(
-    (record) => record.result === "LOSE",
-  ).length;
-  const playerGameCount = playerRecords.length;
+async function getProfileWerewolfStats(profileId: string) {
+  const groups = await prisma.gameToolPlayerRecord.groupBy({
+    by: ["isJudge", "result"],
+    where: {
+      kind: "WEREWOLF",
+      profileId,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+  const stats = buildWerewolfStatsFromGroups(groups);
 
-  return {
-    judgeCount,
-    lossCount,
-    playerGameCount,
-    winCount,
-    winRate:
-      playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
-  };
+  if (process.env.PROFILE_AGGREGATE_SHADOW_COMPARE === "1") {
+    const records = await prisma.gameToolPlayerRecord.findMany({
+      where: {
+        kind: "WEREWOLF",
+        profileId,
+      },
+      select: {
+        isJudge: true,
+        result: true,
+      },
+    });
+    const legacyStats = buildWerewolfStatsFromRecords(records);
+
+    if (JSON.stringify(stats) !== JSON.stringify(legacyStats)) {
+      console.error("Profile werewolf aggregate shadow mismatch", {
+        profileId,
+      });
+    }
+  }
+
+  return stats;
 }
 
 function getTeamActivityWhere(): Prisma.ActivityWhereInput {
@@ -655,71 +725,177 @@ async function getProfileViewerRelationship(
   };
 }
 
-async function getProfileFollowNetwork(
-  profileId: string,
-): Promise<ProfileFollowNetworkViewModel> {
-  const buckets = await getFollowRelationshipBuckets(profileId);
-  const [mutual, followers, following] = await Promise.all([
-    buckets.mutualFollowIds.length > 0
-      ? prisma.userFollow.findMany({
-          where: {
-            followerId: profileId,
-            followingId: {
-              in: buckets.mutualFollowIds,
-            },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-          take: profileFollowListLimit,
-          select: {
-            following: {
-              select: profileFollowUserSelect,
-            },
-          },
-        })
-      : Promise.resolve([]),
-    buckets.followerOnlyIds.length > 0
-      ? prisma.userFollow.findMany({
-          where: {
-            followerId: {
-              in: buckets.followerOnlyIds,
-            },
-            followingId: profileId,
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-          take: profileFollowListLimit,
-          select: {
-            follower: {
-              select: profileFollowUserSelect,
-            },
-          },
-        })
-      : Promise.resolve([]),
-    buckets.followingOnlyIds.length > 0
-      ? prisma.userFollow.findMany({
-          where: {
-            followerId: profileId,
-            followingId: {
-              in: buckets.followingOnlyIds,
-            },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-          take: profileFollowListLimit,
-          select: {
-            following: {
-              select: profileFollowUserSelect,
-            },
-          },
-        })
-      : Promise.resolve([]),
-  ]);
+type ProfileFollowNetworkCountRow = {
+  followersCount: bigint | number;
+  followingCount: bigint | number;
+  mutualCount: bigint | number;
+};
+
+async function getProfileFollowNetworkCounts(profileId: string) {
+  const rows = await prisma.$queryRaw<ProfileFollowNetworkCountRow[]>(
+    Prisma.sql`
+      SELECT
+        (
+          SELECT COUNT(*)::bigint
+          FROM "UserFollow" outgoing
+          WHERE outgoing."followerId" = ${profileId}
+            AND outgoing."followingId" <> ${profileId}
+            AND EXISTS (
+              SELECT 1
+              FROM "UserFollow" reciprocal
+              WHERE reciprocal."followerId" = outgoing."followingId"
+                AND reciprocal."followingId" = ${profileId}
+            )
+        ) AS "mutualCount",
+        (
+          SELECT COUNT(*)::bigint
+          FROM "UserFollow" incoming
+          WHERE incoming."followingId" = ${profileId}
+            AND incoming."followerId" <> ${profileId}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "UserFollow" reciprocal
+              WHERE reciprocal."followerId" = ${profileId}
+                AND reciprocal."followingId" = incoming."followerId"
+            )
+        ) AS "followersCount",
+        (
+          SELECT COUNT(*)::bigint
+          FROM "UserFollow" outgoing
+          WHERE outgoing."followerId" = ${profileId}
+            AND outgoing."followingId" <> ${profileId}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "UserFollow" reciprocal
+              WHERE reciprocal."followerId" = outgoing."followingId"
+                AND reciprocal."followingId" = ${profileId}
+            )
+        ) AS "followingCount"
+    `,
+  );
+  const row = rows[0];
 
   return {
-    mutualCount: buckets.mutualFollowIds.length,
-    followersCount: buckets.followerOnlyIds.length,
-    followingCount: buckets.followingOnlyIds.length,
-    mutual: mutual.map((item) => mapFollowUser(item.following)),
-    followers: followers.map((item) => mapFollowUser(item.follower)),
-    following: following.map((item) => mapFollowUser(item.following)),
+    followersCount: Number(row?.followersCount ?? 0),
+    followingCount: Number(row?.followingCount ?? 0),
+    mutualCount: Number(row?.mutualCount ?? 0),
+  };
+}
+
+async function getProfileFollowNetwork(
+  profileId: string,
+  remarkOwnerProfileId?: string | null,
+): Promise<ProfileFollowNetworkViewModel> {
+  const mutualWhere = {
+    followerId: profileId,
+    followingId: {
+      not: profileId,
+    },
+    following: {
+      following: {
+        some: {
+          followingId: profileId,
+        },
+      },
+    },
+  } satisfies Prisma.UserFollowWhereInput;
+  const followerOnlyWhere = {
+    followerId: {
+      not: profileId,
+    },
+    followingId: profileId,
+    follower: {
+      followers: {
+        none: {
+          followerId: profileId,
+        },
+      },
+    },
+  } satisfies Prisma.UserFollowWhereInput;
+  const followingOnlyWhere = {
+    followerId: profileId,
+    followingId: {
+      not: profileId,
+    },
+    following: {
+      following: {
+        none: {
+          followingId: profileId,
+        },
+      },
+    },
+  } satisfies Prisma.UserFollowWhereInput;
+  const [counts, mutual, followers, following] = await Promise.all([
+    getProfileFollowNetworkCounts(profileId),
+    prisma.userFollow.findMany({
+      where: mutualWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        following: {
+          select: profileFollowUserSelect,
+        },
+      },
+    }),
+    prisma.userFollow.findMany({
+      where: followerOnlyWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        follower: {
+          select: profileFollowUserSelect,
+        },
+      },
+    }),
+    prisma.userFollow.findMany({
+      where: followingOnlyWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        following: {
+          select: profileFollowUserSelect,
+        },
+      },
+    }),
+  ]);
+  const mutualUsers = mutual.map((item) => item.following);
+  const followerUsers = followers.map((item) => item.follower);
+  const followingUsers = following.map((item) => item.following);
+  const remarkMap = await getProfileRemarkMap({
+    ownerProfileId: remarkOwnerProfileId,
+    targetProfileIds: [...mutualUsers, ...followerUsers, ...followingUsers].map(
+      (user) => user.id,
+    ),
+  });
+
+  if (process.env.PROFILE_FOLLOW_NETWORK_SHADOW_COMPARE === "1") {
+    const buckets = await getFollowRelationshipBuckets(profileId);
+    const legacyCounts = {
+      mutualCount: buckets.mutualFollowIds.length,
+      followersCount: buckets.followerOnlyIds.length,
+      followingCount: buckets.followingOnlyIds.length,
+    };
+
+    if (JSON.stringify(counts) !== JSON.stringify(legacyCounts)) {
+      console.error("Profile follow network shadow mismatch", {
+        profileId,
+      });
+    }
+  }
+
+  return {
+    mutualCount: counts.mutualCount,
+    followersCount: counts.followersCount,
+    followingCount: counts.followingCount,
+    mutual: mutualUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
+    followers: followerUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
+    following: followingUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
   };
 }
 
@@ -749,7 +925,7 @@ export async function getProfileDashboard(
     favoriteActivities,
     favoritePublicEvents,
     moments,
-    werewolfRecords,
+    werewolfStats,
     trustScoreAggregate,
     charmBalance,
     recentCharmGifts,
@@ -816,16 +992,7 @@ export async function getProfileDashboard(
       take: profileActivityListLimit,
       select: profileMomentSelect,
     }),
-    prisma.gameToolPlayerRecord.findMany({
-      where: {
-        kind: "WEREWOLF",
-        profileId,
-      },
-      select: {
-        isJudge: true,
-        result: true,
-      },
-    }),
+    getProfileWerewolfStats(profileId),
     getTrustScoreAggregate(profileId),
     prisma.userCharmBalance.findUnique({
       where: {
@@ -843,7 +1010,7 @@ export async function getProfileDashboard(
       take: profileCharmGiftListLimit,
       select: profileCharmGiftSelect,
     }),
-    getProfileFollowNetwork(profileId),
+    getProfileFollowNetwork(profileId, profileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -907,7 +1074,7 @@ export async function getProfileDashboard(
     ),
     recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
-    werewolfStats: buildWerewolfStats(werewolfRecords),
+    werewolfStats,
   };
 }
 
@@ -942,7 +1109,7 @@ export async function getPublicProfileDashboard(
     createdActivities,
     participations,
     moments,
-    werewolfRecords,
+    werewolfStats,
     trustScoreAggregate,
     charmBalance,
     recentCharmGifts,
@@ -975,16 +1142,7 @@ export async function getPublicProfileDashboard(
       take: profileActivityListLimit,
       select: profileMomentSelect,
     }),
-    prisma.gameToolPlayerRecord.findMany({
-      where: {
-        kind: "WEREWOLF",
-        profileId,
-      },
-      select: {
-        isJudge: true,
-        result: true,
-      },
-    }),
+    getProfileWerewolfStats(profileId),
     getTrustScoreAggregate(profileId),
     prisma.userCharmBalance.findUnique({
       where: {
@@ -1002,7 +1160,7 @@ export async function getPublicProfileDashboard(
       take: profileCharmGiftListLimit,
       select: profileCharmGiftSelect,
     }),
-    getProfileFollowNetwork(profileId),
+    getProfileFollowNetwork(profileId, viewerProfileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -1044,7 +1202,7 @@ export async function getPublicProfileDashboard(
     ),
     recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
-    werewolfStats: buildWerewolfStats(werewolfRecords),
+    werewolfStats,
   };
 }
 
@@ -1067,16 +1225,24 @@ export async function getPublicProfileById(
     return null;
   }
 
+  const [relation, remarkName] = await Promise.all([
+    options.viewerProfileId && options.viewerProfileId !== profileId
+      ? getFollowRelationState({
+          targetProfileId: profileId,
+          viewerProfileId: options.viewerProfileId,
+        })
+      : Promise.resolve(null),
+    getProfileRemarkName({
+      ownerProfileId: options.viewerProfileId,
+      targetProfileId: profileId,
+    }),
+  ]);
   const canViewPresence =
-    options.viewerProfileId === profileId ||
-    (options.viewerProfileId
-      ? (
-          await getFollowRelationState({
-            targetProfileId: profileId,
-            viewerProfileId: options.viewerProfileId,
-          })
-        ).isMutualFollow
-      : false);
+    options.viewerProfileId === profileId || Boolean(relation?.isMutualFollow);
 
-  return mapPublicProfile(profile, { canViewPresence });
+  return mapPublicProfile(profile, {
+    canViewPresence,
+    includePrivateFields: options.includePrivateFields,
+    remarkName,
+  });
 }

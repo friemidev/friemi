@@ -1,6 +1,6 @@
 import type { ActivityStatus, ActivityType, ParticipantStatus } from "@prisma/client";
 import { grantSuccessfulActivityBlindBoxFragment } from "@/features/charm/services/charmRewards";
-import { syncProfileAchievements } from "@/features/achievements/services/achievements";
+import { syncActivityAchievements } from "@/features/achievements/services/achievements";
 import { markReferralFirstParticipation } from "@/features/referrals/services/referrals";
 import { prisma } from "@/lib/prisma";
 
@@ -315,7 +315,7 @@ export async function syncActivitySocialRewards({
 
   const [profileSyncResults, referralSyncResults] = await Promise.all([
     Promise.allSettled(
-      profileIdsToSync.map((profileId) => syncProfileAchievements(profileId)),
+      profileIdsToSync.map((profileId) => syncActivityAchievements(profileId)),
     ),
     Promise.allSettled(
       realParticipantProfileIds.map((profileId) =>

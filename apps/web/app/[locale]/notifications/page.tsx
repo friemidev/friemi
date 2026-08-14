@@ -4,6 +4,7 @@ import { NotificationsCenterClient } from "@/features/notifications/components/N
 import { getNotificationCenter } from "@/features/notifications/queries/getNotifications";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
+import { noIndexMetadata } from "@/lib/seo";
 
 type NotificationsPageProps = {
   params: Promise<{
@@ -12,6 +13,7 @@ type NotificationsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
 
 export default async function NotificationsPage({
   params,

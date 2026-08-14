@@ -1,16 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import {
   BadgeCheck,
+  CalendarCheck2,
   Crown,
+  FilePenLine,
+  Gift,
   Handshake,
   PartyPopper,
+  Send,
   ShieldCheck,
   Sparkles,
+  Star,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
-import type { AchievementKey } from "@/features/achievements/achievementCatalog";
+import {
+  getAchievementDefinition,
+  type AchievementKey,
+} from "@/features/achievements/achievementCatalog";
 import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +44,24 @@ const achievementVisuals: Record<AchievementKey, AchievementVisual> = {
     surface: "bg-[#E9F7F3]",
     text: "text-[#007C70]",
   },
+  content_contributor: {
+    icon: FilePenLine,
+    ring: "ring-[#D7C8F5]",
+    surface: "bg-[#F4EEFF]",
+    text: "text-[#7853B2]",
+  },
+  first_gift: {
+    icon: Gift,
+    ring: "ring-[#F5C5D7]",
+    surface: "bg-[#FFF0F3]",
+    text: "text-[#E83F83]",
+  },
+  gift_ambassador: {
+    icon: Send,
+    ring: "ring-[#F5C5D7]",
+    surface: "bg-[#FFF0F3]",
+    text: "text-[#D43D73]",
+  },
   hello_world: {
     icon: PartyPopper,
     ring: "ring-[#F5C5D7]",
@@ -46,11 +74,29 @@ const achievementVisuals: Record<AchievementKey, AchievementVisual> = {
     surface: "bg-[#FFF7DC]",
     text: "text-[#7D641C]",
   },
+  invitation_expert: {
+    icon: UserPlus,
+    ring: "ring-[#F1D59B]",
+    surface: "bg-[#FFF7DC]",
+    text: "text-[#9A6C0F]",
+  },
   open_minded: {
     icon: BadgeCheck,
     ring: "ring-[#C8D9F5]",
     surface: "bg-[#EEF5FF]",
     text: "text-[#143376]",
+  },
+  popularity_star: {
+    icon: Star,
+    ring: "ring-[#F5C5D7]",
+    surface: "bg-[#FFF0F3]",
+    text: "text-[#E83F83]",
+  },
+  punctuality_star: {
+    icon: CalendarCheck2,
+    ring: "ring-[#D7C8F5]",
+    surface: "bg-[#F4EEFF]",
+    text: "text-[#7853B2]",
   },
   trusted_profile: {
     icon: ShieldCheck,
@@ -66,11 +112,17 @@ function getPublicAchievementWallCopy(locale: string) {
       empty: "Aucun badge public pour le moment.",
       title: "Badges publics",
       achievementTitles: {
-        active_guest_20: "Invité actif",
+        active_guest_20: "Joueur actif",
         co_creator: "Co-créateur",
-        hello_world: "Première sortie",
+        content_contributor: "Contributeur de contenu",
+        first_gift: "Premier cadeau",
+        gift_ambassador: "Ambassadeur des cadeaux",
+        hello_world: "Nouveau joueur",
         host_20: "Hôte 20",
-        open_minded: "Esprit ouvert",
+        invitation_expert: "Expert des invitations",
+        open_minded: "Organisateur ouvert",
+        popularity_star: "Étoile populaire",
+        punctuality_star: "Étoile de ponctualité",
         trusted_profile: "Profil fiable",
       },
     };
@@ -81,11 +133,17 @@ function getPublicAchievementWallCopy(locale: string) {
       empty: "No public badges yet.",
       title: "Public badges",
       achievementTitles: {
-        active_guest_20: "Active Guest",
+        active_guest_20: "Active Player",
         co_creator: "Co-creator",
-        hello_world: "First Plan",
+        content_contributor: "Content Contributor",
+        first_gift: "First Gift",
+        gift_ambassador: "Gift Ambassador",
+        hello_world: "First-time Player",
         host_20: "Host 20",
-        open_minded: "Open Minded",
+        invitation_expert: "Invitation Expert",
+        open_minded: "Open Host",
+        popularity_star: "Popularity Star",
+        punctuality_star: "Punctuality Star",
         trusted_profile: "Trusted Profile",
       },
     };
@@ -97,9 +155,15 @@ function getPublicAchievementWallCopy(locale: string) {
     achievementTitles: {
       active_guest_20: "活跃玩家",
       co_creator: "共创者",
-      hello_world: "初次见面",
+      content_contributor: "内容贡献者",
+      first_gift: "初次心意",
+      gift_ambassador: "礼物使者",
+      hello_world: "初见玩家",
       host_20: "主理人 20",
+      invitation_expert: "邀请达人",
       open_minded: "开放主理人",
+      popularity_star: "人气之星",
+      punctuality_star: "守约之星",
       trusted_profile: "可信资料",
     },
   };
@@ -138,19 +202,31 @@ export function ProfileAchievementIcon({
   transparent?: boolean;
 }) {
   const visual = achievementVisuals[achievementKey];
+  const imageSrc = getAchievementDefinition(achievementKey)?.imageSrc;
   const Icon = visual.icon;
 
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-[1rem] ring-1",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-[1rem] ring-1",
         transparent ? "bg-transparent" : visual.surface,
         visual.text,
         visual.ring,
         className,
       )}
     >
-      <Icon className={cn("h-5 w-5", iconClassName)} strokeWidth={2.3} />
+      {imageSrc ? (
+        <Image
+          alt=""
+          className="h-full w-full object-contain p-[3px]"
+          height={80}
+          sizes="80px"
+          src={imageSrc}
+          width={80}
+        />
+      ) : (
+        <Icon className={cn("h-5 w-5", iconClassName)} strokeWidth={2.3} />
+      )}
     </span>
   );
 }
@@ -176,12 +252,7 @@ export function ProfileAchievementBadgeStrip({
   }
 
   return (
-    <div
-      className={cn(
-        "flex max-w-full flex-wrap gap-1.5",
-        className,
-      )}
-    >
+    <div className={cn("flex max-w-full flex-wrap gap-1.5", className)}>
       {visibleItems.map((item) => {
         const title = getAchievementTitle(copy, item);
         const active = activeKey === item.definition.key;
@@ -192,13 +263,11 @@ export function ProfileAchievementBadgeStrip({
             aria-expanded={active}
             aria-label={title}
             className={cn(
-              "relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/84 text-[11px] font-black text-[#111210] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+              "relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/84 text-[11px] font-bold text-[#111210] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
               active ? "z-20" : "",
             )}
             key={item.definition.key}
-            onClick={() =>
-              setActiveKey(active ? null : item.definition.key)
-            }
+            onClick={() => setActiveKey(active ? null : item.definition.key)}
             title={title}
           >
             <ProfileAchievementIcon
@@ -207,7 +276,7 @@ export function ProfileAchievementBadgeStrip({
               iconClassName="h-3.5 w-3.5"
             />
             {active ? (
-              <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[9rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+              <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[9rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
                 {title}
               </span>
             ) : null}
@@ -215,7 +284,7 @@ export function ProfileAchievementBadgeStrip({
         );
       })}
       {moreCount > 0 ? (
-        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#F8F4EA] px-3 text-[11px] font-black text-[#6C746A] ring-1 ring-[#E3DCC5]">
+        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#F8F4EA] px-3 text-[11px] font-bold text-[#6C746A] ring-1 ring-[#E3DCC5]">
           +{moreCount}
         </span>
       ) : null}
@@ -242,7 +311,7 @@ export function ProfilePublicAchievementWall({
 
   return (
     <section className="mt-5">
-      <h2 className="text-sm font-black text-[#111210]">{copy.title}</h2>
+      <h2 className="text-sm font-bold text-[#111210]">{copy.title}</h2>
       <div className="mt-3 grid gap-2">
         {items.slice(0, 4).map((item) => (
           <div
@@ -254,7 +323,7 @@ export function ProfilePublicAchievementWall({
               className="h-11 w-11"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-[#111210]">
+              <p className="truncate text-sm font-bold text-[#111210]">
                 {getAchievementTitle(copy, item)}
               </p>
               <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">

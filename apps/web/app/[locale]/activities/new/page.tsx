@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import {
   ensureCurrentUserProfile,
   getOptionalCurrentUserProfileSnapshot,
@@ -13,6 +14,7 @@ import { normalizeActivityFilterValues } from "@/features/activities/utils/activ
 import { getSignInHref } from "@/lib/auth-redirect";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
 type NewActivityPageProps = {
   params: Promise<{
@@ -24,6 +26,16 @@ type NewActivityPageProps = {
     return?: string | string[];
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: NewActivityPageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/activities/new"),
+  });
+}
 
 function getMobileCreateHeaderCopy(locale: string) {
   if (locale === "fr") {

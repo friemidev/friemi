@@ -961,19 +961,19 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   className="h-14 w-11 shrink-0 rounded-[0.9rem] object-contain shadow-sm sm:h-16 sm:w-12"
                 />
                 <div className="min-w-0">
-                  <p className="text-[0.66rem] font-black uppercase tracking-[0.26em] text-forest">
+                  <p className="text-[0.66rem] font-bold uppercase tracking-normal text-forest">
                     {copy.heroEyebrow}
                   </p>
-                  <h1 className="mt-1 text-xl font-black leading-tight text-forest sm:text-2xl">
+                  <h1 className="mt-1 text-xl font-bold leading-tight text-forest sm:text-2xl">
                     {copy.assistantTitle}
                   </h1>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full border border-coral/35 bg-cream px-3 py-1 text-xs font-black text-danger">
+              <span className="shrink-0 rounded-full border border-coral/35 bg-cream px-3 py-1 text-xs font-bold text-danger">
                 {copy.v01}
               </span>
             </div>
-            <h2 className="mt-4 max-w-full break-words text-2xl font-black leading-[1.08] text-ink sm:mt-6 sm:text-3xl">
+            <h2 className="mt-4 max-w-full break-words text-2xl font-bold leading-[1.08] text-ink sm:mt-6 sm:text-3xl">
               {copy.title}
             </h2>
             <p className="mt-3 text-sm font-medium leading-6 text-forest/75 sm:mt-4 sm:leading-7">
@@ -986,7 +986,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   className="rounded-[1.1rem] border border-sage/25 bg-white/62 px-3 py-2.5 shadow-sm"
                   key={rule.label}
                 >
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-forest/70">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-normal text-forest/70">
                     {rule.label}
                   </p>
                   <p className="mt-1 text-xs font-semibold leading-5 text-ink/72">
@@ -1007,7 +1007,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
           </div>
 
           <nav className="avalon-rise min-w-0 max-w-full overflow-hidden rounded-[1.35rem] border border-sage/40 bg-white/74 p-2 shadow-sm [animation-delay:80ms] sm:rounded-[1.5rem] sm:p-3">
-            <p className="px-2 pb-2 text-xs font-black uppercase tracking-[0.2em] text-forest">
+            <p className="px-2 pb-2 text-xs font-bold uppercase tracking-normal text-forest">
               {flow.activeStep}
             </p>
             <div className="flex max-w-full gap-2 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0">
@@ -1024,10 +1024,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                       : "border-sage/30 bg-paper/76 text-forest hover:border-forest/45",
                   )}
                 >
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/82 text-[0.68rem] font-black text-forest lg:h-7 lg:w-7 lg:text-xs">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/82 text-[0.68rem] font-bold text-forest lg:h-7 lg:w-7 lg:text-xs">
                     {index + 1}
                   </span>
-                  <span className="text-xs font-black lg:text-sm">{step.label}</span>
+                  <span className="text-xs font-bold lg:text-sm">{step.label}</span>
                 </button>
               ))}
             </div>
@@ -1037,10 +1037,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
         <main className="avalon-rise min-w-0 max-w-full overflow-hidden rounded-[1.5rem] border border-sage/45 bg-white/78 p-4 shadow-[0_18px_60px_rgb(var(--friemi-forest-rgb)/0.1)] [animation-delay:120ms] sm:rounded-[1.9rem] sm:p-5 lg:min-h-[38rem] lg:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-forest">
+              <p className="text-xs font-bold uppercase tracking-normal text-forest">
                 {flow.nextUp}
               </p>
-              <h3 className="mt-2 max-w-full break-words text-2xl font-black leading-tight text-ink sm:text-3xl">
+              <h3 className="mt-2 max-w-full break-words text-2xl font-bold leading-tight text-ink sm:text-3xl">
                 {displayStep === "setup"
                   ? flow.setupTitle
                   : displayStep === "identity"
@@ -1070,7 +1070,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
             <button
               type="button"
               onClick={() => resetGame()}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-sage/45 bg-paper px-4 text-sm font-black text-forest transition hover:-translate-y-0.5 hover:bg-cream"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-sage/45 bg-paper px-4 text-sm font-bold text-forest transition hover:-translate-y-0.5 hover:bg-cream"
             >
               <RotateCcw className="h-4 w-4" />
               {copy.reset}
@@ -1104,7 +1104,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   alt=""
                   className="mx-auto h-8 w-8"
                 />
-                <p className="mt-1 text-xs font-black text-forest">
+                <p className="mt-1 text-xs font-bold text-forest">
                   {formatRound(copy, index)}
                 </p>
                 <p className="mt-1 text-[0.68rem] font-bold text-forest/65">
@@ -1122,10 +1122,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                    <p className="text-xs font-bold uppercase tracking-normal text-forest">
                       {copy.playerCount}
                     </p>
-                    <h4 className="mt-1 text-2xl font-black text-ink">
+                    <h4 className="mt-1 text-2xl font-bold text-ink">
                       {playerCount} {copy.countLabel}
                     </h4>
                   </div>
@@ -1135,7 +1135,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                       setSeed((value) => value + 1);
                       setRevealedSeat(null);
                     }}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-sage/45 bg-white/70 px-4 text-sm font-black text-forest transition hover:-translate-y-0.5"
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-sage/45 bg-white/70 px-4 text-sm font-bold text-forest transition hover:-translate-y-0.5"
                   >
                     <RefreshCcw className="h-4 w-4" />
                     {copy.shuffle}
@@ -1148,7 +1148,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                       type="button"
                       onClick={() => resetGame(count)}
                       className={cn(
-                        "h-12 rounded-full border text-sm font-black transition",
+                        "h-12 rounded-full border text-sm font-bold transition",
                         count === playerCount
                           ? "border-forest bg-forest text-white shadow-[0_8px_20px_rgb(var(--friemi-forest-rgb)/0.18)]"
                           : "border-sage/35 bg-white/70 text-forest hover:border-forest/45",
@@ -1161,7 +1161,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               </section>
 
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                <p className="text-xs font-bold uppercase tracking-normal text-forest">
                   {copy.roleMix}
                 </p>
                 <p className="mt-2 text-sm font-bold leading-6 text-forest/72">
@@ -1185,7 +1185,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               </section>
 
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4 xl:col-span-2">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                <p className="text-xs font-bold uppercase tracking-normal text-forest">
                   {copy.setup}
                 </p>
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -1199,7 +1199,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                       type="button"
                       onClick={() => setMode(value as AvalonMode)}
                       className={cn(
-                        "flex min-h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-black transition",
+                        "flex min-h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-bold transition",
                         mode === value
                           ? "border-forest bg-forest text-white"
                           : "border-sage/35 bg-white/72 text-forest hover:border-forest/45",
@@ -1216,7 +1216,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                 <button
                   type="button"
                   onClick={() => setActiveStep("identity")}
-                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-black text-white shadow-[0_14px_30px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 sm:w-auto"
+                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-bold text-white shadow-[0_14px_30px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 sm:w-auto"
                 >
                   {flow.continueToIdentity}
                   <ArrowRight className="h-4 w-4" />
@@ -1245,7 +1245,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                         type="button"
                         onClick={() => setRevealedSeat(index)}
                         className={cn(
-                          "absolute grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 text-xs font-black shadow-[0_10px_22px_rgb(var(--friemi-forest-rgb)/0.16)] transition hover:scale-105 sm:h-12 sm:w-12",
+                          "absolute grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 text-xs font-bold shadow-[0_10px_22px_rgb(var(--friemi-forest-rgb)/0.16)] transition hover:scale-105 sm:h-12 sm:w-12",
                           isRevealed
                             ? assignment.alignment === "good"
                               ? "border-forest bg-forest text-white"
@@ -1264,10 +1264,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                    <p className="text-xs font-bold uppercase tracking-normal text-forest">
                       {copy.identityPanel}
                     </p>
-                    <h4 className="mt-1 text-2xl font-black text-ink">
+                    <h4 className="mt-1 text-2xl font-bold text-ink">
                       {revealedAssignment
                         ? `${copy.seatLabel} ${revealedAssignment.seat}`
                         : copy.reveal}
@@ -1291,7 +1291,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
-                              "rounded-full px-3 py-1 text-xs font-black",
+                              "rounded-full px-3 py-1 text-xs font-bold",
                               revealedAssignment.alignment === "good"
                                 ? "bg-forest text-white"
                                 : "bg-danger text-white",
@@ -1301,7 +1301,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                               ? copy.goodSide
                               : copy.evilSide}
                           </span>
-                          <span className="min-w-0 break-words text-base font-black text-ink">
+                          <span className="min-w-0 break-words text-base font-bold text-ink">
                             {copy.roleLabels[revealedAssignment.role]}
                           </span>
                         </div>
@@ -1329,7 +1329,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                 <button
                   type="button"
                   onClick={() => setActiveStep("team")}
-                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-black text-white shadow-[0_14px_30px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5"
+                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-bold text-white shadow-[0_14px_30px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5"
                 >
                   {flow.identityDone}
                   <ArrowRight className="h-4 w-4" />
@@ -1353,7 +1353,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                         disabled={disabled}
                         onClick={() => toggleSeat(index)}
                         className={cn(
-                          "min-h-14 rounded-2xl border px-3 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-35",
+                          "min-h-14 rounded-2xl border px-3 text-left text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-35",
                           selected
                             ? "border-forest bg-forest text-white shadow-[0_10px_24px_rgb(var(--friemi-forest-rgb)/0.16)]"
                             : "border-sage/30 bg-white/70 text-forest hover:border-forest/45",
@@ -1372,16 +1372,16 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                    <p className="text-xs font-bold uppercase tracking-normal text-forest">
                       {copy.currentTeam}
                     </p>
-                    <h4 className="mt-1 text-2xl font-black text-ink">
+                    <h4 className="mt-1 text-2xl font-bold text-ink">
                       {selectedSeats.length}/{requiredTeamSize}
                     </h4>
                   </div>
                   <Crown className="h-8 w-8 text-forest" />
                 </div>
-                <p className="mt-3 min-h-12 rounded-2xl border border-sage/30 bg-white/60 px-4 py-3 text-sm font-black leading-6 text-ink">
+                <p className="mt-3 min-h-12 rounded-2xl border border-sage/30 bg-white/60 px-4 py-3 text-sm font-bold leading-6 text-ink">
                   {selectedTeam || copy.selectExactly}
                 </p>
                 <div className="mt-4 grid gap-2">
@@ -1389,7 +1389,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                     type="button"
                     disabled={!canResolveTeam}
                     onClick={rejectTeam}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-coral/40 bg-cream px-4 text-sm font-black text-danger transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-coral/40 bg-cream px-4 text-sm font-bold text-danger transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <img
                       src="/game-tools/avalon/states/vote-reject-card.svg"
@@ -1402,7 +1402,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                     type="button"
                     disabled={!canResolveTeam}
                     onClick={() => setActiveStep("mission")}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-black text-white shadow-[0_12px_26px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Flag className="h-4 w-4" />
                     {flow.teamReady}
@@ -1415,10 +1415,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
           {displayStep === "mission" ? (
             <div className="mt-6 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                <p className="text-xs font-bold uppercase tracking-normal text-forest">
                   {flow.missionReady}
                 </p>
-                <h4 className="mt-2 text-2xl font-black text-ink">
+                <h4 className="mt-2 text-2xl font-bold text-ink">
                   {formatRound(copy, roundIndex)}
                 </h4>
                 <div className="mt-4 grid gap-3">
@@ -1444,19 +1444,19 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
               </section>
 
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-forest">
+                <p className="text-xs font-bold uppercase tracking-normal text-forest">
                   {copy.currentTeam}
                 </p>
-                <p className="mt-2 rounded-2xl border border-sage/30 bg-white/60 px-4 py-3 text-sm font-black leading-6 text-ink">
+                <p className="mt-2 rounded-2xl border border-sage/30 bg-white/60 px-4 py-3 text-sm font-bold leading-6 text-ink">
                   {selectedTeam || copy.selectExactly}
                 </p>
 
                 <div className="mt-4 rounded-[1.35rem] border border-sage/30 bg-white/60 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="text-sm font-black text-forest">
+                    <span className="text-sm font-bold text-forest">
                       {copy.failureCount}
                     </span>
-                    <span className="rounded-full bg-cream px-3 py-1 text-xs font-black text-danger">
+                    <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-danger">
                       {copy.failThreshold}: {requiredFails}
                     </span>
                   </div>
@@ -1467,7 +1467,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                         type="button"
                         onClick={() => setFailCards(count)}
                         className={cn(
-                          "min-h-16 rounded-2xl border text-2xl font-black transition",
+                          "min-h-16 rounded-2xl border text-2xl font-bold transition",
                           failCards === count
                             ? "border-danger bg-danger text-white shadow-[0_12px_24px_rgb(var(--friemi-coral-rgb)/0.22)]"
                             : "border-sage/35 bg-paper text-forest",
@@ -1483,7 +1483,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   <button
                     type="button"
                     onClick={() => setActiveStep("team")}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-sage/45 bg-white/70 px-4 text-sm font-black text-forest transition hover:-translate-y-0.5"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-sage/45 bg-white/70 px-4 text-sm font-bold text-forest transition hover:-translate-y-0.5"
                   >
                     {flow.backToTeam}
                   </button>
@@ -1491,7 +1491,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                     type="button"
                     disabled={!canResolveTeam}
                     onClick={resolveMission}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-black text-white shadow-[0_12px_26px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-bold text-white shadow-[0_12px_26px_rgb(var(--friemi-forest-rgb)/0.2)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <img
                       src="/game-tools/avalon/states/vote-approve-card.svg"
@@ -1514,10 +1514,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   className="h-28 w-28 shrink-0"
                 />
                 <div className="min-w-0">
-                  <p className="text-sm font-black text-forest">
+                  <p className="text-sm font-bold text-forest">
                     {successCount} / 3 {copy.successMission}
                   </p>
-                  <h4 className="mt-2 text-2xl font-black text-ink">
+                  <h4 className="mt-2 text-2xl font-bold text-ink">
                     {flow.assassinationTitle}
                   </h4>
                   <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-forest/72">
@@ -1529,14 +1529,14 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                 <button
                   type="button"
                   onClick={() => finishAssassination("evil")}
-                  className="min-h-12 rounded-full bg-danger px-4 text-sm font-black text-white transition hover:-translate-y-0.5"
+                  className="min-h-12 rounded-full bg-danger px-4 text-sm font-bold text-white transition hover:-translate-y-0.5"
                 >
                   {copy.victoryAssassinated}
                 </button>
                 <button
                   type="button"
                   onClick={() => finishAssassination("good")}
-                  className="min-h-12 rounded-full bg-forest px-4 text-sm font-black text-white transition hover:-translate-y-0.5"
+                  className="min-h-12 rounded-full bg-forest px-4 text-sm font-bold text-white transition hover:-translate-y-0.5"
                 >
                   {copy.victoryFailedAssassination}
                 </button>
@@ -1548,10 +1548,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
             <div className="mt-6 grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
               <section className="rounded-[1.75rem] border border-sage/35 bg-paper/72 p-5 text-center">
                 <Sparkles className="mx-auto h-12 w-12 text-coral" />
-                <p className="mt-4 text-sm font-black uppercase tracking-[0.2em] text-forest">
+                <p className="mt-4 text-sm font-bold uppercase tracking-normal text-forest">
                   {winner ? flow.gameOver : copy.pending}
                 </p>
-                <h4 className="mt-2 text-3xl font-black text-ink">
+                <h4 className="mt-2 text-3xl font-bold text-ink">
                   {winner
                     ? winner.side === "good"
                       ? copy.goodWins
@@ -1564,14 +1564,14 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                 <button
                   type="button"
                   onClick={() => resetGame()}
-                  className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full bg-forest px-6 text-sm font-black text-white"
+                  className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full bg-forest px-6 text-sm font-bold text-white"
                 >
                   {copy.reset}
                 </button>
               </section>
 
               <section className="rounded-[1.75rem] border border-sage/35 bg-paper/72 p-4">
-                <div className="grid grid-cols-2 gap-2 text-sm font-black text-forest sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 text-sm font-bold text-forest sm:grid-cols-4">
                   <MiniStat label={copy.successMission} value={`${successCount}/3`} />
                   <MiniStat label={copy.failMission} value={`${failedCount}/3`} />
                   <MiniStat label={copy.rejectTeam} value={`${rejectCount}/5`} />
@@ -1613,10 +1613,10 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
 
       <section className="border-t border-sage/30 bg-white/55 px-4 py-5 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-sage/35 bg-paper/82 p-4">
-          <p className="max-w-3xl text-xs font-black uppercase tracking-[0.2em] text-forest">
+          <p className="max-w-3xl text-xs font-bold uppercase tracking-normal text-forest">
             {copy.desktopHint}
           </p>
-          <div className="flex items-center gap-2 text-sm font-black text-forest">
+          <div className="flex items-center gap-2 text-sm font-bold text-forest">
             <ArrowRight className="h-4 w-4" />
             {flow.stepRecap}: {timeline.length}
           </div>
@@ -1641,10 +1641,10 @@ function InfoPill({
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[0.68rem] font-black uppercase tracking-[0.12em] text-forest/58">
+        <span className="block text-[0.68rem] font-bold uppercase tracking-normal text-forest/58">
           {label}
         </span>
-        <span className="block truncate text-sm font-black text-ink">{value}</span>
+        <span className="block truncate text-sm font-bold text-ink">{value}</span>
       </span>
     </div>
   );
@@ -1653,10 +1653,10 @@ function InfoPill({
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-sage/25 bg-white/58 px-3 py-2">
-      <span className="block text-[0.68rem] font-black text-forest/58">
+      <span className="block text-[0.68rem] font-bold text-forest/58">
         {label}
       </span>
-      <span className="mt-1 block text-lg font-black text-ink">{value}</span>
+      <span className="mt-1 block text-lg font-bold text-ink">{value}</span>
     </div>
   );
 }

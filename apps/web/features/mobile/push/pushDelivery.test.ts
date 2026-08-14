@@ -45,7 +45,7 @@ test("getNotificationPath routes activity and message notifications correctly", 
       activityId: null,
       type: "CHARM_GIFT_RECEIVED",
     }),
-    "/profile/sender_1",
+    "/profile/gift-wall",
   );
   assert.equal(
     getNotificationPath({
@@ -107,12 +107,12 @@ test("getNotificationCopy includes received gift detail", () => {
     getNotificationCopy({
       actorName: "hoting",
       activityTitle: null,
-      giftText: "🌹 玫瑰 +5",
+      giftText: "🌹 玫瑰 ×5",
       locale: "zh-CN",
       type: "CHARM_GIFT_RECEIVED",
     }),
     {
-      body: "🌹 玫瑰 +5",
+      body: "🌹 玫瑰 ×5",
       title: "hoting 给你送了礼物",
     },
   );

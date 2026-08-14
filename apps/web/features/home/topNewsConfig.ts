@@ -23,14 +23,14 @@ type MobileHomeTopNewsConfigItem = {
 const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
     active: true,
-    href: "/updates/v2_5",
-    id: "v2-5-release",
+    href: "/updates/v2_7",
+    id: "v2-7-release",
     image: "/brand/v2_1/friemi-og-default-1200x630.png",
     order: 10,
     title: {
-      en: "Friemi v2.5 updates",
-      fr: "Nouveautes Friemi v2.5",
-      "zh-CN": "Friemi v2.5 更新",
+      en: "Friemi v2.7 updates",
+      fr: "Nouveautes Friemi v2.7",
+      "zh-CN": "Friemi v2.7 更新",
     },
   },
   {
@@ -83,4 +83,33 @@ export function getFallbackMobileHomeTopNewsItems(locale: string) {
       image: item.image,
       title: getLocalizedTopNewsTitle(item.title, locale),
     }));
+}
+
+function isVersionReleaseItem(item: MobileHomeTopNewsItem) {
+  return (
+    item.href.includes("/updates/") ||
+    /(?:^|-)v\d+(?:[-_.]\d+)+(?:-release)?$/i.test(item.id)
+  );
+}
+
+export function prioritizeLatestVersionTopNewsItem(
+  items: MobileHomeTopNewsItem[],
+  locale: string,
+) {
+  const latestRelease = getFallbackMobileHomeTopNewsItems(locale).find(
+    (item) => item.id === "v2-7-release",
+  );
+
+  if (!latestRelease) return items.slice(0, 8);
+
+  const previousRelease = items.find(isVersionReleaseItem);
+  const nonReleaseItems = items.filter((item) => !isVersionReleaseItem(item));
+
+  return [
+    {
+      ...latestRelease,
+      image: previousRelease?.image ?? latestRelease.image,
+    },
+    ...nonReleaseItems,
+  ].slice(0, 8);
 }

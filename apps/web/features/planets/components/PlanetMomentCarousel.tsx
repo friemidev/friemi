@@ -12,6 +12,7 @@ type PlanetMomentCarouselComment = {
 
 type PlanetMomentCarouselProps = {
   authorName: string;
+  canLike: boolean;
   comments: PlanetMomentCarouselComment[];
   content: string;
   createdAtLabel: string;
@@ -26,6 +27,7 @@ type PlanetMomentCarouselProps = {
 
 export function PlanetMomentCarousel({
   authorName,
+  canLike,
   comments,
   content,
   createdAtLabel,
@@ -37,6 +39,24 @@ export function PlanetMomentCarousel({
   planetId,
   planetSlug,
 }: PlanetMomentCarouselProps) {
+  const copy =
+    locale === "fr"
+      ? {
+          fallback: "Moment marquant",
+          imageAlt: "Moment marquant de la planète",
+          like: "J'aime",
+        }
+      : locale === "en"
+        ? {
+            fallback: "Planet moment",
+            imageAlt: "Planet moment",
+            like: "Like",
+          }
+        : {
+            fallback: "精彩瞬间",
+            imageAlt: "星球精彩瞬间",
+            like: "点赞",
+          };
   const touchStartXRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -75,7 +95,7 @@ export function PlanetMomentCarousel({
   }
 
   return (
-    <div className="rounded-[1.75rem] bg-[#fffefa] p-2 shadow-[0_18px_42px_rgba(54,47,35,0.12)] ring-1 ring-[#e7e0d5]">
+    <div className="w-full">
       <div className="relative overflow-hidden rounded-[1.35rem] bg-[#f6f1ea]">
         {imageUrls.length ? (
           <div
@@ -96,7 +116,11 @@ export function PlanetMomentCarousel({
                 className="relative flex aspect-[4/5] w-full shrink-0 items-center justify-center bg-[#f6f1ea]"
                 key={`${imageUrl}-${index}`}
               >
-                <img alt="星球精彩瞬间" className="max-h-full max-w-full object-contain" src={imageUrl} />
+                <img
+                  alt={copy.imageAlt}
+                  className="max-h-full max-w-full object-contain"
+                  src={imageUrl}
+                />
               </div>
             ))}
           </div>
@@ -107,7 +131,7 @@ export function PlanetMomentCarousel({
         )}
 
         {hasMultipleImages ? (
-          <div className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-black text-[#245f43] shadow-sm backdrop-blur-sm">
+          <div className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-[#245f43] shadow-sm backdrop-blur-sm">
             {activeIndex + 1}/{imageUrls.length}
           </div>
         ) : null}
@@ -142,9 +166,11 @@ export function PlanetMomentCarousel({
         ) : null}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 px-2 pb-1">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-black text-[#1f211e]">{content || "精彩瞬间"}</p>
+          <p className="truncate text-base font-bold text-[#1f211e]">
+            {content || copy.fallback}
+          </p>
           <p className="mt-0.5 text-xs font-semibold text-[#768078]">
             {authorName} · {createdAtLabel}
           </p>
@@ -155,8 +181,9 @@ export function PlanetMomentCarousel({
           <input name="planetSlug" type="hidden" value={planetSlug} />
           <input name="momentId" type="hidden" value={momentId} />
           <button
-            aria-label="点赞"
-            className={`inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full border border-[#eadfd4] bg-white px-3 text-sm font-black shadow-sm ${isLiked ? "text-[#ba4439]" : "text-[#1f211e]"}`}
+            aria-label={copy.like}
+            className={`inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full border border-[#eadfd4] bg-white px-3 text-sm font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-45 ${isLiked ? "text-[#ba4439]" : "text-[#1f211e]"}`}
+            disabled={!canLike}
           >
             <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
             {likeCount || null}

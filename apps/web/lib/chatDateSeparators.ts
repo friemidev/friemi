@@ -8,6 +8,8 @@ function getStartOfLocalDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+export const chatTimeSeparatorIntervalMs = 5 * 60 * 1000;
+
 export function getChatDateKey(value: string) {
   const date = toValidDate(value);
 
@@ -78,6 +80,28 @@ export function formatChatMessageTime(value: string, locale: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+export function shouldShowChatTimeSeparator(
+  createdAt: string,
+  previousCreatedAt?: string,
+) {
+  if (!previousCreatedAt) {
+    return true;
+  }
+
+  if (getChatDateKey(createdAt) !== getChatDateKey(previousCreatedAt)) {
+    return true;
+  }
+
+  const messageTime = new Date(createdAt).getTime();
+  const previousMessageTime = new Date(previousCreatedAt).getTime();
+
+  if (!Number.isFinite(messageTime) || !Number.isFinite(previousMessageTime)) {
+    return false;
+  }
+
+  return messageTime - previousMessageTime >= chatTimeSeparatorIntervalMs;
 }
 
 export function formatChatListTimestamp(value: string, locale: string) {

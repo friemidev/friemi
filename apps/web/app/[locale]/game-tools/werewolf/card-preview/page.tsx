@@ -208,10 +208,10 @@ export default async function WerewolfCardPreviewPage({
 
         <section className="overflow-hidden rounded-[1.75rem] border border-[#3A2A2D] bg-[#101316] text-white shadow-[0_28px_90px_rgba(30,23,24,0.28)]">
           <div className="bg-[radial-gradient(circle_at_50%_18%,rgba(240,195,106,0.16),transparent_34%),linear-gradient(180deg,#15191D,#0C0E10)] p-5 sm:p-7">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#F0C36A]">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#F0C36A]">
               {t.fullscreen}
             </p>
-            <h1 className="mt-3 text-3xl font-black tracking-normal sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-bold tracking-normal sm:text-5xl">
               {t.title}
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-bold leading-6 text-white/66">
@@ -239,10 +239,10 @@ export default async function WerewolfCardPreviewPage({
         <section className="overflow-hidden rounded-[1.75rem] border border-[#3A2A2D] bg-[#101316] text-white shadow-[0_28px_90px_rgba(30,23,24,0.24)]">
           <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,0.75fr)_minmax(22rem,1fr)] lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#F0C36A]">
+              <p className="text-xs font-semibold uppercase tracking-normal text-[#F0C36A]">
                 {t.deathMotion}
               </p>
-              <h2 className="mt-3 text-2xl font-black tracking-normal sm:text-4xl">
+              <h2 className="mt-3 text-2xl font-bold tracking-normal sm:text-4xl">
                 {t.death}
               </h2>
               <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-white/60">
@@ -257,7 +257,7 @@ export default async function WerewolfCardPreviewPage({
         </section>
 
         <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-xl font-black text-[#1E1718]">{t.roles}</h2>
+          <h2 className="text-xl font-bold text-[#1E1718]">{t.roles}</h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {roleCards.map((card) => (
               <PreviewCard
@@ -270,7 +270,7 @@ export default async function WerewolfCardPreviewPage({
         </section>
 
         <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-xl font-black text-[#1E1718]">{t.backs}</h2>
+          <h2 className="text-xl font-bold text-[#1E1718]">{t.backs}</h2>
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12">
             {Array.from({ length: 12 }, (_, index) => index + 1).map(
               (seatNumber) => (
@@ -356,7 +356,7 @@ function FullscreenCardPreview({
           />
         ) : null}
       </div>
-      <p className="mt-3 text-sm font-black text-white/78">{label}</p>
+      <p className="mt-3 text-sm font-semibold text-white/78">{label}</p>
     </div>
   );
 }
@@ -378,7 +378,7 @@ function PreviewCard({
           src={imageSrc}
         />
       </div>
-      <p className="mt-2 max-w-full truncate text-xs font-black text-[#7A1F2B]">
+      <p className="mt-2 max-w-full truncate text-xs font-semibold text-[#7A1F2B]">
         {label}
       </p>
     </div>

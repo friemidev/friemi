@@ -7,6 +7,7 @@ import { getProfileShopGiftRecipients } from "@/features/charm/queries/getProfil
 import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
 import { ProfileShopPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileShopPageProps = {
   params: Promise<{
@@ -15,6 +16,8 @@ type ProfileShopPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 export default async function ProfileShopPage({
   params,
 }: ProfileShopPageProps) {

@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/auto-create-teams-from-hot-activities",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-guest-participations",
+      "schedule": "15 4 * * *"
     }
   ]
 }

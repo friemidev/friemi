@@ -74,7 +74,7 @@ function CheckInButton({
     <button
       aria-busy={pending}
       className={cn(
-        "inline-flex min-h-9 w-auto items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition active:scale-[0.98]",
+        "inline-flex min-h-9 w-auto items-center justify-center gap-1.5 rounded-full px-3 text-xs font-bold transition active:scale-[0.98]",
         checkedIn || requested
           ? "border border-[#8AB68E] bg-[#EAF7EA] text-[#156240]"
           : "bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]",

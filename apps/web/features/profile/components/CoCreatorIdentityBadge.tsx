@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const coCreatorBadgeIcon = "/brand/v2_1/friemi-co-creator-badge.svg";
+const coCreatorBadgeIcon = "/achievement-badges/co-creator.png";
 
 type CoCreatorIdentityBadgeProps = {
   className?: string;

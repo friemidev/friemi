@@ -282,10 +282,10 @@ export function AvalonPublicScreen({
         <div className="relative grid content-between gap-8">
           <header className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-[#156240]">
+              <p className="text-xs font-bold uppercase tracking-normal text-[#156240]">
                 Friemi Avalon
               </p>
-              <h1 className="mt-3 max-w-5xl text-5xl font-black leading-[0.98] tracking-normal text-[#0E2A5A] md:text-7xl">
+              <h1 className="mt-3 max-w-5xl text-5xl font-bold leading-[0.98] tracking-normal text-[#0E2A5A] md:text-7xl">
                 {room.title}
               </h1>
             </div>
@@ -353,7 +353,7 @@ export function AvalonPublicScreen({
                         src={src}
                         width={74}
                       />
-                      <span className="absolute -bottom-2 rounded-full bg-[#FEFFF9] px-3 py-1 text-sm font-black text-[#156240] shadow-sm">
+                      <span className="absolute -bottom-2 rounded-full bg-[#FEFFF9] px-3 py-1 text-sm font-bold text-[#156240] shadow-sm">
                         {t.mission} {index + 1}
                       </span>
                     </div>
@@ -363,7 +363,7 @@ export function AvalonPublicScreen({
 
               <div className="rounded-[2rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-inner">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#FEFFF9] px-3 py-1 text-xs font-black text-[#156240] shadow-sm">
+                  <span className="rounded-full bg-[#FEFFF9] px-3 py-1 text-xs font-bold text-[#156240] shadow-sm">
                     {t.rejects}
                   </span>
                   {Array.from({ length: 5 }, (_, index) => (
@@ -393,7 +393,7 @@ export function AvalonPublicScreen({
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
                         {roundLabel ? (
-                          <span className="absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-[#156240] text-[0.64rem] font-black text-white">
+                          <span className="absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-[#156240] text-[0.64rem] font-bold text-white">
                             {roundLabel}
                           </span>
                         ) : null}
@@ -408,7 +408,7 @@ export function AvalonPublicScreen({
                           <span className="mt-1 flex justify-center gap-1">
                             {seatNumbers.map((seatNumber) => (
                               <span
-                                className="grid h-5 min-w-5 place-items-center rounded-full bg-[#F09182] px-1 text-[0.58rem] font-black text-white"
+                                className="grid h-5 min-w-5 place-items-center rounded-full bg-[#F09182] px-1 text-[0.58rem] font-bold text-white"
                                 key={`${event.id}-${seatNumber}`}
                               >
                                 {seatNumber}
@@ -426,14 +426,14 @@ export function AvalonPublicScreen({
             <div className="relative overflow-hidden rounded-[2rem] border border-[#D6D5B2] bg-white shadow-2xl shadow-[#156240]/10">
               <div className="flex items-center justify-between gap-3 border-b border-[#D6D5B2] bg-[#FEFFF9] px-5 py-3">
                 <div>
-                  <p className="text-[0.66rem] font-black uppercase tracking-[0.18em] text-[#156240]/65">
+                  <p className="text-[0.66rem] font-bold uppercase tracking-normal text-[#156240]/65">
                     {t.current}
                   </p>
-                  <h2 className="text-2xl font-black text-[#0E2A5A]">
+                  <h2 className="text-2xl font-bold text-[#0E2A5A]">
                     {phaseTitle}
                   </h2>
                 </div>
-                <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-sm font-black text-[#156240] shadow-inner">
+                <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-sm font-bold text-[#156240] shadow-inner">
                   {t.mission} {room.state.roundIndex + 1}
                 </span>
               </div>
@@ -442,7 +442,7 @@ export function AvalonPublicScreen({
                 <div className="absolute left-6 top-6 flex gap-1.5">
                   {room.state.proposedTeamSeatNumbers.map((seatNumber) => (
                     <span
-                      className="grid h-8 w-8 place-items-center rounded-full bg-[#F09182] text-xs font-black text-white shadow-lg shadow-[#F09182]/25"
+                      className="grid h-8 w-8 place-items-center rounded-full bg-[#F09182] text-xs font-bold text-white shadow-lg shadow-[#F09182]/25"
                       key={seatNumber}
                     >
                       {seatNumber}
@@ -493,17 +493,17 @@ export function AvalonPublicScreen({
                 key={seat.id}
               >
                 {seat.isHostSeat ? (
-                  <span className="absolute -top-2 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.62rem] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+                  <span className="absolute -top-2 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.62rem] font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
                     HOST
                   </span>
                 ) : null}
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-[#156240] text-lg font-black text-white">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-[#156240] text-lg font-bold text-white">
                   {seat.avatarLabel}
                 </span>
-                <span className="line-clamp-1 max-w-full text-xs font-black text-[#0E2A5A]">
+                <span className="line-clamp-1 max-w-full text-xs font-bold text-[#0E2A5A]">
                   {seat.displayName}
                 </span>
-                <span className="absolute bottom-1 right-2 text-[0.65rem] font-black text-[#156240]/65">
+                <span className="absolute bottom-1 right-2 text-[0.65rem] font-bold text-[#156240]/65">
                   {seat.seatNumber}
                 </span>
               </div>
@@ -513,7 +513,7 @@ export function AvalonPublicScreen({
 
         <aside className="relative grid content-between gap-5">
           <div className="rounded-[2rem] border border-[#D6D5B2] bg-white/84 p-4 text-center shadow-xl shadow-[#156240]/10">
-            <p className="text-5xl font-black tracking-[0.2em] text-[#0E2A5A]">
+            <p className="friemi-tabular text-5xl font-bold tracking-[0.2em] text-[#0E2A5A]">
               {room.code}
             </p>
           </div>
@@ -608,7 +608,7 @@ function AvalonSoundToggle({
   return (
     <button
       className={cn(
-        "relative z-10 -mt-4 ml-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border px-3 text-xs font-black shadow-lg transition hover:-translate-y-0.5",
+        "relative z-10 -mt-4 ml-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border px-3 text-xs font-bold shadow-lg transition hover:-translate-y-0.5",
         enabled
           ? "border-[#8AB68E] bg-[#156240] text-white shadow-[#156240]/18"
           : "border-[#D6D5B2] bg-white/82 text-[#156240]",
@@ -658,16 +658,16 @@ function MissionRevealDeck({
     <div className="border-t border-[#D6D5B2] bg-[#FEFFF9] px-4 py-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[0.66rem] font-black uppercase tracking-[0.18em] text-[#156240]/65">
+          <p className="text-[0.66rem] font-bold uppercase tracking-normal text-[#156240]/65">
             {latestMission ? t.latestReveal : t.missionReveal}
           </p>
-          <h3 className="text-lg font-black text-[#0E2A5A]">
+          <h3 className="text-lg font-bold text-[#0E2A5A]">
             {t.round} {roundIndex + 1}
           </h3>
         </div>
         <span
           className={cn(
-            "rounded-full px-3 py-1 text-xs font-black shadow-sm",
+            "rounded-full px-3 py-1 text-xs font-bold shadow-sm",
             latestMission?.missionResult === "fail"
               ? "bg-[#FFF0EC] text-[#B5301F] ring-1 ring-[#F09182]/45"
               : latestMission
@@ -782,8 +782,8 @@ function PublicStat({
           width={40}
         />
       ) : null}
-      <p className="text-2xl font-black leading-none">{value}</p>
-      <p className="mt-1 text-[0.58rem] font-black uppercase tracking-[0.08em] opacity-70">
+      <p className="text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-[0.58rem] font-bold uppercase tracking-normal opacity-70">
         {label}
       </p>
     </div>

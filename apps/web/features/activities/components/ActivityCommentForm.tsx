@@ -73,7 +73,7 @@ export function ActivityCommentForm({
       ) : null}
 
       <fieldset className="grid gap-2">
-        <legend className="text-xs font-black uppercase tracking-[0.08em] text-[#156240]/70 sm:text-sm sm:normal-case sm:tracking-normal sm:text-zinc-700">
+        <legend className="text-xs font-bold uppercase tracking-normal text-[#156240]/70 sm:text-sm sm:normal-case sm:tracking-normal sm:text-zinc-700">
           {t.typeLabel}
         </legend>
         <div className="grid grid-cols-3 gap-1.5 rounded-full bg-[#F1F2EC] p-1">

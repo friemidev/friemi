@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-08-14T09:32:06.576Z",
+  "target": "https://friemi-7gbyailcx-friemi.vercel.app",
+  "routes": [
+    "/zh-CN/mobile-home",
+    "/api/lobby/swipe?limit=8"
+  ],
+  "settings": {
+    "durationSeconds": 30,
+    "levels": [
+      100
+    ],
+    "thinkMaxMs": 1200,
+    "thinkMinMs": 400,
+    "timeoutMs": 15000
+  },
+  "stages": [
+    {
+      "concurrency": 100,
+      "durationSeconds": 31.02,
+      "requests": 3328,
+      "requestsPerSecond": 107.3,
+      "failed": 0,
+      "errorRate": 0,
+      "latencyMs": {
+        "p50": 88.2,
+        "p75": 139.9,
+        "p95": 269.4,
+        "p99": 577.3,
+        "max": 1779.7
+      },
+      "responseMegabytes": 354.32,
+      "statusCounts": {
+        "200": 3328
+      },
+      "errorCounts": {},
+      "routeCounts": {
+        "/zh-CN/mobile-home": 1665,
+        "/api/lobby/swipe?limit=8": 1663
+      },
+      "routes": {
+        "/zh-CN/mobile-home": {
+          "requests": 1665,
+          "requestsPerSecond": 53.68,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 132.5,
+            "p75": 182.4,
+            "p95": 316.8,
+            "p99": 646.1,
+            "max": 1779.7
+          },
+          "responseMegabytes": 336.54,
+          "statusCounts": {
+            "200": 1665
+          },
+          "errorCounts": {}
+        },
+        "/api/lobby/swipe?limit=8": {
+          "requests": 1663,
+          "requestsPerSecond": 53.62,
+          "failed": 0,
+          "errorRate": 0,
+          "latencyMs": {
+            "p50": 51.7,
+            "p75": 58.3,
+            "p95": 114.9,
+            "p99": 455,
+            "max": 652.7
+          },
+          "responseMegabytes": 17.78,
+          "statusCounts": {
+            "200": 1663
+          },
+          "errorCounts": {}
+        }
+      }
+    }
+  ]
+}

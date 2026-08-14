@@ -209,7 +209,7 @@ export function AndroidAuthReturnRefresh({
     >
       <div className="w-full max-w-[18rem] rounded-[2rem] border border-[#D6D5B2] bg-white/88 px-6 py-7 shadow-[0_24px_80px_rgba(21,98,64,0.16)]">
         <BrandLoader label={copy.title} size="sm" />
-        <p className="mt-3 text-lg font-black leading-tight text-[#0B2B66]">
+        <p className="mt-3 text-lg font-bold leading-tight text-[#0B2B66]">
           {copy.title}
         </p>
         <p className="mt-2 text-sm font-semibold leading-6 text-[#156240]/80">

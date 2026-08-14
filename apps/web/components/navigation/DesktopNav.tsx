@@ -6,8 +6,8 @@ import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   Compass,
+  Globe2,
   House,
-  MessageCircle,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -45,7 +45,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       icon: UsersRound,
     },
     { href: "/activities", label: t.nav.activities, icon: Compass },
-    { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
+    { href: "/footprints", label: t.nav.footprintsShort, icon: Globe2 },
     {
       href: "/activities/new",
       label: t.nav.newActivity,
@@ -80,13 +80,24 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       );
     }
 
+    if (href === "/footprints") {
+      const messagesHref = withLocale(currentLocale, "/messages");
+
+      return (
+        pathname === localizedHref ||
+        pathname.startsWith(`${localizedHref}/`) ||
+        pathname === messagesHref ||
+        pathname.startsWith(`${messagesHref}/`)
+      );
+    }
+
     return (
       pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
     );
   }
 
   return (
-    <nav className="hidden h-full min-w-0 items-center justify-center gap-0 min-[1024px]:flex lg:gap-1">
+    <nav className="hidden h-full min-w-0 items-center justify-center gap-0 md:flex lg:gap-1">
       {items.map((item) => {
         const Icon = item.icon;
         const active = isItemActive(item.href);

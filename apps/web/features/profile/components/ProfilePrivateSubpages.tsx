@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  AlertCircle,
   ArrowLeft,
   BadgeCheck,
   Box,
@@ -52,7 +53,10 @@ import {
   toggleEquippedAchievementAction,
   type ToggleEquippedAchievementState,
 } from "@/features/achievements/actions/equippedAchievementActions";
-import { maxEquippedAchievementCount } from "@/features/achievements/achievementCatalog";
+import {
+  maxEquippedAchievementCount,
+  type AchievementCategory,
+} from "@/features/achievements/achievementCatalog";
 import {
   redeemBlindBoxCheckAction,
   type RedeemBlindBoxCheckState,
@@ -75,6 +79,7 @@ import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfi
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
 import type { ProfileShopGiftRecipient } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
+import { UserProfilePreviewPopover } from "./UserProfilePreviewPopover";
 import { ProfileAchievementIcon } from "./ProfilePublicAchievementWall";
 
 type ReferralStatsViewModel = {
@@ -133,26 +138,41 @@ function getProfilePrivateSubpageCopy(locale: string) {
         worn: "Portés",
       },
       achievementGroups: {
-        identity: "Identité",
-        organization: "Organisation",
-        participation: "Participation",
-        special: "Spécial",
-        start: "Départ",
+        charm: "Charme et cadeaux",
+        community_contribution: "Contribution communautaire",
+        community_identity: "Identité communautaire",
+        legacy: "Badges existants",
+        player_growth: "Progression joueur",
+        social_connection: "Liens sociaux",
       },
       achievementTitles: {
-        active_guest_20: "Invité actif",
+        active_guest_20: "Joueur actif",
         co_creator: "Co-créateur",
-        hello_world: "Première sortie",
+        content_contributor: "Contributeur de contenu",
+        first_gift: "Premier cadeau",
+        gift_ambassador: "Ambassadeur des cadeaux",
+        hello_world: "Nouveau joueur",
         host_20: "Hôte 20",
-        open_minded: "Esprit ouvert",
+        invitation_expert: "Expert des invitations",
+        open_minded: "Organisateur ouvert",
+        popularity_star: "Étoile populaire",
+        punctuality_star: "Étoile de ponctualité",
         trusted_profile: "Profil fiable",
       },
       achievementDescriptions: {
-        active_guest_20: "Rejoindre 20 sorties.",
-        co_creator: "Devenir co-créateur Friemi.",
-        hello_world: "Rejoindre votre première sortie.",
+        active_guest_20: "Participer à 20 sorties Friemi.",
+        co_creator: "Être officiellement reconnu comme co-créateur Friemi.",
+        content_contributor: "Publier 50 moments originaux.",
+        first_gift: "Recevoir un premier cadeau d'un autre joueur.",
+        gift_ambassador: "Offrir des cadeaux à 20 joueurs différents.",
+        hello_world: "Participer à votre première sortie Friemi.",
         host_20: "Organiser 20 sorties.",
-        open_minded: "Organiser votre première sortie.",
+        invitation_expert:
+          "Inviter 15 nouveaux utilisateurs qui terminent leur première sortie.",
+        open_minded: "Publier et terminer une première sortie ouverte.",
+        popularity_star: "Atteindre 1 000 points de charme.",
+        punctuality_star:
+          "Honorer 20 inscriptions consécutives sans annulation tardive ni absence.",
         trusted_profile: "Atteindre un score fiable.",
       },
       bag: {
@@ -299,26 +319,40 @@ function getProfilePrivateSubpageCopy(locale: string) {
         worn: "Worn",
       },
       achievementGroups: {
-        identity: "Identity",
-        organization: "Hosting",
-        participation: "Joining",
-        special: "Special",
-        start: "Start",
+        charm: "Charm and gifting",
+        community_contribution: "Community contribution",
+        community_identity: "Community identity",
+        legacy: "Existing badges",
+        player_growth: "Player growth",
+        social_connection: "Social connection",
       },
       achievementTitles: {
-        active_guest_20: "Active Guest",
+        active_guest_20: "Active Player",
         co_creator: "Co-creator",
-        hello_world: "First Plan",
+        content_contributor: "Content Contributor",
+        first_gift: "First Gift",
+        gift_ambassador: "Gift Ambassador",
+        hello_world: "First-time Player",
         host_20: "Host 20",
-        open_minded: "Open Minded",
+        invitation_expert: "Invitation Expert",
+        open_minded: "Open Host",
+        popularity_star: "Popularity Star",
+        punctuality_star: "Punctuality Star",
         trusted_profile: "Trusted Profile",
       },
       achievementDescriptions: {
-        active_guest_20: "Join 20 plans.",
-        co_creator: "Become a Friemi co-creator.",
-        hello_world: "Join your first plan.",
+        active_guest_20: "Attend 20 Friemi plans.",
+        co_creator: "Be officially recognized as a Friemi co-creator.",
+        content_contributor: "Publish 50 original moments.",
+        first_gift: "Receive your first gift from another player.",
+        gift_ambassador: "Send gifts to 20 different players.",
+        hello_world: "Attend your first Friemi plan.",
         host_20: "Host 20 plans.",
-        open_minded: "Host your first plan.",
+        invitation_expert: "Invite 15 new users who complete their first plan.",
+        open_minded: "Publish and complete your first open plan.",
+        popularity_star: "Reach 1,000 charm points.",
+        punctuality_star:
+          "Attend 20 consecutive registrations without a late cancellation or no-show.",
         trusted_profile: "Reach a trusted profile score.",
       },
       bag: {
@@ -461,26 +495,39 @@ function getProfilePrivateSubpageCopy(locale: string) {
       worn: "佩戴",
     },
     achievementGroups: {
-      identity: "身份",
-      organization: "组织",
-      participation: "参与",
-      special: "特殊",
-      start: "开始",
+      charm: "魅力心意",
+      community_contribution: "社区贡献",
+      community_identity: "社区身份",
+      legacy: "既有成就",
+      player_growth: "玩家成长",
+      social_connection: "社交连接",
     },
     achievementTitles: {
       active_guest_20: "活跃玩家",
       co_creator: "共创者",
-      hello_world: "初次见面",
+      content_contributor: "内容贡献者",
+      first_gift: "初次心意",
+      gift_ambassador: "礼物使者",
+      hello_world: "初见玩家",
       host_20: "主理人 20",
+      invitation_expert: "邀请达人",
       open_minded: "开放主理人",
+      popularity_star: "人气之星",
+      punctuality_star: "守约之星",
       trusted_profile: "可信资料",
     },
     achievementDescriptions: {
       active_guest_20: "参与 20 次聚吧。",
-      co_creator: "成为 Friemi 共创者。",
+      co_creator: "参与早期测试、产品建议或社区建设，由官方授予。",
+      content_contributor: "发布 50 篇原创晒晒。",
+      first_gift: "第一次收到其他玩家赠送的礼物。",
+      gift_ambassador: "向 20 名不同玩家赠送礼物。",
       hello_world: "首次参加聚吧。",
       host_20: "发起 20 次聚吧。",
-      open_minded: "首次发起聚吧。",
+      invitation_expert: "成功邀请 15 名新用户完成首次聚吧。",
+      open_minded: "成功发布并完成至少 1 场开放聚吧。",
+      popularity_star: "魅力值达到 1000 点。",
+      punctuality_star: "连续 20 次报名后正常到场，无临时爽约。",
       trusted_profile: "信用值达到可信等级。",
     },
     bag: {
@@ -717,7 +764,7 @@ function Avatar({
   }
 
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] text-sm font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
       {initial}
     </span>
   );
@@ -781,7 +828,7 @@ export function ProfilePrivatePageShell({
             <ArrowLeft className="h-5 w-5" />
           </Link>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-center text-xl font-black text-[#111210]">
+        <h1 className="min-w-0 flex-1 truncate text-center text-xl font-bold text-[#111210]">
           {title}
         </h1>
         <div className="flex h-10 min-w-10 shrink-0 items-center justify-end">
@@ -806,7 +853,7 @@ export function ProfilePrivatePageShell({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-lg font-black leading-tight text-[#111210]">
+              <p className="truncate text-lg font-bold leading-tight text-[#111210]">
                 {title}
               </p>
               <p className="mt-1 text-xs font-bold leading-5 text-[#5F685F]">
@@ -832,12 +879,12 @@ function MetricPill({
   value: number | string;
 }) {
   return (
-    <div className="min-w-0 rounded-[1.1rem] bg-white/82 px-3 py-3 ring-1 ring-[#E3DCC5]">
-      <div className="flex items-center gap-1.5 text-[11px] font-black text-[#6C746A]">
+    <div className="min-w-0 border-b border-[#E3DCC5]/70 px-1 py-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6C746A]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-2xl font-black leading-none text-[#111210]">
+      <p className="mt-2 truncate text-2xl font-bold leading-none text-[#111210]">
         {value}
       </p>
     </div>
@@ -847,18 +894,27 @@ function MetricPill({
 function StatusPanel({
   description,
   icon: Icon,
+  minimal = false,
   title,
   tone = "green",
 }: {
   description?: string;
   icon: LucideIcon;
+  minimal?: boolean;
   title: string;
   tone?: SubpageTone;
 }) {
   const toneClasses = getToneClasses(tone);
 
   return (
-    <section className="mt-6 rounded-[1.35rem] bg-white/82 px-4 py-8 text-center ring-1 ring-[#E3DCC5]">
+    <section
+      className={cn(
+        "mt-6 px-4 py-8 text-center",
+        minimal
+          ? "border-t border-[#E3DCC5]/70"
+          : "rounded-[1.35rem] bg-white/82 ring-1 ring-[#E3DCC5]",
+      )}
+    >
       <span
         className={cn(
           "mx-auto flex h-12 w-12 items-center justify-center rounded-[1.1rem] ring-1",
@@ -867,7 +923,7 @@ function StatusPanel({
       >
         <Icon className="h-5 w-5" />
       </span>
-      <h2 className="mt-4 text-base font-black text-[#111210]">{title}</h2>
+      <h2 className="mt-4 text-base font-bold text-[#111210]">{title}</h2>
       {description ? (
         <p className="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-[#6C746A]">
           {description}
@@ -928,7 +984,7 @@ function AchievementEquipSubmitButton({
   return (
     <button
       className={cn(
-        "inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black transition active:scale-95 disabled:active:scale-100",
+        "inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-2.5 text-[10px] font-bold transition active:scale-95 disabled:active:scale-100",
         isEquipped
           ? "bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
           : "bg-white text-[#156240] ring-1 ring-[#BFD8B9]",
@@ -989,7 +1045,7 @@ function AchievementEquipControl({
         isEquipped={item.isEquipped}
       />
       {state.formError ? (
-        <p className="max-w-[5rem] text-right text-[10px] font-black leading-4 text-[#9A2135]">
+        <p className="max-w-[5rem] text-right text-[10px] font-bold leading-4 text-[#9A2135]">
           {state.formError}
         </p>
       ) : null}
@@ -997,44 +1053,21 @@ function AchievementEquipControl({
   );
 }
 
-type AchievementGroupKey =
-  | "identity"
-  | "organization"
-  | "participation"
-  | "special"
-  | "start";
+type AchievementGroupKey = AchievementCategory;
 
 const achievementGroupOrder: AchievementGroupKey[] = [
-  "start",
-  "participation",
-  "organization",
-  "identity",
-  "special",
+  "community_identity",
+  "player_growth",
+  "social_connection",
+  "charm",
+  "community_contribution",
+  "legacy",
 ];
 
 function getAchievementGroupKey(
   item: UserAchievementProgressItem,
 ): AchievementGroupKey {
-  if (item.definition.key === "active_guest_20") {
-    return "participation";
-  }
-
-  if (
-    item.definition.key === "open_minded" ||
-    item.definition.key === "host_20"
-  ) {
-    return "organization";
-  }
-
-  if (item.definition.key === "co_creator") {
-    return "special";
-  }
-
-  if (item.definition.key === "trusted_profile") {
-    return "identity";
-  }
-
-  return "start";
+  return item.definition.category;
 }
 
 function getSortedAchievementItems(items: UserAchievementProgressItem[]) {
@@ -1150,7 +1183,7 @@ function RedeemBlindBoxSubmitButton({
       type="submit"
       aria-busy={pending}
       disabled={disabled || pending}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.16)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:shadow-none"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_12px_22px_rgba(21,98,64,0.16)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:shadow-none"
     >
       {pending ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -1215,7 +1248,7 @@ function RedeemFriemiCheckSubmitButton({
       type="submit"
       aria-busy={pending}
       disabled={disabled || pending}
-      className="inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition active:scale-95 disabled:bg-[#C8CBB7]"
+      className="inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white transition active:scale-95 disabled:bg-[#C8CBB7]"
     >
       {pending ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -1277,10 +1310,14 @@ function GiftAvailabilityBadge({
   const disabled = gift.availability === "disabled";
   const locked = gift.availability === "seasonal_locked";
 
+  if (!disabled && !locked) {
+    return null;
+  }
+
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+        "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
         disabled
           ? "bg-[#F3F1EB] text-[#7A8276] ring-[#DFDAC5]"
           : locked
@@ -1297,6 +1334,18 @@ function GiftAvailabilityBadge({
   );
 }
 
+function getShopCharmUnit(locale: string) {
+  if (locale === "fr") {
+    return "charme";
+  }
+
+  if (locale === "en") {
+    return "charm";
+  }
+
+  return "魅力值";
+}
+
 const shopGiftInitialState: SendCharmGiftState = {};
 
 function ShopGiftSubmitButton({
@@ -1310,7 +1359,7 @@ function ShopGiftSubmitButton({
 
   return (
     <button
-      className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -1321,17 +1370,21 @@ function ShopGiftSubmitButton({
 
 function ShopGiftRecipientDialog({
   attemptId,
+  coinBalance,
   gift,
   locale,
   onClose,
+  onBalanceChange,
   onSent,
   open,
   recipients,
 }: {
   attemptId: string;
+  coinBalance: number;
   gift: ProfileShopGiftItem | null;
   locale: string;
   onClose: () => void;
+  onBalanceChange: (balance: number) => void;
   onSent: () => void;
   open: boolean;
   recipients: ProfileShopGiftRecipient[];
@@ -1343,23 +1396,58 @@ function ShopGiftRecipientDialog({
   );
   const router = useRouter();
   const formError = state.attemptId === attemptId ? state.formError : null;
+  const visibleCoinBalance =
+    state.attemptId === attemptId && typeof state.balance === "number"
+      ? state.balance
+      : coinBalance;
+  const charmUnit =
+    locale === "en" ? "charm" : locale === "fr" ? "charme" : "魅力值";
+  const failureTitle =
+    locale === "en"
+      ? "Gift not sent"
+      : locale === "fr"
+        ? "Cadeau non envoyé"
+        : "礼物没有送出";
+  const requiredLabel =
+    locale === "en" ? "Required" : locale === "fr" ? "Requis" : "需要";
 
   useEffect(() => {
     if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
       return;
     }
 
+    if (typeof state.balance === "number") {
+      onBalanceChange(state.balance);
+    }
     onClose();
     onSent();
     router.refresh();
   }, [
     attemptId,
     onClose,
+    onBalanceChange,
     onSent,
     router,
     state.attemptId,
+    state.balance,
     state.eventId,
     state.ok,
+  ]);
+
+  useEffect(() => {
+    if (
+      state.attemptId === attemptId &&
+      state.formError &&
+      typeof state.balance === "number"
+    ) {
+      onBalanceChange(state.balance);
+    }
+  }, [
+    attemptId,
+    onBalanceChange,
+    state.attemptId,
+    state.balance,
+    state.formError,
   ]);
 
   useEffect(() => {
@@ -1402,15 +1490,19 @@ function ShopGiftRecipientDialog({
       >
         <header className="flex items-center justify-between gap-3 border-b border-[#ECE5CD] px-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[25px] leading-none ring-1 ring-[#E8D59D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-transparent text-[25px] leading-none ring-1 ring-[#E8D59D]">
               {gift.emoji}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-base font-black text-[#111210]">
+              <p className="truncate text-base font-bold text-[#111210]">
                 {gift.label}
               </p>
-              <p className="mt-0.5 text-xs font-black text-[#7A8276]">
+              <p className="mt-0.5 text-xs font-bold text-[#7A8276]">
                 {copy.shop.chooseFriend}
+              </p>
+              <p className="mt-1 truncate text-[11px] font-bold text-[#7A8276]">
+                {gift.coinCost ?? "-"} {copy.shop.fc} · +{gift.charmValue}{" "}
+                {charmUnit}
               </p>
             </div>
           </div>
@@ -1425,6 +1517,12 @@ function ShopGiftRecipientDialog({
         </header>
 
         <div className="max-h-[min(70dvh,30rem)] overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EAF5E8] px-3 py-1.5 text-[11px] font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
+            <Coins className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {copy.shop.coinTitle}: {visibleCoinBalance} {copy.shop.fc}
+            </span>
+          </div>
           {recipients.length > 0 ? (
             <div className="grid gap-2">
               {recipients.map((recipient) => (
@@ -1452,7 +1550,7 @@ function ShopGiftRecipientDialog({
                     name={recipient.nickname}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {recipient.nickname}
                     </p>
                     {recipient.friendCode ? (
@@ -1470,15 +1568,27 @@ function ShopGiftRecipientDialog({
             </div>
           ) : (
             <div className="rounded-[1.1rem] bg-[#F8F4EA] px-4 py-7 text-center ring-1 ring-[#E3DCC5]">
-              <p className="text-sm font-black text-[#111210]">
+              <p className="text-sm font-bold text-[#111210]">
                 {copy.shop.noFriends}
               </p>
             </div>
           )}
           {formError ? (
-            <p className="mt-3 rounded-full bg-[#FFF0F3] px-3 py-2 text-xs font-black text-[#9A2135] ring-1 ring-[#F5C5D7]">
-              {formError}
-            </p>
+            <div
+              className="mt-3 flex items-start gap-2 rounded-[1rem] bg-[#FFF0F3] px-3 py-2.5 text-[#9A2135] ring-1 ring-[#F5C5D7]"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 text-xs font-bold leading-5">
+                <p className="font-bold">{failureTitle}</p>
+                <p>{formError}</p>
+                {typeof state.required === "number" ? (
+                  <p className="mt-0.5 text-[#9A2135]/78">
+                    {requiredLabel}: {state.required} {copy.shop.fc}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
       </section>
@@ -1522,6 +1632,7 @@ export function ProfileAchievementsPageView({
           icon={BadgeCheck}
           title={copy.errorTitle}
           description={copy.errorDescription}
+          minimal
           tone="gold"
         />
       ) : null}
@@ -1540,25 +1651,25 @@ export function ProfileAchievementsPageView({
       </section>
 
       {recentUnlocked.length > 0 ? (
-        <section className="mt-6 rounded-[1.35rem] bg-[#FFF9E8] p-3 ring-1 ring-[#E8D59D]">
+        <section className="mt-6 border-t border-[#E8D59D]/62 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8A641A]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#8A641A]">
               {copy.achievements.recent}
             </p>
             <Star className="h-4 w-4 text-[#D69D26]" />
           </div>
-          <div className="mt-3 grid gap-2">
+          <div className="mt-3 divide-y divide-[#EFE0AF]/72">
             {recentUnlocked.map((item) => {
               const text = getAchievementText(item, locale);
 
               return (
                 <div
-                  className="flex items-center gap-3 rounded-[1rem] bg-white/78 px-3 py-2 ring-1 ring-[#EFE0AF]"
+                  className="flex items-center gap-3 py-2.5"
                   key={item.definition.key}
                 >
                   <AchievementIcon item={item} unlocked />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {text.title}
                     </p>
                     <p className="mt-0.5 truncate text-[11px] font-bold text-[#7D641C]">
@@ -1576,10 +1687,10 @@ export function ProfileAchievementsPageView({
         {groupedItems.length > 0 ? (
           groupedItems.map((group) => (
             <section className="grid gap-2" key={group.groupKey}>
-              <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+              <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
                 {copy.achievementGroups[group.groupKey]}
               </h2>
-              <div className="grid gap-3">
+              <div className="divide-y divide-[#E8E1CF]/72">
                 {group.items.map((item) => {
                   const text = getAchievementText(item, locale);
                   const progressWidth = `${Math.round(
@@ -1590,10 +1701,10 @@ export function ProfileAchievementsPageView({
                   return (
                     <article
                       className={cn(
-                        "rounded-[1.2rem] p-3 ring-1",
+                        "py-3",
                         unlocked
-                          ? "bg-white/90 ring-[#E3DCC5]"
-                          : "bg-[#F7F5EA]/82 ring-[#E8E1CF]",
+                          ? "bg-transparent"
+                          : "bg-transparent opacity-82",
                       )}
                       key={item.definition.key}
                     >
@@ -1602,7 +1713,7 @@ export function ProfileAchievementsPageView({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h3 className="truncate text-sm font-black text-[#111210]">
+                              <h3 className="truncate text-sm font-bold text-[#111210]">
                                 {text.title}
                               </h3>
                               <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
@@ -1612,7 +1723,7 @@ export function ProfileAchievementsPageView({
                             <div className="grid shrink-0 justify-items-end gap-1">
                               <span
                                 className={cn(
-                                  "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                                  "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
                                   unlocked
                                     ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                                     : "bg-white text-[#8B907F] ring-[#DFDAC5]",
@@ -1646,7 +1757,7 @@ export function ProfileAchievementsPageView({
                               style={{ width: progressWidth }}
                             />
                           </div>
-                          <p className="mt-1.5 text-right text-[10px] font-black text-[#8B907F]">
+                          <p className="mt-1.5 text-right text-[10px] font-bold text-[#8B907F]">
                             {item.progress}/{item.target}
                           </p>
                         </div>
@@ -1662,6 +1773,7 @@ export function ProfileAchievementsPageView({
             icon={Medal}
             title={copy.achievements.emptyTitle}
             description={copy.achievements.emptyDescription}
+            minimal
             tone="gold"
           />
         )}
@@ -1726,7 +1838,7 @@ function CopyButton({
       type="button"
       disabled={!value}
       onClick={copyValue}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:text-white"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:text-white"
     >
       {copied ? (
         <Check className="h-3.5 w-3.5" />
@@ -1831,7 +1943,7 @@ function ReferralBindSubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
     >
       {pending ? pendingLabel : label}
     </button>
@@ -1863,10 +1975,10 @@ function ReferralInviteBinder({
             name={boundReferral.inviter.nickname}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-black text-[#8B907F]">
+            <p className="truncate text-[11px] font-bold text-[#8B907F]">
               {copy.invite.inviterLabel}
             </p>
-            <p className="mt-0.5 truncate text-sm font-black text-[#111210]">
+            <p className="mt-0.5 truncate text-sm font-bold text-[#111210]">
               {boundReferral.inviter.nickname}
             </p>
             {boundReferral.inviter.friendCode ? (
@@ -1888,7 +2000,7 @@ function ReferralInviteBinder({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-black text-[#111210]">
+          <h2 className="truncate text-sm font-bold text-[#111210]">
             {copy.invite.bindTitle}
           </h2>
           <p className="mt-1 text-xs font-semibold leading-5 text-[#6C746A]">
@@ -1906,7 +2018,7 @@ function ReferralInviteBinder({
           inputMode="numeric"
           maxLength={240}
           placeholder={copy.invite.bindPlaceholder}
-          className="h-10 min-w-0 flex-1 rounded-full bg-[#FEFFF9] px-3 text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A3A48F] focus:ring-[#E83F83]"
+          className="h-10 min-w-0 flex-1 rounded-full bg-[#FEFFF9] px-3 text-sm font-bold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A3A48F] focus:ring-[#E83F83]"
         />
         <ReferralBindSubmitButton
           label={copy.invite.bindSubmit}
@@ -1934,7 +2046,7 @@ function FriemiToast({ message }: { message: string | null }) {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] z-[80] flex justify-center px-5 md:bottom-8">
-      <div className="flex max-w-[19rem] items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-2 text-xs font-black text-[#156240] shadow-[0_16px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#BFD8B9]">
+      <div className="flex max-w-[19rem] items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-2 text-xs font-bold text-[#156240] shadow-[0_16px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#BFD8B9]">
         <Image
           src={brand.logoIconPath}
           alt=""
@@ -2018,10 +2130,10 @@ export function ProfileInvitePageView({
               <Ticket className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-black text-[#8B907F]">
+              <p className="truncate text-[11px] font-bold text-[#8B907F]">
                 Friemi Code
               </p>
-              <p className="mt-1 truncate text-lg font-black text-[#111210]">
+              <p className="mt-1 truncate text-lg font-bold text-[#111210]">
                 {friendCode ? `@${friendCode}` : copy.invite.linkUnavailable}
               </p>
             </div>
@@ -2046,10 +2158,10 @@ export function ProfileInvitePageView({
 
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-sm font-black text-[#111210]">
+            <h2 className="text-sm font-bold text-[#111210]">
               {copy.invite.invited}
             </h2>
-            <span className="rounded-full bg-[#F7F7F0] px-2.5 py-1 text-xs font-black text-[#156240]">
+            <span className="rounded-full bg-[#F7F7F0] px-2.5 py-1 text-xs font-bold text-[#156240]">
               {stats.invitedCount}
             </span>
           </div>
@@ -2066,7 +2178,7 @@ export function ProfileInvitePageView({
                     name={referral.invitee.nickname}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {referral.invitee.nickname}
                     </p>
                     <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
@@ -2142,25 +2254,34 @@ export function ProfileVisitorsPageView({
 
       <section className="mt-6">
         {visitors.length > 0 ? (
-          <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
+          <div className="divide-y divide-[#E8E1CF]">
             {visitors.map((visit) => (
               <div className="flex items-center gap-2 py-3" key={visit.id}>
-                <Link
-                  href={withLocale(locale, `/profile/${visit.visitor.id}`)}
-                  className="flex min-w-0 flex-1 items-center gap-3 transition active:opacity-80"
+                <UserProfilePreviewPopover
+                  avatarUrl={visit.visitor.avatarUrl}
+                  isAuthenticated
+                  locale={locale}
+                  nickname={visit.visitor.nickname}
+                  profileId={visit.visitor.id}
+                  triggerClassName="shrink-0 rounded-full"
                 >
                   <Avatar
                     avatarUrl={visit.visitor.avatarUrl}
                     name={visit.visitor.nickname}
                   />
+                </UserProfilePreviewPopover>
+                <Link
+                  href={withLocale(locale, `/profile/${visit.visitor.id}`)}
+                  className="flex min-w-0 flex-1 items-center transition active:opacity-80"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate text-sm font-black text-[#111210]">
+                      <p className="truncate text-sm font-bold text-[#111210]">
                         {visit.visitor.nickname}
                       </p>
                       <span
                         className={cn(
-                          "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[9px] font-black ring-1",
+                          "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[9px] font-bold ring-1",
                           visit.isFriend
                             ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                             : "bg-[#EEF5FF] text-[#143376] ring-[#C8D9F5]",
@@ -2176,7 +2297,7 @@ export function ProfileVisitorsPageView({
                     </p>
                   </div>
                 </Link>
-                <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-black text-[#143376] ring-1 ring-[#C8D9F5]">
+                <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-bold text-[#143376] ring-1 ring-[#C8D9F5]">
                   {visit.viewCount}
                 </span>
                 <StartDirectConversationButton
@@ -2239,14 +2360,14 @@ export function ProfileBagPageView({
       <section className="mt-6 rounded-[1.25rem] bg-white p-4 ring-1 ring-[#D6D5B2]">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#6C746A]">
               {copy.bag.coinBalance}
             </p>
-            <p className="mt-2 text-3xl font-black leading-none text-[#111210]">
+            <p className="mt-2 text-3xl font-bold leading-none text-[#111210]">
               {bag.coinBalance.balance}
             </p>
           </div>
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
             F
           </span>
         </div>
@@ -2255,7 +2376,7 @@ export function ProfileBagPageView({
             <p className="text-[11px] font-bold text-[#7A8276]">
               {copy.bag.coinEarned}
             </p>
-            <p className="mt-1 truncate text-sm font-black text-[#156240]">
+            <p className="mt-1 truncate text-sm font-bold text-[#156240]">
               {bag.coinBalance.earnedTotal}
             </p>
           </div>
@@ -2263,7 +2384,7 @@ export function ProfileBagPageView({
             <p className="text-[11px] font-bold text-[#7A8276]">
               {copy.bag.coinSpent}
             </p>
-            <p className="mt-1 truncate text-sm font-black text-[#111210]">
+            <p className="mt-1 truncate text-sm font-bold text-[#111210]">
               {bag.coinBalance.spentTotal}
             </p>
           </div>
@@ -2271,7 +2392,7 @@ export function ProfileBagPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
           {copy.bag.checkList}
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -2282,7 +2403,7 @@ export function ProfileBagPageView({
               </span>
               <span
                 className={cn(
-                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-black ring-1",
+                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
                   bag.fragmentBalance.canRedeem
                     ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                     : "bg-white text-[#6C746A] ring-[#DFDAC5]",
@@ -2294,7 +2415,7 @@ export function ProfileBagPageView({
               </span>
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-[#111210]">
+              <p className="truncate text-sm font-bold text-[#111210]">
                 {copy.bag.fragment}
               </p>
               <p className="mt-1 text-xs font-bold text-[#6C746A]">
@@ -2344,7 +2465,7 @@ export function ProfileBagPageView({
                   </span>
                   <span
                     className={cn(
-                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
                       available
                         ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                         : "bg-white text-[#6C746A] ring-[#DFDAC5]",
@@ -2354,11 +2475,11 @@ export function ProfileBagPageView({
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-black leading-5 text-[#111210]">
+                  <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
                     {getCheckTypeCopy(check.type, locale)}
                   </p>
                   {check.coinValue > 0 ? (
-                    <p className="mt-1 text-xs font-black text-[#156240]">
+                    <p className="mt-1 text-xs font-bold text-[#156240]">
                       {copy.bag.checkCoinValue} {check.coinValue}{" "}
                       {copy.bag.coinBalance}
                     </p>
@@ -2393,8 +2514,12 @@ export function ProfileShopPageView({
   negativeGifts: ProfileShopGiftItem[];
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
+  const charmUnit = getShopCharmUnit(locale);
   const [dialogGiftId, setDialogGiftId] = useState<string | null>(null);
   const [dialogAttemptId, setDialogAttemptId] = useState("");
+  const [localCoinBalance, setLocalCoinBalance] = useState(
+    coinBalance.balance,
+  );
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -2428,6 +2553,10 @@ export function ProfileShopPageView({
     [],
   );
 
+  useEffect(() => {
+    setLocalCoinBalance(coinBalance.balance);
+  }, [coinBalance.balance]);
+
   return (
     <ProfilePrivatePageShell
       icon={ShoppingBag}
@@ -2435,7 +2564,7 @@ export function ProfileShopPageView({
       right={
         <button
           aria-label={copy.shop.recharge}
-          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-black text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
+          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-transparent px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
           onClick={() => setRechargeOpen(true)}
           type="button"
         >
@@ -2455,16 +2584,16 @@ export function ProfileShopPageView({
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
               <Coins className="h-6 w-6" />
-              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-black leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
+              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-bold leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
                 FC
               </span>
             </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-black text-[#7A8276]">
+              <p className="truncate text-xs font-bold text-[#7A8276]">
                 {copy.shop.coinTitle}
               </p>
-              <p className="mt-0.5 text-2xl font-black leading-none text-[#111210]">
-                {coinBalance.balance}
+              <p className="mt-0.5 text-2xl font-bold leading-none text-[#111210]">
+                {localCoinBalance}
               </p>
             </div>
           </div>
@@ -2475,7 +2604,7 @@ export function ProfileShopPageView({
       </section>
 
       <section className="mt-7">
-        <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
           {copy.shop.giftCatalog}
         </h2>
         <p className="mt-2 px-1 text-xs font-semibold text-[#7A8276]">
@@ -2495,27 +2624,27 @@ export function ProfileShopPageView({
                   key={gift.id}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#FFF9E8] text-[30px] leading-none ring-1 ring-[#EFE0AF]">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-transparent text-[30px] leading-none ring-1 ring-[#EFE0AF]">
                       {gift.emoji}
                     </span>
                     <GiftAvailabilityBadge gift={gift} locale={locale} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-black text-[#111210]">
+                    <span className="block truncate text-sm font-bold text-[#111210]">
                       {gift.label}
                     </span>
-                    <span className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] font-black">
-                      <span className="truncate rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
+                    <span className="mt-2 grid gap-1.5 text-[11px] font-bold">
+                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
                         {gift.coinCost ?? "-"} {copy.shop.fc}
                       </span>
-                      <span className="truncate rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
-                        +{gift.charmValue}
+                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
+                        +{gift.charmValue} {charmUnit}
                       </span>
                     </span>
                   </span>
                   {locked ? null : (
                     <button
-                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
+                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
                       onClick={() => openGiftDialog(gift.id)}
                       type="button"
                     >
@@ -2540,7 +2669,7 @@ export function ProfileShopPageView({
       {negativeGifts.length > 0 ? (
         <section className="mt-8">
           <div className="flex items-end justify-between gap-3 px-1">
-            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+            <h2 className="text-xs font-bold uppercase tracking-normal text-[#6C746A]">
               {copy.shop.negativeCatalog}
             </h2>
             <span className="text-xs font-bold text-[#9A2135]">
@@ -2554,11 +2683,11 @@ export function ProfileShopPageView({
                 key={gift.id}
               >
                 <span className="text-2xl leading-none">{gift.emoji}</span>
-                <span className="max-w-full truncate text-xs font-black text-[#111210]">
+                <span className="max-w-full truncate text-xs font-bold text-[#111210]">
                   {gift.label}
                 </span>
-                <span className="text-[11px] font-black text-[#9A2135]">
-                  {gift.charmValue}
+                <span className="text-[11px] font-bold text-[#9A2135]">
+                  {gift.charmValue} {charmUnit}
                 </span>
                 <span className="text-[10px] font-bold text-[#7A8276]">
                   {gift.coinCost} {copy.shop.fc}
@@ -2582,10 +2711,10 @@ export function ProfileShopPageView({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7D641C]">
+                <p className="text-xs font-bold uppercase tracking-normal text-[#7D641C]">
                   {copy.shop.rechargeTitle}
                 </p>
-                <h2 className="mt-1 text-xl font-black text-[#111210]">
+                <h2 className="mt-1 text-xl font-bold text-[#111210]">
                   {copy.shop.fc}
                 </h2>
               </div>
@@ -2600,7 +2729,7 @@ export function ProfileShopPageView({
             </div>
 
             <div className="mt-4 rounded-[1rem] bg-[#F8F7F2] px-4 py-3">
-              <p className="text-sm font-black leading-6 text-[#156240]">
+              <p className="text-sm font-bold leading-6 text-[#156240]">
                 {copy.shop.rechargeContact}
               </p>
               <p className="mt-1 text-xs font-semibold leading-5 text-[#7A8276]">
@@ -2621,16 +2750,16 @@ export function ProfileShopPageView({
                   key={plan.priceEur}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-black text-[#111210]">
+                    <span className="text-sm font-bold text-[#111210]">
                       €{plan.priceEur}
                     </span>
                     {plan.recommended ? (
-                      <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-black text-[#156240]">
+                      <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-bold text-[#156240]">
                         {copy.shop.recommended}
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-2 block text-xs font-black text-[#156240]">
+                  <span className="mt-2 block text-xs font-bold text-[#156240]">
                     {plan.totalCoins} {copy.shop.fc}
                   </span>
                   <span className="mt-1 block text-[11px] font-semibold text-[#7A8276]">
@@ -2647,8 +2776,10 @@ export function ProfileShopPageView({
       ) : null}
       <ShopGiftRecipientDialog
         attemptId={dialogAttemptId}
+        coinBalance={localCoinBalance}
         gift={dialogGift}
         locale={locale}
+        onBalanceChange={setLocalCoinBalance}
         onClose={closeGiftDialog}
         onSent={() => showToast(copy.shop.sent)}
         open={Boolean(dialogGift)}
@@ -2670,11 +2801,11 @@ function GiftWallMetric({
 }) {
   return (
     <div className="min-w-0 px-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#6C746A]">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6C746A]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-xl font-black leading-none text-[#111210]">
+      <p className="mt-2 truncate text-xl font-bold leading-none text-[#111210]">
         {value}
       </p>
     </div>
@@ -2708,7 +2839,7 @@ function GiftWallRoomGift({
       >
         {gift.giftEmoji}
       </span>
-      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-black text-[#6C5515] ring-1 ring-[#E8D59D]">
+      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-bold text-[#6C5515] ring-1 ring-[#E8D59D]">
         x{gift.quantity}
       </span>
     </div>
@@ -2724,7 +2855,7 @@ function GiftWallLeaderboardRow({
 }) {
   return (
     <li className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 py-3">
-      <span className="text-center text-sm font-black text-[#B7892A]">
+      <span className="text-center text-sm font-bold text-[#B7892A]">
         {index + 1}
       </span>
       <div className="flex min-w-0 items-center gap-3">
@@ -2733,7 +2864,7 @@ function GiftWallLeaderboardRow({
           name={item.sender.nickname}
         />
         <div className="min-w-0">
-          <p className="truncate text-sm font-black text-[#111210]">
+          <p className="truncate text-sm font-bold text-[#111210]">
             {item.sender.nickname}
           </p>
           <p className="mt-0.5 text-xs font-semibold text-[#6C746A]">
@@ -2792,10 +2923,10 @@ export function ProfileGiftWallPageView({
       <section className="mt-6">
         <div className="flex items-end justify-between gap-3 px-1">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#B7892A]">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[#B7892A]">
               {copy.giftWall.giftStats}
             </p>
-            <h2 className="mt-1 truncate text-lg font-black text-[#111210]">
+            <h2 className="mt-1 truncate text-lg font-bold text-[#111210]">
               {copy.giftWall.roomTitle}
             </h2>
           </div>
@@ -2831,7 +2962,7 @@ export function ProfileGiftWallPageView({
               <span className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-[#FFF7DC] text-3xl ring-1 ring-[#E8D59D]">
                 🎁
               </span>
-              <p className="text-sm font-black leading-6 text-[#6C746A]">
+              <p className="text-sm font-bold leading-6 text-[#6C746A]">
                 {copy.giftWall.emptyRoom}
               </p>
             </div>
@@ -2858,7 +2989,7 @@ export function ProfileGiftWallPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-sm font-black text-[#111210]">
+        <h2 className="px-1 text-sm font-bold text-[#111210]">
           {copy.giftWall.leaderboard}
         </h2>
         {giftWall.topSenders.length > 0 ? (
@@ -2879,7 +3010,7 @@ export function ProfileGiftWallPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-sm font-black text-[#111210]">
+        <h2 className="px-1 text-sm font-bold text-[#111210]">
           {copy.giftWall.giftCount}
         </h2>
         {giftWall.topGifts.length > 0 ? (
@@ -2894,7 +3025,7 @@ export function ProfileGiftWallPageView({
                     {gift.giftEmoji}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {gift.giftLabel}
                     </p>
                     <p className="mt-0.5 text-xs font-bold text-[#6C746A]">
@@ -2902,7 +3033,7 @@ export function ProfileGiftWallPageView({
                     </p>
                   </div>
                 </div>
-                <p className="mt-2 truncate text-sm font-black text-[#111210]">
+                <p className="mt-2 truncate text-sm font-bold text-[#111210]">
                   +{gift.charm}
                 </p>
               </article>

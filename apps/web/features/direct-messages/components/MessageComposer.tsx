@@ -14,6 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import {
@@ -86,8 +90,6 @@ const emojiOptions = [
 const messageCounterThreshold = 900;
 const messageMaxLength = 1000;
 const messageImageMaxCount = 4;
-const messageImageMaxSize = 4 * 1024 * 1024;
-const allowedMessageImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
 function SubmitButton({
   disabled,
@@ -198,12 +200,7 @@ export function MessageComposer({
   const showCounter = bodyLength >= messageCounterThreshold;
 
   async function uploadImage(file: File) {
-    if (!allowedMessageImageTypes.includes(file.type)) {
-      setImageUploadError(t.imageUploadFailed);
-      return;
-    }
-
-    if (file.size > messageImageMaxSize) {
+    if (getImageUploadClientValidationError(file)) {
       setImageUploadError(t.imageUploadFailed);
       return;
     }
@@ -352,7 +349,7 @@ export function MessageComposer({
       ))}
       <input
         ref={imageInputRef}
-        accept={allowedMessageImageTypes.join(",")}
+        accept={acceptedImageInputTypes}
         className="hidden"
         type="file"
         onChange={(event) => {

@@ -165,10 +165,10 @@ export function AvalonRecapPosterView({
           <header className="rounded-[1.7rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-xl shadow-[#156240]/10">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[0.62rem] font-black uppercase tracking-[0.22em] text-[#156240]">
+                <p className="text-[0.62rem] font-bold uppercase tracking-normal text-[#156240]">
                   Friemi Avalon
                 </p>
-                <h1 className="mt-2 text-3xl font-black leading-tight text-[#0E2A5A]">
+                <h1 className="mt-2 text-3xl font-bold leading-tight text-[#0E2A5A]">
                   {t.poster}
                 </h1>
               </div>
@@ -180,7 +180,7 @@ export function AvalonRecapPosterView({
                 width={72}
               />
             </div>
-            <p className="mt-3 text-lg font-black leading-6 text-[#1D1D1B]">
+            <p className="mt-3 text-lg font-bold leading-6 text-[#1D1D1B]">
               {room.title}
             </p>
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -192,10 +192,10 @@ export function AvalonRecapPosterView({
 
           <section className="rounded-[1.7rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-inner">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-black text-[#0E2A5A]">{t.mission}</h2>
+              <h2 className="text-sm font-bold text-[#0E2A5A]">{t.mission}</h2>
               <span
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-black",
+                  "rounded-full px-3 py-1 text-xs font-bold",
                   winner.tone === "good"
                     ? "bg-[#EAF6E7] text-[#156240]"
                     : winner.tone === "evil"
@@ -221,7 +221,7 @@ export function AvalonRecapPosterView({
                     key={index}
                   >
                     <Image alt="" height={48} src={src} width={48} />
-                    <span className="text-[0.58rem] font-black text-[#156240]">
+                    <span className="text-[0.58rem] font-bold text-[#156240]">
                       {index + 1}
                     </span>
                   </div>
@@ -231,7 +231,7 @@ export function AvalonRecapPosterView({
           </section>
 
           <section className="rounded-[1.7rem] border border-[#D6D5B2] bg-white/78 p-4">
-            <h2 className="mb-3 text-sm font-black text-[#0E2A5A]">{t.players}</h2>
+            <h2 className="mb-3 text-sm font-bold text-[#0E2A5A]">{t.players}</h2>
             <div className="grid grid-cols-4 gap-2">
               {room.seats.map((seat) => (
                 <div
@@ -241,10 +241,10 @@ export function AvalonRecapPosterView({
                   )}
                   key={seat.id}
                 >
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-[#156240] text-sm font-black text-white">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-[#156240] text-sm font-bold text-white">
                     {seat.avatarLabel}
                   </span>
-                  <span className="mt-1 line-clamp-1 text-[0.62rem] font-black text-[#0E2A5A]">
+                  <span className="mt-1 line-clamp-1 text-[0.62rem] font-bold text-[#0E2A5A]">
                     {seat.displayName}
                   </span>
                 </div>
@@ -253,7 +253,7 @@ export function AvalonRecapPosterView({
           </section>
 
           <section className="rounded-[1.7rem] border border-[#D6D5B2] bg-white/78 p-4">
-            <h2 className="mb-3 text-sm font-black text-[#0E2A5A]">{t.timeline}</h2>
+            <h2 className="mb-3 text-sm font-bold text-[#0E2A5A]">{t.timeline}</h2>
             <div className="grid gap-2">
               {room.events.slice(0, 24).map((event) => (
                 <div
@@ -261,11 +261,11 @@ export function AvalonRecapPosterView({
                   key={event.id}
                 >
                   <Image alt="" height={34} src={getEventIcon(event.type)} width={34} />
-                  <span className="truncate text-xs font-black text-[#0E2A5A]">
+                  <span className="truncate text-xs font-bold text-[#0E2A5A]">
                     {event.actorName ?? "Friemi"}
                   </span>
                   {getRoundLabel(event) ? (
-                    <span className="rounded-full bg-[#156240] px-2 py-0.5 text-[0.58rem] font-black text-white">
+                    <span className="rounded-full bg-[#156240] px-2 py-0.5 text-[0.58rem] font-bold text-white">
                       {getRoundLabel(event)}
                     </span>
                   ) : null}
@@ -275,7 +275,7 @@ export function AvalonRecapPosterView({
           </section>
 
           <Link
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#156240] px-4 text-sm font-black text-white shadow-lg shadow-[#156240]/20 print:hidden"
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#156240] px-4 text-sm font-bold text-white shadow-lg shadow-[#156240]/20 print:hidden"
             href={roomHref}
           >
             {t.back}
@@ -306,8 +306,8 @@ function PosterStat({
             : "border-[#D6D5B2]",
       )}
     >
-      <p className="text-xl font-black text-[#0E2A5A]">{value}</p>
-      <p className="mt-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-[#156240]/68">
+      <p className="text-xl font-bold text-[#0E2A5A]">{value}</p>
+      <p className="mt-1 text-[0.58rem] font-bold uppercase tracking-normal text-[#156240]/68">
         {label}
       </p>
     </div>

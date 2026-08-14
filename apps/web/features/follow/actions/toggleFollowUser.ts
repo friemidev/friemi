@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -106,6 +107,7 @@ export async function toggleFollowUserAction(
     revalidatePath(localizedPath);
     revalidatePath(withLocale(locale, "/profile"));
     revalidatePath(withLocale(locale, "/profile/network"));
+    revalidatePath(withLocale(locale, `/profile/${targetUserProfileId}`));
 
     return {
       becameMutualFollow: false,
@@ -115,11 +117,21 @@ export async function toggleFollowUserAction(
     };
   }
 
-  await prisma.userFollow.create({
-    data: {
-      followerId: viewerProfile.id,
-      followingId: targetUserProfileId,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.userFollow.create({
+      data: {
+        followerId: viewerProfile.id,
+        followingId: targetUserProfileId,
+      },
+    });
+
+    await createNotification(tx, {
+      actorDisplayName: viewerProfile.nickname,
+      actorId: viewerProfile.id,
+      dedupe: true,
+      recipientId: targetUserProfileId,
+      type: "FRIEND_REQUEST",
+    });
   });
 
   const isMutualFollow = Boolean(targetFollowsViewer);
@@ -137,6 +149,8 @@ export async function toggleFollowUserAction(
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/profile/invite"));
   revalidatePath(withLocale(locale, "/profile/network"));
+  revalidatePath(withLocale(locale, `/profile/${targetUserProfileId}`));
+  revalidatePath(withLocale(locale, "/notifications"));
 
   return {
     becameMutualFollow: isMutualFollow,

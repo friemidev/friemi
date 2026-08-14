@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  HeartHandshake,
+  UserRound,
+} from "lucide-react";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import type { GlobalSearchUserViewModel } from "@/features/search/queries/getGlobalSearchResults";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -12,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { SearchHighlightedText } from "./SearchHighlightedText";
 
 type GlobalSearchUserResultsProps = {
+  isAuthenticated: boolean;
   locale: string;
   query: string;
   totalCount: number;
@@ -19,6 +27,7 @@ type GlobalSearchUserResultsProps = {
 };
 
 export function GlobalSearchUserResults({
+  isAuthenticated,
   locale,
   query,
   totalCount,
@@ -31,11 +40,12 @@ export function GlobalSearchUserResults({
   const canExpand = users.length > previewLimit;
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 lg:grid-cols-2">
+    <div className="space-y-2">
+      <div className="divide-y divide-[#EFEFEA]">
         {visibleUsers.map((user) => (
           <GlobalSearchUserCard
             key={user.id}
+            isAuthenticated={isAuthenticated}
             locale={locale}
             query={query}
             user={user}
@@ -46,7 +56,7 @@ export function GlobalSearchUserResults({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
+            className="inline-flex h-8 items-center justify-center rounded-full px-0 text-sm font-semibold text-[#156240] transition hover:text-[#0F5134]"
             onClick={() =>
               setExpanded((current) => {
                 const nextExpanded = !current;
@@ -78,7 +88,7 @@ export function GlobalSearchUserResults({
           ) : null}
         </div>
       ) : totalCount > users.length ? (
-        <p className="rounded-xl bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-sand">
+        <p className="text-xs leading-5 text-zinc-500">
           {t.userResultsLimited(users.length, totalCount)}
         </p>
       ) : null}
@@ -87,69 +97,99 @@ export function GlobalSearchUserResults({
 }
 
 function GlobalSearchUserCard({
+  isAuthenticated,
   locale,
   query,
   user,
 }: {
+  isAuthenticated: boolean;
   locale: string;
   query: string;
   user: GlobalSearchUserViewModel;
 }) {
   const t = getCopy(locale).globalSearch;
   const profileHref = withLocale(locale, `/profile/${user.id}`);
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
-    <article className="flex min-w-0 flex-col gap-4 rounded-xl border border-sand bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
-      <ContextualDetailLink
-        href={profileHref}
-        detailSource={{
-          sourceKey: "search",
-          targetKey: `profile:${user.id}`,
-          targetKind: "profile",
-        }}
-        data-detail-source-target={`profile:${user.id}`}
-        className="group flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
-        aria-label={t.openUserProfile(user.nickname)}
-      >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-clay/15 text-clay ring-1 ring-clay/20">
-          {user.avatarUrl ? (
-            // Avatar URLs come from Clerk/Google and are already thumbnail-sized.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <UserRound className="h-5 w-5" aria-hidden="true" />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-base font-semibold text-ink">
-              <SearchHighlightedText text={user.nickname} query={query} />
-            </span>
-            <ArrowRight
-              className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
-              aria-hidden="true"
-            />
+    <article className="flex min-w-0 flex-col gap-2 py-4 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <UserProfilePreviewPopover
+          avatarUrl={user.avatarUrl}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          nickname={user.nickname}
+          profileId={user.id}
+          triggerClassName="shrink-0 rounded-full"
+        >
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#ECF5EF] text-[#156240]">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound className="h-5 w-5" aria-hidden="true" />
+            )}
           </span>
-          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
-            <span className="truncate">
-              {user.friendCode
-                ? `${t.friendCodeLabel} ${user.friendCode}`
-                : t.friendCodeMissing}
+        </UserProfilePreviewPopover>
+        <ContextualDetailLink
+          href={profileHref}
+          detailSource={{
+            sourceKey: "search",
+            targetKey: `profile:${user.id}`,
+            targetKind: "profile",
+          }}
+          data-detail-source-target={`profile:${user.id}`}
+          className="group flex min-w-0 flex-1 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
+          aria-label={t.openUserProfile(user.nickname)}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate text-base font-semibold text-ink">
+                <SearchHighlightedText text={user.nickname} query={query} />
+              </span>
+              {user.friendCode ? (
+                <span className="shrink-0 text-xs font-semibold text-zinc-400">
+                  ID: {user.friendCode}
+                </span>
+              ) : null}
+              <ArrowRight
+                className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
+                aria-hidden="true"
+              />
             </span>
+            {showPublicNickname ? (
+              <span className="mt-0.5 block truncate text-xs font-semibold text-zinc-500">
+                <SearchHighlightedText
+                  text={user.publicNickname}
+                  query={query}
+                />
+              </span>
+            ) : null}
           </span>
-        </span>
-      </ContextualDetailLink>
+        </ContextualDetailLink>
+      </div>
 
-      <div className="shrink-0 sm:w-32">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 pl-[3.75rem] sm:w-auto sm:pl-0">
         <FollowCta
           locale={locale}
           relationshipStatus={user.relationshipStatus}
           targetProfileId={user.id}
         />
+        {user.relationshipStatus !== "SELF" ? (
+          <StartDirectConversationButton
+            buttonClassName="h-8 bg-transparent px-2 text-xs font-semibold text-[#156240] shadow-none hover:bg-[#F7F7F0]"
+            className="w-auto"
+            errorClassName="text-center"
+            locale={locale}
+            peerProfileId={user.id}
+            redirectPath="/search"
+          />
+        ) : null}
       </div>
     </article>
   );
@@ -184,12 +224,14 @@ function FollowCta({
 
   return (
     <FollowButton
-      activeButtonClassName="h-10 w-full rounded-full bg-moss/10 px-3 text-sm font-medium text-moss shadow-none ring-1 ring-moss/20"
+      activeButtonClassName="h-8 rounded-full bg-transparent px-2 text-xs font-semibold text-[#156240] shadow-none ring-0 hover:bg-[#F7F7F0]"
       activeLabel={activeLabel}
-      buttonClassName="h-10 w-full rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#156240]"
+      buttonClassName="h-8 rounded-full bg-transparent px-2 text-xs font-semibold text-[#156240] shadow-none ring-0 hover:bg-[#F7F7F0]"
+      fullWidth={false}
       inactiveLabel={inactiveLabel}
       isAuthenticated
       isFollowing={isFollowing}
+      icon={relationshipStatus === "MUTUAL" ? HeartHandshake : undefined}
       locale={locale}
       redirectPath="/search"
       targetUserProfileId={targetProfileId}
@@ -209,10 +251,8 @@ function RelationshipStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 text-sm font-medium ring-1",
-        tone === "good"
-          ? "bg-moss/10 text-moss ring-moss/20"
-          : "bg-white/70 text-zinc-600 ring-sand",
+        "inline-flex h-8 w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-2 text-xs font-semibold",
+        tone === "good" ? "text-moss" : "text-zinc-500",
       )}
     >
       <CheckCircle2 className="h-4 w-4" aria-hidden="true" />

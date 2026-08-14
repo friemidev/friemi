@@ -17,6 +17,12 @@ export type SendActivityAnnouncementState = {
   };
 };
 
+export type DeleteActivityAnnouncementState = {
+  ok?: boolean;
+  deletedAnnouncementId?: string;
+  formError?: string;
+};
+
 const maxAnnouncementLength = 500;
 const participantStatuses: ParticipantStatus[] = [
   "JOINED",
@@ -46,6 +52,12 @@ const schema = z.object({
   content: z.string().trim().min(1).max(maxAnnouncementLength),
 });
 
+const deleteSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  activityId: z.string().min(1),
+  announcementId: z.string().min(1),
+});
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -55,6 +67,10 @@ function getString(formData: FormData, key: string) {
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
+      deleteFailed: "Impossible de supprimer cette annonce.",
+      deleteForbidden:
+        "Seul l'organisateur ou un gestionnaire peut supprimer une annonce.",
+      deleteInvalid: "Cette annonce n'est plus disponible.",
       failed: "Impossible d'envoyer l'annonce pour le moment.",
       forbidden:
         "Seul l'organisateur ou un gestionnaire peut envoyer une annonce.",
@@ -65,6 +81,9 @@ function getCopy(locale: string) {
 
   if (locale === "en") {
     return {
+      deleteFailed: "Could not delete this announcement.",
+      deleteForbidden: "Only the host or a manager can delete an announcement.",
+      deleteInvalid: "This announcement is no longer available.",
       failed: "The announcement could not be sent right now.",
       forbidden: "Only the host or a manager can send an announcement.",
       locked: "This activity has ended or was cancelled.",
@@ -73,6 +92,9 @@ function getCopy(locale: string) {
   }
 
   return {
+    deleteFailed: "公告暂时删除失败，请稍后重试。",
+    deleteForbidden: "只有发起人或协管可以删除群公告。",
+    deleteInvalid: "这条公告已不可用。",
     failed: "公告暂时发送失败，请稍后重试。",
     forbidden: "只有发起人或协管可以发送群公告。",
     locked: "活动已结束或已取消，不能再发送群公告。",
@@ -164,7 +186,8 @@ export async function sendActivityAnnouncementAction(
         new Set(
           activity.participants
             .map(
-              (participant: { userProfileId: string }) => participant.userProfileId,
+              (participant: { userProfileId: string }) =>
+                participant.userProfileId,
             )
             .filter((userProfileId: string) => userProfileId !== profile.id),
         ),
@@ -177,6 +200,7 @@ export async function sendActivityAnnouncementAction(
           activityAnnouncementId: announcement.id,
           activityId: activity.id,
           dedupe: false,
+          occurrenceId: `activity-announcement:${announcement.id}`,
           recipientId,
           type: "ACTIVITY_ANNOUNCEMENT" as const,
         })),
@@ -208,6 +232,107 @@ export async function sendActivityAnnouncementAction(
       values: {
         content: result.data.content,
       },
+    };
+  }
+}
+
+export async function deleteActivityAnnouncementAction(
+  _previousState: DeleteActivityAnnouncementState,
+  formData: FormData,
+): Promise<DeleteActivityAnnouncementState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    activityId: getString(formData, "activityId"),
+    announcementId: getString(formData, "announcementId"),
+  };
+  const copy = getCopy(rawInput.locale);
+  const result = deleteSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return {
+      formError: copy.deleteInvalid,
+    };
+  }
+
+  try {
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/lobby/${result.data.activityId}/room/manage`,
+    );
+
+    const announcement = await prisma.activityAnnouncement.findFirst({
+      where: {
+        activityId: result.data.activityId,
+        id: result.data.announcementId,
+      },
+      select: {
+        id: true,
+        activity: {
+          select: {
+            coManagers: {
+              where: {
+                managerProfileId: profile.id,
+              },
+              select: {
+                id: true,
+              },
+              take: 1,
+            },
+            id: true,
+            organizerId: true,
+          },
+        },
+      },
+    });
+
+    if (!announcement) {
+      return {
+        formError: copy.deleteInvalid,
+      };
+    }
+
+    const canManage =
+      announcement.activity.organizerId === profile.id ||
+      announcement.activity.coManagers.length > 0;
+
+    if (!canManage) {
+      return {
+        formError: copy.deleteForbidden,
+      };
+    }
+
+    await prisma.activityAnnouncement.delete({
+      where: {
+        id: announcement.id,
+      },
+    });
+
+    revalidatePath(
+      withLocale(
+        result.data.locale,
+        getActivityDetailPath(result.data.activityId),
+      ),
+    );
+    revalidatePath(
+      withLocale(result.data.locale, `/lobby/${result.data.activityId}/room`),
+    );
+    revalidatePath(
+      withLocale(
+        result.data.locale,
+        `/lobby/${result.data.activityId}/room/manage`,
+      ),
+    );
+    revalidatePath(withLocale(result.data.locale, "/notifications"));
+
+    return {
+      ok: true,
+      deletedAnnouncementId: announcement.id,
+    };
+  } catch (error) {
+    console.error("Failed to delete activity announcement", error);
+
+    return {
+      formError: copy.deleteFailed,
     };
   }
 }

@@ -2,8 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Friemi Latin";
+  src: url("/font/Plus_Jakarta_Sans/PlusJakartaSans-FriemiLatin.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF,
+    U+0100-024F,
+    U+1E00-1EFF,
+    U+2000-206F,
+    U+20A0-20CF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Regular.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Medium.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Medium.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Bold.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
 :root {
-  --font-sans: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    "Friemi Latin", "Plus Jakarta Sans", "Friemi CJK", "HarmonyOS Sans SC",
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif, system-ui,
+    sans-serif;
+  --friemi-font-latin:
+    "Friemi Latin", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --friemi-font-cjk:
+    "Friemi CJK", "HarmonyOS Sans SC", "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --friemi-tracking-normal: 0;
+  --friemi-text-display-1-size: 2rem;
+  --friemi-text-display-1-line: 2.5rem;
+  --friemi-text-display-1-weight: 700;
+  --friemi-text-display-2-size: 1.75rem;
+  --friemi-text-display-2-line: 2.25rem;
+  --friemi-text-display-2-weight: 700;
+  --friemi-text-title-1-size: 1.5rem;
+  --friemi-text-title-1-line: 2rem;
+  --friemi-text-title-1-weight: 600;
+  --friemi-text-title-2-size: 1.25rem;
+  --friemi-text-title-2-line: 1.75rem;
+  --friemi-text-title-2-weight: 600;
+  --friemi-text-body-1-size: 1rem;
+  --friemi-text-body-1-line: 1.5rem;
+  --friemi-text-body-1-weight: 400;
+  --friemi-text-body-2-size: 0.875rem;
+  --friemi-text-body-2-line: 1.375rem;
+  --friemi-text-body-2-weight: 400;
+  --friemi-text-caption-size: 0.75rem;
+  --friemi-text-caption-line: 1.125rem;
+  --friemi-text-caption-weight: 400;
+  --friemi-text-overline-size: 0.6875rem;
+  --friemi-text-overline-line: 1rem;
+  --friemi-text-overline-weight: 500;
   --friemi-palette-forest: #156240;
   --friemi-palette-sage: #8ab68e;
   --friemi-palette-rose: #deaab3;
@@ -57,6 +190,69 @@ body {
   margin: 0;
   background: #ffffff;
   color: var(--friemi-palette-ink);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+.friemi-display-1 {
+  font-size: var(--friemi-text-display-1-size);
+  font-weight: var(--friemi-text-display-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-display-1-line);
+}
+
+.friemi-display-2 {
+  font-size: var(--friemi-text-display-2-size);
+  font-weight: var(--friemi-text-display-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-display-2-line);
+}
+
+.friemi-title-1 {
+  font-size: var(--friemi-text-title-1-size);
+  font-weight: var(--friemi-text-title-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-title-1-line);
+}
+
+.friemi-title-2 {
+  font-size: var(--friemi-text-title-2-size);
+  font-weight: var(--friemi-text-title-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-title-2-line);
+}
+
+.friemi-body-1 {
+  font-size: var(--friemi-text-body-1-size);
+  font-weight: var(--friemi-text-body-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-body-1-line);
+}
+
+.friemi-body-2 {
+  font-size: var(--friemi-text-body-2-size);
+  font-weight: var(--friemi-text-body-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-body-2-line);
+}
+
+.friemi-caption {
+  font-size: var(--friemi-text-caption-size);
+  font-weight: var(--friemi-text-caption-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-caption-line);
+}
+
+.friemi-overline {
+  font-size: var(--friemi-text-overline-size);
+  font-weight: var(--friemi-text-overline-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-overline-line);
+}
+
+.friemi-tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 .friemi-alert-overlay {
@@ -109,15 +305,7 @@ html[data-friemi-android-app="true"] * {
 }
 
 html[data-friemi-ios-app="true"] {
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
-    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", ui-sans-serif,
-    system-ui, sans-serif;
   overscroll-behavior-y: contain;
-}
-
-html[data-friemi-ios-app="true"] body {
-  font-family: var(--font-sans);
 }
 
 html[data-friemi-ios-app="true"] * {
@@ -152,6 +340,56 @@ html[data-friemi-ios-app="true"] * {
 .auth-page-shell .cl-footer > div:not(.cl-footerAction),
 .auth-page-shell .cl-footer div:empty {
   display: none !important;
+}
+
+.auth-page-shell .cl-rootBox,
+.auth-page-shell .cl-card,
+.auth-page-shell .cl-cardBox,
+.auth-page-shell .cl-main,
+.auth-page-shell .cl-form,
+.auth-page-shell .cl-formField,
+.auth-page-shell .cl-formFieldRow,
+.auth-page-shell .cl-formFieldInput,
+.auth-page-shell .cl-formButtonPrimary,
+.auth-page-shell .cl-socialButtons,
+.auth-page-shell .cl-socialButtonsBlockButton,
+.auth-page-shell .cl-otpCodeField,
+.auth-page-shell .cl-otpCodeFieldInputs {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.auth-page-shell .cl-rootBox,
+.auth-page-shell .cl-card,
+.auth-page-shell .cl-cardBox,
+.auth-page-shell .cl-main {
+  width: 100% !important;
+}
+
+.auth-page-shell .cl-formFieldLabel,
+.auth-page-shell .cl-formFieldErrorText,
+.auth-page-shell .cl-formFieldSuccessText,
+.auth-page-shell .cl-formHeaderSubtitle,
+.auth-page-shell .cl-formHeaderTitle {
+  overflow-wrap: anywhere !important;
+}
+
+.auth-page-shell .cl-otpCodeFieldInputs {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 0.4rem !important;
+}
+
+.auth-page-shell .cl-otpCodeFieldInput {
+  aspect-ratio: 1 / 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 380px) {
+  .auth-page-shell .cl-otpCodeFieldInputs {
+    gap: 0.3rem !important;
+  }
 }
 
 html[data-friemi-android-app="true"] .app-layout-shell > header,
@@ -214,6 +452,14 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.planet-detail-page) {
+    padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) {
+    padding-bottom: 0;
+  }
+
   .app-layout-shell:has(.mobile-v23-admin-priority) {
     padding-bottom: 0;
   }
@@ -232,6 +478,10 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
+  .app-layout-shell:has(.planet-detail-page) > .app-header,
+  .app-layout-shell:has(.planet-detail-page) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.planet-detail-page) [data-route-progress],
+  .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) > .app-mobile-nav,
   .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
   .app-layout-shell:has(.mobile-v23-admin-priority) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-admin-priority) [data-route-progress],
@@ -248,6 +498,30 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   html[data-friemi-activity-priority-editor-open="true"] [data-mobile-scroll-progress],
   html[data-friemi-activity-priority-editor-open="true"] [data-route-progress] {
     display: none !important;
+  }
+
+  .app-mobile-page-shell :where([class*="border-[#D6D5B2]"]) {
+    border-color: rgba(214, 213, 178, 0.58);
+  }
+
+  .app-mobile-page-shell :where([class*="border-[#D7D5C8]"]) {
+    border-color: rgba(215, 213, 200, 0.62);
+  }
+
+  .app-mobile-page-shell :where([class*="border-[#E3DCC5]"]) {
+    border-color: rgba(227, 220, 197, 0.62);
+  }
+
+  .app-mobile-page-shell :where([class*="ring-[#D6D5B2]"]) {
+    --tw-ring-color: rgba(214, 213, 178, 0.52);
+  }
+
+  .app-mobile-page-shell :where([class*="ring-[#D7D5C8]"]) {
+    --tw-ring-color: rgba(215, 213, 200, 0.56);
+  }
+
+  .app-mobile-page-shell :where([class*="ring-[#E3DCC5]"]) {
+    --tw-ring-color: rgba(227, 220, 197, 0.58);
   }
 }
 
@@ -1427,6 +1701,231 @@ html[data-home-motion-ready="true"]
     #1d1d1b,
     rgba(29, 29, 27, 0)
   ) !important;
+}
+
+.gift-notification-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background-color: rgba(17, 18, 16, 0.18);
+  animation: gift-notification-burst-backdrop 1750ms ease-out both;
+}
+
+.gift-notification-burst__stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.gift-notification-burst__card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(18rem, calc(100vw - 3rem));
+  place-items: center;
+  border: 1px solid #e9e8e0;
+  border-radius: 1.35rem;
+  background-color: #ffffff;
+  box-shadow: 0 1.2rem 3rem rgba(17, 18, 16, 0.14);
+  padding: 1.15rem 1.25rem 1.2rem;
+  color: #111210;
+  text-align: center;
+  animation: gift-notification-burst-card 1450ms
+    cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.gift-notification-burst__emoji {
+  display: grid;
+  height: 4.5rem;
+  width: 4.5rem;
+  place-items: center;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: var(--gift-accent);
+  font-size: 2.8rem;
+  line-height: 1;
+  animation: gift-notification-burst-emoji 1450ms
+    cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.gift-notification-burst__title {
+  margin-top: 0.85rem;
+  color: color-mix(in srgb, var(--gift-accent) 82%, #111210);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.gift-notification-burst__gift {
+  margin-top: 0.35rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: #111210;
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.gift-notification-burst__detail {
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background-color: #ffffff;
+  padding: 0.32rem 0.7rem;
+  color: var(--gift-accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.gift-notification-burst__particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  color: var(--gift-accent);
+  font-size: 1.35rem;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: gift-notification-burst-particle 1500ms
+    cubic-bezier(0.18, 0.78, 0.18, 1) var(--particle-delay) both;
+}
+
+@keyframes gift-notification-burst-backdrop {
+  0% {
+    opacity: 0;
+  }
+  14%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes gift-notification-burst-card {
+  0% {
+    opacity: 0;
+    transform: translateY(1.3rem) scale(0.88);
+  }
+  18%,
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.35rem) scale(0.98);
+  }
+}
+
+@keyframes gift-notification-burst-emoji {
+  0% {
+    transform: scale(0.6) rotate(-10deg);
+  }
+  28% {
+    transform: scale(1.12) rotate(6deg);
+  }
+  52%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes gift-notification-burst-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+    transform: translate(
+        calc(-50% + var(--particle-x)),
+        calc(-50% + var(--particle-y))
+      )
+      scale(1.04)
+      rotate(12deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--particle-x)),
+        calc(-50% + var(--particle-y))
+      )
+      scale(0.55)
+      rotate(18deg);
+  }
+}
+
+.gift-notification-burst--reduced {
+  animation: gift-notification-burst-backdrop 900ms ease-out both;
+}
+
+.gift-notification-burst--reduced .gift-notification-burst__card {
+  animation: gift-notification-burst-card 760ms ease-out both;
+}
+
+.gift-notification-burst--reduced .gift-notification-burst__emoji {
+  animation: none;
+}
+
+.gift-notification-burst--reduced .gift-notification-burst__particle {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[activity-room-sheet-in_180ms_ease-out\],
+  .animate-\[activity-room-sheet-out_160ms_ease-in_forwards\],
+  .animate-\[mobile-bottom-sheet-overlay-out_160ms_ease-in_forwards\] {
+    animation: none;
+  }
+
+  .gift-notification-burst,
+  .gift-notification-burst__card,
+  .gift-notification-burst__emoji,
+  .gift-notification-burst__particle {
+    animation: none;
+    transition: none;
+  }
+
+  .gift-notification-burst__particle {
+    display: none;
+  }
+}
+
+@keyframes activity-room-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes activity-room-sheet-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes mobile-bottom-sheet-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @media (max-width: 767px) {

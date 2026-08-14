@@ -7,6 +7,8 @@ export const notificationCenterExcludedTypes = [
   "MOMENT_COMMENTED",
   "MOMENT_COMMENT_REPLY",
   "MOMENT_REPOSTED",
+  "PLANET_MESSAGE",
+  "ACTIVITY_ROOM_MESSAGE",
 ] satisfies NotificationType[];
 
 export function getVisibleNotificationWhere(
@@ -52,8 +54,11 @@ const notificationSelect = {
   },
   charmGiftEvent: {
     select: {
+      coinCost: true,
       giftEmoji: true,
+      giftId: true,
       giftLabel: true,
+      quantity: true,
       totalCharmDelta: true,
     },
   },
@@ -68,6 +73,13 @@ const notificationSelect = {
       id: true,
       content: true,
       createdAt: true,
+    },
+  },
+  planet: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
     },
   },
 } satisfies Prisma.NotificationSelect;
@@ -88,6 +100,7 @@ export type NotificationViewModel = {
     nickname: string;
   } | null;
   actorDisplayName: string | null;
+  viewerFollowsActor: boolean;
   activity: {
     id: string;
     title: string;
@@ -98,8 +111,11 @@ export type NotificationViewModel = {
     createdAt: string;
   } | null;
   charmGiftEvent: {
+    coinCost: number | null;
     giftEmoji: string;
+    giftId: string;
     giftLabel: string;
+    quantity: number;
     totalCharmDelta: number;
   } | null;
   moment: {
@@ -111,12 +127,18 @@ export type NotificationViewModel = {
     content: string;
     createdAt: string;
   } | null;
+  planet: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
 };
 
 function mapNotification(
   notification: NotificationQueryResult,
   friendRequestId: string | null,
   actorActivityRole: NotificationViewModel["actorActivityRole"],
+  viewerFollowsActor = false,
 ): NotificationViewModel {
   return {
     id: notification.id,
@@ -127,6 +149,7 @@ function mapNotification(
     actorActivityRole,
     actor: notification.actor,
     actorDisplayName: notification.actorDisplayName,
+    viewerFollowsActor,
     activity: notification.activity
       ? {
           id: notification.activity.id,
@@ -154,6 +177,7 @@ function mapNotification(
           createdAt: notification.momentComment.createdAt.toISOString(),
         }
       : null,
+    planet: notification.planet,
   };
 }
 
@@ -215,6 +239,33 @@ export async function getNotificationCenter(profileId: string) {
   const coManagerRoleKeys = new Set(
     coManagerRoles.map((role) => `${role.activityId}:${role.managerProfileId}`),
   );
+  const followNotificationActorIds = Array.from(
+    new Set(
+      notifications
+        .filter(
+          (notification) =>
+            notification.type === "FRIEND_REQUEST" && notification.actor?.id,
+        )
+        .map((notification) => notification.actor!.id),
+    ),
+  );
+  const viewerFollowedActors =
+    followNotificationActorIds.length > 0
+      ? await prisma.userFollow.findMany({
+          where: {
+            followerId: profileId,
+            followingId: {
+              in: followNotificationActorIds,
+            },
+          },
+          select: {
+            followingId: true,
+          },
+        })
+      : [];
+  const viewerFollowedActorIds = new Set(
+    viewerFollowedActors.map((follow) => follow.followingId),
+  );
 
   return {
     notifications: notifications.map((notification) => {
@@ -233,6 +284,7 @@ export async function getNotificationCenter(profileId: string) {
         notification,
         null,
         actorActivityRole,
+        actorId ? viewerFollowedActorIds.has(actorId) : false,
       );
     }),
     unreadCount,

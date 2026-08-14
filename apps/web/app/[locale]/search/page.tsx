@@ -1,18 +1,9 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Image from "next/image";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  Clock3,
-  MapPin,
-  Search,
-  Store,
-  UsersRound,
-} from "lucide-react";
+import type { Metadata } from "next";
+import { ArrowLeft, ArrowRight, Clock3, MapPin, Store } from "lucide-react";
 import type { ReactNode } from "react";
-import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
@@ -35,11 +26,7 @@ import {
   type GlobalSearchUserViewModel,
 } from "@/features/search/queries/getGlobalSearchResults";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import {
-  getActivityDateLabel,
-  getActivityLocationLabel,
-} from "@/features/activities/utils/activityDisplay";
-import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { ResponsiveSearchActivityCards } from "@/features/search/components/ResponsiveSearchActivityCards";
 import {
   getGlobalSearchHref,
   getSingleGlobalSearchParam,
@@ -48,10 +35,11 @@ import {
   type GlobalSearchParams,
 } from "@/features/search/utils/searchQuery";
 import { brand } from "@/lib/brand";
-import { getCategoryLabel, getCopy } from "@/lib/copy";
+import { getCopy } from "@/lib/copy";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
 type SearchPageProps = {
   params: Promise<{
@@ -62,88 +50,31 @@ type SearchPageProps = {
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: SearchPageProps): Promise<Metadata> {
+  const { locale } = await params;
+
+  return buildNoIndexMetadata({
+    canonicalPath: withLocale(locale, "/search"),
+    follow: true,
+  });
+}
+
 function SearchSectionHeader({
-  action,
   count,
   title,
 }: {
-  action?: ReactNode;
   count: number;
   title: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-normal text-ink">
-          {title}
-        </h2>
-        <Badge className="shrink-0 bg-white/85 text-[#156240] ring-1 ring-[#D6D5B2]">
-          {count}
-        </Badge>
-      </div>
-      {action ? <div className="sm:shrink-0">{action}</div> : null}
-    </div>
-  );
-}
-
-function SearchEndedFilterBar({
-  hiddenEndedCount,
-  includeEnded,
-  locale,
-  query,
-}: {
-  hiddenEndedCount: number;
-  includeEnded: boolean;
-  locale: string;
-  query: string;
-}) {
-  const t = getCopy(locale).globalSearch;
-  const nextHref = getGlobalSearchHref(locale, query, {
-    includeEnded: !includeEnded,
-  });
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <AnalyticsLink
-        href={nextHref}
-        aria-pressed={includeEnded}
-        className={
-          includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#F1F2EC] px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F1F2EC]"
-            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
-        }
-        event={{
-          name: "filter_applied",
-          sourceSurface: "global_search",
-          properties: {
-            filter_count: includeEnded ? 0 : 1,
-            filter_names: ["include_ended"],
-            hidden_ended_count: hiddenEndedCount,
-            next_include_ended: !includeEnded,
-            scope: "global_search",
-          },
-        }}
-      >
-        <span
-          className={
-            includeEnded
-              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#369758] text-white shadow-sm"
-              : "h-4 w-4 rounded-[0.32rem] border border-[#8AB68E] bg-white shadow-inner"
-          }
-          aria-hidden="true"
-        >
-          {includeEnded ? (
-            <span className="text-[11px] font-bold leading-none">✓</span>
-          ) : null}
-        </span>
-        {includeEnded ? t.hideEndedResults : t.showEndedResults}
-      </AnalyticsLink>
-      <span className="text-xs leading-5 text-zinc-500">
-        {includeEnded
-          ? t.endedResultsShownHint
-          : hiddenEndedCount > 0
-            ? t.endedResultsHiddenWithCount(hiddenEndedCount)
-            : t.endedResultsHiddenHint}
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold tracking-normal text-ink">
+        {title}
+      </h2>
+      <span className="shrink-0 text-xs font-semibold leading-5 text-[#156240]">
+        {count}
       </span>
     </div>
   );
@@ -230,10 +161,10 @@ function MerchantResultCard({
         targetKind: "merchant",
       }}
       data-detail-source-target={`merchant:${merchant.slug}`}
-      className="group flex min-w-0 items-start gap-3 rounded-xl border border-sand bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
+      className="group flex min-w-0 items-start gap-3 py-4 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
       aria-label={t.openMerchant(merchant.name)}
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-moss/10 text-moss ring-1 ring-moss/15">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-moss">
         {merchant.logoUrl ? (
           // Merchant logos are tiny thumbnails; using img keeps remote source
           // support independent from Next image domain config.
@@ -264,23 +195,12 @@ function MerchantResultCard({
           <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">{location || merchant.city}</span>
         </span>
-        <span className="mt-2 inline-flex rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
+        <span className="mt-2 inline-flex text-xs font-medium text-[#156240]">
           {t.merchantActivityCount(merchant.activityCount)}
         </span>
       </span>
     </ContextualDetailLink>
   );
-}
-
-function getSearchRecommendationActivityHref(
-  activity: ActivityCardViewModel,
-  locale: string,
-) {
-  if (activity.type === "PUBLIC_EVENT") {
-    return withLocale(locale, `/public-events/${activity.publicEventId ?? activity.id}`);
-  }
-
-  return withLocale(locale, getActivityDetailPath(activity.id));
 }
 
 function SearchRecommendationSection({
@@ -292,7 +212,7 @@ function SearchRecommendationSection({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[1.05rem] font-black tracking-normal text-[#111210]">
+      <h2 className="text-[1.05rem] font-bold tracking-normal text-[#111210]">
         {title}
       </h2>
       <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -321,7 +241,7 @@ function SearchUserAvatar({ user }: { user: GlobalSearchUserViewModel }) {
   }
 
   return (
-    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0A8D70] text-xl font-black text-white">
+    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0A8D70] text-xl font-bold text-white">
       {initial}
     </span>
   );
@@ -366,123 +286,18 @@ function SearchRecommendedUsers({
   );
 }
 
-function SearchRecommendationImage({
-  alt,
-  src,
-}: {
-  alt: string;
-  src: string | null;
-}) {
-  if (src) {
-    return (
-      // Cover URLs can come from external event feeds or storage.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={alt}
-        className="absolute inset-0 h-full w-full object-cover"
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-      />
-    );
-  }
-
-  return (
-    <span className="absolute inset-0 flex items-center justify-center bg-[#F6F7F2]">
-      <Image
-        src={brand.logoFullBackgroundPath}
-        alt=""
-        width={58}
-        height={58}
-        className="h-12 w-12 rounded-xl object-cover"
-      />
-    </span>
-  );
-}
-
-function SearchRecommendedActivityCard({
-  activity,
-  locale,
-  sourceKind,
-}: {
-  activity: ActivityCardViewModel;
-  locale: string;
-  sourceKind: "activity" | "hangout";
-}) {
-  const copy = getCopy(locale);
-  const isPublicEvent = activity.type === "PUBLIC_EVENT";
-  const href = getSearchRecommendationActivityHref(activity, locale);
-  const detailTargetKind = isPublicEvent ? "public_event" : "activity";
-  const participantLabel =
-    activity.capacity > 0
-      ? `${activity.participantCount}/${activity.capacity}`
-      : `${activity.participantCount}`;
-
-  return (
-    <ContextualDetailLink
-      href={href}
-      detailSource={{
-        sourceKey: "search",
-        targetKey: `${detailTargetKind}:${activity.publicEventId ?? activity.id}`,
-        targetKind: detailTargetKind,
-      }}
-      className="group w-[10.25rem] shrink-0 snap-start overflow-hidden rounded-[0.9rem] border border-[#E1DDC8] bg-white transition active:scale-[0.99]"
-      aria-label={activity.title}
-    >
-      <div className="relative h-[6.65rem] overflow-hidden bg-[#F6F7F2]">
-        <SearchRecommendationImage
-          src={activity.coverImageUrl}
-          alt={activity.title}
-        />
-        <span className="absolute left-2 top-2 max-w-[7.2rem] truncate rounded-full bg-white/92 px-2 py-0.5 text-[10px] font-black text-[#0A7652]">
-          {getCategoryLabel(activity.category, locale)}
-        </span>
-      </div>
-      <div className="min-h-[5.75rem] px-2.5 py-2.5">
-        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
-          {activity.title}
-        </h3>
-        <p className="mt-2 flex min-w-0 items-center gap-1 text-[10px] font-bold text-[#111210]/62">
-          {sourceKind === "hangout" ? (
-            <>
-              <UsersRound className="h-3 w-3 shrink-0 text-[#0A7652]" />
-              <span className="truncate">
-                {participantLabel} {copy.common.people} · {activity.city}
-              </span>
-            </>
-          ) : (
-            <>
-              <CalendarDays className="h-3 w-3 shrink-0 text-[#0A7652]" />
-              <span className="truncate">
-                {getActivityDateLabel(activity, locale)}
-              </span>
-            </>
-          )}
-        </p>
-        <p className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-bold text-[#111210]/52">
-          <MapPin className="h-3 w-3 shrink-0 text-[#0A7652]" />
-          <span className="truncate">
-            {sourceKind === "hangout"
-              ? getActivityDateLabel(activity, locale)
-              : getActivityLocationLabel(activity)}
-          </span>
-        </p>
-      </div>
-    </ContextualDetailLink>
-  );
-}
-
 function SearchRecommendedActivities({
   activities,
+  isAuthenticated,
   locale,
-  sourceKind,
   title,
+  viewerProfileId,
 }: {
   activities: ActivityCardViewModel[];
+  isAuthenticated: boolean;
   locale: string;
-  sourceKind: "activity" | "hangout";
   title: string;
+  viewerProfileId: string | null;
 }) {
   if (activities.length === 0) {
     return null;
@@ -490,40 +305,50 @@ function SearchRecommendedActivities({
 
   return (
     <SearchRecommendationSection title={title}>
-      <div className="flex w-max snap-x snap-mandatory gap-3 pr-4">
-        {activities.map((activity) => (
-          <SearchRecommendedActivityCard
-            key={`${sourceKind}-${activity.publicEventId ?? activity.id}`}
-            activity={activity}
-            locale={locale}
-            sourceKind={sourceKind}
-          />
-        ))}
-      </div>
+      <ResponsiveSearchActivityCards
+        activities={activities}
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        viewerProfileId={viewerProfileId}
+      />
     </SearchRecommendationSection>
   );
 }
 
 function SearchRecommendationsView({
+  includeUsers = true,
+  isAuthenticated,
   locale,
   recommendations,
+  showEmptyState = true,
+  viewerProfileId,
 }: {
+  includeUsers?: boolean;
+  isAuthenticated: boolean;
   locale: string;
   recommendations: GlobalSearchRecommendations;
+  showEmptyState?: boolean;
+  viewerProfileId: string | null;
 }) {
   const t = getCopy(locale).globalSearch;
   const hasRecommendations =
-    recommendations.users.length > 0 ||
+    (includeUsers && recommendations.users.length > 0) ||
     recommendations.hangouts.length > 0 ||
     recommendations.activities.length > 0;
 
-  if (!hasRecommendations) {
+  if (!hasRecommendations && showEmptyState) {
     return (
       <div className="flex min-h-[18rem] flex-col items-center justify-center text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6F7F2] text-[#0A7652]">
-          <Search className="h-5 w-5" aria-hidden="true" />
+        <span className="flex h-28 w-28 items-center justify-center overflow-hidden">
+          <Image
+            src={brand.emptyContentIllustrationPath}
+            alt=""
+            width={2048}
+            height={2048}
+            className="h-full w-full scale-[1.55] object-contain"
+          />
         </span>
-        <h2 className="mt-4 text-base font-black text-[#111210]">
+        <h2 className="mt-4 text-base font-bold text-[#111210]">
           {t.recommendationsEmptyTitle}
         </h2>
         <p className="mt-2 max-w-xs text-sm leading-6 text-zinc-500">
@@ -533,20 +358,28 @@ function SearchRecommendationsView({
     );
   }
 
+  if (!hasRecommendations) {
+    return null;
+  }
+
   return (
     <div className="space-y-7">
-      <SearchRecommendedUsers users={recommendations.users} locale={locale} />
+      {includeUsers ? (
+        <SearchRecommendedUsers users={recommendations.users} locale={locale} />
+      ) : null}
       <SearchRecommendedActivities
         activities={recommendations.hangouts}
+        isAuthenticated={isAuthenticated}
         locale={locale}
-        sourceKind="hangout"
         title={t.recommendationsHangoutsTitle}
+        viewerProfileId={viewerProfileId}
       />
       <SearchRecommendedActivities
         activities={recommendations.activities}
+        isAuthenticated={isAuthenticated}
         locale={locale}
-        sourceKind="activity"
         title={t.recommendationsActivitiesTitle}
+        viewerProfileId={viewerProfileId}
       />
     </div>
   );
@@ -614,20 +447,8 @@ export default async function SearchPage({
         { result: null, error: null },
         { result: null, error: null },
       ];
-  const recommendationResult = !query
-    ? await perf.measure("search.recommendations", () =>
-        getGlobalSearchRecommendations(viewerProfile?.id)
-          .then((result) => ({ result, error: null }))
-          .catch((error: unknown) => {
-            console.error("Failed to load global search recommendations", error);
-            return { result: null, error };
-          }),
-      )
-    : { result: null, error: null };
   const shouldLoadInitialRelatedResults =
-    query &&
-    mainActivityResult.result &&
-    !mainActivityResult.result.hasMore;
+    query && mainActivityResult.result && !mainActivityResult.result.hasMore;
   const relatedActivityResult = shouldLoadInitialRelatedResults
     ? await perf.measure("search.relatedActivityResults", () =>
         getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
@@ -660,6 +481,20 @@ export default async function SearchPage({
       mixedActivityResultCount
     : mixedActivityResultCount;
   const hasResults = totalCount > 0 || relatedActivityCount > 0;
+  const shouldLoadRecommendations = !query || !hasResults;
+  const recommendationResult = shouldLoadRecommendations
+    ? await perf.measure("search.recommendations", () =>
+        getGlobalSearchRecommendations(viewerProfile?.id)
+          .then((result) => ({ result, error: null }))
+          .catch((error: unknown) => {
+            console.error(
+              "Failed to load global search recommendations",
+              error,
+            );
+            return { result: null, error };
+          }),
+      )
+    : { result: null, error: null };
 
   if (query && searchResult.result) {
     const requestHeaders = await headers();
@@ -761,8 +596,10 @@ export default async function SearchPage({
           />
         ) : recommendationResult.result ? (
           <SearchRecommendationsView
+            isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
             recommendations={recommendationResult.result}
+            viewerProfileId={viewerProfile?.id ?? null}
           />
         ) : null
       ) : !hasResults && hiddenEndedMainCount > 0 ? (
@@ -772,15 +609,33 @@ export default async function SearchPage({
           query={query}
         />
       ) : !hasResults ? (
-        <EmptyState
-          title={t.noResultsTitle}
-          description={t.noResultsDescription(query)}
-          actionHref={withLocale(locale, "/activities")}
-          actionLabel={t.browseRecentActivities}
-        />
+        <section className="space-y-5">
+          <EmptyState
+            title={t.noResultsTitle}
+            description={t.noResultsDescription(query)}
+            actionHref={withLocale(locale, "/activities")}
+            actionLabel={t.browseRecentActivities}
+            className="border-none bg-white p-4 shadow-none sm:p-6"
+            imageSrc={brand.emptyContentIllustrationPath}
+            imageWidth={2048}
+            imageHeight={2048}
+            imageContainerClassName="h-24 w-24 rounded-none bg-transparent ring-0 sm:h-28 sm:w-28"
+            imageClassName="scale-[1.65] object-contain"
+          />
+          {recommendationResult.result ? (
+            <SearchRecommendationsView
+              includeUsers={false}
+              isAuthenticated={Boolean(viewerProfile)}
+              locale={locale}
+              recommendations={recommendationResult.result}
+              showEmptyState={false}
+              viewerProfileId={viewerProfile?.id ?? null}
+            />
+          ) : null}
+        </section>
       ) : searchResult.result ? (
         <div className="space-y-8">
-          <p className="rounded-xl border border-sand bg-white/70 px-4 py-3 text-sm leading-6 text-zinc-600 shadow-sm">
+          <p className="text-sm leading-6 text-zinc-500">
             {totalCount > 0
               ? t.resultSummary(totalCount, query)
               : t.relatedOnlySummary(query)}
@@ -795,6 +650,7 @@ export default async function SearchPage({
               {searchResult.result.users.length > 0 ? (
                 <>
                   <GlobalSearchUserResults
+                    isAuthenticated={Boolean(viewerProfile)}
                     locale={locale}
                     query={query}
                     totalCount={searchResult.result.userCount}
@@ -802,7 +658,7 @@ export default async function SearchPage({
                   />
                 </>
               ) : (
-                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="py-2 text-sm leading-6 text-zinc-500">
                   {t.noUserResults}
                 </p>
               )}
@@ -812,16 +668,6 @@ export default async function SearchPage({
           {mixedActivityResultCount > 0 || relatedActivityCount > 0 ? (
             <section className="space-y-3">
               <SearchSectionHeader
-                action={
-                  query ? (
-                    <SearchEndedFilterBar
-                      hiddenEndedCount={hiddenEndedMainCount}
-                      includeEnded={includeEnded}
-                      locale={locale}
-                      query={query}
-                    />
-                  ) : null
-                }
                 title={t.mainResultsTitle}
                 count={
                   mixedActivityResultCount > 0
@@ -854,11 +700,11 @@ export default async function SearchPage({
                   viewerProfileId={viewerProfile?.id ?? null}
                 />
               ) : mainActivityResult.error ? (
-                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="py-2 text-sm leading-6 text-zinc-500">
                   {t.loadFailedDescription}
                 </p>
               ) : (
-                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="py-2 text-sm leading-6 text-zinc-500">
                   {t.noMainResults}
                 </p>
               )}
@@ -872,7 +718,7 @@ export default async function SearchPage({
                 count={searchResult.result.merchantCount}
               />
               {searchResult.result.merchants.length > 0 ? (
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="divide-y divide-[#EFEFEA]">
                   {searchResult.result.merchants.map((merchant) => (
                     <MerchantResultCard
                       key={merchant.id}
@@ -883,7 +729,7 @@ export default async function SearchPage({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="py-2 text-sm leading-6 text-zinc-500">
                   {t.noMerchantResults}
                 </p>
               )}

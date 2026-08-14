@@ -435,25 +435,25 @@ export function AvalonPrivateRoleCard({
               />
             </span>
             <div className="min-w-0">
-              <p className="text-[0.66rem] font-black uppercase tracking-[0.16em] text-[#156240]/75">
+              <p className="text-[0.66rem] font-bold uppercase tracking-normal text-[#156240]/75">
                 Friemi Table Lab
               </p>
-              <h1 className="truncate text-xl font-black leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
+              <h1 className="truncate text-xl font-bold leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
                 {seatDisplayName}
               </h1>
-              <p className="text-xs font-black text-[#156240]/75">
+              <p className="text-xs font-bold text-[#156240]/75">
                 {t.seat} {seatNumber}
               </p>
               <nav className="mt-2 flex flex-wrap gap-1.5">
                 <Link
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/70 bg-[#FEFFF9] px-2.5 text-[0.68rem] font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/70 bg-[#FEFFF9] px-2.5 text-[0.68rem] font-bold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
                   href={roomHref}
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   {t.backToRoom}
                 </Link>
                 <Link
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-2.5 text-[0.68rem] font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-2.5 text-[0.68rem] font-bold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
                   href={toolHref}
                 >
                   <Home className="h-3.5 w-3.5" />
@@ -484,7 +484,7 @@ export function AvalonPrivateRoleCard({
                 ) : null}
               </nav>
               {leaveState.formError ? (
-                <p className="mt-1.5 text-[0.68rem] font-black text-[#9A1F35]">
+                <p className="mt-1.5 text-[0.68rem] font-bold text-[#9A1F35]">
                   {leaveState.formError}
                 </p>
               ) : null}
@@ -557,7 +557,7 @@ function LeaveAvalonPrivateSeatSubmit({ label }: { label: string }) {
 
   return (
     <button
-      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#F09182]/65 bg-white px-2.5 text-[0.68rem] font-black text-[#9A1F35] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF3EF] disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#F09182]/65 bg-white px-2.5 text-[0.68rem] font-bold text-[#9A1F35] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF3EF] disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -591,11 +591,11 @@ function RoundSwitcher({
       className="rounded-[1.55rem] border border-[#D6D5B2] bg-white/78 p-2.5 shadow-sm backdrop-blur"
     >
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
-        <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#156240]/75">
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-normal text-[#156240]/75">
           <History className="h-3.5 w-3.5" />
           {t.history}
         </span>
-        <span className="rounded-full bg-[#F1F2EC] px-2.5 py-1 text-[0.68rem] font-black text-[#156240]">
+        <span className="rounded-full bg-[#F1F2EC] px-2.5 py-1 text-[0.68rem] font-bold text-[#156240]">
           {t.today} {currentRoundIndex + 1}
         </span>
       </div>
@@ -640,7 +640,7 @@ function RoundSwitcher({
               />
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[0.68rem] font-black leading-none",
+                  "rounded-full px-2 py-0.5 text-[0.68rem] font-bold leading-none",
                   selected
                     ? "bg-[#156240] text-white"
                     : "bg-white/82 text-[#156240]",
@@ -696,7 +696,7 @@ function PlayerStageCard({
         <div className="min-w-0">
           <p
             className={cn(
-              "text-[0.66rem] font-black uppercase tracking-[0.16em]",
+              "text-[0.66rem] font-bold uppercase tracking-normal",
               stage.tone === "forest" ? "text-white/78" : "text-[#156240]/70",
             )}
           >
@@ -704,7 +704,7 @@ function PlayerStageCard({
           </p>
           <h2
             className={cn(
-              "line-clamp-2 text-xl font-black leading-tight tracking-normal",
+              "line-clamp-2 text-xl font-bold leading-tight tracking-normal",
               stage.tone === "forest" ? "text-white" : "text-[#0E2A5A]",
             )}
           >
@@ -721,7 +721,7 @@ function PlayerStageCard({
         </div>
         <span
           className={cn(
-            "grid min-h-12 min-w-12 place-items-center rounded-full px-2 text-center text-[0.68rem] font-black shadow-sm",
+            "grid min-h-12 min-w-12 place-items-center rounded-full px-2 text-center text-[0.68rem] font-bold shadow-sm",
             stage.tone === "forest"
               ? "bg-white text-[#156240]"
               : "border border-[#8AB68E]/55 bg-[#FEFFF9] text-[#156240]",
@@ -766,10 +766,10 @@ function RolePocket({
           />
         </span>
         <div className="min-w-0">
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+          <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
             {t.identityPocket}
           </p>
-          <p className="text-sm font-black leading-5 text-[#0E2A5A]">
+          <p className="text-sm font-bold leading-5 text-[#0E2A5A]">
             {t.noRole}
           </p>
         </div>
@@ -790,14 +790,14 @@ function RolePocket({
             width={88}
           />
           <div className="min-w-0">
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/58">
+            <p className="text-[0.68rem] font-bold uppercase tracking-normal text-white/58">
               {t.identityPocket}
             </p>
             <p className="mt-1 text-sm font-bold leading-5 text-white/82">
               {t.hidden}
             </p>
             <button
-              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] shadow-lg shadow-black/20 transition active:scale-[0.98] hover:-translate-y-0.5"
+              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-[#156240] shadow-lg shadow-black/20 transition active:scale-[0.98] hover:-translate-y-0.5"
               onClick={onReveal}
               type="button"
             >
@@ -834,13 +834,13 @@ function RolePocket({
             />
           </span>
           <div className="min-w-0">
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[#156240]/70">
+            <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
               {t.role}
             </p>
-            <h2 className="line-clamp-1 text-2xl font-black leading-tight text-[#0E2A5A]">
+            <h2 className="line-clamp-1 text-2xl font-bold leading-tight text-[#0E2A5A]">
               {payload.roleLabel}
             </h2>
-            <span className="mt-1 inline-flex rounded-full border border-[#8AB68E]/60 bg-[#FEFFF9] px-2.5 py-0.5 text-xs font-black text-[#156240]">
+            <span className="mt-1 inline-flex rounded-full border border-[#8AB68E]/60 bg-[#FEFFF9] px-2.5 py-0.5 text-xs font-bold text-[#156240]">
               {payload.alignmentLabel}
             </span>
           </div>
@@ -860,7 +860,7 @@ function RolePocket({
 
         {payload.visibleHints.length > 0 ? (
           <div className="grid gap-2">
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+            <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
               {t.visible}
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -869,7 +869,7 @@ function RolePocket({
                   className="grid min-h-24 place-items-center rounded-[1.2rem] border border-[#D6D5B2] bg-[#FEFFF9] px-2 py-2 text-center shadow-sm"
                   key={`${hint.seatNumber}-${hint.label}-${hint.displayName}`}
                 >
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-[#156240] text-sm font-black text-white shadow-sm">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-[#156240] text-sm font-bold text-white shadow-sm">
                     {hint.seatNumber}
                   </span>
                   <Image
@@ -879,10 +879,10 @@ function RolePocket({
                     src={getRoleIconPath(hint.roleKey ?? null)}
                     width={44}
                   />
-                  <span className="line-clamp-1 text-[0.68rem] font-black text-[#0E2A5A]">
+                  <span className="line-clamp-1 text-[0.68rem] font-bold text-[#0E2A5A]">
                     {hint.displayName}
                   </span>
-                  <span className="line-clamp-1 text-[0.62rem] font-black text-[#156240]/75">
+                  <span className="line-clamp-1 text-[0.62rem] font-bold text-[#156240]/75">
                     {hint.label}
                   </span>
                 </div>
@@ -904,7 +904,7 @@ function HelpDialog({ onClose, t }: { onClose: () => void; t: Copy }) {
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#156240] shadow-sm">
               <CircleHelp className="h-5 w-5" />
             </span>
-            <h2 className="text-base font-black text-[#0E2A5A]">{t.help}</h2>
+            <h2 className="text-base font-bold text-[#0E2A5A]">{t.help}</h2>
           </div>
           <button
             aria-label={t.helpClose}
@@ -931,7 +931,7 @@ function HelpDialog({ onClose, t }: { onClose: () => void; t: Copy }) {
             {t.helpBody}
           </p>
           <button
-            className="h-11 rounded-2xl bg-[#156240] px-5 text-sm font-black text-white shadow-lg shadow-[#156240]/18"
+            className="h-11 rounded-2xl bg-[#156240] px-5 text-sm font-bold text-white shadow-lg shadow-[#156240]/18"
             onClick={onClose}
             type="button"
           >
@@ -947,7 +947,7 @@ function MiniHintCard({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <div className="grid min-h-20 place-items-center rounded-[1.2rem] border border-[#D6D5B2] bg-white text-center text-[#156240] shadow-sm">
       {icon}
-      <span className="text-xs font-black">{label}</span>
+      <span className="text-xs font-bold">{label}</span>
     </div>
   );
 }
@@ -1101,13 +1101,13 @@ function LeaderTeamProposalPanel({
             <Crown className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+            <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
               {t.phaseTeam}
             </p>
-            <h2 className="text-lg font-black text-[#0E2A5A]">{t.pickTeam}</h2>
+            <h2 className="text-lg font-bold text-[#0E2A5A]">{t.pickTeam}</h2>
           </div>
         </div>
-        <span className="grid h-10 min-w-10 place-items-center rounded-full bg-[#F1F2EC] px-2 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E]">
+        <span className="grid h-10 min-w-10 place-items-center rounded-full bg-[#F1F2EC] px-2 text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]">
           {requiredTeamSize}
         </span>
       </div>
@@ -1126,10 +1126,10 @@ function LeaderTeamProposalPanel({
               value={seat.seatNumber}
             />
             <span className="relative grid min-h-16 place-items-center rounded-[1.2rem] border border-[#D6D5B2] bg-[#FEFFF9] px-1 py-2 text-center shadow-sm transition active:scale-[0.98] peer-checked:-translate-y-0.5 peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#156240]/20">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-xs font-black text-[#156240] shadow-sm">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-xs font-bold text-[#156240] shadow-sm">
                 {seat.seatNumber}
               </span>
-              <span className="mt-1 line-clamp-1 max-w-full text-[0.62rem] font-black">
+              <span className="mt-1 line-clamp-1 max-w-full text-[0.62rem] font-bold">
                 {seat.displayName}
               </span>
             </span>
@@ -1137,7 +1137,7 @@ function LeaderTeamProposalPanel({
         ))}
       </div>
 
-      <div className="relative flex items-center justify-between gap-2 rounded-2xl bg-[#F1F2EC] px-3 py-2 text-xs font-black text-[#156240] shadow-inner">
+      <div className="relative flex items-center justify-between gap-2 rounded-2xl bg-[#F1F2EC] px-3 py-2 text-xs font-bold text-[#156240] shadow-inner">
         <span>{t.selectExactly}</span>
         <span className="rounded-full bg-white px-2 py-0.5 text-[#0E2A5A]">
           {requiredTeamSize}
@@ -1208,15 +1208,15 @@ function RoundHistoryPanel({
               />
             </span>
             <div>
-              <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+              <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
                 {t.history}
               </p>
-              <h2 className="text-lg font-black text-[#0E2A5A]">
+              <h2 className="text-lg font-bold text-[#0E2A5A]">
                 {t.day} {roundIndex + 1}
               </h2>
             </div>
           </div>
-          <span className="rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-black text-[#156240]">
+          <span className="rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-bold text-[#156240]">
             {missionResult === "success"
               ? t.success
               : missionResult === "fail"
@@ -1286,11 +1286,11 @@ function HistoryStat({
 }) {
   return (
     <div className="rounded-[1.2rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 shadow-sm">
-      <p className="inline-flex items-center gap-1.5 text-[0.68rem] font-black uppercase tracking-[0.12em] text-[#156240]/70">
+      <p className="inline-flex items-center gap-1.5 text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
         {icon}
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-[#0E2A5A]">{value}</p>
+      <p className="mt-1 text-sm font-bold text-[#0E2A5A]">{value}</p>
     </div>
   );
 }
@@ -1314,10 +1314,10 @@ function OwnRecordCard({
         width={56}
       />
       <div className="min-w-0">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[#156240]/70">
+        <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
           {label}
         </p>
-        <p className="truncate text-base font-black text-[#0E2A5A]">{value}</p>
+        <p className="truncate text-base font-bold text-[#0E2A5A]">{value}</p>
       </div>
     </div>
   );
@@ -1359,10 +1359,10 @@ function PassiveRoundPanel({
           src={visual.icon}
           width={96}
         />
-        <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-[#156240]/70">
+        <p className="mt-2 text-xs font-bold uppercase tracking-normal text-[#156240]/70">
           {visual.title}
         </p>
-        <p className="mt-1 text-base font-black text-[#0E2A5A]">
+        <p className="mt-1 text-base font-bold text-[#0E2A5A]">
           {visual.label}
         </p>
       </div>
@@ -1505,7 +1505,7 @@ function AssassinationPanel({
               type="radio"
               value={seat.seatNumber}
             />
-            <span className="grid h-16 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] text-sm font-black text-[#156240] shadow-sm transition peer-checked:-translate-y-0.5 peer-checked:border-[#B5301F] peer-checked:bg-[#B5301F] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#B5301F]/20">
+            <span className="grid h-16 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] text-sm font-bold text-[#156240] shadow-sm transition peer-checked:-translate-y-0.5 peer-checked:border-[#B5301F] peer-checked:bg-[#B5301F] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#B5301F]/20">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-xs">
                 {seat.seatNumber}
               </span>
@@ -1531,7 +1531,7 @@ function ActionPanelHeader({ image, title }: { image: string; title: string }) {
           width={32}
         />
       </span>
-      <h2 className="text-sm font-black text-[#0E2A5A]">{title}</h2>
+      <h2 className="text-sm font-bold text-[#0E2A5A]">{title}</h2>
     </div>
   );
 }
@@ -1572,7 +1572,7 @@ function PrivateImageActionButton({
 
   return (
     <button
-      className="avalon-action-shine group relative grid min-h-32 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-black text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-40"
+      className="avalon-action-shine group relative grid min-h-32 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-bold text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-40"
       disabled={pending}
       type="submit"
     >
@@ -1599,7 +1599,7 @@ function PrivateSubmitButton({ label }: { label: string }) {
 
   return (
     <button
-      className="h-11 rounded-2xl bg-[#156240] px-5 text-sm font-black text-white shadow-lg shadow-[#156240]/20 disabled:opacity-70"
+      className="h-11 rounded-2xl bg-[#156240] px-5 text-sm font-bold text-white shadow-lg shadow-[#156240]/20 disabled:opacity-70"
       disabled={pending}
       type="submit"
     >
@@ -1613,7 +1613,7 @@ function TeamProposalSeatSubmitButton({ label }: { label: string }) {
 
   return (
     <button
-      className="relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#156240] px-5 text-sm font-black text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5 disabled:opacity-70"
+      className="relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#156240] px-5 text-sm font-bold text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5 disabled:opacity-70"
       disabled={pending}
       type="submit"
     >
@@ -1636,7 +1636,7 @@ function RecordedState({ t }: { t: Copy }) {
           width={88}
         />
       </div>
-      <p className="mt-2 max-w-64 text-sm font-black leading-6 text-[#156240]">
+      <p className="mt-2 max-w-64 text-sm font-bold leading-6 text-[#156240]">
         {t.wait}
       </p>
     </div>
@@ -1657,7 +1657,7 @@ function ActionFeedback({ state }: { state: AvalonRoomActionState }) {
   }
 
   return state.formNotice ? (
-    <p className="rounded-2xl bg-[#8AB68E]/14 px-3 py-2 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E]/35">
+    <p className="rounded-2xl bg-[#8AB68E]/14 px-3 py-2 text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]/35">
       {state.formNotice}
     </p>
   ) : null;

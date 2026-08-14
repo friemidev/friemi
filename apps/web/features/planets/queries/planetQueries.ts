@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { getPlanetChatUnreadState } from "@/features/planets/services/planetChat";
 
 const approvedMemberFilter = { status: "APPROVED" as const };
 
 export async function getPlanetSquare(viewerProfileId: string | null) {
   return prisma.planet.findMany({
     where: viewerProfileId
-      ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+      ? {
+          OR: [
+            { visibility: "PUBLIC" },
+            { members: { some: { profileId: viewerProfileId } } },
+          ],
+        }
       : { visibility: "PUBLIC" },
     select: {
       id: true,
@@ -18,25 +24,37 @@ export async function getPlanetSquare(viewerProfileId: string | null) {
       visibility: true,
       _count: { select: { members: { where: approvedMemberFilter } } },
       members: viewerProfileId
-        ? { where: { profileId: viewerProfileId }, select: { role: true, status: true } }
+        ? {
+            where: { profileId: viewerProfileId },
+            select: { role: true, status: true },
+          }
         : false,
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getPlanetRoom(planetSlug: string, viewerProfileId: string | null) {
+export async function getPlanetRoom(
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
   const planet = await prisma.planet.findFirst({
     where: {
       slug: planetSlug,
       ...(viewerProfileId
-        ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+        ? {
+            OR: [
+              { visibility: "PUBLIC" },
+              { members: { some: { profileId: viewerProfileId } } },
+            ],
+          }
         : { visibility: "PUBLIC" }),
     },
     select: {
       id: true,
       slug: true,
       inviteCode: true,
+      coverImageUrl: true,
       name: true,
       nameTranslations: true,
       description: true,
@@ -46,7 +64,7 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
       _count: { select: { members: { where: approvedMemberFilter } } },
       members: {
         where: approvedMemberFilter,
-        take: 5,
+        take: 6,
         orderBy: { joinedAt: "asc" },
         select: {
           profileId: true,
@@ -78,25 +96,9 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
       })
     : null;
 
-  const canViewChat = viewerMembership?.status === "APPROVED";
-  const messages = canViewChat
-    ? await prisma.planetMessage.findMany({
-        where: { planetId: planet.id },
-        take: 40,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          authorId: true,
-          author: { select: { nickname: true, avatarUrl: true } },
-        },
-      })
-    : [];
-
-  const pendingMembers =
+  const [pendingMembers, chatState] = await Promise.all([
     viewerMembership?.role === "OWNER" || viewerMembership?.role === "ADMIN"
-      ? await prisma.planetMember.findMany({
+      ? prisma.planetMember.findMany({
           where: { planetId: planet.id, status: "PENDING" },
           orderBy: { joinedAt: "asc" },
           select: {
@@ -105,25 +107,150 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
             profile: { select: { nickname: true, avatarUrl: true } },
           },
         })
-      : [];
+      : Promise.resolve([]),
+    viewerProfileId && viewerMembership?.status === "APPROVED"
+      ? getPlanetChatUnreadState({
+          planetId: planet.id,
+          profileId: viewerProfileId,
+        })
+      : Promise.resolve({
+          isMuted: false,
+          isPinned: false,
+          unreadCount: 0,
+        }),
+  ]);
+
+  return {
+    ...planet,
+    viewerMembership,
+    canViewChat: viewerMembership?.status === "APPROVED",
+    chatUnreadCount: chatState.unreadCount,
+    isChatMuted: chatState.isMuted,
+    isChatPinned: chatState.isPinned,
+    pendingMembers,
+  };
+}
+
+export async function getPlanetChatPageData(
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
+  const planet = await prisma.planet.findFirst({
+    where: {
+      slug: planetSlug,
+      ...(viewerProfileId
+        ? {
+            OR: [
+              { visibility: "PUBLIC" },
+              { members: { some: { profileId: viewerProfileId } } },
+            ],
+          }
+        : { visibility: "PUBLIC" }),
+    },
+    select: {
+      id: true,
+      slug: true,
+      coverImageUrl: true,
+      name: true,
+      nameTranslations: true,
+    },
+  });
+
+  if (!planet) return null;
+
+  const viewerMembership = viewerProfileId
+    ? await prisma.planetMember.findFirst({
+        where: { planetId: planet.id, profileId: viewerProfileId },
+        select: { role: true, status: true },
+      })
+    : null;
+  const canViewChat = viewerMembership?.status === "APPROVED";
+  const [messages, readState] = canViewChat
+    ? await Promise.all([
+        prisma.planetMessage.findMany({
+          where: { planetId: planet.id },
+          take: 40,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            content: true,
+            imageUrls: true,
+            mentionedProfileIds: true,
+            mentionLabels: true,
+            mentionsEveryone: true,
+            createdAt: true,
+            authorId: true,
+            author: { select: { nickname: true, avatarUrl: true } },
+          },
+        }),
+        prisma.planetChatReadState.findUnique({
+          where: {
+            planetId_profileId: {
+              planetId: planet.id,
+              profileId: viewerProfileId!,
+            },
+          },
+          select: {
+            mutedAt: true,
+            pinnedAt: true,
+          },
+        }),
+      ])
+    : [[], null];
 
   return {
     ...planet,
     viewerMembership,
     canViewChat,
-    pendingMembers,
+    isMuted: Boolean(readState?.mutedAt),
+    isPinned: Boolean(readState?.pinnedAt),
     messages: [...messages].reverse(),
   };
 }
 
-export async function getPlanetMoment(momentId: string, planetSlug: string, viewerProfileId: string | null) {
+export async function getPlanetMomentRedirectTarget(
+  momentId: string,
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
+  return prisma.planetMoment.findFirst({
+    where: {
+      id: momentId,
+      planet: {
+        slug: planetSlug,
+        ...(viewerProfileId
+          ? {
+              OR: [
+                { visibility: "PUBLIC" },
+                { members: { some: { profileId: viewerProfileId } } },
+              ],
+            }
+          : { visibility: "PUBLIC" }),
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+export async function getPlanetMoment(
+  momentId: string,
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
   const moment = await prisma.planetMoment.findFirst({
     where: {
       id: momentId,
       planet: {
         slug: planetSlug,
         ...(viewerProfileId
-          ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+          ? {
+              OR: [
+                { visibility: "PUBLIC" },
+                { members: { some: { profileId: viewerProfileId } } },
+              ],
+            }
           : { visibility: "PUBLIC" }),
       },
     },
@@ -135,17 +262,24 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
       createdAt: true,
       author: { select: { nickname: true, avatarUrl: true } },
       _count: { select: { likes: true } },
-      likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
-      planet: { select: { id: true, slug: true, name: true, nameTranslations: true } },
+      likes: viewerProfileId
+        ? { where: { profileId: viewerProfileId }, select: { id: true } }
+        : false,
+      planet: {
+        select: { id: true, slug: true, name: true, nameTranslations: true },
+      },
       comments: {
-        orderBy: { createdAt: "asc" },
+        take: 50,
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           content: true,
           createdAt: true,
           author: { select: { nickname: true, avatarUrl: true } },
           _count: { select: { likes: true } },
-          likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
+          likes: viewerProfileId
+            ? { where: { profileId: viewerProfileId }, select: { id: true } }
+            : false,
         },
       },
     },
@@ -161,7 +295,10 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
 
   return {
     ...moment,
+    comments: [...moment.comments].reverse(),
     viewerMembership,
-    isViewerAuthor: Boolean(viewerProfileId && moment.authorId === viewerProfileId),
+    isViewerAuthor: Boolean(
+      viewerProfileId && moment.authorId === viewerProfileId,
+    ),
   };
 }

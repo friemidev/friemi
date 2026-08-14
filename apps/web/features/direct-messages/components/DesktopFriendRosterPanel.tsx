@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
+import {
+  BellOff,
+  CalendarDays,
+  ChevronDown,
+  MessageCircle,
+  Pin,
+  Search,
+} from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
@@ -14,6 +21,7 @@ import type {
   DirectMessageFriendRosterItemViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
+import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 
 type DesktopFriendRosterPanelProps = {
   activityContextQuery?: {
@@ -139,6 +147,8 @@ function DesktopFriendRosterRow({
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const showUnreadBadge = unreadCount > 0 && !friend.isMuted;
+  const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -148,6 +158,9 @@ function DesktopFriendRosterRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const showPublicNickname =
+    Boolean(friend.friend.remarkName) &&
+    friend.friend.publicNickname !== friend.friend.nickname;
   const conversationHref = friend.conversationId
     ? getConversationHref({
         activityContextQuery,
@@ -168,7 +181,7 @@ function DesktopFriendRosterRow({
           <span
             className={cn(
               "truncate text-sm",
-              unreadCount > 0 ? "font-black" : "font-semibold",
+              showUnreadBadge ? "font-bold" : "font-semibold",
             )}
           >
             {friend.friend.nickname}
@@ -179,19 +192,38 @@ function DesktopFriendRosterRow({
               isActive ? "text-[#8E8383]" : "text-[#8E8383]",
             )}
           >
-            {formatChatListTimestamp(time, locale)}
+            <span className="inline-flex items-center gap-1">
+              {friend.isPinned ? (
+                <Pin aria-label={t.pinConversation} className="h-3 w-3" />
+              ) : null}
+              {friend.isMuted ? (
+                <BellOff aria-label={t.muteConversation} className="h-3 w-3" />
+              ) : null}
+              {formatChatListTimestamp(time, locale)}
+            </span>
           </span>
-          {unreadCount > 0 ? (
-            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+          {showUnreadBadge ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
+          ) : showMutedUnreadDot ? (
+            <span
+              aria-label={t.mutedUnreadLabel}
+              className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#E7457A] ring-2 ring-white"
+              title={t.mutedUnreadLabel}
+            />
           ) : null}
         </span>
+        {showPublicNickname ? (
+          <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+            {friend.friend.publicNickname}
+          </span>
+        ) : null}
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",
-            unreadCount > 0
-              ? "font-black text-ink"
+            showUnreadBadge
+              ? "font-bold text-ink"
               : isActive
                 ? "text-[#156240]"
                 : "text-[#156240]",
@@ -207,23 +239,31 @@ function DesktopFriendRosterRow({
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-[1.05rem] p-2.5 transition duration-200",
+        "group rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
           ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
           : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
       {friend.conversationId ? (
-        <Link
-          aria-label={t.openConversation(friend.friend.nickname)}
-          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={
-            conversationHref ??
-            withLocale(locale, `/messages/${friend.conversationId}`)
-          }
-        >
-          {content}
-        </Link>
+        <div className="flex min-w-0 items-center gap-1">
+          <Link
+            aria-label={t.openConversation(friend.friend.nickname)}
+            className="grid min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            href={
+              conversationHref ??
+              withLocale(locale, `/messages/${friend.conversationId}`)
+            }
+          >
+            {content}
+          </Link>
+          <ChatRosterDismissButton
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+            conversationId={friend.conversationId}
+            kind="direct"
+            locale={locale}
+          />
+        </div>
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />

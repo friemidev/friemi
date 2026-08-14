@@ -1,15 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import {
-  Compass,
-  MessageCircle,
-  Plus,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { Compass, Globe2, Plus, UserRound, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -32,6 +26,7 @@ function shouldHideMobileNav(pathname: string, locale: string) {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { sectionOverride } = useMobileNavSection();
   const { unreadDirectMessageCount } = useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
@@ -60,7 +55,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       {
         href: "/footprints?tab=moment",
         label: t.nav.footprintsShort,
-        icon: MessageCircle,
+        icon: Globe2,
       },
       {
         href: "/profile",
@@ -77,7 +72,10 @@ export function MobileNav({ locale }: MobileNavProps) {
     ],
   );
 
-  if (shouldHideMobileNav(pathname, currentLocale)) {
+  if (
+    searchParams.get("sheet") === "1" ||
+    shouldHideMobileNav(pathname, currentLocale)
+  ) {
     return null;
   }
 
@@ -169,7 +167,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   strokeWidth={active ? 2.4 : 2}
                 />
                 {showUnreadBadge ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}
                   </span>
                 ) : null}
@@ -178,7 +176,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 <span
                   className={cn(
                     "max-w-full whitespace-nowrap transition",
-                    active ? "font-extrabold text-forest" : null,
+                    active ? "font-semibold text-forest" : null,
                   )}
                 >
                   {item.label}

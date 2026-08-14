@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { createNotification } from "@/features/notifications/utils/createNotification";
+import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -255,6 +257,103 @@ export async function markAllNotificationsReadClientAction(locale: string) {
   return { ok: true as const };
 }
 
+export async function followBackFromNotificationClientAction(
+  locale: string,
+  notificationId: string,
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+  const notification = await prisma.notification.findFirst({
+    where: getVisibleNotificationWhere({
+      id: notificationId,
+      recipientId: profile.id,
+      type: "FRIEND_REQUEST",
+    }),
+    select: {
+      actor: {
+        select: {
+          id: true,
+          nickname: true,
+          status: true,
+        },
+      },
+    },
+  });
+  const target = notification?.actor;
+
+  if (!target || target.id === profile.id || target.status !== "ACTIVE") {
+    return { ok: false as const };
+  }
+
+  const targetFollowsViewer = await prisma.userFollow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: target.id,
+        followingId: profile.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.userFollow.upsert({
+      where: {
+        followerId_followingId: {
+          followerId: profile.id,
+          followingId: target.id,
+        },
+      },
+      create: {
+        followerId: profile.id,
+        followingId: target.id,
+      },
+      update: {},
+    });
+
+    await tx.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    await createNotification(tx, {
+      actorDisplayName: profile.nickname,
+      actorId: profile.id,
+      dedupe: true,
+      recipientId: target.id,
+      type: "FRIEND_REQUEST",
+    });
+  });
+
+  if (targetFollowsViewer) {
+    await markReferralMutualFollowAcceptedBetween(profile.id, target.id).catch(
+      (error: unknown) => {
+        console.error("Failed to mark referral mutual follow accepted", error);
+      },
+    );
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+  revalidatePath(withLocale(normalizedLocale, "/profile"));
+  revalidatePath(withLocale(normalizedLocale, "/profile/network"));
+  revalidatePath(withLocale(normalizedLocale, `/profile/${target.id}`));
+
+  return {
+    isMutualFollow: Boolean(targetFollowsViewer),
+    ok: true as const,
+  };
+}
+
 export async function deleteReadNotificationsAction(formData: FormData) {
   const locale = getString(formData, "locale") || "zh-CN";
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
@@ -306,6 +405,11 @@ export async function openNotificationActivityAction(formData: FormData) {
       actorId: true,
       activityId: true,
       momentId: true,
+      planet: {
+        select: {
+          slug: true,
+        },
+      },
       type: true,
     },
   });
@@ -339,6 +443,39 @@ export async function openNotificationActivityAction(formData: FormData) {
         notification.actorId
           ? `/profile/${notification.actorId}`
           : "/notifications",
+      ),
+    );
+  }
+
+  if (notification?.type === "PLANET_JOIN_REQUEST") {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    if (notification.planet?.slug) {
+      revalidatePath(withLocale(locale, `/planets/${notification.planet.slug}`));
+    }
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "notifications",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.planet?.slug
+          ? `/planets/${notification.planet.slug}`
+          : "/planets",
       ),
     );
   }

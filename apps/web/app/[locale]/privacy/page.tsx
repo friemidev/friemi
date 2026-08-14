@@ -196,7 +196,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <header className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] sm:p-8">
           <BrandLockup size="sm" />
-          <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#156240]">
+          <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {copy.eyebrow}
           </p>

@@ -3,6 +3,7 @@ import { ProfileInvitePageView } from "@/features/profile/components/ProfilePriv
 import { getReferralStats } from "@/features/referrals/queries/getReferralDashboard";
 import { buildReferralLink } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileInvitePageProps = {
   params: Promise<{
@@ -11,6 +12,8 @@ type ProfileInvitePageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 const emptyReferralStats = {
   boundReferral: null,
   firstParticipationCount: 0,

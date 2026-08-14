@@ -18,7 +18,9 @@ export function normalizePushLocale(value: string | null): PushCopyLocale {
 export function getNotificationPath(input: {
   activityId: string | null;
   actorId?: string | null;
+  conversationId?: string | null;
   momentId?: string | null;
+  planetSlug?: string | null;
   type: NotificationType;
 }) {
   if (
@@ -28,6 +30,19 @@ export function getNotificationPath(input: {
     input.type === "MOMENT_REPOSTED"
   ) {
     return input.momentId ? `/footprints/${input.momentId}` : "/footprints";
+  }
+
+  if (input.type === "ACTIVITY_ROOM_MESSAGE") {
+    return input.activityId ? `/lobby/${input.activityId}/room` : "/lobby";
+  }
+
+  if (
+    input.type === "PLANET_MESSAGE" ||
+    input.type === "PLANET_JOIN_REQUEST"
+  ) {
+    return input.planetSlug
+      ? `/planets/${input.planetSlug}/chat`
+      : "/planets";
   }
 
   if (input.activityId) {
@@ -43,11 +58,13 @@ export function getNotificationPath(input: {
   }
 
   if (input.type === "DIRECT_MESSAGE") {
-    return "/messages";
+    return input.conversationId
+      ? `/messages/${input.conversationId}`
+      : "/messages";
   }
 
   if (input.type === "CHARM_GIFT_RECEIVED") {
-    return input.actorId ? `/profile/${input.actorId}` : "/notifications";
+    return "/profile/gift-wall";
   }
 
   return "/notifications";
@@ -70,6 +87,7 @@ export function getNotificationCopy(input: {
   giftText?: string | null;
   locale: PushCopyLocale;
   messageBody?: string | null;
+  planetName?: string | null;
   type: NotificationType;
 }) {
   const activityTitle =
@@ -79,6 +97,13 @@ export function getNotificationCopy(input: {
       : input.locale === "en"
         ? "your plan"
         : "votre sortie");
+  const planetName =
+    input.planetName ||
+    (input.locale === "zh-CN"
+      ? "星球"
+      : input.locale === "en"
+        ? "your planet"
+        : "votre planète");
   const hasActorName = Boolean(input.actorName?.trim());
   const actorName =
     input.actorName ||
@@ -120,6 +145,9 @@ export function getNotificationCopy(input: {
       PARTICIPATION_PENDING: `${actorName} 提交了报名申请`,
       PARTICIPATION_REJECTED: `${activityTitle} 未通过报名`,
       REPORT_CREATED: "有新的举报需要处理",
+      PLANET_MESSAGE: `「${planetName}」有新消息`,
+      ACTIVITY_ROOM_MESSAGE: `「${activityTitle}」群聊有新消息`,
+      PLANET_JOIN_REQUEST: `${actorName} 申请加入「${planetName}」`,
     },
     en: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
@@ -145,6 +173,9 @@ export function getNotificationCopy(input: {
       PARTICIPATION_PENDING: `${actorName} asked to join`,
       PARTICIPATION_REJECTED: `${activityTitle} could not approve you`,
       REPORT_CREATED: "A new report needs review",
+      PLANET_MESSAGE: `New messages in ${planetName}`,
+      ACTIVITY_ROOM_MESSAGE: `New messages in ${activityTitle}`,
+      PLANET_JOIN_REQUEST: `${actorName} asked to join ${planetName}`,
     },
     fr: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
@@ -170,6 +201,9 @@ export function getNotificationCopy(input: {
       PARTICIPATION_PENDING: `${actorName} demande à participer`,
       PARTICIPATION_REJECTED: `${activityTitle} n'a pas pu vous accepter`,
       REPORT_CREATED: "Un nouveau signalement est à traiter",
+      PLANET_MESSAGE: `Nouveaux messages dans ${planetName}`,
+      ACTIVITY_ROOM_MESSAGE: `Nouveaux messages dans ${activityTitle}`,
+      PLANET_JOIN_REQUEST: `${actorName} demande à rejoindre ${planetName}`,
     },
   };
 

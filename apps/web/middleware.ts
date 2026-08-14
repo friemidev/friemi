@@ -42,6 +42,11 @@ const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
 const isActivityRoomChatApiRoute = createRouteMatcher([
   "/api/activity-room-chat(.*)",
 ]);
+const isActivityRoomCursorApiRoute = createRouteMatcher([
+  "/api/activity-room(.*)",
+]);
+const isGameToolsApiRoute = createRouteMatcher(["/api/game-tools(.*)"]);
+const isPlanetsApiRoute = createRouteMatcher(["/api/planets(.*)"]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isDirectMessagesApiRoute = createRouteMatcher([
@@ -52,6 +57,7 @@ const isProfileVisitsApiRoute = createRouteMatcher(["/api/profile-visits(.*)"]);
 const isProfileApiRoute = createRouteMatcher(["/api/profile(.*)"]);
 const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
+const isNavigationApiRoute = createRouteMatcher(["/api/navigation(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
@@ -154,7 +160,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (canonicalHostRedirectUrl) {
     return withReferralCookie(
       request,
-      NextResponse.redirect(canonicalHostRedirectUrl),
+      NextResponse.redirect(canonicalHostRedirectUrl, 308),
     );
   }
 
@@ -192,7 +198,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (localeRootHomePath) {
     return withReferralCookie(
       request,
-      NextResponse.redirect(new URL(localeRootHomePath, request.url)),
+      NextResponse.redirect(new URL(localeRootHomePath, request.url), 308),
     );
   }
 
@@ -245,6 +251,18 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isActivityRoomCursorApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isGameToolsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isPlanetsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isUserPreviewApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -277,6 +295,10 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isNavigationApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isAnalyticsApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -303,6 +325,9 @@ export const config = {
     "/:locale/updates/:path*",
     "/api/admin/:path*",
     "/api/activity-room-chat/:path*",
+    "/api/activity-room/:path*",
+    "/api/game-tools/:path*",
+    "/api/planets/:path*",
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
@@ -312,6 +337,7 @@ export const config = {
     "/api/profile-visits/:path*",
     "/api/referrals/:path*",
     "/api/lobby/:path*",
+    "/api/navigation/:path*",
     "/api/analytics/:path*",
     "/api/search/:path*",
     "/api/translations/:path*",

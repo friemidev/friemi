@@ -4,9 +4,13 @@
     "DATABASE_URL",
     "DIRECT_URL",
     "CLERK_SECRET_KEY",
+    "ENABLE_WEREWOLF_TEST_BOTS",
     "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_ENABLE_WEREWOLF_TEST_BOTS",
     "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_STORAGE_BUCKET"
+    "SUPABASE_STORAGE_BUCKET",
+    "UNREAD_BADGE_FRESHNESS_GUARD_ENABLED",
+    "VERCEL_ENV"
   ],
   "globalDependencies": ["apps/web/prisma/schema.prisma"],
   "tasks": {
@@ -14,8 +18,11 @@
       "cache": false,
       "persistent": true
     },
+    "db:generate": {
+      "cache": false
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["db:generate", "^build"],
       "outputs": [".next/**", "dist/**"]
     },
     "lint": {

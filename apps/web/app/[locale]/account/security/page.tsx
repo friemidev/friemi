@@ -167,7 +167,7 @@ export default async function AccountSecurityPage({
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           {copy.eyebrow}
         </p>
-        <h1 className="mt-4 text-[26px] font-black leading-tight tracking-normal text-ink sm:text-4xl sm:font-semibold">
+        <h1 className="mt-4 text-[26px] font-bold leading-tight tracking-normal text-ink sm:text-4xl sm:font-semibold">
           {copy.title}
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[#156240] sm:text-base">

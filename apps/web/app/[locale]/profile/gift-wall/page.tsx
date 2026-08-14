@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { getProfileGiftWall } from "@/features/charm/queries/getProfileGiftWall";
 import { ProfileGiftWallPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileGiftWallPageProps = {
   params: Promise<{
@@ -10,6 +11,8 @@ type ProfileGiftWallPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 const emptyGiftWall = {
   lastGiftAt: null,
   senderCount: 0,

@@ -88,9 +88,9 @@ const copy = {
       mobileOpen: "打开全站搜索",
       submit: "搜索",
       back: "返回",
-      recommendationsUsersTitle: "感兴趣用户",
-      recommendationsHangoutsTitle: "感兴趣聚吧",
-      recommendationsActivitiesTitle: "感兴趣活动",
+      recommendationsUsersTitle: "可能感兴趣的用户",
+      recommendationsHangoutsTitle: "可能感兴趣的聚吧",
+      recommendationsActivitiesTitle: "可能感兴趣的活动",
       recommendationsEmptyTitle: "暂无推荐",
       recommendationsEmptyDescription: "稍后会展示更多可探索的内容。",
       emptyTitle: "输入关键词开始搜索",
@@ -191,6 +191,7 @@ const copy = {
       emptyDescription: "当前没有可展示的公开活动，请稍后再来看看。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
+      otherActivitiesTitle: "其他活动",
       viewToggleLabel: "切换活动视图",
       cardView: "全部",
       dateView: "按日期",
@@ -570,6 +571,11 @@ const copy = {
           body: (_activityTitle: string, actorName = "有人") =>
             `${actorName}关注了你。`,
         },
+        PLANET_JOIN_REQUEST: {
+          title: "星球加入申请",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}申请加入你的星球，去审核一下吧。`,
+        },
         ACTIVITY_COMMENTED: {
           title: "活动有新评论",
           body: (activityTitle: string, actorName = "有人") =>
@@ -621,7 +627,8 @@ const copy = {
       title: "发起人操作",
       cancel: "取消聚吧",
       cancelling: "取消中...",
-      cancelDescription: "取消后这场聚吧会停止报名，并从可参与列表中隐藏。",
+      cancelDescription:
+        "取消后这场聚吧会停止报名，并以已取消状态排在进行中聚吧之后。",
       cancelConfirm: "确定要取消这个聚吧吗？取消后用户将不能继续报名。",
       cancelConfirmTitle: "确认取消聚吧？",
       cancelConfirmDescription:
@@ -631,6 +638,17 @@ const copy = {
       cancelConfirmSubmit: "确认取消",
       cancelledHint: "聚吧已取消，用户无法继续报名。",
       endedHint: "活动已结束，不能再取消。",
+      delete: "删除聚吧",
+      deleting: "删除中...",
+      deleteConfirmTitle: "确认删除聚吧？",
+      deleteConfirmDescription:
+        "删除后，聚吧、群聊、报名、公告和评论会被移除，无法恢复。",
+      deleteContextLabel: "即将删除",
+      deleteConfirmSubmit: "确认删除",
+      deletePermissionError: "只有聚吧创建人可以删除这个聚吧。",
+      deleteStatusError: "公开活动信息不能在这里删除。",
+      deleteFailedError: "删除聚吧失败，请稍后重试。",
+      deleteStateKept: "删除未生效，聚吧已保留。",
       refreshError: "请稍后再试。",
       permissionError: "只有活动发起人或管理人可以取消这个活动。",
       statusError: "当前活动状态不能取消。",
@@ -666,10 +684,10 @@ const copy = {
       description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人或管理人可以编辑这个活动。",
-      lockedCancelledTitle: "活动已取消，无法编辑",
-      lockedCancelledDescription: "这个活动已经取消，不能继续修改。",
-      lockedEndedTitle: "活动已结束，无法编辑",
-      lockedEndedDescription: "这个活动已经结束，不能继续修改。",
+      lockedCancelledTitle: "活动已取消",
+      lockedCancelledDescription: "已取消的活动无法修改。",
+      lockedEndedTitle: "活动已结束",
+      lockedEndedDescription: "已结束的活动无法修改。",
     },
     profile: {
       title: "个人空间",
@@ -799,7 +817,8 @@ const copy = {
       coverImage: "封面图片",
       coverDefault: "使用默认封面",
       coverImageHint: "上传后会展示在聚吧卡片和详情页顶部。",
-      coverFileHint: "支持常见图片格式，最大 4MB。",
+      coverFileHint:
+        "支持 JPG、PNG、WebP、GIF、AVIF、HEIC 等图片，普通图片最大 10MB，GIF 最大 20MB。",
       coverUpload: "上传封面",
       coverTapToUpload: "点击上传封面",
       coverDropHere: "松开即可上传",
@@ -807,7 +826,7 @@ const copy = {
       coverRemove: "移除",
       coverUploadFailed: "封面上传失败，请稍后重试。",
       coverTypeError: "请上传常见图片格式。",
-      coverSizeError: "图片不能超过 4MB。",
+      coverSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
       coverStorageConfigError: "图片上传暂不可用，请稍后再试。",
       linkImportTitle: "从链接导入",
@@ -1160,6 +1179,7 @@ const copy = {
       emptyFilteredTitle: "No matching activity info",
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
+      otherActivitiesTitle: "Other activities",
       viewToggleLabel: "Switch activity view",
       cardView: "All",
       dateView: "By date",
@@ -1564,6 +1584,11 @@ const copy = {
           body: (_activityTitle: string, actorName = "Someone") =>
             `${actorName} started following you.`,
         },
+        PLANET_JOIN_REQUEST: {
+          title: "Planet join request",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} asked to join your planet. Review it now.`,
+        },
         ACTIVITY_COMMENTED: {
           title: "New activity comment",
           body: (activityTitle: string, actorName = "Someone") =>
@@ -1616,7 +1641,7 @@ const copy = {
       cancel: "Cancel crew",
       cancelling: "Cancelling...",
       cancelDescription:
-        "After cancellation, this crew stops taking new join requests and is hidden from joinable lists.",
+        "After cancellation, this crew stops taking new join requests and remains listed after active crews with a cancelled status.",
       cancelConfirm: "Cancel this crew? Users will no longer be able to join.",
       cancelConfirmTitle: "Cancel this crew?",
       cancelConfirmDescription:
@@ -1626,6 +1651,17 @@ const copy = {
       cancelConfirmSubmit: "Cancel crew",
       cancelledHint: "This crew is cancelled. Users can no longer join.",
       endedHint: "This activity has ended and can no longer be cancelled.",
+      delete: "Delete crew",
+      deleting: "Deleting...",
+      deleteConfirmTitle: "Delete this crew?",
+      deleteConfirmDescription:
+        "This removes the crew, group chat, signups, announcements, and comments. It cannot be undone.",
+      deleteContextLabel: "Crew to delete",
+      deleteConfirmSubmit: "Delete crew",
+      deletePermissionError: "Only the crew creator can delete this crew.",
+      deleteStatusError: "Public event info cannot be deleted here.",
+      deleteFailedError: "Failed to delete the crew. Try again later.",
+      deleteStateKept: "Deletion did not go through. The crew is unchanged.",
       refreshError: "Try again later.",
       permissionError:
         "Only the organizer or a manager can cancel this activity.",
@@ -1816,7 +1852,8 @@ const copy = {
       coverImage: "Cover image",
       coverDefault: "Use the default cover",
       coverImageHint: "Uploaded images appear on plan cards and detail pages.",
-      coverFileHint: "Common image formats. Max 4MB.",
+      coverFileHint:
+        "JPG, PNG, WebP, GIF, AVIF, HEIC and more. Regular images max 10 MB, GIF max 20 MB.",
       coverUpload: "Upload cover",
       coverTapToUpload: "Tap to upload cover",
       coverDropHere: "Drop to upload",
@@ -1824,7 +1861,7 @@ const copy = {
       coverRemove: "Remove",
       coverUploadFailed: "Cover upload failed. Please try again later.",
       coverTypeError: "Please upload a common image format.",
-      coverSizeError: "Image must be 4MB or smaller.",
+      coverSizeError: "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
       coverInvalidContentError:
         "The image content is invalid. Please choose the original image file.",
       coverStorageConfigError:
@@ -2199,6 +2236,7 @@ const copy = {
       emptyFilteredTitle: "Aucune sortie trouvée",
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
+      otherActivitiesTitle: "Autres sorties",
       viewToggleLabel: "Changer de vue",
       cardView: "Tout",
       dateView: "Par date",
@@ -2612,6 +2650,11 @@ const copy = {
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} vous suit.`,
         },
+        PLANET_JOIN_REQUEST: {
+          title: "Demande pour rejoindre",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} demande à rejoindre votre planète. Vérifiez-la.`,
+        },
         ACTIVITY_COMMENTED: {
           title: "Nouveau commentaire",
           body: (activityTitle: string, actorName = "Quelqu'un") =>
@@ -2664,7 +2707,7 @@ const copy = {
       cancel: "Annuler l'équipe",
       cancelling: "Annulation...",
       cancelDescription:
-        "Après annulation, cette équipe n'accepte plus de demandes et disparaît des listes à rejoindre.",
+        "Après annulation, cette équipe n'accepte plus de demandes et reste listée après les équipes actives avec le statut annulé.",
       cancelConfirm:
         "Annuler cette équipe ? Les utilisateurs ne pourront plus la rejoindre.",
       cancelConfirmTitle: "Annuler cette équipe ?",
@@ -2676,6 +2719,20 @@ const copy = {
       cancelledHint:
         "Cette équipe est annulée. Les utilisateurs ne peuvent plus la rejoindre.",
       endedHint: "Cette activité est terminée et ne peut plus être annulée.",
+      delete: "Supprimer l'équipe",
+      deleting: "Suppression...",
+      deleteConfirmTitle: "Supprimer cette équipe ?",
+      deleteConfirmDescription:
+        "Cela supprime l'équipe, le chat, les inscriptions, les annonces et les commentaires. Cette action est irreversible.",
+      deleteContextLabel: "Équipe à supprimer",
+      deleteConfirmSubmit: "Supprimer",
+      deletePermissionError:
+        "Seul le créateur de l'équipe peut supprimer cette équipe.",
+      deleteStatusError:
+        "Les informations d'un événement public ne peuvent pas être supprimées ici.",
+      deleteFailedError: "Échec de la suppression. Réessayez plus tard.",
+      deleteStateKept:
+        "La suppression n'a pas été appliquée. L'équipe reste inchangée.",
       refreshError: "Réessayez plus tard.",
       permissionError:
         "Seul l'organisateur ou un gestionnaire peut annuler cette activité.",
@@ -2874,7 +2931,8 @@ const copy = {
       coverDefault: "Utiliser la couverture par défaut",
       coverImageHint:
         "L'image s'affiche sur les cartes de sortie et la page détail.",
-      coverFileHint: "Formats d'image courants. 4 Mo maximum.",
+      coverFileHint:
+        "JPG, PNG, WebP, GIF, AVIF, HEIC, etc. 10 Mo max, GIF 20 Mo.",
       coverUpload: "Importer",
       coverTapToUpload: "Touchez pour importer",
       coverDropHere: "Relâchez pour importer",
@@ -2883,7 +2941,8 @@ const copy = {
       coverUploadFailed:
         "Échec de l'import de la couverture. Réessayez plus tard.",
       coverTypeError: "Importez un format d'image courant.",
-      coverSizeError: "L'image ne doit pas dépasser 4 Mo.",
+      coverSizeError:
+        "Les images doivent faire 10 Mo max ; les GIF 20 Mo max.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:

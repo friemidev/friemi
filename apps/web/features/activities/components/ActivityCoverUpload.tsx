@@ -10,6 +10,10 @@ import {
 } from "@/features/activities/utils/activityCategoryVisuals";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverUploadProps = {
@@ -35,9 +39,6 @@ type ActivityCoverUploadProps = {
   uploadEndpoint?: string;
 };
 
-const acceptedImageTypes =
-  "image/*,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp";
-const maxFileSize = 4 * 1024 * 1024;
 type UploadErrorCode =
   | "STORAGE_NOT_CONFIGURED"
   | "MISSING_FILE"
@@ -135,12 +136,14 @@ export function ActivityCoverUpload({
       return;
     }
 
-    if (file.type && !file.type.toLowerCase().startsWith("image/")) {
+    const localValidationError = getImageUploadClientValidationError(file);
+
+    if (localValidationError === "UNSUPPORTED_FILE_TYPE") {
       setError(t.coverTypeError);
       return;
     }
 
-    if (file.size > maxFileSize) {
+    if (localValidationError === "FILE_TOO_LARGE") {
       setError(t.coverSizeError);
       return;
     }
@@ -202,7 +205,7 @@ export function ActivityCoverUpload({
         <input name={name} type="hidden" value={submittedImageUrl} />
         <input
           ref={inputRef}
-          accept={acceptedImageTypes}
+          accept={acceptedImageInputTypes}
           className="hidden"
           type="file"
           onChange={(event) => {
@@ -282,7 +285,7 @@ export function ActivityCoverUpload({
               />
               {!isUploading && isFallbackPreview ? (
                 <span className="absolute inset-x-3 bottom-3 flex justify-center">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-[#0B6B45] shadow-sm ring-1 ring-[#D6D5B2]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-[#0B6B45] shadow-sm ring-1 ring-[#D6D5B2]">
                     <UploadCloud className="h-3.5 w-3.5" aria-hidden />
                     {t.coverTapToUpload}
                   </span>
@@ -298,7 +301,7 @@ export function ActivityCoverUpload({
               <button
                 type="button"
                 className={cn(
-                  "absolute right-2.5 top-2.5 z-10 rounded-full bg-[#1D1D1B]/62 px-3 py-1.5 text-xs font-black leading-none text-white shadow-[0_8px_18px_rgba(29,29,27,0.18)] backdrop-blur-md transition hover:bg-[#1D1D1B]/76 active:scale-95",
+                  "absolute right-2.5 top-2.5 z-10 rounded-full bg-[#1D1D1B]/62 px-3 py-1.5 text-xs font-bold leading-none text-white shadow-[0_8px_18px_rgba(29,29,27,0.18)] backdrop-blur-md transition hover:bg-[#1D1D1B]/76 active:scale-95",
                   splitRemoveButtonClassName,
                 )}
                 disabled={isUploading}
@@ -328,7 +331,7 @@ export function ActivityCoverUpload({
       <input name={name} type="hidden" value={submittedImageUrl} />
       <input
         ref={inputRef}
-        accept={acceptedImageTypes}
+        accept={acceptedImageInputTypes}
         className="hidden"
         type="file"
         onChange={(event) => {

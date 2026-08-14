@@ -12,6 +12,8 @@ test("notification center excludes chat and moment notifications", () => {
     "MOMENT_COMMENTED",
     "MOMENT_COMMENT_REPLY",
     "MOMENT_REPOSTED",
+    "PLANET_MESSAGE",
+    "ACTIVITY_ROOM_MESSAGE",
   ]);
 
   assert.deepEqual(

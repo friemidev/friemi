@@ -11,11 +11,15 @@ import { z } from "zod";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
 import { getActivityRoomChatCopy } from "../copy";
 import {
   ActivityRoomChatDomainError,
+  activityRoomMessageImageMaxCount,
   activityRoomMessageMaxLength,
+  canViewActivityRoomChat,
   deleteActivityRoomMessage,
+  deleteActivityRoomMessages,
   sendActivityRoomMessage,
 } from "../services/activityRoomChat";
 
@@ -24,8 +28,10 @@ export type ActivityRoomChatActionState = {
   formError?: string;
   fieldErrors?: Record<string, string[]>;
   messageId?: string;
+  messageIds?: string[];
   values?: {
     body?: string;
+    imageUrls?: string[];
   };
 };
 
@@ -42,16 +48,35 @@ export type ActivityRoomInviteActionState = {
   successMessage?: string;
 };
 
-const sendActivityRoomMessageSchema = z.object({
-  activityId: z.string().min(1).max(80),
-  body: z.string().trim().min(1).max(activityRoomMessageMaxLength),
-  locale: z.string().min(1).max(16).default("zh-CN"),
-});
+const sendActivityRoomMessageSchema = z
+  .object({
+    activityId: z.string().min(1).max(80),
+    body: z.string().trim().max(activityRoomMessageMaxLength).default(""),
+    imageUrls: z
+      .array(z.string().trim().url())
+      .max(activityRoomMessageImageMaxCount)
+      .default([]),
+    mentionedProfileIds: z
+      .array(z.string().trim().min(1).max(80))
+      .max(chatMentionMaxProfileCount)
+      .default([]),
+    mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
+    locale: z.string().min(1).max(16).default("zh-CN"),
+  })
+  .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
+    path: ["body"],
+  });
 
 const deleteActivityRoomMessageSchema = z.object({
   activityId: z.string().min(1).max(80),
   locale: z.string().min(1).max(16).default("zh-CN"),
   messageId: z.string().min(1).max(80),
+});
+
+const deleteActivityRoomMessagesSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  messageIds: z.array(z.string().min(1).max(80)).min(1).max(50),
 });
 
 const removeActivityRoomParticipantSchema = z.object({
@@ -63,6 +88,29 @@ const removeActivityRoomParticipantSchema = z.object({
 const inviteActivityRoomParticipantSchema = z.object({
   activityId: z.string().min(1).max(80),
   inviteeProfileId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+});
+
+const toggleActivityRoomMuteSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  muted: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const toggleActivityRoomPinSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+  pinned: z.enum(["0", "1", "false", "true"]).default("1"),
+});
+
+const hideActivityRoomConversationSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  locale: z.string().min(1).max(16).default("zh-CN"),
+});
+
+const acknowledgeActivityAnnouncementSchema = z.object({
+  activityId: z.string().min(1).max(80),
+  announcementId: z.string().min(1).max(80),
   locale: z.string().min(1).max(16).default("zh-CN"),
 });
 
@@ -87,6 +135,13 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function getStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .flatMap((value) => (typeof value === "string" ? [value.trim()] : []))
+    .filter(Boolean);
+}
+
 function getActionErrorMessage(locale: string, error: unknown) {
   const t = getActivityRoomChatCopy(locale);
 
@@ -107,8 +162,7 @@ function getMemberActionCopy(locale: string) {
       inviteFailed: "Impossible d'inviter cette personne.",
       inviteFull: "Le groupe est complet.",
       inviteMissing: "Cette personne n'est plus disponible.",
-      inviteNonMutual:
-        "Vous pouvez inviter une personne qui vous suit aussi.",
+      inviteNonMutual: "Vous pouvez inviter une personne qui vous suit aussi.",
       inviteSelf: "Cette personne est déjà dans le groupe.",
       inviteSuccess: "Invitation envoyée.",
       inviteUnavailable: "Ce groupe n'accepte plus d'invitations.",
@@ -180,6 +234,9 @@ export async function sendActivityRoomMessageAction(
   const rawInput = {
     activityId: getString(formData, "activityId"),
     body: getString(formData, "body"),
+    imageUrls: getStringList(formData, "imageUrls"),
+    mentionedProfileIds: getStringList(formData, "mentionedProfileIds"),
+    mentionsEveryone: getString(formData, "mentionsEveryone") || "0",
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = sendActivityRoomMessageSchema.safeParse(rawInput);
@@ -191,6 +248,7 @@ export async function sendActivityRoomMessageAction(
       formError: t.invalidRequest,
       values: {
         body: rawInput.body,
+        imageUrls: rawInput.imageUrls,
       },
     };
   }
@@ -203,6 +261,11 @@ export async function sendActivityRoomMessageAction(
     const message = await sendActivityRoomMessage({
       activityId: result.data.activityId,
       body: result.data.body,
+      imageUrls: result.data.imageUrls,
+      mentionedProfileIds: result.data.mentionedProfileIds,
+      mentionsEveryone:
+        result.data.mentionsEveryone === "1" ||
+        result.data.mentionsEveryone === "true",
       senderId: profile.id,
     });
 
@@ -219,6 +282,7 @@ export async function sendActivityRoomMessageAction(
       formError: getActionErrorMessage(result.data.locale, error),
       values: {
         body: result.data.body,
+        imageUrls: result.data.imageUrls,
       },
     };
   }
@@ -270,6 +334,311 @@ export async function deleteActivityRoomMessageAction(
           : t.deleteFailed,
     };
   }
+}
+
+export async function deleteActivityRoomMessagesAction(
+  _previousState: ActivityRoomChatActionState,
+  formData: FormData,
+): Promise<ActivityRoomChatActionState> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    messageIds: formData
+      .getAll("messageId")
+      .filter((value): value is string => typeof value === "string"),
+  };
+  const result = deleteActivityRoomMessagesSchema.safeParse(rawInput);
+  const t = getActivityRoomChatCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  try {
+    const profile = await getCurrentUserProfileForMutation(
+      result.data.locale,
+      `/lobby/${result.data.activityId}/room`,
+    );
+    const messageIds = [...new Set(result.data.messageIds)];
+
+    await deleteActivityRoomMessages({
+      activityId: result.data.activityId,
+      actorId: profile.id,
+      messageIds,
+    });
+    revalidateActivityRoom(result.data.locale, result.data.activityId);
+
+    return {
+      ok: true,
+      messageIds,
+    };
+  } catch (error) {
+    console.error("Failed to delete activity room messages", error);
+
+    return {
+      formError:
+        error instanceof ActivityRoomChatDomainError
+          ? t.errors[error.code]
+          : t.deleteFailed,
+    };
+  }
+}
+
+export async function toggleActivityRoomMuteAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    muted: getString(formData, "muted") || "1",
+  };
+  const result = toggleActivityRoomMuteSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const nextMuted = result.data.muted === "1" || result.data.muted === "true";
+
+  if (nextMuted) {
+    await prisma.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        lastReadAt: new Date(0),
+        mutedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        mutedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.activityRoomReadState.updateMany({
+      where: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+      data: {
+        mutedAt: null,
+      },
+    });
+  }
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function toggleActivityRoomPinAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    pinned: getString(formData, "pinned") || "1",
+  };
+  const result = toggleActivityRoomPinSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const nextPinned =
+    result.data.pinned === "1" || result.data.pinned === "true";
+
+  if (nextPinned) {
+    await prisma.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        lastReadAt: new Date(),
+        pinnedAt: new Date(),
+        profileId: profile.id,
+      },
+      update: {
+        pinnedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.activityRoomReadState.updateMany({
+      where: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+      data: {
+        pinnedAt: null,
+      },
+    });
+  }
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function hideActivityRoomConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const result = hideActivityRoomConversationSchema.safeParse({
+    activityId: getString(formData, "activityId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  });
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    "/footprints?tab=message",
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const hiddenAt = new Date();
+  await prisma.activityRoomReadState.upsert({
+    where: {
+      activityId_profileId: {
+        activityId: result.data.activityId,
+        profileId: profile.id,
+      },
+    },
+    create: {
+      activityId: result.data.activityId,
+      hiddenAt,
+      lastReadAt: hiddenAt,
+      profileId: profile.id,
+    },
+    update: {
+      hiddenAt,
+      lastReadAt: hiddenAt,
+    },
+  });
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
+}
+
+export async function acknowledgeActivityAnnouncementAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    activityId: getString(formData, "activityId"),
+    announcementId: getString(formData, "announcementId"),
+    locale: getString(formData, "locale") || "zh-CN",
+  };
+  const result = acknowledgeActivityAnnouncementSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    return;
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    `/lobby/${result.data.activityId}/room`,
+  );
+  const canView = await canViewActivityRoomChat(
+    profile.id,
+    result.data.activityId,
+  );
+
+  if (!canView) {
+    return;
+  }
+
+  const announcement = await prisma.activityAnnouncement.findFirst({
+    where: {
+      activityId: result.data.activityId,
+      id: result.data.announcementId,
+    },
+    select: {
+      createdAt: true,
+    },
+  });
+
+  if (!announcement) {
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.activityRoomReadState.findUnique({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      select: {
+        announcementReadAt: true,
+      },
+    });
+    const announcementReadAt =
+      existing?.announcementReadAt &&
+      existing.announcementReadAt.getTime() > announcement.createdAt.getTime()
+        ? existing.announcementReadAt
+        : announcement.createdAt;
+
+    await tx.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId: result.data.activityId,
+          profileId: profile.id,
+        },
+      },
+      create: {
+        activityId: result.data.activityId,
+        announcementReadAt,
+        lastReadAt: new Date(0),
+        profileId: profile.id,
+      },
+      update: {
+        announcementReadAt,
+      },
+    });
+  });
+
+  revalidateActivityRoom(result.data.locale, result.data.activityId);
 }
 
 export async function inviteActivityRoomParticipantAction(
@@ -578,7 +947,10 @@ export async function removeActivityRoomParticipantAction(
         },
       });
 
-      if (!participation || participation.activityId !== result.data.activityId) {
+      if (
+        !participation ||
+        participation.activityId !== result.data.activityId
+      ) {
         return {
           ok: false,
           error: copy.missing,

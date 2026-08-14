@@ -5,6 +5,7 @@ import {
   getProfileMoments,
 } from "@/features/profile/queries/getProfileMoments";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileMomentsPageProps = {
   params: Promise<{
@@ -13,6 +14,8 @@ type ProfileMomentsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 export default async function ProfileMomentsPage({
   params,
 }: ProfileMomentsPageProps) {

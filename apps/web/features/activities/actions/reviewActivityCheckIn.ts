@@ -153,7 +153,10 @@ export async function reviewActivityCheckInAction(
       getActivityDetailPath(result.data.activityId),
     );
   } catch (error) {
-    console.error("Failed to resolve viewer profile for check-in review", error);
+    console.error(
+      "Failed to resolve viewer profile for check-in review",
+      error,
+    );
     return { formError: copy.failed };
   }
 
@@ -246,7 +249,10 @@ export async function reviewActivityCheckInAction(
           type: "NO_SHOW",
         });
 
-        if (!wasAlreadyCheckedIn && participation.userProfileId !== profile.id) {
+        if (
+          !wasAlreadyCheckedIn &&
+          participation.userProfileId !== profile.id
+        ) {
           await createNotification(tx, {
             activityId: result.data.activityId,
             dedupeIncludingRead: true,
@@ -401,6 +407,7 @@ export async function confirmAllPendingActivityCheckInsAction(
           .map((participant) => ({
             activityId: result.data.activityId,
             dedupeIncludingRead: true,
+            occurrenceId: `check-in-confirm:${participant.id}:${now.toISOString()}`,
             recipientId: participant.userProfileId,
             type: "ACTIVITY_CHECK_IN",
           })),
@@ -453,7 +460,10 @@ export async function confirmSelectedActivityCheckInsAction(
       getActivityDetailPath(result.data.activityId),
     );
   } catch (error) {
-    console.error("Failed to resolve viewer profile for selected check-ins", error);
+    console.error(
+      "Failed to resolve viewer profile for selected check-ins",
+      error,
+    );
     return { formError: copy.failed };
   }
 
@@ -467,7 +477,9 @@ export async function confirmSelectedActivityCheckInsAction(
       return { formError: copy.forbidden };
     }
 
-    const selectedIds = Array.from(new Set(result.data.selectedParticipationIds));
+    const selectedIds = Array.from(
+      new Set(result.data.selectedParticipationIds),
+    );
     const now = new Date();
     const reviewResult = await prisma.$transaction(async (tx) => {
       const participants = await tx.activityParticipant.findMany({
@@ -535,6 +547,7 @@ export async function confirmSelectedActivityCheckInsAction(
             .map((participant) => ({
               activityId: result.data.activityId,
               dedupeIncludingRead: true,
+              occurrenceId: `check-in-confirm:${participant.id}:${now.toISOString()}`,
               recipientId: participant.userProfileId,
               type: "ACTIVITY_CHECK_IN",
             })),

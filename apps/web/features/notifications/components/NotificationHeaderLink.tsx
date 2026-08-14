@@ -58,7 +58,7 @@ export function NotificationHeaderLink({
       {hasUnreadNotifications ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute right-[-0.2rem] top-[-0.2rem] inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F09182] px-1 text-[10px] font-extrabold leading-none text-white shadow-[0_6px_12px_rgba(176,49,31,0.24)] ring-2 ring-[#FEFFF9] outline outline-1 outline-[#156240]/20 max-[420px]:right-[-0.05rem] max-[420px]:top-[-0.1rem] max-[420px]:h-4 max-[420px]:min-w-4 max-[420px]:text-[9px]"
+          className="pointer-events-none absolute right-[-0.2rem] top-[-0.2rem] inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F09182] px-1 text-[10px] font-bold leading-none text-white shadow-[0_6px_12px_rgba(176,49,31,0.24)] ring-2 ring-[#FEFFF9] outline outline-1 outline-[#156240]/20 max-[420px]:right-[-0.05rem] max-[420px]:top-[-0.1rem] max-[420px]:h-4 max-[420px]:min-w-4 max-[420px]:text-[9px]"
         >
           {unreadBadgeText}
         </span>

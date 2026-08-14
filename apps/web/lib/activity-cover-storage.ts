@@ -1,28 +1,27 @@
 import { randomUUID } from "node:crypto";
 import { StorageClient } from "@supabase/storage-js";
 import { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
+import {
+  allowedImageMimeTypes,
+  areCompatibleImageMimeTypes,
+  getAllowedImageMimeTypes,
+  getImageUploadSizeLimit,
+  maxImageBucketFileSize,
+  maxImageUploadFileSize,
+  maxProfileAvatarUploadFileSize,
+  normalizeImageMimeType,
+  type AllowedImageMimeType,
+  type ImageUploadSizeProfile,
+} from "@/lib/image-upload-policy";
 
 export { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 
-export const maxActivityCoverFileSize = 4 * 1024 * 1024;
-export const maxProfileAvatarFileSize = 2 * 1024 * 1024;
+export const maxActivityCoverFileSize = maxImageUploadFileSize;
+export const maxProfileAvatarFileSize = maxProfileAvatarUploadFileSize;
 const defaultBucket = "activity-covers";
-const allowedMimeTypes = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif",
-  "image/gif": "gif",
-  "image/bmp": "bmp",
-} as const;
-const mimeTypeAliases = {
-  "image/jpg": "image/jpeg",
-  "image/x-png": "image/png",
-  "image/x-ms-bmp": "image/bmp",
-} as const;
 const readyBuckets = new Set<string>();
 
-export type AllowedCoverMimeType = keyof typeof allowedMimeTypes;
+export type AllowedCoverMimeType = AllowedImageMimeType;
 
 export type ActivityCoverStorageErrorCode =
   | "STORAGE_NOT_CONFIGURED"
@@ -36,6 +35,15 @@ export type ActivityCoverStorageErrorCode =
 export type ActivityCoverUploadResult =
   | { error: ActivityCoverStorageErrorCode }
   | { path: string; url: string };
+
+export type ValidatedImageUploadFile =
+  | {
+      error: Extract<
+        ActivityCoverStorageErrorCode,
+        "FILE_TOO_LARGE" | "INVALID_IMAGE_CONTENT" | "UNSUPPORTED_FILE_TYPE"
+      >;
+    }
+  | { detectedMimeType: AllowedCoverMimeType; fileBuffer: Buffer };
 
 export function getActivityCoverStorageConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -126,6 +134,23 @@ export function detectActivityCoverMimeType(
     if (brands.includes("avif") || brands.includes("avis")) {
       return "image/avif";
     }
+
+    if (
+      brands.includes("heic") ||
+      brands.includes("heix") ||
+      brands.includes("hevc") ||
+      brands.includes("hevx") ||
+      brands.includes("heim") ||
+      brands.includes("heis") ||
+      brands.includes("hevm") ||
+      brands.includes("hevs")
+    ) {
+      return "image/heic";
+    }
+
+    if (brands.includes("mif1") || brands.includes("msf1")) {
+      return "image/heif";
+    }
   }
 
   return null;
@@ -134,26 +159,48 @@ export function detectActivityCoverMimeType(
 export function normalizeActivityCoverMimeType(
   mimeType: string | null | undefined,
 ): AllowedCoverMimeType | null {
-  const normalized = mimeType?.trim().toLowerCase();
-
-  if (!normalized) {
-    return null;
-  }
-
-  if (normalized in allowedMimeTypes) {
-    return normalized as AllowedCoverMimeType;
-  }
-
-  return (
-    mimeTypeAliases[normalized as keyof typeof mimeTypeAliases] ?? null
-  );
+  return normalizeImageMimeType(mimeType);
 }
 
 export function getAllowedActivityCoverMimeTypes() {
-  return [
-    ...Object.keys(allowedMimeTypes),
-    ...Object.keys(mimeTypeAliases),
-  ];
+  return getAllowedImageMimeTypes();
+}
+
+export async function validateImageUploadFile(
+  file: File,
+  options: { sizeProfile?: ImageUploadSizeProfile } = {},
+): Promise<ValidatedImageUploadFile> {
+  if (file.size > maxImageBucketFileSize) {
+    return { error: "FILE_TOO_LARGE" };
+  }
+
+  const uploadedMimeType = normalizeActivityCoverMimeType(file.type);
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const detectedMimeType = detectActivityCoverMimeType(fileBuffer);
+
+  if (!detectedMimeType) {
+    return file.type && !uploadedMimeType
+      ? { error: "UNSUPPORTED_FILE_TYPE" }
+      : { error: "INVALID_IMAGE_CONTENT" };
+  }
+
+  if (
+    uploadedMimeType &&
+    !areCompatibleImageMimeTypes(uploadedMimeType, detectedMimeType)
+  ) {
+    return { error: "INVALID_IMAGE_CONTENT" };
+  }
+
+  const sizeLimit = getImageUploadSizeLimit(
+    detectedMimeType,
+    options.sizeProfile,
+  );
+
+  if (file.size > sizeLimit) {
+    return { error: "FILE_TOO_LARGE" };
+  }
+
+  return { detectedMimeType, fileBuffer };
 }
 
 function getSafePathSegment(value: string) {
@@ -171,7 +218,7 @@ async function ensurePublicBucket(storage: StorageClient, bucket: string) {
     const updated = await storage.updateBucket(bucket, {
       public: true,
       allowedMimeTypes: getAllowedActivityCoverMimeTypes(),
-      fileSizeLimit: maxActivityCoverFileSize,
+      fileSizeLimit: maxImageBucketFileSize,
     });
 
     if (!updated.error) {
@@ -190,7 +237,7 @@ async function ensurePublicBucket(storage: StorageClient, bucket: string) {
   const created = await storage.createBucket(bucket, {
     public: true,
     allowedMimeTypes: getAllowedActivityCoverMimeTypes(),
-    fileSizeLimit: maxActivityCoverFileSize,
+    fileSizeLimit: maxImageBucketFileSize,
   });
 
   if (!created.error) {
@@ -245,6 +292,16 @@ export async function uploadDirectMessageImageBuffer(
 ): Promise<ActivityCoverUploadResult> {
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "direct-messages",
+  });
+}
+
+export async function uploadChatImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "chat-images",
   });
 }
 
@@ -313,7 +370,7 @@ async function uploadPublicImageBuffer(
     return { error: "BUCKET_NOT_AVAILABLE" as const };
   }
 
-  const extension = allowedMimeTypes[detectedMimeType];
+  const extension = allowedImageMimeTypes[detectedMimeType];
   const safeUserId = getSafePathSegment(userId);
   const path = options.pathPrefix
     ? `${options.pathPrefix}/${safeUserId}/${randomUUID()}.${extension}`
@@ -362,13 +419,17 @@ export async function mirrorExternalCoverImage(
 
     const fileBuffer = Buffer.from(await response.arrayBuffer());
 
-    if (fileBuffer.length > maxActivityCoverFileSize) {
+    if (fileBuffer.length > maxImageBucketFileSize) {
       return null;
     }
 
     const detectedMimeType = detectActivityCoverMimeType(fileBuffer);
 
     if (!detectedMimeType) {
+      return null;
+    }
+
+    if (fileBuffer.length > getImageUploadSizeLimit(detectedMimeType)) {
       return null;
     }
 

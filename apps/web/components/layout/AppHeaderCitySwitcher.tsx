@@ -22,7 +22,7 @@ export function AppHeaderCitySwitcher({ locale }: { locale: string }) {
 
   return (
     <span
-      className="inline-flex h-9 cursor-default select-none items-center justify-center gap-1.5 justify-self-end rounded-full bg-white/82 px-3 text-xs font-extrabold text-[#156240] shadow-sm ring-1 ring-black/10 lg:justify-self-auto"
+      className="inline-flex h-9 cursor-default select-none items-center justify-center gap-1.5 justify-self-end rounded-full bg-white/82 px-3 text-xs font-bold text-[#156240] shadow-sm ring-1 ring-black/10 md:justify-self-auto"
       aria-label={selectedLabel}
       title={selectedLabel}
     >

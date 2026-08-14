@@ -3,6 +3,10 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import {
+  buildWerewolfDerivedSyncVersion,
+  getWerewolfSyncVersion,
+} from "@/features/game-tools/werewolfSyncVersion";
+import {
   getActiveGameToolRoomForProfile,
   getGameToolPrivateSeatPath,
   getGameToolRoomPath,
@@ -159,14 +163,20 @@ export default async function WerewolfRoomPage({
     })),
     state: room.state,
     status: room.status,
-    syncVersion: [
-      room.status,
-      room.updatedAt.toISOString(),
-      room.startedAt?.toISOString() ?? "",
-      room.finishedAt?.toISOString() ?? "",
-      room.events[0]?.id ?? "",
-      room.events[0]?.createdAt.toISOString() ?? "",
-    ].join(":"),
+    syncVersion: getWerewolfSyncVersion({
+      derived: buildWerewolfDerivedSyncVersion({
+        finishedAt: room.finishedAt,
+        latestEvent: room.events[0]
+          ? { createdAt: room.events[0].createdAt, id: room.events[0].id }
+          : null,
+        startedAt: room.startedAt,
+        status: room.status,
+        updatedAt: room.updatedAt,
+      }),
+      revision: room.revision,
+      roomId: room.id,
+      status: room.status,
+    }).value,
     title: room.title,
     variant: room.variant,
   };

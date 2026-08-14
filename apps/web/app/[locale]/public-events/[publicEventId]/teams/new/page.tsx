@@ -7,6 +7,7 @@ import {
   formatParisDateTimeInput,
   type ActivityFormValues,
 } from "@/features/activities/actions/activityActionUtils";
+import { getActivityEndBoundary } from "@/features/activities/utils/activityDisplay";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import {
   getEventDateLabel,
@@ -133,7 +134,11 @@ export default async function NewPublicEventTeamPage({
     notFound();
   }
 
-  const eventEndBoundary = new Date(publicEvent.endAt ?? publicEvent.startAt);
+  const eventEndBoundary = getActivityEndBoundary({
+    endAt: publicEvent.endAt,
+    startAt: publicEvent.startAt,
+    type: "PUBLIC_EVENT",
+  });
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
   const canCreateTeam = !isCancelled && !isEnded;
@@ -150,11 +155,11 @@ export default async function NewPublicEventTeamPage({
         >
           {headerCopy.cancel}
         </Link>
-        <h1 className="truncate text-center text-lg font-black tracking-normal text-ink">
+        <h1 className="truncate text-center text-lg font-bold tracking-normal text-ink">
           {headerCopy.title}
         </h1>
         <button
-          className="justify-self-end rounded-full bg-[#007A4D] px-4 py-2 text-sm font-black text-white transition hover:bg-[#156240] disabled:bg-zinc-300"
+          className="justify-self-end rounded-full bg-[#007A4D] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#156240] disabled:bg-zinc-300"
           disabled={!canCreateTeam}
           form={canCreateTeam ? formId : undefined}
           type="submit"
@@ -171,11 +176,11 @@ export default async function NewPublicEventTeamPage({
           <ArrowLeft className="h-4 w-4 shrink-0" />
           <span className="truncate">{t.backToEvent}</span>
         </Link>
-        <h1 className="truncate text-center text-2xl font-black tracking-normal text-ink">
+        <h1 className="truncate text-center text-2xl font-bold tracking-normal text-ink">
           {headerCopy.title}
         </h1>
         <button
-          className="justify-self-end rounded-full bg-[#007A4D] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#156240] disabled:bg-zinc-300"
+          className="justify-self-end rounded-full bg-[#007A4D] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#156240] disabled:bg-zinc-300"
           disabled={!canCreateTeam}
           form={canCreateTeam ? formId : undefined}
           type="submit"

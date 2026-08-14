@@ -9,10 +9,15 @@ import { getCopy } from "@/lib/copy";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
-import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { runScheduledGuestLink } from "@/features/guest-participants/services/guestLinkScheduler";
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 import { isDefaultProfileAvatarSrc } from "@/features/profile/defaultAvatars";
+import {
+  canChangeNickname,
+  getNicknameChangeAvailableAt,
+  NICKNAME_CHANGE_COOLDOWN_MS,
+} from "@/features/profile/nicknameChangePolicy";
 import { isUploadedProfileAvatarUrl } from "@/lib/activity-cover-storage";
 import {
   normalizeGuestEmail,
@@ -26,6 +31,7 @@ export type UpdateProfileIdentityState = {
   formError?: string;
   homeCity?: string | null;
   nickname?: string;
+  nicknameChangedAt?: string | null;
   success?: boolean;
 };
 
@@ -97,6 +103,25 @@ function revalidateNicknamePaths(locale: string) {
   revalidatePath(withLocale(locale, "/"), "layout");
 }
 
+function getNicknameCooldownError(locale: string, availableAt: Date) {
+  const formatted = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+  }).format(availableAt);
+
+  if (locale === "fr") {
+    return `Le pseudo peut être modifié une fois toutes les 24 heures. Réessayez après ${formatted}.`;
+  }
+
+  if (locale === "en") {
+    return `You can change your nickname once every 24 hours. Try again after ${formatted}.`;
+  }
+
+  return `昵称每24小时只能修改一次，请在 ${formatted} 后重试。`;
+}
+
 export async function updateProfileIdentityAction(
   _previousState: UpdateProfileIdentityState,
   formData: FormData,
@@ -132,20 +157,77 @@ export async function updateProfileIdentityAction(
   const profile = await perf.measure("viewer.profile", () =>
     getCurrentUserProfileForMutation(locale, redirectPath),
   );
+  const nicknameChanged = profile.nickname !== nickname;
+  const now = new Date();
+  const profileData = {
+    ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
+    ...(bio !== undefined ? { bio: bio || null } : {}),
+    ...(homeCity !== undefined ? { homeCity: homeCity || null } : {}),
+  };
 
-  await perf.measure("profile.update", () =>
-    prisma.userProfile.update({
+  if (nicknameChanged && !canChangeNickname(profile.nicknameChangedAt, now)) {
+    const availableAt = getNicknameChangeAvailableAt(
+      profile.nicknameChangedAt,
+    )!;
+    perf.finish({ afterSave, nicknameChanged, outcome: "cooldown" });
+
+    return {
+      formError: getNicknameCooldownError(locale, availableAt),
+      nicknameChangedAt: profile.nicknameChangedAt?.toISOString() ?? null,
+    };
+  }
+
+  const updatedNicknameChangedAt = nicknameChanged
+    ? now
+    : profile.nicknameChangedAt;
+
+  const updateSucceeded = await perf.measure("profile.update", async () => {
+    if (!nicknameChanged) {
+      await prisma.userProfile.update({
+        where: { id: profile.id },
+        data: profileData,
+      });
+
+      return true;
+    }
+
+    const cooldownCutoff = new Date(
+      now.getTime() - NICKNAME_CHANGE_COOLDOWN_MS,
+    );
+    const result = await prisma.userProfile.updateMany({
       where: {
         id: profile.id,
+        OR: [
+          { nicknameChangedAt: null },
+          { nicknameChangedAt: { lte: cooldownCutoff } },
+        ],
       },
       data: {
-        ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
-        ...(bio !== undefined ? { bio: bio || null } : {}),
-        ...(homeCity !== undefined ? { homeCity: homeCity || null } : {}),
+        ...profileData,
         nickname,
+        nicknameChangedAt: now,
       },
-    }),
-  );
+    });
+
+    return result.count === 1;
+  });
+
+  if (!updateSucceeded) {
+    const latestProfile = await prisma.userProfile.findUnique({
+      where: { id: profile.id },
+      select: { nicknameChangedAt: true },
+    });
+    const availableAt =
+      getNicknameChangeAvailableAt(latestProfile?.nicknameChangedAt) ??
+      new Date(now.getTime() + NICKNAME_CHANGE_COOLDOWN_MS);
+    perf.finish({ afterSave, nicknameChanged, outcome: "cooldown-race" });
+
+    return {
+      formError: getNicknameCooldownError(locale, availableAt),
+      nicknameChangedAt:
+        latestProfile?.nicknameChangedAt?.toISOString() ?? null,
+    };
+  }
 
   if (afterSave === "refresh") {
     perf.finish({
@@ -157,6 +239,7 @@ export async function updateProfileIdentityAction(
       bio: bio !== undefined ? bio || null : undefined,
       homeCity: homeCity !== undefined ? homeCity || null : undefined,
       nickname,
+      nicknameChangedAt: updatedNicknameChangedAt?.toISOString() ?? null,
       success: true,
     };
   }
@@ -247,10 +330,12 @@ export async function updateProfileWechatAction(
     };
   }
 
-  const linkResult = await linkGuestParticipationsForProfile(
+  const linkResult = await runScheduledGuestLink({
+    force: true,
     prisma,
-    updateResult.updatedProfile,
-  ).catch((error) => {
+    profile: updateResult.updatedProfile,
+    trigger: "contact_binding",
+  }).catch((error) => {
     console.error(
       "Failed to link guest participations after wechat update",
       error,
@@ -445,10 +530,12 @@ export async function updateProfileContactBindingsAction(
     };
   }
 
-  const linkResult = await linkGuestParticipationsForProfile(
+  const linkResult = await runScheduledGuestLink({
+    force: true,
     prisma,
-    updateResult.updatedProfile,
-  ).catch((error) => {
+    profile: updateResult.updatedProfile,
+    trigger: "contact_binding",
+  }).catch((error) => {
     console.error(
       "Failed to link guest participations after contact binding update",
       error,

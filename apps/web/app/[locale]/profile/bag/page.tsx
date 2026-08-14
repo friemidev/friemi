@@ -3,6 +3,7 @@ import { blindBoxFragmentExchangeCount } from "@/features/charm/charm";
 import { getProfileBag } from "@/features/charm/queries/getProfileBag";
 import { ProfileBagPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { noIndexMetadata } from "@/lib/seo";
 
 type ProfileBagPageProps = {
   params: Promise<{
@@ -11,6 +12,8 @@ type ProfileBagPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
+
 export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/bag");

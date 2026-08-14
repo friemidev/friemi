@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCharmGiftDefinition } from "@/features/charm/charm";
+import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
 import {
   CharmGiftUnavailableError,
   InsufficientFriemiCoinBalanceError,
@@ -16,19 +17,29 @@ const sendCharmGiftSchema = z.object({
   attemptId: z.string().min(1),
   giftId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
+  quantity: z.coerce.number().int().min(1).max(99).default(1),
   recipientProfileId: z.string().min(1),
   redirectPath: z.string().min(1),
   sourceContextId: z.string().min(1).optional(),
   sourceSurface: z
-    .enum(["PROFILE", "ACTIVITY", "MOMENT", "PLANET", "DIRECT_MESSAGE", "OTHER"])
+    .enum([
+      "PROFILE",
+      "ACTIVITY",
+      "MOMENT",
+      "PLANET",
+      "DIRECT_MESSAGE",
+      "OTHER",
+    ])
     .default("PROFILE"),
 });
 
 export type SendCharmGiftState = {
   attemptId?: string;
+  balance?: number;
   eventId?: string;
   formError?: string;
   ok?: boolean;
+  required?: number;
 };
 
 function getString(formData: FormData, key: string) {
@@ -70,6 +81,23 @@ function getSendGiftCopy(locale: string) {
   };
 }
 
+export async function getViewerFriemiCoinBalanceClientAction(
+  locale: string,
+  redirectPath: string,
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    redirectPath || "/profile",
+  );
+  const balance = await getFriemiCoinBalance(profile.id);
+
+  return {
+    balance: balance.balance,
+    ok: true as const,
+  };
+}
+
 export async function sendCharmGiftAction(
   _previousState: SendCharmGiftState,
   formData: FormData,
@@ -80,6 +108,7 @@ export async function sendCharmGiftAction(
     attemptId: getString(formData, "attemptId"),
     giftId: getString(formData, "giftId"),
     locale: fallbackLocale,
+    quantity: getString(formData, "quantity") || "1",
     recipientProfileId: getString(formData, "recipientProfileId"),
     redirectPath: getString(formData, "redirectPath"),
     sourceContextId: getString(formData, "sourceContextId") || undefined,
@@ -97,6 +126,7 @@ export async function sendCharmGiftAction(
     attemptId,
     giftId,
     locale,
+    quantity,
     recipientProfileId,
     redirectPath,
     sourceContextId,
@@ -143,18 +173,21 @@ export async function sendCharmGiftAction(
   }
 
   let eventId: string;
+  let senderBalance: number | undefined;
 
   try {
-    const result = await recordReceivedCharmGift({
+    const giftResult = await recordReceivedCharmGift({
       giftId,
       locale,
+      quantity,
       recipientProfileId,
       senderProfileId: senderProfile.id,
       sourceContextId: sourceContextId ?? recipientProfileId,
       sourceSurface,
     });
 
-    eventId = result.event.id;
+    eventId = giftResult.event.id;
+    senderBalance = giftResult.senderBalance?.balance;
   } catch (error) {
     if (error instanceof CharmGiftUnavailableError) {
       return {
@@ -166,7 +199,9 @@ export async function sendCharmGiftAction(
     if (error instanceof InsufficientFriemiCoinBalanceError) {
       return {
         attemptId,
+        balance: error.balance,
         formError: copy.insufficientCoins,
+        required: error.required,
       };
     }
 
@@ -185,6 +220,7 @@ export async function sendCharmGiftAction(
 
   return {
     attemptId,
+    balance: senderBalance,
     eventId,
     ok: true,
   };

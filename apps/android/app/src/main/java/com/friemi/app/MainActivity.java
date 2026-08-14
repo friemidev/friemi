@@ -61,6 +61,7 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 4821;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4822;
+    private static final int GALLERY_PERMISSION_REQUEST_CODE = 4823;
     private static final String PREFS_NAME = "friemi_android";
     private static final String PREF_LOCALE = "friemi_locale";
     private static final String PREF_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested";
@@ -92,6 +93,7 @@ public final class MainActivity extends Activity {
     private ValueCallback<Uri[]> filePathCallback;
     private String currentUrl;
     private String pendingAuthBrowserUrl;
+    private String pendingGalleryImageUrl;
     private long pendingAuthStartedAt;
     private boolean pendingAuthAutoRetryUsed;
     private boolean webBackRequested;
@@ -131,6 +133,29 @@ public final class MainActivity extends Activity {
             webView.post(() -> injectAndroidAppContext(false));
         }
         maybeResumePendingAuthBrowser();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode,
+        String[] permissions,
+        int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode != GALLERY_PERMISSION_REQUEST_CODE) {
+            return;
+        }
+
+        String imageUrl = pendingGalleryImageUrl;
+        pendingGalleryImageUrl = null;
+        if (
+            grantResults.length > 0 &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+            !isBlank(imageUrl)
+        ) {
+            saveImageToGallery(imageUrl);
+        }
     }
 
     private void configureWindow() {
@@ -924,6 +949,10 @@ public final class MainActivity extends Activity {
         mainHandler.post(() -> downloadFile(url, null, null));
     }
 
+    void saveImageToGalleryFromBridge(String url) {
+        mainHandler.post(() -> saveImageToGallery(url));
+    }
+
     void shareFromBridge(String payloadJson) {
         mainHandler.post(() -> {
             try {
@@ -1128,6 +1157,56 @@ public final class MainActivity extends Activity {
             }
             manager.enqueue(request);
             Toast.makeText(this, R.string.download_started, Toast.LENGTH_SHORT).show();
+        } catch (Exception error) {
+            openExternal(url);
+        }
+    }
+
+    private void saveImageToGallery(String url) {
+        if (isBlank(url)) {
+            return;
+        }
+
+        if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingGalleryImageUrl = url;
+            requestPermissions(
+                new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                GALLERY_PERMISSION_REQUEST_CODE
+            );
+            return;
+        }
+
+        try {
+            String mimeType = URLUtil.guessFileName(url, null, null).toLowerCase(Locale.ROOT).endsWith(".gif")
+                ? "image/gif"
+                : "image/*";
+            String fileName = URLUtil.guessFileName(url, null, mimeType);
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setMimeType(mimeType);
+            request.setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            );
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(true);
+            request.setDestinationInExternalPublicDir(
+                Environment.DIRECTORY_PICTURES,
+                "Friemi/" + fileName
+            );
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                request.allowScanningByMediaScanner();
+            }
+
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            if (manager == null) {
+                openExternal(url);
+                return;
+            }
+            manager.enqueue(request);
+            Toast.makeText(this, R.string.image_save_started, Toast.LENGTH_SHORT).show();
         } catch (Exception error) {
             openExternal(url);
         }

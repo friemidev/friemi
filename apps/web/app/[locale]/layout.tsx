@@ -16,6 +16,7 @@ import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionM
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
+import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notifications/unreadBadgePolling";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
 import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
 import { ActiveGameToolFloatingWindow } from "@/features/game-tools/components/ActiveGameToolFloatingWindow";
@@ -95,14 +96,22 @@ export default async function LocaleLayout({
     showAdminNav: viewerState.showAdminNav,
   });
   const clerkEnabled = hasClerkKeys();
+  const unreadBadgeFreshnessGuardEnabled =
+    resolveUnreadBadgeFreshnessGuardEnabled({
+      configuredValue:
+        process.env.UNREAD_BADGE_FRESHNESS_GUARD_ENABLED,
+      vercelEnvironment: process.env.VERCEL_ENV,
+    });
   const content = (
     <NextIntlClientProvider messages={messages}>
       <ViewerProfileProvider initialNickname={viewerProfile?.nickname ?? null}>
         <NotificationBadgeProvider
           enabled={Boolean(viewerProfile)}
+          freshnessGuardEnabled={unreadBadgeFreshnessGuardEnabled}
           initialUnreadNotificationCount={
             viewerState.initialUnreadNotificationCount
           }
+          key={viewerProfile?.id ?? "anonymous"}
         >
           <MobileNavSectionProvider>
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">

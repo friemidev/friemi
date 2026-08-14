@@ -141,7 +141,7 @@ export function ActivityParticipantContactDialog({
           >
             <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-5">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-moss">
+                <p className="text-xs font-semibold uppercase tracking-normal text-moss">
                   {buttonLabel}
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold tracking-normal text-ink">

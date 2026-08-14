@@ -8,9 +8,10 @@ import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
 import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards";
-import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { runScheduledGuestLink } from "@/features/guest-participants/services/guestLinkScheduler";
 import { referralCookieName } from "@/features/referrals/referralCode";
 import { consumeReferralCodeOnProfileCreate } from "@/features/referrals/services/referrals";
+import { resolveProfileAvatarUrlForClerkSync } from "@/features/profile/profileAvatarSync";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
@@ -20,6 +21,8 @@ async function finalizeUserProfile<
     email?: string | null;
     emailVerifiedAt?: Date | string | null;
     friendCode: string | null;
+    guestLinkCheckedAt?: Date | string | null;
+    guestLinkFingerprint?: string | null;
     id: string;
     normalizedContactEmail?: string | null;
     normalizedPhone?: string | null;
@@ -35,9 +38,13 @@ async function finalizeUserProfile<
 ) {
   const ensuredProfile = await ensureUserProfileFriendCode(profile);
 
-  void linkGuestParticipationsForProfile(prisma, {
-    ...ensuredProfile,
-    verifiedEmail: options.verifiedEmail,
+  void runScheduledGuestLink({
+    prisma,
+    profile: {
+      ...ensuredProfile,
+      verifiedEmail: options.verifiedEmail,
+    },
+    trigger: "auth_snapshot",
   }).catch((error) => {
     console.error("Failed to link guest participations for profile", error);
   });
@@ -235,6 +242,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
   const existing = await prisma.userProfile.findUnique({
     where: { clerkUserId: user.id },
     select: {
+      avatarUrl: true,
       email: true,
       emailVerifiedAt: true,
       nickname: true,
@@ -275,14 +283,19 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
         ? {}
         : { nickname: profileFields.nickname }),
       username: profileFields.username,
-      avatarUrl: profileFields.avatarUrl,
+      avatarUrl: resolveProfileAvatarUrlForClerkSync({
+        clerkAvatarUrl: profileFields.avatarUrl,
+        storedAvatarUrl: existing?.avatarUrl,
+      }),
       status: profileFields.status,
       clerkDeletedAt: profileFields.clerkDeletedAt,
       syncedAt: profileFields.syncedAt,
     },
   });
 
-  const finalizedProfile = await finalizeUserProfile(profile, { verifiedEmail });
+  const finalizedProfile = await finalizeUserProfile(profile, {
+    verifiedEmail,
+  });
 
   if (!existing) {
     await grantWelcomeCheckForNewProfile(finalizedProfile.id);

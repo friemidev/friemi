@@ -49,15 +49,16 @@ export function getUserPresenceState({
   const ageMs = now.getTime() - activeTime;
   const isRecentlyActive =
     Number.isFinite(activeTime) && ageMs >= 0 && ageMs <= presenceOnlineWindowMs;
+  const displayStatus =
+    normalizedStatus === "ONLINE" && isRecentlyActive
+      ? "ONLINE"
+      : normalizedStatus === "AWAY" && isRecentlyActive
+        ? "AWAY"
+        : null;
 
   return {
     status: normalizedStatus,
-    displayStatus:
-      normalizedStatus === "AWAY"
-        ? "AWAY"
-        : normalizedStatus === "ONLINE" && isRecentlyActive
-          ? "ONLINE"
-          : null,
+    displayStatus,
     isOnline: normalizedStatus === "ONLINE" && isRecentlyActive,
   };
 }

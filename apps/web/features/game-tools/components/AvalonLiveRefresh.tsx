@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 
 type AvalonLiveRefreshProps = {
@@ -22,6 +22,7 @@ export function AvalonLiveRefresh({
 }: AvalonLiveRefreshProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const lastRefreshAtRef = useRef(0);
   const [online, setOnline] = useState(true);
   const [pulse, setPulse] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -36,6 +37,14 @@ export function AvalonLiveRefresh({
       return;
     }
 
+    const now = Date.now();
+    const minimumGapMs = Math.min(1500, Math.max(800, intervalMs / 2));
+
+    if (now - lastRefreshAtRef.current < minimumGapMs) {
+      return;
+    }
+
+    lastRefreshAtRef.current = now;
     setOnline(true);
     setPulse(true);
     startTransition(() => {
@@ -43,7 +52,7 @@ export function AvalonLiveRefresh({
       setLastSyncedAt(new Date());
     });
     window.setTimeout(() => setPulse(false), 850);
-  }, [enabled, router, startTransition]);
+  }, [enabled, intervalMs, router, startTransition]);
 
   useEffect(() => {
     if (!enabled) {
@@ -53,7 +62,14 @@ export function AvalonLiveRefresh({
     setOnline(window.navigator.onLine);
     setLastSyncedAt(new Date());
 
-    const getInterval = () => (document.hidden ? Math.max(intervalMs * 3, 9000) : intervalMs);
+    const getInterval = () => {
+      const baseInterval = document.hidden
+        ? Math.max(intervalMs * 3, 9000)
+        : intervalMs;
+      const jitter = Math.floor(Math.random() * Math.min(1200, baseInterval / 3));
+
+      return baseInterval + jitter;
+    };
     let interval = window.setInterval(refresh, getInterval());
 
     const resetInterval = () => {
@@ -94,7 +110,7 @@ export function AvalonLiveRefresh({
     <button
       aria-live="polite"
       className={cn(
-        "flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9]/92 text-xs font-black text-[#156240] shadow-lg shadow-[#156240]/10 backdrop-blur transition active:scale-95",
+        "flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9]/92 text-xs font-bold text-[#156240] shadow-lg shadow-[#156240]/10 backdrop-blur transition active:scale-95",
         variant === "floating"
           ? "fixed right-3 top-24 z-40 px-2.5 py-1.5 hover:-translate-y-0.5 sm:right-4"
           : "h-10 shrink-0 px-2.5 py-1",

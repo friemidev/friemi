@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@chill-club/ui";
-import { Heart, UserPlus } from "lucide-react";
+import { Heart, HeartHandshake, UserPlus } from "lucide-react";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
@@ -92,12 +92,19 @@ function FriendAction({
     ? actionCopy.followBack
     : actionCopy.follow;
 
+  const FollowIcon =
+    relationship.isFollowing && relationship.targetFollowsViewer
+      ? HeartHandshake
+      : relationship.targetFollowsViewer
+        ? Heart
+        : UserPlus;
+
   return (
     <FollowButton
       activeButtonClassName="h-10 w-full rounded-full bg-white px-4 text-sm text-[#156240] shadow-none ring-1 ring-[#8AB68E]"
       activeLabel={activeLabel}
       buttonClassName="h-10 w-full rounded-full px-4 text-sm"
-      icon={relationship.targetFollowsViewer ? Heart : UserPlus}
+      icon={FollowIcon}
       inactiveLabel={inactiveLabel}
       isAuthenticated={isAuthenticated}
       isFollowing={relationship.isFollowing}
@@ -124,7 +131,7 @@ export function ProfileSocialActions({
   const actionCopy = getProfileSocialActionCopy(locale);
 
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2">
+    <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
       <div className="grid gap-2">
         <FriendAction
           isAuthenticated={isAuthenticated}

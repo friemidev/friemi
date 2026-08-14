@@ -12,13 +12,16 @@ import {
   Crown,
   Gift,
   Heart,
+  HeartHandshake,
   Info,
   Lock,
+  LoaderCircle,
   MapPin,
   Medal,
   MessageCircle,
   MoreHorizontal,
   Package,
+  PencilLine,
   ScanLine,
   Settings,
   Share2,
@@ -30,8 +33,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import {
+  updateProfileRemarkAction,
+  type UpdateProfileRemarkState,
+} from "@/features/profile/actions/updateProfileRemark";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
   isDetailSourceReturnPage,
@@ -69,6 +76,7 @@ import {
 } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
+import { useViewerProfile } from "./ViewerProfileProvider";
 import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
@@ -83,6 +91,7 @@ import {
   type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
+import { getNicknameChangeAvailableAt } from "../nicknameChangePolicy";
 import type {
   ProfileDashboardViewModel,
   PublicProfileViewModel,
@@ -101,6 +110,7 @@ type ProfileDashboardViewProps = {
 };
 
 const profilePresenceInitialState: UpdateProfilePresenceState = {};
+const profileRemarkInitialState: UpdateProfileRemarkState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
@@ -464,7 +474,8 @@ function getMobileProfileCopy(locale: string) {
     charm: "魅力值",
     charmLevelsClose: "知道了",
     charmLevelsCurrent: "当前等级",
-    charmLevelsIntro: "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
+    charmLevelsIntro:
+      "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
     charmLevelsOpen: "查看魅力等级",
     charmLevelsScore: "魅力值",
     charmLevelsStartingAt: "达到",
@@ -651,7 +662,7 @@ function ProfilePresenceControl({
             name="status"
             value={presenceStatus}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black transition active:scale-[0.98]",
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition active:scale-[0.98]",
               active
                 ? "bg-[#156240] text-white"
                 : "border border-[#E7E2D6] bg-white text-[#4F574F]",
@@ -702,7 +713,7 @@ function GuestProfilePlaceholder({
     <div className="mx-auto w-full max-w-7xl pb-8">
       <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
+          <h1 className="text-[18px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.title}
           </h1>
         </header>
@@ -718,7 +729,7 @@ function GuestProfilePlaceholder({
               size="sm"
             />
             <div className="min-w-0">
-              <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+              <h2 className="truncate text-[18px] font-bold leading-tight text-[#111210]">
                 {profile.nickname}
               </h2>
               {profile.bio ? (
@@ -732,7 +743,7 @@ function GuestProfilePlaceholder({
           <div className="mt-6 grid grid-cols-3">
             {stats.map((item) => (
               <div className="min-w-0 px-2 py-2 text-center" key={item.label}>
-                <p className="text-[22px] font-black leading-none text-[#111210]">
+                <p className="text-[22px] font-bold leading-none text-[#111210] friemi-tabular">
                   {item.value}
                 </p>
                 <p className="mt-1 text-[10px] font-bold leading-3 text-[#4F574F]">
@@ -745,19 +756,19 @@ function GuestProfilePlaceholder({
           <div className="mt-7 grid gap-3">
             <Link
               href={signInHref}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-semibold text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95"
             >
               {copy.signIn}
             </Link>
             <Link
               href={planetsHref}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
             >
               {copy.browsePlanets}
             </Link>
             <Link
               href={settingsHref}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
             >
               <Settings className="h-4 w-4" />
               {copy.settings}
@@ -849,23 +860,40 @@ function MobileProfileSummaryStrip({
 }) {
   const copy = getProfileSummaryCopy(locale);
   const stats = [
-    { label: copy.hangouts, value: dashboard.createdActivityCount },
-    { label: copy.friends, value: dashboard.friendCount },
-    { label: copy.moments, value: dashboard.momentCount },
+    {
+      href: withLocale(locale, "/profile/hangouts"),
+      label: copy.hangouts,
+      value: dashboard.createdActivityCount,
+    },
+    {
+      href: withLocale(locale, "/profile/network"),
+      label: copy.friends,
+      value: dashboard.friendCount,
+    },
+    {
+      href: withLocale(locale, "/profile/moments"),
+      label: copy.moments,
+      value: dashboard.momentCount,
+    },
   ];
 
   return (
     <div className="mt-5 grid grid-cols-[minmax(0,1fr)_5.65rem] items-center gap-3">
       <div className="grid min-w-0 grid-cols-3">
         {stats.map((item) => (
-          <div className="min-w-0 px-1.5 py-1.5 text-center" key={item.label}>
-            <p className="text-[21px] font-black leading-[1.08] text-[#111210]">
+          <Link
+            aria-label={`${item.label}: ${item.value}`}
+            className="min-w-0 rounded-2xl px-1.5 py-1.5 text-center transition active:scale-[0.98]"
+            href={item.href}
+            key={item.label}
+          >
+            <p className="text-[21px] font-bold leading-[1.08] text-[#111210] friemi-tabular">
               {item.value}
             </p>
             <p className="mt-1 truncate text-[10px] font-bold leading-4 text-[#4F574F]">
               {item.label}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -878,7 +906,7 @@ function MobileProfileSummaryStrip({
             <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
               {copy.trust}
             </span>
-            <span className="mt-1 block text-[16px] font-black leading-none text-[#156240] tabular-nums">
+            <span className="mt-1 block text-[16px] font-bold leading-none text-[#156240] friemi-tabular">
               {dashboard.trustScore}
             </span>
           </span>
@@ -891,7 +919,7 @@ function MobileProfileSummaryStrip({
             <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
               {copy.charm}
             </span>
-            <span className="mt-1 block text-[16px] font-black leading-none text-[#111210] tabular-nums">
+            <span className="mt-1 block text-[16px] font-bold leading-none text-[#111210] friemi-tabular">
               {formatCharmScore(dashboard.charmScore)}
             </span>
           </span>
@@ -914,11 +942,17 @@ function getProfilePreviewTabsCopy(locale: string) {
       moments: "Moments",
       viewAll: "Tout voir",
       achievementTitles: {
-        active_guest_20: "Invité actif",
+        active_guest_20: "Joueur actif",
         co_creator: "Co-créateur",
-        hello_world: "Première sortie",
+        content_contributor: "Contributeur de contenu",
+        first_gift: "Premier cadeau",
+        gift_ambassador: "Ambassadeur des cadeaux",
+        hello_world: "Nouveau joueur",
         host_20: "Hôte 20",
-        open_minded: "Esprit ouvert",
+        invitation_expert: "Expert des invitations",
+        open_minded: "Organisateur ouvert",
+        popularity_star: "Étoile populaire",
+        punctuality_star: "Étoile de ponctualité",
         trusted_profile: "Profil fiable",
       },
     };
@@ -934,11 +968,17 @@ function getProfilePreviewTabsCopy(locale: string) {
       moments: "Moments",
       viewAll: "View all",
       achievementTitles: {
-        active_guest_20: "Active Guest",
+        active_guest_20: "Active Player",
         co_creator: "Co-creator",
-        hello_world: "First Plan",
+        content_contributor: "Content Contributor",
+        first_gift: "First Gift",
+        gift_ambassador: "Gift Ambassador",
+        hello_world: "First-time Player",
         host_20: "Host 20",
-        open_minded: "Open Minded",
+        invitation_expert: "Invitation Expert",
+        open_minded: "Open Host",
+        popularity_star: "Popularity Star",
+        punctuality_star: "Punctuality Star",
         trusted_profile: "Trusted Profile",
       },
     };
@@ -955,9 +995,15 @@ function getProfilePreviewTabsCopy(locale: string) {
     achievementTitles: {
       active_guest_20: "活跃玩家",
       co_creator: "共创者",
-      hello_world: "初次见面",
+      content_contributor: "内容贡献者",
+      first_gift: "初次心意",
+      gift_ambassador: "礼物使者",
+      hello_world: "初见玩家",
       host_20: "主理人 20",
+      invitation_expert: "邀请达人",
       open_minded: "开放主理人",
+      popularity_star: "人气之星",
+      punctuality_star: "守约之星",
       trusted_profile: "可信资料",
     },
   };
@@ -999,14 +1045,16 @@ function ProfilePreviewTabs({
     ...dashboard.createdActivities,
     ...dashboard.participations.map((participation) => participation.activity),
     ...dashboard.favoriteActivities.map((favorite) => favorite.activity),
-  ].filter((activity) => {
-    if (seenActivityIds.has(activity.id)) {
-      return false;
-    }
+  ]
+    .filter((activity) => {
+      if (seenActivityIds.has(activity.id)) {
+        return false;
+      }
 
-    seenActivityIds.add(activity.id);
-    return true;
-  }).slice(0, 3);
+      seenActivityIds.add(activity.id);
+      return true;
+    })
+    .slice(0, 3);
   const badgeItems = achievementPreviewItems;
   const activeHref = getProfilePreviewTabHref(locale, activeTab);
 
@@ -1161,13 +1209,7 @@ function PreviewImage({
   );
 }
 
-function ProfilePreviewEmpty({
-  href,
-  label,
-}: {
-  href: string;
-  label: string;
-}) {
+function ProfilePreviewEmpty({ href, label }: { href: string; label: string }) {
   return (
     <Link
       className="col-span-3 flex min-h-[7.5rem] items-center justify-center rounded-xl bg-[#F8F7F2] px-4 text-center text-[12px] font-semibold text-[#6C746A] transition active:scale-[0.98]"
@@ -1195,10 +1237,9 @@ function ProfileFeatureLink({
   status?: string;
   tone?: "green" | "pink" | "blue" | "gold" | "gray";
 }) {
-  const toneClass =
-    locked
-      ? "bg-[#F5F4EF] text-[#9A9A90]"
-      : tone === "pink"
+  const toneClass = locked
+    ? "bg-[#F5F4EF] text-[#9A9A90]"
+    : tone === "pink"
       ? "bg-[#FFF1F6] text-[#F05B91]"
       : tone === "blue"
         ? "bg-[#F1F6FF] text-[#4D83E9]"
@@ -1222,7 +1263,7 @@ function ProfileFeatureLink({
             <Lock className="h-3 w-3" strokeWidth={2.4} />
           </span>
         ) : status ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-semibold leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">{status}</span>
           </span>
         ) : null}
@@ -1286,16 +1327,6 @@ function getTimelineDateParts(value: string, locale: string) {
   };
 }
 
-function truncateProfileDisplayName(value: string, maxLength = 15) {
-  const characters = Array.from(value.trim());
-
-  if (characters.length <= maxLength) {
-    return value;
-  }
-
-  return `${characters.slice(0, maxLength).join("")}...`;
-}
-
 function PublicMobileProfileActions({
   isAuthenticated,
   locale,
@@ -1315,14 +1346,18 @@ function PublicMobileProfileActions({
   const inactiveLabel = relationship.targetFollowsViewer
     ? copy.followBack
     : copy.addFriend;
+  const FollowIcon =
+    relationship.isFollowing && relationship.targetFollowsViewer
+      ? HeartHandshake
+      : undefined;
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="grid grid-cols-2 items-start gap-2">
       <FollowButton
-        activeButtonClassName="!h-8 !min-h-8 min-w-[5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeButtonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-semibold text-[#156240] shadow-none active:scale-[0.98]"
         activeLabel={activeLabel}
-        buttonClassName="!h-8 !min-h-8 min-w-[4.5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
-        fullWidth={false}
+        buttonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-semibold text-[#156240] shadow-none active:scale-[0.98]"
+        icon={FollowIcon}
         inactiveLabel={inactiveLabel}
         isAuthenticated={isAuthenticated}
         isFollowing={relationship.isFollowing}
@@ -1337,17 +1372,14 @@ function PublicMobileProfileActions({
         }}
       />
       {isAuthenticated ? (
-        <form action={openDirectConversationAction}>
-          <input name="locale" type="hidden" value={locale} />
-          <input name="friendProfileId" type="hidden" value={profileId} />
-          <input name="redirectPath" type="hidden" value={redirectPath} />
-          <button
-            className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)] active:scale-[0.98]"
-            type="submit"
-          >
-            {copy.message}
-          </button>
-        </form>
+        <StartDirectConversationButton
+          buttonClassName="h-9 w-full px-3 text-[11px]"
+          errorClassName="col-span-2 text-center"
+          label={copy.message}
+          locale={locale}
+          peerProfileId={profileId}
+          redirectPath={redirectPath}
+        />
       ) : null}
     </div>
   );
@@ -1377,7 +1409,7 @@ function RecentCharmGifts({
       </span>
       {visibleGifts.map((gift) => (
         <span
-          className="inline-flex h-7 items-center gap-1 rounded-full bg-white/78 px-2 text-[11px] font-black text-[#1D1D1B] ring-1 ring-[#E8E0C8]"
+          className="inline-flex h-7 items-center gap-1 rounded-full bg-white/78 px-2 text-[11px] font-semibold text-[#1D1D1B] ring-1 ring-[#E8E0C8]"
           key={gift.id}
           title={`${gift.giftLabel} +${gift.totalCharmDelta}`}
         >
@@ -1443,11 +1475,11 @@ function CharmLevelsDialog({
       <div className="w-full max-w-sm rounded-[1.4rem] bg-[#FEFFF9] p-4 shadow-[0_18px_54px_rgba(17,18,16,0.22)] ring-1 ring-[#D6D5B2]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#8A61CE]">
+            <p className="text-[11px] font-semibold uppercase tracking-normal text-[#8A61CE]">
               {copy.charmLevelsCurrent}
             </p>
             <h2
-              className="mt-1 text-xl font-black leading-tight text-[#111210]"
+              className="mt-1 text-xl font-bold leading-tight text-[#111210]"
               id="charm-levels-dialog-title"
             >
               {copy.charmLevelsTitle}
@@ -1484,11 +1516,11 @@ function CharmLevelsDialog({
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-black">
+                    <p className="truncate text-sm font-bold">
                       {getCharmLevelLabel(level, locale)}
                     </p>
                     {active ? (
-                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#8A61CE] ring-1 ring-[#DBC8F3]">
                         {copy.charmLevelsCurrent}
                       </span>
                     ) : null}
@@ -1497,7 +1529,7 @@ function CharmLevelsDialog({
                     {getCharmLevelDescription(level, locale)}
                   </p>
                 </div>
-                <p className="whitespace-nowrap text-xs font-black text-[#8A61CE]">
+                <p className="whitespace-nowrap text-xs font-semibold text-[#8A61CE] friemi-tabular">
                   {copy.charmLevelsStartingAt}{" "}
                   {formatCharmScore(level.minScore)}
                 </p>
@@ -1507,7 +1539,7 @@ function CharmLevelsDialog({
         </div>
 
         <button
-          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-semibold text-white transition active:scale-[0.98]"
           onClick={onClose}
           type="button"
         >
@@ -1551,12 +1583,12 @@ function CharmProgressPanel({
       <div className={cn("min-w-0", className)}>
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[26px] font-black leading-none text-[#A57AEB]">
+            <p className="text-[26px] font-bold leading-none text-[#A57AEB] friemi-tabular">
               {formatCharmScore(progress.score)}
             </p>
             <button
               aria-label={copy.charmLevelsOpen}
-              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-black text-[#8B78B9] transition active:scale-[0.98]"
+              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-semibold text-[#8B78B9] transition active:scale-[0.98]"
               onClick={() => setLevelsOpen(true)}
               type="button"
             >
@@ -1679,7 +1711,7 @@ function PublicMobileTimeline({
                 <div className="pt-0.5 text-center">
                   {showDate ? (
                     <>
-                      <p className="text-[25px] font-black leading-none text-[#111210]">
+                      <p className="text-[25px] font-bold leading-none text-[#111210] friemi-tabular">
                         {item.dateParts.day}
                       </p>
                       <p className="mt-1 text-[11px] font-bold leading-4 text-[#7A8276]">
@@ -1689,7 +1721,7 @@ function PublicMobileTimeline({
                   ) : null}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[12px] font-black text-[#156240]">
+                  <p className="text-[12px] font-semibold text-[#156240]">
                     {item.type}
                   </p>
                   <p className="mt-1 line-clamp-2 text-[15px] font-bold leading-5 text-[#1D1D1B]">
@@ -1714,6 +1746,327 @@ function PublicMobileTimeline({
   );
 }
 
+function getProfileRemarkCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      clear: "Effacer",
+      cleared: "Note effacee.",
+      close: "Fermer",
+      edit: "Modifier la note",
+      label: "Note privee",
+      originalName: "Nom public",
+      placeholder: "Ex. partenaire jeux",
+      privateHint: "Visible uniquement par vous",
+      save: "Enregistrer",
+      saved: "Note enregistree.",
+      saving: "Enregistrement...",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      clear: "Clear",
+      cleared: "Remark cleared.",
+      close: "Close",
+      edit: "Edit remark",
+      label: "Private remark",
+      originalName: "Public name",
+      placeholder: "E.g. board game friend",
+      privateHint: "Only visible to you",
+      save: "Save",
+      saved: "Remark saved.",
+      saving: "Saving...",
+    };
+  }
+
+  return {
+    clear: "清除",
+    cleared: "备注已清除。",
+    close: "关闭",
+    edit: "修改备注名",
+    label: "备注名",
+    originalName: "公开昵称",
+    placeholder: "例如：桌游搭子",
+    privateHint: "仅自己可见",
+    save: "保存",
+    saved: "备注已保存。",
+    saving: "保存中...",
+  };
+}
+
+function ProfileRemarkSubmitButton({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const copy = getProfileRemarkCopy(locale);
+
+  return (
+    <button
+      aria-busy={pending}
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-semibold text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? (
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <PencilLine className="h-3.5 w-3.5" />
+      )}
+      {pending ? copy.saving : copy.save}
+    </button>
+  );
+}
+
+function ProfileRemarkEditor({
+  className,
+  locale,
+  profile,
+}: {
+  className?: string;
+  locale: string;
+  profile: PublicProfileViewModel;
+}) {
+  const copy = getProfileRemarkCopy(locale);
+  const [state, formAction] = useActionState(
+    updateProfileRemarkAction,
+    profileRemarkInitialState,
+  );
+  const router = useRouter();
+  const [value, setValue] = useState(profile.remarkName ?? "");
+  const savedRemark = state.ok
+    ? (state.remarkName ?? "")
+    : (profile.remarkName ?? "");
+  const hasSavedRemark = savedRemark.trim().length > 0;
+
+  useEffect(() => {
+    setValue(profile.remarkName ?? "");
+  }, [profile.id, profile.remarkName]);
+
+  useEffect(() => {
+    if (state.ok) {
+      setValue(state.remarkName ?? "");
+      router.refresh();
+    }
+  }, [router, state.ok, state.remarkName]);
+
+  return (
+    <div className={cn("grid gap-3", className)}>
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <label
+          className="text-xs font-semibold text-[#156240]"
+          htmlFor={`profile-remark-${profile.id}`}
+        >
+          {copy.label}
+        </label>
+        {profile.publicNickname !== profile.nickname || hasSavedRemark ? (
+          <span className="min-w-0 truncate text-[11px] font-semibold text-[#6C746A]">
+            {copy.originalName}: {profile.publicNickname}
+          </span>
+        ) : null}
+      </div>
+      <form action={formAction} className="flex min-w-0 items-center gap-2">
+        <input name="locale" type="hidden" value={locale} />
+        <input
+          name="redirectPath"
+          type="hidden"
+          value={`/profile/${profile.id}`}
+        />
+        <input name="targetProfileId" type="hidden" value={profile.id} />
+        <input
+          className="h-10 min-w-0 flex-1 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20"
+          id={`profile-remark-${profile.id}`}
+          maxLength={32}
+          name="remarkName"
+          onChange={(event) => setValue(event.target.value)}
+          placeholder={copy.placeholder}
+          value={value}
+        />
+        <ProfileRemarkSubmitButton locale={locale} />
+      </form>
+      {hasSavedRemark ? (
+        <form
+          action={formAction}
+          className="flex justify-end"
+          onSubmit={() => setValue("")}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input
+            name="redirectPath"
+            type="hidden"
+            value={`/profile/${profile.id}`}
+          />
+          <input name="targetProfileId" type="hidden" value={profile.id} />
+          <input name="remarkName" type="hidden" value="" />
+          <button
+            className="inline-flex h-7 items-center justify-center rounded-full px-2.5 text-[11px] font-semibold text-[#6C746A] transition active:bg-white"
+            type="submit"
+          >
+            {copy.clear}
+          </button>
+        </form>
+      ) : null}
+      {state.formError ? (
+        <p className="text-xs font-bold leading-5 text-[#B5301F]">
+          {state.formError}
+        </p>
+      ) : state.ok ? (
+        <p className="text-xs font-bold leading-5 text-[#156240]">
+          {state.remarkName ? copy.saved : copy.cleared}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function PublicProfileMoreMenu({
+  buttonClassName,
+  isAuthenticated,
+  locale,
+  profile,
+}: {
+  buttonClassName?: string;
+  isAuthenticated: boolean;
+  locale: string;
+  profile: PublicProfileViewModel;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  const remarkCopy = getProfileRemarkCopy(locale);
+  const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const menuId = `public-profile-more-menu-${profile.id}`;
+  const dialogTitleId = `profile-remark-dialog-title-${profile.id}`;
+
+  useEffect(() => {
+    if (!menuOpen && !remarkOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (remarkOpen) {
+        setRemarkOpen(false);
+      } else {
+        setMenuOpen(false);
+      }
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        menuOpen &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [menuOpen, remarkOpen]);
+
+  const openRemarkEditor = () => {
+    setMenuOpen(false);
+
+    if (!isAuthenticated) {
+      router.push(getSignInHref(locale, `/profile/${profile.id}`));
+      return;
+    }
+
+    setRemarkOpen(true);
+  };
+
+  return (
+    <>
+      <div className="relative" ref={menuRef}>
+        <button
+          aria-controls={menuOpen ? menuId : undefined}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-label={copy.more}
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[#1D1D1B] transition active:scale-95",
+            buttonClassName,
+          )}
+          onClick={() => setMenuOpen((current) => !current)}
+          type="button"
+        >
+          <MoreHorizontal className="h-5 w-5" strokeWidth={2.3} />
+        </button>
+
+        {menuOpen ? (
+          <div
+            className="absolute right-0 top-11 z-[80] w-44 overflow-hidden rounded-lg bg-white py-1 shadow-[0_16px_42px_rgba(17,18,16,0.18)] ring-1 ring-[#E7E2D6]"
+            id={menuId}
+            role="menu"
+          >
+            <button
+              className="flex h-11 w-full items-center gap-2.5 px-3 text-left text-sm font-semibold text-[#1D1D1B] transition hover:bg-[#F5F7F1] active:bg-[#EEF3EA]"
+              onClick={openRemarkEditor}
+              role="menuitem"
+              type="button"
+            >
+              <PencilLine className="h-4 w-4 text-[#156240]" />
+              <span>{remarkCopy.edit}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {remarkOpen ? (
+        <div
+          aria-labelledby={dialogTitleId}
+          aria-modal="true"
+          className="fixed inset-0 z-[10001] flex items-end bg-[#111210]/30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center sm:justify-center sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setRemarkOpen(false);
+            }
+          }}
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-[1.35rem] bg-white p-4 shadow-[0_24px_70px_rgba(17,18,16,0.24)] ring-1 ring-[#D6D5B2] sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2
+                  className="text-lg font-bold leading-6 text-[#111210]"
+                  id={dialogTitleId}
+                >
+                  {remarkCopy.edit}
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-[#7A8276]">
+                  {remarkCopy.privateHint}
+                </p>
+              </div>
+              <button
+                aria-label={remarkCopy.close}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#4F574F] transition hover:bg-[#F5F7F1] active:scale-95"
+                onClick={() => setRemarkOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <ProfileRemarkEditor
+              className="mt-5"
+              locale={locale}
+              profile={profile}
+            />
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function PublicMobileProfileHome({
   dashboard,
   isAuthenticated,
@@ -1730,7 +2083,6 @@ function PublicMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const displayNickname = truncateProfileDisplayName(profile.nickname);
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
@@ -1757,14 +2109,11 @@ function PublicMobileProfileHome({
           >
             <Share2 className="h-4 w-4" strokeWidth={2.3} />
           </button>
-          <button
-            aria-label={copy.more}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[#1D1D1B]"
-            onClick={() => window.alert(copy.soon)}
-            type="button"
-          >
-            <MoreHorizontal className="h-5 w-5" strokeWidth={2.3} />
-          </button>
+          <PublicProfileMoreMenu
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            profile={profile}
+          />
         </div>
       </header>
 
@@ -1779,26 +2128,18 @@ function PublicMobileProfileHome({
             size="sm"
           />
           <div className="min-w-0 pt-0.5">
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center">
-                  <h1
-                    className="min-w-0 max-w-full truncate text-lg font-black leading-tight text-[#111210]"
-                    title={profile.nickname}
-                  >
-                    {displayNickname}
-                  </h1>
-                </div>
-              </div>
-              <div className="shrink-0 pt-0.5">
-                <PublicMobileProfileActions
-                  isAuthenticated={isAuthenticated}
-                  locale={locale}
-                  profileId={profile.id}
-                  relationship={dashboard.viewerRelationship}
-                />
-              </div>
-            </div>
+            <h1
+              className="min-w-0 max-w-full truncate text-lg font-bold leading-tight text-[#111210]"
+              title={profile.nickname}
+            >
+              {profile.nickname}
+            </h1>
+            {profile.remarkName &&
+            profile.publicNickname !== profile.nickname ? (
+              <p className="mt-0.5 truncate text-xs font-bold text-[#6C746A]">
+                {profile.publicNickname}
+              </p>
+            ) : null}
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
@@ -1817,6 +2158,15 @@ function PublicMobileProfileHome({
               </p>
             ) : null}
           </div>
+        </div>
+
+        <div className="mt-4">
+          <PublicMobileProfileActions
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            profileId={profile.id}
+            relationship={dashboard.viewerRelationship}
+          />
         </div>
 
         <CharmProgressPanel
@@ -1858,7 +2208,7 @@ function TrustScoreBadge({
       aria-expanded={active}
       aria-label={copy.label}
       className={cn(
-        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
         active ? "z-20" : "",
         className,
       )}
@@ -1869,7 +2219,7 @@ function TrustScoreBadge({
       <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={2.35} />
       <span className="leading-none">{score}</span>
       {active ? (
-        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
           {copy.tooltip}
         </span>
       ) : null}
@@ -1939,9 +2289,9 @@ function MobileProfileAboutCard({
   const displayBio = bio.trim() || copy.empty;
 
   return (
-    <section className="mt-6 rounded-[1.35rem] border border-[#EEE7D5] bg-white px-4 py-4">
+    <section className="mt-6 border-t border-[#EEE7D5] bg-white pt-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
-        <h3 className="min-w-0 truncate text-[16px] font-black leading-6 text-[#111210]">
+        <h3 className="min-w-0 truncate text-[16px] font-bold leading-6 text-[#111210]">
           {getProfileAboutTitle(locale, nickname)}
         </h3>
         {editButton}
@@ -1994,7 +2344,7 @@ function MobileProfileBioEditor({
         bio={savedBio}
         editButton={
           <button
-            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
             type="button"
             onClick={() => setOpen(true)}
           >
@@ -2023,11 +2373,11 @@ function MobileProfileBioEditor({
             noValidate
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black text-[#111210]">
+              <h3 className="text-lg font-bold text-[#111210]">
                 {copy.bioLabel}
               </h3>
               <button
-                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                className="h-9 rounded-full bg-white px-4 text-xs font-semibold text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
                 type="button"
                 onClick={() => {
                   setBioValue(savedBio);
@@ -2081,7 +2431,7 @@ function MobileProfileBioSubmitButton({
 
   return (
     <button
-      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -2100,6 +2450,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
       city: "Ville",
       cityPickerSearch: "Rechercher ou saisir une ville",
       cityPickerTitle: "Choisir une ville",
+      nickname: "Pseudo",
+      nicknameHint: "Modifiable une fois toutes les 24 heures",
+      nicknameLocked: "À nouveau modifiable le",
       save: "Enregistrer",
       saving: "Enregistrement...",
       status: "Statut",
@@ -2115,6 +2468,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
       city: "City",
       cityPickerSearch: "Search or enter a city",
       cityPickerTitle: "Choose city",
+      nickname: "Nickname",
+      nicknameHint: "Can be changed once every 24 hours",
+      nicknameLocked: "Available again",
       save: "Save",
       saving: "Saving...",
       status: "Status",
@@ -2129,6 +2485,9 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
     city: "城市",
     cityPickerSearch: "搜索或输入城市",
     cityPickerTitle: "选择城市",
+    nickname: "昵称",
+    nicknameHint: "每24小时可修改一次",
+    nicknameLocked: "可再次修改：",
     save: "保存",
     saving: "保存中...",
     status: "状态",
@@ -2179,7 +2538,7 @@ function ProfileCityPickerField({
   return (
     <>
       <button
-        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
+        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-semibold text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
         type="button"
         onClick={() => setOpen(true)}
       >
@@ -2205,7 +2564,7 @@ function ProfileCityPickerField({
         >
           <div className="max-h-[82dvh] w-full overflow-hidden rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="text-lg font-black text-[#111210]">
+              <h4 className="text-lg font-bold text-[#111210]">
                 {copy.cityPickerTitle}
               </h4>
               <button
@@ -2238,7 +2597,7 @@ function ProfileCityPickerField({
             <div className="mt-4 max-h-[58dvh] overflow-y-auto pr-1">
               {canUseCustomCity ? (
                 <button
-                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-black text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
+                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-semibold text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
                   type="button"
                   onClick={() => handleSelect(normalizedQuery)}
                 >
@@ -2258,9 +2617,9 @@ function ProfileCityPickerField({
                   const cities = normalizedQueryKey
                     ? country.cities.filter(
                         (city) =>
-                          city.toLocaleLowerCase().includes(
-                            normalizedQueryKey,
-                          ) ||
+                          city
+                            .toLocaleLowerCase()
+                            .includes(normalizedQueryKey) ||
                           countryLabel
                             .toLocaleLowerCase()
                             .includes(normalizedQueryKey),
@@ -2273,7 +2632,7 @@ function ProfileCityPickerField({
 
                   return (
                     <section key={country.key} className="grid gap-2">
-                      <p className="px-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#7B8178]">
+                      <p className="px-1 text-[11px] font-semibold uppercase tracking-normal text-[#7B8178]">
                         {countryLabel}
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -2284,7 +2643,7 @@ function ProfileCityPickerField({
                             <button
                               key={`${country.key}-${city}`}
                               className={cn(
-                                "rounded-full px-3 py-2 text-xs font-black transition active:scale-[0.98]",
+                                "rounded-full px-3 py-2 text-xs font-semibold transition active:scale-[0.98]",
                                 active
                                   ? "bg-[#0B7A4B] text-white"
                                   : "bg-white text-[#111210] ring-1 ring-[#E1DEC9]",
@@ -2318,6 +2677,7 @@ function MobileProfileAvatarEditor({
   locale,
   name,
   nickname,
+  nicknameChangedAt,
   onPresenceStatusChange,
   onSaved,
   presenceDisplayStatus,
@@ -2331,16 +2691,20 @@ function MobileProfileAvatarEditor({
   locale: string;
   name: string;
   nickname: string;
+  nicknameChangedAt: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   onSaved: (nextValue: {
     avatarUrl: string | null;
     homeCity: string | null;
+    nickname: string;
+    nicknameChangedAt: string | null;
   }) => void;
   presenceDisplayStatus?: UserPresenceDisplayStatus;
   presenceStatus: UserPresenceStatusValue;
 }) {
   const copy = getMobileProfileAvatarEditorCopy(locale);
   const router = useRouter();
+  const { setNickname } = useViewerProfile();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     mobileAvatarInitialState,
@@ -2348,7 +2712,12 @@ function MobileProfileAvatarEditor({
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
-  const [cityValue, setCityValue] = useState(normalizeProfileHomeCity(homeCity));
+  const [cityValue, setCityValue] = useState(
+    normalizeProfileHomeCity(homeCity),
+  );
+  const [nicknameValue, setNicknameValue] = useState(nickname);
+  const [currentNicknameChangedAt, setCurrentNicknameChangedAt] =
+    useState(nicknameChangedAt);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   useEffect(() => {
@@ -2361,13 +2730,32 @@ function MobileProfileAvatarEditor({
   }, [homeCity]);
 
   useEffect(() => {
+    setNicknameValue(nickname);
+  }, [nickname]);
+
+  useEffect(() => {
+    setCurrentNicknameChangedAt(nicknameChangedAt);
+  }, [nicknameChangedAt]);
+
+  useEffect(() => {
     if (!state.success) {
       return;
     }
 
+    const savedNickname = state.nickname ?? nicknameValue;
+    const savedNicknameChangedAt =
+      state.nicknameChangedAt === undefined
+        ? currentNicknameChangedAt
+        : state.nicknameChangedAt;
+
+    setNickname(savedNickname);
+    setNicknameValue(savedNickname);
+    setCurrentNicknameChangedAt(savedNicknameChangedAt);
     onSaved({
       avatarUrl: state.avatarUrl === undefined ? avatarValue : state.avatarUrl,
       homeCity: state.homeCity === undefined ? cityValue : state.homeCity,
+      nickname: savedNickname,
+      nicknameChangedAt: savedNicknameChangedAt,
     });
     setAvatarDirty(false);
     setOpen(false);
@@ -2375,14 +2763,32 @@ function MobileProfileAvatarEditor({
   }, [
     avatarValue,
     cityValue,
+    currentNicknameChangedAt,
+    nicknameValue,
     onSaved,
     router,
+    setNickname,
     state.avatarUrl,
     state.homeCity,
+    state.nickname,
+    state.nicknameChangedAt,
     state.success,
   ]);
 
   const cityDirty = cityValue !== normalizeProfileHomeCity(homeCity);
+  const nicknameDirty = nicknameValue.trim() !== nickname;
+  const nicknameAvailableAt = getNicknameChangeAvailableAt(
+    currentNicknameChangedAt,
+  );
+  const nicknameLocked = Boolean(
+    nicknameAvailableAt && nicknameAvailableAt.getTime() > Date.now(),
+  );
+  const nicknameHint = nicknameLocked
+    ? `${copy.nicknameLocked} ${nicknameAvailableAt!.toLocaleString(locale, {
+        dateStyle: "short",
+        timeStyle: "short",
+      })}`
+    : copy.nicknameHint;
 
   return (
     <>
@@ -2415,11 +2821,9 @@ function MobileProfileAvatarEditor({
         >
           <div className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black text-[#111210]">
-                {copy.title}
-              </h3>
+              <h3 className="text-lg font-bold text-[#111210]">{copy.title}</h3>
               <button
-                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                className="h-9 rounded-full bg-white px-4 text-xs font-semibold text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
                 type="button"
                 onClick={() => setOpen(false)}
               >
@@ -2430,9 +2834,11 @@ function MobileProfileAvatarEditor({
             <div className="mt-4">
               <ProfileAvatarPicker
                 hideUploadAction
-                initial={initial}
+                initial={
+                  nicknameValue.trim().charAt(0).toUpperCase() || initial
+                }
                 locale={locale}
-                name={name}
+                name={nicknameValue || name}
                 onChange={(nextAvatarUrl) => {
                   setAvatarValue(nextAvatarUrl);
                   setAvatarDirty(true);
@@ -2443,7 +2849,7 @@ function MobileProfileAvatarEditor({
                 sideContent={
                   <div className="grid gap-3">
                     <div className="grid gap-1.5">
-                      <p className="text-[11px] font-black text-[#4F574F]">
+                      <p className="text-[11px] font-semibold text-[#4F574F]">
                         {copy.status}
                       </p>
                       <ProfilePresenceControl
@@ -2456,7 +2862,6 @@ function MobileProfileAvatarEditor({
                     <form action={formAction} className="grid gap-2" noValidate>
                       <input name="locale" type="hidden" value={locale} />
                       <input name="afterSave" type="hidden" value="refresh" />
-                      <input name="nickname" type="hidden" value={nickname} />
                       <input name="bio" type="hidden" value={bio ?? ""} />
                       <input name="homeCity" type="hidden" value={cityValue} />
                       {avatarDirty && avatarValue ? (
@@ -2466,6 +2871,25 @@ function MobileProfileAvatarEditor({
                           value={avatarValue}
                         />
                       ) : null}
+
+                      <label className="grid gap-1.5">
+                        <span className="text-[11px] font-semibold text-[#4F574F]">
+                          {copy.nickname}
+                        </span>
+                        <input
+                          className="h-10 w-full rounded-full bg-white px-3 text-sm font-semibold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A7A99D] focus:ring-[#8AB68E] read-only:bg-[#F4F5F1] read-only:text-[#7B8178]"
+                          maxLength={24}
+                          name="nickname"
+                          onChange={(event) =>
+                            setNicknameValue(event.currentTarget.value)
+                          }
+                          readOnly={nicknameLocked}
+                          value={nicknameValue}
+                        />
+                        <span className="text-[10px] font-medium text-[#7B8178]">
+                          {nicknameHint}
+                        </span>
+                      </label>
 
                       <ProfileCityPickerField
                         label={copy.city}
@@ -2482,7 +2906,9 @@ function MobileProfileAvatarEditor({
                       <div className="flex justify-end">
                         <MobileProfileAvatarSubmitButton
                           disabled={
-                            (!avatarDirty && !cityDirty) || isAvatarUploading
+                            (!avatarDirty && !cityDirty && !nicknameDirty) ||
+                            !nicknameValue.trim() ||
+                            isAvatarUploading
                           }
                           label={copy.save}
                           pendingLabel={copy.saving}
@@ -2513,7 +2939,7 @@ function MobileProfileAvatarSubmitButton({
 
   return (
     <button
-      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
       disabled={pending || disabled}
       type="submit"
     >
@@ -2544,6 +2970,10 @@ function SelfMobileProfileHome({
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
+  const [currentNickname, setCurrentNickname] = useState(profile.nickname);
+  const [currentNicknameChangedAt, setCurrentNicknameChangedAt] = useState(
+    profile.nicknameChangedAt,
+  );
   const [currentHomeCity, setCurrentHomeCity] = useState(
     normalizeProfileHomeCity(profile.homeCity),
   );
@@ -2553,6 +2983,11 @@ function SelfMobileProfileHome({
   useEffect(() => {
     setCurrentAvatarUrl(profile.avatarUrl);
   }, [profile.avatarUrl]);
+
+  useEffect(() => {
+    setCurrentNickname(profile.nickname);
+    setCurrentNicknameChangedAt(profile.nicknameChangedAt);
+  }, [profile.nickname, profile.nicknameChangedAt]);
 
   useEffect(() => {
     setCurrentHomeCity(normalizeProfileHomeCity(profile.homeCity));
@@ -2650,15 +3085,23 @@ function SelfMobileProfileHome({
               avatarUrl={currentAvatarUrl}
               bio={profile.bio}
               homeCity={currentHomeCity}
-              initial={profileInitial}
+              initial={
+                currentNickname.trim().slice(0, 1).toUpperCase() ||
+                profileInitial
+              }
               isOnline={presenceStatus === "ONLINE"}
               locale={locale}
-              name={profile.nickname}
-              nickname={profile.nickname}
+              name={currentNickname}
+              nickname={currentNickname}
+              nicknameChangedAt={currentNicknameChangedAt}
               onPresenceStatusChange={onPresenceStatusChange}
               onSaved={(nextValue) => {
                 setCurrentAvatarUrl(nextValue.avatarUrl);
-                setCurrentHomeCity(normalizeProfileHomeCity(nextValue.homeCity));
+                setCurrentHomeCity(
+                  normalizeProfileHomeCity(nextValue.homeCity),
+                );
+                setCurrentNickname(nextValue.nickname);
+                setCurrentNicknameChangedAt(nextValue.nicknameChangedAt);
               }}
               presenceDisplayStatus={
                 presenceStatus === "INVISIBLE" ? null : presenceStatus
@@ -2668,8 +3111,8 @@ function SelfMobileProfileHome({
 
             <div className="min-w-0 flex-1 pt-2">
               <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-[22px] font-black leading-tight text-[#111210]">
-                  {profile.nickname}
+                <h2 className="truncate text-[22px] font-bold leading-tight text-[#111210]">
+                  {currentNickname}
                 </h2>
                 <ProfileAchievementBadgeStrip
                   className="min-w-0 shrink-0"
@@ -2687,7 +3130,7 @@ function SelfMobileProfileHome({
                     title={copied ? copy.copied : copy.copyCode}
                     type="button"
                   >
-                    <span className="tabular-nums">{profile.friendCode}</span>
+                    <span className="friemi-tabular">{profile.friendCode}</span>
                     <Copy className="h-3.5 w-3.5 shrink-0" />
                   </button>
                 ) : null}
@@ -2712,7 +3155,6 @@ function SelfMobileProfileHome({
               </button>
             </div>
           </div>
-
         </div>
 
         <MobileProfileSummaryStrip dashboard={dashboard} locale={locale} />
@@ -2774,7 +3216,7 @@ function SelfMobileProfileHome({
       <MobileProfileBioEditor
         bio={profile.bio}
         locale={locale}
-        nickname={profile.nickname}
+        nickname={currentNickname}
       />
     </div>
   );
@@ -2974,6 +3416,7 @@ export function ProfileDashboardView({
                       friendCode={profile.friendCode}
                       locale={locale}
                       nickname={profile.nickname}
+                      nicknameChangedAt={profile.nicknameChangedAt}
                     />
                   </div>
                 ) : null}
@@ -3028,7 +3471,7 @@ export function ProfileDashboardView({
                   presenceDisplayStatus={profile.presenceDisplayStatus}
                 />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
+                  <p className="text-[11px] font-semibold uppercase tracking-normal text-moss/75 sm:text-xs sm:tracking-normal">
                     {t.profile.title}
                   </p>
                   <div className="mt-0.5 flex min-w-0 items-center gap-2 sm:mt-1">
@@ -3042,6 +3485,12 @@ export function ProfileDashboardView({
                       locale={locale}
                     />
                   </div>
+                  {profile.remarkName &&
+                  profile.publicNickname !== profile.nickname ? (
+                    <p className="mt-1 truncate text-xs font-semibold text-[#6C746A]">
+                      {profile.publicNickname}
+                    </p>
+                  ) : null}
                   {profile.isCoCreator ? (
                     <CoCreatorIdentityBadge className="mt-2" locale={locale} />
                   ) : null}
@@ -3053,6 +3502,14 @@ export function ProfileDashboardView({
                 </div>
               </div>
               <div className="grid gap-2">
+                <div className="flex justify-end">
+                  <PublicProfileMoreMenu
+                    buttonClassName="bg-white/85 ring-1 ring-[#D6D5B2] hover:bg-white"
+                    isAuthenticated={isAuthenticated}
+                    locale={locale}
+                    profile={profile}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     className={cn(

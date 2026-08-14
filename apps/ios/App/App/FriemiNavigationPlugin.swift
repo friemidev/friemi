@@ -1,6 +1,7 @@
 import AuthenticationServices
 import Capacitor
 import GoogleSignIn
+import Photos
 import UIKit
 import WebKit
 
@@ -14,6 +15,7 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContro
     let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "signInWithGoogle", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveImageToPhotos", returnType: CAPPluginReturnPromise),
     ]
 
     override func load() {
@@ -65,6 +67,48 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContro
         controller.delegate = self
         controller.presentationContextProvider = self
         controller.performRequests()
+    }
+
+    @objc func saveImageToPhotos(_ call: CAPPluginCall) {
+        guard let urlValue = call.getString("url"),
+              let url = URL(string: urlValue),
+              url.scheme == "https" || url.scheme == "http"
+        else {
+            call.reject("Invalid image URL.")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode),
+                  let data,
+                  !data.isEmpty
+            else {
+                call.reject("Unable to download the image.")
+                return
+            }
+
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                guard status == .authorized || status == .limited else {
+                    call.reject("Photo library access was not granted.")
+                    return
+                }
+
+                PHPhotoLibrary.shared().performChanges({
+                    let request = PHAssetCreationRequest.forAsset()
+                    request.addResource(with: .photo, data: data, options: nil)
+                }) { success, saveError in
+                    if success {
+                        call.resolve()
+                    } else {
+                        call.reject(
+                            saveError?.localizedDescription ?? "Unable to save the image."
+                        )
+                    }
+                }
+            }
+        }.resume()
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
