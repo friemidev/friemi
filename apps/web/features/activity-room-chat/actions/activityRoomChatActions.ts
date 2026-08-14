@@ -14,6 +14,7 @@ import { withLocale } from "@/lib/routes";
 import { getActivityRoomChatCopy } from "../copy";
 import {
   ActivityRoomChatDomainError,
+  activityRoomMessageImageMaxCount,
   activityRoomMessageMaxLength,
   canViewActivityRoomChat,
   deleteActivityRoomMessage,
@@ -29,6 +30,7 @@ export type ActivityRoomChatActionState = {
   messageIds?: string[];
   values?: {
     body?: string;
+    imageUrls?: string[];
   };
 };
 
@@ -45,11 +47,19 @@ export type ActivityRoomInviteActionState = {
   successMessage?: string;
 };
 
-const sendActivityRoomMessageSchema = z.object({
-  activityId: z.string().min(1).max(80),
-  body: z.string().trim().min(1).max(activityRoomMessageMaxLength),
-  locale: z.string().min(1).max(16).default("zh-CN"),
-});
+const sendActivityRoomMessageSchema = z
+  .object({
+    activityId: z.string().min(1).max(80),
+    body: z.string().trim().max(activityRoomMessageMaxLength).default(""),
+    imageUrls: z
+      .array(z.string().trim().url())
+      .max(activityRoomMessageImageMaxCount)
+      .default([]),
+    locale: z.string().min(1).max(16).default("zh-CN"),
+  })
+  .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
+    path: ["body"],
+  });
 
 const deleteActivityRoomMessageSchema = z.object({
   activityId: z.string().min(1).max(80),
@@ -114,6 +124,13 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function getStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .flatMap((value) => (typeof value === "string" ? [value.trim()] : []))
+    .filter(Boolean);
+}
+
 function getActionErrorMessage(locale: string, error: unknown) {
   const t = getActivityRoomChatCopy(locale);
 
@@ -134,8 +151,7 @@ function getMemberActionCopy(locale: string) {
       inviteFailed: "Impossible d'inviter cette personne.",
       inviteFull: "Le groupe est complet.",
       inviteMissing: "Cette personne n'est plus disponible.",
-      inviteNonMutual:
-        "Vous pouvez inviter une personne qui vous suit aussi.",
+      inviteNonMutual: "Vous pouvez inviter une personne qui vous suit aussi.",
       inviteSelf: "Cette personne est déjà dans le groupe.",
       inviteSuccess: "Invitation envoyée.",
       inviteUnavailable: "Ce groupe n'accepte plus d'invitations.",
@@ -207,6 +223,7 @@ export async function sendActivityRoomMessageAction(
   const rawInput = {
     activityId: getString(formData, "activityId"),
     body: getString(formData, "body"),
+    imageUrls: getStringList(formData, "imageUrls"),
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = sendActivityRoomMessageSchema.safeParse(rawInput);
@@ -218,6 +235,7 @@ export async function sendActivityRoomMessageAction(
       formError: t.invalidRequest,
       values: {
         body: rawInput.body,
+        imageUrls: rawInput.imageUrls,
       },
     };
   }
@@ -230,6 +248,7 @@ export async function sendActivityRoomMessageAction(
     const message = await sendActivityRoomMessage({
       activityId: result.data.activityId,
       body: result.data.body,
+      imageUrls: result.data.imageUrls,
       senderId: profile.id,
     });
 
@@ -246,6 +265,7 @@ export async function sendActivityRoomMessageAction(
       formError: getActionErrorMessage(result.data.locale, error),
       values: {
         body: result.data.body,
+        imageUrls: result.data.imageUrls,
       },
     };
   }
@@ -862,7 +882,10 @@ export async function removeActivityRoomParticipantAction(
         },
       });
 
-      if (!participation || participation.activityId !== result.data.activityId) {
+      if (
+        !participation ||
+        participation.activityId !== result.data.activityId
+      ) {
         return {
           ok: false,
           error: copy.missing,

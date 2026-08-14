@@ -37,7 +37,12 @@ export type ActivityCoverUploadResult =
   | { path: string; url: string };
 
 export type ValidatedImageUploadFile =
-  | { error: Extract<ActivityCoverStorageErrorCode, "FILE_TOO_LARGE" | "INVALID_IMAGE_CONTENT" | "UNSUPPORTED_FILE_TYPE"> }
+  | {
+      error: Extract<
+        ActivityCoverStorageErrorCode,
+        "FILE_TOO_LARGE" | "INVALID_IMAGE_CONTENT" | "UNSUPPORTED_FILE_TYPE"
+      >;
+    }
   | { detectedMimeType: AllowedCoverMimeType; fileBuffer: Buffer };
 
 export function getActivityCoverStorageConfig() {
@@ -287,6 +292,16 @@ export async function uploadDirectMessageImageBuffer(
 ): Promise<ActivityCoverUploadResult> {
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "direct-messages",
+  });
+}
+
+export async function uploadChatImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "chat-images",
   });
 }
 

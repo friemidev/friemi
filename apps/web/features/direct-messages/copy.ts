@@ -41,6 +41,8 @@ type DirectMessagesCopy = {
   attachImage: string;
   imageMessage: string;
   resetImagePreview: string;
+  saveImage: string;
+  savingImage: string;
   imageUploadFailed: string;
   imageUploading: string;
   removeImage: string;
@@ -129,6 +131,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       attachImage: "Ajouter une image",
       imageMessage: "Image",
       resetImagePreview: "Réinitialiser",
+      saveImage: "Enregistrer l'image",
+      savingImage: "Enregistrement...",
       imageUploadFailed: "Image impossible à importer.",
       imageUploading: "Import...",
       removeImage: "Retirer l'image",
@@ -231,6 +235,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       attachImage: "Add image",
       imageMessage: "Image",
       resetImagePreview: "Reset",
+      saveImage: "Save image",
+      savingImage: "Saving image...",
       imageUploadFailed: "Image could not be uploaded.",
       imageUploading: "Uploading...",
       removeImage: "Remove image",
@@ -327,6 +333,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     attachImage: "添加图片",
     imageMessage: "图片",
     resetImagePreview: "重置",
+    saveImage: "保存到相册",
+    savingImage: "正在保存...",
     imageUploadFailed: "图片上传失败，请稍后再试。",
     imageUploading: "上传中...",
     removeImage: "移除图片",

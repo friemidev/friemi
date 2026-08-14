@@ -6,7 +6,12 @@ const approvedMemberFilter = { status: "APPROVED" as const };
 export async function getPlanetSquare(viewerProfileId: string | null) {
   return prisma.planet.findMany({
     where: viewerProfileId
-      ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+      ? {
+          OR: [
+            { visibility: "PUBLIC" },
+            { members: { some: { profileId: viewerProfileId } } },
+          ],
+        }
       : { visibility: "PUBLIC" },
     select: {
       id: true,
@@ -19,19 +24,30 @@ export async function getPlanetSquare(viewerProfileId: string | null) {
       visibility: true,
       _count: { select: { members: { where: approvedMemberFilter } } },
       members: viewerProfileId
-        ? { where: { profileId: viewerProfileId }, select: { role: true, status: true } }
+        ? {
+            where: { profileId: viewerProfileId },
+            select: { role: true, status: true },
+          }
         : false,
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getPlanetRoom(planetSlug: string, viewerProfileId: string | null) {
+export async function getPlanetRoom(
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
   const planet = await prisma.planet.findFirst({
     where: {
       slug: planetSlug,
       ...(viewerProfileId
-        ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+        ? {
+            OR: [
+              { visibility: "PUBLIC" },
+              { members: { some: { profileId: viewerProfileId } } },
+            ],
+          }
         : { visibility: "PUBLIC" }),
     },
     select: {
@@ -158,6 +174,7 @@ export async function getPlanetChatPageData(
           select: {
             id: true,
             content: true,
+            imageUrls: true,
             createdAt: true,
             authorId: true,
             author: { select: { nickname: true, avatarUrl: true } },
@@ -214,14 +231,23 @@ export async function getPlanetMomentRedirectTarget(
   });
 }
 
-export async function getPlanetMoment(momentId: string, planetSlug: string, viewerProfileId: string | null) {
+export async function getPlanetMoment(
+  momentId: string,
+  planetSlug: string,
+  viewerProfileId: string | null,
+) {
   const moment = await prisma.planetMoment.findFirst({
     where: {
       id: momentId,
       planet: {
         slug: planetSlug,
         ...(viewerProfileId
-          ? { OR: [{ visibility: "PUBLIC" }, { members: { some: { profileId: viewerProfileId } } }] }
+          ? {
+              OR: [
+                { visibility: "PUBLIC" },
+                { members: { some: { profileId: viewerProfileId } } },
+              ],
+            }
           : { visibility: "PUBLIC" }),
       },
     },
@@ -233,8 +259,12 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
       createdAt: true,
       author: { select: { nickname: true, avatarUrl: true } },
       _count: { select: { likes: true } },
-      likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
-      planet: { select: { id: true, slug: true, name: true, nameTranslations: true } },
+      likes: viewerProfileId
+        ? { where: { profileId: viewerProfileId }, select: { id: true } }
+        : false,
+      planet: {
+        select: { id: true, slug: true, name: true, nameTranslations: true },
+      },
       comments: {
         take: 50,
         orderBy: { createdAt: "desc" },
@@ -244,7 +274,9 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
           createdAt: true,
           author: { select: { nickname: true, avatarUrl: true } },
           _count: { select: { likes: true } },
-          likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
+          likes: viewerProfileId
+            ? { where: { profileId: viewerProfileId }, select: { id: true } }
+            : false,
         },
       },
     },
@@ -262,6 +294,8 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
     ...moment,
     comments: [...moment.comments].reverse(),
     viewerMembership,
-    isViewerAuthor: Boolean(viewerProfileId && moment.authorId === viewerProfileId),
+    isViewerAuthor: Boolean(
+      viewerProfileId && moment.authorId === viewerProfileId,
+    ),
   };
 }

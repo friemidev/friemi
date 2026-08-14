@@ -388,6 +388,7 @@ model PlanetMessage {
   planetId  String
   authorId  String
   content   String      @db.Text
+  imageUrls String[]    @default([])
   planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
   author    UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime    @default(now())
@@ -593,6 +594,7 @@ model ActivityRoomMessage {
   activityId  String
   senderId    String
   body        String       @db.Text
+  imageUrls   String[]     @default([])
   deletedAt   DateTime?
   deletedById String?
   activity    Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)

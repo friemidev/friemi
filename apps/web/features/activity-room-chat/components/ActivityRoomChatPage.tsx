@@ -37,6 +37,12 @@ import {
 import { createPortal, useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
+import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import {
+  ChatImageAttachmentPicker,
+  ChatImageAttachmentPreviews,
+} from "@/features/chat/components/ChatImageAttachmentPicker";
+import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
@@ -391,9 +397,7 @@ function isActivityRoomManageHref(href: string | null, activityId: string) {
     const url = new URL(href, "https://friemi.local");
     const managePath = `/lobby/${activityId}/room/manage`;
 
-    return (
-      url.pathname === managePath || url.pathname.endsWith(managePath)
-    );
+    return url.pathname === managePath || url.pathname.endsWith(managePath);
   } catch {
     return false;
   }
@@ -480,7 +484,9 @@ function RoomInfoAvatar({
   muted?: boolean;
 }) {
   const isCheckedIn = Boolean(member.checkedInAt);
-  const isCheckInPending = Boolean(member.checkInRequestedAt && !member.checkedInAt);
+  const isCheckInPending = Boolean(
+    member.checkInRequestedAt && !member.checkedInAt,
+  );
 
   return (
     <div
@@ -1162,7 +1168,11 @@ function getAnnouncementDeleteConfirmCopy(locale: string) {
   return "确认删除这条群公告？";
 }
 
-function DeleteActivityAnnouncementSubmitButton({ locale }: { locale: string }) {
+function DeleteActivityAnnouncementSubmitButton({
+  locale,
+}: {
+  locale: string;
+}) {
   const { pending } = useFormStatus();
   const copy = getActivityRoomChatCopy(locale).announcements;
 
@@ -1246,8 +1256,9 @@ function ActivityRoomAnnouncementNotice({
 }) {
   const [open, setOpen] = useState(false);
   const [portalMounted, setPortalMounted] = useState(false);
-  const [acknowledgedAnnouncementId, setAcknowledgedAnnouncementId] =
-    useState<string | null>(null);
+  const [acknowledgedAnnouncementId, setAcknowledgedAnnouncementId] = useState<
+    string | null
+  >(null);
   const copy = getActivityRoomChatCopy(locale).announcements;
   const latestAnnouncement = announcements[0];
   const isRow = variant === "row";
@@ -1347,7 +1358,10 @@ function ActivityRoomAnnouncementNotice({
               <div className="max-h-[calc(min(78svh,32rem)-3.75rem)] overflow-y-auto px-5 pb-4">
                 <div className="divide-y divide-[#EFEFEA]">
                   {announcements.map((announcement, index) => (
-                    <article className="py-4 first:pt-2 last:pb-1" key={announcement.id}>
+                    <article
+                      className="py-4 first:pt-2 last:pb-1"
+                      key={announcement.id}
+                    >
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-[#8B907F]">
                           <span className="font-bold text-[#156240]">
@@ -1805,6 +1819,13 @@ function MessageRow({
   );
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-chat-image-preview='true']")
+    ) {
+      return;
+    }
+
     if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
       return;
     }
@@ -1866,58 +1887,60 @@ function MessageRow({
     onOpenActionMenu(message.id);
   }
 
-  const selectionControl = selectionMode && canDelete ? (
-    <button
-      aria-label={copy.selectMessage}
-      aria-pressed={isSelected}
-      className={cn(
-        "mb-1 inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border transition active:scale-95",
-        isSelected
-          ? "border-[#156240] bg-[#156240] text-white"
-          : "border-[#C9CBBE] bg-white text-transparent",
-      )}
-      disabled={isDeleting}
-      onClick={() => onToggleSelection(message.id)}
-      title={copy.selectMessage}
-      type="button"
-    >
-      <CheckCircle2 className="h-4 w-4" />
-    </button>
-  ) : null;
-
-  const actionMenu = actionMenuOpen && canDelete && !selectionMode ? (
-    <div
-      aria-label={`${copy.selectMessage} / ${copy.deleteMessage}`}
-      className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
-      data-room-message-action-menu
-      role="toolbar"
-    >
+  const selectionControl =
+    selectionMode && canDelete ? (
       <button
         aria-label={copy.selectMessage}
-        className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
-        onClick={() => onStartSelection(message.id)}
+        aria-pressed={isSelected}
+        className={cn(
+          "mb-1 inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border transition active:scale-95",
+          isSelected
+            ? "border-[#156240] bg-[#156240] text-white"
+            : "border-[#C9CBBE] bg-white text-transparent",
+        )}
+        disabled={isDeleting}
+        onClick={() => onToggleSelection(message.id)}
         title={copy.selectMessage}
         type="button"
       >
-        <ListChecks className="h-4 w-4" />
+        <CheckCircle2 className="h-4 w-4" />
       </button>
-      <button
-        aria-busy={isDeleting}
-        aria-label={copy.deleteMessage}
-        className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
-        disabled={isDeleting}
-        onClick={() => onDelete([message.id])}
-        title={copy.deleteMessage}
-        type="button"
+    ) : null;
+
+  const actionMenu =
+    actionMenuOpen && canDelete && !selectionMode ? (
+      <div
+        aria-label={`${copy.selectMessage} / ${copy.deleteMessage}`}
+        className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
+        data-room-message-action-menu
+        role="toolbar"
       >
-        {isDeleting ? (
-          <LoaderCircle className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-      </button>
-    </div>
-  ) : null;
+        <button
+          aria-label={copy.selectMessage}
+          className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+          onClick={() => onStartSelection(message.id)}
+          title={copy.selectMessage}
+          type="button"
+        >
+          <ListChecks className="h-4 w-4" />
+        </button>
+        <button
+          aria-busy={isDeleting}
+          aria-label={copy.deleteMessage}
+          className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
+          disabled={isDeleting}
+          onClick={() => onDelete([message.id])}
+          title={copy.deleteMessage}
+          type="button"
+        >
+          {isDeleting ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    ) : null;
 
   return (
     <div
@@ -1931,7 +1954,7 @@ function MessageRow({
           <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
         </span>
       ) : null}
-      {message.isMine ? actionMenu ?? selectionControl : null}
+      {message.isMine ? (actionMenu ?? selectionControl) : null}
       <div
         className={cn(
           "grid gap-0.5",
@@ -1982,17 +2005,29 @@ function MessageRow({
           role={canDelete ? "button" : undefined}
           tabIndex={canDelete ? 0 : undefined}
         >
-          <p
-            className={cn(
-              "whitespace-pre-wrap break-words",
-              message.isDeleted && "font-semibold italic",
-            )}
-          >
-            {message.isDeleted ? copy.deletedMessage : message.body}
-          </p>
+          {!message.isDeleted && message.imageUrls.length ? (
+            <ChatImagePreviewGrid
+              imageLabel={copy.imageMessage}
+              imageUrls={message.imageUrls}
+              resetLabel={copy.resetImagePreview}
+              saveLabel={copy.saveImage}
+              savedLabel={copy.savingImage}
+            />
+          ) : null}
+          {message.isDeleted || message.body.trim() ? (
+            <p
+              className={cn(
+                "whitespace-pre-wrap break-words",
+                message.imageUrls.length && !message.isDeleted && "px-1 pt-2",
+                message.isDeleted && "font-semibold italic",
+              )}
+            >
+              {message.isDeleted ? copy.deletedMessage : message.body}
+            </p>
+          ) : null}
         </div>
       </div>
-      {!message.isMine ? actionMenu ?? selectionControl : null}
+      {!message.isMine ? (actionMenu ?? selectionControl) : null}
       {message.isMine ? (
         <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
       ) : null}
@@ -2051,18 +2086,37 @@ function RoomComposer({
   const copy = getActivityRoomChatCopy(locale);
   const [body, setBody] = useState("");
   const [formError, setFormError] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertEmoji(emoji: string) {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? body.length;
+    const end = textarea?.selectionEnd ?? body.length;
+    const nextBody = `${body.slice(0, start)}${emoji}${body.slice(end)}`.slice(
+      0,
+      500,
+    );
+    setBody(nextBody);
+    window.requestAnimationFrame(() => {
+      const cursor = Math.min(start + emoji.length, nextBody.length);
+      textarea?.focus();
+      textarea?.setSelectionRange(cursor, cursor);
+    });
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (disabled || isSending) {
+    if (disabled || isSending || isImageUploading) {
       return;
     }
 
     const trimmedBody = body.trim();
 
-    if (!trimmedBody) {
+    if (!trimmedBody && imageUrls.length === 0) {
       setBody("");
       setFormError("");
       return;
@@ -2072,6 +2126,7 @@ function RoomComposer({
     formData.set("activityId", activityId);
     formData.set("body", trimmedBody);
     formData.set("locale", locale);
+    imageUrls.forEach((imageUrl) => formData.append("imageUrls", imageUrl));
 
     setFormError("");
     setIsSending(true);
@@ -2080,12 +2135,14 @@ function RoomComposer({
       .then((state) => {
         if (state.ok && state.messageId) {
           setBody("");
+          setImageUrls([]);
           onSent({
             body: trimmedBody,
             createdAt: new Date().toISOString(),
             id: state.messageId,
             isDeleted: false,
             isMine: true,
+            imageUrls,
             sender: {
               avatarUrl: viewer?.avatarUrl ?? null,
               friendCode: null,
@@ -2115,7 +2172,30 @@ function RoomComposer({
       onFocusCapture={keepMobileChatPageAnchored}
       onSubmit={handleSubmit}
     >
+      <ChatImageAttachmentPreviews
+        imageLabel={copy.imageMessage}
+        imageUrls={imageUrls}
+        onChange={setImageUrls}
+        removeLabel={copy.removeImage}
+      />
       <div className="flex items-end gap-2">
+        <ChatEmojiPicker
+          disabled={disabled || isSending}
+          label={copy.addEmoji}
+          onSelect={insertEmoji}
+        />
+        <ChatImageAttachmentPicker
+          attachLabel={copy.attachImage}
+          disabled={disabled || isSending}
+          imageLabel={copy.imageMessage}
+          imageUrls={imageUrls}
+          onChange={setImageUrls}
+          onUploadingChange={setIsImageUploading}
+          removeLabel={copy.removeImage}
+          tooManyLabel={copy.tooManyImages}
+          uploadFailedLabel={copy.imageUploadFailed}
+          uploadingLabel={copy.imageUploading}
+        />
         <textarea
           className="max-h-28 min-h-11 min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC]"
           disabled={disabled || isSending}
@@ -2124,12 +2204,13 @@ function RoomComposer({
           onChange={(event) => setBody(event.target.value)}
           placeholder={copy.placeholder}
           rows={1}
+          ref={textareaRef}
           value={body}
         />
         <Button
           aria-busy={isSending}
           className="h-11 min-w-11 shrink-0 rounded-full bg-[#156240] px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5rem] sm:px-4"
-          disabled={disabled || isSending}
+          disabled={disabled || isSending || isImageUploading}
           type="submit"
         >
           {isSending ? (

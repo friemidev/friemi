@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 
 const RAISED_HAND_SIGNUP_ICON_SRC =
   "/brand/v2_1/team-detail-join-raised-hand.svg";
-const TeamDetailMobileCtaSheetCloseContext = createContext<
-  (() => void) | null
->(null);
+const TeamDetailMobileCtaSheetCloseContext = createContext<(() => void) | null>(
+  null,
+);
 
 export function useTeamDetailMobileCtaSheetClose() {
   return useContext(TeamDetailMobileCtaSheetCloseContext);
@@ -133,7 +133,7 @@ export function TeamDetailMobileCtaSheet({
   const sheet = (
     <div
       aria-modal="true"
-      className="fixed inset-x-0 top-0 bottom-[calc(5.05rem+env(safe-area-inset-bottom))] z-[90] md:hidden"
+      className="fixed inset-0 z-[90] md:hidden"
       role="dialog"
     >
       <button
@@ -147,7 +147,7 @@ export function TeamDetailMobileCtaSheet({
       />
       <div
         className={cn(
-          "absolute inset-x-3 bottom-3 max-h-[min(78svh,40rem)] overflow-hidden rounded-[1.55rem] border border-coral/35 bg-paper text-left shadow-[0_-18px_55px_rgba(29,29,27,0.18)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "absolute inset-x-3 bottom-0 max-h-[min(78svh,40rem)] overflow-hidden rounded-t-[1.55rem] border border-b-0 border-coral/35 bg-paper pb-[env(safe-area-inset-bottom)] text-left shadow-[0_-18px_55px_rgba(29,29,27,0.18)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
         )}
       >

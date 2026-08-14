@@ -9,4 +9,5 @@
     <string name="exit_hint">Tap again to leave Friemi</string>
     <string name="copied">Copied</string>
     <string name="download_started">Download started</string>
+    <string name="image_save_started">Saving image to Photos</string>
 </resources>

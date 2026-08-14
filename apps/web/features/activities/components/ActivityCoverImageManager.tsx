@@ -105,7 +105,9 @@ export function ActivityCoverImageManager({
   const router = useRouter();
   const copy = getCoverManagerCopy(locale);
   const [open, setOpen] = useState(false);
-  const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState(
+    initialCoverImageUrl ?? "",
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [state, formAction] = useActionState(
     updateActivityCoverImageAction,
@@ -176,9 +178,7 @@ export function ActivityCoverImageManager({
         />
         <span
           className={
-            compact
-              ? "sr-only min-[460px]:not-sr-only"
-              : "max-[380px]:sr-only"
+            compact ? "sr-only min-[460px]:not-sr-only" : "max-[380px]:sr-only"
           }
         >
           {triggerTone === "detail" ? copy.trigger : copy.triggerShort}
@@ -187,7 +187,7 @@ export function ActivityCoverImageManager({
 
       {open ? (
         <div
-          className="fixed inset-x-0 top-0 bottom-[calc(5.15rem+env(safe-area-inset-bottom))] z-[80] flex items-end justify-center bg-black/42 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] md:inset-0 md:items-center md:p-6"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] md:items-center md:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`cover-manager-title-${activityId}`}

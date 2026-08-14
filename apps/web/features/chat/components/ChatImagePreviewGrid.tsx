@@ -10,24 +10,37 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   Minus,
   Plus,
   RotateCcw,
   X,
 } from "lucide-react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { cn } from "@/lib/utils";
 
-type MessageImagePreviewGridProps = {
+type FriemiNavigationPlugin = {
+  saveImageToPhotos: (options: { url: string }) => Promise<void>;
+};
+
+const FriemiNavigation =
+  registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
+
+type ChatImagePreviewGridProps = {
   imageLabel: string;
   imageUrls: string[];
+  saveLabel?: string;
+  savedLabel?: string;
   resetLabel: string;
 };
 
-export function MessageImagePreviewGrid({
+export function ChatImagePreviewGrid({
   imageLabel,
   imageUrls,
+  saveLabel = "Save image",
+  savedLabel = "Saving image",
   resetLabel,
-}: MessageImagePreviewGridProps) {
+}: ChatImagePreviewGridProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [previewTransform, setPreviewTransform] = useState({
     scale: 1,
@@ -56,6 +69,9 @@ export function MessageImagePreviewGrid({
     | null
   >(null);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [saveNotice, setSaveNotice] = useState("");
   const activeImageUrl =
     activeIndex === null ? null : (imageUrls[activeIndex] ?? null);
   const hasMultipleImages = imageUrls.length > 1;
@@ -93,6 +109,60 @@ export function MessageImagePreviewGrid({
     pointersRef.current.clear();
   }
 
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }
+
+  async function saveActiveImage() {
+    if (!activeImageUrl) {
+      return;
+    }
+
+    setSaveNotice(savedLabel);
+
+    if (typeof window.FriemiAndroid?.saveImageToGallery === "function") {
+      window.FriemiAndroid.saveImageToGallery(activeImageUrl);
+      window.setTimeout(() => setSaveNotice(""), 1800);
+      return;
+    }
+
+    if (Capacitor.getPlatform() === "ios") {
+      try {
+        await FriemiNavigation.saveImageToPhotos({ url: activeImageUrl });
+        window.setTimeout(() => setSaveNotice(""), 1800);
+        return;
+      } catch {
+        // Fall through to the browser download path when native saving fails.
+      }
+    }
+
+    try {
+      const response = await fetch(activeImageUrl);
+      if (!response.ok) {
+        throw new Error("IMAGE_DOWNLOAD_FAILED");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const extension =
+        blob.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+      link.href = objectUrl;
+      link.download = `friemi-image-${Date.now()}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(activeImageUrl, "_blank", "noopener,noreferrer");
+    } finally {
+      window.setTimeout(() => setSaveNotice(""), 1800);
+    }
+  }
+
   useEffect(() => {
     if (activeIndex === null) {
       return;
@@ -128,6 +198,7 @@ export function MessageImagePreviewGrid({
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      clearLongPressTimer();
     };
   }, [activeIndex, imageUrls.length]);
 
@@ -236,7 +307,12 @@ export function MessageImagePreviewGrid({
       previewTransform.scale +
       direction * Math.max(0.18, previewTransform.scale * 0.14);
 
-    zoomAroundPoint(nextScale, event.clientX, event.clientY, event.currentTarget);
+    zoomAroundPoint(
+      nextScale,
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
+    );
   }
 
   function handlePreviewDoubleClick(event: ReactPointerEvent<HTMLDivElement>) {
@@ -259,7 +335,17 @@ export function MessageImagePreviewGrid({
       y: event.clientY,
     });
 
+    clearLongPressTimer();
+    if (!isZoomed && pointersRef.current.size === 1) {
+      longPressStartRef.current = { x: event.clientX, y: event.clientY };
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
+        void saveActiveImage();
+      }, 650);
+    }
+
     if (pointersRef.current.size >= 2) {
+      clearLongPressTimer();
       const distance = getPointerDistance();
 
       if (distance) {
@@ -303,6 +389,15 @@ export function MessageImagePreviewGrid({
       x: event.clientX,
       y: event.clientY,
     });
+
+    const longPressStart = longPressStartRef.current;
+    if (
+      longPressStart &&
+      (Math.abs(event.clientX - longPressStart.x) > 8 ||
+        Math.abs(event.clientY - longPressStart.y) > 8)
+    ) {
+      clearLongPressTimer();
+    }
 
     const gesture = gestureRef.current;
 
@@ -348,6 +443,7 @@ export function MessageImagePreviewGrid({
 
     const gesture = gestureRef.current;
     const pointer = pointersRef.current.get(event.pointerId);
+    clearLongPressTimer();
     pointersRef.current.delete(event.pointerId);
     setIsPanning(false);
 
@@ -391,7 +487,11 @@ export function MessageImagePreviewGrid({
               imageUrls.length === 1 ? "h-44 w-56 max-w-[62vw]" : "h-24 w-24",
             )}
             aria-label={`${imageLabel} ${index + 1}`}
-            onClick={() => setActiveIndex(index)}
+            data-chat-image-preview="true"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveIndex(index);
+            }}
           >
             {/* Uploaded message images can come from public storage domains outside next/image config. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -411,7 +511,11 @@ export function MessageImagePreviewGrid({
           role="dialog"
           aria-modal="true"
           aria-label={imageLabel}
-          onClick={() => setActiveIndex(null)}
+          data-chat-image-preview="true"
+          onClick={(event) => {
+            event.stopPropagation();
+            setActiveIndex(null);
+          }}
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/92 via-black/58 to-transparent" />
           <div
@@ -419,6 +523,15 @@ export function MessageImagePreviewGrid({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/16 text-white transition hover:bg-white/24 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                aria-label={saveLabel}
+                title={saveLabel}
+                onClick={() => void saveActiveImage()}
+              >
+                <Download className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#151515]/85 px-3 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)] ring-1 ring-white/35 backdrop-blur-md transition hover:bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
@@ -483,7 +596,7 @@ export function MessageImagePreviewGrid({
 
             <div
               className={cn(
-                "flex h-full w-full touch-none select-none items-center justify-center overflow-hidden",
+                "flex h-full w-full touch-none select-none items-center justify-center overflow-hidden [-webkit-touch-callout:none]",
                 isZoomed
                   ? isPanning
                     ? "cursor-grabbing"
@@ -492,6 +605,7 @@ export function MessageImagePreviewGrid({
               )}
               role="presentation"
               onClick={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.preventDefault()}
               onDoubleClick={handlePreviewDoubleClick}
               onPointerCancel={handlePreviewPointerUp}
               onPointerDown={handlePreviewPointerDown}
@@ -551,6 +665,15 @@ export function MessageImagePreviewGrid({
                   onClick={() => setActiveIndex(index)}
                 />
               ))}
+            </div>
+          ) : null}
+          {saveNotice ? (
+            <div
+              aria-live="polite"
+              className="pointer-events-none absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/78 px-4 py-2 text-xs font-semibold text-white shadow-lg ring-1 ring-white/20"
+              role="status"
+            >
+              {saveNotice}
             </div>
           ) : null}
         </div>
