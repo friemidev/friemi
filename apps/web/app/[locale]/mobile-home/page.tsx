@@ -579,6 +579,7 @@ function MobileHomeV23Experience({
             <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
+                  href={withLocale(locale, item.href)}
                   image={item.image}
                   key={item.id}
                   title={item.title}
@@ -626,14 +627,17 @@ function MobileHomeV23Experience({
 }
 
 function MobileHomeV23NewsCard({
+  href,
   image,
   title,
 }: {
+  href: string;
   image: string;
   title: string;
 }) {
   return (
-    <article
+    <Link
+      href={href}
       className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
       aria-label={title}
     >
@@ -648,7 +652,7 @@ function MobileHomeV23NewsCard({
       <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold text-[#123D31] shadow-sm">
         {title}
       </span>
-    </article>
+    </Link>
   );
 }
 

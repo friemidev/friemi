@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   getFallbackMobileHomeTopNewsItems,
+  prioritizeLatestVersionTopNewsItem,
   type MobileHomeTopNewsItem,
 } from "@/features/home/topNewsConfig";
 
@@ -67,10 +68,12 @@ export async function getMobileHomeTopNewsItems(locale: string) {
     const rows = await getCachedTopNewsRows();
 
     if (rows.length > 0) {
-      return rows
-        .filter((row) => row.isActive)
-        .slice(0, 8)
-        .map((row) => mapTopNewsRow(row, locale));
+      return prioritizeLatestVersionTopNewsItem(
+        rows
+          .filter((row) => row.isActive)
+          .map((row) => mapTopNewsRow(row, locale)),
+        locale,
+      );
     }
   } catch (error) {
     console.error("Failed to load mobile home top news", error);
