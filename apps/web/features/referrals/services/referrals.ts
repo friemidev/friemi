@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { syncInvitationExpertAchievement } from "@/features/achievements/services/achievements";
 import { getTrustScoreEventDelta } from "@/features/trust/trustScoreEvents";
 import { prisma } from "@/lib/prisma";
 export {
@@ -231,7 +232,21 @@ export async function getReferralStats(profileId: string) {
 }
 
 export async function markReferralFirstParticipation(inviteeId: string) {
-  return prisma.userReferral.updateMany({
+  const referral = await prisma.userReferral.findUnique({
+    where: {
+      inviteeId,
+    },
+    select: {
+      firstParticipationAt: true,
+      inviterId: true,
+    },
+  });
+
+  if (!referral || referral.firstParticipationAt) {
+    return { count: 0 };
+  }
+
+  const result = await prisma.userReferral.updateMany({
     where: {
       firstParticipationAt: null,
       inviteeId,
@@ -240,6 +255,16 @@ export async function markReferralFirstParticipation(inviteeId: string) {
       firstParticipationAt: new Date(),
     },
   });
+
+  if (result.count > 0) {
+    await syncInvitationExpertAchievement(referral.inviterId).catch(
+      (error: unknown) => {
+        console.error("Failed to sync invitation expert achievement", error);
+      },
+    );
+  }
+
+  return result;
 }
 
 export async function markReferralFriendshipAccepted(

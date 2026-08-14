@@ -53,7 +53,10 @@ import {
   toggleEquippedAchievementAction,
   type ToggleEquippedAchievementState,
 } from "@/features/achievements/actions/equippedAchievementActions";
-import { maxEquippedAchievementCount } from "@/features/achievements/achievementCatalog";
+import {
+  maxEquippedAchievementCount,
+  type AchievementCategory,
+} from "@/features/achievements/achievementCatalog";
 import {
   redeemBlindBoxCheckAction,
   type RedeemBlindBoxCheckState,
@@ -135,26 +138,41 @@ function getProfilePrivateSubpageCopy(locale: string) {
         worn: "Portés",
       },
       achievementGroups: {
-        identity: "Identité",
-        organization: "Organisation",
-        participation: "Participation",
-        special: "Spécial",
-        start: "Départ",
+        charm: "Charme et cadeaux",
+        community_contribution: "Contribution communautaire",
+        community_identity: "Identité communautaire",
+        legacy: "Badges existants",
+        player_growth: "Progression joueur",
+        social_connection: "Liens sociaux",
       },
       achievementTitles: {
-        active_guest_20: "Invité actif",
+        active_guest_20: "Joueur actif",
         co_creator: "Co-créateur",
-        hello_world: "Première sortie",
+        content_contributor: "Contributeur de contenu",
+        first_gift: "Premier cadeau",
+        gift_ambassador: "Ambassadeur des cadeaux",
+        hello_world: "Nouveau joueur",
         host_20: "Hôte 20",
-        open_minded: "Esprit ouvert",
+        invitation_expert: "Expert des invitations",
+        open_minded: "Organisateur ouvert",
+        popularity_star: "Étoile populaire",
+        punctuality_star: "Étoile de ponctualité",
         trusted_profile: "Profil fiable",
       },
       achievementDescriptions: {
-        active_guest_20: "Rejoindre 20 sorties.",
-        co_creator: "Devenir co-créateur Friemi.",
-        hello_world: "Rejoindre votre première sortie.",
+        active_guest_20: "Participer à 20 sorties Friemi.",
+        co_creator: "Être officiellement reconnu comme co-créateur Friemi.",
+        content_contributor: "Publier 50 moments originaux.",
+        first_gift: "Recevoir un premier cadeau d'un autre joueur.",
+        gift_ambassador: "Offrir des cadeaux à 20 joueurs différents.",
+        hello_world: "Participer à votre première sortie Friemi.",
         host_20: "Organiser 20 sorties.",
-        open_minded: "Organiser votre première sortie.",
+        invitation_expert:
+          "Inviter 15 nouveaux utilisateurs qui terminent leur première sortie.",
+        open_minded: "Publier et terminer une première sortie ouverte.",
+        popularity_star: "Atteindre 1 000 points de charme.",
+        punctuality_star:
+          "Honorer 20 inscriptions consécutives sans annulation tardive ni absence.",
         trusted_profile: "Atteindre un score fiable.",
       },
       bag: {
@@ -301,26 +319,40 @@ function getProfilePrivateSubpageCopy(locale: string) {
         worn: "Worn",
       },
       achievementGroups: {
-        identity: "Identity",
-        organization: "Hosting",
-        participation: "Joining",
-        special: "Special",
-        start: "Start",
+        charm: "Charm and gifting",
+        community_contribution: "Community contribution",
+        community_identity: "Community identity",
+        legacy: "Existing badges",
+        player_growth: "Player growth",
+        social_connection: "Social connection",
       },
       achievementTitles: {
-        active_guest_20: "Active Guest",
+        active_guest_20: "Active Player",
         co_creator: "Co-creator",
-        hello_world: "First Plan",
+        content_contributor: "Content Contributor",
+        first_gift: "First Gift",
+        gift_ambassador: "Gift Ambassador",
+        hello_world: "First-time Player",
         host_20: "Host 20",
-        open_minded: "Open Minded",
+        invitation_expert: "Invitation Expert",
+        open_minded: "Open Host",
+        popularity_star: "Popularity Star",
+        punctuality_star: "Punctuality Star",
         trusted_profile: "Trusted Profile",
       },
       achievementDescriptions: {
-        active_guest_20: "Join 20 plans.",
-        co_creator: "Become a Friemi co-creator.",
-        hello_world: "Join your first plan.",
+        active_guest_20: "Attend 20 Friemi plans.",
+        co_creator: "Be officially recognized as a Friemi co-creator.",
+        content_contributor: "Publish 50 original moments.",
+        first_gift: "Receive your first gift from another player.",
+        gift_ambassador: "Send gifts to 20 different players.",
+        hello_world: "Attend your first Friemi plan.",
         host_20: "Host 20 plans.",
-        open_minded: "Host your first plan.",
+        invitation_expert: "Invite 15 new users who complete their first plan.",
+        open_minded: "Publish and complete your first open plan.",
+        popularity_star: "Reach 1,000 charm points.",
+        punctuality_star:
+          "Attend 20 consecutive registrations without a late cancellation or no-show.",
         trusted_profile: "Reach a trusted profile score.",
       },
       bag: {
@@ -463,26 +495,39 @@ function getProfilePrivateSubpageCopy(locale: string) {
       worn: "佩戴",
     },
     achievementGroups: {
-      identity: "身份",
-      organization: "组织",
-      participation: "参与",
-      special: "特殊",
-      start: "开始",
+      charm: "魅力心意",
+      community_contribution: "社区贡献",
+      community_identity: "社区身份",
+      legacy: "既有成就",
+      player_growth: "玩家成长",
+      social_connection: "社交连接",
     },
     achievementTitles: {
       active_guest_20: "活跃玩家",
       co_creator: "共创者",
-      hello_world: "初次见面",
+      content_contributor: "内容贡献者",
+      first_gift: "初次心意",
+      gift_ambassador: "礼物使者",
+      hello_world: "初见玩家",
       host_20: "主理人 20",
+      invitation_expert: "邀请达人",
       open_minded: "开放主理人",
+      popularity_star: "人气之星",
+      punctuality_star: "守约之星",
       trusted_profile: "可信资料",
     },
     achievementDescriptions: {
       active_guest_20: "参与 20 次聚吧。",
-      co_creator: "成为 Friemi 共创者。",
+      co_creator: "参与早期测试、产品建议或社区建设，由官方授予。",
+      content_contributor: "发布 50 篇原创晒晒。",
+      first_gift: "第一次收到其他玩家赠送的礼物。",
+      gift_ambassador: "向 20 名不同玩家赠送礼物。",
       hello_world: "首次参加聚吧。",
       host_20: "发起 20 次聚吧。",
-      open_minded: "首次发起聚吧。",
+      invitation_expert: "成功邀请 15 名新用户完成首次聚吧。",
+      open_minded: "成功发布并完成至少 1 场开放聚吧。",
+      popularity_star: "魅力值达到 1000 点。",
+      punctuality_star: "连续 20 次报名后正常到场，无临时爽约。",
       trusted_profile: "信用值达到可信等级。",
     },
     bag: {
@@ -1008,44 +1053,21 @@ function AchievementEquipControl({
   );
 }
 
-type AchievementGroupKey =
-  | "identity"
-  | "organization"
-  | "participation"
-  | "special"
-  | "start";
+type AchievementGroupKey = AchievementCategory;
 
 const achievementGroupOrder: AchievementGroupKey[] = [
-  "start",
-  "participation",
-  "organization",
-  "identity",
-  "special",
+  "community_identity",
+  "player_growth",
+  "social_connection",
+  "charm",
+  "community_contribution",
+  "legacy",
 ];
 
 function getAchievementGroupKey(
   item: UserAchievementProgressItem,
 ): AchievementGroupKey {
-  if (item.definition.key === "active_guest_20") {
-    return "participation";
-  }
-
-  if (
-    item.definition.key === "open_minded" ||
-    item.definition.key === "host_20"
-  ) {
-    return "organization";
-  }
-
-  if (item.definition.key === "co_creator") {
-    return "special";
-  }
-
-  if (item.definition.key === "trusted_profile") {
-    return "identity";
-  }
-
-  return "start";
+  return item.definition.category;
 }
 
 function getSortedAchievementItems(items: UserAchievementProgressItem[]) {

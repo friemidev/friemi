@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { syncContentContributorAchievement } from "@/features/achievements/services/achievements";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -206,6 +207,12 @@ export async function createMomentAction(
       },
       {
         userProfileId: profile.id,
+      },
+    );
+
+    await syncContentContributorAchievement(profile.id).catch(
+      (error: unknown) => {
+        console.error("Failed to sync content contributor achievement", error);
       },
     );
   } catch (error) {
