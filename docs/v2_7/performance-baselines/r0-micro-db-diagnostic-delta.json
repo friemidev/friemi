@@ -1,0 +1,88 @@
+{
+  "capturedFrom": "2026-08-14T09:31:27.669Z",
+  "capturedTo": "2026-08-14T09:32:55.059Z",
+  "loadFile": "r0-micro-preview-db-diagnostic.json",
+  "databaseDelta": {
+    "commits": 303,
+    "rollbacks": 0,
+    "blocksRead": 0,
+    "blocksHit": 20398,
+    "tempFiles": 5,
+    "tempBytes": 21332426,
+    "deadlocks": 0
+  },
+  "statementDelta": {
+    "calls": 1504,
+    "execMs": 172.034,
+    "rows": 6333,
+    "sharedBlocksRead": 0
+  },
+  "observerStatementIds": [
+    "5665921440829354032",
+    "7083905039997197048",
+    "-3474207438320883139"
+  ],
+  "applicationStatementDeltas": [
+    {
+      "queryid": "-4142453971933733398",
+      "callsDelta": 107,
+      "execMsDelta": 58.648
+    },
+    {
+      "queryid": "-3098018704118035903",
+      "callsDelta": 106,
+      "execMsDelta": 6.536
+    },
+    {
+      "queryid": "-2164906215200179040",
+      "callsDelta": 106,
+      "execMsDelta": 5.989
+    },
+    {
+      "queryid": "4111925118360278519",
+      "callsDelta": 106,
+      "execMsDelta": 4.72
+    },
+    {
+      "queryid": "6394675951840411234",
+      "callsDelta": 78,
+      "execMsDelta": 4.232
+    },
+    {
+      "queryid": "-5677138145598705746",
+      "callsDelta": 108,
+      "execMsDelta": 3.299
+    },
+    {
+      "queryid": "6960850840025225995",
+      "callsDelta": 1,
+      "execMsDelta": 2.625
+    },
+    {
+      "queryid": "-3332532416300386766",
+      "callsDelta": 71,
+      "execMsDelta": 2.525
+    },
+    {
+      "queryid": "7089289609631367811",
+      "callsDelta": 2,
+      "execMsDelta": 1.01
+    },
+    {
+      "queryid": "-2918666938316930037",
+      "callsDelta": 2,
+      "execMsDelta": 0.844
+    },
+    {
+      "queryid": "5680547380046583904",
+      "callsDelta": 270,
+      "execMsDelta": 0.611
+    },
+    {
+      "queryid": "3393632725691790249",
+      "callsDelta": 5,
+      "execMsDelta": 0.545
+    }
+  ],
+  "note": "tempFiles/tempBytes were produced by the pg_stat_statements snapshot ORDER BY queries, not by the application load."
+}

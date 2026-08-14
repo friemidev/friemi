@@ -1,0 +1,337 @@
+{
+  "capturedAt": "2026-08-14T09:23:33.649Z",
+  "endpoint": {
+    "hostname": "aws-0-eu-west-1.pooler.supabase.com",
+    "port": "6543",
+    "database": "postgres",
+    "pgbouncer": "true",
+    "connectionLimit": "1"
+  },
+  "server": {
+    "database_name": "postgres",
+    "server_version": "17.6",
+    "server_started_at": "2026-08-14T08:07:47.212Z",
+    "database_size_bytes": "43732115"
+  },
+  "settings": [
+    {
+      "name": "effective_cache_size",
+      "setting": "98304",
+      "unit": "8kB"
+    },
+    {
+      "name": "maintenance_work_mem",
+      "setting": "65536",
+      "unit": "kB"
+    },
+    {
+      "name": "max_connections",
+      "setting": "60",
+      "unit": null
+    },
+    {
+      "name": "shared_buffers",
+      "setting": "32768",
+      "unit": "8kB"
+    },
+    {
+      "name": "work_mem",
+      "setting": "3500",
+      "unit": "kB"
+    }
+  ],
+  "databaseStats": {
+    "numbackends": "6",
+    "xact_commit": "2694293",
+    "xact_rollback": "1499",
+    "blks_read": "3555",
+    "blks_hit": "42674741",
+    "temp_files": "123914",
+    "temp_bytes": "407140994294",
+    "deadlocks": "0",
+    "stats_reset": "2026-05-22T15:13:20.515Z"
+  },
+  "connections": [
+    {
+      "state": "active",
+      "count": "1"
+    },
+    {
+      "state": "idle",
+      "count": "4"
+    },
+    {
+      "state": "unknown",
+      "count": "1"
+    }
+  ],
+  "waits": [
+    {
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "count": "3"
+    },
+    {
+      "wait_event_type": "Extension",
+      "wait_event": "Extension",
+      "count": "2"
+    },
+    {
+      "wait_event_type": "none",
+      "wait_event": "none",
+      "count": "1"
+    }
+  ],
+  "statementTotals": {
+    "tracked_statements": "2286",
+    "calls": "1875819",
+    "total_exec_time_ms": "306565.677",
+    "rows": "2218721",
+    "shared_blks_hit": "7458287",
+    "shared_blks_read": "1462",
+    "temp_blks_read": "5321",
+    "temp_blks_written": "45722"
+  },
+  "topStatements": [
+    {
+      "queryid": "-7726440967385220442",
+      "calls": "116",
+      "total_exec_time_ms": "47607.833",
+      "mean_exec_time_ms": "410.412",
+      "max_exec_time_ms": "1587.816",
+      "rows": "138736",
+      "shared_blks_hit": "0",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-2647655532108368607",
+      "calls": "71",
+      "total_exec_time_ms": "27599.327",
+      "mean_exec_time_ms": "388.723",
+      "max_exec_time_ms": "828.274",
+      "rows": "5538",
+      "shared_blks_hit": "406",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "3393632725691790249",
+      "calls": "76724",
+      "total_exec_time_ms": "27296.069",
+      "mean_exec_time_ms": "0.356",
+      "max_exec_time_ms": "44.142",
+      "rows": "76724",
+      "shared_blks_hit": "123523",
+      "shared_blks_read": "3",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-6907317334361737624",
+      "calls": "18294",
+      "total_exec_time_ms": "24779.084",
+      "mean_exec_time_ms": "1.354",
+      "max_exec_time_ms": "207.974",
+      "rows": "18294",
+      "shared_blks_hit": "390603",
+      "shared_blks_read": "52",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "8580411586163530256",
+      "calls": "333",
+      "total_exec_time_ms": "19549.241",
+      "mean_exec_time_ms": "58.706",
+      "max_exec_time_ms": "107.643",
+      "rows": "87829",
+      "shared_blks_hit": "904193",
+      "shared_blks_read": "2",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "4868794970434878014",
+      "calls": "52",
+      "total_exec_time_ms": "9856.087",
+      "mean_exec_time_ms": "189.540",
+      "max_exec_time_ms": "340.809",
+      "rows": "52",
+      "shared_blks_hit": "0",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "7089289609631367811",
+      "calls": "1539",
+      "total_exec_time_ms": "5860.979",
+      "mean_exec_time_ms": "3.808",
+      "max_exec_time_ms": "71.711",
+      "rows": "13851",
+      "shared_blks_hit": "140418",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "5299301975933694258",
+      "calls": "117",
+      "total_exec_time_ms": "5076.176",
+      "mean_exec_time_ms": "43.386",
+      "max_exec_time_ms": "196.224",
+      "rows": "117",
+      "shared_blks_hit": "234000",
+      "shared_blks_read": "369",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-8856799461280935852",
+      "calls": "117",
+      "total_exec_time_ms": "4799.417",
+      "mean_exec_time_ms": "41.021",
+      "max_exec_time_ms": "212.005",
+      "rows": "7354",
+      "shared_blks_hit": "178396",
+      "shared_blks_read": "326",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "4761875506710231882",
+      "calls": "1312",
+      "total_exec_time_ms": "4406.512",
+      "mean_exec_time_ms": "3.359",
+      "max_exec_time_ms": "46.399",
+      "rows": "1312",
+      "shared_blks_hit": "88838",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-3076875962393720596",
+      "calls": "40",
+      "total_exec_time_ms": "4150.169",
+      "mean_exec_time_ms": "103.754",
+      "max_exec_time_ms": "205.959",
+      "rows": "3897",
+      "shared_blks_hit": "21800",
+      "shared_blks_read": "0",
+      "temp_blks_read": "5120",
+      "temp_blks_written": "45520"
+    },
+    {
+      "queryid": "-5536234233783753158",
+      "calls": "3160",
+      "total_exec_time_ms": "3893.914",
+      "mean_exec_time_ms": "1.232",
+      "max_exec_time_ms": "32.860",
+      "rows": "3160",
+      "shared_blks_hit": "124484",
+      "shared_blks_read": "1",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-72185466006755965",
+      "calls": "2469",
+      "total_exec_time_ms": "3545.777",
+      "mean_exec_time_ms": "1.436",
+      "max_exec_time_ms": "32.692",
+      "rows": "16258",
+      "shared_blks_hit": "150420",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-1345301571488601639",
+      "calls": "11293",
+      "total_exec_time_ms": "3138.462",
+      "mean_exec_time_ms": "0.278",
+      "max_exec_time_ms": "28.760",
+      "rows": "63813",
+      "shared_blks_hit": "503131",
+      "shared_blks_read": "19",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-8121307229093323197",
+      "calls": "5465",
+      "total_exec_time_ms": "2786.561",
+      "mean_exec_time_ms": "0.510",
+      "max_exec_time_ms": "22.318",
+      "rows": "5465",
+      "shared_blks_hit": "64630",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-7054454739611083059",
+      "calls": "1699",
+      "total_exec_time_ms": "2374.017",
+      "mean_exec_time_ms": "1.397",
+      "max_exec_time_ms": "64.472",
+      "rows": "1699",
+      "shared_blks_hit": "58927",
+      "shared_blks_read": "15",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "3714655324273014750",
+      "calls": "1614",
+      "total_exec_time_ms": "2224.180",
+      "mean_exec_time_ms": "1.378",
+      "max_exec_time_ms": "36.421",
+      "rows": "12469",
+      "shared_blks_hit": "51032",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-7636120669495855217",
+      "calls": "52",
+      "total_exec_time_ms": "2159.353",
+      "mean_exec_time_ms": "41.526",
+      "max_exec_time_ms": "72.294",
+      "rows": "52",
+      "shared_blks_hit": "0",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "-4947716871114429284",
+      "calls": "50",
+      "total_exec_time_ms": "2046.728",
+      "mean_exec_time_ms": "40.935",
+      "max_exec_time_ms": "60.477",
+      "rows": "0",
+      "shared_blks_hit": "23112",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    },
+    {
+      "queryid": "4036039243858997587",
+      "calls": "25",
+      "total_exec_time_ms": "2027.636",
+      "mean_exec_time_ms": "81.105",
+      "max_exec_time_ms": "165.479",
+      "rows": "10168",
+      "shared_blks_hit": "234615",
+      "shared_blks_read": "0",
+      "temp_blks_read": "0",
+      "temp_blks_written": "0"
+    }
+  ]
+}

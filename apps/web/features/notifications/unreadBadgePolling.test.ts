@@ -1,6 +1,95 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getUnreadBadgePollDelayMs } from "./unreadBadgePolling";
+import {
+  getUnreadBadgeFreshnessRemainingMs,
+  getUnreadBadgePollDelayMs,
+  resolveUnreadBadgeFreshnessGuardEnabled,
+} from "./unreadBadgePolling";
+
+test("enables the freshness guard by default only in Preview", () => {
+  assert.equal(
+    resolveUnreadBadgeFreshnessGuardEnabled({
+      vercelEnvironment: "preview",
+    }),
+    true,
+  );
+  assert.equal(
+    resolveUnreadBadgeFreshnessGuardEnabled({
+      vercelEnvironment: "production",
+    }),
+    false,
+  );
+  assert.equal(
+    resolveUnreadBadgeFreshnessGuardEnabled({
+      configuredValue: "1",
+      vercelEnvironment: "production",
+    }),
+    true,
+  );
+  assert.equal(
+    resolveUnreadBadgeFreshnessGuardEnabled({
+      configuredValue: "off",
+      vercelEnvironment: "preview",
+    }),
+    false,
+  );
+});
+
+test("skips navigation refreshes inside the 30 second freshness window", () => {
+  const firstNavigationAtMs = 1_000;
+  let lastSuccessfulRefreshAtMs: number | null = null;
+  let refreshCount = 0;
+
+  for (const nowMs of [1_000, 3_000, 5_000, 7_000, 10_000]) {
+    const freshnessRemainingMs = getUnreadBadgeFreshnessRemainingMs({
+      freshnessGuardEnabled: true,
+      lastSuccessfulRefreshAtMs,
+      nowMs,
+    });
+
+    if (freshnessRemainingMs === 0) {
+      refreshCount += 1;
+      lastSuccessfulRefreshAtMs = firstNavigationAtMs;
+    }
+  }
+
+  assert.equal(refreshCount, 1);
+  assert.equal(
+    getUnreadBadgeFreshnessRemainingMs({
+      freshnessGuardEnabled: true,
+      lastSuccessfulRefreshAtMs,
+      nowMs: 10_000,
+    }),
+    21_000,
+  );
+});
+
+test("refreshes when freshness expires and when the guard is disabled", () => {
+  assert.equal(
+    getUnreadBadgeFreshnessRemainingMs({
+      freshnessGuardEnabled: true,
+      lastSuccessfulRefreshAtMs: 1_000,
+      nowMs: 31_000,
+    }),
+    0,
+  );
+  assert.equal(
+    getUnreadBadgeFreshnessRemainingMs({
+      freshnessGuardEnabled: false,
+      lastSuccessfulRefreshAtMs: 30_000,
+      nowMs: 31_000,
+    }),
+    0,
+  );
+  assert.equal(
+    getUnreadBadgeFreshnessRemainingMs({
+      freshnessGuardEnabled: true,
+      lastSuccessfulRefreshAtMs: null,
+      nowMs: 31_000,
+    }),
+    0,
+  );
+});
 
 test("uses the base interval for successful and first failed badge polls", () => {
   assert.equal(

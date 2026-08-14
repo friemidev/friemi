@@ -14,7 +14,11 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@capawesome/capacitor-badge";
 import { isFriemiIOSApp } from "@/features/mobile/push/clientPush";
 import { parseUnreadBadgeCountsPayload } from "@/features/notifications/unreadBadgeCounts";
-import { getUnreadBadgePollDelayMs } from "@/features/notifications/unreadBadgePolling";
+import {
+  DEFAULT_UNREAD_BADGE_FRESHNESS_WINDOW_MS,
+  getUnreadBadgeFreshnessRemainingMs,
+  getUnreadBadgePollDelayMs,
+} from "@/features/notifications/unreadBadgePolling";
 
 const NOTIFICATION_BADGE_POLL_INTERVAL_MS =
   process.env.NODE_ENV === "development" ? 60000 : 45000;
@@ -34,10 +38,6 @@ type NotificationBadgeContextValue = {
 const NotificationBadgeContext =
   createContext<NotificationBadgeContextValue | null>(null);
 
-function isNotificationsPath(pathname: string) {
-  return pathname.split("/").includes("notifications");
-}
-
 function normalizeUnreadCount(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return 0;
@@ -49,17 +49,22 @@ function normalizeUnreadCount(value: unknown) {
 export function NotificationBadgeProvider({
   children,
   enabled,
+  freshnessGuardEnabled,
   initialUnreadDirectMessageCount = 0,
   initialUnreadNotificationCount,
 }: {
   children: ReactNode;
   enabled: boolean;
+  freshnessGuardEnabled: boolean;
   initialUnreadDirectMessageCount?: number;
   initialUnreadNotificationCount: number;
 }) {
   const pathname = usePathname();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const consecutiveFailuresRef = useRef(0);
   const hasScheduledInitialRefreshRef = useRef(false);
+  const lastSuccessfulRefreshAtRef = useRef<number | null>(null);
+  const nextRefreshNotBeforeAtRef = useRef<number | null>(null);
   const refreshPromiseRef = useRef<Promise<UnreadCountRefreshResult> | null>(
     null,
   );
@@ -80,6 +85,7 @@ export function NotificationBadgeProvider({
 
   const runUnreadCountRefresh = useCallback(() => {
     if (!enabled) {
+      lastSuccessfulRefreshAtRef.current = null;
       setUnreadNotificationCountState(0);
       setUnreadDirectMessageCountState(0);
       return Promise.resolve<UnreadCountRefreshResult>("success");
@@ -92,7 +98,9 @@ export function NotificationBadgeProvider({
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    const refreshPromise = (async () => {
+    const refreshPromise = (async (): Promise<UnreadCountRefreshResult> => {
+      let result: UnreadCountRefreshResult;
+
       try {
         const response = await fetch("/api/navigation/unread-counts", {
           cache: "no-store",
@@ -102,72 +110,77 @@ export function NotificationBadgeProvider({
         if (response.status === 401) {
           setUnreadNotificationCountState(0);
           setUnreadDirectMessageCountState(0);
-          return "success";
-        }
-
-        if (response.ok) {
+          result = "success";
+        } else if (response.ok) {
           const counts = parseUnreadBadgeCountsPayload(await response.json());
 
           if (counts) {
             setUnreadNotificationCountState(counts.unreadNotificationCount);
             setUnreadDirectMessageCountState(counts.unreadMessageCount);
-            return "success";
+            result = "success";
+          } else {
+            result = "failed";
+          }
+        } else if (response.status !== 404 && response.status !== 405) {
+          result = "failed";
+        } else {
+          const [notificationResponse, messageResponse] = await Promise.all([
+            fetch("/api/notifications/unread-count", {
+              cache: "no-store",
+              signal: abortController.signal,
+            }),
+            fetch("/api/direct-messages/unread-count", {
+              cache: "no-store",
+              signal: abortController.signal,
+            }),
+          ]);
+
+          const notificationSucceeded =
+            notificationResponse.status === 401 || notificationResponse.ok;
+          const messageSucceeded =
+            messageResponse.status === 401 || messageResponse.ok;
+
+          if (notificationResponse.status === 401) {
+            setUnreadNotificationCountState(0);
+          } else if (notificationResponse.ok) {
+            const payload = (await notificationResponse.json()) as {
+              unreadCount?: unknown;
+            };
+            setUnreadNotificationCountState(
+              normalizeUnreadCount(payload.unreadCount),
+            );
           }
 
-          return "failed";
+          if (messageResponse.status === 401) {
+            setUnreadDirectMessageCountState(0);
+          } else if (messageResponse.ok) {
+            const payload = (await messageResponse.json()) as {
+              unreadCount?: unknown;
+            };
+            setUnreadDirectMessageCountState(
+              normalizeUnreadCount(payload.unreadCount),
+            );
+          }
+
+          result =
+            notificationSucceeded && messageSucceeded ? "success" : "failed";
         }
-
-        if (response.status !== 404 && response.status !== 405) {
-          return "failed";
-        }
-
-        const [notificationResponse, messageResponse] = await Promise.all([
-          fetch("/api/notifications/unread-count", {
-            cache: "no-store",
-            signal: abortController.signal,
-          }),
-          fetch("/api/direct-messages/unread-count", {
-            cache: "no-store",
-            signal: abortController.signal,
-          }),
-        ]);
-
-        const notificationSucceeded =
-          notificationResponse.status === 401 || notificationResponse.ok;
-        const messageSucceeded =
-          messageResponse.status === 401 || messageResponse.ok;
-
-        if (notificationResponse.status === 401) {
-          setUnreadNotificationCountState(0);
-        } else if (notificationResponse.ok) {
-          const payload = (await notificationResponse.json()) as {
-            unreadCount?: unknown;
-          };
-          setUnreadNotificationCountState(
-            normalizeUnreadCount(payload.unreadCount),
-          );
-        }
-
-        if (messageResponse.status === 401) {
-          setUnreadDirectMessageCountState(0);
-        } else if (messageResponse.ok) {
-          const payload = (await messageResponse.json()) as {
-            unreadCount?: unknown;
-          };
-          setUnreadDirectMessageCountState(
-            normalizeUnreadCount(payload.unreadCount),
-          );
-        }
-
-        return notificationSucceeded && messageSucceeded ? "success" : "failed";
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
-          return "aborted";
+          result = "aborted";
+        } else {
+          // Keep the last known values; these badges are non-critical.
+          result = "failed";
         }
-
-        // Keep the last known values; these badges are non-critical.
-        return "failed";
       }
+
+      if (result === "success") {
+        consecutiveFailuresRef.current = 0;
+        lastSuccessfulRefreshAtRef.current = Date.now();
+        nextRefreshNotBeforeAtRef.current = null;
+      }
+
+      return result;
     })();
 
     refreshPromiseRef.current = refreshPromise;
@@ -204,11 +217,16 @@ export function NotificationBadgeProvider({
 
   useEffect(() => {
     if (!enabled) {
+      abortControllerRef.current?.abort();
+      consecutiveFailuresRef.current = 0;
       hasScheduledInitialRefreshRef.current = false;
+      lastSuccessfulRefreshAtRef.current = null;
+      nextRefreshNotBeforeAtRef.current = null;
+      setUnreadNotificationCountState(0);
+      setUnreadDirectMessageCountState(0);
       return;
     }
 
-    let consecutiveFailures = 0;
     let stopped = false;
     let timeoutId: number | null = null;
 
@@ -237,16 +255,58 @@ export function NotificationBadgeProvider({
         delayMs ??
           getUnreadBadgePollDelayMs({
             baseIntervalMs: NOTIFICATION_BADGE_POLL_INTERVAL_MS,
-            consecutiveFailures,
+            consecutiveFailures: consecutiveFailuresRef.current,
           }),
       );
     };
 
-    const refreshAndScheduleNext = async () => {
+    const scheduleAfterFreshnessSkip = () => {
+      const lastSuccessfulRefreshAtMs = lastSuccessfulRefreshAtRef.current;
+      const pollDelayMs = getUnreadBadgePollDelayMs({
+        baseIntervalMs: NOTIFICATION_BADGE_POLL_INTERVAL_MS,
+        consecutiveFailures: consecutiveFailuresRef.current,
+      });
+      const elapsedSinceSuccessMs =
+        lastSuccessfulRefreshAtMs === null
+          ? 0
+          : Math.max(0, Date.now() - lastSuccessfulRefreshAtMs);
+
+      scheduleNextRefresh(Math.max(0, pollDelayMs - elapsedSinceSuccessMs));
+    };
+
+    const refreshAndScheduleNext = async ({
+      respectFreshness = false,
+    }: {
+      respectFreshness?: boolean;
+    } = {}) => {
       clearScheduledRefresh();
 
       if (stopped || !isActiveSurface()) {
         return;
+      }
+
+      if (respectFreshness && freshnessGuardEnabled) {
+        const nextRefreshNotBeforeAtMs = nextRefreshNotBeforeAtRef.current;
+        const retryRemainingMs =
+          nextRefreshNotBeforeAtMs === null
+            ? 0
+            : Math.max(0, nextRefreshNotBeforeAtMs - Date.now());
+
+        if (retryRemainingMs > 0) {
+          scheduleNextRefresh(retryRemainingMs);
+          return;
+        }
+
+        if (
+          getUnreadBadgeFreshnessRemainingMs({
+            freshnessGuardEnabled,
+            freshnessWindowMs: DEFAULT_UNREAD_BADGE_FRESHNESS_WINDOW_MS,
+            lastSuccessfulRefreshAtMs: lastSuccessfulRefreshAtRef.current,
+          }) > 0
+        ) {
+          scheduleAfterFreshnessSkip();
+          return;
+        }
       }
 
       const result = await runUnreadCountRefresh();
@@ -256,15 +316,24 @@ export function NotificationBadgeProvider({
       }
 
       if (result === "success") {
-        consecutiveFailures = 0;
+        consecutiveFailuresRef.current = 0;
+        nextRefreshNotBeforeAtRef.current = null;
       } else if (result === "failed") {
-        consecutiveFailures += 1;
+        consecutiveFailuresRef.current += 1;
+        const retryDelayMs = getUnreadBadgePollDelayMs({
+          baseIntervalMs: NOTIFICATION_BADGE_POLL_INTERVAL_MS,
+          consecutiveFailures: consecutiveFailuresRef.current,
+        });
+
+        nextRefreshNotBeforeAtRef.current = Date.now() + retryDelayMs;
+        scheduleNextRefresh(retryDelayMs);
+        return;
       }
 
       scheduleNextRefresh();
     };
 
-    function refreshWhenVisible(event?: Event) {
+    function handleNotificationsRefresh(event: Event) {
       if (event instanceof CustomEvent) {
         let handledPayload = false;
 
@@ -283,7 +352,9 @@ export function NotificationBadgeProvider({
         }
 
         if (handledPayload) {
-          consecutiveFailures = 0;
+          consecutiveFailuresRef.current = 0;
+          lastSuccessfulRefreshAtRef.current = Date.now();
+          nextRefreshNotBeforeAtRef.current = null;
           scheduleNextRefresh();
           return;
         }
@@ -292,50 +363,49 @@ export function NotificationBadgeProvider({
       void refreshAndScheduleNext();
     }
 
+    const refreshWhenFreshnessExpired = () =>
+      void refreshAndScheduleNext({ respectFreshness: true });
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void refreshAndScheduleNext();
+        refreshWhenFreshnessExpired();
       } else {
         clearScheduledRefresh();
       }
     };
 
-    const handleOnline = () => void refreshAndScheduleNext();
+    const handleOnline = () => refreshWhenFreshnessExpired();
     const handleOffline = () => clearScheduledRefresh();
 
-    window.addEventListener("focus", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenFreshnessExpired);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("friemi:notifications-refresh", refreshWhenVisible);
+    window.addEventListener(
+      "friemi:notifications-refresh",
+      handleNotificationsRefresh,
+    );
 
     if (!hasScheduledInitialRefreshRef.current) {
       hasScheduledInitialRefreshRef.current = true;
-
-      if (isNotificationsPath(pathname)) {
-        scheduleNextRefresh();
-      } else {
-        scheduleNextRefresh(NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS);
-      }
-    } else if (isNotificationsPath(pathname)) {
-      scheduleNextRefresh();
+      scheduleNextRefresh(NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS);
     } else {
-      void refreshAndScheduleNext();
+      refreshWhenFreshnessExpired();
     }
 
     return () => {
       stopped = true;
       clearScheduledRefresh();
-      window.removeEventListener("focus", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenFreshnessExpired);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener(
         "friemi:notifications-refresh",
-        refreshWhenVisible,
+        handleNotificationsRefresh,
       );
     };
-  }, [enabled, pathname, runUnreadCountRefresh]);
+  }, [enabled, freshnessGuardEnabled, pathname, runUnreadCountRefresh]);
 
   useEffect(
     () => () => {
