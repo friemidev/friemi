@@ -21,7 +21,9 @@ import {
 } from "@/features/game-tools/werewolfConfig";
 import {
   createInitialWerewolfRoomState,
+  getWerewolfWinnerFromFinishSelection,
   normalizeWerewolfRoomState,
+  type WerewolfFinishSelection,
   type WerewolfRoomState,
   type WerewolfWinner,
 } from "@/features/game-tools/werewolfRoomState";
@@ -98,15 +100,25 @@ const readyWerewolfSeatSchema = z
 
 const updateWerewolfLifeSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
+  memberToken: z.string().min(16).max(40).optional(),
   operation: z.enum(["mark_dead", "revive"]),
+  privateToken: z.string().min(16).max(40),
+  seatNumber: z.coerce.number().int().min(1).max(20),
+});
+
+const updateWerewolfSheriffSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  memberToken: z.string().min(16).max(40).optional(),
+  operation: z.enum(["clear", "set"]),
   privateToken: z.string().min(16).max(40),
   seatNumber: z.coerce.number().int().min(1).max(20),
 });
 
 const finishWerewolfRoomSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
+  memberToken: z.string().min(16).max(40).optional(),
   privateToken: z.string().min(16).max(40),
-  winner: z.enum(["GOOD", "WEREWOLF"]),
+  winner: z.enum(["GOOD", "WEREWOLF", "TERMINATED"]),
 });
 
 const werewolfTestBotOperationSchema = z.object({
@@ -324,6 +336,7 @@ function buildStartedWerewolfRoomState(now: Date): WerewolfRoomState {
     lockedAt: timestamp,
     phase: "IN_PROGRESS",
     resultRecordedAt: null,
+    sheriffSeatNumber: null,
     startedAt: timestamp,
     winner: null,
   };
@@ -336,7 +349,7 @@ function buildFinishedWerewolfRoomState({
 }: {
   currentState: WerewolfRoomState;
   finishedAt: Date;
-  winner: Exclude<WerewolfWinner, null>;
+  winner: WerewolfWinner;
 }): WerewolfRoomState {
   const timestamp = finishedAt.toISOString();
 
@@ -344,7 +357,7 @@ function buildFinishedWerewolfRoomState({
     ...currentState,
     finishedAt: timestamp,
     phase: "FINISHED",
-    resultRecordedAt: timestamp,
+    resultRecordedAt: winner ? timestamp : null,
     winner,
   };
 }
@@ -2103,8 +2116,10 @@ export async function updateWerewolfPlayerLifeAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
     operation: getString(formData, "operation"),
     privateToken: getString(formData, "privateToken"),
     seatNumber: getString(formData, "seatNumber"),
@@ -2226,11 +2241,153 @@ export async function updateWerewolfPlayerLifeAction(
     return { formError: t.statusFailed };
   }
 
+  if (returnInline) {
+    return {
+      formNotice: `${result.data.operation}:${result.data.seatNumber}`,
+    };
+  }
+
   redirect(
-    withLocale(
-      result.data.locale,
-      `${werewolfToolPath}/rooms/${redirectRoomId}`,
-    ),
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: result.data.memberToken,
+      roomId: redirectRoomId,
+    }),
+  );
+}
+
+export async function updateWerewolfSheriffAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
+    operation: getString(formData, "operation"),
+    privateToken: getString(formData, "privateToken"),
+    seatNumber: getString(formData, "seatNumber"),
+  };
+  const result = updateWerewolfSheriffSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  let redirectRoomId: string | null = null;
+
+  try {
+    const judgeSeat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      include: {
+        room: {
+          include: {
+            seats: {
+              orderBy: { seatNumber: "asc" },
+              select: {
+                guestName: true,
+                id: true,
+                privateToken: true,
+                profileId: true,
+                seatNumber: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!judgeSeat || judgeSeat.room.kind !== "WEREWOLF") {
+      return { formError: t.statusFailed };
+    }
+
+    const room = judgeSeat.room;
+    redirectRoomId = room.id;
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
+
+    if (!isWerewolfJudgeSeat(judgeSeat.seatNumber, variant)) {
+      return { formError: t.notJudge };
+    }
+
+    if (room.status !== "IN_PROGRESS") {
+      return { formError: t.notRunning };
+    }
+
+    if (!isWerewolfPlayerSeat(result.data.seatNumber, variant)) {
+      return { formError: t.statusFailed };
+    }
+
+    const targetSeat = room.seats.find(
+      (seat) => seat.seatNumber === result.data.seatNumber,
+    );
+
+    if (!targetSeat || (!targetSeat.profileId && !targetSeat.guestName)) {
+      return { formError: t.statusFailed };
+    }
+
+    const currentState = normalizeWerewolfRoomState(room.state);
+    const sheriffSeatNumber =
+      result.data.operation === "set" ? targetSeat.seatNumber : null;
+
+    await prisma.$transaction([
+      prisma.gameToolRoom.update({
+        where: { id: room.id },
+        data: {
+          state: {
+            ...currentState,
+            sheriffSeatNumber,
+          },
+        },
+      }),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: judgeSeat.profileId,
+          payload: {
+            operation: result.data.operation,
+            seatNumber: targetSeat.seatNumber,
+          },
+          roomId: room.id,
+          type:
+            result.data.operation === "set"
+              ? "werewolf_sheriff_assigned"
+              : "werewolf_sheriff_cleared",
+        },
+      }),
+    ]);
+
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+    revalidateWerewolfSeatPath(result.data.locale, judgeSeat.privateToken);
+    revalidateWerewolfSeatPath(result.data.locale, targetSeat.privateToken);
+  } catch (error) {
+    console.error("Failed to update Werewolf sheriff", error);
+
+    return { formError: t.statusFailed };
+  }
+
+  if (!redirectRoomId) {
+    return { formError: t.statusFailed };
+  }
+
+  if (returnInline) {
+    return {
+      formNotice: `${result.data.operation}:${result.data.seatNumber}`,
+    };
+  }
+
+  redirect(
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: result.data.memberToken,
+      roomId: redirectRoomId,
+    }),
   );
 }
 
@@ -2238,8 +2395,10 @@ export async function finishWerewolfRoomAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
     privateToken: getString(formData, "privateToken"),
     winner: getString(formData, "winner"),
   };
@@ -2293,27 +2452,31 @@ export async function finishWerewolfRoomAction(
       return { formError: t.notRunning };
     }
 
-    const winner = result.data.winner as Exclude<WerewolfWinner, null>;
+    const finishSelection = result.data.winner as WerewolfFinishSelection;
+    const winner = getWerewolfWinnerFromFinishSelection(finishSelection);
+    const wasTerminated = finishSelection === "TERMINATED";
     const finishedAt = new Date();
     const currentState = normalizeWerewolfRoomState(room.state);
     const variantName = getWerewolfVariantLabel(room.locale, variant);
-    const playerResults = room.seats
-      .filter((seat) => isWerewolfPlayerSeat(seat.seatNumber, variant))
-      .map((seat) => {
-        const won =
-          winner === "WEREWOLF"
-            ? seat.roleAlignment === "werewolf"
-            : seat.roleAlignment === "good";
+    const playerResults = winner
+      ? room.seats
+          .filter((seat) => isWerewolfPlayerSeat(seat.seatNumber, variant))
+          .map((seat) => {
+            const won =
+              winner === "WEREWOLF"
+                ? seat.roleAlignment === "werewolf"
+                : seat.roleAlignment === "good";
 
-        return {
-          alignment: seat.roleAlignment,
-          displayName: seat.displayName,
-          profileId: seat.profileId,
-          result: won ? "WIN" : "LOSE",
-          roleKey: seat.roleKey,
-          seatNumber: seat.seatNumber,
-        };
-      });
+            return {
+              alignment: seat.roleAlignment,
+              displayName: seat.displayName,
+              profileId: seat.profileId,
+              result: won ? "WIN" : "LOSE",
+              roleKey: seat.roleKey,
+              seatNumber: seat.seatNumber,
+            };
+          })
+      : [];
     const eventPlayerResults = playerResults.map((player) => ({
       alignment: player.alignment,
       displayName: player.displayName,
@@ -2372,6 +2535,7 @@ export async function finishWerewolfRoomAction(
             finishedAt: finishedAt.toISOString(),
             judgeSeatNumber: judgeSeat.seatNumber,
             results: eventPlayerResults,
+            terminated: wasTerminated,
             winner,
           },
           roomId: room.id,
@@ -2460,11 +2624,18 @@ export async function finishWerewolfRoomAction(
     return { formError: t.finishFailed };
   }
 
+  if (returnInline) {
+    return {
+      formNotice: `finished:${result.data.winner}`,
+    };
+  }
+
   redirect(
-    withLocale(
-      result.data.locale,
-      `${werewolfToolPath}/rooms/${redirectRoomId}`,
-    ),
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: result.data.memberToken,
+      roomId: redirectRoomId,
+    }),
   );
 }
 
