@@ -45,7 +45,7 @@ test("getNotificationPath routes activity and message notifications correctly", 
       activityId: null,
       type: "CHARM_GIFT_RECEIVED",
     }),
-    "/profile/sender_1",
+    "/profile/gift-wall",
   );
   assert.equal(
     getNotificationPath({

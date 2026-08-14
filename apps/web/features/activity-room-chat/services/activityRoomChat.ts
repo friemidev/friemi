@@ -21,6 +21,7 @@ import type {
   ChatUnreadMention,
 } from "@/features/chat/types";
 import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
 
@@ -1631,6 +1632,25 @@ export async function markActivityRoomChatRead({
   profileId: string;
   readAt?: Date;
 }) {
+  await prisma.notification
+    .updateMany({
+      where: {
+        activityId,
+        readAt: null,
+        recipientId: profileId,
+        type: "ACTIVITY_ROOM_MESSAGE",
+      },
+      data: {
+        readAt,
+      },
+    })
+    .catch((error: unknown) => {
+      console.error(
+        "Failed to mark activity room message notifications read",
+        error,
+      );
+    });
+
   return prisma.activityRoomReadState.upsert({
     where: {
       activityId_profileId: {
@@ -1714,6 +1734,70 @@ export async function sendActivityRoomMessage({
         lastReadAt: message.createdAt,
       },
     });
+
+    const roomAudience = await tx.activity.findUnique({
+      where: {
+        id: activityId,
+      },
+      select: {
+        organizerId: true,
+        coManagers: {
+          select: {
+            managerProfileId: true,
+          },
+        },
+        participants: {
+          where: {
+            status: {
+              in: roomParticipantStatuses,
+            },
+          },
+          select: {
+            userProfileId: true,
+          },
+        },
+      },
+    });
+
+    if (roomAudience) {
+      const recipientIds = new Set<string>([
+        roomAudience.organizerId,
+        ...roomAudience.coManagers.map(
+          (coManager) => coManager.managerProfileId,
+        ),
+        ...roomAudience.participants.map(
+          (participant) => participant.userProfileId,
+        ),
+      ]);
+      recipientIds.delete(senderId);
+
+      const mutedReadStates = await tx.activityRoomReadState.findMany({
+        where: {
+          activityId,
+          profileId: { in: Array.from(recipientIds) },
+          mutedAt: { not: null },
+        },
+        select: {
+          profileId: true,
+        },
+      });
+      const mutedProfileIds = new Set(
+        mutedReadStates.map((readState) => readState.profileId),
+      );
+
+      await createNotifications(
+        tx,
+        Array.from(recipientIds)
+          .filter((recipientId) => !mutedProfileIds.has(recipientId))
+          .map((recipientId) => ({
+            actorId: senderId,
+            activityId,
+            occurrenceId: `activity-room-message:${message.id}`,
+            recipientId,
+            type: "ACTIVITY_ROOM_MESSAGE" as const,
+          })),
+      );
+    }
 
     return mapActivityRoomMessage(message, senderId);
   });

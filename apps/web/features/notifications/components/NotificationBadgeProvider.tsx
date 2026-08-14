@@ -419,17 +419,19 @@ export function NotificationBadgeProvider({
       return;
     }
 
-    if (unreadNotificationCount <= 0) {
+    const totalBadgeCount = unreadNotificationCount + unreadDirectMessageCount;
+
+    if (totalBadgeCount <= 0) {
       Badge.clear().catch((error: unknown) => {
         console.error("Failed to clear iOS app badge", error);
       });
       return;
     }
 
-    Badge.set({ count: unreadNotificationCount }).catch((error: unknown) => {
+    Badge.set({ count: totalBadgeCount }).catch((error: unknown) => {
       console.error("Failed to set iOS app badge", error);
     });
-  }, [unreadNotificationCount]);
+  }, [unreadDirectMessageCount, unreadNotificationCount]);
 
   const value = useMemo(
     () => ({

@@ -66,7 +66,9 @@ function getNotificationCategory(
     return "activity";
   }
 
-  if (type === "FRIEND_REQUEST") return "friends";
+  if (type === "FRIEND_REQUEST" || type === "PLANET_JOIN_REQUEST") {
+    return "friends";
+  }
   if (type === "CHARM_GIFT_RECEIVED") return "gift";
   if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
@@ -232,7 +234,17 @@ function getNotificationText(
     return { title: copy.title, body: copy.body(activityTitle, actorName) };
   }
 
-  const copy = t.types[notification.type];
+  const copy = (
+    t.types as Record<
+      string,
+      { title: string; body: (...args: string[]) => string } | undefined
+    >
+  )[notification.type];
+
+  if (!copy) {
+    return { title: t.title, body: "" };
+  }
+
   return { title: copy.title, body: copy.body(activityTitle) };
 }
 
@@ -265,6 +277,7 @@ function getNotificationActionLabel(
     return t.openComments;
   }
   if (notification.type === "DIRECT_MESSAGE") return t.openMessages;
+  if (notification.type === "PLANET_JOIN_REQUEST") return t.openReview;
   if (notification.type === "PARTICIPATION_PENDING" && notification.actor) {
     return t.openReview;
   }
@@ -746,7 +759,7 @@ function getNotificationVisual(
     };
   }
 
-  if (type === "FRIEND_REQUEST") {
+  if (type === "FRIEND_REQUEST" || type === "PLANET_JOIN_REQUEST") {
     return {
       icon: UserPlus,
       iconClassName: isUnread ? "bg-ink text-paper" : "bg-fog text-ink/55",
@@ -895,6 +908,7 @@ function NotificationCard({
       : Boolean(notification.activity) ||
         notification.type === "REPORT_CREATED" ||
         notification.type === "DIRECT_MESSAGE" ||
+        notification.type === "PLANET_JOIN_REQUEST" ||
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||

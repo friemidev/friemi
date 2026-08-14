@@ -7,6 +7,8 @@ export const notificationCenterExcludedTypes = [
   "MOMENT_COMMENTED",
   "MOMENT_COMMENT_REPLY",
   "MOMENT_REPOSTED",
+  "PLANET_MESSAGE",
+  "ACTIVITY_ROOM_MESSAGE",
 ] satisfies NotificationType[];
 
 export function getVisibleNotificationWhere(
@@ -73,6 +75,13 @@ const notificationSelect = {
       createdAt: true,
     },
   },
+  planet: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+    },
+  },
 } satisfies Prisma.NotificationSelect;
 
 type NotificationQueryResult = Prisma.NotificationGetPayload<{
@@ -117,6 +126,11 @@ export type NotificationViewModel = {
     id: string;
     content: string;
     createdAt: string;
+  } | null;
+  planet: {
+    id: string;
+    name: string;
+    slug: string;
   } | null;
 };
 
@@ -163,6 +177,7 @@ function mapNotification(
           createdAt: notification.momentComment.createdAt.toISOString(),
         }
       : null,
+    planet: notification.planet,
   };
 }
 
