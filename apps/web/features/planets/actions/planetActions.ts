@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import {
   PlanetChatDomainError,
+  planetChatMessageImageMaxCount,
   sendPlanetChatMessage,
   setPlanetChatMuted,
   setPlanetChatPinned,
@@ -39,9 +40,17 @@ const planetIdSchema = z.object({
   planetSlug: z.string().min(1),
 });
 
-const messageSchema = planetIdSchema.extend({
-  content: z.string().trim().min(1).max(1000),
-});
+const messageSchema = planetIdSchema
+  .extend({
+    content: z.string().trim().max(1000).default(""),
+    imageUrls: z
+      .array(z.string().trim().url())
+      .max(planetChatMessageImageMaxCount)
+      .default([]),
+  })
+  .refine((value) => value.content.length > 0 || value.imageUrls.length > 0, {
+    path: ["content"],
+  });
 
 const togglePlanetChatMuteSchema = planetIdSchema.extend({
   muted: z.enum(["0", "1", "false", "true"]),
@@ -69,6 +78,13 @@ const reviewPlanetMemberSchema = planetIdSchema.extend({
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function readStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .flatMap((value) => (typeof value === "string" ? [value.trim()] : []))
+    .filter(Boolean);
 }
 
 function parseImageUrls(value: string | undefined) {
@@ -391,6 +407,7 @@ export async function sendPlanetMessageAction(
     planetId: readString(formData, "planetId"),
     planetSlug: readString(formData, "planetSlug"),
     content: readString(formData, "content"),
+    imageUrls: readStringList(formData, "imageUrls"),
   });
   if (!result.success) {
     return {
@@ -402,6 +419,7 @@ export async function sendPlanetMessageAction(
   try {
     const message = await sendPlanetChatMessage({
       content: result.data.content,
+      imageUrls: result.data.imageUrls,
       planetId: result.data.planetId,
       profileId: profile.id,
     });

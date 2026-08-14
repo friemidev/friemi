@@ -21,6 +21,16 @@ type ActivityRoomChatCopy = {
   emptyTitle: string;
   errors: Record<ActivityRoomChatErrorCode, string>;
   invalidRequest: string;
+  addEmoji: string;
+  attachImage: string;
+  imageMessage: string;
+  imageUploadFailed: string;
+  imageUploading: string;
+  removeImage: string;
+  resetImagePreview: string;
+  saveImage: string;
+  savingImage: string;
+  tooManyImages: string;
   lockedTitle: string;
   loginAction: string;
   loginDescription: string;
@@ -65,6 +75,16 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       emptyDescription: "Dites bonjour quand vous êtes prêt.",
       emptyTitle: "Aucun message",
       invalidRequest: "Réessayez avec un message valide.",
+      addEmoji: "Ajouter emoji",
+      attachImage: "Ajouter une image",
+      imageMessage: "Image",
+      imageUploadFailed: "Image impossible à importer.",
+      imageUploading: "Import...",
+      removeImage: "Retirer l'image",
+      resetImagePreview: "Réinitialiser",
+      saveImage: "Enregistrer l'image",
+      savingImage: "Enregistrement...",
+      tooManyImages: "Vous pouvez envoyer jusqu'à 4 images.",
       lockedTitle: "Pas encore disponible",
       loginAction: "Se connecter",
       loginDescription: "Connectez-vous pour voir la discussion.",
@@ -81,7 +101,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       send: "Envoyer",
       sendFailed: "Message non envoyé.",
       selectMessage: "Sélectionner",
-      selectedMessages: (count) => `${count} sélectionné${count > 1 ? "s" : ""}`,
+      selectedMessages: (count) =>
+        `${count} sélectionné${count > 1 ? "s" : ""}`,
       sending: "Envoi...",
       title: "Discussion",
       viewActivity: "Voir le groupe",
@@ -98,6 +119,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
           "Ce groupe est terminé. Vous pouvez relire les messages.",
         EMPTY_BODY: "Le message ne peut pas être vide.",
         BODY_TOO_LONG: "Le message est trop long.",
+        TOO_MANY_IMAGES: "Vous pouvez envoyer jusqu'à 4 images.",
+        INVALID_IMAGE_URL: "Une image n'est pas valide.",
         MESSAGE_NOT_FOUND: "Ce message n'est plus disponible.",
         DELETE_FORBIDDEN: "Vous ne pouvez pas supprimer ce message.",
       },
@@ -125,6 +148,16 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       emptyDescription: "Say hello when you are ready.",
       emptyTitle: "No messages yet",
       invalidRequest: "Try again with a valid message.",
+      addEmoji: "Add emoji",
+      attachImage: "Add image",
+      imageMessage: "Image",
+      imageUploadFailed: "Image could not be uploaded.",
+      imageUploading: "Uploading...",
+      removeImage: "Remove image",
+      resetImagePreview: "Reset",
+      saveImage: "Save image",
+      savingImage: "Saving image...",
+      tooManyImages: "You can send up to 4 images.",
       lockedTitle: "Not available yet",
       loginAction: "Sign in",
       loginDescription: "Sign in to see the room chat.",
@@ -155,6 +188,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
         ACTIVITY_ENDED: "This group has ended. Messages are read-only.",
         EMPTY_BODY: "Message cannot be empty.",
         BODY_TOO_LONG: "Message is too long.",
+        TOO_MANY_IMAGES: "You can send up to 4 images.",
+        INVALID_IMAGE_URL: "One image is invalid.",
         MESSAGE_NOT_FOUND: "This message is no longer available.",
         DELETE_FORBIDDEN: "You cannot delete this message.",
       },
@@ -181,6 +216,16 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
     emptyDescription: "可以先和大家打个招呼。",
     emptyTitle: "还没有消息",
     invalidRequest: "请重新输入一条消息。",
+    addEmoji: "添加表情",
+    attachImage: "添加图片",
+    imageMessage: "图片",
+    imageUploadFailed: "图片上传失败，请稍后再试。",
+    imageUploading: "上传中...",
+    removeImage: "移除图片",
+    resetImagePreview: "重置",
+    saveImage: "保存到相册",
+    savingImage: "正在保存...",
+    tooManyImages: "一次最多发送 4 张图片。",
     lockedTitle: "暂时不能查看",
     loginAction: "登录",
     loginDescription: "登录后可以查看局内聊天。",
@@ -211,6 +256,8 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
       ACTIVITY_ENDED: "这个聚吧已结束，消息仅可查看。",
       EMPTY_BODY: "消息不能为空。",
       BODY_TOO_LONG: "消息内容过长。",
+      TOO_MANY_IMAGES: "一次最多发送 4 张图片。",
+      INVALID_IMAGE_URL: "其中一张图片无效。",
       MESSAGE_NOT_FOUND: "这条消息已不可用。",
       DELETE_FORBIDDEN: "你不能删除这条消息。",
     },

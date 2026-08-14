@@ -6,6 +6,7 @@ import {
   canDeleteActivityRoomMessage,
   hasUnreadActivityAnnouncement,
   normalizeActivityRoomMessageBody,
+  normalizeActivityRoomMessagePayload,
   resolveActivityRoomChatPolicy,
 } from "./activityRoomChat";
 
@@ -44,6 +45,33 @@ test("activity announcement unread state respects author and read time", () => {
       viewerProfileId: "member",
     }),
     true,
+  );
+});
+
+test("activity room messages accept emoji and image-only payloads", () => {
+  assert.deepEqual(normalizeActivityRoomMessagePayload("  👋  "), {
+    body: "👋",
+    imageUrls: [],
+  });
+  assert.deepEqual(
+    normalizeActivityRoomMessagePayload("", ["https://cdn.example/image.gif"]),
+    {
+      body: "",
+      imageUrls: ["https://cdn.example/image.gif"],
+    },
+  );
+  assert.throws(
+    () =>
+      normalizeActivityRoomMessagePayload("", [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+        "https://cdn.example/3.jpg",
+        "https://cdn.example/4.jpg",
+        "https://cdn.example/5.jpg",
+      ]),
+    (error) =>
+      error instanceof ActivityRoomChatDomainError &&
+      error.code === "TOO_MANY_IMAGES",
   );
 });
 

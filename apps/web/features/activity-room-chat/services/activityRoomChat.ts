@@ -19,6 +19,7 @@ import { getMutualFollowProfileIds } from "@/features/follow/queries/followRelat
 import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
+export const activityRoomMessageImageMaxCount = 4;
 export const defaultActivityRoomMessageLimit = 50;
 export const defaultActivityRoomRosterLimit = 80;
 export const maxActivityRoomMessageLimit = 100;
@@ -35,6 +36,8 @@ export type ActivityRoomChatErrorCode =
   | "ACTIVITY_ENDED"
   | "EMPTY_BODY"
   | "BODY_TOO_LONG"
+  | "TOO_MANY_IMAGES"
+  | "INVALID_IMAGE_URL"
   | "MESSAGE_NOT_FOUND"
   | "DELETE_FORBIDDEN";
 
@@ -57,6 +60,7 @@ export type ActivityRoomMessageViewModel = {
   createdAt: string;
   isDeleted: boolean;
   isMine: boolean;
+  imageUrls: string[];
   sender: {
     id: string;
     avatarUrl: string | null;
@@ -183,6 +187,7 @@ const messageSelect = {
   body: true,
   createdAt: true,
   deletedAt: true,
+  imageUrls: true,
   senderId: true,
   sender: {
     select: {
@@ -319,6 +324,41 @@ export function normalizeActivityRoomMessageBody(body: string) {
   return normalizedBody;
 }
 
+export function normalizeActivityRoomMessagePayload(
+  body: string,
+  imageUrls: string[] = [],
+) {
+  const normalizedBody = body.trim();
+  const normalizedImageUrls = [
+    ...new Set(imageUrls.map((url) => url.trim())),
+  ].filter(Boolean);
+
+  if (normalizedImageUrls.length > activityRoomMessageImageMaxCount) {
+    throw new ActivityRoomChatDomainError("TOO_MANY_IMAGES");
+  }
+
+  for (const imageUrl of normalizedImageUrls) {
+    try {
+      const parsedUrl = new URL(imageUrl);
+      if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        throw new Error("INVALID_PROTOCOL");
+      }
+    } catch {
+      throw new ActivityRoomChatDomainError("INVALID_IMAGE_URL");
+    }
+  }
+
+  if (!normalizedBody && normalizedImageUrls.length === 0) {
+    throw new ActivityRoomChatDomainError("EMPTY_BODY");
+  }
+
+  if (normalizedBody.length > activityRoomMessageMaxLength) {
+    throw new ActivityRoomChatDomainError("BODY_TOO_LONG");
+  }
+
+  return { body: normalizedBody, imageUrls: normalizedImageUrls };
+}
+
 export function resolveActivityRoomChatPolicy({
   activityType,
   endAt = null,
@@ -435,6 +475,7 @@ function mapActivityRoomMessage(
     id: message.id,
     body: isDeleted ? "" : message.body,
     createdAt: message.createdAt.toISOString(),
+    imageUrls: isDeleted ? [] : message.imageUrls,
     isDeleted,
     isMine: message.senderId === viewerProfileId,
     sender: {
@@ -461,9 +502,9 @@ export function hasUnreadActivityAnnouncement({
 }) {
   return Boolean(
     latestAnnouncement &&
-      latestAnnouncement.authorId !== viewerProfileId &&
-      (!announcementReadAt ||
-        announcementReadAt.getTime() < latestAnnouncement.createdAt.getTime()),
+    latestAnnouncement.authorId !== viewerProfileId &&
+    (!announcementReadAt ||
+      announcementReadAt.getTime() < latestAnnouncement.createdAt.getTime()),
   );
 }
 
@@ -832,16 +873,12 @@ export async function getActivityRoomChatPageData({
     : [];
 
   return {
-    activity: mapActivityRoomActivity(
-      activity,
-      policy,
-      {
-        announcementReadAt: activity.roomReadStates[0]?.announcementReadAt,
-        isMuted: Boolean(activity.roomReadStates[0]?.mutedAt),
-        isPinned: Boolean(activity.roomReadStates[0]?.pinnedAt),
-        viewerProfileId,
-      },
-    ),
+    activity: mapActivityRoomActivity(activity, policy, {
+      announcementReadAt: activity.roomReadStates[0]?.announcementReadAt,
+      isMuted: Boolean(activity.roomReadStates[0]?.mutedAt),
+      isPinned: Boolean(activity.roomReadStates[0]?.pinnedAt),
+      viewerProfileId,
+    }),
     messages: [...messages]
       .reverse()
       .map((message) => mapActivityRoomMessage(message, viewerProfileId)),
@@ -869,8 +906,7 @@ export async function getActivityRoomManagementData({
     return null;
   }
 
-  const canManage =
-    policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
+  const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
 
   const activity = await prisma.activity.findUnique({
     where: {
@@ -984,9 +1020,7 @@ export async function getActivityRoomManagementData({
   ];
   const activeOrPendingMemberIds = new Set([
     activity.organizerId,
-    ...activity.participants.map(
-      (participant) => participant.userProfile.id,
-    ),
+    ...activity.participants.map((participant) => participant.userProfile.id),
   ]);
   const [coManagerDashboardResult, checkInRosterResult] =
     await Promise.allSettled([
@@ -1164,9 +1198,7 @@ export async function getUnreadActivityRoomTotalMessageCount(
       },
     },
   });
-  const unmutedRooms = rooms.filter(
-    (room) => !room.roomReadStates[0]?.mutedAt,
-  );
+  const unmutedRooms = rooms.filter((room) => !room.roomReadStates[0]?.mutedAt);
   const unreadCountByActivityId = await getActivityRoomUnreadCountMap(
     unmutedRooms,
     viewerProfileId,
@@ -1291,13 +1323,15 @@ export async function markActivityRoomChatRead({
 export async function sendActivityRoomMessage({
   activityId,
   body,
+  imageUrls = [],
   senderId,
 }: {
   activityId: string;
   body: string;
+  imageUrls?: string[];
   senderId: string;
 }) {
-  const normalizedBody = normalizeActivityRoomMessageBody(body);
+  const payload = normalizeActivityRoomMessagePayload(body, imageUrls);
 
   return prisma.$transaction(async (tx) => {
     const policy = await getActivityRoomPolicy(tx, senderId, activityId);
@@ -1311,7 +1345,8 @@ export async function sendActivityRoomMessage({
     const message = await tx.activityRoomMessage.create({
       data: {
         activityId,
-        body: normalizedBody,
+        body: payload.body,
+        imageUrls: payload.imageUrls,
         senderId,
       },
       select: messageSelect,

@@ -5,6 +5,7 @@ import {
   getPlanetChatUnreadSince,
   isApprovedPlanetChatMember,
   normalizePlanetChatMessage,
+  normalizePlanetChatPayload,
   PlanetChatDomainError,
   resolvePlanetChatPreferenceTimestamp,
   sortPlanetChatRosterItems,
@@ -27,6 +28,26 @@ test("planet chat messages are trimmed and bounded", () => {
   );
   assert.throws(
     () => normalizePlanetChatMessage("x".repeat(1001)),
+    (error) =>
+      error instanceof PlanetChatDomainError &&
+      error.code === "INVALID_MESSAGE",
+  );
+});
+
+test("planet chat payloads accept emoji and image-only messages", () => {
+  assert.deepEqual(normalizePlanetChatPayload("  🎉  "), {
+    content: "🎉",
+    imageUrls: [],
+  });
+  assert.deepEqual(
+    normalizePlanetChatPayload("", ["https://cdn.example/image.webp"]),
+    {
+      content: "",
+      imageUrls: ["https://cdn.example/image.webp"],
+    },
+  );
+  assert.throws(
+    () => normalizePlanetChatPayload("", ["javascript:alert(1)"]),
     (error) =>
       error instanceof PlanetChatDomainError &&
       error.code === "INVALID_MESSAGE",
@@ -57,7 +78,10 @@ test("planet chat unread time never predates membership", () => {
   const staleReadAt = new Date("2026-08-01T10:00:00.000Z");
   const recentReadAt = new Date("2026-08-12T10:00:00.000Z");
 
-  assert.equal(getPlanetChatUnreadSince(joinedAt).toISOString(), joinedAt.toISOString());
+  assert.equal(
+    getPlanetChatUnreadSince(joinedAt).toISOString(),
+    joinedAt.toISOString(),
+  );
   assert.equal(
     getPlanetChatUnreadSince(joinedAt, staleReadAt).toISOString(),
     joinedAt.toISOString(),

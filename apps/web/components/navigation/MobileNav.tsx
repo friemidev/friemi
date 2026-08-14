@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
@@ -32,6 +32,7 @@ function shouldHideMobileNav(pathname: string, locale: string) {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { sectionOverride } = useMobileNavSection();
   const { unreadDirectMessageCount } = useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
@@ -77,7 +78,10 @@ export function MobileNav({ locale }: MobileNavProps) {
     ],
   );
 
-  if (shouldHideMobileNav(pathname, currentLocale)) {
+  if (
+    searchParams.get("sheet") === "1" ||
+    shouldHideMobileNav(pathname, currentLocale)
+  ) {
     return null;
   }
 

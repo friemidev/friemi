@@ -13,7 +13,7 @@ import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
 import type { DirectMessageUserViewModel } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
-import { MessageImagePreviewGrid } from "./MessageImagePreviewGrid";
+import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
 
 export type MessageBubbleDeliveryStatus = "sending" | "failed";
 
@@ -73,10 +73,7 @@ export function MessageBubble({
   const canDelete =
     !deliveryStatus &&
     Boolean(
-      onDelete &&
-        onOpenActionMenu &&
-        onStartSelection &&
-        onToggleSelection,
+      onDelete && onOpenActionMenu && onStartSelection && onToggleSelection,
     );
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -99,6 +96,13 @@ export function MessageBubble({
   );
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-chat-image-preview='true']")
+    ) {
+      return;
+    }
+
     if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
       return;
     }
@@ -160,58 +164,60 @@ export function MessageBubble({
     onOpenActionMenu?.(id);
   }
 
-  const selectionControl = selectionMode && canDelete ? (
-    <button
-      aria-label={t.selectMessage}
-      aria-pressed={isSelected}
-      className={cn(
-        "mb-1 inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border transition active:scale-95",
-        isSelected
-          ? "border-[#156240] bg-[#156240] text-white"
-          : "border-[#C9CBBE] bg-white text-transparent",
-      )}
-      disabled={isDeleting}
-      onClick={() => onToggleSelection?.(id)}
-      title={t.selectMessage}
-      type="button"
-    >
-      <CheckCircle2 className="h-4 w-4" />
-    </button>
-  ) : null;
-
-  const actionMenu = actionMenuOpen && canDelete && !selectionMode ? (
-    <div
-      aria-label={`${t.selectMessage} / ${t.deleteMessage}`}
-      className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
-      data-direct-message-action-menu
-      role="toolbar"
-    >
+  const selectionControl =
+    selectionMode && canDelete ? (
       <button
         aria-label={t.selectMessage}
-        className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
-        onClick={() => onStartSelection?.(id)}
+        aria-pressed={isSelected}
+        className={cn(
+          "mb-1 inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border transition active:scale-95",
+          isSelected
+            ? "border-[#156240] bg-[#156240] text-white"
+            : "border-[#C9CBBE] bg-white text-transparent",
+        )}
+        disabled={isDeleting}
+        onClick={() => onToggleSelection?.(id)}
         title={t.selectMessage}
         type="button"
       >
-        <ListChecks className="h-4 w-4" />
+        <CheckCircle2 className="h-4 w-4" />
       </button>
-      <button
-        aria-busy={isDeleting}
-        aria-label={t.deleteMessage}
-        className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
-        disabled={isDeleting}
-        onClick={() => onDelete?.([id])}
-        title={t.deleteMessage}
-        type="button"
+    ) : null;
+
+  const actionMenu =
+    actionMenuOpen && canDelete && !selectionMode ? (
+      <div
+        aria-label={`${t.selectMessage} / ${t.deleteMessage}`}
+        className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
+        data-direct-message-action-menu
+        role="toolbar"
       >
-        {isDeleting ? (
-          <LoaderCircle className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-      </button>
-    </div>
-  ) : null;
+        <button
+          aria-label={t.selectMessage}
+          className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+          onClick={() => onStartSelection?.(id)}
+          title={t.selectMessage}
+          type="button"
+        >
+          <ListChecks className="h-4 w-4" />
+        </button>
+        <button
+          aria-busy={isDeleting}
+          aria-label={t.deleteMessage}
+          className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
+          disabled={isDeleting}
+          onClick={() => onDelete?.([id])}
+          title={t.deleteMessage}
+          type="button"
+        >
+          {isDeleting ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    ) : null;
 
   return (
     <div
@@ -221,7 +227,7 @@ export function MessageBubble({
       )}
     >
       {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
-      {isMine ? actionMenu ?? selectionControl : null}
+      {isMine ? (actionMenu ?? selectionControl) : null}
       <div
         aria-pressed={selectionMode && canDelete ? isSelected : undefined}
         className={cn(
@@ -260,10 +266,12 @@ export function MessageBubble({
         tabIndex={canDelete ? 0 : undefined}
       >
         {hasImages ? (
-          <MessageImagePreviewGrid
+          <ChatImagePreviewGrid
             imageLabel={t.imageMessage}
             imageUrls={imageUrls}
             resetLabel={t.resetImagePreview}
+            saveLabel={t.saveImage}
+            savedLabel={t.savingImage}
           />
         ) : null}
         {hasBody ? (
@@ -309,7 +317,7 @@ export function MessageBubble({
           </p>
         ) : null}
       </div>
-      {!isMine ? actionMenu ?? selectionControl : null}
+      {!isMine ? (actionMenu ?? selectionControl) : null}
       {isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
     </div>
   );

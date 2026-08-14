@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const planetChatMessageMaxLength = 1000;
+export const planetChatMessageImageMaxCount = 4;
 export const defaultPlanetChatRosterLimit = 80;
 
 export type PlanetChatRosterItemViewModel = {
@@ -24,9 +25,7 @@ export type PlanetChatRosterItemViewModel = {
   unreadCount: number;
 };
 
-export type PlanetChatErrorCode =
-  | "CHAT_ACCESS_DENIED"
-  | "INVALID_MESSAGE";
+export type PlanetChatErrorCode = "CHAT_ACCESS_DENIED" | "INVALID_MESSAGE";
 
 export class PlanetChatDomainError extends Error {
   code: PlanetChatErrorCode;
@@ -38,9 +37,7 @@ export class PlanetChatDomainError extends Error {
   }
 }
 
-export function isApprovedPlanetChatMember(
-  status?: string | null,
-) {
+export function isApprovedPlanetChatMember(status?: string | null) {
   return status === "APPROVED";
 }
 
@@ -52,6 +49,40 @@ export function normalizePlanetChatMessage(content: string) {
   }
 
   return normalized;
+}
+
+export function normalizePlanetChatPayload(
+  content: string,
+  imageUrls: string[] = [],
+) {
+  const normalizedContent = content.trim();
+  const normalizedImageUrls = [
+    ...new Set(imageUrls.map((url) => url.trim())),
+  ].filter(Boolean);
+
+  if (
+    normalizedContent.length > planetChatMessageMaxLength ||
+    normalizedImageUrls.length > planetChatMessageImageMaxCount
+  ) {
+    throw new PlanetChatDomainError("INVALID_MESSAGE");
+  }
+
+  for (const imageUrl of normalizedImageUrls) {
+    try {
+      const parsedUrl = new URL(imageUrl);
+      if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        throw new Error("INVALID_PROTOCOL");
+      }
+    } catch {
+      throw new PlanetChatDomainError("INVALID_MESSAGE");
+    }
+  }
+
+  if (!normalizedContent && normalizedImageUrls.length === 0) {
+    throw new PlanetChatDomainError("INVALID_MESSAGE");
+  }
+
+  return { content: normalizedContent, imageUrls: normalizedImageUrls };
 }
 
 function normalizePlanetChatRosterLimit(limit: number) {
@@ -285,14 +316,16 @@ export async function markPlanetChatRead({
 
 export async function sendPlanetChatMessage({
   content,
+  imageUrls = [],
   planetId,
   profileId,
 }: {
   content: string;
+  imageUrls?: string[];
   planetId: string;
   profileId: string;
 }) {
-  const normalizedContent = normalizePlanetChatMessage(content);
+  const payload = normalizePlanetChatPayload(content, imageUrls);
 
   return prisma.$transaction(async (tx) => {
     await requireApprovedMembership(tx, planetId, profileId);
@@ -300,7 +333,8 @@ export async function sendPlanetChatMessage({
     const message = await tx.planetMessage.create({
       data: {
         authorId: profileId,
-        content: normalizedContent,
+        content: payload.content,
+        imageUrls: payload.imageUrls,
         planetId,
       },
       select: {
@@ -342,11 +376,7 @@ async function updatePlanetChatPreference({
   value: boolean;
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await requireApprovedMembership(
-      tx,
-      planetId,
-      profileId,
-    );
+    const membership = await requireApprovedMembership(tx, planetId, profileId);
     const preferenceAt = resolvePlanetChatPreferenceTimestamp(value);
 
     if (preferenceAt) {
@@ -457,6 +487,7 @@ export async function getPlanetChatRoster(
               id: true,
               authorId: true,
               content: true,
+              imageUrls: true,
               createdAt: true,
               author: {
                 select: {
