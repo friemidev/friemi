@@ -384,17 +384,22 @@ model PlanetMember {
 }
 
 model PlanetMessage {
-  id        String      @id @default(cuid())
-  planetId  String
-  authorId  String
-  content   String      @db.Text
-  imageUrls String[]    @default([])
-  planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
-  author    UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id                  String      @id @default(cuid())
+  planetId            String
+  authorId            String
+  content             String      @db.Text
+  imageUrls           String[]    @default([])
+  mentionedProfileIds String[]    @default([])
+  mentionLabels       String[]    @default([])
+  mentionsEveryone    Boolean     @default(false)
+  planet              Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author              UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   @@index([planetId, createdAt])
+  @@index([planetId, mentionsEveryone, createdAt])
+  @@index([mentionedProfileIds], type: Gin)
   @@index([authorId, createdAt])
 }
 
@@ -590,20 +595,25 @@ model ActivityManagementLog {
 }
 
 model ActivityRoomMessage {
-  id          String       @id @default(cuid())
-  activityId  String
-  senderId    String
-  body        String       @db.Text
-  imageUrls   String[]     @default([])
-  deletedAt   DateTime?
-  deletedById String?
-  activity    Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  sender      UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  deletedBy   UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  activityId          String
+  senderId            String
+  body                String       @db.Text
+  imageUrls           String[]     @default([])
+  mentionedProfileIds String[]     @default([])
+  mentionLabels       String[]     @default([])
+  mentionsEveryone    Boolean      @default(false)
+  deletedAt           DateTime?
+  deletedById         String?
+  activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  sender              UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  deletedBy           UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([activityId, createdAt])
+  @@index([activityId, mentionsEveryone, createdAt])
+  @@index([mentionedProfileIds], type: Gin)
   @@index([senderId, createdAt])
   @@index([deletedById])
 }

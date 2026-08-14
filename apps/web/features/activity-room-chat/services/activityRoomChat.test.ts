@@ -4,6 +4,7 @@ import {
   ActivityRoomChatDomainError,
   activityRoomMessageMaxLength,
   canDeleteActivityRoomMessage,
+  canMentionEveryoneInActivityRoom,
   hasUnreadActivityAnnouncement,
   normalizeActivityRoomMessageBody,
   normalizeActivityRoomMessagePayload,
@@ -229,4 +230,11 @@ test("activity room message delete permission stays narrow", () => {
     }),
     false,
   );
+});
+
+test("activity room mention-all permission is limited to managers", () => {
+  assert.equal(canMentionEveryoneInActivityRoom("ORGANIZER"), true);
+  assert.equal(canMentionEveryoneInActivityRoom("CO_MANAGER"), true);
+  assert.equal(canMentionEveryoneInActivityRoom("PARTICIPANT"), false);
+  assert.equal(canMentionEveryoneInActivityRoom("NONE"), false);
 });

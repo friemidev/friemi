@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canMentionEveryoneInPlanet,
   getLocalizedPlanetChatName,
   getPlanetChatUnreadSince,
   isApprovedPlanetChatMember,
@@ -130,6 +131,7 @@ test("planet chat roster sorts pinned items first and then by latest activity", 
       name: id,
       slug: id,
       tags: [],
+      unreadMention: null,
       unreadCount: 0,
     };
   }
@@ -152,4 +154,10 @@ test("planet chat roster sorts pinned items first and then by latest activity", 
     sorted.map((entry) => entry.id),
     ["pinned", "latest", "older"],
   );
+});
+
+test("planet mention-all permission is limited to owners and admins", () => {
+  assert.equal(canMentionEveryoneInPlanet("OWNER"), true);
+  assert.equal(canMentionEveryoneInPlanet("ADMIN"), true);
+  assert.equal(canMentionEveryoneInPlanet("MEMBER"), false);
 });

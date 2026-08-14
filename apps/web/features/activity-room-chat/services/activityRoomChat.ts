@@ -16,6 +16,11 @@ import {
   type ActivityCheckInParticipantViewModel,
 } from "@/features/activities/queries/getActivityCheckInRoster";
 import { getMutualFollowProfileIds } from "@/features/follow/queries/followRelations";
+import type {
+  ChatMentionMember,
+  ChatUnreadMention,
+} from "@/features/chat/types";
+import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
 import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
@@ -38,6 +43,8 @@ export type ActivityRoomChatErrorCode =
   | "BODY_TOO_LONG"
   | "TOO_MANY_IMAGES"
   | "INVALID_IMAGE_URL"
+  | "INVALID_MENTION"
+  | "MENTION_ALL_FORBIDDEN"
   | "MESSAGE_NOT_FOUND"
   | "DELETE_FORBIDDEN";
 
@@ -61,6 +68,9 @@ export type ActivityRoomMessageViewModel = {
   isDeleted: boolean;
   isMine: boolean;
   imageUrls: string[];
+  mentionedProfileIds: string[];
+  mentionLabels: string[];
+  mentionsEveryone: boolean;
   sender: {
     id: string;
     avatarUrl: string | null;
@@ -117,6 +127,7 @@ export type ActivityRoomChatRosterItemViewModel = {
   title: string;
   isMuted: boolean;
   isPinned: boolean;
+  unreadMention: ChatUnreadMention | null;
   unreadCount: number;
 };
 
@@ -188,6 +199,9 @@ const messageSelect = {
   createdAt: true,
   deletedAt: true,
   imageUrls: true,
+  mentionedProfileIds: true,
+  mentionLabels: true,
+  mentionsEveryone: true,
   senderId: true,
   sender: {
     select: {
@@ -476,6 +490,9 @@ function mapActivityRoomMessage(
     body: isDeleted ? "" : message.body,
     createdAt: message.createdAt.toISOString(),
     imageUrls: isDeleted ? [] : message.imageUrls,
+    mentionedProfileIds: isDeleted ? [] : message.mentionedProfileIds,
+    mentionLabels: isDeleted ? [] : message.mentionLabels,
+    mentionsEveryone: !isDeleted && message.mentionsEveryone,
     isDeleted,
     isMine: message.senderId === viewerProfileId,
     sender: {
@@ -631,10 +648,82 @@ async function getActivityRoomUnreadCountMap(
   return new Map(groups.map((group) => [group.activityId, group._count._all]));
 }
 
+async function getActivityRoomUnreadMentionMap(
+  rooms: Array<{
+    id: string;
+    roomReadStates: Array<{ lastReadAt: Date }>;
+  }>,
+  viewerProfileId: string,
+) {
+  if (rooms.length === 0) {
+    return new Map<string, ChatUnreadMention>();
+  }
+
+  const messages = await prisma.activityRoomMessage.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { mentionedProfileIds: { has: viewerProfileId } },
+            { mentionsEveryone: true },
+          ],
+        },
+        {
+          OR: rooms.map((room) => ({
+            activityId: room.id,
+            ...(room.roomReadStates[0]?.lastReadAt
+              ? {
+                  createdAt: {
+                    gt: room.roomReadStates[0].lastReadAt,
+                  },
+                }
+              : {}),
+          })),
+        },
+      ],
+      deletedAt: null,
+      senderId: { not: viewerProfileId },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      activityId: true,
+      createdAt: true,
+      id: true,
+      mentionedProfileIds: true,
+      sender: {
+        select: {
+          friendCode: true,
+          nickname: true,
+        },
+      },
+    },
+  });
+  const result = new Map<string, ChatUnreadMention>();
+
+  for (const message of messages) {
+    if (result.has(message.activityId)) {
+      continue;
+    }
+
+    result.set(message.activityId, {
+      createdAt: message.createdAt.toISOString(),
+      kind: message.mentionedProfileIds.includes(viewerProfileId)
+        ? "ME"
+        : "ALL",
+      messageId: message.id,
+      senderName:
+        message.sender.nickname.trim() || message.sender.friendCode || "Friemi",
+    });
+  }
+
+  return result;
+}
+
 function mapActivityRoomRosterItem(
   room: ActivityRoomRosterResult,
   viewerProfileId: string,
   unreadCount: number,
+  unreadMention: ChatUnreadMention | null,
 ): ActivityRoomChatRosterItemViewModel {
   const lastMessage = room.roomMessages[0] ?? null;
 
@@ -663,7 +752,164 @@ function mapActivityRoomRosterItem(
     title: room.title,
     isMuted: Boolean(room.roomReadStates[0]?.mutedAt),
     isPinned: Boolean(room.roomReadStates[0]?.pinnedAt),
+    unreadMention,
     unreadCount,
+  };
+}
+
+export function canMentionEveryoneInActivityRoom(
+  role: ActivityRoomChatMemberRole,
+) {
+  return role === "ORGANIZER" || role === "CO_MANAGER";
+}
+
+async function getActivityRoomMentionMembers(db: DbClient, activityId: string) {
+  const activity = await db.activity.findUnique({
+    where: { id: activityId },
+    select: {
+      organizer: {
+        select: {
+          avatarUrl: true,
+          id: true,
+          nickname: true,
+          status: true,
+        },
+      },
+      coManagers: {
+        select: {
+          manager: {
+            select: {
+              avatarUrl: true,
+              id: true,
+              nickname: true,
+              status: true,
+            },
+          },
+        },
+      },
+      participants: {
+        where: { status: { in: roomParticipantStatuses } },
+        select: {
+          userProfile: {
+            select: {
+              avatarUrl: true,
+              id: true,
+              nickname: true,
+              status: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!activity) {
+    return [];
+  }
+
+  const profiles = [
+    activity.organizer,
+    ...activity.coManagers.map((coManager) => coManager.manager),
+    ...activity.participants.map((participant) => participant.userProfile),
+  ];
+  const members = new Map<string, ChatMentionMember>();
+
+  for (const profile of profiles) {
+    if (profile.status !== "ACTIVE" || members.has(profile.id)) {
+      continue;
+    }
+
+    members.set(profile.id, {
+      avatarUrl: profile.avatarUrl,
+      id: profile.id,
+      nickname: profile.nickname.trim() || "Friemi",
+    });
+  }
+
+  return [...members.values()];
+}
+
+export async function getActivityRoomMentionCandidates({
+  activityId,
+  query = "",
+  viewerProfileId,
+}: {
+  activityId: string;
+  query?: string;
+  viewerProfileId: string;
+}) {
+  const policy = await getActivityRoomPolicy(
+    prisma,
+    viewerProfileId,
+    activityId,
+  );
+
+  if (!policy.canView) {
+    throw new ActivityRoomChatDomainError(
+      getDeniedActivityRoomChatReason(policy),
+    );
+  }
+
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const members = (await getActivityRoomMentionMembers(prisma, activityId))
+    .filter((member) => member.id !== viewerProfileId)
+    .filter(
+      (member) =>
+        !normalizedQuery ||
+        member.nickname.toLocaleLowerCase().includes(normalizedQuery),
+    )
+    .slice(0, 50);
+
+  return {
+    canMentionEveryone: canMentionEveryoneInActivityRoom(policy.role),
+    members,
+  };
+}
+
+async function resolveActivityRoomMessageMentions({
+  activityId,
+  db,
+  mentionedProfileIds,
+  mentionsEveryone,
+  policy,
+  senderId,
+}: {
+  activityId: string;
+  db: DbClient;
+  mentionedProfileIds: string[];
+  mentionsEveryone: boolean;
+  policy: ActivityRoomChatPolicy;
+  senderId: string;
+}) {
+  if (mentionsEveryone && !canMentionEveryoneInActivityRoom(policy.role)) {
+    throw new ActivityRoomChatDomainError("MENTION_ALL_FORBIDDEN");
+  }
+
+  const requestedIds = normalizeChatMentionProfileIds(
+    mentionedProfileIds,
+  ).filter((profileId) => profileId !== senderId);
+
+  if (requestedIds.length === 0) {
+    return {
+      mentionLabels: [] as string[],
+      mentionedProfileIds: [] as string[],
+      mentionsEveryone,
+    };
+  }
+
+  const members = await getActivityRoomMentionMembers(db, activityId);
+  const memberById = new Map(members.map((member) => [member.id, member]));
+
+  if (requestedIds.some((profileId) => !memberById.has(profileId))) {
+    throw new ActivityRoomChatDomainError("INVALID_MENTION");
+  }
+
+  return {
+    mentionLabels: requestedIds.map(
+      (profileId) => memberById.get(profileId)?.nickname ?? "Friemi",
+    ),
+    mentionedProfileIds: requestedIds,
+    mentionsEveryone,
   };
 }
 
@@ -1141,10 +1387,11 @@ export async function getActivityRoomChatRoster(
       },
     },
   });
-  const unreadCountByActivityId = await getActivityRoomUnreadCountMap(
-    rooms,
-    viewerProfileId,
-  );
+  const [unreadCountByActivityId, unreadMentionByActivityId] =
+    await Promise.all([
+      getActivityRoomUnreadCountMap(rooms, viewerProfileId),
+      getActivityRoomUnreadMentionMap(rooms, viewerProfileId),
+    ]);
 
   return rooms
     .map((room) =>
@@ -1152,6 +1399,7 @@ export async function getActivityRoomChatRoster(
         room,
         viewerProfileId,
         unreadCountByActivityId.get(room.id) ?? 0,
+        unreadMentionByActivityId.get(room.id) ?? null,
       ),
     )
     .sort((roomA, roomB) => {
@@ -1324,11 +1572,15 @@ export async function sendActivityRoomMessage({
   activityId,
   body,
   imageUrls = [],
+  mentionedProfileIds = [],
+  mentionsEveryone = false,
   senderId,
 }: {
   activityId: string;
   body: string;
   imageUrls?: string[];
+  mentionedProfileIds?: string[];
+  mentionsEveryone?: boolean;
   senderId: string;
 }) {
   const payload = normalizeActivityRoomMessagePayload(body, imageUrls);
@@ -1342,11 +1594,23 @@ export async function sendActivityRoomMessage({
       );
     }
 
+    const mentions = await resolveActivityRoomMessageMentions({
+      activityId,
+      db: tx,
+      mentionedProfileIds,
+      mentionsEveryone,
+      policy,
+      senderId,
+    });
+
     const message = await tx.activityRoomMessage.create({
       data: {
         activityId,
         body: payload.body,
         imageUrls: payload.imageUrls,
+        mentionLabels: mentions.mentionLabels,
+        mentionedProfileIds: mentions.mentionedProfileIds,
+        mentionsEveryone: mentions.mentionsEveryone,
         senderId,
       },
       select: messageSelect,

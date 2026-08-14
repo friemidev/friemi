@@ -2874,6 +2874,18 @@ function FootprintsMessageList({
   );
 }
 
+function getUnreadMentionPreview(locale: string, kind: "ALL" | "ME") {
+  if (locale === "fr") {
+    return kind === "ALL" ? "[@tout le monde]" : "[Vous avez été mentionné]";
+  }
+
+  if (locale === "en") {
+    return kind === "ALL" ? "[@everyone]" : "[Mentioned you]";
+  }
+
+  return kind === "ALL" ? "[@所有人]" : "[有人@我]";
+}
+
 function FootprintsRoomChatRow({
   locale,
   room,
@@ -2887,11 +2899,16 @@ function FootprintsRoomChatRow({
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const showUnreadBadge = unreadCount > 0 && !room.isMuted;
   const showMutedUnreadDot = unreadCount > 0 && room.isMuted;
-  const preview = lastMessage
-    ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
-        lastMessage.body.trim() || t.imageMessage
-      }`
-    : t.roomChatEmptyPreview;
+  const mentionPreview = room.unreadMention
+    ? getUnreadMentionPreview(locale, room.unreadMention.kind)
+    : null;
+  const preview =
+    mentionPreview ??
+    (lastMessage
+      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+          lastMessage.body.trim() || t.imageMessage
+        }`
+      : t.roomChatEmptyPreview);
   const time = lastMessage?.createdAt ?? room.startAt;
 
   return (
@@ -2944,9 +2961,11 @@ function FootprintsRoomChatRow({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[13px] leading-5",
-                showUnreadBadge
-                  ? "font-bold text-[#111210]"
-                  : "font-semibold text-[#5F635E]",
+                mentionPreview
+                  ? "font-bold text-[#D63B68]"
+                  : showUnreadBadge
+                    ? "font-bold text-[#111210]"
+                    : "font-semibold text-[#5F635E]",
               )}
             >
               {preview}
@@ -2984,6 +3003,9 @@ function FootprintsPlanetChatRow({
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const showUnreadBadge = unreadCount > 0 && !planet.isMuted;
   const showMutedUnreadDot = unreadCount > 0 && planet.isMuted;
+  const mentionPreview = planet.unreadMention
+    ? getUnreadMentionPreview(locale, planet.unreadMention.kind)
+    : null;
   const planetLabel =
     locale === "fr"
       ? "Discussion de planète"
@@ -2996,11 +3018,13 @@ function FootprintsPlanetChatRow({
       : locale === "en"
         ? "No messages yet"
         : "还没有消息";
-  const preview = lastMessage
-    ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
-        lastMessage.body.trim() || t.imageMessage
-      }`
-    : emptyPreview;
+  const preview =
+    mentionPreview ??
+    (lastMessage
+      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+          lastMessage.body.trim() || t.imageMessage
+        }`
+      : emptyPreview);
   const time = lastMessage?.createdAt ?? planet.joinedAt;
   const href = `${withLocale(locale, `/planets/${planet.slug}/chat`)}?returnTo=${encodeURIComponent(returnHref)}`;
 
@@ -3069,9 +3093,11 @@ function FootprintsPlanetChatRow({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-[13px] leading-5",
-                showUnreadBadge
-                  ? "font-bold text-[#111210]"
-                  : "font-semibold text-[#5F635E]",
+                mentionPreview
+                  ? "font-bold text-[#D63B68]"
+                  : showUnreadBadge
+                    ? "font-bold text-[#111210]"
+                    : "font-semibold text-[#5F635E]",
               )}
             >
               {preview}

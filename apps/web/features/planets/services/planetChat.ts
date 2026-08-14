@@ -1,4 +1,9 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type PlanetMemberRole } from "@prisma/client";
+import type {
+  ChatMentionMember,
+  ChatUnreadMention,
+} from "@/features/chat/types";
+import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
 import { prisma } from "@/lib/prisma";
 
 export const planetChatMessageMaxLength = 1000;
@@ -22,10 +27,15 @@ export type PlanetChatRosterItemViewModel = {
   name: string;
   slug: string;
   tags: string[];
+  unreadMention: ChatUnreadMention | null;
   unreadCount: number;
 };
 
-export type PlanetChatErrorCode = "CHAT_ACCESS_DENIED" | "INVALID_MESSAGE";
+export type PlanetChatErrorCode =
+  | "CHAT_ACCESS_DENIED"
+  | "INVALID_MESSAGE"
+  | "INVALID_MENTION"
+  | "MENTION_ALL_FORBIDDEN";
 
 export class PlanetChatDomainError extends Error {
   code: PlanetChatErrorCode;
@@ -195,6 +205,76 @@ async function getPlanetChatUnreadCountMap(
   return new Map(groups.map((group) => [group.planetId, group._count._all]));
 }
 
+async function getPlanetChatUnreadMentionMap(
+  planets: Array<{
+    chatReadStates: Array<{ lastReadAt: Date }>;
+    id: string;
+    joinedAt: Date;
+  }>,
+  viewerProfileId: string,
+) {
+  if (planets.length === 0) {
+    return new Map<string, ChatUnreadMention>();
+  }
+
+  const messages = await prisma.planetMessage.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { mentionedProfileIds: { has: viewerProfileId } },
+            { mentionsEveryone: true },
+          ],
+        },
+        {
+          OR: planets.map((planet) => ({
+            createdAt: {
+              gt: getPlanetChatUnreadSince(
+                planet.joinedAt,
+                planet.chatReadStates[0]?.lastReadAt,
+              ),
+            },
+            planetId: planet.id,
+          })),
+        },
+      ],
+      authorId: { not: viewerProfileId },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      author: {
+        select: {
+          friendCode: true,
+          nickname: true,
+        },
+      },
+      createdAt: true,
+      id: true,
+      mentionedProfileIds: true,
+      planetId: true,
+    },
+  });
+  const result = new Map<string, ChatUnreadMention>();
+
+  for (const message of messages) {
+    if (result.has(message.planetId)) {
+      continue;
+    }
+
+    result.set(message.planetId, {
+      createdAt: message.createdAt.toISOString(),
+      kind: message.mentionedProfileIds.includes(viewerProfileId)
+        ? "ME"
+        : "ALL",
+      messageId: message.id,
+      senderName:
+        message.author.nickname.trim() || message.author.friendCode || "Friemi",
+    });
+  }
+
+  return result;
+}
+
 async function requireApprovedMembership(
   tx: Prisma.TransactionClient,
   planetId: string,
@@ -209,6 +289,7 @@ async function requireApprovedMembership(
     },
     select: {
       joinedAt: true,
+      role: true,
       status: true,
     },
   });
@@ -218,6 +299,158 @@ async function requireApprovedMembership(
   }
 
   return membership;
+}
+
+export function canMentionEveryoneInPlanet(role: PlanetMemberRole) {
+  return role === "OWNER" || role === "ADMIN";
+}
+
+export async function getPlanetMentionCandidates({
+  planetId,
+  query = "",
+  viewerProfileId,
+}: {
+  planetId: string;
+  query?: string;
+  viewerProfileId: string;
+}) {
+  const membership = await prisma.planetMember.findUnique({
+    where: {
+      planetId_profileId: {
+        planetId,
+        profileId: viewerProfileId,
+      },
+    },
+    select: {
+      role: true,
+      status: true,
+    },
+  });
+
+  if (!isApprovedPlanetChatMember(membership?.status) || !membership) {
+    throw new PlanetChatDomainError("CHAT_ACCESS_DENIED");
+  }
+
+  const normalizedQuery = query.trim();
+  const memberships = await prisma.planetMember.findMany({
+    where: {
+      planetId,
+      profileId: { not: viewerProfileId },
+      status: "APPROVED",
+      profile: {
+        status: "ACTIVE",
+        ...(normalizedQuery
+          ? {
+              OR: [
+                {
+                  nickname: {
+                    contains: normalizedQuery,
+                    mode: "insensitive" as const,
+                  },
+                },
+                {
+                  friendCode: {
+                    contains: normalizedQuery,
+                    mode: "insensitive" as const,
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+    },
+    orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
+    take: 50,
+    select: {
+      profile: {
+        select: {
+          avatarUrl: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
+    },
+  });
+
+  return {
+    canMentionEveryone: canMentionEveryoneInPlanet(membership.role),
+    members: memberships.map(
+      ({ profile }): ChatMentionMember => ({
+        avatarUrl: profile.avatarUrl,
+        id: profile.id,
+        nickname: profile.nickname.trim() || profile.friendCode || "Friemi",
+      }),
+    ),
+  };
+}
+
+async function resolvePlanetMessageMentions({
+  mentionedProfileIds,
+  mentionsEveryone,
+  membershipRole,
+  planetId,
+  profileId,
+  tx,
+}: {
+  mentionedProfileIds: string[];
+  mentionsEveryone: boolean;
+  membershipRole: PlanetMemberRole;
+  planetId: string;
+  profileId: string;
+  tx: Prisma.TransactionClient;
+}) {
+  if (mentionsEveryone && !canMentionEveryoneInPlanet(membershipRole)) {
+    throw new PlanetChatDomainError("MENTION_ALL_FORBIDDEN");
+  }
+
+  const requestedIds = normalizeChatMentionProfileIds(
+    mentionedProfileIds,
+  ).filter((targetProfileId) => targetProfileId !== profileId);
+
+  if (requestedIds.length === 0) {
+    return {
+      mentionLabels: [] as string[],
+      mentionedProfileIds: [] as string[],
+      mentionsEveryone,
+    };
+  }
+
+  const targets = await tx.planetMember.findMany({
+    where: {
+      planetId,
+      profileId: { in: requestedIds },
+      status: "APPROVED",
+      profile: { status: "ACTIVE" },
+    },
+    select: {
+      profile: {
+        select: {
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
+    },
+  });
+  const targetById = new Map(
+    targets.map(({ profile }) => [profile.id, profile]),
+  );
+
+  if (
+    requestedIds.some((targetProfileId) => !targetById.has(targetProfileId))
+  ) {
+    throw new PlanetChatDomainError("INVALID_MENTION");
+  }
+
+  return {
+    mentionLabels: requestedIds.map((targetProfileId) => {
+      const target = targetById.get(targetProfileId);
+      return target?.nickname.trim() || target?.friendCode || "Friemi";
+    }),
+    mentionedProfileIds: requestedIds,
+    mentionsEveryone,
+  };
 }
 
 export async function getPlanetChatUnreadState({
@@ -317,24 +550,39 @@ export async function markPlanetChatRead({
 export async function sendPlanetChatMessage({
   content,
   imageUrls = [],
+  mentionedProfileIds = [],
+  mentionsEveryone = false,
   planetId,
   profileId,
 }: {
   content: string;
   imageUrls?: string[];
+  mentionedProfileIds?: string[];
+  mentionsEveryone?: boolean;
   planetId: string;
   profileId: string;
 }) {
   const payload = normalizePlanetChatPayload(content, imageUrls);
 
   return prisma.$transaction(async (tx) => {
-    await requireApprovedMembership(tx, planetId, profileId);
+    const membership = await requireApprovedMembership(tx, planetId, profileId);
+    const mentions = await resolvePlanetMessageMentions({
+      mentionedProfileIds,
+      mentionsEveryone,
+      membershipRole: membership.role,
+      planetId,
+      profileId,
+      tx,
+    });
 
     const message = await tx.planetMessage.create({
       data: {
         authorId: profileId,
         content: payload.content,
         imageUrls: payload.imageUrls,
+        mentionLabels: mentions.mentionLabels,
+        mentionedProfileIds: mentions.mentionedProfileIds,
+        mentionsEveryone: mentions.mentionsEveryone,
         planetId,
       },
       select: {
@@ -505,10 +753,10 @@ export async function getPlanetChatRoster(
     ...membership.planet,
     joinedAt: membership.joinedAt,
   }));
-  const unreadCountByPlanetId = await getPlanetChatUnreadCountMap(
-    planets,
-    viewerProfileId,
-  );
+  const [unreadCountByPlanetId, unreadMentionByPlanetId] = await Promise.all([
+    getPlanetChatUnreadCountMap(planets, viewerProfileId),
+    getPlanetChatUnreadMentionMap(planets, viewerProfileId),
+  ]);
 
   return sortPlanetChatRosterItems(
     memberships.map((membership) => {
@@ -542,6 +790,7 @@ export async function getPlanetChatRoster(
         }),
         slug: planet.slug,
         tags: planet.tags,
+        unreadMention: unreadMentionByPlanetId.get(planet.id) ?? null,
         unreadCount: unreadCountByPlanetId.get(planet.id) ?? 0,
       };
     }),

@@ -38,11 +38,18 @@ import { createPortal, useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
+import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
 import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
 } from "@/features/chat/components/ChatImageAttachmentPicker";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import type { ChatMentionMember } from "@/features/chat/types";
+import {
+  getChatMentionEveryoneToken,
+  getChatMentionMemberToken,
+} from "@/features/chat/utils/chatMentions";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
@@ -2022,7 +2029,18 @@ function MessageRow({
                 message.isDeleted && "font-semibold italic",
               )}
             >
-              {message.isDeleted ? copy.deletedMessage : message.body}
+              {message.isDeleted ? (
+                copy.deletedMessage
+              ) : (
+                <ChatMentionText
+                  content={message.body}
+                  mentionClassName={
+                    message.isMine ? "text-[#BDF3D2]" : "text-[#7A2FBE]"
+                  }
+                  mentionLabels={message.mentionLabels}
+                  mentionsEveryone={message.mentionsEveryone}
+                />
+              )}
             </p>
           ) : null}
         </div>
@@ -2089,6 +2107,12 @@ function RoomComposer({
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
+  const [mentionedMembers, setMentionedMembers] = useState<ChatMentionMember[]>(
+    [],
+  );
+  const [mentionsEveryone, setMentionsEveryone] = useState(false);
+  const mentionCursorRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function insertEmoji(emoji: string) {
@@ -2105,6 +2129,83 @@ function RoomComposer({
       textarea?.focus();
       textarea?.setSelectionRange(cursor, cursor);
     });
+  }
+
+  function setMentionPicker(nextOpen: boolean) {
+    if (nextOpen) {
+      mentionCursorRef.current =
+        textareaRef.current?.selectionStart ?? body.length;
+    }
+
+    setMentionPickerOpen(nextOpen);
+  }
+
+  function insertMentionToken(token: string) {
+    const textarea = textareaRef.current;
+    const cursor = mentionCursorRef.current;
+    const tokenStart = body[cursor - 1] === "@" ? cursor - 1 : cursor;
+    const nextBody =
+      `${body.slice(0, tokenStart)}${token} ${body.slice(cursor)}`.slice(
+        0,
+        500,
+      );
+    const nextCursor = Math.min(tokenStart + token.length + 1, nextBody.length);
+
+    setBody(nextBody);
+    window.requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  function handleSelectMember(member: ChatMentionMember) {
+    const token = getChatMentionMemberToken(member);
+    const hasPendingAt = body[mentionCursorRef.current - 1] === "@";
+
+    if (hasPendingAt || !body.includes(token)) {
+      insertMentionToken(token);
+    }
+
+    setMentionedMembers((current) =>
+      current.some((item) => item.id === member.id)
+        ? current
+        : [...current, member],
+    );
+  }
+
+  function handleSelectEveryone() {
+    const token = getChatMentionEveryoneToken(locale);
+    const hasPendingAt = body[mentionCursorRef.current - 1] === "@";
+
+    if (hasPendingAt || !body.includes(token)) {
+      insertMentionToken(token);
+    }
+
+    setMentionsEveryone(true);
+  }
+
+  function handleBodyChange(nextBody: string, cursor: number) {
+    const previousBody = body;
+    setBody(nextBody);
+    setMentionedMembers((current) =>
+      current.filter((member) =>
+        nextBody.includes(getChatMentionMemberToken(member)),
+      ),
+    );
+
+    if (!nextBody.includes(getChatMentionEveryoneToken(locale))) {
+      setMentionsEveryone(false);
+    }
+
+    const insertedAt =
+      nextBody.length > previousBody.length &&
+      cursor > 0 &&
+      nextBody[cursor - 1] === "@";
+
+    if (insertedAt) {
+      mentionCursorRef.current = cursor;
+      setMentionPickerOpen(true);
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -2126,7 +2227,11 @@ function RoomComposer({
     formData.set("activityId", activityId);
     formData.set("body", trimmedBody);
     formData.set("locale", locale);
+    formData.set("mentionsEveryone", mentionsEveryone ? "1" : "0");
     imageUrls.forEach((imageUrl) => formData.append("imageUrls", imageUrl));
+    mentionedMembers.forEach((member) =>
+      formData.append("mentionedProfileIds", member.id),
+    );
 
     setFormError("");
     setIsSending(true);
@@ -2136,6 +2241,8 @@ function RoomComposer({
         if (state.ok && state.messageId) {
           setBody("");
           setImageUrls([]);
+          setMentionedMembers([]);
+          setMentionsEveryone(false);
           onSent({
             body: trimmedBody,
             createdAt: new Date().toISOString(),
@@ -2143,6 +2250,9 @@ function RoomComposer({
             isDeleted: false,
             isMine: true,
             imageUrls,
+            mentionedProfileIds: mentionedMembers.map((member) => member.id),
+            mentionLabels: mentionedMembers.map((member) => member.nickname),
+            mentionsEveryone,
             sender: {
               avatarUrl: viewer?.avatarUrl ?? null,
               friendCode: null,
@@ -2184,6 +2294,17 @@ function RoomComposer({
           label={copy.addEmoji}
           onSelect={insertEmoji}
         />
+        <ChatMentionPicker
+          disabled={disabled || isSending}
+          locale={locale}
+          onOpenChange={setMentionPicker}
+          onSelectEveryone={handleSelectEveryone}
+          onSelectMember={handleSelectMember}
+          open={mentionPickerOpen}
+          roomId={activityId}
+          scopeKind="activity"
+          selectedProfileIds={mentionedMembers.map((member) => member.id)}
+        />
         <ChatImageAttachmentPicker
           attachLabel={copy.attachImage}
           disabled={disabled || isSending}
@@ -2201,7 +2322,12 @@ function RoomComposer({
           disabled={disabled || isSending}
           maxLength={500}
           name="body"
-          onChange={(event) => setBody(event.target.value)}
+          onChange={(event) =>
+            handleBodyChange(
+              event.target.value,
+              event.target.selectionStart ?? event.target.value.length,
+            )
+          }
           placeholder={copy.placeholder}
           rows={1}
           ref={textareaRef}

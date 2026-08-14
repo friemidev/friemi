@@ -4,10 +4,16 @@ import { LoaderCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
 import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
 } from "@/features/chat/components/ChatImageAttachmentPicker";
+import type { ChatMentionMember } from "@/features/chat/types";
+import {
+  getChatMentionEveryoneToken,
+  getChatMentionMemberToken,
+} from "@/features/chat/utils/chatMentions";
 import {
   sendPlanetMessageAction,
   type PlanetChatActionState,
@@ -71,9 +77,15 @@ export function PlanetChatComposer({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mentionCursorRef = useRef(0);
   const [content, setContent] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isImageUploading, setIsImageUploading] = useState(false);
+  const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
+  const [mentionedMembers, setMentionedMembers] = useState<ChatMentionMember[]>(
+    [],
+  );
+  const [mentionsEveryone, setMentionsEveryone] = useState(false);
   const initialState: PlanetChatActionState = {};
   const [state, formAction, isPending] = useActionState(
     sendPlanetMessageAction,
@@ -86,6 +98,8 @@ export function PlanetChatComposer({
     formRef.current?.reset();
     setContent("");
     setImageUrls([]);
+    setMentionedMembers([]);
+    setMentionsEveryone(false);
     router.refresh();
     keepMobileChatPageAnchored();
   }, [router, state.messageId, state.ok]);
@@ -104,6 +118,85 @@ export function PlanetChatComposer({
     });
   }
 
+  function setMentionPicker(nextOpen: boolean) {
+    if (nextOpen) {
+      mentionCursorRef.current =
+        inputRef.current?.selectionStart ?? content.length;
+    }
+
+    setMentionPickerOpen(nextOpen);
+  }
+
+  function insertMentionToken(token: string) {
+    const input = inputRef.current;
+    const cursor = mentionCursorRef.current;
+    const tokenStart = content[cursor - 1] === "@" ? cursor - 1 : cursor;
+    const suffix = content.slice(cursor);
+    const nextContent =
+      `${content.slice(0, tokenStart)}${token} ${suffix}`.slice(0, 1000);
+    const nextCursor = Math.min(
+      tokenStart + token.length + 1,
+      nextContent.length,
+    );
+
+    setContent(nextContent);
+    window.requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  function handleSelectMember(member: ChatMentionMember) {
+    const token = getChatMentionMemberToken(member);
+    const hasPendingAt = content[mentionCursorRef.current - 1] === "@";
+
+    if (hasPendingAt || !content.includes(token)) {
+      insertMentionToken(token);
+    }
+
+    setMentionedMembers((current) =>
+      current.some((item) => item.id === member.id)
+        ? current
+        : [...current, member],
+    );
+  }
+
+  function handleSelectEveryone() {
+    const token = getChatMentionEveryoneToken(locale);
+    const hasPendingAt = content[mentionCursorRef.current - 1] === "@";
+
+    if (hasPendingAt || !content.includes(token)) {
+      insertMentionToken(token);
+    }
+
+    setMentionsEveryone(true);
+  }
+
+  function handleContentChange(nextContent: string, cursor: number) {
+    const previousContent = content;
+    setContent(nextContent);
+    setMentionedMembers((current) =>
+      current.filter((member) =>
+        nextContent.includes(getChatMentionMemberToken(member)),
+      ),
+    );
+
+    const everyoneToken = getChatMentionEveryoneToken(locale);
+    if (!nextContent.includes(everyoneToken)) {
+      setMentionsEveryone(false);
+    }
+
+    const insertedAt =
+      nextContent.length > previousContent.length &&
+      cursor > 0 &&
+      nextContent[cursor - 1] === "@";
+
+    if (insertedAt) {
+      mentionCursorRef.current = cursor;
+      setMentionPickerOpen(true);
+    }
+  }
+
   return (
     <div>
       <form
@@ -115,6 +208,19 @@ export function PlanetChatComposer({
         <input name="locale" type="hidden" value={locale} />
         <input name="planetId" type="hidden" value={planetId} />
         <input name="planetSlug" type="hidden" value={planetSlug} />
+        <input
+          name="mentionsEveryone"
+          type="hidden"
+          value={mentionsEveryone ? "1" : "0"}
+        />
+        {mentionedMembers.map((member) => (
+          <input
+            key={member.id}
+            name="mentionedProfileIds"
+            type="hidden"
+            value={member.id}
+          />
+        ))}
         {imageUrls.map((imageUrl) => (
           <input
             key={imageUrl}
@@ -135,6 +241,17 @@ export function PlanetChatComposer({
             label={copy.addEmoji}
             onSelect={insertEmoji}
           />
+          <ChatMentionPicker
+            disabled={isPending}
+            locale={locale}
+            onOpenChange={setMentionPicker}
+            onSelectEveryone={handleSelectEveryone}
+            onSelectMember={handleSelectMember}
+            open={mentionPickerOpen}
+            roomId={planetId}
+            scopeKind="planet"
+            selectedProfileIds={mentionedMembers.map((member) => member.id)}
+          />
           <ChatImageAttachmentPicker
             attachLabel={copy.attachImage}
             disabled={isPending}
@@ -152,7 +269,12 @@ export function PlanetChatComposer({
             disabled={isPending}
             maxLength={1000}
             name="content"
-            onChange={(event) => setContent(event.target.value)}
+            onChange={(event) =>
+              handleContentChange(
+                event.target.value,
+                event.target.selectionStart ?? event.target.value.length,
+              )
+            }
             onFocus={keepMobileChatPageAnchored}
             placeholder={copy.placeholder}
             ref={inputRef}

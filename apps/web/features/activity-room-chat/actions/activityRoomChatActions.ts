@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
 import { getActivityRoomChatCopy } from "../copy";
 import {
   ActivityRoomChatDomainError,
@@ -55,6 +56,11 @@ const sendActivityRoomMessageSchema = z
       .array(z.string().trim().url())
       .max(activityRoomMessageImageMaxCount)
       .default([]),
+    mentionedProfileIds: z
+      .array(z.string().trim().min(1).max(80))
+      .max(chatMentionMaxProfileCount)
+      .default([]),
+    mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
     locale: z.string().min(1).max(16).default("zh-CN"),
   })
   .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
@@ -224,6 +230,8 @@ export async function sendActivityRoomMessageAction(
     activityId: getString(formData, "activityId"),
     body: getString(formData, "body"),
     imageUrls: getStringList(formData, "imageUrls"),
+    mentionedProfileIds: getStringList(formData, "mentionedProfileIds"),
+    mentionsEveryone: getString(formData, "mentionsEveryone") || "0",
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = sendActivityRoomMessageSchema.safeParse(rawInput);
@@ -249,6 +257,10 @@ export async function sendActivityRoomMessageAction(
       activityId: result.data.activityId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
+      mentionedProfileIds: result.data.mentionedProfileIds,
+      mentionsEveryone:
+        result.data.mentionsEveryone === "1" ||
+        result.data.mentionsEveryone === "true",
       senderId: profile.id,
     });
 
