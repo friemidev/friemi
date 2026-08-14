@@ -169,6 +169,9 @@ enum NotificationType {
   MOMENT_REPOSTED
   CHARM_GIFT_RECEIVED
   REPORT_CREATED
+  PLANET_MESSAGE
+  ACTIVITY_ROOM_MESSAGE
+  PLANET_JOIN_REQUEST
 }
 
 enum ReportTargetType {
@@ -366,6 +369,7 @@ model Planet {
   messages         PlanetMessage[]
   chatReadStates   PlanetChatReadState[]
   moments          PlanetMoment[]
+  notifications    Notification[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
@@ -1188,7 +1192,9 @@ model Notification {
   moment                 Moment?               @relation(fields: [momentId], references: [id], onDelete: SetNull)
   momentCommentId        String?
   momentComment          MomentComment?        @relation(fields: [momentCommentId], references: [id], onDelete: SetNull)
-  dedupeKey               String?               @unique @db.VarChar(80)
+  planetId               String?
+  planet                 Planet?               @relation(fields: [planetId], references: [id], onDelete: SetNull)
+  dedupeKey              String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -1199,6 +1205,7 @@ model Notification {
   @@index([charmGiftEventId])
   @@index([momentId])
   @@index([momentCommentId])
+  @@index([planetId])
 }
 
 model OfficialMessage {

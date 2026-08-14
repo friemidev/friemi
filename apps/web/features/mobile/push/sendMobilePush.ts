@@ -278,6 +278,13 @@ export async function sendMobilePushForNotification(notificationId: string) {
         },
       },
       momentId: true,
+      planetId: true,
+      planet: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
       recipientId: true,
       type: true,
     },
@@ -287,34 +294,35 @@ export async function sendMobilePushForNotification(notificationId: string) {
     return { ok: false, skipped: true, reason: "NOTIFICATION_NOT_FOUND" };
   }
 
-  const messageBody =
+  const latestDirectMessage =
     notification.type === "DIRECT_MESSAGE" && notification.actorId
-      ? ((
-          await prisma.directMessage.findFirst({
-            where: {
-              senderId: notification.actorId,
-              conversation: {
-                OR: [
-                  {
-                    userAId: notification.actorId,
-                    userBId: notification.recipientId,
-                  },
-                  {
-                    userAId: notification.recipientId,
-                    userBId: notification.actorId,
-                  },
-                ],
-              },
+      ? await prisma.directMessage.findFirst({
+          where: {
+            senderId: notification.actorId,
+            conversation: {
+              OR: [
+                {
+                  userAId: notification.actorId,
+                  userBId: notification.recipientId,
+                },
+                {
+                  userAId: notification.recipientId,
+                  userBId: notification.actorId,
+                },
+              ],
             },
-            orderBy: {
-              createdAt: "desc",
-            },
-            select: {
-              body: true,
-            },
-          })
-        )?.body ?? null)
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            body: true,
+            conversationId: true,
+          },
+        })
       : null;
+  const messageBody = latestDirectMessage?.body ?? null;
+  const directMessageConversationId = latestDirectMessage?.conversationId ?? null;
 
   const devices = await prisma.mobileDevice.findMany({
     where: {
@@ -362,12 +370,15 @@ export async function sendMobilePushForNotification(notificationId: string) {
         : null,
       locale,
       messageBody,
+      planetName: notification.planet?.name ?? null,
       type: notification.type,
     });
     const path = getNotificationPath({
       actorId: notification.actorId,
       activityId: notification.activityId,
+      conversationId: directMessageConversationId,
       momentId: notification.momentId,
+      planetSlug: notification.planet?.slug ?? null,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {

@@ -405,6 +405,11 @@ export async function openNotificationActivityAction(formData: FormData) {
       actorId: true,
       activityId: true,
       momentId: true,
+      planet: {
+        select: {
+          slug: true,
+        },
+      },
       type: true,
     },
   });
@@ -438,6 +443,39 @@ export async function openNotificationActivityAction(formData: FormData) {
         notification.actorId
           ? `/profile/${notification.actorId}`
           : "/notifications",
+      ),
+    );
+  }
+
+  if (notification?.type === "PLANET_JOIN_REQUEST") {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    if (notification.planet?.slug) {
+      revalidatePath(withLocale(locale, `/planets/${notification.planet.slug}`));
+    }
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "notifications",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.planet?.slug
+          ? `/planets/${notification.planet.slug}`
+          : "/planets",
       ),
     );
   }

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import {
   canCreatePlanet,
   maximumOwnedPlanets,
@@ -303,7 +304,7 @@ export async function joinPlanetAction(formData: FormData) {
   });
   if (!planet) return;
 
-  await prisma.planetMember.upsert({
+  const membership = await prisma.planetMember.upsert({
     where: {
       planetId_profileId: { planetId: planet.id, profileId: profile.id },
     },
@@ -315,6 +316,17 @@ export async function joinPlanetAction(formData: FormData) {
     },
     update: {},
   });
+
+  if (membership.status === "PENDING" && planet.ownerId !== profile.id) {
+    await createNotification(prisma, {
+      actorId: profile.id,
+      occurrenceId: `planet-join-request:${planet.id}:${profile.id}`,
+      planetId: planet.id,
+      recipientId: planet.ownerId,
+      type: "PLANET_JOIN_REQUEST",
+    });
+  }
+
   revalidatePlanet(result.data.locale, result.data.planetSlug);
 }
 
@@ -330,7 +342,7 @@ export async function joinPlanetByInviteAction(formData: FormData) {
   });
   if (!planet) return;
 
-  await prisma.planetMember.upsert({
+  const membership = await prisma.planetMember.upsert({
     where: {
       planetId_profileId: { planetId: planet.id, profileId: profile.id },
     },
@@ -342,6 +354,17 @@ export async function joinPlanetByInviteAction(formData: FormData) {
     },
     update: {},
   });
+
+  if (membership.status === "PENDING" && planet.ownerId !== profile.id) {
+    await createNotification(prisma, {
+      actorId: profile.id,
+      occurrenceId: `planet-join-request:${planet.id}:${profile.id}`,
+      planetId: planet.id,
+      recipientId: planet.ownerId,
+      type: "PLANET_JOIN_REQUEST",
+    });
+  }
+
   revalidatePlanet(locale, planet.slug);
   redirect(withLocale(locale, `/planets/${planet.slug}`));
 }

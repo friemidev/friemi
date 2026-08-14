@@ -20,6 +20,7 @@ type CreateNotificationInput = {
   momentCommentId?: string | null;
   momentId?: string | null;
   occurrenceId?: string | null;
+  planetId?: string | null;
   recipientId: string;
   type: NotificationType;
 };
@@ -43,6 +44,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.charmGiftEventId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
+        input.planetId ?? "",
       ].join("\n"),
     )
     .digest("hex")}`;
@@ -58,6 +60,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,
+    planetId: input.planetId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };

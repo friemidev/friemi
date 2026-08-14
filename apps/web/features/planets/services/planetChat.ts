@@ -4,6 +4,7 @@ import type {
   ChatUnreadMention,
 } from "@/features/chat/types";
 import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentions";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
 
@@ -529,6 +530,18 @@ export async function markPlanetChatRead({
   return prisma.$transaction(async (tx) => {
     await requireApprovedMembership(tx, planetId, profileId);
 
+    await tx.notification.updateMany({
+      where: {
+        planetId,
+        readAt: null,
+        recipientId: profileId,
+        type: { in: ["PLANET_MESSAGE", "PLANET_JOIN_REQUEST"] },
+      },
+      data: {
+        readAt,
+      },
+    });
+
     return tx.planetChatReadState.upsert({
       where: {
         planetId_profileId: {
@@ -609,6 +622,44 @@ export async function sendPlanetChatMessage({
         lastReadAt: message.createdAt,
       },
     });
+
+    const recipientMembers = await tx.planetMember.findMany({
+      where: {
+        planetId,
+        profileId: { not: profileId },
+        status: "APPROVED",
+      },
+      select: {
+        profileId: true,
+      },
+    });
+    const mutedReadStates = await tx.planetChatReadState.findMany({
+      where: {
+        planetId,
+        profileId: { in: recipientMembers.map((member) => member.profileId) },
+        mutedAt: { not: null },
+      },
+      select: {
+        profileId: true,
+      },
+    });
+    const mutedProfileIds = new Set(
+      mutedReadStates.map((readState) => readState.profileId),
+    );
+    const recipients = recipientMembers.filter(
+      (member) => !mutedProfileIds.has(member.profileId),
+    );
+
+    await createNotifications(
+      tx,
+      recipients.map((recipient) => ({
+        actorId: profileId,
+        occurrenceId: `planet-message:${message.id}`,
+        planetId,
+        recipientId: recipient.profileId,
+        type: "PLANET_MESSAGE" as const,
+      })),
+    );
 
     return message;
   });

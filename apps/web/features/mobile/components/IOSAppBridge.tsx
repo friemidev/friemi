@@ -32,6 +32,24 @@ function resolvePushPath(
   return typeof path === "string" && path.startsWith("/") ? path : null;
 }
 
+function resolvePushNotificationId(notification: PushNotificationSchema) {
+  const notificationId = notification.data?.notificationId;
+
+  return typeof notificationId === "string" ? notificationId : null;
+}
+
+async function markPushNotificationRead(notificationId: string) {
+  try {
+    await fetch("/api/notifications/mark-read", {
+      body: JSON.stringify({ notificationId }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Failed to mark push notification read", error);
+  }
+}
+
 export function IOSAppBridge() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
@@ -93,10 +111,19 @@ export function IOSAppBridge() {
       "pushNotificationActionPerformed",
       (notification) => {
         const path = resolvePushPath(notification.notification);
+        const notificationId = resolvePushNotificationId(
+          notification.notification,
+        );
 
-        if (path) {
-          router.push(path);
-        }
+        void (async () => {
+          if (notificationId) {
+            await markPushNotificationRead(notificationId);
+          }
+
+          if (path) {
+            router.push(path);
+          }
+        })();
       },
     );
 

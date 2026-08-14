@@ -571,6 +571,11 @@ const copy = {
           body: (_activityTitle: string, actorName = "有人") =>
             `${actorName}关注了你。`,
         },
+        PLANET_JOIN_REQUEST: {
+          title: "星球加入申请",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}申请加入你的星球，去审核一下吧。`,
+        },
         ACTIVITY_COMMENTED: {
           title: "活动有新评论",
           body: (activityTitle: string, actorName = "有人") =>
@@ -1578,6 +1583,11 @@ const copy = {
           title: "New follower",
           body: (_activityTitle: string, actorName = "Someone") =>
             `${actorName} started following you.`,
+        },
+        PLANET_JOIN_REQUEST: {
+          title: "Planet join request",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} asked to join your planet. Review it now.`,
         },
         ACTIVITY_COMMENTED: {
           title: "New activity comment",
@@ -2639,6 +2649,11 @@ const copy = {
           title: "Nouvel abonné",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} vous suit.`,
+        },
+        PLANET_JOIN_REQUEST: {
+          title: "Demande pour rejoindre",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} demande à rejoindre votre planète. Vérifiez-la.`,
         },
         ACTIVITY_COMMENTED: {
           title: "Nouveau commentaire",
