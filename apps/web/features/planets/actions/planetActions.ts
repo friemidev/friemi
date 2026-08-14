@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import {
   PlanetChatDomainError,
@@ -47,6 +48,11 @@ const messageSchema = planetIdSchema
       .array(z.string().trim().url())
       .max(planetChatMessageImageMaxCount)
       .default([]),
+    mentionedProfileIds: z
+      .array(z.string().trim().min(1).max(80))
+      .max(chatMentionMaxProfileCount)
+      .default([]),
+    mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
   })
   .refine((value) => value.content.length > 0 || value.imageUrls.length > 0, {
     path: ["content"],
@@ -104,22 +110,32 @@ function getPlanetChatError(locale: string, error?: unknown) {
   const accessDenied =
     error instanceof PlanetChatDomainError &&
     error.code === "CHAT_ACCESS_DENIED";
+  const invalidMention =
+    error instanceof PlanetChatDomainError && error.code === "INVALID_MENTION";
+  const mentionAllForbidden =
+    error instanceof PlanetChatDomainError &&
+    error.code === "MENTION_ALL_FORBIDDEN";
 
   if (locale === "fr") {
-    return accessDenied
-      ? "La discussion est réservée aux membres validés."
-      : "Impossible d'envoyer ce message.";
+    if (accessDenied) return "La discussion est réservée aux membres validés.";
+    if (invalidMention) return "Cette personne n'est plus dans la planète.";
+    if (mentionAllForbidden) {
+      return "Seuls les administrateurs peuvent mentionner tout le monde.";
+    }
+    return "Impossible d'envoyer ce message.";
   }
 
   if (locale === "en") {
-    return accessDenied
-      ? "Chat is available to approved members only."
-      : "Unable to send this message.";
+    if (accessDenied) return "Chat is available to approved members only.";
+    if (invalidMention) return "That person is no longer in this planet.";
+    if (mentionAllForbidden) return "Only planet admins can mention everyone.";
+    return "Unable to send this message.";
   }
 
-  return accessDenied
-    ? "群聊仅对审核通过的成员开放。"
-    : "消息发送失败，请稍后重试。";
+  if (accessDenied) return "群聊仅对审核通过的成员开放。";
+  if (invalidMention) return "这位用户已不在星球群聊中。";
+  if (mentionAllForbidden) return "只有创建者和管理员可以@所有人。";
+  return "消息发送失败，请稍后重试。";
 }
 
 function revalidatePlanet(locale: string, planetSlug?: string) {
@@ -408,6 +424,8 @@ export async function sendPlanetMessageAction(
     planetSlug: readString(formData, "planetSlug"),
     content: readString(formData, "content"),
     imageUrls: readStringList(formData, "imageUrls"),
+    mentionedProfileIds: readStringList(formData, "mentionedProfileIds"),
+    mentionsEveryone: readString(formData, "mentionsEveryone") || "0",
   });
   if (!result.success) {
     return {
@@ -420,6 +438,10 @@ export async function sendPlanetMessageAction(
     const message = await sendPlanetChatMessage({
       content: result.data.content,
       imageUrls: result.data.imageUrls,
+      mentionedProfileIds: result.data.mentionedProfileIds,
+      mentionsEveryone:
+        result.data.mentionsEveryone === "1" ||
+        result.data.mentionsEveryone === "true",
       planetId: result.data.planetId,
       profileId: profile.id,
     });

@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
 import {
   formatChatDateSeparator,
   formatChatMessageTime,
@@ -23,6 +24,9 @@ export type PlanetChatThreadMessage = {
   createdAt: string;
   id: string;
   imageUrls: string[];
+  mentionedProfileIds: string[];
+  mentionLabels: string[];
+  mentionsEveryone: boolean;
 };
 
 function Avatar({
@@ -202,7 +206,14 @@ export function PlanetChatThread({
                   ) : null}
                   {message.content.trim() ? (
                     <p className={message.imageUrls.length ? "px-1 pt-2" : ""}>
-                      {message.content}
+                      <ChatMentionText
+                        content={message.content}
+                        mentionClassName={
+                          isViewer ? "text-[#BDF3D2]" : "text-[#7A2FBE]"
+                        }
+                        mentionLabels={message.mentionLabels}
+                        mentionsEveryone={message.mentionsEveryone}
+                      />
                     </p>
                   ) : null}
                 </div>
