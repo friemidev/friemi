@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/import-public-activities",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-guest-participations",
+      "schedule": "15 4 * * *"
     }
   ]
 }

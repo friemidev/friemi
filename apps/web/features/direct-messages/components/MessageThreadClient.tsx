@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, LoaderCircle, MapPin, Trash2, X } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -129,6 +131,12 @@ export function MessageThreadClient({
   const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
     useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
+  const chatCursorMode = useChatCursorSync({
+    endpoint: `/api/direct-messages/${encodeURIComponent(conversationId)}/messages`,
+    messages,
+    setMessages,
+    subjectKey: conversationId,
+  });
   const hasMessages = messages.length > 0;
   const lastMessageId = messages[messages.length - 1]?.id;
   const canSendNow =
@@ -255,11 +263,15 @@ export function MessageThreadClient({
             : message,
         ),
       );
-      startTransition(() => {
-        router.refresh();
-      });
+      if (chatCursorMode === "canary") {
+        dispatchChatCursorWake(conversationId);
+      } else {
+        startTransition(() => {
+          router.refresh();
+        });
+      }
     },
-    [router],
+    [chatCursorMode, conversationId, router],
   );
 
   const handleOptimisticFailure = useCallback(
@@ -394,7 +406,11 @@ export function MessageThreadClient({
           );
           setActionMenuMessageId("");
           handleCancelSelection();
-          startTransition(() => router.refresh());
+          if (chatCursorMode === "canary") {
+            dispatchChatCursorWake(conversationId);
+          } else {
+            startTransition(() => router.refresh());
+          }
           return;
         }
 

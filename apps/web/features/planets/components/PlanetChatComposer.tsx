@@ -19,6 +19,8 @@ import {
   type PlanetChatActionState,
 } from "@/features/planets/actions/planetActions";
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
+import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 
 type PlanetChatComposerProps = {
   locale: string;
@@ -75,6 +77,7 @@ export function PlanetChatComposer({
 }: PlanetChatComposerProps) {
   const copy = getCopy(locale);
   const router = useRouter();
+  const chatCursorMode = getPerformanceRolloutMode("chatCursor", planetId);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mentionCursorRef = useRef(0);
@@ -100,9 +103,13 @@ export function PlanetChatComposer({
     setImageUrls([]);
     setMentionedMembers([]);
     setMentionsEveryone(false);
-    router.refresh();
+    if (chatCursorMode === "canary") {
+      dispatchChatCursorWake(planetId);
+    } else {
+      router.refresh();
+    }
     keepMobileChatPageAnchored();
-  }, [router, state.messageId, state.ok]);
+  }, [chatCursorMode, planetId, router, state.messageId, state.ok]);
 
   function insertEmoji(emoji: string) {
     const input = inputRef.current;

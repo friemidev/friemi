@@ -45,6 +45,8 @@ import {
   ChatImageAttachmentPreviews,
 } from "@/features/chat/components/ChatImageAttachmentPicker";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 import type { ChatMentionMember } from "@/features/chat/types";
 import {
   getChatMentionEveryoneToken,
@@ -73,6 +75,7 @@ import {
 } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 import {
   formatChatDateSeparator,
   formatChatListTimestamp,
@@ -319,8 +322,13 @@ function ActivityRoomChatAutoRefresh({
   intervalMs?: number;
 }) {
   const router = useRouter();
+  const mode = getPerformanceRolloutMode("chatCursor", activityId);
 
   useEffect(() => {
+    if (mode === "canary") {
+      return;
+    }
+
     const timer = window.setInterval(() => {
       const activeElement = document.activeElement;
       const composer = document.querySelector("[data-activity-room-composer]");
@@ -336,7 +344,7 @@ function ActivityRoomChatAutoRefresh({
     }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [activityId, intervalMs, router]);
+  }, [activityId, intervalMs, mode, router]);
 
   return null;
 }
@@ -2381,6 +2389,12 @@ export function ActivityRoomChatPage({
   const [manageSheetOpen, setManageSheetOpen] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const chatCursorMode = useChatCursorSync({
+    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    messages,
+    setMessages,
+    subjectKey: activityId,
+  });
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
   const activityHref = withLocale(
@@ -2434,7 +2448,11 @@ export function ActivityRoomChatPage({
 
   function handleSent(message: ActivityRoomMessageViewModel) {
     setMessages((current) => [...current, message]);
-    router.refresh();
+    if (chatCursorMode === "canary") {
+      dispatchChatCursorWake(activityId);
+    } else {
+      router.refresh();
+    }
   }
 
   function handleOpenActionMenu(messageId: string) {
@@ -2501,7 +2519,11 @@ export function ActivityRoomChatPage({
           );
           setActionMenuMessageId("");
           handleCancelSelection();
-          router.refresh();
+          if (chatCursorMode === "canary") {
+            dispatchChatCursorWake(activityId);
+          } else {
+            router.refresh();
+          }
           return;
         }
 

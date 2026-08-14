@@ -298,7 +298,7 @@ export async function updateActivityAction(
         },
       });
 
-      await tx.activityManagementLog.create({
+      const updateLog = await tx.activityManagementLog.create({
         data: {
           activityId,
           actorId: profile.id,
@@ -307,6 +307,9 @@ export async function updateActivityAction(
             keyFieldsChanged,
             role: permission.role,
           },
+        },
+        select: {
+          id: true,
         },
       });
 
@@ -324,6 +327,7 @@ export async function updateActivityAction(
           recipientIds.map((recipientId) => ({
             actorId: profile.id,
             activityId,
+            occurrenceId: `activity-update:${updateLog.id}`,
             recipientId,
             type: "ACTIVITY_UPDATED",
           })),

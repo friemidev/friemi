@@ -9,7 +9,7 @@ import { getCopy } from "@/lib/copy";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
-import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { runScheduledGuestLink } from "@/features/guest-participants/services/guestLinkScheduler";
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 import { isDefaultProfileAvatarSrc } from "@/features/profile/defaultAvatars";
@@ -330,10 +330,12 @@ export async function updateProfileWechatAction(
     };
   }
 
-  const linkResult = await linkGuestParticipationsForProfile(
+  const linkResult = await runScheduledGuestLink({
+    force: true,
     prisma,
-    updateResult.updatedProfile,
-  ).catch((error) => {
+    profile: updateResult.updatedProfile,
+    trigger: "contact_binding",
+  }).catch((error) => {
     console.error(
       "Failed to link guest participations after wechat update",
       error,
@@ -528,10 +530,12 @@ export async function updateProfileContactBindingsAction(
     };
   }
 
-  const linkResult = await linkGuestParticipationsForProfile(
+  const linkResult = await runScheduledGuestLink({
+    force: true,
     prisma,
-    updateResult.updatedProfile,
-  ).catch((error) => {
+    profile: updateResult.updatedProfile,
+    trigger: "contact_binding",
+  }).catch((error) => {
     console.error(
       "Failed to link guest participations after contact binding update",
       error,

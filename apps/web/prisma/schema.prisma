@@ -253,6 +253,9 @@ model UserProfile {
   username                String?
   wechatId                String?
   normalizedWechatId      String?
+  guestLinkFingerprint    String?
+  guestLinkCheckedAt      DateTime?
+  guestLinkLastLinkedAt   DateTime?
   avatarUrl               String?
   bio                     String?
   homeCity                String?                       @default("Paris")
@@ -398,6 +401,7 @@ model PlanetMessage {
   updatedAt           DateTime    @updatedAt
 
   @@index([planetId, createdAt])
+  @@index([planetId, createdAt, id])
   @@index([planetId, mentionsEveryone, createdAt])
   @@index([mentionedProfileIds], type: Gin)
   @@index([authorId, createdAt])
@@ -612,6 +616,8 @@ model ActivityRoomMessage {
   updatedAt           DateTime     @updatedAt
 
   @@index([activityId, createdAt])
+  @@index([activityId, createdAt, id])
+  @@index([activityId, updatedAt])
   @@index([activityId, mentionsEveryone, createdAt])
   @@index([mentionedProfileIds], type: Gin)
   @@index([senderId, createdAt])
@@ -1176,6 +1182,7 @@ model Notification {
   moment                 Moment?               @relation(fields: [momentId], references: [id], onDelete: SetNull)
   momentCommentId        String?
   momentComment          MomentComment?        @relation(fields: [momentCommentId], references: [id], onDelete: SetNull)
+  dedupeKey               String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -1334,6 +1341,8 @@ model DirectMessage {
   updatedAt      DateTime                @updatedAt
 
   @@index([conversationId, createdAt])
+  @@index([conversationId, createdAt, id])
+  @@index([conversationId, updatedAt])
   @@index([conversationId, senderId, readAt])
   @@index([senderId, createdAt])
   @@index([activityId])
@@ -1349,6 +1358,7 @@ model DirectMessageDeletion {
 
   @@unique([messageId, profileId])
   @@index([profileId, deletedAt])
+  @@index([profileId, deletedAt, messageId])
 }
 
 model AnalyticsEvent {
@@ -1393,6 +1403,7 @@ model GameToolRoom {
   startedAt     DateTime?
   finishedAt    DateTime?
   cancelledAt   DateTime?
+  revision      Int                    @default(0)
   seats         GameToolSeat[]
   members       GameToolRoomMember[]
   events        GameToolEvent[]

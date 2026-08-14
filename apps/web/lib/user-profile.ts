@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
 import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards";
-import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { runScheduledGuestLink } from "@/features/guest-participants/services/guestLinkScheduler";
 import { resolveProfileAvatarUrlForClerkSync } from "@/features/profile/profileAvatarSync";
 
 type ClerkEmailAddressLike = {
@@ -34,12 +34,20 @@ function fromUnixMs(value: number | null | undefined) {
 }
 
 function getPrimaryEmail(user: ClerkUserLike) {
-  const primaryEmail = user.email_addresses.find((email) => email.id === user.primary_email_address_id);
-  return primaryEmail?.email_address ?? user.email_addresses[0]?.email_address ?? null;
+  const primaryEmail = user.email_addresses.find(
+    (email) => email.id === user.primary_email_address_id,
+  );
+  return (
+    primaryEmail?.email_address ??
+    user.email_addresses[0]?.email_address ??
+    null
+  );
 }
 
 function getVerifiedEmail(user: ClerkUserLike) {
-  const primaryEmail = user.email_addresses.find((email) => email.id === user.primary_email_address_id);
+  const primaryEmail = user.email_addresses.find(
+    (email) => email.id === user.primary_email_address_id,
+  );
 
   if (primaryEmail?.verification?.status === "verified") {
     return primaryEmail.email_address;
@@ -82,7 +90,10 @@ function getStoredEmailVerifiedAt({
 }
 
 function getDisplayName(user: ClerkUserLike) {
-  const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+  const fullName = [user.first_name, user.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   return fullName || user.username || getPrimaryEmail(user) || "未命名用户";
 }
 
@@ -125,49 +136,58 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
     verifiedEmail,
   });
 
-  const profile = await prisma.userProfile.upsert({
-    where: {
-      clerkUserId: user.id
-    },
-    create: {
-      clerkUserId: user.id,
-      email,
-      emailVerifiedAt,
-      nickname,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      username: user.username,
-      avatarUrl: user.image_url,
-      status: "ACTIVE",
-      lastSignInAt: fromUnixMs(user.last_sign_in_at),
-      clerkCreatedAt: fromUnixMs(user.created_at),
-      clerkUpdatedAt: fromUnixMs(user.updated_at),
-      clerkDeletedAt: null,
-      syncedAt: new Date()
-    },
-    update: {
-      email,
-      emailVerifiedAt,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      username: user.username,
-      avatarUrl: resolveProfileAvatarUrlForClerkSync({
-        clerkAvatarUrl: user.image_url,
-        storedAvatarUrl: existing?.avatarUrl,
-      }),
-      status: "ACTIVE",
-      lastSignInAt: fromUnixMs(user.last_sign_in_at),
-      clerkUpdatedAt: fromUnixMs(user.updated_at),
-      clerkDeletedAt: null,
-      syncedAt: new Date()
-    }
-  }).then(ensureUserProfileFriendCode);
+  const profile = await prisma.userProfile
+    .upsert({
+      where: {
+        clerkUserId: user.id,
+      },
+      create: {
+        clerkUserId: user.id,
+        email,
+        emailVerifiedAt,
+        nickname,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        username: user.username,
+        avatarUrl: user.image_url,
+        status: "ACTIVE",
+        lastSignInAt: fromUnixMs(user.last_sign_in_at),
+        clerkCreatedAt: fromUnixMs(user.created_at),
+        clerkUpdatedAt: fromUnixMs(user.updated_at),
+        clerkDeletedAt: null,
+        syncedAt: new Date(),
+      },
+      update: {
+        email,
+        emailVerifiedAt,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        username: user.username,
+        avatarUrl: resolveProfileAvatarUrlForClerkSync({
+          clerkAvatarUrl: user.image_url,
+          storedAvatarUrl: existing?.avatarUrl,
+        }),
+        status: "ACTIVE",
+        lastSignInAt: fromUnixMs(user.last_sign_in_at),
+        clerkUpdatedAt: fromUnixMs(user.updated_at),
+        clerkDeletedAt: null,
+        syncedAt: new Date(),
+      },
+    })
+    .then(ensureUserProfileFriendCode);
 
-  void linkGuestParticipationsForProfile(prisma, {
-    ...profile,
-    verifiedEmail,
+  void runScheduledGuestLink({
+    prisma,
+    profile: {
+      ...profile,
+      verifiedEmail,
+    },
+    trigger: "clerk_webhook",
   }).catch((error) => {
-    console.error("Failed to link guest participations from Clerk webhook", error);
+    console.error(
+      "Failed to link guest participations from Clerk webhook",
+      error,
+    );
   });
 
   if (!existing) {
@@ -177,31 +197,36 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
   return profile;
 }
 
-export async function markUserProfileDeletedFromClerk(user: ClerkDeletedUserLike) {
+export async function markUserProfileDeletedFromClerk(
+  user: ClerkDeletedUserLike,
+) {
   if (!user.id) {
     return null;
   }
 
   return prisma.userProfile.updateMany({
     where: {
-      clerkUserId: user.id
+      clerkUserId: user.id,
     },
     data: {
       status: "DELETED",
       clerkDeletedAt: new Date(),
-      syncedAt: new Date()
-    }
+      syncedAt: new Date(),
+    },
   });
 }
 
-export async function touchUserProfileLastSignIn(clerkUserId: string, signedInAt = new Date()) {
+export async function touchUserProfileLastSignIn(
+  clerkUserId: string,
+  signedInAt = new Date(),
+) {
   return prisma.userProfile.updateMany({
     where: {
-      clerkUserId
+      clerkUserId,
     },
     data: {
       lastSignInAt: signedInAt,
-      syncedAt: new Date()
-    }
+      syncedAt: new Date(),
+    },
   });
 }

@@ -42,6 +42,11 @@ const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
 const isActivityRoomChatApiRoute = createRouteMatcher([
   "/api/activity-room-chat(.*)",
 ]);
+const isActivityRoomCursorApiRoute = createRouteMatcher([
+  "/api/activity-room(.*)",
+]);
+const isGameToolsApiRoute = createRouteMatcher(["/api/game-tools(.*)"]);
+const isPlanetsApiRoute = createRouteMatcher(["/api/planets(.*)"]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isDirectMessagesApiRoute = createRouteMatcher([
@@ -246,6 +251,18 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isActivityRoomCursorApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isGameToolsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isPlanetsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isUserPreviewApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -308,6 +325,9 @@ export const config = {
     "/:locale/updates/:path*",
     "/api/admin/:path*",
     "/api/activity-room-chat/:path*",
+    "/api/activity-room/:path*",
+    "/api/game-tools/:path*",
+    "/api/planets/:path*",
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
