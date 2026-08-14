@@ -1,8 +1,12 @@
 import { createSign } from "node:crypto";
 import { connect } from "node:http2";
 import type { NotificationType } from "@prisma/client";
+import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { formatGiftNotificationText } from "@/features/charm/giftNotificationText";
+import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
+import { getUnreadOfficialMessageCount } from "@/features/official-messages/services/officialMessages";
+import { getUnreadPlanetChatTotalMessageCount } from "@/features/planets/services/planetChat";
 import { prisma } from "@/lib/prisma";
 import {
   getNotificationCopy,
@@ -11,6 +15,30 @@ import {
   isInvalidFirebaseTokenResponse,
   normalizePushLocale,
 } from "./pushDelivery";
+
+async function getTotalBadgeCount(recipientId: string) {
+  const [
+    unreadNotificationCount,
+    unreadDirectMessageCount,
+    unreadOfficialMessageCount,
+    unreadActivityRoomCount,
+    unreadPlanetChatCount,
+  ] = await Promise.all([
+    getUnreadNotificationCount(recipientId),
+    getUnreadDirectMessageCount(recipientId),
+    getUnreadOfficialMessageCount(recipientId),
+    getUnreadActivityRoomTotalMessageCount(recipientId),
+    getUnreadPlanetChatTotalMessageCount(recipientId),
+  ]);
+
+  return (
+    unreadNotificationCount +
+    unreadDirectMessageCount +
+    unreadOfficialMessageCount +
+    unreadActivityRoomCount +
+    unreadPlanetChatCount
+  );
+}
 
 const firebaseTokenUrl = "https://oauth2.googleapis.com/token";
 const firebaseScope = "https://www.googleapis.com/auth/firebase.messaging";
@@ -355,7 +383,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
           : null
       : undefined;
   const accessToken = config ? await getFirebaseAccessToken(config) : null;
-  const badgeCount = await getUnreadNotificationCount(notification.recipientId);
+  const badgeCount = await getTotalBadgeCount(notification.recipientId);
   let sentCount = 0;
 
   for (const device of devices) {
