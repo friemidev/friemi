@@ -12,6 +12,7 @@ import {
   type ProfileDashboardViewModel,
   type PublicProfileViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import { initialTrustScore } from "@/features/trust/trustScore";
 import { getUserPresenceState } from "@/features/profile/presence";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { withLocale } from "@/lib/routes";
@@ -44,7 +45,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followersCount: 0,
     followingCount: 0,
     momentCount: 0,
-    trustScore: 80,
+    trustScore: initialTrustScore,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],

@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { ChevronUp, LockKeyhole, X } from "lucide-react";
+import { ChevronRight, Gamepad2, LockKeyhole, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 type BoardGameToolFloatingEntryProps = {
   avalonHref: string;
+  gameToolsHref: string;
   locale: string;
   werewolfHref: string;
 };
@@ -22,6 +23,7 @@ type BoardGameToolCopy = {
   close: string;
   comingSoon: string;
   description: string;
+  enterGameTools: string;
   eyebrow: string;
   werewolfTitle: string;
   open: string;
@@ -41,6 +43,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       comingSoon: "Bientôt",
       description:
         "Choisis l'outil qui accompagne la partie autour de la table.",
+      enterGameTools: "Ouvrir tous les jeux",
       eyebrow: "Débloqué",
       werewolfTitle: "Loup-garou",
       open: "Outils jeu",
@@ -59,6 +62,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       close: "Close",
       comingSoon: "Coming soon",
       description: "Pick a table tool for the game you are running.",
+      enterGameTools: "Open all games",
       eyebrow: "Unlocked",
       werewolfTitle: "Werewolf",
       open: "Game tools",
@@ -76,6 +80,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
     close: "关闭",
     comingSoon: "敬请期待",
     description: "选择Friemi 桌游应用，开启你的桌游世界。",
+    enterGameTools: "进入桌游",
     eyebrow: "已解锁",
     werewolfTitle: "狼人杀",
     open: "桌游工具",
@@ -85,6 +90,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
 }
 
 export function BoardGameToolFloatingEntry({
+  gameToolsHref,
   locale,
   werewolfHref,
 }: BoardGameToolFloatingEntryProps) {
@@ -243,6 +249,19 @@ export function BoardGameToolFloatingEntry({
                   ),
                 )}
               </div>
+              <Link
+                className="flex min-h-12 items-center gap-3 rounded-full border border-[#8AB68E]/70 bg-white px-3.5 text-sm font-bold text-[#156240] transition hover:border-[#156240] active:scale-[0.99]"
+                href={gameToolsHref}
+                tabIndex={isOpen ? undefined : -1}
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF5E8]">
+                  <Gamepad2 className="h-4.5 w-4.5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {copy.enterGameTools}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+              </Link>
             </div>
           </div>
         </div>
@@ -251,30 +270,20 @@ export function BoardGameToolFloatingEntry({
           aria-controls={panelId}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
+          aria-label={copy.open}
           className={cn(
-            "group relative flex min-h-14 items-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] py-2 pl-2 pr-4 text-[#156240] shadow-[0_18px_42px_rgba(21,98,64,0.2)] transition duration-300 hover:-translate-y-0.5 hover:border-[#156240] hover:bg-white active:scale-[0.98]",
+            "group relative grid h-14 w-14 place-items-center rounded-full border border-[#8AB68E]/80 bg-white text-[#156240] shadow-[0_18px_42px_rgba(21,98,64,0.2)] transition duration-300 hover:-translate-y-0.5 hover:border-[#156240] active:scale-[0.96]",
             isOpen && "border-[#156240] bg-white",
           )}
+          title={copy.open}
           type="button"
           onClick={() => setIsOpen((value) => !value)}
         >
           <span className="absolute -inset-1 -z-10 rounded-full bg-[#F09182]/28 opacity-0 blur-md transition group-hover:opacity-100" />
-          <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white shadow-inner shadow-white/20 ring-4 ring-[#D6D5B2]/55">
-            <Image
-              alt=""
-              src="/illustrations/png/board-games.png"
-              width={34}
-              height={34}
-              className="h-9 w-9 object-cover"
-            />
-          </span>
-          <span className="max-w-[5.5rem] truncate text-sm font-bold">
-            {copy.open}
-          </span>
-          <ChevronUp
+          <Gamepad2
             className={cn(
-              "h-4 w-4 transition-transform",
-              isOpen && "rotate-180",
+              "h-6 w-6 transition-transform duration-300",
+              isOpen && "-rotate-6 scale-105",
             )}
             aria-hidden
           />

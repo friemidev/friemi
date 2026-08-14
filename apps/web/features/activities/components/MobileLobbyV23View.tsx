@@ -27,6 +27,7 @@ import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
+import { sortLobbyActivitiesByStatusAndOwnership } from "@/features/activities/utils/lobbyActivitySort";
 import { brand } from "@/lib/brand";
 import { getCategoryLabel } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -397,18 +398,24 @@ function getTodayActivities(activities: ActivityCardViewModel[]) {
   );
 }
 
-function getPopularActivities(activities: ActivityCardViewModel[]) {
-  return [...activities].sort((left, right) => {
-    const leftScore =
-      left.participantCount * 2 +
-      left.favoriteCount +
-      (left.friendSignal?.count ?? 0) * 3;
-    const rightScore =
-      right.participantCount * 2 +
-      right.favoriteCount +
-      (right.friendSignal?.count ?? 0) * 3;
+function getPopularActivities(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null,
+) {
+  return sortLobbyActivitiesByStatusAndOwnership(activities, {
+    tieBreaker: (left, right) => {
+      const leftScore =
+        left.participantCount * 2 +
+        left.favoriteCount +
+        (left.friendSignal?.count ?? 0) * 3;
+      const rightScore =
+        right.participantCount * 2 +
+        right.favoriteCount +
+        (right.friendSignal?.count ?? 0) * 3;
 
-    return rightScore - leftScore;
+      return rightScore - leftScore;
+    },
+    viewerProfileId,
   });
 }
 
@@ -417,31 +424,44 @@ function getVisibleActivities({
   activities,
   friendActivities = [],
   mineActivities = [],
+  viewerProfileId = null,
 }: {
   activeTab: MobileLobbyV23TabId;
   activities: ActivityCardViewModel[];
   friendActivities?: ActivityCardViewModel[];
   mineActivities?: ActivityCardViewModel[];
+  viewerProfileId?: string | null;
 }) {
   const dedupedActivities = dedupeActivities(activities);
 
   if (activeTab === "friends") {
-    return dedupeActivities(friendActivities);
+    return sortLobbyActivitiesByStatusAndOwnership(
+      dedupeActivities(friendActivities),
+      { viewerProfileId },
+    );
   }
 
   if (activeTab === "mine") {
-    return dedupeActivities(mineActivities);
+    return sortLobbyActivitiesByStatusAndOwnership(
+      dedupeActivities(mineActivities),
+      { viewerProfileId },
+    );
   }
 
   if (activeTab === "today") {
-    return getTodayActivities(dedupedActivities);
+    return sortLobbyActivitiesByStatusAndOwnership(
+      getTodayActivities(dedupedActivities),
+      { viewerProfileId },
+    );
   }
 
   if (activeTab === "popular") {
-    return getPopularActivities(dedupedActivities);
+    return getPopularActivities(dedupedActivities, viewerProfileId);
   }
 
-  return dedupedActivities;
+  return sortLobbyActivitiesByStatusAndOwnership(dedupedActivities, {
+    viewerProfileId,
+  });
 }
 
 function filterMobileLobbyActivitiesByCategory(
@@ -737,6 +757,7 @@ export function MobileLobbyV23View({
         activities,
         friendActivities: resolvedFriendActivities,
         mineActivities,
+        viewerProfileId,
       }),
       activeCategory,
     ),

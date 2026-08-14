@@ -308,7 +308,7 @@ export function CharmGiftDialog({
 
       {open && mounted
         ? createPortal(
-            <div className="fixed inset-0 z-[180] flex items-end justify-center bg-[#111210]/28 px-4 pb-4 pt-12 backdrop-blur-[2px] md:items-center md:pb-12">
+            <div className="fixed inset-0 z-[180] flex items-end justify-center overflow-hidden bg-[#111210]/28 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] md:items-center md:px-4 md:pb-6 md:pt-6">
               <button
                 aria-label={copy.close}
                 className="absolute inset-0 cursor-default"
@@ -317,10 +317,10 @@ export function CharmGiftDialog({
               />
               <div
                 aria-modal="true"
-                className="relative max-h-[calc(100dvh-2rem)] w-full max-w-[390px] overflow-hidden rounded-[1.5rem] bg-[#FEFFF9] shadow-[0_26px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E4DDBE]"
+                className="relative flex max-h-full min-h-0 w-full max-w-[390px] flex-col overflow-hidden rounded-[1.5rem] bg-[#FEFFF9] shadow-[0_26px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E4DDBE]"
                 role="dialog"
               >
-                <div className="flex items-start justify-between gap-3 border-b border-[#ECE5CD] px-5 pb-4 pt-5">
+                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#ECE5CD] px-5 pb-4 pt-5">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-[17px] font-bold leading-tight text-[#111210]">
                       <Sparkles className="h-4 w-4 text-[#A57AEB]" />
@@ -354,7 +354,7 @@ export function CharmGiftDialog({
 
                 <form
                   action={formAction}
-                  className="grid max-h-[calc(100dvh-8.5rem)] gap-4 overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  className="grid min-h-0 flex-1 gap-4 overflow-y-auto overscroll-contain px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   onSubmit={() => setSuccessMessage(null)}
                 >
                   <input name="attemptId" type="hidden" value={attemptId} />

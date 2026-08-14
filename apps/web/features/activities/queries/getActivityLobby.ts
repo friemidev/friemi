@@ -26,6 +26,7 @@ import {
 } from "../utils/activityDisplay";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
+import { compareLobbyActivityStatusAndOwnership } from "../utils/lobbyActivitySort";
 import type { Prisma } from "@prisma/client";
 
 const activityLobbyFeedPageSize = 10;
@@ -774,6 +775,7 @@ function buildLobbyPriorityFeed({
   friendJoinedActivities,
   joinedActivities,
   openActivities,
+  viewerProfileId,
 }: {
   createdActivities: ActivityCardViewModel[];
   favoriteActivities: ActivityCardViewModel[];
@@ -782,6 +784,7 @@ function buildLobbyPriorityFeed({
   friendJoinedActivities: ActivityCardViewModel[];
   joinedActivities: ActivityCardViewModel[];
   openActivities: ActivityCardViewModel[];
+  viewerProfileId: string;
 }) {
   const priorityGroups = [
     createdActivities,
@@ -809,6 +812,10 @@ function buildLobbyPriorityFeed({
         activity,
       ]),
     ).values(),
+  ).sort((left, right) =>
+    compareLobbyActivityStatusAndOwnership(left, right, {
+      viewerProfileId,
+    }),
   );
 }
 
@@ -1396,6 +1403,7 @@ export async function getActivityLobby(
     favoriteActivities,
     friendHostedActivities,
     friendJoinedActivities,
+    viewerProfileId,
   });
 
   return {

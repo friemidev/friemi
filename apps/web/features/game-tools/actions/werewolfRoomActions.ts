@@ -1822,6 +1822,10 @@ export async function leaveWerewolfSeatAction(
       return { formError: t.leaveFailed };
     }
 
+    if (targetSeat?.profileId && profile?.id !== targetSeat.profileId) {
+      return { formError: t.leaveFailed };
+    }
+
     const now = new Date();
     const shouldReleaseSeat = room.status === "LOBBY";
     const shouldLeaveRoom =

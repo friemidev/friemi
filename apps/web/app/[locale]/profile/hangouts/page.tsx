@@ -6,6 +6,7 @@ import {
   getProfileDashboard,
   type ProfileDashboardViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import { initialTrustScore } from "@/features/trust/trustScore";
 
 type ProfileHangoutsPageProps = {
   params: Promise<{
@@ -29,7 +30,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followersCount: 0,
     followingCount: 0,
     momentCount: 0,
-    trustScore: 80,
+    trustScore: initialTrustScore,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],

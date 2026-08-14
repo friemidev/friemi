@@ -1,4 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
@@ -67,6 +69,10 @@ export default async function SignUpPage({
       ? getNativeAuthCompleteHref(locale, redirectTarget)
       : redirectTarget;
 
+  if (hasClerkKeys() && (await auth()).userId) {
+    redirect(forceRedirectUrl);
+  }
+
   if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
@@ -93,6 +99,7 @@ export default async function SignUpPage({
   return (
     <PageContainer className="flex min-h-[70vh] items-center justify-center">
       <ClerkAuthMountGuard
+        exitUrl={withLocale(locale, "/mobile-home")}
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={forceRedirectUrl}
         locale={locale}

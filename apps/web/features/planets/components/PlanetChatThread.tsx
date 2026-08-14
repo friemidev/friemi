@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
@@ -13,6 +14,7 @@ import {
 } from "@/lib/chatDateSeparators";
 import { getAvatarInitial } from "@/lib/display-text";
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
+import { withLocale } from "@/lib/routes";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 
 export type PlanetChatThreadMessage = {
@@ -195,10 +197,18 @@ export function PlanetChatThread({
             <div
               className={`flex items-start gap-2 ${isViewer ? "flex-row-reverse" : ""}`}
             >
-              <Avatar
-                avatarUrl={message.author.avatarUrl}
-                name={message.author.nickname}
-              />
+              <Link
+                aria-label={message.author.nickname}
+                className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
+                href={withLocale(locale, `/profile/${message.authorId}`)}
+                prefetch={false}
+                title={message.author.nickname}
+              >
+                <Avatar
+                  avatarUrl={message.author.avatarUrl}
+                  name={message.author.nickname}
+                />
+              </Link>
               <div className={`max-w-[76%] ${isViewer ? "text-right" : ""}`}>
                 {!isViewer ? (
                   <p className="mb-1 px-1 text-[11px] font-semibold text-[#838A83]">

@@ -23,6 +23,7 @@ type MobileBottomSheetProps = {
   className?: string;
   closeLabel?: string;
   heightClassName?: string;
+  initiallyExpanded?: boolean;
   onClose: () => void;
   open: boolean;
   zIndexClassName?: string;
@@ -35,6 +36,7 @@ export function MobileBottomSheet({
   className,
   closeLabel,
   heightClassName = "h-[85svh]",
+  initiallyExpanded = false,
   onClose,
   open,
   zIndexClassName = "z-[70]",
@@ -48,7 +50,7 @@ export function MobileBottomSheet({
   const suppressNextClickRef = useRef(false);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
   const [isClosing, setIsClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -72,10 +74,10 @@ export function MobileBottomSheet({
     if (open) {
       setDragDeltaY(0);
       setIsDragging(false);
-      setIsExpanded(false);
+      setIsExpanded(initiallyExpanded);
       setIsClosing(false);
     }
-  }, [open]);
+  }, [initiallyExpanded, open]);
 
   useEffect(() => {
     return () => {

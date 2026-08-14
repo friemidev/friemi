@@ -52,6 +52,7 @@ export function MobileActivityDetailSheetLink({
         ariaLabel={label}
         bodyClassName="overflow-hidden"
         closeLabel={label}
+        initiallyExpanded
         onClose={() => setOpen(false)}
         open={open}
         zIndexClassName="z-[80]"

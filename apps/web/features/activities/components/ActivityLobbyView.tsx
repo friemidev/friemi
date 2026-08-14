@@ -26,7 +26,8 @@ import type { ActivityCardViewModel } from "../types";
 import { ActivityCard } from "./ActivityCard";
 import { ActivitySwipeDiscovery } from "./ActivitySwipeDiscovery";
 import { isPublicEventCard } from "../utils/activityCardKind";
-import { getActivityDisplayStatus } from "../utils/activityDisplay";
+import { getActivityTimeState } from "../utils/activityDisplay";
+import { sortLobbyActivitiesByStatusAndOwnership } from "../utils/lobbyActivitySort";
 import type {
   ActivityLobbyFeedPage,
   ActivityLobbyFeedStatus,
@@ -47,6 +48,7 @@ type ActivityLobbyViewProps = {
   initialStatusFilter?: LobbyStatusFilterId;
   starterActivities: ActivityCardViewModel[];
   locale: string;
+  viewerProfileId: string;
 };
 
 type LobbyFilterId =
@@ -500,7 +502,7 @@ function getStatusFilterLabel(locale: string, id: LobbyStatusFilterId) {
 }
 
 function isEndedLobbyActivity(activity: ActivityCardViewModel) {
-  return getActivityDisplayStatus(activity) === "ENDED";
+  return getActivityTimeState(activity) === "ENDED";
 }
 
 function getLobbyActivityKey(activity: ActivityCardViewModel) {
@@ -580,19 +582,12 @@ function dedupeLobbyActivities(activities: ActivityCardViewModel[]) {
   return [...activityByKey.values()];
 }
 
-function sortLobbyActivities(activities: ActivityCardViewModel[]) {
-  return [...activities].sort((left, right) => {
-    const leftEnded = isEndedLobbyActivity(left);
-    const rightEnded = isEndedLobbyActivity(right);
-
-    if (leftEnded !== rightEnded) {
-      return leftEnded ? 1 : -1;
-    }
-
-    const leftTime = new Date(left.startAt).getTime();
-    const rightTime = new Date(right.startAt).getTime();
-
-    return leftEnded ? rightTime - leftTime : leftTime - rightTime;
+function sortLobbyActivities(
+  activities: ActivityCardViewModel[],
+  viewerProfileId?: string | null,
+) {
+  return sortLobbyActivitiesByStatusAndOwnership(activities, {
+    viewerProfileId,
   });
 }
 
@@ -1770,6 +1765,7 @@ export function ActivityLobbyView({
   initialStatusFilter = "all",
   starterActivities,
   locale,
+  viewerProfileId,
 }: ActivityLobbyViewProps) {
   const appCopy = getCopy(locale);
   const t = appCopy.activityLobby;
@@ -2000,8 +1996,8 @@ export function ActivityLobbyView({
       return typeFilteredActivities;
     }
 
-    return sortLobbyActivities(typeFilteredActivities);
-  }, [activeFilter, activeTypeFilter, categoryGroups]);
+    return sortLobbyActivities(typeFilteredActivities, viewerProfileId);
+  }, [activeFilter, activeTypeFilter, categoryGroups, viewerProfileId]);
   const statusFilterOptions = useMemo(
     () =>
       activeFilter === "all"
@@ -2059,7 +2055,7 @@ export function ActivityLobbyView({
     (loadingFeedKey === activeFeedKey || activeFeedNeedsLoad);
   const visibleActivities =
     activeFilter === "all"
-      ? (activeFeed?.activities ?? [])
+      ? sortLobbyActivities(activeFeed?.activities ?? [], viewerProfileId)
       : clientVisibleActivities;
   const visibleActivityKeys = useMemo(
     () =>

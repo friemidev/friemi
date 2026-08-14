@@ -1490,7 +1490,7 @@ function ShopGiftRecipientDialog({
       >
         <header className="flex items-center justify-between gap-3 border-b border-[#ECE5CD] px-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[25px] leading-none ring-1 ring-[#E8D59D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-transparent text-[25px] leading-none ring-1 ring-[#E8D59D]">
               {gift.emoji}
             </span>
             <div className="min-w-0">
@@ -2564,7 +2564,7 @@ export function ProfileShopPageView({
       right={
         <button
           aria-label={copy.shop.recharge}
-          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
+          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-transparent px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
           onClick={() => setRechargeOpen(true)}
           type="button"
         >
@@ -2593,7 +2593,7 @@ export function ProfileShopPageView({
                 {copy.shop.coinTitle}
               </p>
               <p className="mt-0.5 text-2xl font-bold leading-none text-[#111210]">
-                {localCoinBalance} {copy.shop.fc}
+                {localCoinBalance}
               </p>
             </div>
           </div>
@@ -2624,7 +2624,7 @@ export function ProfileShopPageView({
                   key={gift.id}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#FFF9E8] text-[30px] leading-none ring-1 ring-[#EFE0AF]">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-transparent text-[30px] leading-none ring-1 ring-[#EFE0AF]">
                       {gift.emoji}
                     </span>
                     <GiftAvailabilityBadge gift={gift} locale={locale} />

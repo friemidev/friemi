@@ -470,8 +470,8 @@ function getActivityRoomEntryCopy(locale: string) {
 function getActivityOperatorActionCopy(locale: string) {
   if (locale === "fr") {
     return {
-      announcement: "Annonce",
-      checkIn: "Présences",
+      announcement: "Modifier l'annonce",
+      checkIn: "Gestion des présences",
       edit: "Modifier",
       manage: "Discussion",
     };
@@ -479,16 +479,16 @@ function getActivityOperatorActionCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      announcement: "Notice",
-      checkIn: "Check-in",
+      announcement: "Edit announcement",
+      checkIn: "Check-in management",
       edit: "Edit",
       manage: "Chat",
     };
   }
 
   return {
-    announcement: "公告",
-    checkIn: "签到",
+    announcement: "编辑公告",
+    checkIn: "签到管理",
     edit: "编辑聚吧",
     manage: "群聊",
   };
@@ -1571,10 +1571,8 @@ export async function ActivityDetailPageContent({
   );
   const canUseBoardGameTools =
     !activity.isActivityInfo &&
-    activity.category === "BOARD_GAME" &&
-    (isTeamOperator ||
-      viewerParticipation?.status === "JOINED" ||
-      viewerParticipation?.status === "APPROVED");
+    activity.category === "BOARD_GAME";
+  const gameToolsHref = withLocale(locale, "/game-tools");
   const avalonToolHref = withLocale(locale, "/game-tools/avalon");
   const werewolfToolHref = withLocale(locale, "/game-tools/werewolf");
   const [pendingParticipants, analyticsSummary, activityCheckInRoster] =
@@ -2378,6 +2376,7 @@ export async function ActivityDetailPageContent({
                     activityId={activity.id}
                     compact
                     locale={locale}
+                    triggerLabel={operatorActionCopy.announcement}
                   />
                 ) : null}
                 <div className="[&>button]:w-full">
@@ -2385,6 +2384,7 @@ export async function ActivityDetailPageContent({
                     activityId={activity.id}
                     locale={locale}
                     participants={activityCheckInRoster}
+                    triggerLabel={operatorActionCopy.checkIn}
                   />
                 </div>
                 {canCancelActivity ? (
@@ -2808,6 +2808,7 @@ export async function ActivityDetailPageContent({
         {canUseBoardGameTools ? (
           <BoardGameToolFloatingEntry
             avalonHref={avalonToolHref}
+            gameToolsHref={gameToolsHref}
             locale={locale}
             werewolfHref={werewolfToolHref}
           />
