@@ -2299,7 +2299,7 @@ function RoomComposer({
 
   return (
     <form
-      className="relative z-20 shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3"
+      className="relative z-20 shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
       data-activity-room-composer
       noValidate
       onFocusCapture={keepMobileChatPageAnchored}
