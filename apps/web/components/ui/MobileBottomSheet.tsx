@@ -187,6 +187,11 @@ export function MobileBottomSheet({
     resetDrag(event);
 
     if (isExpanded) {
+      if (deltaY > sheetCloseDistance) {
+        requestClose();
+        return;
+      }
+
       if (deltaY > sheetSnapDistance) {
         setIsExpanded(false);
       }
@@ -281,7 +286,12 @@ export function MobileBottomSheet({
         style={sheetStyle}
       >
         <div
-          className="shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2"
+          className={cn(
+            "shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2",
+            isExpanded
+              ? "pt-[calc(0.5rem_+_var(--app-top-safe-area))]"
+              : null,
+          )}
           onPointerCancel={handleDragCancel}
           onPointerDown={handleDragStart}
           onPointerMove={handleDragMove}
