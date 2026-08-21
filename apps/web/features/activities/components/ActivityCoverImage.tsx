@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 type ActivityCoverImageProps = {
   alt?: string;
   fetchPriority?: "auto" | "high" | "low";
+  imageClassName?: string;
   loading?: "eager" | "lazy";
   overlayClassName?: string;
   src: string | null;
@@ -15,6 +16,7 @@ type ActivityCoverImageProps = {
 export function ActivityCoverImage({
   alt = "",
   fetchPriority = "auto",
+  imageClassName,
   loading = "lazy",
   overlayClassName = "bg-black/20",
   src,
@@ -54,7 +56,10 @@ export function ActivityCoverImage({
       <img
         src={src}
         alt={alt}
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.035]"
+        className={cn(
+          "absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.035]",
+          imageClassName,
+        )}
         decoding="async"
         fetchPriority={fetchPriority}
         loading={loading}

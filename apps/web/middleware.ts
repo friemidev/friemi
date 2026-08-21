@@ -46,6 +46,7 @@ const isActivityRoomChatApiRoute = createRouteMatcher([
 const isActivityRoomCursorApiRoute = createRouteMatcher([
   "/api/activity-room(.*)",
 ]);
+const isChatApiRoute = createRouteMatcher(["/api/chat(.*)"]);
 const isGameToolsApiRoute = createRouteMatcher(["/api/game-tools(.*)"]);
 const isPlanetsApiRoute = createRouteMatcher(["/api/planets(.*)"]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
@@ -263,6 +264,10 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isChatApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isGameToolsApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -334,6 +339,7 @@ export const config = {
     "/api/admin/:path*",
     "/api/activity-room-chat/:path*",
     "/api/activity-room/:path*",
+    "/api/chat/:path*",
     "/api/game-tools/:path*",
     "/api/planets/:path*",
     "/api/uploads/:path*",

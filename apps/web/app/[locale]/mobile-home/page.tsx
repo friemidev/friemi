@@ -20,6 +20,7 @@ import {
   getMobileHomeTrendingTeamActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import { isActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
@@ -510,6 +511,10 @@ function MobileHomeV23Experience({
 
   return (
     <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-[65] h-[var(--app-top-safe-area)] bg-white"
+      />
       <div className="mx-auto flex w-full max-w-[430px] flex-col pl-5 pr-0">
         <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pr-5 pt-1">
           <Link
@@ -682,6 +687,9 @@ function MobileHomeV23ActivityCard({
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity}`
       : `${activity.participantCount}`;
+  const usesDefaultIllustration = isActivityCategoryIllustrationSrc(
+    activity.coverImageUrl,
+  );
 
   return (
     <MobileActivityDetailSheetLink
@@ -692,10 +700,15 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
+          imageClassName={
+            usesDefaultIllustration
+              ? "scale-[1.09] object-bottom"
+              : undefined
+          }
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
         />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur-sm">
+        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
           <Heart className="h-3.5 w-3.5" />
         </span>
       </div>
@@ -741,7 +754,7 @@ function MobileHomeV23FallbackCard({
           className="object-cover transition duration-500 group-active:scale-[1.03]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/24 to-transparent" />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur-sm">
+        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
           <Heart className="h-3.5 w-3.5" />
         </span>
       </div>
