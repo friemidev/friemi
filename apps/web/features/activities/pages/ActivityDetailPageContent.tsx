@@ -1959,6 +1959,15 @@ export async function ActivityDetailPageContent({
               sourceSurface="activity_detail"
             />
           ) : null}
+          {isSheetPresentation ? (
+            <ActivityShareDialogButton
+              className="bg-white/95 text-zinc-900 ring-black/10 hover:bg-white md:hidden"
+              closeLabel={mobileCloseLabel}
+              label={mobileShareLabel}
+            >
+              {renderTeamShareTools({ collapsible: false })}
+            </ActivityShareDialogButton>
+          ) : null}
           {canManageCrewCover ? (
             <ActivityCoverImageManager
               activityId={activity.id}
