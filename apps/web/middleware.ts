@@ -7,6 +7,7 @@ import { hasClerkKeys } from "./lib/clerk";
 import {
   getMobileRootLobbyRedirectPath,
   getRootHomeRedirectPath,
+  isSearchCrawlerUserAgent,
   localeCookieName,
 } from "./lib/mobile-root-lobby-entry";
 import {
@@ -184,12 +185,19 @@ export default clerkMiddleware(async (auth, request) => {
     localeCookie: request.cookies.get(localeCookieName)?.value,
     pathname: request.nextUrl.pathname,
     search: request.nextUrl.search,
+    userAgent: request.headers.get("user-agent"),
   });
 
   if (rootHomePath) {
+    const redirectStatus = isSearchCrawlerUserAgent(
+      request.headers.get("user-agent"),
+    )
+      ? 308
+      : 307;
+
     return withReferralCookie(
       request,
-      NextResponse.redirect(new URL(rootHomePath, request.url)),
+      NextResponse.redirect(new URL(rootHomePath, request.url), redirectStatus),
     );
   }
 
