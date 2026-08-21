@@ -1,6 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
+  createSignedActivityCoverUpload,
+  finalizeSignedActivityCoverUpload,
   getActivityCoverStorageConfig,
   uploadActivityCoverBuffer,
   validateImageUploadFile,
@@ -10,6 +13,19 @@ import { hasClerkKeys } from "@/lib/clerk";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const signedUploadRequestSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("create"),
+    fileName: z.string().trim().min(1).max(255),
+    fileSize: z.number().int().nonnegative(),
+    fileType: z.string().trim().max(100).optional(),
+  }),
+  z.object({
+    action: z.literal("finalize"),
+    path: z.string().trim().min(1).max(500),
+  }),
+]);
 
 function uploadError(error: ActivityCoverStorageErrorCode, status: number) {
   return NextResponse.json({ error }, { status });
@@ -34,6 +50,38 @@ export async function POST(request: Request) {
 
   if (!getActivityCoverStorageConfig()) {
     return uploadError("STORAGE_NOT_CONFIGURED", 500);
+  }
+
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    const body = await request.json().catch(() => null);
+    const parsed = signedUploadRequestSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
+    }
+
+    const result =
+      parsed.data.action === "create"
+        ? await createSignedActivityCoverUpload(userId, {
+            name: parsed.data.fileName,
+            size: parsed.data.fileSize,
+            type: parsed.data.fileType,
+          })
+        : await finalizeSignedActivityCoverUpload(userId, parsed.data.path);
+
+    if ("error" in result) {
+      const status =
+        result.error === "FILE_TOO_LARGE" ||
+        result.error === "INVALID_IMAGE_CONTENT" ||
+        result.error === "INVALID_UPLOAD_PATH" ||
+        result.error === "UNSUPPORTED_FILE_TYPE"
+          ? 400
+          : 500;
+
+      return uploadError(result.error, status);
+    }
+
+    return NextResponse.json(result);
   }
 
   const formData = await request.formData();

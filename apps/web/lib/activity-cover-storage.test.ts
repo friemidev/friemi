@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   detectActivityCoverMimeType,
+  isActivityCoverUploadPathOwnedByUser,
   validateImageUploadFile,
 } from "./activity-cover-storage";
 
@@ -58,4 +59,18 @@ test("rejects unsupported image content without throwing", async () => {
   assert.deepEqual(await validateImageUploadFile(file), {
     error: "UNSUPPORTED_FILE_TYPE",
   });
+});
+
+test("accepts only signed cover paths owned by the current user", () => {
+  const path = "user-123/123e4567-e89b-12d3-a456-426614174000.jpg";
+
+  assert.equal(isActivityCoverUploadPathOwnedByUser("user-123", path), true);
+  assert.equal(isActivityCoverUploadPathOwnedByUser("user-456", path), false);
+  assert.equal(
+    isActivityCoverUploadPathOwnedByUser(
+      "user-123",
+      "user-123/../../another-user/image.jpg",
+    ),
+    false,
+  );
 });

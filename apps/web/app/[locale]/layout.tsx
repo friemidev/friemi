@@ -13,7 +13,6 @@ import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSecti
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
-import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notifications/unreadBadgePolling";
@@ -98,8 +97,7 @@ export default async function LocaleLayout({
   const clerkEnabled = hasClerkKeys();
   const unreadBadgeFreshnessGuardEnabled =
     resolveUnreadBadgeFreshnessGuardEnabled({
-      configuredValue:
-        process.env.UNREAD_BADGE_FRESHNESS_GUARD_ENABLED,
+      configuredValue: process.env.UNREAD_BADGE_FRESHNESS_GUARD_ENABLED,
       vercelEnvironment: process.env.VERCEL_ENV,
     });
   const content = (
@@ -136,11 +134,6 @@ export default async function LocaleLayout({
                 }
               />
               <MobileScrollProgress />
-              <IdleRoutePrefetcher
-                enabled
-                idleDelayMs={1600}
-                locale={locale}
-              />
               {clerkEnabled ? (
                 <>
                   <AndroidAuthReturnRefresh

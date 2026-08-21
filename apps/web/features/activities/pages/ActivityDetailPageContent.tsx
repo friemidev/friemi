@@ -115,6 +115,7 @@ import {
   getSharePriceLabel,
   resolveShareImageUrl,
 } from "@/lib/share-metadata";
+import { resolveTeamWechatShareImageUrl } from "@/features/activities/utils/teamWechatShareImage";
 import {
   ensurePrivateActivityShareToken,
   getPrivateActivitySharePath,
@@ -835,10 +836,12 @@ export async function generateActivityDetailMetadata(
         baseUrl,
         locale,
       }),
-      wechatShareImageUrl: resolveShareImageUrl(
-        activity.coverImageUrl,
-        baseUrl,
-      ),
+      wechatShareImageUrl: resolveTeamWechatShareImageUrl({
+        activityId,
+        activityUrl: canonicalUrl,
+        coverImageUrl: activity.coverImageUrl,
+        locale,
+      }),
       title: activity.title,
     });
 

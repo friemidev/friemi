@@ -14,6 +14,7 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverUploadProps = {
@@ -38,15 +39,6 @@ type ActivityCoverUploadProps = {
   submitFallbackValue?: boolean;
   uploadEndpoint?: string;
 };
-
-type UploadErrorCode =
-  | "STORAGE_NOT_CONFIGURED"
-  | "MISSING_FILE"
-  | "UNSUPPORTED_FILE_TYPE"
-  | "FILE_TOO_LARGE"
-  | "INVALID_IMAGE_CONTENT"
-  | "BUCKET_NOT_AVAILABLE"
-  | "UPLOAD_FAILED";
 
 function normalizeUploadedCoverUrl(url: string | null | undefined) {
   const trimmedUrl = url?.trim() ?? "";
@@ -153,30 +145,14 @@ export function ActivityCoverUpload({
     onUploadingChange?.(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const result = await uploadImageWithSignedUrl(uploadEndpoint, file);
 
-      const response = await fetch(uploadEndpoint, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const json = (await response.json().catch(() => null)) as {
-          error?: UploadErrorCode;
-        } | null;
-        setError(getUploadErrorMessage(json?.error));
+      if ("error" in result) {
+        setError(getUploadErrorMessage(result.error));
         return;
       }
 
-      const json = (await response.json()) as { url?: string };
-
-      if (!json.url) {
-        setError(t.coverUploadFailed);
-        return;
-      }
-
-      updateImageUrl(json.url);
+      updateImageUrl(result.url);
     } catch {
       setError(t.coverUploadFailed);
     } finally {

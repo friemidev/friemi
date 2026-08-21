@@ -841,6 +841,17 @@ export async function markDirectConversationRead({
         hiddenAt: null,
       },
     }),
+    prisma.notification.updateMany({
+      where: {
+        actorId: peerProfileId,
+        readAt: null,
+        recipientId: currentUserProfileId,
+        type: "DIRECT_MESSAGE",
+      },
+      data: {
+        readAt: new Date(),
+      },
+    }),
   ]);
 }
 

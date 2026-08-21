@@ -9,6 +9,12 @@ const mobileUserAgentPattern =
 const searchCrawlerUserAgentPattern =
   /\b(Googlebot|AdsBot-Google|Mediapartners-Google|Google-InspectionTool|bingbot|BingPreview|DuckDuckBot|Slurp|YandexBot|Baiduspider|facebookexternalhit|Twitterbot|LinkedInBot)\b/i;
 
+export function isSearchCrawlerUserAgent(userAgent: string | null | undefined) {
+  return Boolean(
+    userAgent?.trim() && searchCrawlerUserAgentPattern.test(userAgent),
+  );
+}
+
 function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
   return locales.includes(value as SupportedLocale);
 }
@@ -50,7 +56,7 @@ export function isMobileUserAgent(userAgent: string | null | undefined) {
     return false;
   }
 
-  if (searchCrawlerUserAgentPattern.test(userAgent)) {
+  if (isSearchCrawlerUserAgent(userAgent)) {
     return false;
   }
 
@@ -116,17 +122,21 @@ export function getRootHomeRedirectPath({
   localeCookie,
   pathname,
   search,
+  userAgent,
 }: {
   acceptLanguage?: string | null;
   localeCookie?: string | null;
   pathname: string;
   search?: string | null;
+  userAgent?: string | null;
 }) {
   if (pathname !== "/") {
     return null;
   }
 
-  const locale = resolveRootEntryLocale({ acceptLanguage, localeCookie });
+  const locale = isSearchCrawlerUserAgent(userAgent)
+    ? defaultLocale
+    : resolveRootEntryLocale({ acceptLanguage, localeCookie });
 
   return `/${locale}/home${normalizeSearch(search)}`;
 }

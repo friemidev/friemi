@@ -4,6 +4,7 @@ import {
   getMobileRootLobbyRedirectPath,
   getRootHomeRedirectPath,
   isMobileUserAgent,
+  isSearchCrawlerUserAgent,
   resolveRootEntryLocale,
 } from "./mobile-root-lobby-entry";
 
@@ -31,12 +32,11 @@ test("isMobileUserAgent detects common mobile browsers", () => {
 });
 
 test("isMobileUserAgent does not redirect search crawlers with mobile user agents", () => {
-  assert.equal(
-    isMobileUserAgent(
-      "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-    ),
-    false,
-  );
+  const googlebotUserAgent =
+    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
+  assert.equal(isSearchCrawlerUserAgent(googlebotUserAgent), true);
+  assert.equal(isMobileUserAgent(googlebotUserAgent), false);
 });
 
 test("resolveRootEntryLocale prefers the locale cookie", () => {
@@ -123,5 +123,16 @@ test("getRootHomeRedirectPath redirects root requests directly to localized home
       pathname: "/zh-CN/home",
     }),
     null,
+  );
+
+  assert.equal(
+    getRootHomeRedirectPath({
+      acceptLanguage: "fr-FR,fr;q=0.9",
+      localeCookie: "en",
+      pathname: "/",
+      userAgent:
+        "Mozilla/5.0 (Linux; Android 6.0.1) Mobile (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    }),
+    "/zh-CN/home",
   );
 });

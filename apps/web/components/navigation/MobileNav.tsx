@@ -121,7 +121,6 @@ export function MobileNav({ locale }: MobileNavProps) {
             <IntentPrefetchLink
               key={item.href}
               href={withLocale(currentLocale, item.href)}
-              prefetchOnVisible
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               title={item.label}

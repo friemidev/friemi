@@ -6,7 +6,7 @@ import {
   resolveUnreadBadgeFreshnessGuardEnabled,
 } from "./unreadBadgePolling";
 
-test("enables the freshness guard by default only in Preview", () => {
+test("enables the freshness guard by default in Vercel environments", () => {
   assert.equal(
     resolveUnreadBadgeFreshnessGuardEnabled({
       vercelEnvironment: "preview",
@@ -17,7 +17,7 @@ test("enables the freshness guard by default only in Preview", () => {
     resolveUnreadBadgeFreshnessGuardEnabled({
       vercelEnvironment: "production",
     }),
-    false,
+    true,
   );
   assert.equal(
     resolveUnreadBadgeFreshnessGuardEnabled({

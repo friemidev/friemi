@@ -169,7 +169,8 @@ test("buildTeamShareMetadata puts WeChat cover image first for group pages", () 
     shareImageUrl:
       "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN",
     title: "周末野餐组局",
-    wechatShareImageUrl: "https://images.example.com/team-cover.jpg",
+    wechatShareImageUrl:
+      "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
   });
   const images = metadata.openGraph?.images;
 
@@ -178,10 +179,35 @@ test("buildTeamShareMetadata puts WeChat cover image first for group pages", () 
 
   assert.equal(
     imageObjects[0]?.url,
-    "https://images.example.com/team-cover.jpg",
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
   );
-  assert.equal(imageObjects[0]?.width, 1200);
+  assert.equal(imageObjects[0]?.width, 420);
   assert.equal(imageObjects[1]?.width, 1200);
+});
+
+test("buildTeamShareMetadata does not invent dimensions for custom covers", () => {
+  const metadata = buildTeamShareMetadata({
+    canonicalUrl: "https://friemi.example/zh-CN/activities/activity_1",
+    locale: "zh-CN",
+    participantCount: 1,
+    title: "周末野餐组局",
+    wechatShareImageUrl: "https://images.example.com/custom-cover.jpg",
+  });
+  const images = metadata.openGraph?.images;
+
+  assert.ok(Array.isArray(images));
+  const imageObjects = images as Array<{
+    height?: number;
+    url: string;
+    width?: number;
+  }>;
+
+  assert.equal(
+    imageObjects[0]?.url,
+    "https://images.example.com/custom-cover.jpg",
+  );
+  assert.equal(imageObjects[0]?.width, undefined);
+  assert.equal(imageObjects[0]?.height, undefined);
 });
 
 test("getShareLocationLabel avoids duplicating city names", () => {

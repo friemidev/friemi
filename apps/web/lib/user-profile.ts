@@ -176,19 +176,21 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
     })
     .then(ensureUserProfileFriendCode);
 
-  void runScheduledGuestLink({
-    prisma,
-    profile: {
-      ...profile,
-      verifiedEmail,
-    },
-    trigger: "clerk_webhook",
-  }).catch((error) => {
+  try {
+    await runScheduledGuestLink({
+      prisma,
+      profile: {
+        ...profile,
+        verifiedEmail,
+      },
+      trigger: "clerk_webhook",
+    });
+  } catch (error) {
     console.error(
       "Failed to link guest participations from Clerk webhook",
       error,
     );
-  });
+  }
 
   if (!existing) {
     await grantWelcomeCheckForNewProfile(profile.id);
