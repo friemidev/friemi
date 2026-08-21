@@ -18,6 +18,7 @@ const existingParticipantStatuses: ParticipantStatus[] = [
   "APPROVED",
   "PENDING",
 ];
+const guestLinkBatchSize = 50;
 
 function getGuestMatchWhere(profile: {
   contactEmail?: string | null;
@@ -206,8 +207,8 @@ export async function linkGuestParticipationsForProfile(
     return { activityIds: [], linked: 0 };
   }
 
-  const result = await prismaClient.$transaction(async (tx) => {
-    const guestParticipations = await tx.guestActivityParticipant.findMany({
+  const guestParticipations =
+    await prismaClient.guestActivityParticipant.findMany({
       where: {
         linkedParticipantId: null,
         status: {
@@ -216,6 +217,7 @@ export async function linkGuestParticipationsForProfile(
         OR: matchWhere,
       },
       orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
+      take: guestLinkBatchSize,
       select: {
         activityId: true,
         id: true,
@@ -225,14 +227,13 @@ export async function linkGuestParticipationsForProfile(
       },
     });
 
-    let linked = 0;
-    const linkedActivityIds = new Set<string>();
+  let linked = 0;
+  const linkedActivityIds = new Set<string>();
 
+  try {
     for (const guest of guestParticipations) {
-      const linkedParticipation = await linkGuestParticipation(
-        tx,
-        guest,
-        profile.id,
+      const linkedParticipation = await prismaClient.$transaction((tx) =>
+        linkGuestParticipation(tx, guest, profile.id),
       );
 
       if (linkedParticipation) {
@@ -240,12 +241,19 @@ export async function linkGuestParticipationsForProfile(
         linkedActivityIds.add(linkedParticipation.activityId);
       }
     }
+  } catch (error) {
+    await Promise.allSettled(
+      [...linkedActivityIds].map((activityId) =>
+        syncActivitySocialRewards({ activityId }),
+      ),
+    );
+    throw error;
+  }
 
-    return {
-      activityIds: Array.from(linkedActivityIds),
-      linked,
-    };
-  });
+  const result = {
+    activityIds: [...linkedActivityIds],
+    linked,
+  };
 
   await Promise.allSettled(
     result.activityIds.map((activityId) =>

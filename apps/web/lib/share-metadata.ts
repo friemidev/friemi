@@ -144,6 +144,19 @@ function canUseShareImageUrl(value: string) {
   }
 }
 
+function isGeneratedTeamWechatShareImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+
+    return (
+      url.pathname === "/api/share/team-card" &&
+      url.searchParams.get("variant") === "wechat"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function resolveShareImageUrl(
   coverImageUrl: string | null | undefined,
   baseUrl: string,
@@ -499,15 +512,24 @@ export function buildTeamShareMetadata({
     resolveAbsoluteUrl(shareImageUrl, baseUrl) ??
     resolveShareImageUrl(coverImageUrl, baseUrl);
   const wechatImageUrl = resolveAbsoluteUrl(wechatShareImageUrl, baseUrl);
+  const wechatImage = wechatImageUrl
+    ? isGeneratedTeamWechatShareImageUrl(wechatImageUrl)
+      ? {
+          alt: metadataTitle,
+          height: 420,
+          type: "image/png",
+          url: wechatImageUrl,
+          width: 420,
+        }
+      : {
+          alt: metadataTitle,
+          url: wechatImageUrl,
+        }
+    : null;
   const openGraphImages =
-    wechatImageUrl && wechatImageUrl !== imageUrl
+    wechatImage && wechatImage.url !== imageUrl
       ? [
-          {
-            alt: metadataTitle,
-            height: 630,
-            url: wechatImageUrl,
-            width: 1200,
-          },
+          wechatImage,
           {
             alt: metadataTitle,
             height: 630,

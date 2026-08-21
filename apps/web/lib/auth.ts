@@ -38,16 +38,18 @@ async function finalizeUserProfile<
 ) {
   const ensuredProfile = await ensureUserProfileFriendCode(profile);
 
-  void runScheduledGuestLink({
-    prisma,
-    profile: {
-      ...ensuredProfile,
-      verifiedEmail: options.verifiedEmail,
-    },
-    trigger: "auth_snapshot",
-  }).catch((error) => {
+  try {
+    await runScheduledGuestLink({
+      prisma,
+      profile: {
+        ...ensuredProfile,
+        verifiedEmail: options.verifiedEmail,
+      },
+      trigger: "auth_snapshot",
+    });
+  } catch (error) {
     console.error("Failed to link guest participations for profile", error);
-  });
+  }
 
   return ensuredProfile;
 }

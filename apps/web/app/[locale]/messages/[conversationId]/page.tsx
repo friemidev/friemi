@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { after } from "next/server";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -19,7 +18,6 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
-import { prisma } from "@/lib/prisma";
 import { noIndexMetadata } from "@/lib/seo";
 
 type MessageThreadPageProps = {
@@ -98,27 +96,6 @@ export default async function MessageThreadPage({
       return directCount + roomCount;
     },
   );
-
-  after(() => {
-    void prisma.notification
-      .updateMany({
-        where: {
-          actorId: conversation.peer.id,
-          readAt: null,
-          recipientId: profile.id,
-          type: "DIRECT_MESSAGE",
-        },
-        data: {
-          readAt: new Date(),
-        },
-      })
-      .catch((error: unknown) => {
-        console.error(
-          "Failed to mark direct message notifications read",
-          error,
-        );
-      });
-  });
 
   const activityContext = activityId
     ? await perf

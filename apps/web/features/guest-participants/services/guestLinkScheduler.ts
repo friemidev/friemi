@@ -140,27 +140,12 @@ export async function runScheduledGuestLink({
     lastCheckedAt: profile.guestLinkCheckedAt,
     previousFingerprint: profile.guestLinkFingerprint,
   });
+  // Auth snapshots run on most protected pages. Always apply the scheduler
+  // guard there, even while the rollout is in legacy mode, so navigation
+  // cannot start the same best-effort linking job many times in parallel.
+  const usesScheduleGuard = mode === "canary" || trigger === "auth_snapshot";
 
-  if (mode === "shadow") {
-    const candidateCount = await countGuestLinkCandidatesForProfile(
-      prisma,
-      profile,
-    );
-    const result = await linkGuestParticipationsForProfile(prisma, profile);
-
-    logPerformanceShadow("b1_guest_link", {
-      candidateCount,
-      durationMs: Date.now() - startedAt,
-      due,
-      linked: result.linked,
-      mode,
-      trigger,
-    });
-
-    return { ...result, skipped: false };
-  }
-
-  if (mode === "canary") {
+  if (usesScheduleGuard) {
     if (!force && !due) {
       return { activityIds: [], linked: 0, skipped: true };
     }
@@ -187,12 +172,20 @@ export async function runScheduledGuestLink({
     }
   }
 
+  let candidateCount: number | null = null;
   let result: Awaited<ReturnType<typeof linkGuestParticipationsForProfile>>;
 
   try {
+    if (mode === "shadow") {
+      candidateCount = await countGuestLinkCandidatesForProfile(
+        prisma,
+        profile,
+      );
+    }
+
     result = await linkGuestParticipationsForProfile(prisma, profile);
   } catch (error) {
-    if (mode === "canary") {
+    if (usesScheduleGuard) {
       await prisma.userProfile.updateMany({
         where: {
           id: profile.id,
@@ -207,7 +200,7 @@ export async function runScheduledGuestLink({
     throw error;
   }
 
-  if (mode === "canary") {
+  if (usesScheduleGuard) {
     await prisma.userProfile.updateMany({
       where: {
         id: profile.id,
@@ -220,7 +213,7 @@ export async function runScheduledGuestLink({
   }
 
   logPerformanceShadow("b1_guest_link", {
-    candidateCount: result.linked,
+    candidateCount: candidateCount ?? result.linked,
     durationMs: Date.now() - startedAt,
     due,
     linked: result.linked,

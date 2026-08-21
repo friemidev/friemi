@@ -730,7 +730,6 @@ function MobileHomeV23FallbackCard({
   return (
     <IntentPrefetchLink
       href={withLocale(locale, card.href)}
-      prefetchOnVisible
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">

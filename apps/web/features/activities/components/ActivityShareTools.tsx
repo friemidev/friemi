@@ -13,6 +13,7 @@ import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { resolveTeamWechatShareImageUrl } from "@/features/activities/utils/teamWechatShareImage";
 import { WechatShareConfigurator } from "./WechatShareConfigurator";
 
 type ActivityShareToolsProps = {
@@ -217,51 +218,6 @@ async function generateActivityPosterDataUrl({
   context.fillText(urlHost, 108, 1242);
 
   return canvas.toDataURL("image/png");
-}
-
-function resolveWechatShareImageUrl(
-  value: string | null | undefined,
-  baseUrl: string,
-) {
-  if (!value?.trim()) {
-    return null;
-  }
-
-  try {
-    const imageUrl = new URL(value.trim(), baseUrl);
-
-    if (imageUrl.protocol !== "http:" && imageUrl.protocol !== "https:") {
-      return null;
-    }
-
-    return imageUrl.toString();
-  } catch {
-    return null;
-  }
-}
-
-function buildTeamWechatShareImageUrl({
-  activityUrl,
-  coverImageUrl,
-}: {
-  activityUrl: string;
-  coverImageUrl?: string | null;
-}) {
-  try {
-    const shareUrl = new URL(activityUrl);
-    const coverShareUrl = coverImageUrl
-      ? resolveWechatShareImageUrl(
-          getActivityCoverDisplayUrl(coverImageUrl),
-          shareUrl.origin,
-        )
-      : null;
-
-    return (
-      coverShareUrl ?? new URL(brand.shareImagePath, shareUrl.origin).toString()
-    );
-  } catch {
-    return null;
-  }
 }
 
 function drawWrappedText(
@@ -694,12 +650,14 @@ export function ActivityShareTools({
     }
 
     setWechatShareImageUrl(
-      buildTeamWechatShareImageUrl({
+      resolveTeamWechatShareImageUrl({
+        activityId: analyticsEntityId,
         activityUrl,
         coverImageUrl,
+        locale,
       }),
     );
-  }, [activityUrl, coverImageUrl, shareKind]);
+  }, [activityUrl, analyticsEntityId, coverImageUrl, locale, shareKind]);
 
   useEffect(() => {
     if (!activityUrl) {

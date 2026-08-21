@@ -3,7 +3,7 @@
 import { RouteErrorState } from "@/components/ui/RouteErrorState";
 import type { RouteErrorProps } from "@/components/ui/RouteErrorState";
 
-export default function PlanetRoomError({ error, reset }: RouteErrorProps) {
+export default function LocaleError({ error, reset }: RouteErrorProps) {
   void error;
 
   return <RouteErrorState reset={reset} />;

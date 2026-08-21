@@ -5,7 +5,9 @@ import {
   allowedImageMimeTypes,
   areCompatibleImageMimeTypes,
   getAllowedImageMimeTypes,
+  getImageMimeTypeFromFileName,
   getImageUploadSizeLimit,
+  getLikelyImageMimeType,
   maxImageBucketFileSize,
   maxImageUploadFileSize,
   maxProfileAvatarUploadFileSize,
@@ -30,11 +32,16 @@ export type ActivityCoverStorageErrorCode =
   | "INVALID_IMAGE_CONTENT"
   | "BUCKET_NOT_AVAILABLE"
   | "UPLOAD_FAILED"
+  | "INVALID_UPLOAD_PATH"
   | "FETCH_FAILED";
 
 export type ActivityCoverUploadResult =
   | { error: ActivityCoverStorageErrorCode }
   | { path: string; url: string };
+
+export type ActivityCoverSignedUploadResult =
+  | { error: ActivityCoverStorageErrorCode }
+  | { path: string; signedUrl: string };
 
 export type ValidatedImageUploadFile =
   | {
@@ -207,6 +214,20 @@ function getSafePathSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
+export function isActivityCoverUploadPathOwnedByUser(
+  userId: string,
+  path: string,
+) {
+  const safeUserId = getSafePathSegment(userId);
+  const extensions = Object.values(allowedImageMimeTypes).join("|");
+  const pathPattern = new RegExp(
+    `^${safeUserId}/[0-9a-f-]{36}\\.(${extensions})$`,
+    "i",
+  );
+
+  return pathPattern.test(path);
+}
+
 async function ensurePublicBucket(storage: StorageClient, bucket: string) {
   if (readyBuckets.has(bucket)) {
     return true;
@@ -265,6 +286,119 @@ function createActivityCoverStorageClient(config: {
       Authorization: `Bearer ${config.serviceRoleKey}`,
     },
   );
+}
+
+export async function createSignedActivityCoverUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  const config = getActivityCoverStorageConfig();
+
+  if (!config) {
+    return { error: "STORAGE_NOT_CONFIGURED" };
+  }
+
+  const detectedMimeType = getLikelyImageMimeType(file.type, file.name);
+
+  if (!detectedMimeType) {
+    return { error: "UNSUPPORTED_FILE_TYPE" };
+  }
+
+  if (
+    file.size > maxImageBucketFileSize ||
+    file.size > getImageUploadSizeLimit(detectedMimeType)
+  ) {
+    return { error: "FILE_TOO_LARGE" };
+  }
+
+  const storage = createActivityCoverStorageClient(config);
+  const bucketReady = await ensurePublicBucket(storage, config.bucket);
+
+  if (!bucketReady) {
+    return { error: "BUCKET_NOT_AVAILABLE" };
+  }
+
+  const extension = allowedImageMimeTypes[detectedMimeType];
+  const safeUserId = getSafePathSegment(userId);
+  const path = `${safeUserId}/${randomUUID()}.${extension}`;
+  const signed = await storage
+    .from(config.bucket)
+    .createSignedUploadUrl(path, { upsert: false });
+
+  if (signed.error) {
+    console.error("Failed to create signed activity cover upload", {
+      bucket: config.bucket,
+      message: signed.error.message,
+    });
+
+    return { error: "UPLOAD_FAILED" };
+  }
+
+  return {
+    path: signed.data.path,
+    signedUrl: signed.data.signedUrl,
+  };
+}
+
+export async function finalizeSignedActivityCoverUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  const config = getActivityCoverStorageConfig();
+
+  if (!config) {
+    return { error: "STORAGE_NOT_CONFIGURED" };
+  }
+
+  if (!isActivityCoverUploadPathOwnedByUser(userId, path)) {
+    return { error: "INVALID_UPLOAD_PATH" };
+  }
+
+  const expectedMimeType = getImageMimeTypeFromFileName(path);
+
+  if (!expectedMimeType) {
+    return { error: "UNSUPPORTED_FILE_TYPE" };
+  }
+
+  const storage = createActivityCoverStorageClient(config);
+  const bucket = storage.from(config.bucket);
+  const downloaded = await bucket.download(path);
+
+  if (downloaded.error) {
+    console.error("Failed to validate signed activity cover upload", {
+      bucket: config.bucket,
+      message: downloaded.error.message,
+      path,
+    });
+
+    return { error: "UPLOAD_FAILED" };
+  }
+
+  const file = new File([downloaded.data], path, {
+    type: downloaded.data.type || expectedMimeType,
+  });
+  const validated = await validateImageUploadFile(file);
+
+  if (
+    "error" in validated ||
+    !areCompatibleImageMimeTypes(
+      expectedMimeType,
+      validated.detectedMimeType,
+    )
+  ) {
+    await bucket.remove([path]);
+
+    return "error" in validated
+      ? validated
+      : { error: "INVALID_IMAGE_CONTENT" };
+  }
+
+  const publicUrl = bucket.getPublicUrl(path);
+
+  return {
+    path,
+    url: publicUrl.data.publicUrl,
+  };
 }
 
 export async function uploadActivityCoverBuffer(

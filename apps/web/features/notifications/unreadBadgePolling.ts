@@ -30,7 +30,7 @@ export function resolveUnreadBadgeFreshnessGuardEnabled({
     return false;
   }
 
-  return vercelEnvironment === "preview";
+  return vercelEnvironment === "preview" || vercelEnvironment === "production";
 }
 
 export function getUnreadBadgeFreshnessRemainingMs({

@@ -102,7 +102,9 @@ export function DesktopNav({ locale }: DesktopNavProps) {
         const Icon = item.icon;
         const active = isItemActive(item.href);
         const visibleLabel =
-          currentLocale === "zh-CN" ? item.label : item.shortLabel ?? item.label;
+          currentLocale === "zh-CN"
+            ? item.label
+            : (item.shortLabel ?? item.label);
         const title = typeof item.label === "string" ? item.label : undefined;
 
         return (
@@ -121,7 +123,6 @@ export function DesktopNav({ locale }: DesktopNavProps) {
                   : "text-zinc-700 hover:bg-[#F1F2EC] hover:text-[#1D1D1B]",
             )}
             href={withLocale(currentLocale, item.href)}
-            prefetchOnVisible
           >
             <span
               className={cn(
