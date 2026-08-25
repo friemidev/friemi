@@ -107,13 +107,19 @@ type FootprintsMobilePageProps = {
   messageFriends: DirectMessageFriendRosterItemViewModel[];
   officialMessages: OfficialMessageRosterViewModel | null;
   messageRosterError?: boolean;
+  messageRosterLoaded: boolean;
   momentFeedError?: boolean;
+  momentFeedHasMore: boolean;
+  momentFeedLoaded: boolean;
+  momentFeedNextCursor: string | null;
   moments: MomentFeedItemViewModel[];
   canCreatePlanet: boolean;
-  planetChatRosterLoaded: boolean;
   planetChats: PlanetChatRosterItemViewModel[];
   planets: PlanetSquare;
   planetSquareError?: boolean;
+  planetSquareHasMore: boolean;
+  planetSquareLoaded: boolean;
+  planetSquareNextCursor: string | null;
   profile: FootprintsViewerProfile | null;
 };
 
@@ -3407,25 +3413,59 @@ function FootprintsMessageRow({
 }
 
 export function FootprintsMobilePage({
-  activityRoomChats,
+  activityRoomChats: initialActivityRoomChats,
   initialMomentScope = "PUBLIC",
   initialTab = "moment",
   locale,
-  messageFriends,
-  officialMessages,
+  messageFriends: initialMessageFriends,
+  officialMessages: initialOfficialMessages,
   messageRosterError = false,
+  messageRosterLoaded,
   momentFeedError = false,
-  moments,
-  canCreatePlanet,
-  planetChatRosterLoaded,
-  planetChats,
-  planets,
+  momentFeedHasMore,
+  momentFeedLoaded,
+  momentFeedNextCursor,
+  moments: initialMoments,
+  canCreatePlanet: initialCanCreatePlanet,
+  planetChats: initialPlanetChats,
+  planets: initialPlanets,
   planetSquareError = false,
+  planetSquareHasMore,
+  planetSquareLoaded,
+  planetSquareNextCursor,
   profile,
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
+  const [moments, setMoments] = useState(initialMoments);
+  const [momentCursor, setMomentCursor] = useState(momentFeedNextCursor);
+  const [hasMoreMoments, setHasMoreMoments] = useState(momentFeedHasMore);
+  const [planets, setPlanets] = useState(initialPlanets);
+  const [planetCursor, setPlanetCursor] = useState(planetSquareNextCursor);
+  const [hasMorePlanets, setHasMorePlanets] = useState(planetSquareHasMore);
+  const [canCreatePlanet, setCanCreatePlanet] = useState(
+    initialCanCreatePlanet,
+  );
+  const [messageFriends, setMessageFriends] = useState(initialMessageFriends);
+  const [officialMessages, setOfficialMessages] = useState(
+    initialOfficialMessages,
+  );
+  const [activityRoomChats, setActivityRoomChats] = useState(
+    initialActivityRoomChats,
+  );
+  const [planetChats, setPlanetChats] = useState(initialPlanetChats);
+  const [loadedTabs, setLoadedTabs] = useState<Record<FootprintsTab, boolean>>({
+    message: messageRosterLoaded,
+    moment: momentFeedLoaded,
+    planet: planetSquareLoaded,
+  });
+  const [loadingMoreMoments, setLoadingMoreMoments] = useState(false);
+  const [loadingMorePlanets, setLoadingMorePlanets] = useState(false);
+  const momentLoadMoreRef = useRef<HTMLDivElement>(null);
+  const planetLoadMoreRef = useRef<HTMLDivElement>(null);
+  const momentPageInFlightRef = useRef(false);
+  const planetPageInFlightRef = useRef(false);
   const isAuthenticated = Boolean(profile);
   const [feedScope, setFeedScope] = useState<MomentFeedScope>(
     isAuthenticated ? initialMomentScope : "PUBLIC",
@@ -3547,7 +3587,7 @@ export function FootprintsMobilePage({
   function handleTopTabChange(nextTab: FootprintsTab) {
     setActiveTab(nextTab);
 
-    if (nextTab === "message" && profile && !planetChatRosterLoaded) {
+    if (!loadedTabs[nextTab]) {
       router.push(
         withLocale(locale, getFootprintsTabPath(nextTab, feedScope)),
         { scroll: false },
@@ -3557,6 +3597,161 @@ export function FootprintsMobilePage({
 
     updateFootprintsHistoryUrl(locale, nextTab, feedScope, "push");
   }
+
+  useEffect(() => {
+    if (!momentFeedLoaded) return;
+    setMoments(initialMoments);
+    setMomentCursor(momentFeedNextCursor);
+    setHasMoreMoments(momentFeedHasMore);
+    setLoadedTabs((current) => ({ ...current, moment: true }));
+  }, [
+    initialMoments,
+    momentFeedHasMore,
+    momentFeedLoaded,
+    momentFeedNextCursor,
+  ]);
+
+  useEffect(() => {
+    if (!planetSquareLoaded) return;
+    setPlanets(initialPlanets);
+    setPlanetCursor(planetSquareNextCursor);
+    setHasMorePlanets(planetSquareHasMore);
+    setCanCreatePlanet(initialCanCreatePlanet);
+    setLoadedTabs((current) => ({ ...current, planet: true }));
+  }, [
+    initialCanCreatePlanet,
+    initialPlanets,
+    planetSquareHasMore,
+    planetSquareLoaded,
+    planetSquareNextCursor,
+  ]);
+
+  useEffect(() => {
+    if (!messageRosterLoaded) return;
+    setMessageFriends(initialMessageFriends);
+    setOfficialMessages(initialOfficialMessages);
+    setActivityRoomChats(initialActivityRoomChats);
+    setPlanetChats(initialPlanetChats);
+    setLoadedTabs((current) => ({ ...current, message: true }));
+  }, [
+    initialActivityRoomChats,
+    initialMessageFriends,
+    initialOfficialMessages,
+    initialPlanetChats,
+    messageRosterLoaded,
+  ]);
+
+  useEffect(() => {
+    const target = momentLoadMoreRef.current;
+
+    if (
+      activeTab !== "moment" ||
+      !target ||
+      !hasMoreMoments ||
+      loadingMoreMoments
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (!entries[0]?.isIntersecting || momentPageInFlightRef.current)
+          return;
+        momentPageInFlightRef.current = true;
+        setLoadingMoreMoments(true);
+
+        try {
+          const params = new URLSearchParams();
+          if (momentCursor) params.set("cursor", momentCursor);
+          const response = await fetch(`/api/footprints/moments?${params}`);
+          const payload = (await response.json()) as {
+            ok?: boolean;
+            page?: {
+              hasMore: boolean;
+              items: MomentFeedItemViewModel[];
+              nextCursor: string | null;
+            };
+          };
+
+          if (!response.ok || !payload.page)
+            throw new Error("Moment page failed");
+          setMoments((current) => {
+            const seen = new Set(current.map((item) => item.id));
+            return [
+              ...current,
+              ...payload.page!.items.filter((item) => !seen.has(item.id)),
+            ];
+          });
+          setMomentCursor(payload.page.nextCursor);
+          setHasMoreMoments(payload.page.hasMore);
+        } catch (error) {
+          console.error("Failed to load more moments", error);
+        } finally {
+          momentPageInFlightRef.current = false;
+          setLoadingMoreMoments(false);
+        }
+      },
+      { rootMargin: "320px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeTab, hasMoreMoments, loadingMoreMoments, momentCursor]);
+
+  useEffect(() => {
+    const target = planetLoadMoreRef.current;
+
+    if (
+      activeTab !== "planet" ||
+      !target ||
+      !hasMorePlanets ||
+      loadingMorePlanets
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (!entries[0]?.isIntersecting || planetPageInFlightRef.current)
+          return;
+        planetPageInFlightRef.current = true;
+        setLoadingMorePlanets(true);
+
+        try {
+          const params = new URLSearchParams();
+          if (planetCursor) params.set("cursor", planetCursor);
+          const response = await fetch(`/api/footprints/planets?${params}`);
+          const payload = (await response.json()) as {
+            ok?: boolean;
+            page?: {
+              hasMore: boolean;
+              items: PlanetSquare;
+              nextCursor: string | null;
+            };
+          };
+
+          if (!response.ok || !payload.page)
+            throw new Error("Planet page failed");
+          setPlanets((current) => {
+            const seen = new Set(current.map((item) => item.id));
+            return [
+              ...current,
+              ...payload.page!.items.filter((item) => !seen.has(item.id)),
+            ];
+          });
+          setPlanetCursor(payload.page.nextCursor);
+          setHasMorePlanets(payload.page.hasMore);
+        } catch (error) {
+          console.error("Failed to load more planets", error);
+        } finally {
+          planetPageInFlightRef.current = false;
+          setLoadingMorePlanets(false);
+        }
+      },
+      { rootMargin: "320px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeTab, hasMorePlanets, loadingMorePlanets, planetCursor]);
 
   function handleFeedScopeChange(nextScope: MomentFeedScope) {
     setFeedScope(nextScope);
@@ -3599,9 +3794,11 @@ export function FootprintsMobilePage({
 
   return (
     <>
-      <DirectMessageUnreadCountHydrator
-        unreadCount={initialUnreadMessageCount}
-      />
+      {loadedTabs.message ? (
+        <DirectMessageUnreadCountHydrator
+          unreadCount={initialUnreadMessageCount}
+        />
+      ) : null}
       <main className="min-h-screen bg-white pb-28 text-[#111210] md:pb-12">
         <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-7xl md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
           <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5 lg:flex lg:items-end lg:justify-between lg:gap-10 lg:pb-0">
@@ -3698,6 +3895,14 @@ export function FootprintsMobilePage({
                     </p>
                   </div>
                 )}
+                <div
+                  ref={momentLoadMoreRef}
+                  className="flex min-h-12 items-center justify-center"
+                >
+                  {loadingMoreMoments ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-[#156240]" />
+                  ) : null}
+                </div>
               </div>
             </section>
           ) : null}
@@ -3745,6 +3950,14 @@ export function FootprintsMobilePage({
                   planets={planets}
                 />
               )}
+              <div
+                ref={planetLoadMoreRef}
+                className="flex min-h-12 items-center justify-center"
+              >
+                {loadingMorePlanets ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-[#156240]" />
+                ) : null}
+              </div>
             </section>
           ) : null}
         </div>

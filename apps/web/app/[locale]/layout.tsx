@@ -11,6 +11,7 @@ import { PortraitOrientationLock } from "@/components/layout/PortraitOrientation
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSectionContext";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
+import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
@@ -152,6 +153,7 @@ export default async function LocaleLayout({
                 activeRoom={activeGameToolFloatingRoom}
                 locale={locale}
               />
+              <IdleRoutePrefetcher locale={locale} />
               <MobileNav locale={locale} />
               <FriemiAlertProvider locale={locale} />
             </div>

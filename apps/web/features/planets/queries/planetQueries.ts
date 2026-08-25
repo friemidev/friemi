@@ -3,8 +3,12 @@ import { getPlanetChatUnreadState } from "@/features/planets/services/planetChat
 
 const approvedMemberFilter = { status: "APPROVED" as const };
 
-export async function getPlanetSquare(viewerProfileId: string | null) {
-  return prisma.planet.findMany({
+export async function getPlanetSquarePage(
+  viewerProfileId: string | null,
+  options: { cursor?: string | null; limit?: number } = {},
+) {
+  const limit = Math.min(Math.max(Math.floor(options.limit ?? 12), 1), 24);
+  const planets = await prisma.planet.findMany({
     where: viewerProfileId
       ? {
           OR: [
@@ -30,8 +34,27 @@ export async function getPlanetSquare(viewerProfileId: string | null) {
           }
         : false,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...(options.cursor
+      ? {
+          cursor: { id: options.cursor },
+          skip: 1,
+        }
+      : {}),
+    take: limit + 1,
   });
+  const hasMore = planets.length > limit;
+  const items = planets.slice(0, limit);
+
+  return {
+    hasMore,
+    items,
+    nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
+  };
+}
+
+export async function getPlanetSquare(viewerProfileId: string | null) {
+  return (await getPlanetSquarePage(viewerProfileId, { limit: 24 })).items;
 }
 
 export async function getPlanetRoom(

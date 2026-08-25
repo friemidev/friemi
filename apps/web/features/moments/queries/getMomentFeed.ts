@@ -145,6 +145,12 @@ export type MomentFeedItemViewModel = {
   resharedMoment: MomentSharedPreviewViewModel | null;
 };
 
+export type MomentFeedPageViewModel = {
+  hasMore: boolean;
+  items: MomentFeedItemViewModel[];
+  nextCursor: string | null;
+};
+
 function mapAuthor(author: MomentFeedQueryResult["author"]) {
   const nickname = author.nickname.trim();
 
@@ -272,7 +278,11 @@ export async function getVisibleMomentWhere(
   };
 }
 
-export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
+export async function getMomentFeedPage(
+  viewerProfileId: string | null,
+  options: { cursor?: string | null; limit?: number } = {},
+): Promise<MomentFeedPageViewModel> {
+  const limit = Math.min(Math.max(Math.floor(options.limit ?? 8), 1), 24);
   const visibilityRules: Prisma.MomentWhereInput[] = [{ visibility: "PUBLIC" }];
   let followedProfileIds = new Set<string>();
   let mutualFollowProfileIds = new Set<string>();
@@ -303,24 +313,41 @@ export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
       OR: visibilityRules,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: 50,
+    ...(options.cursor
+      ? {
+          cursor: { id: options.cursor },
+          skip: 1,
+        }
+      : {}),
+    take: limit + 1,
     select: getMomentFeedSelect(viewerProfileId),
   });
+  const hasMore = moments.length > limit;
+  const pageMoments = moments.slice(0, limit);
 
   const giftCountByMomentId = await getMomentGiftCountMap(
-    moments.map((moment) => moment.id),
+    pageMoments.map((moment) => moment.id),
   );
 
-  return moments.map((moment) =>
-    mapMoment(
-      moment,
-      giftCountByMomentId.get(moment.id) ?? 0,
-      viewerProfileId,
-      followedProfileIds,
-      mutualFollowProfileIds,
+  return {
+    hasMore,
+    items: pageMoments.map((moment) =>
+      mapMoment(
+        moment,
+        giftCountByMomentId.get(moment.id) ?? 0,
+        viewerProfileId,
+        followedProfileIds,
+        mutualFollowProfileIds,
+      ),
     ),
-  );
-});
+    nextCursor: hasMore ? (pageMoments.at(-1)?.id ?? null) : null,
+  };
+}
+
+export const getMomentFeed = cache(
+  async (viewerProfileId: string | null) =>
+    (await getMomentFeedPage(viewerProfileId, { limit: 8 })).items,
+);
 
 export const getMomentDetail = cache(
   async (momentId: string, viewerProfileId: string | null) => {

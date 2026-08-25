@@ -51,6 +51,7 @@ const isGameToolsApiRoute = createRouteMatcher(["/api/game-tools(.*)"]);
 const isPlanetsApiRoute = createRouteMatcher(["/api/planets(.*)"]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
+const isFootprintsApiRoute = createRouteMatcher(["/api/footprints(.*)"]);
 const isDirectMessagesApiRoute = createRouteMatcher([
   "/api/direct-messages(.*)",
 ]);
@@ -284,6 +285,10 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isFootprintsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isDirectMessagesApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -345,6 +350,7 @@ export const config = {
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
+    "/api/footprints/:path*",
     "/api/direct-messages/:path*",
     "/api/notifications/:path*",
     "/api/profile/:path*",

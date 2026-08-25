@@ -36,7 +36,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
-import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
+import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
@@ -61,7 +61,7 @@ type ActivitiesPageProps = {
 
 export const dynamic = "force-dynamic";
 
-const mobileActivityPageSize = 14;
+const mobileActivityPageSize = 10;
 const agendaDatePageSize = 7;
 
 export async function generateMetadata({
@@ -285,7 +285,7 @@ export default async function ActivitiesPage({
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
   const userAgent = requestHeaders.get("user-agent");
-  const isMobileRequest = isMobileUserAgent(userAgent);
+  const isMobileRequest = isMobileViewportRequest(requestHeaders);
   const [activitiesResult, filterOptions] = await perf.measure(
     "activity.data",
     () =>

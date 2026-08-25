@@ -1,12 +1,17 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { withLocale } from "@/lib/routes";
+import { getSequentialMobilePrefetchTargets } from "@/lib/mobile-route-prefetch";
+import {
+  MOBILE_VIEWPORT_MEDIA_QUERY,
+  useMediaQuery,
+} from "@/lib/useMediaQuery";
 
 type IdleRoutePrefetcherProps = {
   enabled?: boolean;
   idleDelayMs?: number;
+  intervalMs?: number;
   locale: string;
 };
 
@@ -24,15 +29,8 @@ type BrowserWindowWithIdleCallback = Window &
     ) => number;
   };
 
-const prefetchedTargets = new Set<string>();
-const coreMobilePrefetchTargets = [
-  "/mobile-home",
-  "/lobby",
-  "/activities",
-  "/activities/new",
-  "/footprints",
-  "/profile",
-] as const;
+const recentlyPrefetchedTargets = new Map<string, number>();
+const PREFETCH_DEDUPE_WINDOW_MS = 30_000;
 
 function getNetworkInformation() {
   return (navigator as Navigator & { connection?: NetworkInformationLike })
@@ -40,7 +38,7 @@ function getNetworkInformation() {
 }
 
 function canRunIdlePrefetch() {
-  if (document.visibilityState !== "visible") {
+  if (document.visibilityState !== "visible" || !navigator.onLine) {
     return false;
   }
 
@@ -57,138 +55,124 @@ function canRunIdlePrefetch() {
   return true;
 }
 
-function getLocalizedPathWithoutLocale(pathname: string, locale: string) {
-  const localePrefix = `/${locale}`;
-
-  if (pathname === localePrefix) {
-    return "/";
-  }
-
-  if (pathname.startsWith(`${localePrefix}/`)) {
-    return pathname.slice(localePrefix.length) || "/";
-  }
-
-  return pathname || "/";
-}
-
-function getRouteAwarePrefetchTargets(routePath: string) {
-  if (
-    routePath === "/" ||
-    routePath === "/home" ||
-    routePath === "/mobile-home"
-  ) {
-    return ["/lobby", "/activities", "/footprints", "/activities/new"];
-  }
-
-  if (routePath === "/lobby") {
-    return ["/activities", "/mobile-home", "/activities/new", "/footprints"];
-  }
-
-  if (routePath === "/activities") {
-    return ["/lobby", "/mobile-home", "/activities/new"];
-  }
-
-  if (routePath === "/activities/new") {
-    return ["/lobby", "/game-tools"];
-  }
-
-  if (routePath === "/footprints") {
-    return ["/messages", "/profile", "/planets", "/lobby"];
-  }
-
-  if (routePath === "/messages") {
-    return ["/footprints", "/lobby"];
-  }
-
-  if (routePath === "/profile") {
-    return ["/footprints", "/messages"];
-  }
-
-  if (routePath === "/notifications") {
-    return ["/footprints", "/messages"];
-  }
-
-  return [];
-}
-
-function getIdlePrefetchTargets(pathname: string, locale: string) {
-  const routePath = getLocalizedPathWithoutLocale(pathname, locale);
-  const targetPaths = [
-    ...getRouteAwarePrefetchTargets(routePath),
-    ...coreMobilePrefetchTargets,
-  ];
-  const seenTargets = new Set<string>();
-
-  return targetPaths
-    .map((targetPath) => withLocale(locale, targetPath))
-    .filter((target) => {
-      if (
-        target === pathname ||
-        seenTargets.has(target) ||
-        prefetchedTargets.has(target)
-      ) {
-        return false;
-      }
-
-      seenTargets.add(target);
-      return true;
-    });
-}
-
 export function IdleRoutePrefetcher({
   enabled = true,
   idleDelayMs = 1800,
+  intervalMs = 1100,
   locale,
 }: IdleRoutePrefetcherProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileViewport = useMediaQuery(MOBILE_VIEWPORT_MEDIA_QUERY);
+  const search = searchParams.toString();
 
   useEffect(() => {
-    if (!enabled || !pathname) {
+    if (!enabled || !pathname || !isMobileViewport) {
       return;
     }
 
-    const targets = getIdlePrefetchTargets(pathname, locale);
+    const targets = getSequentialMobilePrefetchTargets({
+      locale,
+      pathname,
+      search,
+    });
 
     if (targets.length === 0) {
       return;
     }
 
     const browserWindow = window as BrowserWindowWithIdleCallback;
+    let targetIndex = 0;
+    let cancelled = false;
     let idleHandle: number | null = null;
-    let fallbackHandle: number | null = null;
-    let timeoutHandle: number | null = window.setTimeout(() => {
-      timeoutHandle = null;
+    let timeoutHandle: number | null = null;
+    let hasStarted = false;
 
-      if (!canRunIdlePrefetch()) {
+    const scheduleNext = (delayMs: number) => {
+      if (
+        cancelled ||
+        targetIndex >= targets.length ||
+        timeoutHandle !== null ||
+        idleHandle !== null ||
+        !canRunIdlePrefetch()
+      ) {
         return;
       }
 
-      const runPrefetch = () => {
-        if (!canRunIdlePrefetch()) {
+      timeoutHandle = window.setTimeout(() => {
+        timeoutHandle = null;
+
+        const runPrefetch = () => {
+          idleHandle = null;
+
+          if (cancelled || !canRunIdlePrefetch()) {
+            return;
+          }
+
+          const target = targets[targetIndex];
+
+          if (!target) {
+            return;
+          }
+
+          targetIndex += 1;
+          const lastPrefetchedAt = recentlyPrefetchedTargets.get(target) ?? 0;
+
+          if (Date.now() - lastPrefetchedAt >= PREFETCH_DEDUPE_WINDOW_MS) {
+            try {
+              router.prefetch(target);
+              recentlyPrefetchedTargets.set(target, Date.now());
+            } catch (error) {
+              console.warn("Failed to prefetch route", { error, target });
+            }
+          }
+
+          scheduleNext(intervalMs);
+        };
+
+        if (typeof browserWindow.requestIdleCallback === "function") {
+          idleHandle = browserWindow.requestIdleCallback(runPrefetch, {
+            timeout: 3000,
+          });
           return;
         }
 
-        for (const target of targets) {
-          if (prefetchedTargets.has(target)) {
-            continue;
-          }
+        runPrefetch();
+      }, delayMs);
+    };
 
-          prefetchedTargets.add(target);
-          router.prefetch(target);
-        }
-      };
-
-      if (typeof browserWindow.requestIdleCallback === "function") {
-        idleHandle = browserWindow.requestIdleCallback(runPrefetch, {
-          timeout: 4500,
-        });
-      } else {
-        fallbackHandle = window.setTimeout(runPrefetch, 900);
+    const start = () => {
+      if (hasStarted) {
+        scheduleNext(250);
+        return;
       }
-    }, idleDelayMs);
+
+      hasStarted = true;
+      scheduleNext(idleDelayMs);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        start();
+      }
+    };
+
+    if (document.readyState === "complete") {
+      start();
+    } else {
+      window.addEventListener("load", start, { once: true });
+    }
+
+    window.addEventListener("online", start);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      cancelled = true;
+      window.removeEventListener("load", start);
+      window.removeEventListener("online", start);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+
       if (timeoutHandle !== null) {
         window.clearTimeout(timeoutHandle);
       }
@@ -199,12 +183,17 @@ export function IdleRoutePrefetcher({
       ) {
         browserWindow.cancelIdleCallback(idleHandle);
       }
-
-      if (fallbackHandle !== null) {
-        window.clearTimeout(fallbackHandle);
-      }
     };
-  }, [enabled, idleDelayMs, locale, pathname, router]);
+  }, [
+    enabled,
+    idleDelayMs,
+    intervalMs,
+    isMobileViewport,
+    locale,
+    pathname,
+    router,
+    search,
+  ]);
 
   return null;
 }

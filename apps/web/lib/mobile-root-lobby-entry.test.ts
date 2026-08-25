@@ -4,6 +4,7 @@ import {
   getMobileRootLobbyRedirectPath,
   getRootHomeRedirectPath,
   isMobileUserAgent,
+  isMobileViewportRequest,
   isSearchCrawlerUserAgent,
   resolveRootEntryLocale,
 } from "./mobile-root-lobby-entry";
@@ -37,6 +38,33 @@ test("isMobileUserAgent does not redirect search crawlers with mobile user agent
 
   assert.equal(isSearchCrawlerUserAgent(googlebotUserAgent), true);
   assert.equal(isMobileUserAgent(googlebotUserAgent), false);
+});
+
+test("isMobileViewportRequest prefers viewport client hints and falls back to the user agent", () => {
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({
+        "sec-ch-viewport-width": "430",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/125",
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({
+        "sec-ch-viewport-width": "1280",
+        "user-agent": "Mozilla/5.0 (iPhone) Mobile",
+      }),
+    ),
+    false,
+  );
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({ "user-agent": "Mozilla/5.0 (iPhone) Mobile" }),
+    ),
+    true,
+  );
 });
 
 test("resolveRootEntryLocale prefers the locale cookie", () => {

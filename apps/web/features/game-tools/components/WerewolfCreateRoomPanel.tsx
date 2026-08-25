@@ -326,7 +326,7 @@ function WerewolfVariantModeCard({
       />
       <Image
         alt=""
-        className="absolute bottom-0 -left-3 top-4 h-[calc(100%-1rem)] w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+        className="absolute bottom-0 -left-3 top-0 h-full w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
         height={360}
         src={heroImage}
         width={252}
@@ -437,7 +437,7 @@ function CustomModeCard({
         />
         <Image
           alt=""
-          className="pointer-events-none absolute bottom-0 -left-3 top-4 h-[calc(100%-1rem)] w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+          className="pointer-events-none absolute bottom-0 -left-3 top-0 h-full w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
           height={360}
           src="/game-tools/werewolf/recto/villager_en.png"
           width={252}

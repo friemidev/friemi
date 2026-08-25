@@ -29,7 +29,7 @@ import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAcc
 import { compareLobbyActivityStatusAndOwnership } from "../utils/lobbyActivitySort";
 import type { Prisma } from "@prisma/client";
 
-const activityLobbyFeedPageSize = 10;
+const activityLobbyFeedPageSize = 8;
 const activityLobbySectionLimit = activityLobbyFeedPageSize * 6;
 const activityLobbyPreviewLimit = activityLobbyFeedPageSize * 2;
 const activityLobbyStarterLimit = 8;
@@ -105,6 +105,21 @@ export type ActivityLobbySectionId =
   | "friendJoined";
 
 export type ActivityLobbyFeedStatus = "all" | "ongoing" | "ended";
+
+export type MobileActivityLobbyTabId =
+  | "nearby"
+  | "mine"
+  | "friends"
+  | "today"
+  | "popular";
+
+export type MobileActivityLobbyPage = {
+  activities: ActivityCardViewModel[];
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+  tab: MobileActivityLobbyTabId;
+};
 
 export type ActivityLobbyFeedPage = {
   activities: ActivityCardViewModel[];
@@ -605,19 +620,17 @@ export function sortMobileHomeTrendingTeamActivities(
   activities: ActivityCardViewModel[],
   now = getActivityFloatingNow(),
 ) {
-  return activities
-    .filter(isJoinableTeamCard)
-    .sort((left, right) => {
-      const scoreDiff =
-        getMobileHomeTrendingTeamScore(right, now) -
-        getMobileHomeTrendingTeamScore(left, now);
+  return activities.filter(isJoinableTeamCard).sort((left, right) => {
+    const scoreDiff =
+      getMobileHomeTrendingTeamScore(right, now) -
+      getMobileHomeTrendingTeamScore(left, now);
 
-      if (scoreDiff !== 0) {
-        return scoreDiff;
-      }
+    if (scoreDiff !== 0) {
+      return scoreDiff;
+    }
 
-      return compareLobbyActivityTime(left, right);
-    });
+    return compareLobbyActivityTime(left, right);
+  });
 }
 
 function getMobileHomeTrendingTeamLimit(limit?: number) {
@@ -1486,4 +1499,136 @@ const getCachedActivityLobbyPreview = unstable_cache(
 
 export async function getActivityLobbyPreview(category?: ActivityCategory) {
   return getCachedActivityLobbyPreview(category);
+}
+
+const mobileActivityLobbyPageSize = 8;
+
+function getMobileLobbyDateKey(value: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Paris",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function getMobileLobbyPopularScore(activity: ActivityCardViewModel) {
+  return (
+    activity.participantCount * 2 +
+    activity.favoriteCount +
+    (activity.friendSignal?.count ?? 0) * 3
+  );
+}
+
+function sortMobileLobbyPageActivities(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null,
+  tieBreaker?: (
+    left: ActivityCardViewModel,
+    right: ActivityCardViewModel,
+  ) => number,
+) {
+  return [...activities].sort(
+    (left, right) =>
+      compareLobbyActivityStatusAndOwnership(left, right, {
+        viewerProfileId,
+      }) ||
+      tieBreaker?.(left, right) ||
+      compareLobbyActivityTime(left, right),
+  );
+}
+
+function paginateMobileLobbyActivities(
+  activities: ActivityCardViewModel[],
+  page: number,
+) {
+  const normalizedPage = Math.max(1, Math.floor(page));
+  const start = (normalizedPage - 1) * mobileActivityLobbyPageSize;
+  const deduped = Array.from(
+    new Map(
+      activities.map((activity) => [getLobbyActivityKey(activity), activity]),
+    ).values(),
+  );
+
+  return {
+    activities: deduped.slice(start, start + mobileActivityLobbyPageSize),
+    hasMore: start + mobileActivityLobbyPageSize < deduped.length,
+    page: normalizedPage,
+  };
+}
+
+export async function getMobileActivityLobbyPage({
+  page = 1,
+  tab,
+  viewerProfileId,
+}: {
+  page?: number;
+  tab: MobileActivityLobbyTabId;
+  viewerProfileId: string | null;
+}): Promise<MobileActivityLobbyPage> {
+  const normalizedPage = Math.max(1, Math.floor(page));
+
+  if (tab === "nearby" && viewerProfileId) {
+    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
+      page: normalizedPage,
+    });
+
+    return {
+      activities: feed.activities,
+      hasMore: feed.page < feed.totalPages,
+      page: feed.page,
+      pageSize: mobileActivityLobbyPageSize,
+      tab,
+    };
+  }
+
+  let activities: ActivityCardViewModel[] = [];
+
+  if (!viewerProfileId) {
+    activities = await getActivityLobbyPreview();
+  } else if (tab === "mine") {
+    const [created, joined] = await Promise.all([
+      getActivityLobbySection(viewerProfileId, "created"),
+      getActivityLobbySection(viewerProfileId, "joined"),
+    ]);
+    activities = sortMobileLobbyPageActivities(
+      [...created, ...joined],
+      viewerProfileId,
+    );
+  } else if (tab === "friends") {
+    const [hosted, joined] = await Promise.all([
+      getActivityLobbySection(viewerProfileId, "friendHosted"),
+      getActivityLobbySection(viewerProfileId, "friendJoined"),
+    ]);
+    activities = sortMobileLobbyPageActivities(
+      [...hosted, ...joined],
+      viewerProfileId,
+    );
+  } else {
+    activities = await getActivityLobbySection(viewerProfileId, "open");
+  }
+
+  if (tab === "today") {
+    const today = getMobileLobbyDateKey(new Date());
+    activities = activities.filter(
+      (activity) => getMobileLobbyDateKey(activity.startAt) === today,
+    );
+  } else if (tab === "popular") {
+    activities = sortMobileLobbyPageActivities(
+      activities,
+      viewerProfileId,
+      (left, right) =>
+        getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
+    );
+  } else if (tab === "nearby") {
+    activities = sortMobileLobbyPageActivities(activities, viewerProfileId);
+  }
+
+  const result = paginateMobileLobbyActivities(activities, normalizedPage);
+
+  return {
+    ...result,
+    pageSize: mobileActivityLobbyPageSize,
+    tab,
+  };
 }

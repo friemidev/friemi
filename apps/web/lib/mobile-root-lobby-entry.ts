@@ -15,7 +15,9 @@ export function isSearchCrawlerUserAgent(userAgent: string | null | undefined) {
   );
 }
 
-function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
+function isSupportedLocale(
+  value: string | null | undefined,
+): value is SupportedLocale {
   return locales.includes(value as SupportedLocale);
 }
 
@@ -48,7 +50,9 @@ function getLocaleFromLanguageTag(languageTag: string) {
     return "zh-CN";
   }
 
-  return locales.find((locale) => locale.toLowerCase() === baseLanguage) ?? null;
+  return (
+    locales.find((locale) => locale.toLowerCase() === baseLanguage) ?? null
+  );
 }
 
 export function isMobileUserAgent(userAgent: string | null | undefined) {
@@ -61,6 +65,28 @@ export function isMobileUserAgent(userAgent: string | null | undefined) {
   }
 
   return mobileUserAgentPattern.test(userAgent);
+}
+
+export function isMobileViewportRequest(requestHeaders: Pick<Headers, "get">) {
+  const userAgent = requestHeaders.get("user-agent");
+
+  if (isSearchCrawlerUserAgent(userAgent)) {
+    return false;
+  }
+
+  const viewportWidth = Number(
+    requestHeaders.get("sec-ch-viewport-width") ??
+      requestHeaders.get("viewport-width"),
+  );
+
+  if (Number.isFinite(viewportWidth) && viewportWidth > 0) {
+    return viewportWidth < 768;
+  }
+
+  return (
+    requestHeaders.get("sec-ch-ua-mobile") === "?1" ||
+    isMobileUserAgent(userAgent)
+  );
 }
 
 export function resolveRootEntryLocale({
@@ -87,8 +113,9 @@ export function resolveRootEntryLocale({
         q: Number.isFinite(q) ? q : 0,
       };
     })
-    .filter((entry): entry is { index: number; locale: SupportedLocale; q: number } =>
-      Boolean(entry.locale) && entry.q > 0,
+    .filter(
+      (entry): entry is { index: number; locale: SupportedLocale; q: number } =>
+        Boolean(entry.locale) && entry.q > 0,
     )
     .sort((a, b) => b.q - a.q || a.index - b.index);
 
