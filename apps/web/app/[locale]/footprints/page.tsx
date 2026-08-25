@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
@@ -220,45 +221,59 @@ export default async function FootprintsPage({
     },
   );
 
+  const initialImageSources =
+    initialTab === "moment"
+      ? momentsResult.page.items.flatMap((moment) =>
+          moment.images.map((image) => image.url),
+        )
+      : initialTab === "message"
+        ? messageFriendsResult.friends.map(
+            (friend) => friend.friend.avatarUrl,
+          )
+        : planetsResult.page.items.map((planet) => planet.coverImageUrl);
+
   return (
-    <FootprintsMobilePage
-      locale={locale}
-      initialMomentScope={requestedMomentScope}
-      initialTab={initialTab}
-      moments={momentsResult.page.items}
-      momentFeedHasMore={momentsResult.page.hasMore}
-      momentFeedNextCursor={momentsResult.page.nextCursor}
-      momentFeedLoaded={initialTab === "moment"}
-      momentFeedError={Boolean(momentsResult.error)}
-      messageFriends={messageFriendsResult.friends}
-      officialMessages={officialMessagesResult.roster}
-      activityRoomChats={activityRoomChatsResult.rooms}
-      planetChats={planetChatsResult.planetChats}
-      messageRosterLoaded={!profile || initialTab === "message"}
-      messageRosterError={Boolean(
-        messageFriendsResult.error ||
-        officialMessagesResult.error ||
-        activityRoomChatsResult.error ||
-        planetChatsResult.error,
-      )}
-      profile={
-        profile
-          ? {
-              id: profile.id,
-              nickname: profile.nickname,
-              avatarUrl: profile.avatarUrl,
-              bio: profile.bio,
-              friendCode: profile.friendCode,
-              isCoCreator: profile.isCoCreator,
-            }
-          : null
-      }
-      planets={planetsResult.page.items}
-      planetSquareHasMore={planetsResult.page.hasMore}
-      planetSquareNextCursor={planetsResult.page.nextCursor}
-      planetSquareLoaded={initialTab === "planet"}
-      planetSquareError={Boolean(planetsResult.error)}
-      canCreatePlanet={canCreateResult.canCreate}
-    />
+    <>
+      <ImageResourcePreloader limit={5} sources={initialImageSources} />
+      <FootprintsMobilePage
+        locale={locale}
+        initialMomentScope={requestedMomentScope}
+        initialTab={initialTab}
+        moments={momentsResult.page.items}
+        momentFeedHasMore={momentsResult.page.hasMore}
+        momentFeedNextCursor={momentsResult.page.nextCursor}
+        momentFeedLoaded={initialTab === "moment"}
+        momentFeedError={Boolean(momentsResult.error)}
+        messageFriends={messageFriendsResult.friends}
+        officialMessages={officialMessagesResult.roster}
+        activityRoomChats={activityRoomChatsResult.rooms}
+        planetChats={planetChatsResult.planetChats}
+        messageRosterLoaded={!profile || initialTab === "message"}
+        messageRosterError={Boolean(
+          messageFriendsResult.error ||
+          officialMessagesResult.error ||
+          activityRoomChatsResult.error ||
+          planetChatsResult.error,
+        )}
+        profile={
+          profile
+            ? {
+                id: profile.id,
+                nickname: profile.nickname,
+                avatarUrl: profile.avatarUrl,
+                bio: profile.bio,
+                friendCode: profile.friendCode,
+                isCoCreator: profile.isCoCreator,
+              }
+            : null
+        }
+        planets={planetsResult.page.items}
+        planetSquareHasMore={planetsResult.page.hasMore}
+        planetSquareNextCursor={planetsResult.page.nextCursor}
+        planetSquareLoaded={initialTab === "planet"}
+        planetSquareError={Boolean(planetsResult.error)}
+        canCreatePlanet={canCreateResult.canCreate}
+      />
+    </>
   );
 }

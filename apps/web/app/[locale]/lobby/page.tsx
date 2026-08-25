@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import {
   ActivityLobbyPreviewView,
@@ -185,17 +186,25 @@ export default async function ActivityLobbyPage({
     );
 
     return (
-      <MobileLobbyV23View
-        activeTab={initialMobileTab}
-        activities={mobilePage.activities}
-        initialCategoryFilter={initialCategoryFilter}
-        initialFreeOnly={initialFreeOnly}
-        initialHasMore={mobilePage.hasMore}
-        isSignedIn={Boolean(profile)}
-        locale={locale}
-        swipeActivities={swipeActivities}
-        viewerProfileId={profile?.id ?? null}
-      />
+      <>
+        <ImageResourcePreloader
+          limit={4}
+          sources={mobilePage.activities.map(
+            (activity) => activity.coverImageUrl,
+          )}
+        />
+        <MobileLobbyV23View
+          activeTab={initialMobileTab}
+          activities={mobilePage.activities}
+          initialCategoryFilter={initialCategoryFilter}
+          initialFreeOnly={initialFreeOnly}
+          initialHasMore={mobilePage.hasMore}
+          isSignedIn={Boolean(profile)}
+          locale={locale}
+          swipeActivities={swipeActivities}
+          viewerProfileId={profile?.id ?? null}
+        />
+      </>
     );
   }
 
