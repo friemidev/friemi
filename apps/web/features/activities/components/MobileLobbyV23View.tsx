@@ -932,11 +932,12 @@ export function MobileLobbyV23View({
         ) : visibleActivities.length > 0 ? (
           <>
             <div className="mt-5 grid gap-5">
-              {visibleActivities.map((activity) => (
+              {visibleActivities.map((activity, index) => (
                 <MobileActivityListRow
                   activity={activity}
                   key={getActivityKey(activity)}
                   locale={locale}
+                  prioritizeImage={index < 4}
                   showHostedBadge={
                     displayedActiveTab === "mine" &&
                     Boolean(viewerProfileId) &&

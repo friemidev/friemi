@@ -16,6 +16,7 @@ type MobileActivityListRowProps = {
   activity: ActivityCardViewModel;
   className?: string;
   locale: string;
+  prioritizeImage?: boolean;
   showHostedBadge?: boolean;
 };
 
@@ -104,6 +105,7 @@ export function MobileActivityListRow({
   activity,
   className,
   locale,
+  prioritizeImage = false,
   showHostedBadge = false,
 }: MobileActivityListRowProps) {
   const copy = getRowCopy(locale);
@@ -134,6 +136,8 @@ export function MobileActivityListRow({
       >
         <ActivityCoverImage
           alt={activity.title}
+          fetchPriority={prioritizeImage ? "high" : "auto"}
+          loading={prioritizeImage ? "eager" : "lazy"}
           overlayClassName={cn(
             "bg-gradient-to-t to-transparent",
             isInactiveActivity ? "from-zinc-900/24" : "from-black/10",

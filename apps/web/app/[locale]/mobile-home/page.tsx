@@ -11,6 +11,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
@@ -468,6 +469,15 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
 
   return (
     <>
+      <ImageResourcePreloader
+        limit={5}
+        sources={[
+          ...topNewsItems.map((item) => item.image),
+          ...trendingActivitiesResult.trendingActivities.map(
+            (activity) => activity.coverImageUrl,
+          ),
+        ]}
+      />
       <HomeLuxuryMotion />
       <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
