@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
-import {
-  getPublicAchievementWall,
-  getUnlockedAchievementWall,
-} from "@/features/achievements/queries/getUserAchievements";
+import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -16,6 +14,7 @@ import { initialTrustScore } from "@/features/trust/trustScore";
 import { getUserPresenceState } from "@/features/profile/presence";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { withLocale } from "@/lib/routes";
+import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -129,9 +128,13 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const profile = await getOptionalCurrentUserProfileSnapshot();
-  const [dashboardResult, publicAchievements, achievementPreviewItems] = profile
+  const isMobileRequest = isMobileViewportRequest(await headers());
+  const [dashboardResult, publicAchievements] = profile
     ? await Promise.all([
-        getProfileDashboard(profile.id)
+        getProfileDashboard(profile.id, {
+          loadActivityPreview: !isMobileRequest,
+          momentPreviewLimit: isMobileRequest ? 3 : undefined,
+        })
           .then((dashboard) => ({ dashboard, error: null }))
           .catch((error: unknown) => {
             console.error("Failed to load profile dashboard", error);
@@ -146,18 +149,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
           return [];
         }),
-        getUnlockedAchievementWall(profile.id).catch((error: unknown) => {
-          console.error("Failed to load unlocked profile achievements", error);
-
-          return [];
-        }),
       ])
     : [
         {
           dashboard: getEmptyProfileDashboard(),
           error: null,
         },
-        [],
         [],
       ];
   const isAuthenticated = Boolean(profile);
@@ -196,7 +193,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isSelf={isAuthenticated}
         locale={locale}
         profile={profileViewModel}
-        achievementPreviewItems={achievementPreviewItems}
+        achievementPreviewItems={[]}
         publicAchievements={publicAchievements}
       />
     </PageContainer>

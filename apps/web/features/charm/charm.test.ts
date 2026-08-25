@@ -7,6 +7,7 @@ import {
   charmGiftCatalog,
   getActiveCharmGifts,
   getCharmGiftDefinition,
+  getCharmGiftLabel,
   getFriemiCheckCoinValue,
   getCharmLevel,
   getCharmLevelDescription,
@@ -42,6 +43,16 @@ test("active charm gifts match the launch gift catalog values", () => {
   assert.equal(getCharmGiftDefinition("christmas")?.charmValue, 40);
   assert.equal(getCharmGiftDefinition("spring_festival")?.charmValue, 40);
   assert.equal(getCharmGiftDefinition("fireworks")?.charmValue, 70);
+});
+
+test("werewolf gifts expose the current Chinese product names", () => {
+  const seerGift = getCharmGiftDefinition("werewolf_crystal");
+  const wolfGift = getCharmGiftDefinition("werewolf");
+
+  assert.ok(seerGift);
+  assert.ok(wolfGift);
+  assert.equal(getCharmGiftLabel(seerGift, "zh-CN"), "真预言家");
+  assert.equal(getCharmGiftLabel(wolfGift, "zh-CN"), "狼王之王");
 });
 
 test("negative gifts stay in the catalog but are disabled for launch", () => {

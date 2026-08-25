@@ -15,11 +15,13 @@ import {
   getActivityLobbyInitial,
   getActivityLobbyPreview,
   getLobbySwipePublicEventActivities,
+  getMobileActivityLobbyPage,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
+import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
@@ -136,31 +138,79 @@ export default async function ActivityLobbyPage({
     getOptionalLayoutViewerState(),
   );
   const profile = viewerState.profile;
+  const requestHeaders = await headers();
+  const isMobileRequest = isMobileViewportRequest(requestHeaders);
 
-  if (!profile) {
-    const [previewActivities, swipeActivities] = await Promise.all([
-      perf.measure("lobby.preview", () =>
-        getActivityLobbyPreview().catch((error: unknown) => {
-          console.error("Failed to load public activity lobby preview", error);
+  if (isMobileRequest) {
+    const [mobilePage, swipeActivities] = await Promise.all([
+      perf.measure("lobby.mobileTab", () =>
+        getMobileActivityLobbyPage({
+          tab: initialMobileTab,
+          viewerProfileId: profile?.id ?? null,
+        }).catch((error: unknown) => {
+          console.error("Failed to load mobile lobby tab", error);
+
+          return {
+            activities: [],
+            hasMore: false,
+            page: 1,
+            pageSize: 8,
+            tab: initialMobileTab,
+          };
+        }),
+      ),
+      perf.measure("lobby.swipe", () =>
+        getLobbySwipePublicEventActivities(profile?.id ?? null, {
+          limit: 8,
+        }).catch((error: unknown) => {
+          console.error("Failed to load lobby swipe activities", error);
 
           return [];
         }),
       ),
-      perf.measure("lobby.swipe", () =>
-        getLobbySwipePublicEventActivities(null, { limit: 8 }).catch(
-          (error: unknown) => {
-            console.error("Failed to load lobby swipe activities", error);
-
-            return [];
-          },
-        ),
-      ),
     ]);
+
+    perf.finish(
+      {
+        hasViewer: Boolean(profile),
+        initialTab: initialMobileTab,
+        mobileCount: mobilePage.activities.length,
+        swipeCount: swipeActivities.length,
+      },
+      {
+        route: `/${locale}/lobby`,
+        routeKey: "lobby-mobile",
+        userProfileId: profile?.id,
+      },
+    );
+
+    return (
+      <MobileLobbyV23View
+        activeTab={initialMobileTab}
+        activities={mobilePage.activities}
+        initialCategoryFilter={initialCategoryFilter}
+        initialFreeOnly={initialFreeOnly}
+        initialHasMore={mobilePage.hasMore}
+        isSignedIn={Boolean(profile)}
+        locale={locale}
+        swipeActivities={swipeActivities}
+        viewerProfileId={profile?.id ?? null}
+      />
+    );
+  }
+
+  if (!profile) {
+    const previewActivities = await perf.measure("lobby.preview", () =>
+      getActivityLobbyPreview().catch((error: unknown) => {
+        console.error("Failed to load public activity lobby preview", error);
+
+        return [];
+      }),
+    );
     perf.finish(
       {
         hasViewer: false,
         previewCount: previewActivities.length,
-        swipeCount: swipeActivities.length,
       },
       {
         route: `/${locale}/lobby`,
@@ -169,55 +219,33 @@ export default async function ActivityLobbyPage({
     );
 
     return (
-      <>
-        <MobileLobbyV23View
-          activeTab={initialMobileTab}
+      <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
+        <ActivityLobbyPreviewView
           activities={previewActivities}
           initialCategoryFilter={initialCategoryFilter}
-          initialFreeOnly={initialFreeOnly}
-          isSignedIn={false}
           locale={locale}
-          swipeActivities={swipeActivities}
         />
-        <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
-          <ActivityLobbyPreviewView
-            activities={previewActivities}
-            initialCategoryFilter={initialCategoryFilter}
-            locale={locale}
-          />
-        </PageContainer>
-      </>
+      </PageContainer>
     );
   }
 
-  const [lobby, swipeActivities] = await Promise.all([
-    perf.measure("lobby.initialData", () =>
-      getActivityLobbyInitial(profile.id).catch((error: unknown) => {
-        console.error("Failed to load activity lobby", error);
+  const lobby = await perf.measure("lobby.initialData", () =>
+    getActivityLobbyInitial(profile.id).catch((error: unknown) => {
+      console.error("Failed to load activity lobby", error);
 
-        return {
-          allActivities: [],
-          allActivityFeed: createEmptyActivityLobbyFeedPage(),
-          openActivities: [],
-          createdActivities: [],
-          joinedActivities: [],
-          favoriteActivities: [],
-          friendHostedActivities: [],
-          friendJoinedActivities: [],
-          starterActivities: [],
-        };
-      }),
-    ),
-    perf.measure("lobby.swipe", () =>
-      getLobbySwipePublicEventActivities(profile.id, { limit: 8 }).catch(
-        (error: unknown) => {
-          console.error("Failed to load lobby swipe activities", error);
-
-          return [];
-        },
-      ),
-    ),
-  ]);
+      return {
+        allActivities: [],
+        allActivityFeed: createEmptyActivityLobbyFeedPage(),
+        openActivities: [],
+        createdActivities: [],
+        joinedActivities: [],
+        favoriteActivities: [],
+        friendHostedActivities: [],
+        friendJoinedActivities: [],
+        starterActivities: [],
+      };
+    }),
+  );
   perf.finish(
     {
       createdCount: lobby.createdActivities.length,
@@ -225,7 +253,6 @@ export default async function ActivityLobbyPage({
       favoriteCount: lobby.favoriteActivities.length,
       hasViewer: true,
       joinedCount: lobby.joinedActivities.length,
-      swipeCount: swipeActivities.length,
     },
     {
       route: `/${locale}/lobby`,
@@ -235,44 +262,24 @@ export default async function ActivityLobbyPage({
   );
 
   return (
-    <>
-      <MobileLobbyV23View
-        activeTab={initialMobileTab}
-        activities={[
-          ...lobby.allActivityFeed.activities,
-          ...lobby.allActivities,
-          ...lobby.openActivities,
-          ...lobby.starterActivities,
-          ...lobby.joinedActivities,
-          ...lobby.createdActivities,
-        ]}
+    <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
+      <ActivityLobbyView
+        allActivities={lobby.allActivities}
+        allActivityFeed={lobby.allActivityFeed}
+        openActivities={lobby.openActivities}
+        createdActivities={lobby.createdActivities}
+        deferredFilters={["favorites", "friendHosted", "friendJoined"]}
+        joinedActivities={lobby.joinedActivities}
+        favoriteActivities={lobby.favoriteActivities}
+        friendHostedActivities={lobby.friendHostedActivities}
+        friendJoinedActivities={lobby.friendJoinedActivities}
+        initialFilter={initialFilter}
         initialCategoryFilter={initialCategoryFilter}
-        initialFreeOnly={initialFreeOnly}
-        isSignedIn
+        initialStatusFilter={initialStatusFilter}
+        starterActivities={lobby.starterActivities}
         locale={locale}
-        mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
-        swipeActivities={swipeActivities}
         viewerProfileId={profile.id}
       />
-      <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
-        <ActivityLobbyView
-          allActivities={lobby.allActivities}
-          allActivityFeed={lobby.allActivityFeed}
-          openActivities={lobby.openActivities}
-          createdActivities={lobby.createdActivities}
-          deferredFilters={["favorites", "friendHosted", "friendJoined"]}
-          joinedActivities={lobby.joinedActivities}
-          favoriteActivities={lobby.favoriteActivities}
-          friendHostedActivities={lobby.friendHostedActivities}
-          friendJoinedActivities={lobby.friendJoinedActivities}
-          initialFilter={initialFilter}
-          initialCategoryFilter={initialCategoryFilter}
-          initialStatusFilter={initialStatusFilter}
-          starterActivities={lobby.starterActivities}
-          locale={locale}
-          viewerProfileId={profile.id}
-        />
-      </PageContainer>
-    </>
+    </PageContainer>
   );
 }

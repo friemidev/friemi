@@ -20,6 +20,10 @@ import {
 } from "@/features/navigation/contextualDetailReturn";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
+import {
+  DESKTOP_VIEWPORT_MEDIA_QUERY,
+  useMediaQuery,
+} from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { activityCategoryOptions } from "../utils/activityFilters";
 import type { ActivityCardViewModel } from "../types";
@@ -105,7 +109,7 @@ type WindowWithIdleCallback = Window &
     ) => number;
   };
 
-const LOBBY_PAGE_SIZE = 10;
+const LOBBY_PAGE_SIZE = 8;
 const LOBBY_SWIPE_BATCH_SIZE = 8;
 const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
 const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
@@ -1767,6 +1771,7 @@ export function ActivityLobbyView({
   locale,
   viewerProfileId,
 }: ActivityLobbyViewProps) {
+  const isDesktopViewport = useMediaQuery(DESKTOP_VIEWPORT_MEDIA_QUERY);
   const appCopy = getCopy(locale);
   const t = appCopy.activityLobby;
   const [activeFilter, setActiveFilter] =
@@ -2237,6 +2242,10 @@ export function ActivityLobbyView({
         visual?: boolean;
       } = {},
     ) => {
+      if (!isDesktopViewport) {
+        return;
+      }
+
       const normalizedPage = Math.max(1, Math.floor(targetPage));
       const cacheKey = getLobbyFeedCacheKey(status, normalizedPage, typeFilter);
 
@@ -2326,7 +2335,7 @@ export function ActivityLobbyView({
         setLoadingFeedKey((current) => (current === cacheKey ? null : current));
       }
     },
-    [],
+    [isDesktopViewport],
   );
 
   const loadDeferredSection = useCallback(
@@ -2337,6 +2346,7 @@ export function ActivityLobbyView({
       } = {},
     ) => {
       if (
+        !isDesktopViewport ||
         !deferredFilterSet.has(filter) ||
         lazySectionsRef.current[filter] ||
         inFlightSectionRefs.current.has(filter)
@@ -2414,7 +2424,7 @@ export function ActivityLobbyView({
         setLoadingFilter((current) => (current === filter ? null : current));
       }
     },
-    [deferredFilterSet],
+    [deferredFilterSet, isDesktopViewport],
   );
 
   useEffect(() => {

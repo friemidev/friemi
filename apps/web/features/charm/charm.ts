@@ -200,7 +200,7 @@ export const charmGiftCatalog = [
   {
     id: "werewolf_crystal",
     emoji: "🔮",
-    labels: { zh: "水晶球", en: "Crystal ball", fr: "Boule de cristal" },
+    labels: { zh: "真预言家", en: "Crystal ball", fr: "Boule de cristal" },
     charmValue: 40,
     referenceRmb: 300,
     coinCost: 30,
@@ -211,7 +211,7 @@ export const charmGiftCatalog = [
   {
     id: "werewolf",
     emoji: "🐺",
-    labels: { zh: "银色子弹", en: "Silver bullet", fr: "Balle d'argent" },
+    labels: { zh: "狼王之王", en: "Silver bullet", fr: "Balle d'argent" },
     charmValue: 40,
     referenceRmb: 300,
     coinCost: 30,

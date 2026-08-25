@@ -337,6 +337,42 @@ export async function getGlobalSearchRecommendations(
   };
 }
 
+export async function getGlobalSearchHangoutRecommendations(
+  currentUserProfileId?: string | null,
+): Promise<ActivityCardViewModel[]> {
+  const perf = createActionPerformanceTracker({
+    action: "search.hangoutRecommendations",
+  });
+  const now = getActivityFloatingNow();
+  const hangouts = await perf.measure("hangout.list", () =>
+    prisma.activity.findMany({
+      where: {
+        AND: [
+          getVisibleActivityWhere({ now }),
+          {
+            type: {
+              not: "PUBLIC_EVENT",
+            },
+          },
+        ],
+      },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: searchRecommendationLimit,
+      select: activityCardSelect,
+    }),
+  );
+  const recommendations = await perf.measure("hangout.favoriteState", () =>
+    attachActivityFavoriteStates(
+      hangouts.map(getActivityCardViewModel),
+      currentUserProfileId,
+    ),
+  );
+
+  perf.finish({ hangoutCount: recommendations.length });
+
+  return recommendations;
+}
+
 function sortSearchActivityCards(
   left: ActivityCardViewModel,
   right: ActivityCardViewModel,

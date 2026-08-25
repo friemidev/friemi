@@ -901,7 +901,12 @@ async function getProfileFollowNetwork(
 
 export async function getProfileDashboard(
   profileId: string,
+  options: {
+    loadActivityPreview?: boolean;
+    momentPreviewLimit?: number;
+  } = {},
 ): Promise<ProfileDashboardViewModel> {
+  const loadActivityPreview = options.loadActivityPreview ?? true;
   const publicEventFavorite = getPublicEventFavoriteDelegate();
   const relationship = await getProfileViewerRelationship(profileId, profileId);
   const createdWhere = getCreatedActivitiesWhere({
@@ -954,29 +959,35 @@ export async function getProfileDashboard(
     prisma.moment.count({
       where: momentsWhere,
     }),
-    prisma.activity.findMany({
-      where: createdWhere,
-      orderBy: [{ startAt: "desc" }, { id: "asc" }],
-      take: profileActivityListLimit,
-      select: activityCardSelect,
-    }),
-    prisma.activityParticipant.findMany({
-      where: {
-        userProfileId: profileId,
-      },
-      orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
-      take: profileActivityListLimit,
-      select: profileParticipationSelect,
-    }),
-    prisma.activityFavorite.findMany({
-      where: {
-        userProfileId: profileId,
-      },
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      take: profileActivityListLimit,
-      select: profileFavoriteSelect,
-    }),
-    publicEventFavorite
+    loadActivityPreview
+      ? prisma.activity.findMany({
+          where: createdWhere,
+          orderBy: [{ startAt: "desc" }, { id: "asc" }],
+          take: profileActivityListLimit,
+          select: activityCardSelect,
+        })
+      : Promise.resolve([]),
+    loadActivityPreview
+      ? prisma.activityParticipant.findMany({
+          where: {
+            userProfileId: profileId,
+          },
+          orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
+          take: profileActivityListLimit,
+          select: profileParticipationSelect,
+        })
+      : Promise.resolve([]),
+    loadActivityPreview
+      ? prisma.activityFavorite.findMany({
+          where: {
+            userProfileId: profileId,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+          take: profileActivityListLimit,
+          select: profileFavoriteSelect,
+        })
+      : Promise.resolve([]),
+    loadActivityPreview && publicEventFavorite
       ? publicEventFavorite.findMany({
           where: {
             userProfileId: profileId,
@@ -989,7 +1000,10 @@ export async function getProfileDashboard(
     prisma.moment.findMany({
       where: momentsWhere,
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      take: profileActivityListLimit,
+      take: Math.min(
+        Math.max(options.momentPreviewLimit ?? profileActivityListLimit, 1),
+        profileActivityListLimit,
+      ),
       select: profileMomentSelect,
     }),
     getProfileWerewolfStats(profileId),
@@ -1076,6 +1090,72 @@ export async function getProfileDashboard(
     viewerRelationship: relationship,
     werewolfStats,
   };
+}
+
+export async function getProfileHangoutPreview(profileId: string) {
+  const publicEventFavorite = getPublicEventFavoriteDelegate();
+  const createdWhere = getCreatedActivitiesWhere({
+    isFriend: false,
+    isSelf: true,
+    profileId,
+  });
+  const [createdActivities, participations, favorites, publicFavorites] =
+    await Promise.all([
+      prisma.activity.findMany({
+        where: createdWhere,
+        orderBy: [{ startAt: "desc" }, { id: "asc" }],
+        take: 3,
+        select: activityCardSelect,
+      }),
+      prisma.activityParticipant.findMany({
+        where: { userProfileId: profileId },
+        orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
+        take: 3,
+        select: profileParticipationSelect,
+      }),
+      prisma.activityFavorite.findMany({
+        where: { userProfileId: profileId },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        take: 3,
+        select: profileFavoriteSelect,
+      }),
+      publicEventFavorite
+        ? publicEventFavorite.findMany({
+            where: { userProfileId: profileId },
+            orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+            take: 3,
+            select: profilePublicEventFavoriteSelect,
+          })
+        : Promise.resolve([]),
+    ]);
+  const [createdCards, participationCards, favoriteCards] = await Promise.all([
+    applyOrganizerParticipationDefaults(
+      createdActivities.map(getActivityCardViewModel),
+    ),
+    applyOrganizerParticipationDefaults(
+      participations.map((item) => getActivityCardViewModel(item.activity)),
+    ),
+    applyOrganizerParticipationDefaults(
+      favorites.map((item) => getActivityCardViewModel(item.activity)),
+    ),
+  ]);
+  const publicFavoriteCards = (
+    publicFavorites as ProfilePublicEventFavoriteQueryResult[]
+  ).map((item) => mapPublicEventFavorite(item).activity);
+  const seen = new Set<string>();
+
+  return [
+    ...createdCards,
+    ...participationCards,
+    ...favoriteCards,
+    ...publicFavoriteCards,
+  ]
+    .filter((activity) => {
+      if (seen.has(activity.id)) return false;
+      seen.add(activity.id);
+      return true;
+    })
+    .slice(0, 3);
 }
 
 export async function getPublicProfileDashboard(

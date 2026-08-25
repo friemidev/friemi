@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
-import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
+import { getMomentFeedPage } from "@/features/moments/queries/getMomentFeed";
 import { getOfficialMessageRoster } from "@/features/official-messages/services/officialMessages";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
-import { getPlanetSquare } from "@/features/planets/queries/planetQueries";
+import { getPlanetSquarePage } from "@/features/planets/queries/planetQueries";
 import { getPlanetChatRoster } from "@/features/planets/services/planetChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -83,110 +83,134 @@ export default async function FootprintsPage({
     planetsResult,
     canCreateResult,
   ] = await Promise.all([
-      perf
-        .measure("moments.feed", () => getMomentFeed(viewerProfileId))
-        .then((moments) => ({ moments, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load moment feed", error);
+    initialTab === "moment"
+      ? perf
+          .measure("moments.feed", () =>
+            getMomentFeedPage(viewerProfileId, { limit: 8 }),
+          )
+          .then((page) => ({ page, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load moment feed", error);
 
-          return {
-            moments: [],
-            error,
-          };
+            return {
+              page: { hasMore: false, items: [], nextCursor: null },
+              error,
+            };
+          })
+      : Promise.resolve({
+          page: { hasMore: false, items: [], nextCursor: null },
+          error: null,
         }),
-      profile
-        ? perf
-            .measure("messages.friendRoster", () =>
-              getDirectMessageFriendRoster(profile.id),
-            )
-            .then((friends) => ({ friends, error: null }))
-            .catch((error: unknown) => {
-              console.error("Failed to load footprints message roster", error);
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.friendRoster", () =>
+            getDirectMessageFriendRoster(profile.id),
+          )
+          .then((friends) => ({ friends, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load footprints message roster", error);
 
-              return {
-                friends: [],
-                error,
-              };
-            })
-        : Promise.resolve({ friends: [], error: null }),
-      profile && initialTab === "message"
-        ? perf
-            .measure("messages.official", () =>
-              getOfficialMessageRoster(profile.id, locale),
-            )
-            .then((roster) => ({ roster, error: null }))
-            .catch((error: unknown) => {
-              console.error("Failed to load official message roster", error);
+            return {
+              friends: [],
+              error,
+            };
+          })
+      : Promise.resolve({ friends: [], error: null }),
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.official", () =>
+            getOfficialMessageRoster(profile.id, locale),
+          )
+          .then((roster) => ({ roster, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load official message roster", error);
 
-              return {
-                roster: null,
-                error,
-              };
-            })
-        : Promise.resolve({ roster: null, error: null }),
-      profile
-        ? perf
-            .measure("messages.activityRooms", () =>
-              getActivityRoomChatRoster(profile.id),
-            )
-            .then((rooms) => ({ rooms, error: null }))
-            .catch((error: unknown) => {
-              console.error("Failed to load footprints room chat roster", error);
+            return {
+              roster: null,
+              error,
+            };
+          })
+      : Promise.resolve({ roster: null, error: null }),
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.activityRooms", () =>
+            getActivityRoomChatRoster(profile.id),
+          )
+          .then((rooms) => ({ rooms, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load footprints room chat roster", error);
 
-              return {
-                rooms: [],
-                error,
-              };
-            })
-        : Promise.resolve({ rooms: [], error: null }),
-      profile && initialTab === "message"
-        ? perf
-            .measure("messages.planetChats", () =>
-              getPlanetChatRoster(profile.id, locale),
-            )
-            .then((planetChats) => ({ planetChats, error: null }))
-            .catch((error: unknown) => {
-              console.error("Failed to load footprints planet chat roster", error);
+            return {
+              rooms: [],
+              error,
+            };
+          })
+      : Promise.resolve({ rooms: [], error: null }),
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.planetChats", () =>
+            getPlanetChatRoster(profile.id, locale),
+          )
+          .then((planetChats) => ({ planetChats, error: null }))
+          .catch((error: unknown) => {
+            console.error(
+              "Failed to load footprints planet chat roster",
+              error,
+            );
 
-              return {
-                planetChats: [],
-                error,
-              };
-            })
-        : Promise.resolve({ planetChats: [], error: null }),
-      perf
-        .measure("planets.square", () => getPlanetSquare(viewerProfileId))
-        .then((planets) => ({ planets, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load footprints planet square", error);
+            return {
+              planetChats: [],
+              error,
+            };
+          })
+      : Promise.resolve({ planetChats: [], error: null }),
+    initialTab === "planet"
+      ? perf
+          .measure("planets.square", () =>
+            getPlanetSquarePage(viewerProfileId, { limit: 12 }),
+          )
+          .then((page) => ({ page, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load footprints planet square", error);
 
-          return {
-            planets: [],
-            error,
-          };
+            return {
+              page: { hasMore: false, items: [], nextCursor: null },
+              error,
+            };
+          })
+      : Promise.resolve({
+          page: { hasMore: false, items: [], nextCursor: null },
+          error: null,
         }),
-      perf
-        .measure("planets.canCreate", () => canCreatePlanet(profile))
-        .then((canCreate) => ({ canCreate, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to resolve planet creation eligibility", error);
+    initialTab === "planet"
+      ? perf
+          .measure("planets.canCreate", () => canCreatePlanet(profile))
+          .then((canCreate) => ({ canCreate, error: null }))
+          .catch((error: unknown) => {
+            console.error(
+              "Failed to resolve planet creation eligibility",
+              error,
+            );
 
-          return {
-            canCreate: false,
-            error,
-          };
-        }),
-    ]);
+            return {
+              canCreate: false,
+              error,
+            };
+          })
+      : Promise.resolve({ canCreate: false, error: null }),
+  ]);
   perf.finish(
     {
       initialTab,
       activityRoomChatCount: activityRoomChatsResult.rooms.length,
       messageFriendCount: messageFriendsResult.friends.length,
-      officialMessageLoaded: !officialMessagesResult.error,
+      officialMessageLoaded:
+        initialTab === "message" && !officialMessagesResult.error,
       planetChatCount: planetChatsResult.planetChats.length,
-      momentCount: momentsResult.moments.length,
-      planetCount: planetsResult.planets.length,
-      planetCreationEligibilityLoaded: !canCreateResult.error,
+      momentCount: momentsResult.page.items.length,
+      planetCount: planetsResult.page.items.length,
+      planetCreationEligibilityLoaded:
+        initialTab === "planet" && !canCreateResult.error,
     },
     {
       route: `/${locale}/footprints`,
@@ -201,18 +225,21 @@ export default async function FootprintsPage({
       locale={locale}
       initialMomentScope={requestedMomentScope}
       initialTab={initialTab}
-      moments={momentsResult.moments}
+      moments={momentsResult.page.items}
+      momentFeedHasMore={momentsResult.page.hasMore}
+      momentFeedNextCursor={momentsResult.page.nextCursor}
+      momentFeedLoaded={initialTab === "moment"}
       momentFeedError={Boolean(momentsResult.error)}
       messageFriends={messageFriendsResult.friends}
       officialMessages={officialMessagesResult.roster}
       activityRoomChats={activityRoomChatsResult.rooms}
       planetChats={planetChatsResult.planetChats}
-      planetChatRosterLoaded={!profile || initialTab === "message"}
+      messageRosterLoaded={!profile || initialTab === "message"}
       messageRosterError={Boolean(
         messageFriendsResult.error ||
-          officialMessagesResult.error ||
-          activityRoomChatsResult.error ||
-          planetChatsResult.error,
+        officialMessagesResult.error ||
+        activityRoomChatsResult.error ||
+        planetChatsResult.error,
       )}
       profile={
         profile
@@ -226,7 +253,10 @@ export default async function FootprintsPage({
             }
           : null
       }
-      planets={planetsResult.planets}
+      planets={planetsResult.page.items}
+      planetSquareHasMore={planetsResult.page.hasMore}
+      planetSquareNextCursor={planetsResult.page.nextCursor}
+      planetSquareLoaded={initialTab === "planet"}
       planetSquareError={Boolean(planetsResult.error)}
       canCreatePlanet={canCreateResult.canCreate}
     />

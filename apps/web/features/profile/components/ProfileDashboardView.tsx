@@ -61,8 +61,8 @@ import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
-import { achievementCatalog } from "@/features/achievements/achievementCatalog";
 import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
+import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
   ProfileActivitySections,
   type ProfileSectionKey,
@@ -1025,10 +1025,12 @@ function ProfilePreviewTabs({
   achievementPreviewItems,
   dashboard,
   locale,
+  profileId,
 }: {
   achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  profileId: string;
 }) {
   const copy = getProfilePreviewTabsCopy(locale);
   const [activeTab, setActiveTab] = useState<ProfilePreviewTabKey>("moments");
@@ -1041,7 +1043,7 @@ function ProfilePreviewTabs({
     .filter((moment) => moment.content?.trim() || moment.image)
     .slice(0, 3);
   const seenActivityIds = new Set<string>();
-  const hangoutItems = [
+  const initialHangoutItems = [
     ...dashboard.createdActivities,
     ...dashboard.participations.map((participation) => participation.activity),
     ...dashboard.favoriteActivities.map((favorite) => favorite.activity),
@@ -1055,8 +1057,57 @@ function ProfilePreviewTabs({
       return true;
     })
     .slice(0, 3);
-  const badgeItems = achievementPreviewItems;
+  const [hangoutItems, setHangoutItems] = useState<
+    ActivityCardViewModel[] | null
+  >(initialHangoutItems.length > 0 ? initialHangoutItems : null);
+  const [badgeItems, setBadgeItems] = useState<
+    PublicAchievementWallItem[] | null
+  >(achievementPreviewItems.length > 0 ? achievementPreviewItems : null);
+  const [loadingTab, setLoadingTab] = useState<ProfilePreviewTabKey | null>(
+    null,
+  );
   const activeHref = getProfilePreviewTabHref(locale, activeTab);
+
+  async function selectTab(tab: ProfilePreviewTabKey) {
+    setActiveTab(tab);
+
+    if (
+      tab === "moments" ||
+      (tab === "hangouts" && hangoutItems !== null) ||
+      (tab === "badges" && badgeItems !== null) ||
+      loadingTab
+    ) {
+      return;
+    }
+
+    setLoadingTab(tab);
+
+    try {
+      const response = await fetch(`/api/profile/preview?tab=${tab}`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as {
+        badges?: PublicAchievementWallItem[];
+        hangouts?: ActivityCardViewModel[];
+        ok?: boolean;
+      };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(`Profile preview request failed for ${profileId}`);
+      }
+
+      if (tab === "hangouts") {
+        setHangoutItems(payload.hangouts ?? []);
+      } else {
+        setBadgeItems(payload.badges ?? []);
+      }
+    } catch (error) {
+      console.error("Failed to load profile preview tab", error);
+    } finally {
+      setLoadingTab(null);
+    }
+  }
 
   return (
     <section className="mt-5 bg-white">
@@ -1073,7 +1124,7 @@ function ProfilePreviewTabs({
               aria-selected={active}
               className="relative h-8 min-w-0 px-1 text-center text-[11px] font-semibold text-[#4F574F] transition active:scale-[0.98]"
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => void selectTab(tab.key)}
               role="tab"
               type="button"
             >
@@ -1089,6 +1140,11 @@ function ProfilePreviewTabs({
       </div>
 
       <div className="mt-3 grid min-h-[7.9rem] grid-cols-3 gap-2.5">
+        {loadingTab === activeTab ? (
+          <div className="col-span-3 flex min-h-[7.5rem] items-center justify-center">
+            <LoaderCircle className="h-5 w-5 animate-spin text-[#156240]" />
+          </div>
+        ) : null}
         {activeTab === "moments" ? (
           momentItems.length > 0 ? (
             momentItems.map((moment) => (
@@ -1122,9 +1178,9 @@ function ProfilePreviewTabs({
           )
         ) : null}
 
-        {activeTab === "hangouts" ? (
-          hangoutItems.length > 0 ? (
-            hangoutItems.map((activity) => (
+        {activeTab === "hangouts" && loadingTab !== "hangouts" ? (
+          (hangoutItems?.length ?? 0) > 0 ? (
+            hangoutItems!.map((activity) => (
               <Link
                 className="group min-w-0"
                 href={withLocale(locale, getActivityDetailPath(activity.id))}
@@ -1149,9 +1205,9 @@ function ProfilePreviewTabs({
           )
         ) : null}
 
-        {activeTab === "badges" ? (
-          badgeItems.length > 0 ? (
-            badgeItems.map((item) => (
+        {activeTab === "badges" && loadingTab !== "badges" ? (
+          (badgeItems?.length ?? 0) > 0 ? (
+            badgeItems!.map((item) => (
               <Link
                 className="group min-w-0"
                 href={activeHref}
@@ -3189,7 +3245,6 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
           label={copy.achievements}
-          status={String(achievementCatalog.length)}
           tone="gold"
         />
         <ProfileFeatureLink
@@ -3211,6 +3266,7 @@ function SelfMobileProfileHome({
         achievementPreviewItems={achievementPreviewItems}
         dashboard={dashboard}
         locale={locale}
+        profileId={profile.id}
       />
 
       <MobileProfileBioEditor
