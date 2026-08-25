@@ -7,6 +7,7 @@ import {
   type ActivityCoverStorageErrorCode,
 } from "@/lib/activity-cover-storage";
 import { hasClerkKeys } from "@/lib/clerk";
+import { getUploadRateLimitRejection } from "@/lib/uploadRateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,12 @@ export async function POST(request: Request) {
 
   if (!userId) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  const rateLimitRejection = await getUploadRateLimitRejection(userId);
+
+  if (rateLimitRejection) {
+    return rateLimitRejection;
   }
 
   if (!getActivityCoverStorageConfig()) {

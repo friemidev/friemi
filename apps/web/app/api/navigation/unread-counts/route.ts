@@ -5,11 +5,17 @@ import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { getUnreadOfficialMessageCount } from "@/features/official-messages/services/officialMessages";
 import { createUnreadBadgeCounts } from "@/features/notifications/unreadBadgeCounts";
+import {
+  getCachedUnreadBadgeCounts,
+  setCachedUnreadBadgeCounts,
+  unreadBadgeCountsMatch,
+} from "@/features/notifications/unreadBadgeRedisCache";
 import { getUnreadPlanetChatTotalMessageCount } from "@/features/planets/services/planetChat";
 import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
+import { getRedisRuntimeConfig } from "@/lib/redisConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +73,41 @@ async function loadUnreadBadgeCounts(profileId: string) {
   });
 }
 
+async function loadUnreadBadgeCountsWithRedis(profileId: string) {
+  const config = getRedisRuntimeConfig();
+  const cached = await getCachedUnreadBadgeCounts(profileId);
+
+  if (config.unreadCacheMode === "serve" && cached.counts) {
+    return {
+      cacheStatus: "hit",
+      counts: cached.counts,
+    };
+  }
+
+  const counts = await loadUnreadBadgeCounts(profileId);
+
+  if (config.unreadCacheMode === "shadow") {
+    console.info("[redis-shadow] unread cache", {
+      cacheStatus: cached.status,
+      matchesDatabase: cached.counts
+        ? unreadBadgeCountsMatch(cached.counts, counts)
+        : null,
+    });
+  }
+
+  await setCachedUnreadBadgeCounts(profileId, counts);
+
+  return {
+    cacheStatus:
+      config.unreadCacheMode === "off"
+        ? "off"
+        : config.unreadCacheMode === "shadow"
+          ? `shadow-${cached.status}`
+          : cached.status,
+    counts,
+  };
+}
+
 export async function GET(request: Request) {
   return withApiRequestMetrics(
     request,
@@ -91,7 +132,8 @@ export async function GET(request: Request) {
           );
         }
 
-        const counts = await loadUnreadBadgeCounts(profileId);
+        const { cacheStatus, counts } =
+          await loadUnreadBadgeCountsWithRedis(profileId);
 
         return NextResponse.json(
           {
@@ -99,7 +141,12 @@ export async function GET(request: Request) {
             requestId,
             updatedAt: new Date().toISOString(),
           },
-          { headers: noStoreHeaders },
+          {
+            headers: {
+              ...noStoreHeaders,
+              "X-Friemi-Unread-Cache": cacheStatus,
+            },
+          },
         );
       } catch (error) {
         console.error("Failed to load navigation unread counts", error);

@@ -4,6 +4,10 @@ import { getActivityRoomMentionCandidates } from "@/features/activity-room-chat/
 import { getPlanetMentionCandidates } from "@/features/planets/services/planetChat";
 import { withApiRequestMetrics } from "@/lib/apiRequestMetrics";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import {
+  checkDistributedRateLimit,
+  getRateLimitResponseHeaders,
+} from "@/lib/distributedRateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +46,23 @@ export async function GET(request: Request) {
         return NextResponse.json(
           { error: "UNAUTHORIZED", requestId },
           { headers: noStoreHeaders, status: 401 },
+        );
+      }
+
+      const rateLimit = await checkDistributedRateLimit({
+        identifier: viewer.id,
+        limit: 60,
+        scope: "mention-candidates",
+        window: "1 m",
+      });
+
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          { error: "RATE_LIMITED", requestId },
+          {
+            headers: getRateLimitResponseHeaders(rateLimit),
+            status: 429,
+          },
         );
       }
 
