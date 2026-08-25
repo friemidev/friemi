@@ -9,6 +9,7 @@ import {
   authRedirectParamName,
   getAuthRedirectFallback,
   getNativeAuthCompleteHref,
+  getProfileSetupHref,
   getSignInHref,
   normalizeAuthRedirectTarget,
 } from "@/lib/auth-redirect";
@@ -64,13 +65,18 @@ export default async function SignUpPage({
   const t = getCopy(locale);
   const requestHeaders = await headers();
   const userAgent = requestHeaders.get("user-agent");
-  const forceRedirectUrl =
-    isFriemiAndroidApp(userAgent) || isFriemiIOSApp(userAgent)
-      ? getNativeAuthCompleteHref(locale, redirectTarget)
-      : redirectTarget;
+  const isNativeApp =
+    isFriemiAndroidApp(userAgent) || isFriemiIOSApp(userAgent);
+  const profileSetupTarget = getProfileSetupHref(locale, redirectTarget);
+  const signedInRedirectUrl = isNativeApp
+    ? getNativeAuthCompleteHref(locale, redirectTarget)
+    : redirectTarget;
+  const forceRedirectUrl = isNativeApp
+    ? getNativeAuthCompleteHref(locale, profileSetupTarget)
+    : profileSetupTarget;
 
   if (hasClerkKeys() && (await auth()).userId) {
-    redirect(forceRedirectUrl);
+    redirect(signedInRedirectUrl);
   }
 
   if (isWechatWebView(userAgent)) {

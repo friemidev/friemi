@@ -18,6 +18,7 @@ import { SearchActivityResultsFeed } from "@/features/search/components/SearchAc
 import { SearchHighlightedText } from "@/features/search/components/SearchHighlightedText";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
+  getGlobalSearchHangoutRecommendations,
   getGlobalSearchMainActivityResults,
   getGlobalSearchRecommendations,
   getGlobalSearchResults,
@@ -495,6 +496,20 @@ export default async function SearchPage({
           }),
       )
     : { result: null, error: null };
+  const userFallbackHangoutResult =
+    query && hasResults && searchResult.result?.userCount === 0
+      ? await perf.measure("search.userFallbackHangouts", () =>
+          getGlobalSearchHangoutRecommendations(viewerProfile?.id)
+            .then((result) => ({ result, error: null }))
+            .catch((error: unknown) => {
+              console.error(
+                "Failed to load user fallback hangout recommendations",
+                error,
+              );
+              return { result: null, error };
+            }),
+        )
+      : { result: null, error: null };
 
   if (query && searchResult.result) {
     const requestHeaders = await headers();
@@ -663,7 +678,25 @@ export default async function SearchPage({
                 </p>
               )}
             </section>
-          ) : null}
+          ) : (
+            <>
+              <section className="space-y-3">
+                <SearchSectionHeader title={t.usersTitle} count={0} />
+                <p className="py-2 text-sm leading-6 text-zinc-500">
+                  {t.noUserResults}
+                </p>
+              </section>
+              {userFallbackHangoutResult.result?.length ? (
+                <SearchRecommendedActivities
+                  activities={userFallbackHangoutResult.result}
+                  isAuthenticated={Boolean(viewerProfile)}
+                  locale={locale}
+                  title={t.recommendationsHangoutsTitle}
+                  viewerProfileId={viewerProfile?.id ?? null}
+                />
+              ) : null}
+            </>
+          )}
 
           {mixedActivityResultCount > 0 || relatedActivityCount > 0 ? (
             <section className="space-y-3">

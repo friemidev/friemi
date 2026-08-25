@@ -13,6 +13,9 @@ type ProfileShopPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    recharge?: string | string[];
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -20,8 +23,13 @@ export const metadata = noIndexMetadata;
 
 export default async function ProfileShopPage({
   params,
+  searchParams,
 }: ProfileShopPageProps) {
   const { locale } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const rechargeParam = Array.isArray(resolvedSearchParams.recharge)
+    ? resolvedSearchParams.recharge[0]
+    : resolvedSearchParams.recharge;
 
   const profile = await ensureCurrentUserProfile(locale, "/profile/shop");
   const gifts = getProfileShopGiftCatalog(locale);
@@ -39,6 +47,7 @@ export default async function ProfileShopPage({
         gifts={gifts}
         locale={locale}
         negativeGifts={negativeGifts}
+        openRecharge={rechargeParam === "1"}
       />
     </PageContainer>
   );

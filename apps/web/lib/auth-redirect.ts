@@ -98,6 +98,16 @@ export function getSignUpHref(
   return withLocale(locale, `/sign-up?${query.toString()}`);
 }
 
+export function getProfileSetupHref(
+  locale: string,
+  redirectTarget?: string | string[] | null,
+) {
+  const target = normalizeAuthRedirectTarget(locale, redirectTarget);
+  const query = new URLSearchParams({ [authRedirectParamName]: target });
+
+  return withLocale(locale, `/profile/setup?${query.toString()}`);
+}
+
 export function getAndroidAuthCompleteHref(
   locale: string,
   redirectTarget?: string | string[] | null,

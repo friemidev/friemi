@@ -21,7 +21,6 @@ import {
   HeartPulse,
   LogOut,
   Monitor,
-  Moon,
   Palette,
   Plus,
   QrCode,
@@ -216,11 +215,6 @@ function getWerewolfRoomPreloadAssets({
     new Set([
       atmosphereSrc,
       "/game-tools/werewolf/werewolf.jpeg",
-      werewolfUiAssets.seatJudge,
-      werewolfUiAssets.seatPlayerDead,
-      werewolfUiAssets.seatPlayerEmpty,
-      werewolfUiAssets.seatPlayerOccupied,
-      werewolfUiAssets.seatPlayerReady,
       ...Array.from({ length: 12 }, (_, index) =>
         getWerewolfSeatBackImage(index + 1),
       ),
@@ -498,8 +492,7 @@ function getCopy(locale: string) {
     exitGameTitle: "退出提醒",
     finished: "本局已结束",
     finishGame: "结束游戏",
-    finishGameDescription:
-      "请选择本局结果。终止游戏不会计入玩家胜负记录。",
+    finishGameDescription: "请选择本局结果。终止游戏不会计入玩家胜负记录。",
     finishGameTitle: "确认结束本局？",
     finishGood: "平民胜利",
     finishWerewolf: "狼人胜利",
@@ -928,19 +921,7 @@ export function WerewolfRoomOverview({
     () => room.seats.filter((seat) => seat.isPlayerSeat),
     [room.seats],
   );
-  const leftTableSeats = useMemo(
-    () => playerSeats.filter((seat) => seat.seatNumber % 2 === 1),
-    [playerSeats],
-  );
-  const rightTableSeats = useMemo(
-    () => playerSeats.filter((seat) => seat.seatNumber % 2 === 0),
-    [playerSeats],
-  );
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
-  const isDenseTable = playerSeats.length >= 9;
-  const tableCanvasMinHeightClass = isDenseTable
-    ? "min-h-[28rem]"
-    : "min-h-[25rem]";
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -1244,8 +1225,7 @@ export function WerewolfRoomOverview({
     }
 
     const intervalMs =
-      getWerewolfSyncIntervalMs(room.status) +
-      Math.floor(Math.random() * 900);
+      getWerewolfSyncIntervalMs(room.status) + Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
       if (!document.hidden) {
         void pollRoomSync();
@@ -1488,12 +1468,14 @@ export function WerewolfRoomOverview({
     (seatNumber: number, isDead: boolean) => {
       lastOptimisticMutationAtRef.current = Date.now();
 
-      setRoom((previousRoom): WerewolfRoomView => ({
-        ...previousRoom,
-        seats: previousRoom.seats.map((seat) =>
-          seat.seatNumber === seatNumber ? { ...seat, isDead } : seat,
-        ),
-      }));
+      setRoom(
+        (previousRoom): WerewolfRoomView => ({
+          ...previousRoom,
+          seats: previousRoom.seats.map((seat) =>
+            seat.seatNumber === seatNumber ? { ...seat, isDead } : seat,
+          ),
+        }),
+      );
     },
     [],
   );
@@ -1585,7 +1567,7 @@ export function WerewolfRoomOverview({
         ) ?? null);
   const pendingSheriffIsCurrent = Boolean(
     pendingSheriffSeat &&
-      room.state.sheriffSeatNumber === pendingSheriffSeat.seatNumber,
+    room.state.sheriffSeatNumber === pendingSheriffSeat.seatNumber,
   );
   const revealedPlayerSeats = playerSeats.filter((seat) => seat.isClaimed);
   const centerTitle =
@@ -1601,10 +1583,7 @@ export function WerewolfRoomOverview({
         ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
         : room.variant.label;
 
-  const renderClaimedSeatAvatar = (
-    seat: WerewolfSeat,
-    className: string,
-  ) => {
+  const renderClaimedSeatAvatar = (seat: WerewolfSeat, className: string) => {
     const avatar = (
       <WerewolfAvatar
         avatarLabel={seat.avatarLabel}
@@ -1640,47 +1619,6 @@ export function WerewolfRoomOverview({
     const emptySeatActionLabel = room.currentMember?.seatedSeatNumber
       ? t.changeSeat
       : t.selectSeat;
-    const seatImage = seat.isClaimed
-      ? seat.isDead
-        ? werewolfUiAssets.seatPlayerDead
-        : seat.readyAt || room.status !== "LOBBY"
-          ? werewolfUiAssets.seatPlayerReady
-          : werewolfUiAssets.seatPlayerOccupied
-      : werewolfUiAssets.seatPlayerEmpty;
-    const nodeClass = `relative z-20 mx-auto flex w-full flex-col items-center justify-start text-center transition ${
-      isDenseTable ? "min-h-[4.45rem] max-w-[4.45rem]" : "min-h-[5.4rem] max-w-[5.25rem]"
-    } ${
-      isCurrentSeat ? "scale-[1.03]" : ""
-    }`;
-    const tokenClass = `relative grid place-items-center rounded-full transition ${
-      isDenseTable ? "h-[3.15rem] w-[3.15rem]" : "h-[3.85rem] w-[3.85rem]"
-    } ${
-      seat.isDead ? "grayscale opacity-55" : ""
-    } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
-    const seatNumberClass = `absolute -left-0.5 -top-0.5 z-20 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-bold ring-1 friemi-tabular ${
-      isCurrentSeat
-        ? "bg-[#F8DDA8]/28 text-[#FFF8DC] ring-[#FFF8DC]/70 shadow-[0_0_12px_rgba(248,221,168,0.38)]"
-        : "bg-white/18 text-[#FFF8DC] ring-white/38"
-    }`;
-    const seatNameClass = `mt-1 block max-w-full truncate px-1 font-bold leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
-      isDenseTable ? "text-[9.5px]" : "text-[10.5px]"
-    } ${
-      seat.isDead
-        ? "text-white/42"
-        : isCurrentSeat
-          ? "text-[#F8DDA8]"
-          : "text-white"
-    }`;
-    const readyBadge =
-      isLobby && seat.isClaimed && seat.readyAt ? (
-        <span
-          className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-semibold leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
-            isDenseTable ? "h-3.5 px-1 text-[8px]" : "h-4 px-1.5 text-[9px]"
-          }`}
-        >
-          {t.ready}
-        </span>
-      ) : null;
     const isSheriff = room.state.sheriffSeatNumber === seat.seatNumber;
     const showRoleIdentity =
       !isLobby &&
@@ -1693,47 +1631,39 @@ export function WerewolfRoomOverview({
       seat.isClaimed &&
       canJudgeControlPlayers &&
       judgePrivateToken ? (
-        <div className="mt-0.5 flex items-center justify-center gap-1.5">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {seat.isDead ? (
-              <form
-                action={lifeAction}
-                onSubmit={(event) => {
-                  if (!canSubmitOnline(event)) {
-                    return;
-                  }
+            <form
+              action={lifeAction}
+              onSubmit={(event) => {
+                if (!canSubmitOnline(event)) {
+                  return;
+                }
 
-                  applyOptimisticPlayerLife(seat.seatNumber, false);
-                }}
-              >
-                <input name="locale" type="hidden" value={locale} />
-                {currentMemberToken ? (
-                  <input
-                    name="memberToken"
-                    type="hidden"
-                    value={currentMemberToken}
-                  />
-                ) : null}
+                applyOptimisticPlayerLife(seat.seatNumber, false);
+              }}
+            >
+              <input name="locale" type="hidden" value={locale} />
+              {currentMemberToken ? (
                 <input
-                  name="privateToken"
+                  name="memberToken"
                   type="hidden"
-                  value={judgePrivateToken}
+                  value={currentMemberToken}
                 />
-                <input
-                  name="seatNumber"
-                  type="hidden"
-                  value={seat.seatNumber}
-                />
-                <input
-                  name="operation"
-                  type="hidden"
-                  value="revive"
-                />
-                <input name="responseMode" type="hidden" value="inline" />
-                <JudgeLifeButton
-                  isDead
-                  label={`${t.judgeControls}: ${seat.displayName} · ${t.revive}`}
-                />
-              </form>
+              ) : null}
+              <input
+                name="privateToken"
+                type="hidden"
+                value={judgePrivateToken}
+              />
+              <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+              <input name="operation" type="hidden" value="revive" />
+              <input name="responseMode" type="hidden" value="inline" />
+              <JudgeLifeButton
+                isDead
+                label={`${t.judgeControls}: ${seat.displayName} · ${t.revive}`}
+              />
+            </form>
           ) : (
             <JudgeLifeButton
               isDead={false}
@@ -1757,7 +1687,7 @@ export function WerewolfRoomOverview({
       return (
         <form
           action={seatAction}
-          className={nodeClass}
+          className="relative z-20"
           key={seat.id}
           onSubmit={(event) => {
             if (!canSubmitOnline(event)) {
@@ -1774,39 +1704,63 @@ export function WerewolfRoomOverview({
           <input name="responseMode" type="hidden" value="inline" />
           <button
             aria-label={`${emptySeatActionLabel} ${seat.seatNumber}`}
-            className="group flex w-full flex-col items-center text-center text-white disabled:cursor-not-allowed disabled:opacity-55"
+            className="group flex min-h-[4.5rem] w-full items-center gap-3 px-3 py-2.5 text-left text-white transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-55"
             type="submit"
           >
-            <span className={tokenClass}>
-              <span className={seatNumberClass}>{seat.seatNumber}</span>
-              <img
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full"
-                draggable={false}
-                src={seatImage}
-              />
-              <Plus
-                className={`relative text-[#F8DDA8] transition group-hover:scale-110 ${
-                  isDenseTable ? "h-3.5 w-3.5" : "h-4 w-4"
-                }`}
-              />
+            <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-white/10 px-1 text-[11px] font-bold text-[#F8DDA8] ring-1 ring-white/20 friemi-tabular">
+              {seat.seatNumber}
             </span>
-            <span className={seatNameClass}>{emptySeatActionLabel}</span>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F8DDA8]/55 bg-[#062A24]/70 text-[#F8DDA8]">
+              <Plus className="h-4 w-4 transition group-hover:scale-110" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-white">
+                {t.empty}
+              </span>
+              <span className="mt-0.5 block text-xs font-semibold text-white/58">
+                {emptySeatActionLabel}
+              </span>
+            </span>
           </button>
         </form>
       );
     }
 
     return (
-      <div className={nodeClass} key={seat.id}>
-        <div className={tokenClass}>
-          <span className={seatNumberClass}>{seat.seatNumber}</span>
-          {showRoleIdentity ? (
-            <span className="absolute -top-2.5 left-1/2 z-30 block max-w-[4.75rem] -translate-x-1/2 truncate rounded-full bg-[#F8DDA8] px-2 py-0.5 text-[9px] font-bold leading-tight text-[#153B31] shadow-md ring-1 ring-white/75">
-              {seat.roleLabel ?? t.roleUnknown}
+      <div
+        className={`relative z-20 flex min-h-[4.5rem] items-center gap-3 px-3 py-2.5 transition ${
+          isCurrentSeat ? "bg-[#F8DDA8]/10" : ""
+        }`}
+        key={seat.id}
+      >
+        <span
+          className={`grid h-7 min-w-7 shrink-0 place-items-center rounded-full px-1 text-[11px] font-bold ring-1 friemi-tabular ${
+            isCurrentSeat
+              ? "bg-[#F8DDA8] text-[#153B31] ring-white/55"
+              : "bg-white/10 text-[#F8DDA8] ring-white/20"
+          }`}
+        >
+          {seat.seatNumber}
+        </span>
+        <div
+          className={`relative shrink-0 rounded-full ${
+            seat.isDead ? "grayscale opacity-55" : ""
+          } ${
+            isCurrentSeat
+              ? "ring-2 ring-[#F8DDA8] ring-offset-2 ring-offset-[#082E28]"
+              : ""
+          }`}
+        >
+          {seat.isClaimed ? (
+            renderClaimedSeatAvatar(
+              seat,
+              "h-11 w-11 border border-[#F8DDA8]/34 text-sm",
+            )
+          ) : (
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F8DDA8] ring-1 ring-white/16 friemi-tabular">
+              {seat.seatNumber}
             </span>
-          ) : null}
+          )}
           {isSheriff ? (
             <span
               aria-label={t.setSheriff}
@@ -1816,35 +1770,153 @@ export function WerewolfRoomOverview({
               <Crown className="h-3 w-3" />
             </span>
           ) : null}
-          <img
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full"
-            draggable={false}
-            src={seatImage}
-          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`truncate text-sm font-bold ${
+              seat.isDead
+                ? "text-white/45"
+                : isCurrentSeat
+                  ? "text-[#F8DDA8]"
+                  : "text-white"
+            }`}
+          >
+            {seat.isClaimed ? seat.displayName : t.empty}
+          </p>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+            {showRoleIdentity ? (
+              <span className="max-w-full truncate rounded-full bg-[#F8DDA8] px-2 py-0.5 text-[10px] font-bold text-[#153B31]">
+                {seat.roleLabel ?? t.roleUnknown}
+              </span>
+            ) : null}
+            {seat.isDead ? (
+              <span className="rounded-full bg-[#7A1F2B] px-2 py-0.5 text-[10px] font-bold text-white">
+                {t.dead}
+              </span>
+            ) : null}
+            {isLobby && seat.isClaimed ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  seat.readyAt
+                    ? "bg-[#38A96D] text-white"
+                    : "bg-white/10 text-white/60"
+                }`}
+              >
+                {seat.readyAt ? t.ready : t.unready}
+              </span>
+            ) : null}
+            {isCurrentSeat ? (
+              <span className="text-[10px] font-bold text-[#F8DDA8]">
+                {t.currentMember}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        {judgeSeatControls}
+      </div>
+    );
+  };
+
+  const renderJudgeSeatNode = (seat: WerewolfSeat) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+
+    if (!seat.isClaimed && isLobby && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            className="group flex min-h-[4.75rem] w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.06]"
+            type="submit"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F8DDA8] text-[#704515] shadow-sm">
+              <Crown className="h-4 w-4" />
+            </span>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F8DDA8]/55 bg-[#062A24]/70 text-[#F8DDA8]">
+              <Plus className="h-4 w-4 transition group-hover:scale-110" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-[#F8DDA8]">
+                {t.judge}
+              </span>
+              <span className="mt-0.5 block text-xs font-semibold text-white/58">
+                {t.selectSeat}
+              </span>
+            </span>
+          </button>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className={`flex min-h-[4.75rem] items-center gap-3 px-3 py-2.5 ${
+          isCurrentSeat ? "bg-[#F8DDA8]/10" : ""
+        }`}
+        key={seat.id}
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F8DDA8] text-[#704515] shadow-sm">
+          <Crown className="h-4 w-4" />
+        </span>
+        <div
+          className={`shrink-0 rounded-full ${
+            isCurrentSeat
+              ? "ring-2 ring-[#F8DDA8] ring-offset-2 ring-offset-[#082E28]"
+              : ""
+          }`}
+        >
           {seat.isClaimed ? (
             renderClaimedSeatAvatar(
               seat,
-              isDenseTable
-                ? "relative h-9 w-9 border border-[#F8DDA8]/34 text-xs"
-                : "relative h-12 w-12 border border-[#F8DDA8]/34 text-sm",
+              "h-11 w-11 border border-[#F8DDA8]/34 text-sm",
             )
           ) : (
-            <span
-              className={`relative grid place-items-center rounded-full bg-[#102F29] font-bold text-[#F8DDA8] shadow-sm friemi-tabular ${
-                isDenseTable ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-xs"
-              }`}
-            >
-              {seat.seatNumber}
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F8DDA8] ring-1 ring-white/16">
+              {t.empty}
             </span>
           )}
         </div>
-        <span className={seatNameClass}>
-          {seat.isClaimed ? seat.displayName : t.empty}
-        </span>
-        {judgeSeatControls}
-        {readyBadge}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-[#F8DDA8]">
+            {seat.isClaimed ? seat.displayName : t.empty}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-[#F8DDA8]/14 px-2 py-0.5 text-[10px] font-bold text-[#F8DDA8]">
+              {t.judge}
+            </span>
+            {isLobby && seat.isClaimed ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  seat.readyAt
+                    ? "bg-[#38A96D] text-white"
+                    : "bg-white/10 text-white/60"
+                }`}
+              >
+                {seat.readyAt ? t.ready : t.unready}
+              </span>
+            ) : null}
+            {isCurrentSeat ? (
+              <span className="text-[10px] font-bold text-[#F8DDA8]">
+                {t.currentMember}
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
     );
   };
@@ -2025,184 +2097,34 @@ export function WerewolfRoomOverview({
           ) : null}
 
           <div className="relative z-10 mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
-            <div className="pointer-events-none absolute right-5 top-20 h-20 w-20 rounded-full bg-[#D8A84E]/8 blur-2xl" />
-
-            <div
-              className={`relative flex ${tableCanvasMinHeightClass} flex-1 flex-col px-2 py-2`}
-            >
-              {judgeSeat ? (
-                <div
-                  className={`relative z-30 mx-auto flex w-full flex-col items-center text-center ${
-                    isDenseTable ? "max-w-[4.65rem]" : "max-w-[5.2rem]"
-                  }`}
-                >
-                  <span
-                    className={`mb-0.5 px-2 font-bold text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)] ${
-                      isDenseTable ? "text-[10px]" : "text-[11px]"
-                    }`}
-                  >
-                    {t.judge}
-                  </span>
-                  {judgeSeat.isClaimed ? (
-                    <div
-                      className={`relative grid place-items-center drop-shadow-[0_0_12px_rgba(240,195,106,0.42)] ${
-                        isDenseTable ? "h-12 w-12" : "h-14 w-14"
-                      } ${
-                        judgeSeat.isDead ? "grayscale opacity-55" : ""
-                      }`}
-                    >
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full"
-                        draggable={false}
-                        src={werewolfUiAssets.seatJudge}
-                      />
-                      {renderClaimedSeatAvatar(
-                        judgeSeat,
-                        isDenseTable
-                          ? "relative h-9 w-9 border border-[#F8DDA8]/34 text-[10px]"
-                          : "relative h-11 w-11 border border-[#F8DDA8]/34 text-xs",
-                      )}
-                    </div>
-                  ) : isLobby && canChooseSeat ? (
-                    <form
-                      action={seatAction}
-                      onSubmit={(event) => {
-                        if (!canSubmitOnline(event)) {
-                          return;
-                        }
-
-                        applyOptimisticSeatClaim(judgeSeat.seatNumber);
-                      }}
-                    >
-                      <input name="locale" type="hidden" value={locale} />
-                      <input name="roomId" type="hidden" value={room.id} />
-                      <input
-                        name="memberToken"
-                        type="hidden"
-                        value={currentMemberToken}
-                      />
-                      <input
-                        name="seatNumber"
-                        type="hidden"
-                        value={judgeSeat.seatNumber}
-                      />
-                      <input name="responseMode" type="hidden" value="inline" />
-                      <button
-                        className={`relative grid place-items-center transition hover:scale-105 ${
-                          isDenseTable ? "h-12 w-12" : "h-14 w-14"
-                        }`}
-                        type="submit"
-                      >
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="absolute inset-0 h-full w-full"
-                          draggable={false}
-                          src={werewolfUiAssets.seatJudge}
-                        />
-                        <Plus className="relative h-5 w-5 text-[#F8DDA8]" />
-                      </button>
-                    </form>
-                  ) : (
-                    <span
-                      className={`relative grid place-items-center ${
-                        isDenseTable ? "h-12 w-12" : "h-14 w-14"
-                      }`}
-                    >
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full opacity-70"
-                        draggable={false}
-                        src={werewolfUiAssets.seatJudge}
-                      />
-                      <span className="relative text-xs font-bold text-[#F8DDA8]">
-                        {t.empty}
-                      </span>
-                    </span>
-                  )}
-                  <span
-                    className={`mt-1 block truncate px-1 font-bold leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
-                      isDenseTable
-                        ? "max-w-[4.65rem] text-[9.5px]"
-                        : "max-w-[5.2rem] text-[10.5px]"
-                    }`}
-                  >
-                    {judgeSeat.isClaimed ? judgeSeat.displayName : t.empty}
-                  </span>
-                  {isLobby && judgeSeat.isClaimed && judgeSeat.readyAt ? (
-                    <span
-                      className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-semibold leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
-                        isDenseTable
-                          ? "h-3.5 px-1 text-[8px]"
-                          : "h-4 px-1.5 text-[9px]"
-                      }`}
-                    >
-                      {t.ready}
-                    </span>
-                  ) : null}
+            <div className="relative px-2 py-2">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#F8DDA8]/22 bg-[#031F1B]/68 px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#062A24] ring-1 ring-white/20">
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="h-full w-full object-cover opacity-75"
+                    draggable={false}
+                    src="/game-tools/werewolf/werewolf.jpeg"
+                  />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-bold text-[#F8DDA8]">
+                    {centerTitle}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-white/68">
+                    {centerSubtitle}
+                  </p>
                 </div>
-              ) : null}
+                <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white/78 friemi-tabular">
+                  {playerSeats.filter((seat) => seat.isClaimed).length}/
+                  {playerSeats.length}
+                </span>
+              </div>
 
-              <div
-                className={`relative z-20 grid min-h-0 flex-1 ${
-                  isDenseTable
-                    ? "mt-1 grid-cols-[minmax(0,1fr)_minmax(6.25rem,7rem)_minmax(0,1fr)] gap-0.5"
-                    : "mt-2 grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1"
-                }`}
-              >
-                <div
-                  className={`grid content-start px-0.5 ${
-                    isDenseTable ? "gap-1.5 py-1" : "gap-2.5 py-2"
-                  }`}
-                >
-                  {leftTableSeats.map((seat) => renderSeatNode(seat))}
-                </div>
-
-                <div
-                  className={`relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden ${
-                    isDenseTable ? "px-2 py-2" : "px-3 py-3"
-                  }`}
-                >
-                  <div className="pointer-events-none absolute inset-x-6 bottom-9 top-9 rounded-full border border-white/38 bg-[#031F1B]/12" />
-                  <div className="pointer-events-none absolute left-1/2 top-12 h-[calc(100%-6rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/18 to-transparent" />
-
-                  <Moon className="relative h-6 w-6 text-[#F0C36A]" />
-
-                  <div className="relative grid place-items-center px-2 py-3 text-center">
-                    <div className="mb-3 grid h-16 w-16 place-items-center overflow-hidden rounded-full bg-[#062A24]/80 shadow-[0_12px_24px_rgba(0,0,0,0.28)] ring-1 ring-white/28">
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="h-full w-full object-cover opacity-70"
-                        draggable={false}
-                        src="/game-tools/werewolf/werewolf.jpeg"
-                      />
-                      <div className="absolute h-16 w-16 rounded-full bg-[#062A24]/42" />
-                    </div>
-                    <p className="max-w-[5rem] text-center text-lg font-bold leading-tight text-[#F8DDA8] [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
-                      {centerTitle}
-                    </p>
-                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-semibold leading-tight text-white/76 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
-                      {centerSubtitle}
-                    </p>
-                  </div>
-
-                  <div className="relative grid h-8 w-8 place-items-center rounded-full bg-[#062A24]/78 ring-1 ring-white/24">
-                    <Moon className="h-4 w-4 text-[#F0C36A]" />
-                  </div>
-                </div>
-
-                <div
-                  className={`grid content-start px-0.5 ${
-                    isDenseTable ? "gap-1.5 py-1" : "gap-2.5 py-2"
-                  }`}
-                >
-                  {rightTableSeats.map((seat) => renderSeatNode(seat))}
-                </div>
+              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-2xl border border-[#F8DDA8]/22 bg-[#031F1B]/68 shadow-[0_16px_38px_rgba(0,0,0,0.2)] backdrop-blur-sm">
+                {judgeSeat ? renderJudgeSeatNode(judgeSeat) : null}
+                {playerSeats.map((seat) => renderSeatNode(seat))}
               </div>
             </div>
 
@@ -2574,7 +2496,8 @@ export function WerewolfRoomOverview({
               />
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold">
-                  {pendingSheriffSeat.seatNumber}. {pendingSheriffSeat.displayName}
+                  {pendingSheriffSeat.seatNumber}.{" "}
+                  {pendingSheriffSeat.displayName}
                 </p>
                 <p className="mt-1 text-xs font-bold text-[#8A5C1F]">
                   {pendingSheriffSeat.roleLabel ?? t.roleUnknown}

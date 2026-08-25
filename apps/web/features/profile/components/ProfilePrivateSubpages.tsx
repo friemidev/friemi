@@ -2506,12 +2506,14 @@ export function ProfileShopPageView({
   gifts,
   locale,
   negativeGifts,
+  openRecharge = false,
 }: {
   coinBalance: FriemiCoinBalanceViewModel;
   giftRecipients: ProfileShopGiftRecipient[];
   gifts: ProfileShopGiftItem[];
   locale: string;
   negativeGifts: ProfileShopGiftItem[];
+  openRecharge?: boolean;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const charmUnit = getShopCharmUnit(locale);
@@ -2520,7 +2522,7 @@ export function ProfileShopPageView({
   const [localCoinBalance, setLocalCoinBalance] = useState(
     coinBalance.balance,
   );
-  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [rechargeOpen, setRechargeOpen] = useState(openRecharge);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const dialogGift = gifts.find((gift) => gift.id === dialogGiftId) ?? null;

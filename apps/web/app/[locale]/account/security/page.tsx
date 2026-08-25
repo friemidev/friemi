@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, ChevronRight, Mail, UserRound } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountDeletionEntryCard } from "@/features/account/components/AccountDeletionEntryCard";
 import { AccountContactBindingsSection } from "@/features/account/components/AccountContactBindingsSection";
@@ -151,36 +151,24 @@ export default async function AccountSecurityPage({
   );
 
   return (
-    <PageContainer className="max-w-4xl space-y-5 px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:pt-8">
-      <div className="flex items-center">
+    <PageContainer className="min-h-[100svh] max-w-2xl bg-white px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:pt-8">
+      <header className="flex min-h-12 items-center gap-3 border-b border-[#ECEBE3] pb-4">
         <Link
           href={withLocale(locale, "/account/settings")}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#1D1D1B] shadow-[0_8px_18px_rgba(17,18,16,0.05)] ring-1 ring-[#ECE6D5]"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#1D1D1B] transition hover:bg-[#F4F5F0]"
           aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-      </div>
-
-      <header className="rounded-2xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.06)] sm:p-6">
-        <p className="inline-flex items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          {copy.eyebrow}
-        </p>
-        <h1 className="mt-4 text-[26px] font-bold leading-tight tracking-normal text-ink sm:text-4xl sm:font-semibold">
-          {copy.title}
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-[#156240] sm:text-base">
-          {copy.description}
-        </p>
+        <h1 className="text-xl font-bold text-ink">{copy.metadataTitle}</h1>
       </header>
 
-      <section className="rounded-2xl border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+      <section className="py-6">
+        <h2 className="flex items-center gap-2 text-base font-bold text-ink">
           <UserRound className="h-5 w-5 text-[#156240]" aria-hidden="true" />
           {copy.profileTitle}
         </h2>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+        <dl className="mt-3 divide-y divide-[#ECEBE3]">
           <AccountField label={copy.loginEmail} value={profile.email} />
           <AccountField
             label={copy.contactEmail}
@@ -188,20 +176,16 @@ export default async function AccountSecurityPage({
           />
           <AccountField label={copy.friendCode} value={profile.friendCode} />
         </dl>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link
-            className="inline-flex rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+        <nav className="mt-2 divide-y divide-[#ECEBE3] border-t border-[#ECEBE3]">
+          <SecurityLink
             href={withLocale(locale, "/privacy")}
-          >
-            {copy.privacyLink}
-          </Link>
-          <Link
-            className="inline-flex rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+            label={copy.privacyLink}
+          />
+          <SecurityLink
             href={withLocale(locale, "/safety")}
-          >
-            {copy.safetyLink}
-          </Link>
-        </div>
+            label={copy.safetyLink}
+          />
+        </nav>
       </section>
 
       <AccountContactBindingsSection
@@ -212,19 +196,17 @@ export default async function AccountSecurityPage({
         locale={locale}
       />
 
-      <section className="rounded-2xl border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+      <section className="border-t border-[#ECEBE3] py-6">
+        <h2 className="flex items-center gap-2 text-base font-bold text-ink">
           <Mail className="h-5 w-5 text-[#F09182]" aria-hidden="true" />
           {copy.supportTitle}
         </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-700">
-          {copy.supportBody}
-        </p>
         <a
-          className="mt-4 inline-flex rounded-full bg-[#156240] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D1D1B]"
+          className="mt-3 flex min-h-11 items-center justify-between gap-3 text-sm font-semibold text-[#156240]"
           href={`mailto:${copy.supportEmail}`}
         >
-          {copy.supportEmail}
+          <span>{copy.supportEmail}</span>
+          <ChevronRight className="h-4 w-4 text-[#9A9D94]" aria-hidden="true" />
         </a>
       </section>
 
@@ -241,11 +223,23 @@ function AccountField({
   value?: string | null;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-[#FEFFF9] p-4 ring-1 ring-[#D6D5B2]">
-      <dt className="text-xs font-semibold text-[#156240]">{label}</dt>
-      <dd className="mt-2 min-h-5 truncate text-sm font-medium text-ink">
+    <div className="flex min-h-12 min-w-0 items-center justify-between gap-4 py-3">
+      <dt className="shrink-0 text-sm font-medium text-[#697066]">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-sm font-semibold text-ink">
         {value?.trim() || "-"}
       </dd>
     </div>
+  );
+}
+
+function SecurityLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      className="flex min-h-12 items-center justify-between gap-3 text-sm font-semibold text-ink"
+      href={href}
+    >
+      <span>{label}</span>
+      <ChevronRight className="h-4 w-4 text-[#9A9D94]" aria-hidden="true" />
+    </Link>
   );
 }

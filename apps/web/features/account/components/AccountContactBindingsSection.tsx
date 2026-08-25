@@ -42,24 +42,21 @@ export function AccountContactBindingsSection({
 
   return (
     <>
-      <section className="rounded-2xl border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <section className="border-t border-[#ECEBE3] py-6">
+        <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+            <h2 className="flex items-center gap-2 text-base font-bold text-ink">
               <ShieldCheck
                 className="h-5 w-5 text-[#156240]"
                 aria-hidden="true"
               />
               {profileCopy.contactBindingsTitle}
             </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-700">
-              {profileCopy.contactBindingsDescription}
-            </p>
           </div>
           <Button
             type="button"
-            className="h-10 rounded-full px-4 text-sm"
-            variant={boundCount > 0 ? "secondary" : "primary"}
+            className="h-9 rounded-full px-4 text-xs"
+            variant="secondary"
             onClick={() => setOpen(true)}
           >
             {boundCount > 0
@@ -68,7 +65,7 @@ export function AccountContactBindingsSection({
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 divide-y divide-[#ECEBE3]">
           <AccountBindingField
             label={profileCopy.contactEmailLabel}
             value={bindings.contactEmail}
@@ -107,9 +104,9 @@ function AccountBindingField({
   value?: string | null;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-[#FEFFF9] p-4 ring-1 ring-[#D6D5B2]">
-      <p className="text-xs font-semibold text-[#156240]">{label}</p>
-      <p className="mt-2 min-h-5 truncate text-sm font-medium text-ink">
+    <div className="flex min-h-12 min-w-0 items-center justify-between gap-4 py-3">
+      <p className="shrink-0 text-sm font-medium text-[#697066]">{label}</p>
+      <p className="min-w-0 truncate text-right text-sm font-semibold text-ink">
         {value?.trim() || "-"}
       </p>
     </div>

@@ -71,6 +71,7 @@ type Copy = {
   joinCodePlaceholder: string;
   joinCodeTitle: string;
   judge: string;
+  unlockAllRoles: string;
   players: string;
   preview: string;
   roleCount: string;
@@ -109,6 +110,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "例如 C2E848",
     joinCodeTitle: "加入已有房间",
     judge: "含 1 位法官",
+    unlockAllRoles: "解锁全部角色",
     players: "席",
     preview: "卡牌预览",
     roleCount: "角色",
@@ -146,6 +148,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "e.g. C2E848",
     joinCodeTitle: "Join a room",
     judge: "includes 1 judge",
+    unlockAllRoles: "Unlock all roles",
     players: "Seats",
     preview: "Card preview",
     roleCount: "Roles",
@@ -186,6 +189,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "ex. C2E848",
     joinCodeTitle: "Entrer dans une table",
     judge: "inclut 1 maître",
+    unlockAllRoles: "Débloquer tous les rôles",
     players: "Places",
     preview: "Aperçu cartes",
     roleCount: "Rôles",
@@ -322,7 +326,7 @@ function WerewolfVariantModeCard({
       />
       <Image
         alt=""
-        className="absolute -bottom-2 -left-4 top-2 h-[calc(100%-0.15rem)] w-[7.5rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+        className="absolute bottom-0 -left-3 top-4 h-[calc(100%-1rem)] w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
         height={360}
         src={heroImage}
         width={252}
@@ -433,7 +437,7 @@ function CustomModeCard({
         />
         <Image
           alt=""
-          className="pointer-events-none absolute -bottom-2 -left-4 top-2 h-[calc(100%-0.15rem)] w-[7.5rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+          className="pointer-events-none absolute bottom-0 -left-3 top-4 h-[calc(100%-1rem)] w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
           height={360}
           src="/game-tools/werewolf/recto/villager_en.png"
           width={252}
@@ -545,7 +549,15 @@ function CustomModeCard({
       ) : null}
 
       <div className="relative mt-4 flex justify-end">
-        <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F4C76D]/55 bg-[#08231F] px-4 text-sm font-semibold text-[#F8E9C8] transition hover:bg-[#0A3A32]"
+            href={withLocale(locale, "/profile/shop?recharge=1")}
+          >
+            {t.unlockAllRoles}
+          </Link>
+          <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
+        </div>
       </div>
     </form>
   );

@@ -54,21 +54,21 @@ export function AccountDeletionEntryCard({
   }
 
   return (
-    <section className="rounded-2xl border border-red-200 bg-white p-5 shadow-[0_18px_48px_rgba(127,29,29,0.06)] sm:p-6">
+    <section className="border-t border-[#ECEBE3] py-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-100">
-            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+          <h2 className="flex items-center gap-2 text-base font-bold text-red-800">
+            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
             {copy.title}
-          </p>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-700">
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
             {copy.body}
           </p>
         </div>
         {!confirmOpen ? (
           <button
             type="button"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-red-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
             onClick={() => setConfirmOpen(true)}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -78,7 +78,7 @@ export function AccountDeletionEntryCard({
       </div>
 
       {confirmOpen ? (
-        <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/70 p-4">
+        <div className="mt-5 border-t border-red-100 pt-4">
           <h2 className="text-base font-semibold text-red-950">
             {copy.confirmTitle}
           </h2>
