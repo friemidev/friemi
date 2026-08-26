@@ -45,6 +45,28 @@ function retainImage(source: string, referrerPolicy?: ReferrerPolicy) {
   }
 }
 
+export function retainImageSources(
+  sources: Array<string | null | undefined>,
+  limit = 4,
+) {
+  let retainedCount = 0;
+
+  for (const source of new Set(sources)) {
+    const normalizedSource = source?.trim();
+
+    if (!normalizedSource) {
+      continue;
+    }
+
+    retainImage(normalizedSource, "no-referrer");
+    retainedCount += 1;
+
+    if (retainedCount >= limit) {
+      break;
+    }
+  }
+}
+
 type RetainedImageProps = Omit<
   ImgHTMLAttributes<HTMLImageElement>,
   "alt" | "onError" | "onLoad" | "src"
