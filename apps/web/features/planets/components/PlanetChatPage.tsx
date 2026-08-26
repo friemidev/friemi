@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Lock, MessageCircle } from "lucide-react";
+import { RetainedImage } from "@/components/media/RetainedImage";
 import { withLocale } from "@/lib/routes";
 import type { getPlanetChatPageData } from "../queries/planetQueries";
 import { PlanetChatBackButton } from "./PlanetChatBackButton";
@@ -71,14 +72,16 @@ export function PlanetChatPage({
         <header className="grid min-w-0 shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-[#E8E5DA] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:pt-3">
           <PlanetChatBackButton fallbackHref={fallbackHref} label={copy.back} />
           <div className="flex min-w-0 items-center justify-center gap-2">
-            {planet.coverImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover" src={planet.coverImageUrl} />
-            ) : (
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E6F0E9] text-[#155F40]">
-                <MessageCircle className="h-5 w-5" />
-              </span>
-            )}
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#E6F0E9] text-[#155F40]">
+              <MessageCircle className="h-5 w-5" />
+              {planet.coverImageUrl ? (
+                <RetainedImage
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  src={planet.coverImageUrl}
+                />
+              ) : null}
+            </span>
             <h1 className="truncate text-base font-bold">{name}</h1>
           </div>
           {planet.canViewChat ? (
@@ -115,7 +118,7 @@ export function PlanetChatPage({
                 viewerProfileId={viewerProfileId}
               />
             </div>
-            <footer className="shrink-0 border-t border-[#E8E5DA] bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 md:rounded-b-[1.25rem] md:pb-3">
+            <footer className="min-w-0 shrink-0 border-t border-[#E8E5DA] bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 md:rounded-b-[1.25rem] md:pb-3">
               <PlanetChatComposer locale={locale} planetId={planet.id} planetSlug={planet.slug} />
             </footer>
           </>

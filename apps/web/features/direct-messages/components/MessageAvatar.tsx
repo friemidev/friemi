@@ -1,4 +1,5 @@
 import type { UserPresenceDisplayStatus } from "@/features/profile/presence";
+import { RetainedImage } from "@/components/media/RetainedImage";
 
 type MessageAvatarProps = {
   avatarUrl: string | null;
@@ -29,17 +30,15 @@ export function MessageAvatar({
       className={`${sizeClass} relative flex shrink-0 items-center justify-center rounded-full bg-[#FEFFF9] text-center font-semibold text-moss shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-sand`}
     >
       <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+        <span aria-hidden="true">{initial}</span>
         {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <RetainedImage
             alt=""
-            className="h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             referrerPolicy="no-referrer"
             src={avatarUrl}
           />
-        ) : (
-          initial
-        )}
+        ) : null}
       </span>
       {visiblePresenceStatus ? (
         <span

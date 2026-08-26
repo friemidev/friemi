@@ -208,7 +208,7 @@ export function PlanetChatComposer({
     <div>
       <form
         action={formAction}
-        className="grid gap-2"
+        className="grid min-w-0 w-full gap-2"
         data-planet-chat-composer
         ref={formRef}
       >
@@ -242,7 +242,7 @@ export function PlanetChatComposer({
           onChange={setImageUrls}
           removeLabel={copy.removeImage}
         />
-        <div className="flex items-center gap-2">
+        <div className="grid min-w-0 w-full grid-cols-[2.75rem_2.5rem_2.75rem_minmax(0,1fr)_2.5rem] items-center gap-1.5">
           <ChatEmojiPicker
             disabled={isPending}
             label={copy.addEmoji}
@@ -272,7 +272,7 @@ export function PlanetChatComposer({
             uploadingLabel={copy.uploading}
           />
           <input
-            className="min-w-0 flex-1 rounded-full border border-[#E7E2D6] bg-white px-4 py-2.5 text-sm outline-none placeholder:text-[#A5A29A] focus:border-[#8AB68E] disabled:bg-[#F4F4F0]"
+            className="min-w-0 w-full rounded-full border border-[#E7E2D6] bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-[#A5A29A] focus:border-[#8AB68E] disabled:bg-[#F4F4F0]"
             disabled={isPending}
             maxLength={1000}
             name="content"

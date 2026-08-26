@@ -30,7 +30,6 @@ export function PlanetChatBackButton({
 
         if (hasInternalReferrer && window.history.length > 1) {
           router.back();
-          window.setTimeout(() => router.refresh(), 120);
           return;
         }
 

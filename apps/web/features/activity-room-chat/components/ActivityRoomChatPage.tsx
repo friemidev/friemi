@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { RetainedImage } from "@/components/media/RetainedImage";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -298,18 +299,16 @@ function RoomAvatar({
   name: string;
 }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]">
+    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]">
+      <span aria-hidden="true">{getAvatarInitial(name)}</span>
       {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetainedImage
           alt=""
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"
           src={avatarUrl}
         />
-      ) : (
-        getAvatarInitial(name)
-      )}
+      ) : null}
     </span>
   );
 }
