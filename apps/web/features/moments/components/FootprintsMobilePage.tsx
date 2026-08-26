@@ -34,7 +34,6 @@ import {
   Loader2,
   MessageCircle,
   MoreHorizontal,
-  Orbit,
   Pin,
   RefreshCw,
   Search,
@@ -3052,7 +3051,7 @@ function FootprintsRoomChatRow({
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
-        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem] bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
           <UsersRound className="h-5 w-5" />
           {room.coverImageUrl ? (
             <RetainedImage
@@ -3185,8 +3184,8 @@ function FootprintsPlanetChatRow({
           );
         }}
       >
-        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
-          <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem] bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          <span className="flex h-full w-full items-center justify-center">
             <Globe2 className="h-5 w-5" />
             {planet.coverImageUrl ? (
               <RetainedImage
@@ -3196,13 +3195,6 @@ function FootprintsPlanetChatRow({
                 src={planet.coverImageUrl}
               />
             ) : null}
-          </span>
-          <span
-            aria-label={planetLabel}
-            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-[#156240] text-white"
-            title={planetLabel}
-          >
-            <Orbit className="h-3 w-3" />
           </span>
         </span>
         <span className="min-w-0 flex-1">

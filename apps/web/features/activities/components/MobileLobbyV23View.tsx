@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileActivityListRow } from "@/features/activities/components/MobileActivityListRow";
+import { retainImageSources } from "@/components/media/RetainedImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
@@ -96,10 +97,77 @@ type MobileLobbyTabPageState = {
   page: number;
 };
 
+type MobileLobbyTabCacheEntry = {
+  cachedAt: number;
+  page: MobileLobbyTabPageState;
+};
+
+type MobileLobbyTabCache = Partial<
+  Record<MobileLobbyV23TabId, MobileLobbyTabCacheEntry>
+>;
+
 type MobileLobbyPageResponse = {
   ok: boolean;
   page?: MobileLobbyTabPageState & { tab: MobileLobbyV23TabId };
 };
+
+const mobileLobbyTabMemoryCache = new Map<string, MobileLobbyTabCache>();
+const mobileLobbyTabCacheFreshMs = 45_000;
+const mobileLobbyTabCacheLimit = 8;
+const mobileLobbyWarmupDelayMs = 1_400;
+const mobileLobbyWarmupIntervalMs = 650;
+
+function getMobileLobbyTabCacheKey(
+  locale: string,
+  viewerProfileId: string | null,
+) {
+  return `${viewerProfileId ?? "anonymous"}:${locale}`;
+}
+
+function getMobileLobbyTabCacheEntry(
+  cacheKey: string,
+  tab: MobileLobbyV23TabId,
+) {
+  return mobileLobbyTabMemoryCache.get(cacheKey)?.[tab];
+}
+
+function isMobileLobbyTabCacheFresh(
+  cacheKey: string,
+  tab: MobileLobbyV23TabId,
+) {
+  const entry = getMobileLobbyTabCacheEntry(cacheKey, tab);
+
+  return Boolean(
+    entry && Date.now() - entry.cachedAt < mobileLobbyTabCacheFreshMs,
+  );
+}
+
+function cacheMobileLobbyTabPage(
+  cacheKey: string,
+  tab: MobileLobbyV23TabId,
+  page: MobileLobbyTabPageState,
+) {
+  const current = mobileLobbyTabMemoryCache.get(cacheKey) ?? {};
+
+  mobileLobbyTabMemoryCache.delete(cacheKey);
+  mobileLobbyTabMemoryCache.set(cacheKey, {
+    ...current,
+    [tab]: {
+      cachedAt: Date.now(),
+      page,
+    },
+  });
+
+  if (mobileLobbyTabMemoryCache.size <= mobileLobbyTabCacheLimit) {
+    return;
+  }
+
+  const oldestKey = mobileLobbyTabMemoryCache.keys().next().value;
+
+  if (typeof oldestKey === "string" && oldestKey !== cacheKey) {
+    mobileLobbyTabMemoryCache.delete(oldestKey);
+  }
+}
 
 const mobileLobbyV23CategoryIcons = {
   FOOD: Utensils,
@@ -627,6 +695,12 @@ export function MobileLobbyV23View({
   viewerProfileId = null,
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
+  const tabCacheKey = getMobileLobbyTabCacheKey(locale, viewerProfileId);
+  const initialTabPage = {
+    activities: dedupeActivities(activities),
+    hasMore: initialHasMore,
+    page: 1,
+  };
   const [selectedTab, setSelectedTab] =
     useState<MobileLobbyV23TabId>(activeTab);
   const [activeCategory, setActiveCategory] =
@@ -634,12 +708,16 @@ export function MobileLobbyV23View({
   const [categoryRailOpen, setCategoryRailOpen] = useState(false);
   const [tabPages, setTabPages] = useState<
     Partial<Record<MobileLobbyV23TabId, MobileLobbyTabPageState>>
-  >({
-    [activeTab]: {
-      activities: dedupeActivities(activities),
-      hasMore: initialHasMore,
-      page: 1,
-    },
+  >(() => {
+    const cachedTabs = mobileLobbyTabMemoryCache.get(tabCacheKey) ?? {};
+    const cachedPages = Object.fromEntries(
+      Object.entries(cachedTabs).map(([tab, entry]) => [tab, entry.page]),
+    ) as Partial<Record<MobileLobbyV23TabId, MobileLobbyTabPageState>>;
+
+    return {
+      ...cachedPages,
+      [activeTab]: initialTabPage,
+    };
   });
   const [loadingTabs, setLoadingTabs] = useState<
     Partial<Record<MobileLobbyV23TabId, boolean>>
@@ -649,6 +727,7 @@ export function MobileLobbyV23View({
   >({});
   const tabPagesRef = useRef(tabPages);
   const inFlightTabsRef = useRef(new Set<MobileLobbyV23TabId>());
+  const hasScheduledWarmupRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const categoryFilterOptions = useMemo<MobileLobbyV23CategoryFilterOption[]>(
     () => [
@@ -709,9 +788,14 @@ export function MobileLobbyV23View({
     ],
   );
   const loadTabPage = useCallback(
-    async (tab: MobileLobbyV23TabId, loadNext = false) => {
+    async (
+      tab: MobileLobbyV23TabId,
+      loadNext = false,
+      background = false,
+    ) => {
       const currentPage = tabPagesRef.current[tab];
       const nextPage = loadNext ? (currentPage?.page ?? 0) + 1 : 1;
+      const exposeLoadingState = !background || !currentPage;
 
       if (
         inFlightTabsRef.current.has(tab) ||
@@ -721,8 +805,10 @@ export function MobileLobbyV23View({
       }
 
       inFlightTabsRef.current.add(tab);
-      setLoadingTabs((current) => ({ ...current, [tab]: true }));
-      setFailedTabs((current) => ({ ...current, [tab]: false }));
+      if (exposeLoadingState) {
+        setLoadingTabs((current) => ({ ...current, [tab]: true }));
+        setFailedTabs((current) => ({ ...current, [tab]: false }));
+      }
 
       const controller = new AbortController();
       const timeoutId =
@@ -737,42 +823,49 @@ export function MobileLobbyV23View({
           controller.signal,
         );
 
-        setTabPages((current) => {
-          const previous = current[tab];
-          const nextActivities = loadNext
+        const previous = tabPagesRef.current[tab];
+        const nextTabPage = {
+          activities: loadNext
             ? dedupeActivities([
                 ...(previous?.activities ?? []),
                 ...result.activities,
               ])
-            : dedupeActivities(result.activities);
-          const nextState = {
-            ...current,
-            [tab]: {
-              activities: nextActivities,
-              hasMore: result.hasMore,
-              page: result.page,
-            },
-          };
+            : dedupeActivities(result.activities),
+          hasMore: result.hasMore,
+          page: result.page,
+        };
+        const nextState = {
+          ...tabPagesRef.current,
+          [tab]: nextTabPage,
+        };
 
-          tabPagesRef.current = nextState;
-          return nextState;
-        });
+        tabPagesRef.current = nextState;
+        setTabPages(nextState);
+        cacheMobileLobbyTabPage(tabCacheKey, tab, nextTabPage);
+        retainImageSources(
+          nextTabPage.activities.map((activity) => activity.coverImageUrl),
+          4,
+        );
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           console.error("Failed to load mobile lobby tab", error);
         }
 
-        setFailedTabs((current) => ({ ...current, [tab]: true }));
+        if (exposeLoadingState) {
+          setFailedTabs((current) => ({ ...current, [tab]: true }));
+        }
       } finally {
         if (timeoutId !== null) {
           window.clearTimeout(timeoutId);
         }
 
         inFlightTabsRef.current.delete(tab);
-        setLoadingTabs((current) => ({ ...current, [tab]: false }));
+        if (exposeLoadingState) {
+          setLoadingTabs((current) => ({ ...current, [tab]: false }));
+        }
       }
     },
-    [],
+    [tabCacheKey],
   );
   const handleSelectCategory = useCallback(
     (category: MobileLobbyV23CategoryFilterId) => {
@@ -809,12 +902,90 @@ export function MobileLobbyV23View({
       tabPagesRef.current = next;
       return next;
     });
-  }, [activeTab, activities, initialHasMore]);
+    cacheMobileLobbyTabPage(tabCacheKey, activeTab, nextState);
+  }, [activeTab, activities, initialHasMore, tabCacheKey]);
   useEffect(() => {
     if (!tabPagesRef.current[displayedActiveTab]) {
       void loadTabPage(displayedActiveTab);
+      return;
     }
-  }, [displayedActiveTab, loadTabPage]);
+
+    if (!isMobileLobbyTabCacheFresh(tabCacheKey, displayedActiveTab)) {
+      void loadTabPage(displayedActiveTab, false, true);
+    }
+  }, [displayedActiveTab, loadTabPage, tabCacheKey]);
+  useEffect(() => {
+    if (hasScheduledWarmupRef.current) {
+      return;
+    }
+
+    hasScheduledWarmupRef.current = true;
+    const warmupTabs = (
+      isSignedIn
+        ? ["mine", "friends", "today", "popular"]
+        : ["today", "popular"]
+    ) satisfies MobileLobbyV23TabId[];
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+    const browserWindow = window as Window &
+      typeof globalThis & {
+        cancelIdleCallback?: (handle: number) => void;
+        requestIdleCallback?: (
+          callback: () => void,
+          options?: { timeout?: number },
+        ) => number;
+      };
+
+    const runWarmup = async () => {
+      for (const tab of warmupTabs) {
+        if (cancelled) {
+          return;
+        }
+
+        if (!isMobileLobbyTabCacheFresh(tabCacheKey, tab)) {
+          await loadTabPage(tab, false, true);
+        }
+
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, mobileLobbyWarmupIntervalMs);
+        });
+      }
+    };
+
+    const startWarmup = () => {
+      if (!cancelled) {
+        void runWarmup();
+      }
+    };
+
+    timeoutHandle = window.setTimeout(() => {
+      timeoutHandle = null;
+
+      if (typeof browserWindow.requestIdleCallback === "function") {
+        idleHandle = browserWindow.requestIdleCallback(startWarmup, {
+          timeout: 3_000,
+        });
+      } else {
+        startWarmup();
+      }
+    }, mobileLobbyWarmupDelayMs);
+
+    return () => {
+      cancelled = true;
+
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+
+      if (
+        idleHandle !== null &&
+        typeof browserWindow.cancelIdleCallback === "function"
+      ) {
+        browserWindow.cancelIdleCallback(idleHandle);
+      }
+    };
+  }, [isSignedIn, loadTabPage, tabCacheKey]);
   useEffect(() => {
     const target = loadMoreRef.current;
 
