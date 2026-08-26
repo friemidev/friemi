@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { RetainedImage } from "@/components/media/RetainedImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
@@ -11,6 +12,7 @@ import type {
 } from "react";
 import {
   useActionState,
+  useCallback,
   useEffect,
   useMemo,
   useOptimistic,
@@ -122,6 +124,25 @@ type FootprintsMobilePageProps = {
   planetSquareNextCursor: string | null;
   profile: FootprintsViewerProfile | null;
 };
+
+type MessageRosterSnapshot = {
+  activityRoomChats: ActivityRoomChatRosterItemViewModel[];
+  friends: DirectMessageFriendRosterItemViewModel[];
+  hasError: boolean;
+  officialMessages: OfficialMessageRosterViewModel | null;
+  planetChats: PlanetChatRosterItemViewModel[];
+  updatedAt: number;
+};
+
+type MessageRosterResponse = Omit<MessageRosterSnapshot, "updatedAt"> & {
+  ok?: boolean;
+};
+
+const messageRosterMemoryCache = new Map<string, MessageRosterSnapshot>();
+
+function getMessageRosterCacheKey(profileId: string, locale: string) {
+  return `${profileId}:${locale}`;
+}
 
 function getFootprintsTabFromSearch(search: string): FootprintsTab | null {
   const tab = new URLSearchParams(search).get("tab");
@@ -3031,18 +3052,16 @@ function FootprintsRoomChatRow({
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          <UsersRound className="h-5 w-5" />
           {room.coverImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <RetainedImage
               alt=""
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               referrerPolicy="no-referrer"
               src={room.coverImageUrl}
             />
-          ) : (
-            <UsersRound className="h-5 w-5" />
-          )}
+          ) : null}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-start gap-2">
@@ -3168,17 +3187,15 @@ function FootprintsPlanetChatRow({
       >
         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
           <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl">
+            <Globe2 className="h-5 w-5" />
             {planet.coverImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <RetainedImage
                 alt=""
-                className="h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
                 referrerPolicy="no-referrer"
                 src={planet.coverImageUrl}
               />
-            ) : (
-              <Globe2 className="h-5 w-5" />
-            )}
+            ) : null}
           </span>
           <span
             aria-label={planetLabel}
@@ -3437,6 +3454,13 @@ export function FootprintsMobilePage({
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
   const router = useRouter();
+  const profileId = profile?.id ?? null;
+  const messageRosterCacheKey = profileId
+    ? getMessageRosterCacheKey(profileId, locale)
+    : null;
+  const cachedMessageRoster = messageRosterCacheKey
+    ? messageRosterMemoryCache.get(messageRosterCacheKey)
+    : null;
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
   const [moments, setMoments] = useState(initialMoments);
   const [momentCursor, setMomentCursor] = useState(momentFeedNextCursor);
@@ -3447,16 +3471,23 @@ export function FootprintsMobilePage({
   const [canCreatePlanet, setCanCreatePlanet] = useState(
     initialCanCreatePlanet,
   );
-  const [messageFriends, setMessageFriends] = useState(initialMessageFriends);
+  const [messageFriends, setMessageFriends] = useState(
+    cachedMessageRoster?.friends ?? initialMessageFriends,
+  );
   const [officialMessages, setOfficialMessages] = useState(
-    initialOfficialMessages,
+    cachedMessageRoster?.officialMessages ?? initialOfficialMessages,
   );
   const [activityRoomChats, setActivityRoomChats] = useState(
-    initialActivityRoomChats,
+    cachedMessageRoster?.activityRoomChats ?? initialActivityRoomChats,
   );
-  const [planetChats, setPlanetChats] = useState(initialPlanetChats);
+  const [planetChats, setPlanetChats] = useState(
+    cachedMessageRoster?.planetChats ?? initialPlanetChats,
+  );
+  const [messageRosterHasError, setMessageRosterHasError] = useState(
+    cachedMessageRoster?.hasError ?? messageRosterError,
+  );
   const [loadedTabs, setLoadedTabs] = useState<Record<FootprintsTab, boolean>>({
-    message: messageRosterLoaded,
+    message: messageRosterLoaded || Boolean(cachedMessageRoster),
     moment: momentFeedLoaded,
     planet: planetSquareLoaded,
   });
@@ -3466,6 +3497,11 @@ export function FootprintsMobilePage({
   const planetLoadMoreRef = useRef<HTMLDivElement>(null);
   const momentPageInFlightRef = useRef(false);
   const planetPageInFlightRef = useRef(false);
+  const pendingTabRef = useRef<FootprintsTab | null>(null);
+  const loadedTabsRef = useRef(loadedTabs);
+  const messageRosterRefreshControllerRef = useRef<AbortController | null>(
+    null,
+  );
   const isAuthenticated = Boolean(profile);
   const [feedScope, setFeedScope] = useState<MomentFeedScope>(
     isAuthenticated ? initialMomentScope : "PUBLIC",
@@ -3553,6 +3589,57 @@ export function FootprintsMobilePage({
       ]
     : [{ key: "PUBLIC", label: copy.feedPublic }];
 
+  const refreshMessageRoster = useCallback(async () => {
+    if (
+      !profileId ||
+      !messageRosterCacheKey ||
+      messageRosterRefreshControllerRef.current
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    messageRosterRefreshControllerRef.current = controller;
+
+    try {
+      const params = new URLSearchParams({ locale });
+      const response = await fetch(`/api/footprints/messages?${params}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const payload = (await response.json()) as MessageRosterResponse;
+
+      if (!response.ok || !payload.ok || payload.hasError) {
+        throw new Error("Message roster refresh failed");
+      }
+
+      const nextSnapshot: MessageRosterSnapshot = {
+        activityRoomChats: payload.activityRoomChats,
+        friends: payload.friends,
+        hasError: false,
+        officialMessages: payload.officialMessages,
+        planetChats: payload.planetChats,
+        updatedAt: Date.now(),
+      };
+
+      messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
+      setMessageFriends(nextSnapshot.friends);
+      setOfficialMessages(nextSnapshot.officialMessages);
+      setActivityRoomChats(nextSnapshot.activityRoomChats);
+      setPlanetChats(nextSnapshot.planetChats);
+      setMessageRosterHasError(false);
+      setLoadedTabs((current) => ({ ...current, message: true }));
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        console.error("Failed to refresh message roster", error);
+      }
+    } finally {
+      if (messageRosterRefreshControllerRef.current === controller) {
+        messageRosterRefreshControllerRef.current = null;
+      }
+    }
+  }, [locale, messageRosterCacheKey, profileId]);
+
   useEffect(() => {
     if (!profile && feedScope !== "PUBLIC") {
       setFeedScope("PUBLIC");
@@ -3560,11 +3647,21 @@ export function FootprintsMobilePage({
   }, [feedScope, profile]);
 
   useEffect(() => {
+    loadedTabsRef.current = loadedTabs;
+  }, [loadedTabs]);
+
+  useEffect(() => {
     const readUrlState = () => {
       const nextTab = getFootprintsTabFromSearch(window.location.search);
       const nextScope = getMomentScopeFromSearch(window.location.search);
 
-      setActiveTab(nextTab ?? "moment");
+      const resolvedTab = nextTab ?? "moment";
+
+      if (loadedTabsRef.current[resolvedTab]) {
+        setActiveTab(resolvedTab);
+      } else {
+        pendingTabRef.current = resolvedTab;
+      }
       setFeedScope(profile ? nextScope : "PUBLIC");
     };
 
@@ -3585,9 +3682,8 @@ export function FootprintsMobilePage({
   }, [initialMomentScope, initialTab, locale, profile]);
 
   function handleTopTabChange(nextTab: FootprintsTab) {
-    setActiveTab(nextTab);
-
     if (!loadedTabs[nextTab]) {
+      pendingTabRef.current = nextTab;
       router.push(
         withLocale(locale, getFootprintsTabPath(nextTab, feedScope)),
         { scroll: false },
@@ -3595,6 +3691,7 @@ export function FootprintsMobilePage({
       return;
     }
 
+    setActiveTab(nextTab);
     updateFootprintsHistoryUrl(locale, nextTab, feedScope, "push");
   }
 
@@ -3628,18 +3725,52 @@ export function FootprintsMobilePage({
 
   useEffect(() => {
     if (!messageRosterLoaded) return;
-    setMessageFriends(initialMessageFriends);
-    setOfficialMessages(initialOfficialMessages);
-    setActivityRoomChats(initialActivityRoomChats);
-    setPlanetChats(initialPlanetChats);
+
+    const cachedSnapshot = messageRosterCacheKey
+      ? messageRosterMemoryCache.get(messageRosterCacheKey)
+      : null;
+    const nextSnapshot =
+      cachedSnapshot ??
+      ({
+        activityRoomChats: initialActivityRoomChats,
+        friends: initialMessageFriends,
+        hasError: messageRosterError,
+        officialMessages: initialOfficialMessages,
+        planetChats: initialPlanetChats,
+        updatedAt: Date.now(),
+      } satisfies MessageRosterSnapshot);
+
+    if (messageRosterCacheKey && !cachedSnapshot) {
+      messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
+    }
+
+    setMessageFriends(nextSnapshot.friends);
+    setOfficialMessages(nextSnapshot.officialMessages);
+    setActivityRoomChats(nextSnapshot.activityRoomChats);
+    setPlanetChats(nextSnapshot.planetChats);
+    setMessageRosterHasError(nextSnapshot.hasError);
     setLoadedTabs((current) => ({ ...current, message: true }));
   }, [
     initialActivityRoomChats,
     initialMessageFriends,
     initialOfficialMessages,
     initialPlanetChats,
+    messageRosterCacheKey,
+    messageRosterError,
     messageRosterLoaded,
   ]);
+
+  useEffect(() => {
+    if (
+      pendingTabRef.current !== initialTab ||
+      !loadedTabs[initialTab]
+    ) {
+      return;
+    }
+
+    pendingTabRef.current = null;
+    setActiveTab(initialTab);
+  }, [initialTab, loadedTabs]);
 
   useEffect(() => {
     const target = momentLoadMoreRef.current;
@@ -3774,7 +3905,42 @@ export function FootprintsMobilePage({
   }, []);
 
   useEffect(() => {
-    if (!profile || activeTab !== "message" || !hasMountedUnreadCount) {
+    if (!profileId || activeTab !== "message") {
+      return;
+    }
+
+    const cachedSnapshot = messageRosterCacheKey
+      ? messageRosterMemoryCache.get(messageRosterCacheKey)
+      : null;
+
+    if (
+      cachedSnapshot &&
+      Date.now() - cachedSnapshot.updatedAt < 2_000
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshMessageRoster();
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    activeTab,
+    messageRosterCacheKey,
+    profileId,
+    refreshMessageRoster,
+  ]);
+
+  useEffect(
+    () => () => {
+      messageRosterRefreshControllerRef.current?.abort();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!profileId || activeTab !== "message" || !hasMountedUnreadCount) {
       return;
     }
 
@@ -3783,12 +3949,12 @@ export function FootprintsMobilePage({
     }
 
     lastRosterRefreshUnreadCountRef.current = unreadDirectMessageCount;
-    router.refresh();
+    void refreshMessageRoster();
   }, [
     activeTab,
-    profile,
-    router,
     hasMountedUnreadCount,
+    profileId,
+    refreshMessageRoster,
     unreadDirectMessageCount,
   ]);
 
@@ -3914,7 +4080,7 @@ export function FootprintsMobilePage({
                   currentUserProfileId={profile.id}
                   activityRoomChats={activityRoomChats}
                   friends={messageFriends}
-                  hasError={messageRosterError}
+                  hasError={messageRosterHasError}
                   locale={locale}
                   officialMessages={officialMessages}
                   planetChats={planetChats}

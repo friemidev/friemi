@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
+import { RetainedImage } from "@/components/media/RetainedImage";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
 import {
@@ -40,18 +41,16 @@ function Avatar({
   name: string;
 }) {
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#DDEBE2] text-xs font-bold text-[#155F40]">
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#DDEBE2] text-xs font-bold text-[#155F40]">
+      <span aria-hidden="true">{getAvatarInitial(name)}</span>
       {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetainedImage
           alt=""
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"
           src={avatarUrl}
         />
-      ) : (
-        getAvatarInitial(name)
-      )}
+      ) : null}
     </span>
   );
 }
