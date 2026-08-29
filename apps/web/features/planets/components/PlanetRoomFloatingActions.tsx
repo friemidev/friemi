@@ -137,15 +137,15 @@ export function PlanetRoomFloatingActions({
               <button
                 type="button"
                 onClick={openReview}
-                className="flex w-full items-center justify-between rounded-[0.95rem] px-2 py-1.5 text-left text-[#7a5623] transition hover:bg-[#fff8ef]"
+              className="flex w-full items-center justify-between rounded-[0.95rem] px-2 py-1.5 text-left text-[#2c312b] transition hover:bg-[#F7F8F5]"
               >
                 <span className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff2d8] text-[#9a6a21]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-[#246c4b]">
                     <ShieldCheck className="h-4 w-4" />
                   </span>
                   <span>{copy.reviewTitle}</span>
                 </span>
-                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-bold leading-none text-[#8d641f]">
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold leading-none text-[#246c4b] ring-1 ring-[#dce3dc]">
                   {pendingMembers.length}
                 </span>
               </button>
@@ -179,18 +179,18 @@ export function PlanetRoomFloatingActions({
             className="absolute inset-0 bg-black/32 backdrop-blur-sm"
             onClick={() => setReviewOpen(false)}
           />
-          <section className="absolute inset-x-3 bottom-0 rounded-t-[1.75rem] border border-[#e7decd] bg-[#fffaf3] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(29,29,27,0.18)] sm:left-1/2 sm:bottom-6 sm:max-w-md sm:-translate-x-1/2 sm:rounded-[1.75rem]">
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#ddd1bf] sm:hidden" />
+          <section className="absolute inset-x-3 bottom-0 rounded-t-[1.75rem] border border-[#dce3dc] bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(29,29,27,0.18)] sm:left-1/2 sm:bottom-6 sm:max-w-md sm:-translate-x-1/2 sm:rounded-[1.75rem]">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#dce3dc] sm:hidden" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-[#7a5623]">{copy.reviewTitle}</p>
+                <p className="text-sm font-bold text-[#2c312b]">{copy.reviewTitle}</p>
                 <p className="mt-1 text-xs text-[#8b8578]">{copy.reviewHint}</p>
               </div>
               <button
                 type="button"
                 aria-label={copy.close}
                 onClick={() => setReviewOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#8b8578] ring-1 ring-[#e7decd] transition hover:bg-[#fffdf8] hover:text-[#5d5548]"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#8b8578] ring-1 ring-[#dce3dc] transition hover:bg-[#F7F8F5] hover:text-[#5d5548]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -199,7 +199,7 @@ export function PlanetRoomFloatingActions({
             {pendingMembers.length ? (
               <div className="mt-4 space-y-3">
                 {pendingMembers.map((member) => (
-                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#eee2cf] bg-white/88 px-3 py-3 shadow-sm" key={member.profileId}>
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#dce3dc] bg-white px-3 py-3 shadow-sm" key={member.profileId}>
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar avatarUrl={member.avatarUrl} name={member.nickname} />
                       <div className="min-w-0">

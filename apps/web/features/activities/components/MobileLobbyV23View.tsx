@@ -1036,7 +1036,7 @@ export function MobileLobbyV23View({
       />
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[39px] font-bold leading-none tracking-normal text-[#111210]">
+          <h1 className="text-[28px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
           </h1>
           <div className="flex shrink-0 items-center gap-2">

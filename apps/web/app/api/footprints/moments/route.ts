@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getMomentFeedPage } from "@/features/moments/queries/getMomentFeed";
+import {
+  getMomentFeedPage,
+  momentFeedPageSize,
+} from "@/features/moments/queries/getMomentFeed";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +13,7 @@ export async function GET(request: Request) {
     const viewerProfileId = await getOptionalAuthenticatedProfileId();
     const page = await getMomentFeedPage(viewerProfileId, {
       cursor: url.searchParams.get("cursor"),
-      limit: 8,
+      limit: momentFeedPageSize,
     });
 
     return NextResponse.json({ ok: true, page });

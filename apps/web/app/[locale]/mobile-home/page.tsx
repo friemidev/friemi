@@ -542,7 +542,7 @@ function MobileHomeV23Experience({
         </header>
 
         <section className="pr-5">
-          <h1 className="text-[23px] font-bold leading-tight tracking-normal text-[#111210]">
+          <h1 className="text-[31px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
           <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
@@ -712,7 +712,7 @@ function MobileHomeV23ActivityCard({
           alt={activity.title}
           imageClassName={
             usesDefaultIllustration
-              ? "scale-[1.09] object-bottom"
+              ? "scale-[1.2] object-center"
               : undefined
           }
           src={activity.coverImageUrl}

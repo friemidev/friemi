@@ -99,7 +99,7 @@ export function ParticipationApprovalPanel({
   return (
     <section
       id="participation-approval"
-      className="scroll-mt-24 rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5"
+      className="scroll-mt-24 rounded-lg border border-[#dce3dc] bg-white p-4 sm:p-5"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>

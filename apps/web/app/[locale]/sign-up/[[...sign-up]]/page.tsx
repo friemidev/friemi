@@ -103,16 +103,18 @@ export default async function SignUpPage({
   }
 
   return (
-    <PageContainer className="flex min-h-[70vh] items-center justify-center">
-      <ClerkAuthMountGuard
-        exitUrl={withLocale(locale, "/mobile-home")}
-        fallbackRedirectUrl={fallbackRedirectUrl}
-        forceRedirectUrl={forceRedirectUrl}
-        locale={locale}
-        mode="sign-up"
-        path={`/${locale}/sign-up`}
-        secondaryUrl={getSignInHref(locale, redirectTarget)}
-      />
+    <PageContainer className="auth-page-shell min-h-svh max-w-none overflow-x-hidden overflow-y-auto bg-white px-5 pb-[calc(1rem+var(--app-bottom-safe-area))] pt-[calc(1.2rem+var(--app-top-safe-area))] sm:px-6">
+      <section className="mx-auto flex min-h-[calc(100svh-2.2rem)] w-full max-w-[24rem] flex-col justify-start py-5 sm:justify-center">
+        <ClerkAuthMountGuard
+          exitUrl={withLocale(locale, "/mobile-home")}
+          fallbackRedirectUrl={fallbackRedirectUrl}
+          forceRedirectUrl={forceRedirectUrl}
+          locale={locale}
+          mode="sign-up"
+          path={`/${locale}/sign-up`}
+          secondaryUrl={getSignInHref(locale, redirectTarget)}
+        />
+      </section>
     </PageContainer>
   );
 }
