@@ -105,9 +105,14 @@ export function ClerkAuthMountGuard({
 
   useEffect(() => {
     const userAgent = window.navigator.userAgent;
+    document.documentElement.dataset.friemiAuthPage = "true";
     setMounted(true);
     setIsFriemiIOSApp(/\bFriemiIOS\//i.test(userAgent));
     setIsFriemiNativeApp(/\bFriemi(?:Android|IOS)\//i.test(userAgent));
+
+    return () => {
+      delete document.documentElement.dataset.friemiAuthPage;
+    };
   }, []);
 
   useEffect(() => {
@@ -177,7 +182,7 @@ export function ClerkAuthMountGuard({
 
   if (mode === "sign-in") {
     return (
-      <>
+      <div className="grid w-full min-w-0 gap-5">
         {isFriemiNativeApp ? (
           <NativeAuthExitButton exitUrl={exitUrl} locale={locale} />
         ) : null}
@@ -198,12 +203,12 @@ export function ClerkAuthMountGuard({
           signUpForceRedirectUrl={forceRedirectUrl}
           signUpUrl={secondaryUrl}
         />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="grid w-full min-w-0 gap-5">
       {isFriemiNativeApp ? (
         <NativeAuthExitButton exitUrl={exitUrl} locale={locale} />
       ) : null}
@@ -224,7 +229,7 @@ export function ClerkAuthMountGuard({
         signInForceRedirectUrl={forceRedirectUrl}
         signInUrl={secondaryUrl}
       />
-    </>
+    </div>
   );
 }
 

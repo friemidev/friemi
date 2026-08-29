@@ -4,6 +4,8 @@ import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendId
 import { getFollowRelationshipBuckets } from "@/features/follow/queries/followRelations";
 import { prisma } from "@/lib/prisma";
 
+export const momentFeedPageSize = 4;
+
 const momentAuthorSelect = {
   id: true,
   nickname: true,
@@ -282,7 +284,10 @@ export async function getMomentFeedPage(
   viewerProfileId: string | null,
   options: { cursor?: string | null; limit?: number } = {},
 ): Promise<MomentFeedPageViewModel> {
-  const limit = Math.min(Math.max(Math.floor(options.limit ?? 8), 1), 24);
+  const limit = Math.min(
+    Math.max(Math.floor(options.limit ?? momentFeedPageSize), 1),
+    24,
+  );
   const visibilityRules: Prisma.MomentWhereInput[] = [{ visibility: "PUBLIC" }];
   let followedProfileIds = new Set<string>();
   let mutualFollowProfileIds = new Set<string>();
@@ -346,7 +351,11 @@ export async function getMomentFeedPage(
 
 export const getMomentFeed = cache(
   async (viewerProfileId: string | null) =>
-    (await getMomentFeedPage(viewerProfileId, { limit: 8 })).items,
+    (
+      await getMomentFeedPage(viewerProfileId, {
+        limit: momentFeedPageSize,
+      })
+    ).items,
 );
 
 export const getMomentDetail = cache(

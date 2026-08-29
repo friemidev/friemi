@@ -720,7 +720,7 @@ function ApprovalModeNotice({
       className={cn(
         "flex items-start gap-2.5 rounded-2xl px-3 py-2.5 text-left ring-1",
         requiresApproval
-          ? "bg-[#FFF5E6]/90 text-[#8A3B21] ring-coral/35"
+          ? "bg-white text-[#2c312b] ring-[#dce3dc]"
           : "bg-white/82 text-[#156240] ring-[#8AB68E]/55",
         className,
       )}

@@ -312,6 +312,17 @@ html[data-friemi-ios-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
 
+html[data-friemi-android-app="true"] .app-layout-shell::before,
+html[data-friemi-ios-app="true"] .app-layout-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 200;
+  height: var(--app-top-safe-area);
+  background: #ffffff;
+  pointer-events: none;
+}
+
 .app-layout-shell:has(.auth-page-shell) {
   padding-bottom: 0;
   background: var(--friemi-palette-paper);
@@ -323,6 +334,17 @@ html[data-friemi-ios-app="true"] * {
 .app-layout-shell:has(.auth-page-shell) [data-route-progress],
 .app-layout-shell:has(.route-loading-shell) [data-route-progress] {
   display: none;
+}
+
+html[data-friemi-auth-page="true"] .app-layout-shell {
+  padding-bottom: 0 !important;
+}
+
+html[data-friemi-auth-page="true"] .app-layout-shell > .app-header,
+html[data-friemi-auth-page="true"] .app-layout-shell > .app-mobile-nav,
+html[data-friemi-auth-page="true"] .app-layout-shell [data-mobile-scroll-progress],
+html[data-friemi-auth-page="true"] .app-layout-shell [data-route-progress] {
+  display: none !important;
 }
 
 .auth-page-shell .cl-footer {
@@ -363,6 +385,14 @@ html[data-friemi-ios-app="true"] * {
 .auth-page-shell .cl-card,
 .auth-page-shell .cl-cardBox,
 .auth-page-shell .cl-main {
+  width: 100% !important;
+}
+
+.auth-page-shell .cl-socialButtons,
+.auth-page-shell .cl-form,
+.auth-page-shell .cl-formFieldRow {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   width: 100% !important;
 }
 
@@ -1150,6 +1180,22 @@ a {
   animation-delay: 0.32s;
 }
 
+@keyframes friemi-feed-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.friemi-feed-reveal {
+  animation: friemi-feed-reveal 320ms ease-out both;
+}
+
 .friemi-shimmer {
   position: relative;
   overflow: hidden;
@@ -1586,6 +1632,7 @@ html[data-home-motion-ready="true"]
   .planet-danmaku,
   [data-home-reveal],
   .friemi-loading-dots span,
+  .friemi-feed-reveal,
   .friemi-shimmer::after {
     animation: none;
     transition: none;

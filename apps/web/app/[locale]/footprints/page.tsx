@@ -3,7 +3,10 @@ import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloade
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
-import { getMomentFeedPage } from "@/features/moments/queries/getMomentFeed";
+import {
+  getMomentFeedPage,
+  momentFeedPageSize,
+} from "@/features/moments/queries/getMomentFeed";
 import { getOfficialMessageRoster } from "@/features/official-messages/services/officialMessages";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import { getPlanetSquarePage } from "@/features/planets/queries/planetQueries";
@@ -87,7 +90,9 @@ export default async function FootprintsPage({
     initialTab === "moment"
       ? perf
           .measure("moments.feed", () =>
-            getMomentFeedPage(viewerProfileId, { limit: 8 }),
+            getMomentFeedPage(viewerProfileId, {
+              limit: momentFeedPageSize,
+            }),
           )
           .then((page) => ({ page, error: null }))
           .catch((error: unknown) => {

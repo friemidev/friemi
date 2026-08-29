@@ -3960,7 +3960,7 @@ export function FootprintsMobilePage({
       <main className="min-h-screen bg-white pb-28 text-[#111210] md:pb-12">
         <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-7xl md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
           <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5 lg:flex lg:items-end lg:justify-between lg:gap-10 lg:pb-0">
-            <h1 className="pb-3 text-[30px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
+            <h1 className="pb-3 text-[31px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
               {copy.title}
             </h1>
             <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center lg:flex lg:w-[30rem] lg:self-stretch lg:translate-y-0">
@@ -4032,15 +4032,22 @@ export function FootprintsMobilePage({
                   </div>
                 ) : scopedMoments.length > 0 ? (
                   <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
-                    {scopedMoments.map((moment) => (
-                      <FeedCard
+                    {scopedMoments.map((moment, index) => (
+                      <div
                         key={moment.id}
-                        isAuthenticated={isAuthenticated}
-                        locale={locale}
-                        moment={moment}
-                        copy={copy}
-                        viewerProfileId={profile?.id ?? null}
-                      />
+                        className="friemi-feed-reveal"
+                        style={{
+                          animationDelay: `${Math.min(index % 4, 3) * 80}ms`,
+                        }}
+                      >
+                        <FeedCard
+                          isAuthenticated={isAuthenticated}
+                          locale={locale}
+                          moment={moment}
+                          copy={copy}
+                          viewerProfileId={profile?.id ?? null}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (

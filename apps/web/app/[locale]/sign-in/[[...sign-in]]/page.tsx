@@ -113,10 +113,10 @@ export default async function SignInPage({
   }
 
   return (
-    <PageContainer className="auth-page-shell relative isolate flex min-h-svh max-w-none flex-col overflow-hidden px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1.2rem+env(safe-area-inset-top))] sm:px-6">
+    <PageContainer className="auth-page-shell relative isolate flex min-h-svh max-w-none flex-col overflow-x-hidden overflow-y-auto px-5 pb-[calc(1rem+var(--app-bottom-safe-area))] pt-[calc(1.2rem+var(--app-top-safe-area))] sm:px-6">
       <AuthBackdrop />
 
-      <section className="relative mx-auto flex min-h-[calc(100svh-2.2rem)] w-full max-w-[24rem] flex-col justify-center">
+      <section className="relative mx-auto flex min-h-[calc(100svh-2.2rem)] w-full max-w-[24rem] flex-col justify-start py-5 sm:justify-center">
         <header className="mb-8 flex justify-center">
           <Link
             aria-label="Friemi"

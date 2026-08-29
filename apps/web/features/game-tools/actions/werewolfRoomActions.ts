@@ -1914,7 +1914,10 @@ export async function leaveWerewolfSeatAction(
   }
 
   if (returnInline) {
-    return { formNotice: "left" };
+    return {
+      formNotice:
+        result.data.intent === "exit_room" ? "exited" : "left",
+    };
   }
 
   redirect(
