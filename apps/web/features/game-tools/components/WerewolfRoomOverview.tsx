@@ -1309,9 +1309,7 @@ export function WerewolfRoomOverview({
   useEffect(() => {
     if (
       seatState.formNotice ||
-      leaveState.formNotice ||
       readyState.formNotice ||
-      lifeState.formNotice ||
       sheriffState.formNotice ||
       finishState.formNotice
     ) {
@@ -1321,13 +1319,45 @@ export function WerewolfRoomOverview({
     }
   }, [
     broadcastRoomChange,
-    leaveState.formNotice,
     finishState.formNotice,
-    lifeState.formNotice,
     readyState.formNotice,
     refreshRoom,
     sheriffState.formNotice,
     seatState.formNotice,
+  ]);
+
+  useEffect(() => {
+    if (!lifeState.formNotice) {
+      return;
+    }
+
+    // The seat is already updated optimistically. Avoid blocking the judge UI
+    // on an immediate full-room fetch; regular sync reconciles the snapshot.
+    broadcastRoomChange();
+  }, [broadcastRoomChange, lifeState.formNotice]);
+
+  useEffect(() => {
+    if (!leaveState.formNotice) {
+      return;
+    }
+
+    if (leaveState.formNotice === "exited") {
+      clearActiveRoomClientState();
+      setExitDialogOpen(false);
+      router.replace(werewolfHomeHref);
+      return;
+    }
+
+    lastOptimisticMutationAtRef.current = 0;
+    broadcastRoomChange();
+    void refreshRoom({ force: true });
+  }, [
+    broadcastRoomChange,
+    clearActiveRoomClientState,
+    leaveState.formNotice,
+    refreshRoom,
+    router,
+    werewolfHomeHref,
   ]);
 
   useEffect(() => {
@@ -1944,7 +1974,7 @@ export function WerewolfRoomOverview({
               aria-label={t.back}
               className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
               onClick={() => {
-                if (canExitRoom && room.status !== "FINISHED") {
+                if (canExitRoom) {
                   setExitDialogOpen(true);
                   return;
                 }
@@ -2034,26 +2064,29 @@ export function WerewolfRoomOverview({
                   </button>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
-                    onClick={handleTemporaryLeave}
-                    type="button"
-                  >
-                    {t.temporaryLeave}
-                  </button>
+                <div
+                  className={`mt-4 grid gap-2 ${
+                    room.status === "FINISHED" ? "grid-cols-1" : "grid-cols-2"
+                  }`}
+                >
+                  {room.status !== "FINISHED" ? (
+                    <button
+                      className="inline-flex h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
+                      onClick={handleTemporaryLeave}
+                      type="button"
+                    >
+                      {t.temporaryLeave}
+                    </button>
+                  ) : null}
                   <form
                     action={leaveAction}
                     onSubmit={(event) => {
-                      if (!canSubmitOnline(event)) {
-                        return;
-                      }
-
-                      clearActiveRoomClientState();
+                      canSubmitOnline(event);
                     }}
                   >
                     <input name="intent" type="hidden" value="exit_room" />
                     <input name="locale" type="hidden" value={locale} />
+                    <input name="responseMode" type="hidden" value="inline" />
                     {currentSeatPrivateToken ? (
                       <input
                         name="privateToken"
@@ -2721,10 +2754,17 @@ export function WerewolfRoomOverview({
             <div className="border-t border-[#E3DFCE] p-4">
               <button
                 className="h-11 w-full rounded-full bg-[#176B45] text-sm font-bold text-white transition hover:bg-[#125739]"
-                onClick={() => setResultDialogOpen(false)}
+                onClick={() => {
+                  setResultDialogOpen(false);
+                  if (canExitRoom) {
+                    setExitDialogOpen(true);
+                  } else {
+                    router.push(werewolfHomeHref);
+                  }
+                }}
                 type="button"
               >
-                {t.resultDialogClose}
+                {canExitRoom ? t.exitGame : t.resultDialogClose}
               </button>
             </div>
           </section>

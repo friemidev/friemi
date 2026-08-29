@@ -22,9 +22,11 @@ export function ActivityCoverImage({
   src,
 }: ActivityCoverImageProps) {
   const [hasFailed, setHasFailed] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     setHasFailed(false);
+    setHasLoaded(false);
   }, [src]);
 
   if (!src || hasFailed) {
@@ -51,13 +53,18 @@ export function ActivityCoverImage({
 
   return (
     <>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[linear-gradient(145deg,#F1F2EC_0%,#FEFFF9_58%,#EAF3EC_100%)]"
+      />
       {/* Public cover URLs can come from Supabase Storage or Paris OpenData. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={alt}
         className={cn(
-          "absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.035]",
+          "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover/card:scale-[1.035]",
+          hasLoaded ? "opacity-100" : "opacity-0",
           imageClassName,
         )}
         decoding="async"
@@ -65,6 +72,7 @@ export function ActivityCoverImage({
         loading={loading}
         referrerPolicy="no-referrer"
         onError={() => setHasFailed(true)}
+        onLoad={() => setHasLoaded(true)}
       />
       <div className={cn("absolute inset-0", overlayClassName)} aria-hidden />
     </>

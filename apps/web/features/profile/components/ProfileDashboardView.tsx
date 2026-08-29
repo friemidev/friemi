@@ -396,6 +396,7 @@ function getMobileProfileCopy(locale: string) {
       signOut: "Déconnexion",
       soon: "Bientôt disponible",
       trusted: "Fiable",
+      title: "Moi",
       visitors: "Visites",
     };
   }
@@ -460,6 +461,7 @@ function getMobileProfileCopy(locale: string) {
       signOut: "Sign out",
       soon: "Coming soon",
       trusted: "Trusted",
+      title: "Me",
       visitors: "Visits",
     };
   }
@@ -523,6 +525,7 @@ function getMobileProfileCopy(locale: string) {
     signOut: "退出登录",
     soon: "敬请期待",
     trusted: "信用值",
+    title: "我的",
     visitors: "访客记录",
   };
 }
@@ -713,7 +716,7 @@ function GuestProfilePlaceholder({
     <div className="mx-auto w-full max-w-7xl pb-8">
       <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-[18px] font-bold leading-tight tracking-normal text-[#111210]">
+          <h1 className="text-[31px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.title}
           </h1>
         </header>
@@ -3134,6 +3137,9 @@ function SelfMobileProfileHome({
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:2.35rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
+      <h1 className="mb-6 text-[31px] font-bold leading-none tracking-normal text-[#111210]">
+        {copy.title}
+      </h1>
       <section>
         <div>
           <div className="flex items-start gap-4">
