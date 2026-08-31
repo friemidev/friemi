@@ -881,7 +881,7 @@ model TrustScoreEvent {
   profileId  String
   profile    UserProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
   type       TrustScoreEventType
-  delta      Int
+  delta      Float
   activityId String?
   activity   Activity?           @relation(fields: [activityId], references: [id], onDelete: SetNull)
   note       String?

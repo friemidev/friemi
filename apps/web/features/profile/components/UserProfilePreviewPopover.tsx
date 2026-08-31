@@ -176,10 +176,15 @@ export function UserProfilePreviewPopover({
 
     function handlePointerDown(event: PointerEvent) {
       const targetNode = event.target as Node;
+      const targetElement =
+        event.target instanceof Element ? event.target : null;
       const isInsideTrigger = rootRef.current?.contains(targetNode);
       const isInsidePopover = popoverRef.current?.contains(targetNode);
+      const isInsidePersistentOverlay = Boolean(
+        targetElement?.closest("[data-user-preview-persistent-overlay]"),
+      );
 
-      if (!isInsideTrigger && !isInsidePopover) {
+      if (!isInsideTrigger && !isInsidePopover && !isInsidePersistentOverlay) {
         isPinnedOpenRef.current = false;
         setIsOpen(false);
       }

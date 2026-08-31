@@ -564,7 +564,7 @@ const copy = {
         ACTIVITY_CHECK_IN: {
           title: "签到成功",
           body: (activityTitle: string) =>
-            `你已成功签到「${activityTitle}」。`,
+            `你已成功签到「${activityTitle}」，信用值 +0.1。`,
         },
         FRIEND_REQUEST: {
           title: "新的关注",
@@ -1577,7 +1577,7 @@ const copy = {
         ACTIVITY_CHECK_IN: {
           title: "Check-in confirmed",
           body: (activityTitle: string) =>
-            `Your check-in for "${activityTitle}" is confirmed.`,
+            `Your check-in for "${activityTitle}" is confirmed. Credit +0.1.`,
         },
         FRIEND_REQUEST: {
           title: "New follower",
@@ -2643,7 +2643,7 @@ const copy = {
         ACTIVITY_CHECK_IN: {
           title: "Présence confirmée",
           body: (activityTitle: string) =>
-            `Votre présence à « ${activityTitle} » est confirmée.`,
+            `Votre présence à « ${activityTitle} » est confirmée. Crédit +0,1.`,
         },
         FRIEND_REQUEST: {
           title: "Nouvel abonné",

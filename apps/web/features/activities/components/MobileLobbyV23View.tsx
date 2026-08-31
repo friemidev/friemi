@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ActivityCategory } from "@chill-club/shared";
 import type { CSSProperties } from "react";
+import { preload } from "react-dom";
 import {
   ChevronRight,
   CircleEllipsis,
@@ -29,6 +30,7 @@ import { getActivityDisplayStatus } from "@/features/activities/utils/activityDi
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
+import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { getCategoryLabel } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
@@ -843,7 +845,9 @@ export function MobileLobbyV23View({
         setTabPages(nextState);
         cacheMobileLobbyTabPage(tabCacheKey, tab, nextTabPage);
         retainImageSources(
-          nextTabPage.activities.map((activity) => activity.coverImageUrl),
+          nextTabPage.activities.map((activity) =>
+            getActivityCoverThumbnailUrl(activity.coverImageUrl, 192),
+          ),
           4,
         );
       } catch (error) {
@@ -1023,6 +1027,18 @@ export function MobileLobbyV23View({
     !failedTabs[displayedActiveTab];
   const shouldShowTabFailed =
     !activePage && Boolean(failedTabs[displayedActiveTab]);
+
+  visibleActivities.slice(0, 4).forEach((activity) => {
+    const source = getActivityCoverThumbnailUrl(activity.coverImageUrl, 192);
+
+    if (source) {
+      preload(source, {
+        as: "image",
+        fetchPriority: "high",
+        referrerPolicy: "no-referrer",
+      });
+    }
+  });
 
   return (
     <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-white text-[#111210] md:hidden">

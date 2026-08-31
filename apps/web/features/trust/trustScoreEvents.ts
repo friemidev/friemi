@@ -16,7 +16,7 @@ type ApplyTrustScoreEventInput = TrustScoreEventInput & {
 };
 
 const trustScoreEventDeltaByType = {
-  ACTIVITY_CHECK_IN: 1,
+  ACTIVITY_CHECK_IN: 0.1,
   CLEAN_HALF_YEAR: 5,
   HARASSMENT_DM: -20,
   INVITE_FRIEND: 2,

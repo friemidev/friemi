@@ -1533,6 +1533,8 @@ export async function ActivityDetailPageContent({
     canUseActivityAnnouncement && isTeamOperator;
   const canShowActivityAnnouncements =
     canUseActivityAnnouncement && activity.announcements.length > 0;
+  const showActivityAnnouncementPanel =
+    canShowActivityAnnouncements || canSendActivityAnnouncement;
   const activityRoomUnreadState =
     showActivityRoomEntry && viewerProfile?.id
       ? await perf
@@ -1576,8 +1578,6 @@ export async function ActivityDetailPageContent({
     !activity.isActivityInfo &&
     activity.category === "BOARD_GAME";
   const gameToolsHref = withLocale(locale, "/game-tools");
-  const avalonToolHref = withLocale(locale, "/game-tools/avalon");
-  const werewolfToolHref = withLocale(locale, "/game-tools/werewolf");
   const [pendingParticipants, analyticsSummary, activityCheckInRoster] =
     await Promise.all([
       isTeamOperator && activity.requiresApproval && viewerProfile
@@ -2003,11 +2003,22 @@ export async function ActivityDetailPageContent({
             {renderMobilePriceAndLinkedEventRow()}
           </div>
         </div>
-        {canShowActivityAnnouncements ? (
+        {showActivityAnnouncementPanel ? (
           <div className="md:hidden">
             <ActivityAnnouncementDetailPanel
               activityId={activity.id}
               announcements={activity.announcements}
+              editor={
+                canSendActivityAnnouncement ? (
+                  <ActivityAnnouncementComposer
+                    activityId={activity.id}
+                    compact
+                    iconOnly
+                    locale={locale}
+                    triggerLabel={operatorActionCopy.announcement}
+                  />
+                ) : undefined
+              }
               hasUnread={activityRoomUnreadState.hasUnreadAnnouncement}
               locale={locale}
             />
@@ -2030,6 +2041,8 @@ export async function ActivityDetailPageContent({
             <div className="mt-2 flex items-center gap-3">
               <UserProfilePreviewPopover
                 avatarUrl={activity.organizer.avatarUrl}
+                giftSourceContextId={activity.id}
+                giftSourceSurface="ACTIVITY"
                 isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
                 nickname={activity.organizer.nickname}
@@ -2076,44 +2089,57 @@ export async function ActivityDetailPageContent({
               <p className="text-[12px] font-semibold leading-none text-[#111210]/72">
                 {t.activityDetail.participants}
               </p>
-              <div className="mt-2 flex items-center">
-                {mobileParticipantPreview.map((participant, index) => (
-                  <UserProfilePreviewPopover
-                    avatarUrl={participant.avatarUrl}
-                    isAuthenticated={Boolean(viewerProfile)}
-                    isGuest={participant.kind !== "user"}
-                    key={participant.id}
-                    locale={locale}
-                    nickname={participant.nickname}
-                    profileId={participant.id}
-                  >
-                    <span
-                      className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm ring-1 ring-[#8AB68E]"
-                      style={{ marginLeft: index === 0 ? 0 : -7 }}
-                      aria-label={participant.nickname}
-                      title={participant.nickname}
+              <div className="mt-2 flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center">
+                  {mobileParticipantPreview.map((participant, index) => (
+                    <UserProfilePreviewPopover
+                      avatarUrl={participant.avatarUrl}
+                      giftSourceContextId={activity.id}
+                      giftSourceSurface="ACTIVITY"
+                      isAuthenticated={Boolean(viewerProfile)}
+                      isGuest={participant.kind !== "user"}
+                      key={participant.id}
+                      locale={locale}
+                      nickname={participant.nickname}
+                      profileId={participant.id}
                     >
                       <span
-                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                        className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm ring-1 ring-[#8AB68E]"
+                        style={{ marginLeft: index === 0 ? 0 : -7 }}
+                        aria-label={participant.nickname}
+                        title={participant.nickname}
                       >
-                        {participant.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={participant.avatarUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          getParticipantInitial(participant.nickname)
-                        )}
+                        <span
+                          className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                        >
+                          {participant.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={participant.avatarUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            getParticipantInitial(participant.nickname)
+                          )}
+                        </span>
                       </span>
+                    </UserProfilePreviewPopover>
+                  ))}
+                  {extraParticipantCount > 0 ? (
+                    <span className="-ml-1 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-[#F1F2EC] px-2 text-[11px] font-bold text-[#111210]/58 shadow-sm ring-1 ring-[#D6D5B2] friemi-tabular">
+                      +{extraParticipantCount}
                     </span>
-                  </UserProfilePreviewPopover>
-                ))}
-                {extraParticipantCount > 0 ? (
-                  <span className="-ml-1 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-[#F1F2EC] px-2 text-[11px] font-bold text-[#111210]/58 shadow-sm ring-1 ring-[#D6D5B2] friemi-tabular">
-                    +{extraParticipantCount}
-                  </span>
+                  ) : null}
+                </div>
+                {isTeamOperator ? (
+                  <ActivityCheckInReviewPanel
+                    activityId={activity.id}
+                    locale={locale}
+                    participants={activityCheckInRoster}
+                    triggerLabel={operatorActionCopy.checkIn}
+                    triggerVariant="icon"
+                  />
                 ) : null}
               </div>
             </div>
@@ -2143,31 +2169,6 @@ export async function ActivityDetailPageContent({
                     unreadCount={activityRoomUnreadState.unreadCount}
                   />
                 ) : null}
-              </div>
-              <div
-                className={cn(
-                  "grid gap-2",
-                  canSendActivityAnnouncement
-                    ? "grid-cols-2"
-                    : "grid-cols-1",
-                )}
-              >
-                {canSendActivityAnnouncement ? (
-                  <ActivityAnnouncementComposer
-                    activityId={activity.id}
-                    compact
-                    locale={locale}
-                    triggerLabel={operatorActionCopy.announcement}
-                  />
-                ) : null}
-                <div className="min-w-0 [&>button]:w-full">
-                  <ActivityCheckInReviewPanel
-                    activityId={activity.id}
-                    locale={locale}
-                    participants={activityCheckInRoster}
-                    triggerLabel={operatorActionCopy.checkIn}
-                  />
-                </div>
               </div>
               {canCancelActivity ? (
                 <CancelActivityForm
@@ -2245,10 +2246,21 @@ export async function ActivityDetailPageContent({
 
       <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
-          {canShowActivityAnnouncements ? (
+          {showActivityAnnouncementPanel ? (
             <ActivityAnnouncementDetailPanel
               activityId={activity.id}
               announcements={activity.announcements}
+              editor={
+                canSendActivityAnnouncement ? (
+                  <ActivityAnnouncementComposer
+                    activityId={activity.id}
+                    compact
+                    iconOnly
+                    locale={locale}
+                    triggerLabel={operatorActionCopy.announcement}
+                  />
+                ) : undefined
+              }
               hasUnread={activityRoomUnreadState.hasUnreadAnnouncement}
               locale={locale}
             />
@@ -2333,6 +2345,8 @@ export async function ActivityDetailPageContent({
             <div className="mt-4 flex items-start gap-3">
               <UserProfilePreviewPopover
                 avatarUrl={activity.organizer.avatarUrl}
+                giftSourceContextId={activity.id}
+                giftSourceSurface="ACTIVITY"
                 isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
                 nickname={activity.organizer.nickname}
@@ -2381,14 +2395,6 @@ export async function ActivityDetailPageContent({
                     labelOverride={operatorActionCopy.manage}
                     locale={locale}
                     unreadCount={activityRoomUnreadState.unreadCount}
-                  />
-                ) : null}
-                {canSendActivityAnnouncement ? (
-                  <ActivityAnnouncementComposer
-                    activityId={activity.id}
-                    compact
-                    locale={locale}
-                    triggerLabel={operatorActionCopy.announcement}
                   />
                 ) : null}
                 <div className="[&>button]:w-full">
@@ -2545,6 +2551,8 @@ export async function ActivityDetailPageContent({
                     <span key={participant.id}>
                       <UserProfilePreviewPopover
                         avatarUrl={participant.avatarUrl}
+                        giftSourceContextId={activity.id}
+                        giftSourceSurface="ACTIVITY"
                         isAuthenticated={Boolean(viewerProfile)}
                         isGuest={participant.kind !== "user"}
                         locale={locale}
@@ -2817,15 +2825,13 @@ export async function ActivityDetailPageContent({
             />
           </div>
         </aside>
-        {canUseBoardGameTools ? (
-          <BoardGameToolFloatingEntry
-            avalonHref={avalonToolHref}
-            gameToolsHref={gameToolsHref}
-            locale={locale}
-            werewolfHref={werewolfToolHref}
-          />
-        ) : null}
       </section>
+      {canUseBoardGameTools ? (
+        <BoardGameToolFloatingEntry
+          gameToolsHref={gameToolsHref}
+          locale={locale}
+        />
+      ) : null}
     </PageContainer>
   );
 }

@@ -216,7 +216,6 @@ export async function sendCharmGiftAction(
   revalidatePath(withLocale(locale, `/profile/${recipientProfileId}`));
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, redirectPath));
 
   return {
     attemptId,

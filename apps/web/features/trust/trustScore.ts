@@ -14,7 +14,9 @@ export function clampTrustScore(score: number) {
 }
 
 export function calculateTrustScore(deltaSum: number | null | undefined) {
-  return clampTrustScore(initialTrustScore + (deltaSum ?? 0));
+  const score = initialTrustScore + (deltaSum ?? 0);
+
+  return clampTrustScore(Math.round(score * 10) / 10);
 }
 
 export function isLowTrustScore(score: number) {

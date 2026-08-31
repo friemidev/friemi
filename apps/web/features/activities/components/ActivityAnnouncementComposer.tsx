@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Bell, Loader2, Megaphone, Send, X } from "lucide-react";
+import { Bell, Loader2, Megaphone, PencilLine, Send, X } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +12,7 @@ import {
 
 type ActivityAnnouncementComposerProps = {
   activityId: string;
+  iconOnly?: boolean;
   locale: string;
   compact?: boolean;
   triggerLabel?: string;
@@ -86,6 +87,7 @@ function SubmitButton({ locale }: { locale: string }) {
 
 export function ActivityAnnouncementComposer({
   activityId,
+  iconOnly = false,
   locale,
   compact = false,
   triggerLabel,
@@ -114,18 +116,36 @@ export function ActivityAnnouncementComposer({
   return (
     <>
       {compact ? (
-        <div className="flex w-full shrink-0 flex-col gap-2">
+        <div
+          className={cn(
+            "shrink-0",
+            iconOnly ? "inline-flex" : "flex w-full flex-col gap-2",
+          )}
+        >
           <Button
             type="button"
-            className="h-11 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F6FAF4]"
+            aria-label={iconOnly ? (triggerLabel ?? t.open) : undefined}
+            className={cn(
+              "rounded-full border border-[#D6D5B2] bg-white font-bold text-[#156240] shadow-none hover:bg-[#F6FAF4]",
+              iconOnly
+                ? "h-8 w-8 min-w-8 p-0"
+                : "h-11 w-full gap-1.5 px-4 text-sm",
+            )}
             onClick={() => setIsOpen(true)}
+            title={iconOnly ? (triggerLabel ?? t.open) : undefined}
             variant="secondary"
           >
-            <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            {triggerLabel ?? t.open}
+            {iconOnly ? (
+              <PencilLine className="h-3.5 w-3.5" />
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                {triggerLabel ?? t.open}
+              </>
+            )}
           </Button>
 
-          {state.ok ? (
+          {state.ok && !iconOnly ? (
             <div className="inline-flex max-w-[11.5rem] items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1.5 text-right text-xs font-semibold text-[#156240] shadow-sm sm:max-w-none">
               <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-[#369758]" />
               <span>{t.success}</span>

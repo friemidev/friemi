@@ -21,7 +21,6 @@ import {
   getMobileHomeTrendingTeamActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { isActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
@@ -697,10 +696,6 @@ function MobileHomeV23ActivityCard({
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity}`
       : `${activity.participantCount}`;
-  const usesDefaultIllustration = isActivityCategoryIllustrationSrc(
-    activity.coverImageUrl,
-  );
-
   return (
     <MobileActivityDetailSheetLink
       href={getMobileHomeActivityHref(activity, locale)}
@@ -710,11 +705,6 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
-          imageClassName={
-            usesDefaultIllustration
-              ? "scale-[1.2] object-center"
-              : undefined
-          }
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
         />
