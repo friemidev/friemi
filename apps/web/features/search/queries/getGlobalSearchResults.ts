@@ -14,6 +14,7 @@ import {
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityFloatingNow } from "@/features/activities/utils/activityDisplay";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { getFollowRelationStateMap } from "@/features/follow/queries/followRelations";
 import {
   getPublicEventCardViewModel,
@@ -30,6 +31,7 @@ import {
   getGlobalSearchTerms,
   normalizeGlobalSearchQuery,
 } from "../utils/searchQuery";
+import { dedupeSearchActivities } from "../utils/searchActivityIdentity";
 import type { Prisma } from "@prisma/client";
 
 const activityResultLimit = 6;
@@ -38,6 +40,7 @@ const merchantResultLimit = 5;
 const searchRecommendationLimit = 12;
 const userResultLimit = 12;
 const searchResultProbeSize = 1;
+const searchResultDedupeFetchMultiplier = 3;
 
 export type GlobalSearchMainActivityResultMode = "strict" | "related";
 
@@ -214,7 +217,7 @@ function mapPublicEventToSearchActivityCard(
     capacity: 0,
     coverImageUrl: event.coverImageUrl,
     favoriteCount: event.favoriteCount,
-    participantCount: event.teamCount,
+    participantCount: 0,
     priceText: event.priceText ?? "",
     status: "RECRUITING",
     visibility: "PUBLIC",
@@ -775,19 +778,20 @@ export async function getGlobalSearchMainActivityResults(
     ],
   };
   const fetchLimit = offset + limit + searchResultProbeSize;
+  const sourceFetchLimit = fetchLimit * searchResultDedupeFetchMultiplier;
   const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       getSearchActivityResults(
         activeActivityResultWhere,
         includeEnded ? endedActivityResultWhere : null,
-        fetchLimit,
+        sourceFetchLimit,
       ),
     ),
     perf.measure("publicEvent.list", () =>
       prisma.publicEvent.findMany({
         where: publicEventSearchWhere,
         orderBy: [{ startAt: "asc" }, { id: "asc" }],
-        take: fetchLimit,
+        take: sourceFetchLimit,
         select: publicEventSelect,
       }),
     ),
@@ -808,18 +812,12 @@ export async function getGlobalSearchMainActivityResults(
     ]),
   );
   const mixedResults = await perf.measure("merge.sort", async () => {
-    const publicEventIdsAlreadyShownByActivity = new Set(
-      activityResultsWithFavoriteState
-        .map((activity) => activity.publicEventId)
-        .filter(Boolean),
-    );
-
-    return [
+    return dedupeSearchActivities([
+      ...publicEventResultsWithFavoriteState.map(
+        mapPublicEventToSearchActivityCard,
+      ),
       ...activityResultsWithFavoriteState,
-      ...publicEventResultsWithFavoriteState
-        .filter((event) => !publicEventIdsAlreadyShownByActivity.has(event.id))
-        .map(mapPublicEventToSearchActivityCard),
-    ].sort(
+    ]).sort(
       mode === "related"
         ? sortRelatedSearchActivityCards.bind(null, terms)
         : sortSearchActivityCards,
@@ -831,8 +829,8 @@ export async function getGlobalSearchMainActivityResults(
     ? offset + limit + searchResultProbeSize
     : mixedResults.length;
   const countedResults = mixedResults.slice(0, totalCount);
-  const countedPublicEventCount = countedResults.filter(
-    (activity) => activity.type === "PUBLIC_EVENT",
+  const countedPublicEventCount = countedResults.filter((activity) =>
+    isPublicEventCard(activity),
   ).length;
   const countedActivityCount = countedResults.length - countedPublicEventCount;
   const nextOffset = offset + items.length;

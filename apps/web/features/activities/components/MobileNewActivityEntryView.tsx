@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Clock3, Dice5, UsersRound } from "lucide-react";
+import { ChevronRight, Clock3, Dice5, LockKeyhole, UsersRound } from "lucide-react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/features/activities/utils/activityDisplay";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { isPrivateActivityCardLocked } from "@/features/activities/utils/privateActivityCardAccess";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { MobileActivityDetailSheetLink } from "./MobileActivityDetailSheetLink";
@@ -223,6 +224,7 @@ function MobileActivityPreviewCard({
   statusLabel: string;
 }) {
   const isInactive = getActivityTimeState(activity) === "ENDED";
+  const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const activityHref = getPreviewActivityHref(activity, locale);
   const activityLabel =
     locale === "fr"
@@ -241,6 +243,8 @@ function MobileActivityPreviewCard({
       )}
       href={activityHref}
       label={activityLabel}
+      locale={locale}
+      locked={isPrivateLocked}
     >
       <div
         className={cn(
@@ -256,6 +260,11 @@ function MobileActivityPreviewCard({
           )}
           src={activity.coverImageUrl}
         />
+        {isPrivateLocked ? (
+          <span className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#096B45] shadow-sm ring-1 ring-[#BFD8B9]">
+            <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        ) : null}
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-between px-2.5 py-2">
         <h3
@@ -292,11 +301,11 @@ export function MobileNewActivityEntryView({
   const copy = getMobileEntryCopy(locale);
 
   return (
-    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
+    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>
-            <h1 className="text-[31px] font-bold leading-none tracking-normal">
+            <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal">
               {copy.title}
             </h1>
             <p className="mt-8 text-[25px] font-bold leading-tight tracking-normal text-[#0D5A3C]">

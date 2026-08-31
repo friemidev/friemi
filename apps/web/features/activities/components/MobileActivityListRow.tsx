@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronRight, Clock3, UsersRound } from "lucide-react";
+import {
+  ChevronRight,
+  Clock3,
+  LockKeyhole,
+  MapPin,
+  UsersRound,
+} from "lucide-react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
 import type { ActivityCardViewModel } from "@/features/activities/types";
@@ -9,6 +15,8 @@ import {
   getActivityDisplayStatus,
 } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import { isPrivateActivityCardLocked } from "@/features/activities/utils/privateActivityCardAccess";
 import { withLocale } from "@/lib/routes";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { cn } from "@/lib/utils";
@@ -28,6 +36,7 @@ function getRowCopy(locale: string) {
       friendGoing: (count: number) => `${count} suivi${count > 1 ? "s" : ""}`,
       hosted: "Créé",
       participants: "pers.",
+      private: "Privé",
     };
   }
 
@@ -38,6 +47,7 @@ function getRowCopy(locale: string) {
         `${count} ${count === 1 ? "followed person" : "followed people"}`,
       hosted: "Host",
       participants: "people",
+      private: "Private",
     };
   }
 
@@ -46,6 +56,7 @@ function getRowCopy(locale: string) {
     friendGoing: (count: number) => `${count} 位关注的人`,
     hosted: "我发起的",
     participants: "人",
+    private: "私密",
   };
 }
 
@@ -115,9 +126,11 @@ export function MobileActivityListRow({
       ? `${activity.participantCount} / ${activity.capacity}`
       : `${activity.participantCount}`;
   const friendCount = activity.friendSignal?.count ?? 0;
+  const isPublicEvent = isPublicEventCard(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const isInactiveActivity =
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const coverImageUrl = getActivityCoverThumbnailUrl(
     activity.coverImageUrl,
     192,
@@ -132,6 +145,8 @@ export function MobileActivityListRow({
       )}
       href={getActivityHref(activity, locale)}
       label={activity.title}
+      locale={locale}
+      locked={isPrivateLocked}
     >
       <div
         className={cn(
@@ -166,17 +181,28 @@ export function MobileActivityListRow({
             isInactiveActivity ? "text-zinc-500" : "text-[#111210]/58",
           )}
         >
-          <UsersRound
-            className={cn(
-              "h-3.5 w-3.5 shrink-0",
-              isInactiveActivity ? "text-zinc-400" : null,
-            )}
-          />
+          {isPublicEvent ? (
+            <MapPin
+              className={cn(
+                "h-3.5 w-3.5 shrink-0",
+                isInactiveActivity ? "text-zinc-400" : null,
+              )}
+            />
+          ) : (
+            <UsersRound
+              className={cn(
+                "h-3.5 w-3.5 shrink-0",
+                isInactiveActivity ? "text-zinc-400" : null,
+              )}
+            />
+          )}
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="min-w-0 truncate">
-              {participantText} · {activity.city || copy.participants}
+              {isPublicEvent
+                ? activity.city || activity.address
+                : `${participantText} · ${activity.city || copy.participants}`}
             </span>
-            {showHostedBadge ? (
+            {!isPublicEvent && showHostedBadge ? (
               <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-semibold leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
                 {copy.hosted}
               </span>
@@ -206,7 +232,12 @@ export function MobileActivityListRow({
             isInactiveActivity ? "text-zinc-400" : "text-[#111210]/70",
           )}
         />
-        {isInactiveActivity ? (
+        {isPrivateLocked ? (
+          <span className="inline-flex max-w-[5.9rem] items-center gap-1 truncate rounded-full bg-[#EAF5E8] px-2 py-1 text-[10px] font-semibold leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
+            <LockKeyhole className="h-3 w-3 shrink-0" aria-hidden="true" />
+            {copy.private}
+          </span>
+        ) : isInactiveActivity ? (
           <span className="max-w-[5.9rem] truncate rounded-full bg-zinc-200 px-2 py-1 text-[10px] font-semibold leading-none text-zinc-600">
             {copy.ended}
           </span>

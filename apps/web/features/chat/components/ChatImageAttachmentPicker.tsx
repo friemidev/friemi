@@ -6,6 +6,7 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 
 export const chatImageMaxCount = 4;
 
@@ -102,18 +103,13 @@ export function ChatImageAttachmentPicker({
     const uploadedUrls: string[] = [];
     try {
       for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const response = await fetch("/api/uploads/chat-image", {
-          body: formData,
-          method: "POST",
-        });
-        const payload = response.ok
-          ? ((await response.json()) as { url?: string })
-          : null;
+        const result = await uploadImageWithSignedUrl(
+          "/api/uploads/chat-image",
+          file,
+        );
 
-        if (!payload?.url) throw new Error("CHAT_IMAGE_UPLOAD_FAILED");
-        uploadedUrls.push(payload.url);
+        if ("error" in result) throw new Error("CHAT_IMAGE_UPLOAD_FAILED");
+        uploadedUrls.push(result.url);
       }
 
       onChange(

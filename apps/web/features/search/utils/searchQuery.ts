@@ -1,8 +1,15 @@
 import { withLocale } from "@/lib/routes";
 
 export type GlobalSearchParams = Record<string, string | string[] | undefined>;
+export type GlobalSearchSource = "messages";
 
 export const globalSearchQueryMaxLength = 80;
+
+export function normalizeGlobalSearchSource(
+  value: unknown,
+): GlobalSearchSource | null {
+  return value === "messages" ? value : null;
+}
 
 export function getSingleGlobalSearchParam(
   searchParams: GlobalSearchParams,
@@ -37,21 +44,29 @@ export function getGlobalSearchHref(
   query: string,
   options: {
     includeEnded?: boolean;
+    source?: GlobalSearchSource | null;
   } = {},
 ) {
   const normalizedQuery = normalizeGlobalSearchQuery(query);
+  const params = new URLSearchParams();
 
-  if (!normalizedQuery) {
-    return withLocale(locale, "/search");
+  if (normalizedQuery) {
+    params.set("q", normalizedQuery);
   }
 
-  const params = new URLSearchParams({ q: normalizedQuery });
-
-  if (options.includeEnded) {
+  if (normalizedQuery && options.includeEnded) {
     params.set("ended", "1");
   }
 
-  return `${withLocale(locale, "/search")}?${params.toString()}`;
+  if (options.source) {
+    params.set("source", options.source);
+  }
+
+  const serializedParams = params.toString();
+
+  return serializedParams
+    ? `${withLocale(locale, "/search")}?${serializedParams}`
+    : withLocale(locale, "/search");
 }
 
 export function isCanonicalGlobalSearchParams(
@@ -59,13 +74,23 @@ export function isCanonicalGlobalSearchParams(
 ) {
   const keys = Object.keys(searchParams);
   const rawQuery = getSingleGlobalSearchParam(searchParams, "q");
+  const rawSource = getSingleGlobalSearchParam(searchParams, "source");
   const normalizedQuery = normalizeGlobalSearchQuery(rawQuery);
+  const normalizedSource = normalizeGlobalSearchSource(rawSource);
 
-  if (keys.some((key) => key !== "q" && key !== "ended")) {
+  if (keys.some((key) => key !== "q" && key !== "ended" && key !== "source")) {
     return false;
   }
 
-  if (Array.isArray(searchParams.q) || Array.isArray(searchParams.ended)) {
+  if (
+    Array.isArray(searchParams.q) ||
+    Array.isArray(searchParams.ended) ||
+    Array.isArray(searchParams.source)
+  ) {
+    return false;
+  }
+
+  if (rawSource !== undefined && rawSource !== normalizedSource) {
     return false;
   }
 
@@ -77,7 +102,7 @@ export function isCanonicalGlobalSearchParams(
   }
 
   if (rawQuery === undefined) {
-    return keys.length === 0;
+    return keys.length === (normalizedSource ? 1 : 0);
   }
 
   return Boolean(normalizedQuery) && rawQuery === normalizedQuery;

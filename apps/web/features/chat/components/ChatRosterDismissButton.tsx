@@ -13,6 +13,7 @@ type ChatRosterDismissButtonProps = {
   conversationId?: string;
   kind: "activity" | "direct" | "planet";
   locale: string;
+  onDismiss?: () => void;
   planetId?: string;
   planetSlug?: string;
 };
@@ -58,6 +59,7 @@ export function ChatRosterDismissButton({
   conversationId,
   kind,
   locale,
+  onDismiss,
   planetId,
   planetSlug,
 }: ChatRosterDismissButtonProps) {
@@ -79,7 +81,7 @@ export function ChatRosterDismissButton({
   const label = getLabel(locale);
 
   return (
-    <form action={action} className="shrink-0">
+    <form action={action} className="shrink-0" onSubmit={onDismiss}>
       <input name="locale" type="hidden" value={locale} />
       {conversationId ? (
         <input name="conversationId" type="hidden" value={conversationId} />

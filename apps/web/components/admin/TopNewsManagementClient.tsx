@@ -18,6 +18,8 @@ import { toast, Toaster } from "sonner";
 import { Button, Card, CardContent, Input } from "@chill-club/ui";
 import { FormField } from "@/components/admin/FormField";
 import type { AdminTopNewsItem } from "@/features/home/adminTopNews";
+import { maxImageUploadFileSize } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { cn } from "@/lib/utils";
 
 type TopNewsManagementClientProps = {
@@ -29,18 +31,8 @@ type TopNewsEditorItem = Omit<AdminTopNewsItem, "createdAt" | "updatedAt"> & {
   updatedAt?: string;
 };
 
-type TopNewsImageUploadErrorCode =
-  | "STORAGE_NOT_CONFIGURED"
-  | "MISSING_FILE"
-  | "UNSUPPORTED_FILE_TYPE"
-  | "FILE_TOO_LARGE"
-  | "INVALID_IMAGE_CONTENT"
-  | "BUCKET_NOT_AVAILABLE"
-  | "UPLOAD_FAILED"
-  | "UNAUTHORIZED";
-
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
-const maxImageFileSize = 4 * 1024 * 1024;
+const maxImageFileSize = maxImageUploadFileSize;
 
 function createEmptyItem(index: number): TopNewsEditorItem {
   const order = (index + 1) * 10;
@@ -98,7 +90,7 @@ function getImageUploadErrorMessage(error?: string) {
   }
 
   if (error === "FILE_TOO_LARGE") {
-    return "图片不能超过 4MB";
+    return "图片不能超过 10MB";
   }
 
   if (error === "INVALID_IMAGE_CONTENT") {
@@ -182,24 +174,17 @@ export function TopNewsManagementClient({
     setUploadingItemId(itemId);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const result = await uploadImageWithSignedUrl(
+        "/api/admin/top-news/upload",
+        file,
+      );
 
-      const response = await fetch("/api/admin/top-news/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = (await response.json().catch(() => null)) as {
-        error?: TopNewsImageUploadErrorCode;
-        url?: string;
-      } | null;
-
-      if (!response.ok || !payload?.url) {
-        toast.error(getImageUploadErrorMessage(payload?.error));
+      if ("error" in result) {
+        toast.error(getImageUploadErrorMessage(result.error));
         return;
       }
 
-      updateItem(itemId, { imageUrl: payload.url });
+      updateItem(itemId, { imageUrl: result.url });
       toast.success("图片已上传");
     } catch {
       toast.error(getImageUploadErrorMessage());
@@ -424,7 +409,7 @@ export function TopNewsManagementClient({
 
                 <FormField
                   label="图片"
-                  hint="建议使用 16:9 横图，支持 JPG、PNG、WebP，单张最多 4MB。"
+                  hint="建议使用 16:9 横图，支持 JPG、PNG、WebP，单张最多 10MB。"
                 >
                   <input
                     ref={(element) => {

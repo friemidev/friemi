@@ -7,6 +7,8 @@ export type SignedImageUploadErrorCode =
   | "BUCKET_NOT_AVAILABLE"
   | "UPLOAD_FAILED"
   | "INVALID_UPLOAD_PATH"
+  | "INVALID_REQUEST"
+  | "UPLOAD_RATE_LIMITED"
   | "UNAUTHORIZED";
 
 type SignedImageUploadResult =
@@ -24,6 +26,7 @@ async function getErrorCode(response: Response) {
 export async function uploadImageWithSignedUrl(
   endpoint: string,
   file: File,
+  options: { signal?: AbortSignal } = {},
 ): Promise<SignedImageUploadResult> {
   const createResponse = await fetch(endpoint, {
     method: "POST",
@@ -34,6 +37,7 @@ export async function uploadImageWithSignedUrl(
       fileSize: file.size,
       fileType: file.type,
     }),
+    signal: options.signal,
   });
 
   if (!createResponse.ok) {
@@ -58,6 +62,7 @@ export async function uploadImageWithSignedUrl(
     headers: { "x-upsert": "false" },
     body: uploadBody,
     credentials: "omit",
+    signal: options.signal,
   });
 
   if (!uploadResponse.ok) {
@@ -71,6 +76,7 @@ export async function uploadImageWithSignedUrl(
       action: "finalize",
       path: signedUpload.path,
     }),
+    signal: options.signal,
   });
 
   if (!finalizeResponse.ok) {

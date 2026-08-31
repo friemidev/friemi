@@ -17,6 +17,7 @@ import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { getGlobalSearchHref } from "@/features/search/utils/searchQuery";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -83,7 +84,10 @@ export function ConversationListPanel({
               {t.emptyListDescription}
             </p>
           </div>
-          <Link href={withLocale(locale, "/search")} className="w-full">
+          <Link
+            href={getGlobalSearchHref(locale, "", { source: "messages" })}
+            className="w-full"
+          >
             <Button variant="secondary" className="w-full gap-2 rounded-full">
               <UsersRound className="h-4 w-4" />
               {t.openFriends}

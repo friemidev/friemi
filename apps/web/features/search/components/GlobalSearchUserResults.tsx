@@ -22,6 +22,7 @@ type GlobalSearchUserResultsProps = {
   isAuthenticated: boolean;
   locale: string;
   query: string;
+  redirectPath: string;
   totalCount: number;
   users: GlobalSearchUserViewModel[];
 };
@@ -30,6 +31,7 @@ export function GlobalSearchUserResults({
   isAuthenticated,
   locale,
   query,
+  redirectPath,
   totalCount,
   users,
 }: GlobalSearchUserResultsProps) {
@@ -48,6 +50,7 @@ export function GlobalSearchUserResults({
             isAuthenticated={isAuthenticated}
             locale={locale}
             query={query}
+            redirectPath={redirectPath}
             user={user}
           />
         ))}
@@ -100,11 +103,13 @@ function GlobalSearchUserCard({
   isAuthenticated,
   locale,
   query,
+  redirectPath,
   user,
 }: {
   isAuthenticated: boolean;
   locale: string;
   query: string;
+  redirectPath: string;
   user: GlobalSearchUserViewModel;
 }) {
   const t = getCopy(locale).globalSearch;
@@ -177,6 +182,7 @@ function GlobalSearchUserCard({
       <div className="flex shrink-0 flex-wrap items-center gap-2 pl-[3.75rem] sm:w-auto sm:pl-0">
         <FollowCta
           locale={locale}
+          redirectPath={redirectPath}
           relationshipStatus={user.relationshipStatus}
           targetProfileId={user.id}
         />
@@ -187,7 +193,7 @@ function GlobalSearchUserCard({
             errorClassName="text-center"
             locale={locale}
             peerProfileId={user.id}
-            redirectPath="/search"
+            redirectPath={redirectPath}
           />
         ) : null}
       </div>
@@ -197,10 +203,12 @@ function GlobalSearchUserCard({
 
 function FollowCta({
   locale,
+  redirectPath,
   relationshipStatus,
   targetProfileId,
 }: {
   locale: string;
+  redirectPath: string;
   relationshipStatus: GlobalSearchUserViewModel["relationshipStatus"];
   targetProfileId: string;
 }) {
@@ -233,7 +241,7 @@ function FollowCta({
       isFollowing={isFollowing}
       icon={relationshipStatus === "MUTUAL" ? HeartHandshake : undefined}
       locale={locale}
-      redirectPath="/search"
+      redirectPath={redirectPath}
       targetUserProfileId={targetProfileId}
     />
   );

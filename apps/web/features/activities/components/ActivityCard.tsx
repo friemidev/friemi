@@ -30,6 +30,7 @@ import { getAvatarInitial, sanitizeDisplayText } from "@/lib/display-text";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { getActivityDetailPath } from "../utils/activityRoutes";
+import { isPrivateActivityCardLocked } from "../utils/privateActivityCardAccess";
 import type { ActivityCardViewModel } from "../types";
 import {
   getActivityDateLabel,
@@ -97,14 +98,14 @@ function getCardVisibilityLabel(
 ) {
   if (visibility === "PRIVATE") {
     if (locale === "fr") {
-      return "Privé";
+      return "🔒 Privé";
     }
 
     if (locale === "en") {
-      return "Private";
+      return "🔒 Private";
     }
 
-    return "私人局";
+    return "🔒 私人局";
   }
 
   if (locale === "fr") {
@@ -653,6 +654,7 @@ export function ActivityCard({
   const isActivityInfo = Boolean(
     activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
   );
+  const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const timeState = getActivityTimeState(activity);
   const activityInfoHref = activity.publicEventId
@@ -672,7 +674,7 @@ export function ActivityCard({
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
   const copyActivityHref =
-    !isActivityInfo && actionContext === "lobby"
+    !isPrivateLocked && !isActivityInfo && actionContext === "lobby"
       ? withLocale(locale, `/activities/new?copyActivityId=${activity.id}`)
       : null;
   const cardActionCopy = getCardActionCopy(locale);
@@ -849,10 +851,12 @@ export function ActivityCard({
     isOwnActivity,
     tone: resolvedActionConfig.tone,
   });
-  const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
+  const canShowPrimaryAction = showPrimaryAction && !isPrivateLocked;
+  const useCompactDualActions =
+    canShowPrimaryAction && Boolean(copyActivityHref);
   const shouldShowInactiveCardState = isInactiveCard && !searchResultStyle;
   const shouldUseMobileDetailSheet =
-    mobileDetailSheet && !showPrimaryAction && !copyActivityHref;
+    mobileDetailSheet && !canShowPrimaryAction && !copyActivityHref;
 
   return (
     <Card
@@ -881,6 +885,7 @@ export function ActivityCard({
       )}
     >
       {showFavoriteButton &&
+      !isPrivateLocked &&
       !isOwnActivity &&
       isActivityInfo &&
       activity.publicEventId ? (
@@ -910,6 +915,7 @@ export function ActivityCard({
         </div>
       ) : null}
       {showFavoriteButton &&
+      !isPrivateLocked &&
       !isOwnActivity &&
       (!isActivityInfo || !activity.publicEventId) ? (
         <div
@@ -943,6 +949,8 @@ export function ActivityCard({
             className="block h-full w-full rounded-[1.15rem]"
             href={cardHref}
             label={activityLabel}
+            locale={locale}
+            locked={isPrivateLocked}
           >
             <span className="sr-only">{activityLabel}</span>
           </MobileActivityDetailSheetLink>
@@ -950,6 +958,7 @@ export function ActivityCard({
       ) : null}
       <AnalyticsLink
         className="flex flex-1 flex-col"
+        disabled={isPrivateLocked}
         href={cardHref}
         ariaLabel={activityLabel}
         event={{
@@ -1077,7 +1086,9 @@ export function ActivityCard({
                   className={cn(
                     "rounded-md bg-[rgba(255,245,230,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
                     mobileDenseClass(
-                      "max-[639px]:hidden max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
+                      activity.visibility === "PRIVATE"
+                        ? "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]"
+                        : "max-[639px]:hidden",
                     ),
                   )}
                 >
@@ -1271,7 +1282,7 @@ export function ActivityCard({
         </CardContent>
       </AnalyticsLink>
 
-      {showPrimaryAction || copyActivityHref ? (
+      {canShowPrimaryAction || copyActivityHref ? (
         <div
           className={cn(
             "px-4 pb-4 pt-0 sm:px-5 sm:pb-5",
@@ -1288,7 +1299,7 @@ export function ActivityCard({
                   : "grid-cols-1",
             )}
           >
-            {showPrimaryAction && !useCompactDualActions ? (
+            {canShowPrimaryAction && !useCompactDualActions ? (
               isClaimableTeamCard ? (
                 <ClaimAutoCreatedActivityCardAction
                   activityId={activity.id}

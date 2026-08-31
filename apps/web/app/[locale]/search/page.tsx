@@ -33,7 +33,9 @@ import {
   getSingleGlobalSearchParam,
   isCanonicalGlobalSearchParams,
   normalizeGlobalSearchQuery,
+  normalizeGlobalSearchSource,
   type GlobalSearchParams,
+  type GlobalSearchSource,
 } from "@/features/search/utils/searchQuery";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
@@ -85,10 +87,12 @@ function SearchEndedOnlyEmptyState({
   endedCount,
   locale,
   query,
+  source,
 }: {
   endedCount: number;
   locale: string;
   query: string;
+  source: GlobalSearchSource | null;
 }) {
   const t = getCopy(locale).globalSearch;
 
@@ -117,7 +121,10 @@ function SearchEndedOnlyEmptyState({
         {t.onlyEndedResultsDescription(endedCount)}
       </p>
       <AnalyticsLink
-        href={getGlobalSearchHref(locale, query, { includeEnded: true })}
+        href={getGlobalSearchHref(locale, query, {
+          includeEnded: true,
+          source,
+        })}
         className="relative mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)] transition hover:bg-[#369758]"
         event={{
           name: "filter_applied",
@@ -397,6 +404,9 @@ export default async function SearchPage({
   });
   const rawSearchParams = (await searchParams) ?? {};
   const rawQuery = getSingleGlobalSearchParam(rawSearchParams, "q");
+  const source = normalizeGlobalSearchSource(
+    getSingleGlobalSearchParam(rawSearchParams, "source"),
+  );
   const rawIncludeEnded =
     getSingleGlobalSearchParam(rawSearchParams, "ended") === "1";
   const query = normalizeGlobalSearchQuery(rawQuery);
@@ -405,11 +415,20 @@ export default async function SearchPage({
     redirect(
       getGlobalSearchHref(locale, query, {
         includeEnded: rawIncludeEnded,
+        source,
       }),
     );
   }
 
   const includeEnded = Boolean(query && rawIncludeEnded);
+  const searchHref = getGlobalSearchHref(locale, query, {
+    includeEnded,
+    source,
+  });
+  const backHref =
+    source === "messages"
+      ? withLocale(locale, "/footprints?tab=message")
+      : withLocale(locale, "/mobile-home");
   const t = getCopy(locale).globalSearch;
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = await perf.measure("viewer.profile", () =>
@@ -585,7 +604,7 @@ export default async function SearchPage({
       <div className="flex items-center gap-3">
         <SearchBackButton
           ariaLabel={t.back}
-          fallbackHref={withLocale(locale, "/mobile-home")}
+          fallbackHref={backHref}
           className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#111210] transition active:scale-95"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
@@ -593,6 +612,7 @@ export default async function SearchPage({
         <GlobalSearchForm
           locale={locale}
           defaultQuery={query}
+          source={source}
           variant="page"
           className="min-w-0 flex-1"
         />
@@ -622,6 +642,7 @@ export default async function SearchPage({
           endedCount={hiddenEndedMainCount}
           locale={locale}
           query={query}
+          source={source}
         />
       ) : !hasResults ? (
         <section className="space-y-5">
@@ -668,6 +689,7 @@ export default async function SearchPage({
                     isAuthenticated={Boolean(viewerProfile)}
                     locale={locale}
                     query={query}
+                    redirectPath={searchHref.replace(`/${locale}`, "")}
                     totalCount={searchResult.result.userCount}
                     users={searchResult.result.users}
                   />

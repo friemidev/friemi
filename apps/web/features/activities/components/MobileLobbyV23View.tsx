@@ -1041,7 +1041,7 @@ export function MobileLobbyV23View({
   });
 
   return (
-    <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-white text-[#111210] md:hidden">
+    <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.1rem] bg-white text-[#111210] md:hidden">
       <MobileLobbyV23CategoryRail
         activeCategory={activeCategory}
         isOpen={categoryRailOpen}
@@ -1052,7 +1052,7 @@ export function MobileLobbyV23View({
       />
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[28px] font-bold leading-none tracking-normal text-[#111210]">
+          <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
           </h1>
           <div className="flex shrink-0 items-center gap-2">

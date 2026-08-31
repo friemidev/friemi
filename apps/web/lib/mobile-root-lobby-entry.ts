@@ -6,6 +6,7 @@ export const localeCookieName = "NEXT_LOCALE";
 
 const mobileUserAgentPattern =
   /\b(Mobi|Mobile|Android|iPhone|iPod|iPad|IEMobile|BlackBerry|Opera Mini|Windows Phone)\b/i;
+const friemiNativeAppUserAgentPattern = /\bFriemi(?:Android|IOS)\//i;
 const searchCrawlerUserAgentPattern =
   /\b(Googlebot|AdsBot-Google|Mediapartners-Google|Google-InspectionTool|bingbot|BingPreview|DuckDuckBot|Slurp|YandexBot|Baiduspider|facebookexternalhit|Twitterbot|LinkedInBot)\b/i;
 
@@ -64,7 +65,10 @@ export function isMobileUserAgent(userAgent: string | null | undefined) {
     return false;
   }
 
-  return mobileUserAgentPattern.test(userAgent);
+  return (
+    mobileUserAgentPattern.test(userAgent) ||
+    friemiNativeAppUserAgentPattern.test(userAgent)
+  );
 }
 
 export function isMobileViewportRequest(requestHeaders: Pick<Headers, "get">) {
@@ -72,6 +76,13 @@ export function isMobileViewportRequest(requestHeaders: Pick<Headers, "get">) {
 
   if (isSearchCrawlerUserAgent(userAgent)) {
     return false;
+  }
+
+  if (
+    requestHeaders.get("sec-ch-ua-mobile") === "?1" ||
+    isMobileUserAgent(userAgent)
+  ) {
+    return true;
   }
 
   const viewportWidth = Number(
@@ -83,10 +94,7 @@ export function isMobileViewportRequest(requestHeaders: Pick<Headers, "get">) {
     return viewportWidth < 768;
   }
 
-  return (
-    requestHeaders.get("sec-ch-ua-mobile") === "?1" ||
-    isMobileUserAgent(userAgent)
-  );
+  return false;
 }
 
 export function resolveRootEntryLocale({

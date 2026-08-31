@@ -13,14 +13,14 @@ test("infers supported image types from MIME type and extension", () => {
   assert.equal(getLikelyImageMimeType("", "camera.heic"), "image/heic");
 });
 
-test("uses a larger client size limit for GIF uploads", () => {
+test("uses the same 10 MB client size limit for every image format", () => {
   assert.equal(
     getImageUploadClientValidationError({
       name: "loop.gif",
       size: maxImageUploadFileSize + 1,
       type: "",
     }),
-    null,
+    "FILE_TOO_LARGE",
   );
   assert.equal(
     getImageUploadClientValidationError({
@@ -32,7 +32,7 @@ test("uses a larger client size limit for GIF uploads", () => {
   );
 });
 
-test("uses the avatar profile size limit for avatar uploads", () => {
+test("uses the same 10 MB size limit for avatar uploads", () => {
   assert.equal(
     getImageUploadClientValidationError(
       {

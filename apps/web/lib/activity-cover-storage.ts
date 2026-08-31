@@ -214,18 +214,38 @@ function getSafePathSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-export function isActivityCoverUploadPathOwnedByUser(
+function isPublicImageUploadPathOwnedByUser(
   userId: string,
   path: string,
+  options: { pathPrefix?: string } = {},
 ) {
   const safeUserId = getSafePathSegment(userId);
   const extensions = Object.values(allowedImageMimeTypes).join("|");
+  const pathPrefix = options.pathPrefix
+    ? `${getSafePathSegment(options.pathPrefix)}/`
+    : "";
   const pathPattern = new RegExp(
-    `^${safeUserId}/[0-9a-f-]{36}\\.(${extensions})$`,
+    `^${pathPrefix}${safeUserId}/[0-9a-f-]{36}\\.(${extensions})$`,
     "i",
   );
 
   return pathPattern.test(path);
+}
+
+export function isActivityCoverUploadPathOwnedByUser(
+  userId: string,
+  path: string,
+) {
+  return isPublicImageUploadPathOwnedByUser(userId, path);
+}
+
+export function isMomentImageUploadPathOwnedByUser(
+  userId: string,
+  path: string,
+) {
+  return isPublicImageUploadPathOwnedByUser(userId, path, {
+    pathPrefix: "moments",
+  });
 }
 
 async function ensurePublicBucket(storage: StorageClient, bucket: string) {
@@ -288,9 +308,13 @@ function createActivityCoverStorageClient(config: {
   );
 }
 
-export async function createSignedActivityCoverUpload(
+async function createSignedPublicImageUpload(
   userId: string,
   file: { name: string; size: number; type?: string | null },
+  options: {
+    pathPrefix?: string;
+    sizeProfile?: ImageUploadSizeProfile;
+  } = {},
 ): Promise<ActivityCoverSignedUploadResult> {
   const config = getActivityCoverStorageConfig();
 
@@ -306,7 +330,7 @@ export async function createSignedActivityCoverUpload(
 
   if (
     file.size > maxImageBucketFileSize ||
-    file.size > getImageUploadSizeLimit(detectedMimeType)
+    file.size > getImageUploadSizeLimit(detectedMimeType, options.sizeProfile)
   ) {
     return { error: "FILE_TOO_LARGE" };
   }
@@ -320,7 +344,9 @@ export async function createSignedActivityCoverUpload(
 
   const extension = allowedImageMimeTypes[detectedMimeType];
   const safeUserId = getSafePathSegment(userId);
-  const path = `${safeUserId}/${randomUUID()}.${extension}`;
+  const path = options.pathPrefix
+    ? `${getSafePathSegment(options.pathPrefix)}/${safeUserId}/${randomUUID()}.${extension}`
+    : `${safeUserId}/${randomUUID()}.${extension}`;
   const signed = await storage
     .from(config.bucket)
     .createSignedUploadUrl(path, { upsert: false });
@@ -340,9 +366,66 @@ export async function createSignedActivityCoverUpload(
   };
 }
 
-export async function finalizeSignedActivityCoverUpload(
+export async function createSignedActivityCoverUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file);
+}
+
+export async function createSignedMomentImageUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "moments",
+  });
+}
+
+export async function createSignedDirectMessageImageUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "direct-messages",
+  });
+}
+
+export async function createSignedChatImageUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "chat-images",
+  });
+}
+
+export async function createSignedProfileAvatarUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "profile-avatars",
+    sizeProfile: "avatar",
+  });
+}
+
+export async function createSignedTopNewsImageUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "top-news",
+  });
+}
+
+async function finalizeSignedPublicImageUpload(
   userId: string,
   path: string,
+  options: {
+    pathPrefix?: string;
+    sizeProfile?: ImageUploadSizeProfile;
+  } = {},
 ): Promise<ActivityCoverUploadResult> {
   const config = getActivityCoverStorageConfig();
 
@@ -350,7 +433,7 @@ export async function finalizeSignedActivityCoverUpload(
     return { error: "STORAGE_NOT_CONFIGURED" };
   }
 
-  if (!isActivityCoverUploadPathOwnedByUser(userId, path)) {
+  if (!isPublicImageUploadPathOwnedByUser(userId, path, options)) {
     return { error: "INVALID_UPLOAD_PATH" };
   }
 
@@ -377,14 +460,13 @@ export async function finalizeSignedActivityCoverUpload(
   const file = new File([downloaded.data], path, {
     type: downloaded.data.type || expectedMimeType,
   });
-  const validated = await validateImageUploadFile(file);
+  const validated = await validateImageUploadFile(file, {
+    sizeProfile: options.sizeProfile,
+  });
 
   if (
     "error" in validated ||
-    !areCompatibleImageMimeTypes(
-      expectedMimeType,
-      validated.detectedMimeType,
-    )
+    !areCompatibleImageMimeTypes(expectedMimeType, validated.detectedMimeType)
   ) {
     await bucket.remove([path]);
 
@@ -399,6 +481,59 @@ export async function finalizeSignedActivityCoverUpload(
     path,
     url: publicUrl.data.publicUrl,
   };
+}
+
+export async function finalizeSignedActivityCoverUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path);
+}
+
+export async function finalizeSignedMomentImageUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "moments",
+  });
+}
+
+export async function finalizeSignedDirectMessageImageUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "direct-messages",
+  });
+}
+
+export async function finalizeSignedChatImageUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "chat-images",
+  });
+}
+
+export async function finalizeSignedProfileAvatarUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "profile-avatars",
+    sizeProfile: "avatar",
+  });
+}
+
+export async function finalizeSignedTopNewsImageUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "top-news",
+  });
 }
 
 export async function uploadActivityCoverBuffer(

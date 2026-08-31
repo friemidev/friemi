@@ -71,6 +71,17 @@ function isFriemiAndroidApp() {
   return /FriemiAndroid\//i.test(window.navigator.userAgent);
 }
 
+function isNativeAppHomePath(pathname: string) {
+  const pathWithoutLocale = pathname.replace(/^\/(?:zh-CN|en|fr)(?=\/|$)/, "");
+
+  return (
+    pathWithoutLocale === "" ||
+    pathWithoutLocale === "/" ||
+    pathWithoutLocale === "/home" ||
+    pathWithoutLocale === "/mobile-home"
+  );
+}
+
 function isElementVisible(element: Element) {
   if (!(element instanceof HTMLElement)) {
     return false;
@@ -244,6 +255,7 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
         JSON.stringify({
           hasModal,
           hasSheet: hasModal,
+          interceptBack: hasModal || !isNativeAppHomePath(pathname),
         }),
       );
     };
@@ -270,7 +282,13 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
       });
     };
     const handleAndroidBack = () => {
-      closeTopDialog();
+      if (!closeTopDialog()) {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.assign(`/${locale}/mobile-home`);
+        }
+      }
       scheduleBackBehaviorUpdate();
     };
     const handleAndroidPushToken = (event: Event) => {
@@ -320,6 +338,7 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
         JSON.stringify({
           hasModal: false,
           hasSheet: false,
+          interceptBack: false,
         }),
       );
       observer.disconnect();
