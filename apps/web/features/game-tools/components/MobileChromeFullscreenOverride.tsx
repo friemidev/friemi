@@ -49,9 +49,15 @@ export function MobileChromeFullscreenOverride({
 
           html.${ROOT_CLASS} .app-layout-shell,
           body:has(.werewolf-seat-mobile-fullscreen) .app-layout-shell {
-            height: 100svh !important;
+            height: 100dvh !important;
             padding-bottom: 0 !important;
             overflow: hidden !important;
+          }
+
+          html.${ROOT_CLASS}:has(.werewolf-room-fullscreen),
+          html.${ROOT_CLASS}:has(.werewolf-room-fullscreen) body,
+          html.${ROOT_CLASS}:has(.werewolf-room-fullscreen) .app-layout-shell {
+            background: #062A24 !important;
           }
 
           html.${ROOT_CLASS} .app-layout-shell > header,
@@ -70,8 +76,8 @@ export function MobileChromeFullscreenOverride({
             z-index: 60 !important;
             width: 100vw !important;
             max-width: none !important;
-            height: 100svh !important;
-            max-height: 100svh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden !important;
@@ -83,9 +89,20 @@ export function MobileChromeFullscreenOverride({
             position: fixed !important;
             inset: 0 !important;
             width: 100vw !important;
-            height: 100svh !important;
-            min-height: 100svh !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
             border-radius: 0 !important;
+          }
+
+          html.${ROOT_CLASS} .werewolf-room-fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            background: #062A24 !important;
           }
         }
       `}

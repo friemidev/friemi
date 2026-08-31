@@ -12,11 +12,7 @@ export type GlobalQrScanDestination =
   | {
       href: string;
       kind: "internal";
-      source:
-        | "avalon-room"
-        | "friend-code"
-        | "internal-link"
-        | "werewolf-room";
+      source: "avalon-room" | "friend-code" | "internal-link" | "werewolf-room";
     }
   | {
       href: string;
@@ -59,7 +55,10 @@ export function canUseNativeAndroidQrScanner() {
 }
 
 export function normalizeScannedRoomCode(value: string) {
-  return value.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase();
 }
 
 export function getWerewolfRoomCodeFromScan(value: string) {
@@ -171,7 +170,9 @@ function getRoomCodeFromScanValue(value: string, tool: "avalon" | "werewolf") {
     return roomCode;
   }
 
-  return isLikelyLinkValue(scanValue) ? "" : normalizeScannedRoomCode(scanValue);
+  return isLikelyLinkValue(scanValue)
+    ? ""
+    : normalizeScannedRoomCode(scanValue);
 }
 
 function getRoomCodeFromPath(value: string, tool: "avalon" | "werewolf") {
@@ -216,7 +217,7 @@ function getInternalHrefFromScan(value: string) {
   const url = getUrlFromScan(scanValue);
 
   if (url && isTrustedInternalScanValue(scanValue)) {
-    return `${url.pathname}${url.search}${url.hash}`;
+    return `${getPathnameFromScan(scanValue)}${url.search}${url.hash}`;
   }
 
   return null;
@@ -241,6 +242,10 @@ function isTrustedInternalScanValue(value: string) {
     return false;
   }
 
+  if (url.protocol === "friemi:") {
+    return url.hostname.toLowerCase() === "game-tools";
+  }
+
   return isCurrentBrowserOrigin(url) || isTrustedFriemiHost(url.hostname);
 }
 
@@ -251,7 +256,13 @@ function getPathnameFromScan(value: string) {
     return scanValue;
   }
 
-  return getUrlFromScan(scanValue)?.pathname ?? "";
+  const url = getUrlFromScan(scanValue);
+
+  if (url?.protocol === "friemi:") {
+    return `/${url.hostname}${url.pathname}`;
+  }
+
+  return url?.pathname ?? "";
 }
 
 function isLikelyLinkValue(value: string) {
@@ -281,9 +292,7 @@ function getUrlFromScan(value: string) {
 }
 
 function isCurrentBrowserOrigin(url: URL) {
-  return (
-    typeof window !== "undefined" && url.origin === window.location.origin
-  );
+  return typeof window !== "undefined" && url.origin === window.location.origin;
 }
 
 function isSchemeLessTrustedHostValue(value: string) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
+import { MobileChromeFullscreenOverride } from "@/features/game-tools/components/MobileChromeFullscreenOverride";
 import {
   buildWerewolfDerivedSyncVersion,
   getWerewolfSyncVersion,
@@ -182,15 +183,18 @@ export default async function WerewolfRoomPage({
   };
 
   return (
-    <main className="werewolf-room-fullscreen fixed inset-0 z-0 h-[100svh] w-screen overflow-hidden bg-[#062A24] px-0 py-0 md:static md:h-auto md:w-full md:bg-transparent">
-      <WerewolfRoomOverview
-        baseUrl={baseUrl}
-        isAuthenticated={Boolean(viewerProfile)}
-        locale={locale}
-        notice={notice}
-        room={roomForClient}
-        testBotsEnabled={isWerewolfTestBotFeatureEnabled()}
-      />
-    </main>
+    <>
+      <MobileChromeFullscreenOverride />
+      <main className="werewolf-room-fullscreen fixed inset-0 z-[60] h-[100dvh] min-h-[100dvh] w-screen overflow-hidden bg-[#062A24] px-0 py-0 md:static md:h-auto md:min-h-0 md:w-full md:bg-transparent">
+        <WerewolfRoomOverview
+          baseUrl={baseUrl}
+          isAuthenticated={Boolean(viewerProfile)}
+          locale={locale}
+          notice={notice}
+          room={roomForClient}
+          testBotsEnabled={isWerewolfTestBotFeatureEnabled()}
+        />
+      </main>
+    </>
   );
 }

@@ -190,7 +190,7 @@ function JoinStatusPage({
           <p className="text-[11px] font-semibold uppercase tracking-normal text-white/58">
             {label}
           </p>
-          <p className="mt-1 text-2xl font-bold tracking-[0.2em] text-[#F0C36A] friemi-tabular">
+          <p className="mt-1 text-2xl font-bold tracking-[0.2em] text-[#F1F2E3] friemi-tabular">
             {code}
           </p>
         </div>

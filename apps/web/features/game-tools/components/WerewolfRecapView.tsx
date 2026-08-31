@@ -243,7 +243,9 @@ export function WerewolfRecapView({
 }: WerewolfRecapViewProps) {
   const t = copy[locale as keyof typeof copy] ?? copy.en;
   const playerSeats = room.seats.filter((seat) => seat.isPlayerSeat);
-  const claimedPlayerCount = playerSeats.filter((seat) => seat.isClaimed).length;
+  const claimedPlayerCount = playerSeats.filter(
+    (seat) => seat.isClaimed,
+  ).length;
   const deadCount = playerSeats.filter((seat) => seat.isDead).length;
   const winnerLabel = getWinnerLabel(room.state.winner ?? null, t);
   const finished = room.status === "FINISHED";
@@ -309,7 +311,12 @@ export function WerewolfRecapView({
             {room.events.length ? (
               <div className="grid gap-2">
                 {room.events.slice(0, 16).map((event) => (
-                  <TimelineEvent event={event} key={event.id} locale={locale} t={t} />
+                  <TimelineEvent
+                    event={event}
+                    key={event.id}
+                    locale={locale}
+                    t={t}
+                  />
                 ))}
               </div>
             ) : (
@@ -358,7 +365,7 @@ export function WerewolfRecapView({
                 >
                   {seat.isJudgeSeat ? (
                     <span className="absolute -top-2 left-3 inline-flex items-center gap-1 rounded-full bg-[#1E1718] px-2 py-0.5 text-[0.58rem] font-bold text-white">
-                      <Crown className="h-3 w-3 text-[#F0C36A]" />
+                      <Crown className="h-3 w-3 text-[#F1F2E3]" />
                       {t.judge}
                     </span>
                   ) : null}
@@ -467,7 +474,7 @@ function SummaryTile({
           ? "border-[#8AB68E]"
           : tone === "werewolf"
             ? "border-[#7A1F2B]"
-          : "border-[#D9C7B4]",
+            : "border-[#D9C7B4]",
       )}
     >
       <img

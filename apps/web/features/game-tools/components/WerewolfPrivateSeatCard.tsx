@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useActionState,
   useEffect,
@@ -52,6 +53,7 @@ type WerewolfPrivateSeatCardProps = {
   roleKey: WerewolfRoleKey | null;
   roleAlignment: string | null;
   roomHref: string;
+  roomId: string;
   roomState: WerewolfRoomState;
   roomStatus: string;
   roomUpdatedAt: string;
@@ -187,8 +189,7 @@ const copies: Record<string, Copy> = {
     allReady: "The table is ready. Deal roles.",
     alive: "Alive",
     back: "Back to room",
-    boundary:
-      "Keep speeches, votes, and night calls at the table.",
+    boundary: "Keep speeches, votes, and night calls at the table.",
     cancel: "Cancel",
     confirmReveal: "Reveal role",
     dead: "Dead",
@@ -222,7 +223,8 @@ const copies: Record<string, Copy> = {
     notReady: "Waiting for the table.",
     ready: "I'm ready",
     reveal: "Reveal my role",
-    revealConfirm: "Reveal your role now? Make sure no one else can see your screen.",
+    revealConfirm:
+      "Reveal your role now? Make sure no one else can see your screen.",
     revealConfirmTitle: "Reveal role?",
     resultDefeat: "Defeat",
     resultJudgeBody: "You sat in the judge seat this game.",
@@ -250,8 +252,7 @@ const copies: Record<string, Copy> = {
     allReady: "La table est prête. Distribuez les rôles.",
     alive: "Vivant",
     back: "Retour salle",
-    boundary:
-      "La parole, les votes et la nuit restent autour de la table.",
+    boundary: "La parole, les votes et la nuit restent autour de la table.",
     cancel: "Annuler",
     confirmReveal: "Voir le rôle",
     dead: "Mort",
@@ -296,8 +297,7 @@ const copies: Record<string, Copy> = {
     resultVictory: "Victoire",
     revive: "Réanimer",
     role: "Rôle",
-    roleHidden:
-      "Révélez pour voir votre rôle et votre camp.",
+    roleHidden: "Révélez pour voir votre rôle et votre camp.",
     roleWaiting: "Quand la partie démarre, votre rôle apparaît ici.",
     seat: "Place",
     start: "Distribuer les rôles",
@@ -353,7 +353,8 @@ function getRoleTone(payload: WerewolfPrivatePayload | null) {
 }
 
 function getPrivateRoleIcon(payload: WerewolfPrivatePayload | null) {
-  const text = `${payload?.roleLabel ?? ""} ${payload?.alignmentLabel ?? ""}`.toLowerCase();
+  const text =
+    `${payload?.roleLabel ?? ""} ${payload?.alignmentLabel ?? ""}`.toLowerCase();
 
   if (
     text.includes("狼") ||
@@ -387,10 +388,7 @@ function getPrivateRoleIcon(payload: WerewolfPrivatePayload | null) {
     return Flag;
   }
 
-  if (
-    text.includes("白痴") ||
-    text.includes("idiot")
-  ) {
+  if (text.includes("白痴") || text.includes("idiot")) {
     return ShieldCheck;
   }
 
@@ -431,7 +429,7 @@ function SafeWerewolfImage({
 
 export function WerewolfPrivateSeatCard({
   allReady,
-  isDead,
+  isDead: initialIsDead,
   isJudgeSeat,
   isReady,
   locale,
@@ -440,13 +438,16 @@ export function WerewolfPrivateSeatCard({
   roleKey,
   roleAlignment,
   roomHref,
+  roomId,
   roomState,
   roomStatus,
+  roomUpdatedAt,
   seatDisplayName,
   seatNumber,
   seats,
   variantLabel,
 }: WerewolfPrivateSeatCardProps) {
+  const router = useRouter();
   const [readyState, readyAction] = useActionState(
     updateWerewolfReadyAction,
     initialState,
@@ -472,7 +473,10 @@ export function WerewolfPrivateSeatCard({
   const [showRevealConfirm, setShowRevealConfirm] = useState(false);
   const [showDeathIntro, setShowDeathIntro] = useState(false);
   const [showResultIntro, setShowResultIntro] = useState(false);
-  const wasDeadRef = useRef(isDead);
+  const [isDead, setIsDead] = useState(initialIsDead);
+  const roomSyncVersionRef = useRef<string | null>(null);
+  const syncInFlightRef = useRef(false);
+  const wasDeadRef = useRef(initialIsDead);
   const t = copies[locale] ?? copies.en;
   const currentRoleKey = roleKey ?? payload?.roleKey ?? null;
   const roleCardImage = getWerewolfRoleCardImage(currentRoleKey, locale);
@@ -487,7 +491,10 @@ export function WerewolfPrivateSeatCard({
         ? t.winnerWerewolf
         : null;
   const resultKind =
-    !isJudgeSeat && roomStatus === "FINISHED" && roomState.winner && roleAlignment
+    !isJudgeSeat &&
+    roomStatus === "FINISHED" &&
+    roomState.winner &&
+    roleAlignment
       ? (roomState.winner === "WEREWOLF" && roleAlignment === "werewolf") ||
         (roomState.winner === "GOOD" && roleAlignment === "good")
         ? "WIN"
@@ -511,9 +518,7 @@ export function WerewolfPrivateSeatCard({
           }`}
         />
         <p
-          className={`font-bold ${
-            size === "large" ? "text-3xl" : "text-2xl"
-          }`}
+          className={`font-bold ${size === "large" ? "text-3xl" : "text-2xl"}`}
         >
           {payload?.roleLabel ?? t.roleHidden}
         </p>
@@ -529,6 +534,120 @@ export function WerewolfPrivateSeatCard({
   );
   const showInGamePlayerCard =
     !isJudgeSeat && roomStatus === "IN_PROGRESS" && Boolean(payload);
+
+  useEffect(() => {
+    setIsDead(initialIsDead);
+  }, [initialIsDead, roomUpdatedAt]);
+
+  useEffect(() => {
+    if (roomStatus === "FINISHED") {
+      return;
+    }
+
+    let disposed = false;
+
+    const syncPrivateSeat = async () => {
+      if (
+        disposed ||
+        syncInFlightRef.current ||
+        document.hidden ||
+        !window.navigator.onLine
+      ) {
+        return;
+      }
+
+      syncInFlightRef.current = true;
+
+      try {
+        const probeResponse = await fetch(
+          `/api/game-tools/werewolf/rooms/${roomId}/sync`,
+          { cache: "no-store" },
+        );
+
+        if (!probeResponse.ok || disposed) {
+          return;
+        }
+
+        const probe = (await probeResponse.json()) as {
+          status?: string;
+          syncVersion?: string;
+        };
+
+        if (probe.status && probe.status !== roomStatus) {
+          router.refresh();
+          return;
+        }
+
+        if (
+          probe.syncVersion &&
+          probe.syncVersion === roomSyncVersionRef.current
+        ) {
+          return;
+        }
+
+        const params = new URLSearchParams({
+          include: "room",
+          locale,
+        });
+        const roomResponse = await fetch(
+          `/api/game-tools/werewolf/rooms/${roomId}/sync?${params.toString()}`,
+          { cache: "no-store" },
+        );
+
+        if (!roomResponse.ok || disposed) {
+          return;
+        }
+
+        const payload = (await roomResponse.json()) as {
+          room?: {
+            seats?: Array<{ isDead: boolean; seatNumber: number }>;
+            status?: string;
+            syncVersion?: string;
+          };
+          syncVersion?: string;
+        };
+        const currentSeat = payload.room?.seats?.find(
+          (seat) => seat.seatNumber === seatNumber,
+        );
+
+        if (currentSeat) {
+          setIsDead(currentSeat.isDead);
+        }
+
+        roomSyncVersionRef.current =
+          payload.room?.syncVersion ??
+          payload.syncVersion ??
+          probe.syncVersion ??
+          roomSyncVersionRef.current;
+      } catch {
+        // The next interval, focus, or online event retries silently.
+      } finally {
+        syncInFlightRef.current = false;
+      }
+    };
+
+    void syncPrivateSeat();
+    const interval = window.setInterval(syncPrivateSeat, 2800);
+    const handleFocus = () => void syncPrivateSeat();
+    const handleOnline = () => void syncPrivateSeat();
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void syncPrivateSeat();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [locale, roomId, roomStatus, router, seatNumber]);
 
   useEffect(() => {
     if (!revealed) {
@@ -614,9 +733,7 @@ export function WerewolfPrivateSeatCard({
   return (
     <div
       className={
-        showInGamePlayerCard
-          ? "relative md:space-y-5"
-          : "relative space-y-5"
+        showInGamePlayerCard ? "relative md:space-y-5" : "relative space-y-5"
       }
     >
       <style>
@@ -693,7 +810,7 @@ export function WerewolfPrivateSeatCard({
           @media (max-width: 767px) {
             .werewolf-live-card-stage {
               background:
-                radial-gradient(ellipse at 50% 43%, rgba(255, 235, 190, .3), rgba(240, 195, 106, .12) 25%, transparent 48%),
+                radial-gradient(ellipse at 50% 43%, rgba(241, 242, 227, .3), rgba(241, 242, 227, .12) 25%, transparent 48%),
                 radial-gradient(circle at 18% 14%, rgba(138, 182, 142, .22), transparent 29%),
                 radial-gradient(circle at 82% 86%, rgba(122, 31, 43, .22), transparent 33%),
                 linear-gradient(180deg, #22362A 0%, #17271F 48%, #2B1C20 100%);
@@ -701,8 +818,8 @@ export function WerewolfPrivateSeatCard({
 
             .werewolf-live-card-stars {
               background-image:
-                radial-gradient(circle at 18% 22%, rgba(255, 232, 178, .72) 0 1px, transparent 1.35px),
-                radial-gradient(circle at 76% 18%, rgba(255, 232, 178, .52) 0 1px, transparent 1.25px),
+                radial-gradient(circle at 18% 22%, rgba(241, 242, 227, .72) 0 1px, transparent 1.35px),
+                radial-gradient(circle at 76% 18%, rgba(241, 242, 227, .52) 0 1px, transparent 1.25px),
                 radial-gradient(circle at 46% 64%, rgba(255, 255, 255, .42) 0 1px, transparent 1.2px);
               background-size: 8.8rem 10rem, 11rem 9.4rem, 7.4rem 8.2rem;
               opacity: .38;
@@ -711,7 +828,7 @@ export function WerewolfPrivateSeatCard({
             .werewolf-live-card-vignette {
               background:
                 radial-gradient(ellipse at 50% 45%, transparent 34%, rgba(9, 10, 12, .18) 70%, rgba(9, 10, 12, .42) 100%),
-                linear-gradient(90deg, rgba(255, 245, 218, .09), transparent 18%, transparent 82%, rgba(255, 245, 218, .09));
+                linear-gradient(90deg, rgba(241, 242, 227, .09), transparent 18%, transparent 82%, rgba(241, 242, 227, .09));
             }
 
             .werewolf-live-card-atmosphere {
@@ -810,9 +927,9 @@ export function WerewolfPrivateSeatCard({
       {showRevealConfirm ? (
         <div className="fixed inset-0 z-[130] grid place-items-center bg-[#07080A]/72 px-5 backdrop-blur-md">
           <div className="w-full max-w-sm overflow-hidden rounded-[1.6rem] border border-white/14 bg-[#FFFDF7] text-center shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
-            <div className="grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(240,195,106,0.28),transparent_52%),linear-gradient(180deg,#1E1718,#111315)] px-6 pb-6 pt-7 text-white">
+            <div className="grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(241,242,227,0.28),transparent_52%),linear-gradient(180deg,#1E1718,#111315)] px-6 pb-6 pt-7 text-white">
               <span className="grid h-14 w-14 place-items-center rounded-full border border-white/18 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
-                <Eye className="h-7 w-7 text-[#F0C36A]" />
+                <Eye className="h-7 w-7 text-[#F1F2E3]" />
               </span>
               <p className="mt-4 text-xl font-bold tracking-normal">
                 {t.revealConfirmTitle}
@@ -853,7 +970,7 @@ export function WerewolfPrivateSeatCard({
 
       {showInGamePlayerCard && payload ? (
         <section className="werewolf-in-game-seat-screen relative isolate min-h-[100svh] w-screen overflow-hidden bg-[#101316] text-white max-md:fixed max-md:inset-0 max-md:z-[80] max-md:h-[100dvh] max-md:min-h-[100dvh] max-md:w-[100dvw] max-md:bg-[#17231E] md:min-h-[calc(100svh-5.5rem)] md:w-full md:rounded-[1.75rem] md:border md:border-[#3A2A2D] md:shadow-[0_28px_90px_rgba(30,23,24,0.30)]">
-          <div className="werewolf-live-card-stage absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(240,195,106,0.16),transparent_34%),radial-gradient(circle_at_50%_78%,rgba(122,31,43,0.22),transparent_42%),linear-gradient(180deg,#15191D,#0C0E10)]" />
+          <div className="werewolf-live-card-stage absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(241,242,227,0.16),transparent_34%),radial-gradient(circle_at_50%_78%,rgba(122,31,43,0.22),transparent_42%),linear-gradient(180deg,#15191D,#0C0E10)]" />
           <img
             alt=""
             aria-hidden="true"
@@ -878,7 +995,7 @@ export function WerewolfPrivateSeatCard({
           <div className="relative flex min-h-[100svh] flex-col p-0 md:min-h-[calc(100svh-5.5rem)] md:p-5">
             <div className="hidden flex-wrap items-center justify-between gap-2 md:flex">
               <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal text-white/86 backdrop-blur">
-                <Moon className="h-3.5 w-3.5 text-[#F0C36A]" />
+                <Moon className="h-3.5 w-3.5 text-[#F1F2E3]" />
                 <span className="truncate">{variantLabel}</span>
               </span>
               <div className="flex items-center gap-2">
@@ -976,7 +1093,7 @@ export function WerewolfPrivateSeatCard({
                 ) : null}
                 <button
                   aria-label={revealed ? t.hide : t.reveal}
-                  className="absolute inset-0 z-30 rounded-[1.35rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F0C36A]/70 md:hidden"
+                  className="absolute inset-0 z-30 rounded-[1.35rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 md:hidden"
                   onClick={handleRevealToggle}
                   type="button"
                 >
@@ -1012,591 +1129,618 @@ export function WerewolfPrivateSeatCard({
       ) : null}
 
       {!showInGamePlayerCard ? (
-      <section className="overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-[0_18px_48px_rgba(30,23,24,0.08)]">
-        <div className={`bg-gradient-to-br ${getRoleTone(payload)} p-5 text-white sm:p-7`}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal backdrop-blur">
-              {isJudgeSeat ? (
-                <Crown className="h-3.5 w-3.5" />
-              ) : (
-                <Moon className="h-3.5 w-3.5" />
-              )}
-              {variantLabel}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#1E1718] friemi-tabular">
-              {t.seat} {seatNumber}
-            </span>
-          </div>
-
-          <div className="mt-6 grid place-items-center text-center sm:mt-8">
-            <div className="grid h-20 w-20 place-items-center rounded-full border border-white/30 bg-white/12 text-4xl font-bold shadow-[0_22px_48px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24 sm:text-5xl friemi-tabular">
-              {seatNumber}
-            </div>
-            <h1 className="mt-4 text-2xl font-bold tracking-normal sm:mt-5 sm:text-3xl">
-              {seatDisplayName}
-            </h1>
-            {isJudgeSeat ? (
-              <p className="mt-2 max-w-xl text-sm font-bold leading-6 text-white/72">
-                {t.judgeHelper}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="grid gap-4 p-4 sm:p-5">
-          {roomStatus === "FINISHED" ? (
-            <div
-              className={`overflow-hidden rounded-[1.2rem] border p-4 ${
-                resultKind === "WIN"
-                  ? "border-[#8AB68E] bg-[#F4FFF2]"
-                  : resultKind === "LOSE"
-                    ? "border-[#D8A1A8] bg-[#FFF6F4]"
-                    : "border-[#D9C7B4] bg-[#1E1718] text-white"
-              }`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p
-                    className={`text-xs font-semibold uppercase tracking-normal ${
-                      resultKind ? "text-[#7A1F2B]/70" : "text-white/62"
-                    }`}
-                  >
-                    {t.finished}
-                  </p>
-                  <p
-                    className={`mt-1 text-2xl font-bold ${
-                      resultKind === "WIN"
-                        ? "text-[#36624A]"
-                        : resultKind === "LOSE"
-                          ? "text-[#7A1F2B]"
-                          : "text-[#F0C36A]"
-                    }`}
-                  >
-                    {resultKind === "WIN"
-                      ? t.resultVictory
-                      : resultKind === "LOSE"
-                        ? t.resultDefeat
-                        : (winnerLabel ?? t.finished)}
-                  </p>
-                </div>
-                <span className="grid h-14 w-14 place-items-center">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-full w-full"
-                    draggable={false}
-                    src={
-                      roomState.winner === "WEREWOLF"
-                        ? werewolfUiAssets.resultWerewolfBadge
-                        : roomState.winner === "GOOD"
-                          ? werewolfUiAssets.resultGoodBadge
-                          : werewolfUiAssets.timelineEventDot
-                    }
-                  />
-                </span>
-              </div>
-              <div
-                className={`mt-4 grid gap-2 rounded-[1rem] p-3 text-sm font-bold ${
-                  resultKind ? "bg-white text-[#1E1718]" : "bg-white/10 text-white"
-                }`}
-              >
-                {winnerLabel ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <span
-                      className={resultKind ? "text-[#7A1F2B]" : "text-white/70"}
-                    >
-                      {t.resultOutcome}
-                    </span>
-                    <span className="text-right">{winnerLabel}</span>
-                  </div>
-                ) : null}
-                {!isJudgeSeat ? (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#7A1F2B]">{t.resultRole}</span>
-                      <span className="text-right">
-                        {payload?.roleLabel ?? "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#7A1F2B]">{t.resultTeam}</span>
-                      <span className="text-right">
-                        {payload?.alignmentLabel ?? "-"}
-                      </span>
-                    </div>
-                  </>
+        <section className="overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-[0_18px_48px_rgba(30,23,24,0.08)]">
+          <div
+            className={`bg-gradient-to-br ${getRoleTone(payload)} p-5 text-white sm:p-7`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal backdrop-blur">
+                {isJudgeSeat ? (
+                  <Crown className="h-3.5 w-3.5" />
                 ) : (
-                  <p className="leading-6">{t.resultJudgeBody}</p>
+                  <Moon className="h-3.5 w-3.5" />
                 )}
-                <Link
-                  className={`mt-2 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    resultKind
-                      ? "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
-                      : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
-                  }`}
-                  href={roomHref}
-                >
-                  {t.back}
-                </Link>
-              </div>
+                {variantLabel}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#1E1718] friemi-tabular">
+                {t.seat} {seatNumber}
+              </span>
             </div>
-          ) : null}
 
-          {roomStatus === "LOBBY" ? (
-            <div className="grid gap-3 rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2 text-sm font-bold text-[#1E1718]">
-                  <UsersRound className="h-4 w-4 text-[#7A1F2B]" />
-                  {readySeats}/{seats.length}
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-semibold text-[#7A1F2B]">
-                  {isReady ? (
-                    <img
-                      alt=""
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                      draggable={false}
-                      src={werewolfUiAssets.seatPlayerReady}
-                    />
-                  ) : null}
-                  {isReady ? t.waiting : t.notReady}
-                </span>
+            <div className="mt-6 grid place-items-center text-center sm:mt-8">
+              <div className="grid h-20 w-20 place-items-center rounded-full border border-white/30 bg-white/12 text-4xl font-bold shadow-[0_22px_48px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24 sm:text-5xl friemi-tabular">
+                {seatNumber}
               </div>
-
-              <form action={readyAction} className="flex flex-wrap gap-2">
-                <input name="locale" type="hidden" value={locale} />
-                <input name="privateToken" type="hidden" value={privateToken} />
-                <input
-                  name="operation"
-                  type="hidden"
-                  value={isReady ? "unready" : "ready"}
-                />
-                <SubmitButton label={isReady ? t.unready : t.ready} />
-              </form>
-
-              <form action={leaveAction}>
-                <input name="locale" type="hidden" value={locale} />
-                <input name="privateToken" type="hidden" value={privateToken} />
-                <SubmitButton
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-semibold text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
-                  label={t.leaveSeat}
-                />
-              </form>
-
-              {readyState.formError ? (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                  {readyState.formError}
-                </p>
-              ) : null}
-              {leaveState.formError ? (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                  {leaveState.formError}
+              <h1 className="mt-4 text-2xl font-bold tracking-normal sm:mt-5 sm:text-3xl">
+                {seatDisplayName}
+              </h1>
+              {isJudgeSeat ? (
+                <p className="mt-2 max-w-xl text-sm font-bold leading-6 text-white/72">
+                  {t.judgeHelper}
                 </p>
               ) : null}
             </div>
-          ) : null}
+          </div>
 
-          {isJudgeSeat && roomStatus === "LOBBY" ? (
-            <div className="grid gap-3 rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
-              <p className="text-sm font-bold text-white/72">
-                {allReady ? t.allReady : t.notReady}
-              </p>
-              <form
-                action={startAction}
-                onSubmit={(event) => {
-                  if (!window.confirm(t.startConfirm)) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                <input name="locale" type="hidden" value={locale} />
-                <input name="privateToken" type="hidden" value={privateToken} />
-                <SubmitButton
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
-                  disabled={!canStart}
-                  label={t.start}
-                />
-              </form>
-              {startState.formError ? (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                  {startState.formError}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {!isJudgeSeat ? (
-            <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-bold text-[#7A1F2B]">
-                  {t.role}
-                </span>
-                {isDead ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E1718] px-3 py-1 text-xs font-semibold text-white">
-                    <img
-                      alt=""
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                      draggable={false}
-                      src={werewolfUiAssets.seatPlayerDead}
-                    />
-                    {t.deathTitle}
-                  </span>
-                ) : null}
-              </div>
+          <div className="grid gap-4 p-4 sm:p-5">
+            {roomStatus === "FINISHED" ? (
               <div
-                className={`mt-3 grid place-items-center rounded-[1.1rem] bg-[#F7F3EC] p-4 text-center ${
-                  roomStatus === "LOBBY" ? "min-h-32" : "min-h-64"
+                className={`overflow-hidden rounded-[1.2rem] border p-4 ${
+                  resultKind === "WIN"
+                    ? "border-[#8AB68E] bg-[#F4FFF2]"
+                    : resultKind === "LOSE"
+                      ? "border-[#D8A1A8] bg-[#FFF6F4]"
+                      : "border-[#D9C7B4] bg-[#1E1718] text-white"
                 }`}
               >
-                {(roomStatus === "IN_PROGRESS" || roomStatus === "FINISHED") &&
-                payload ? (
-                  <div
-                    className={`grid w-full max-w-sm place-items-center gap-4 transition ${
-                      isDead && !revealed && !showDeathIntro ? "grayscale" : ""
-                    }`}
-                  >
-                    <div className="relative aspect-[2/3] w-44 max-w-[72vw] [perspective:1000px] sm:w-52">
-                      <div
-                        className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
-                          revealed ? "[transform:rotateY(180deg)]" : ""
-                        } ${showDeathIntro ? "werewolf-live-death-card" : ""}`}
-                      >
-                        <div
-                          aria-hidden={revealed}
-                          className="absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-[#1E1718] text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
-                        >
-                          <img
-                            alt=""
-                            className="h-full w-full object-cover"
-                            draggable={false}
-                            src={seatBackImage}
-                          />
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/82 to-transparent px-3 pb-3 pt-8 text-center">
-                            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
-                              <EyeOff className="h-3.5 w-3.5" />
-                              {t.hiddenTitle}
-                            </p>
-                          </div>
-                        </div>
-                        <div
-                          aria-live="polite"
-                          className={`absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
-                        >
-                          <SafeWerewolfImage
-                            alt={payload.roleLabel}
-                            className="h-full w-full object-cover"
-                            fallback={renderRoleFallback("compact")}
-                            src={roleCardImage}
-                          />
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/84 to-transparent px-3 pb-3 pt-10">
-                            <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
-                              <TimerReset className="h-3.5 w-3.5" />
-                              {t.visibleFor} {revealSecondsLeft}s
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      {isDead && (!revealed || showDeathIntro) ? (
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className={`pointer-events-none absolute inset-0 z-10 h-full w-full rounded-[1rem] object-cover ${
-                            showDeathIntro
-                              ? "werewolf-live-death-overlay opacity-0"
-                              : "opacity-85"
-                          }`}
-                          draggable={false}
-                          src={werewolfUiAssets.deathOverlayMask}
-                        />
-                      ) : null}
-                      {showDeathIntro ? (
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="werewolf-live-death-blood-drip pointer-events-none absolute inset-0 z-20 h-full w-full rounded-[1rem] object-cover opacity-0"
-                          draggable={false}
-                          src={werewolfUiAssets.deathBloodDripEffect}
-                        />
-                      ) : null}
-                    </div>
-                    <button
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C]"
-                      onClick={handleRevealToggle}
-                      type="button"
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p
+                      className={`text-xs font-semibold uppercase tracking-normal ${
+                        resultKind ? "text-[#7A1F2B]/70" : "text-white/62"
+                      }`}
                     >
+                      {t.finished}
+                    </p>
+                    <p
+                      className={`mt-1 text-2xl font-bold ${
+                        resultKind === "WIN"
+                          ? "text-[#36624A]"
+                          : resultKind === "LOSE"
+                            ? "text-[#7A1F2B]"
+                            : "text-[#F1F2E3]"
+                      }`}
+                    >
+                      {resultKind === "WIN"
+                        ? t.resultVictory
+                        : resultKind === "LOSE"
+                          ? t.resultDefeat
+                          : (winnerLabel ?? t.finished)}
+                    </p>
+                  </div>
+                  <span className="grid h-14 w-14 place-items-center">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-full w-full"
+                      draggable={false}
+                      src={
+                        roomState.winner === "WEREWOLF"
+                          ? werewolfUiAssets.resultWerewolfBadge
+                          : roomState.winner === "GOOD"
+                            ? werewolfUiAssets.resultGoodBadge
+                            : werewolfUiAssets.timelineEventDot
+                      }
+                    />
+                  </span>
+                </div>
+                <div
+                  className={`mt-4 grid gap-2 rounded-[1rem] p-3 text-sm font-bold ${
+                    resultKind
+                      ? "bg-white text-[#1E1718]"
+                      : "bg-white/10 text-white"
+                  }`}
+                >
+                  {winnerLabel ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className={
+                          resultKind ? "text-[#7A1F2B]" : "text-white/70"
+                        }
+                      >
+                        {t.resultOutcome}
+                      </span>
+                      <span className="text-right">{winnerLabel}</span>
+                    </div>
+                  ) : null}
+                  {!isJudgeSeat ? (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[#7A1F2B]">{t.resultRole}</span>
+                        <span className="text-right">
+                          {payload?.roleLabel ?? "-"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[#7A1F2B]">{t.resultTeam}</span>
+                        <span className="text-right">
+                          {payload?.alignmentLabel ?? "-"}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="leading-6">{t.resultJudgeBody}</p>
+                  )}
+                  <Link
+                    className={`mt-2 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                      resultKind
+                        ? "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
+                        : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
+                    }`}
+                    href={roomHref}
+                  >
+                    {t.back}
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
+            {roomStatus === "LOBBY" ? (
+              <div className="grid gap-3 rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2 text-sm font-bold text-[#1E1718]">
+                    <UsersRound className="h-4 w-4 text-[#7A1F2B]" />
+                    {readySeats}/{seats.length}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-semibold text-[#7A1F2B]">
+                    {isReady ? (
                       <img
                         alt=""
                         aria-hidden="true"
-                        className="h-6 w-6"
+                        className="h-4 w-4"
                         draggable={false}
-                        src={
-                          revealed
-                            ? werewolfUiAssets.actionCoverCard
-                            : werewolfUiAssets.actionRevealCard
-                        }
+                        src={werewolfUiAssets.seatPlayerReady}
                       />
-                      {revealed ? t.hide : t.reveal}
-                    </button>
-                    {revealed || isDead ? (
-                      <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
-                        {revealed ? (
-                          <>
-                            <p className="text-xs font-semibold uppercase tracking-normal text-[#7A1F2B]/62">
-                              {payload.variantLabel}
-                            </p>
-                            <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
-                              {payload.roleDescription}
-                            </p>
-                          </>
-                        ) : null}
-                      {isDead ? (
-                        <p className="mt-2 rounded-2xl bg-[#F4ECE6] px-3 py-2 text-sm font-semibold text-[#1E1718]">
-                          {t.deathBody}
-                        </p>
-                      ) : null}
-                      </div>
                     ) : null}
-                  </div>
-                ) : (
-                  <div className="max-w-xs">
-                    <img
-                      alt=""
-                      aria-hidden="true"
-                      className="mx-auto h-14 w-14"
-                      draggable={false}
-                      src={werewolfUiAssets.revealConfirmMark}
-                    />
-                    <p className="mt-3 text-base font-bold text-[#1E1718]">
-                      {t.noRole}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-2 text-sm font-bold text-[#7A1F2B]">
-                    <ShieldCheck className="h-4 w-4" />
-                    {t.judgeStatus}
-                  </span>
-                  <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-semibold text-[#7A1F2B]">
-                    {roomState.phase === "FINISHED" ? t.finished : t.started}
+                    {isReady ? t.waiting : t.notReady}
                   </span>
                 </div>
 
-                {lifeState.formError ? (
-                  <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                    {lifeState.formError || t.statusError}
+                <form action={readyAction} className="flex flex-wrap gap-2">
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={privateToken}
+                  />
+                  <input
+                    name="operation"
+                    type="hidden"
+                    value={isReady ? "unready" : "ready"}
+                  />
+                  <SubmitButton label={isReady ? t.unready : t.ready} />
+                </form>
+
+                <form action={leaveAction}>
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={privateToken}
+                  />
+                  <SubmitButton
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-semibold text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
+                    label={t.leaveSeat}
+                  />
+                </form>
+
+                {readyState.formError ? (
+                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                    {readyState.formError}
                   </p>
                 ) : null}
-
-                <div className="mt-3 grid gap-2">
-                {seats
-                  .filter((seat) => seat.isPlayerSeat)
-                  .map((seat) => {
-                    const roleCard = getWerewolfRoleCardImage(
-                      seat.roleKey,
-                      locale,
-                    );
-
-                    return (
-                    <div
-                      className={`grid gap-3 rounded-2xl px-3 py-3 text-sm font-bold text-[#1E1718] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
-                        seat.isDead ? "bg-[#E8E1D8] text-[#1E1718]/62" : "bg-[#F7F3EC]"
-                      }`}
-                      key={seat.seatNumber}
-                    >
-                      <div className="flex min-w-0 gap-3">
-                        <div
-                          className={`relative aspect-[2/3] h-20 shrink-0 overflow-hidden rounded-[0.7rem] border border-[#D9C7B4] bg-white shadow-sm ${
-                            seat.isDead ? "grayscale" : ""
-                          }`}
-                        >
-                          <SafeWerewolfImage
-                            alt={seat.roleLabel ?? ""}
-                            className="h-full w-full object-cover"
-                            fallback={
-                              <div className="grid h-full place-items-center bg-[#1E1718] px-1 text-center text-xs font-bold text-white">
-                                {seat.roleLabel ?? seat.seatNumber}
-                              </div>
-                            }
-                            src={roleCard}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white friemi-tabular">
-                              {seat.seatNumber}
-                            </span>
-                            <span className="min-w-0 truncate">
-                              {seat.displayName}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
-                                seat.isDead
-                                  ? "bg-[#1E1718] text-white"
-                                  : "bg-white text-[#36624A]"
-                              }`}
-                            >
-                              {seat.isDead ? (
-                                <img
-                                  alt=""
-                                  aria-hidden="true"
-                                  className="h-4 w-4"
-                                  draggable={false}
-                                  src={werewolfUiAssets.seatPlayerDead}
-                                />
-                              ) : (
-                                <img
-                                  alt=""
-                                  aria-hidden="true"
-                                  className="h-4 w-4"
-                                  draggable={false}
-                                  src={werewolfUiAssets.seatPlayerReady}
-                                />
-                              )}
-                              {seat.isDead ? t.dead : t.alive}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-xs font-semibold text-[#7A1F2B]">
-                            {roomStatus === "IN_PROGRESS" ||
-                            roomStatus === "FINISHED"
-                              ? (seat.roleLabel ?? "-")
-                              : seat.readyAt
-                                ? t.ready
-                                : "-"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {roomStatus === "IN_PROGRESS" ? (
-                        <form
-                          action={lifeAction}
-                          className="flex justify-start sm:justify-end"
-                          onSubmit={(event) => {
-                            const confirmed = window.confirm(
-                              seat.isDead ? t.revive : t.markDead,
-                            );
-
-                            if (!confirmed) {
-                              event.preventDefault();
-                            }
-                          }}
-                        >
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="privateToken"
-                            type="hidden"
-                            value={privateToken}
-                          />
-                          <input
-                            name="seatNumber"
-                            type="hidden"
-                            value={seat.seatNumber}
-                          />
-                          <input
-                            name="operation"
-                            type="hidden"
-                            value={seat.isDead ? "revive" : "mark_dead"}
-                          />
-                          <SubmitButton
-                            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${
-                              seat.isDead
-                                ? "bg-white text-[#1E1718] hover:bg-[#FFF7F1]"
-                                : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
-                            }`}
-                            label={seat.isDead ? t.revive : t.markDead}
-                          />
-                        </form>
-                      ) : null}
-                    </div>
-                    );
-                  })}
-                </div>
+                {leaveState.formError ? (
+                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                    {leaveState.formError}
+                  </p>
+                ) : null}
               </div>
+            ) : null}
 
-              <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4">
-                <span className="text-sm font-bold text-[#7A1F2B]">
-                  {t.judgeHelper}
-                </span>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {t.judgePrompts.map((prompt) => (
-                    <span
-                      className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]"
-                      key={prompt}
-                    >
-                      {prompt}
-                    </span>
-                  ))}
-                </div>
+            {isJudgeSeat && roomStatus === "LOBBY" ? (
+              <div className="grid gap-3 rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
+                <p className="text-sm font-bold text-white/72">
+                  {allReady ? t.allReady : t.notReady}
+                </p>
+                <form
+                  action={startAction}
+                  onSubmit={(event) => {
+                    if (!window.confirm(t.startConfirm)) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={privateToken}
+                  />
+                  <SubmitButton
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
+                    disabled={!canStart}
+                    label={t.start}
+                  />
+                </form>
+                {startState.formError ? (
+                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                    {startState.formError}
+                  </p>
+                ) : null}
               </div>
+            ) : null}
 
-              {roomStatus === "IN_PROGRESS" ? (
-                <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-2 text-sm font-bold">
-                      <Flag className="h-4 w-4 text-[#F0C36A]" />
-                      {t.finishGame}
+            {!isJudgeSeat ? (
+              <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-[#7A1F2B]">
+                    {t.role}
+                  </span>
+                  {isDead ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E1718] px-3 py-1 text-xs font-semibold text-white">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        draggable={false}
+                        src={werewolfUiAssets.seatPlayerDead}
+                      />
+                      {t.deathTitle}
                     </span>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <form
-                      action={finishAction}
-                      onSubmit={(event) => {
-                        if (!window.confirm(t.finishGoodConfirm)) {
-                          event.preventDefault();
-                        }
-                      }}
-                    >
-                      <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={privateToken}
-                      />
-                      <input name="winner" type="hidden" value="GOOD" />
-                      <SubmitButton
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.finishGood}
-                      />
-                    </form>
-                    <form
-                      action={finishAction}
-                      onSubmit={(event) => {
-                        if (!window.confirm(t.finishWerewolfConfirm)) {
-                          event.preventDefault();
-                        }
-                      }}
-                    >
-                      <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={privateToken}
-                      />
-                      <input name="winner" type="hidden" value="WEREWOLF" />
-                      <SubmitButton
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.finishWerewolf}
-                      />
-                    </form>
-                  </div>
-
-                  {finishState.formError ? (
-                    <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                      {finishState.formError}
-                    </p>
                   ) : null}
                 </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </section>
+                <div
+                  className={`mt-3 grid place-items-center rounded-[1.1rem] bg-[#F7F3EC] p-4 text-center ${
+                    roomStatus === "LOBBY" ? "min-h-32" : "min-h-64"
+                  }`}
+                >
+                  {(roomStatus === "IN_PROGRESS" ||
+                    roomStatus === "FINISHED") &&
+                  payload ? (
+                    <div
+                      className={`grid w-full max-w-sm place-items-center gap-4 transition ${
+                        isDead && !revealed && !showDeathIntro
+                          ? "grayscale"
+                          : ""
+                      }`}
+                    >
+                      <div className="relative aspect-[2/3] w-44 max-w-[72vw] [perspective:1000px] sm:w-52">
+                        <div
+                          className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                            revealed ? "[transform:rotateY(180deg)]" : ""
+                          } ${showDeathIntro ? "werewolf-live-death-card" : ""}`}
+                        >
+                          <div
+                            aria-hidden={revealed}
+                            className="absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-[#1E1718] text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
+                          >
+                            <img
+                              alt=""
+                              className="h-full w-full object-cover"
+                              draggable={false}
+                              src={seatBackImage}
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/82 to-transparent px-3 pb-3 pt-8 text-center">
+                              <p className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                                <EyeOff className="h-3.5 w-3.5" />
+                                {t.hiddenTitle}
+                              </p>
+                            </div>
+                          </div>
+                          <div
+                            aria-live="polite"
+                            className={`absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+                          >
+                            <SafeWerewolfImage
+                              alt={payload.roleLabel}
+                              className="h-full w-full object-cover"
+                              fallback={renderRoleFallback("compact")}
+                              src={roleCardImage}
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/84 to-transparent px-3 pb-3 pt-10">
+                              <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                                <TimerReset className="h-3.5 w-3.5" />
+                                {t.visibleFor} {revealSecondsLeft}s
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        {isDead && (!revealed || showDeathIntro) ? (
+                          <img
+                            alt=""
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute inset-0 z-10 h-full w-full rounded-[1rem] object-cover ${
+                              showDeathIntro
+                                ? "werewolf-live-death-overlay opacity-0"
+                                : "opacity-85"
+                            }`}
+                            draggable={false}
+                            src={werewolfUiAssets.deathOverlayMask}
+                          />
+                        ) : null}
+                        {showDeathIntro ? (
+                          <img
+                            alt=""
+                            aria-hidden="true"
+                            className="werewolf-live-death-blood-drip pointer-events-none absolute inset-0 z-20 h-full w-full rounded-[1rem] object-cover opacity-0"
+                            draggable={false}
+                            src={werewolfUiAssets.deathBloodDripEffect}
+                          />
+                        ) : null}
+                      </div>
+                      <button
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C]"
+                        onClick={handleRevealToggle}
+                        type="button"
+                      >
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-6 w-6"
+                          draggable={false}
+                          src={
+                            revealed
+                              ? werewolfUiAssets.actionCoverCard
+                              : werewolfUiAssets.actionRevealCard
+                          }
+                        />
+                        {revealed ? t.hide : t.reveal}
+                      </button>
+                      {revealed || isDead ? (
+                        <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
+                          {revealed ? (
+                            <>
+                              <p className="text-xs font-semibold uppercase tracking-normal text-[#7A1F2B]/62">
+                                {payload.variantLabel}
+                              </p>
+                              <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
+                                {payload.roleDescription}
+                              </p>
+                            </>
+                          ) : null}
+                          {isDead ? (
+                            <p className="mt-2 rounded-2xl bg-[#F4ECE6] px-3 py-2 text-sm font-semibold text-[#1E1718]">
+                              {t.deathBody}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="max-w-xs">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="mx-auto h-14 w-14"
+                        draggable={false}
+                        src={werewolfUiAssets.revealConfirmMark}
+                      />
+                      <p className="mt-3 text-base font-bold text-[#1E1718]">
+                        {t.noRole}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-2 text-sm font-bold text-[#7A1F2B]">
+                      <ShieldCheck className="h-4 w-4" />
+                      {t.judgeStatus}
+                    </span>
+                    <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-semibold text-[#7A1F2B]">
+                      {roomState.phase === "FINISHED" ? t.finished : t.started}
+                    </span>
+                  </div>
+
+                  {lifeState.formError ? (
+                    <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                      {lifeState.formError || t.statusError}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-3 grid gap-2">
+                    {seats
+                      .filter((seat) => seat.isPlayerSeat)
+                      .map((seat) => {
+                        const roleCard = getWerewolfRoleCardImage(
+                          seat.roleKey,
+                          locale,
+                        );
+
+                        return (
+                          <div
+                            className={`grid gap-3 rounded-2xl px-3 py-3 text-sm font-bold text-[#1E1718] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
+                              seat.isDead
+                                ? "bg-[#E8E1D8] text-[#1E1718]/62"
+                                : "bg-[#F7F3EC]"
+                            }`}
+                            key={seat.seatNumber}
+                          >
+                            <div className="flex min-w-0 gap-3">
+                              <div
+                                className={`relative aspect-[2/3] h-20 shrink-0 overflow-hidden rounded-[0.7rem] border border-[#D9C7B4] bg-white shadow-sm ${
+                                  seat.isDead ? "grayscale" : ""
+                                }`}
+                              >
+                                <SafeWerewolfImage
+                                  alt={seat.roleLabel ?? ""}
+                                  className="h-full w-full object-cover"
+                                  fallback={
+                                    <div className="grid h-full place-items-center bg-[#1E1718] px-1 text-center text-xs font-bold text-white">
+                                      {seat.roleLabel ?? seat.seatNumber}
+                                    </div>
+                                  }
+                                  src={roleCard}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                  <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white friemi-tabular">
+                                    {seat.seatNumber}
+                                  </span>
+                                  <span className="min-w-0 truncate">
+                                    {seat.displayName}
+                                  </span>
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                                      seat.isDead
+                                        ? "bg-[#1E1718] text-white"
+                                        : "bg-white text-[#36624A]"
+                                    }`}
+                                  >
+                                    {seat.isDead ? (
+                                      <img
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="h-4 w-4"
+                                        draggable={false}
+                                        src={werewolfUiAssets.seatPlayerDead}
+                                      />
+                                    ) : (
+                                      <img
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="h-4 w-4"
+                                        draggable={false}
+                                        src={werewolfUiAssets.seatPlayerReady}
+                                      />
+                                    )}
+                                    {seat.isDead ? t.dead : t.alive}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs font-semibold text-[#7A1F2B]">
+                                  {roomStatus === "IN_PROGRESS" ||
+                                  roomStatus === "FINISHED"
+                                    ? (seat.roleLabel ?? "-")
+                                    : seat.readyAt
+                                      ? t.ready
+                                      : "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {roomStatus === "IN_PROGRESS" ? (
+                              <form
+                                action={lifeAction}
+                                className="flex justify-start sm:justify-end"
+                                onSubmit={(event) => {
+                                  const confirmed = window.confirm(
+                                    seat.isDead ? t.revive : t.markDead,
+                                  );
+
+                                  if (!confirmed) {
+                                    event.preventDefault();
+                                  }
+                                }}
+                              >
+                                <input
+                                  name="locale"
+                                  type="hidden"
+                                  value={locale}
+                                />
+                                <input
+                                  name="privateToken"
+                                  type="hidden"
+                                  value={privateToken}
+                                />
+                                <input
+                                  name="seatNumber"
+                                  type="hidden"
+                                  value={seat.seatNumber}
+                                />
+                                <input
+                                  name="operation"
+                                  type="hidden"
+                                  value={seat.isDead ? "revive" : "mark_dead"}
+                                />
+                                <SubmitButton
+                                  className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${
+                                    seat.isDead
+                                      ? "bg-white text-[#1E1718] hover:bg-[#FFF7F1]"
+                                      : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
+                                  }`}
+                                  label={seat.isDead ? t.revive : t.markDead}
+                                />
+                              </form>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4">
+                  <span className="text-sm font-bold text-[#7A1F2B]">
+                    {t.judgeHelper}
+                  </span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {t.judgePrompts.map((prompt) => (
+                      <span
+                        className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]"
+                        key={prompt}
+                      >
+                        {prompt}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {roomStatus === "IN_PROGRESS" ? (
+                  <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold">
+                        <Flag className="h-4 w-4 text-[#F1F2E3]" />
+                        {t.finishGame}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <form
+                        action={finishAction}
+                        onSubmit={(event) => {
+                          if (!window.confirm(t.finishGoodConfirm)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <input name="locale" type="hidden" value={locale} />
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={privateToken}
+                        />
+                        <input name="winner" type="hidden" value="GOOD" />
+                        <SubmitButton
+                          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
+                          label={t.finishGood}
+                        />
+                      </form>
+                      <form
+                        action={finishAction}
+                        onSubmit={(event) => {
+                          if (!window.confirm(t.finishWerewolfConfirm)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <input name="locale" type="hidden" value={locale} />
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={privateToken}
+                        />
+                        <input name="winner" type="hidden" value="WEREWOLF" />
+                        <SubmitButton
+                          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-semibold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
+                          label={t.finishWerewolf}
+                        />
+                      </form>
+                    </div>
+
+                    {finishState.formError ? (
+                      <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                        {finishState.formError}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </section>
       ) : null}
     </div>
   );

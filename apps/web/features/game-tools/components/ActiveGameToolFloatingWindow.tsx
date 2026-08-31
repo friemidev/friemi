@@ -135,7 +135,10 @@ export function ActiveGameToolFloatingWindow({
 
     syncStoredRoom();
     window.addEventListener("storage", syncStoredRoom);
-    window.addEventListener(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, syncStoredRoom);
+    window.addEventListener(
+      ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+      syncStoredRoom,
+    );
 
     return () => {
       window.removeEventListener("storage", syncStoredRoom);
@@ -200,7 +203,7 @@ export function ActiveGameToolFloatingWindow({
   const targetHref =
     currentRoom.kind === "WEREWOLF"
       ? currentRoom.href
-      : currentRoom.privateSeatHref ?? currentRoom.href;
+      : (currentRoom.privateSeatHref ?? currentRoom.href);
   const label = `${copy.action}: ${kindLabel} · ${currentRoom.title}`;
 
   return (
@@ -208,15 +211,15 @@ export function ActiveGameToolFloatingWindow({
       href={targetHref}
       aria-label={label}
       className={cn(
-        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-[55] grid h-12 w-12 place-items-center rounded-full border border-[#D8B56A]/58 bg-[#052F28] text-[#FFF6D6] shadow-[0_14px_30px_rgba(5,47,40,0.28)] md:bottom-5 md:right-5 md:h-[3.25rem] md:w-[3.25rem]",
-        "transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#063A30] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CF7C]/70",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-[55] grid h-12 w-12 place-items-center rounded-full border border-[#F1F2E3]/58 bg-[#052F28] text-[#F1F2E3] shadow-[0_14px_30px_rgba(5,47,40,0.28)] md:bottom-5 md:right-5 md:h-[3.25rem] md:w-[3.25rem]",
+        "transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#063A30] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70",
       )}
       title={label}
     >
-      <span className="absolute inset-1 rounded-full bg-[#F2CF7C]/12" />
-      <Icon className="relative h-5 w-5 text-[#F2CF7C]" strokeWidth={2.35} />
+      <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
+      <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
       {currentRoom.seatNumber ? (
-        <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F2CF7C] px-1 text-[10px] font-bold leading-none text-[#052F28] ring-2 ring-white">
+        <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[10px] font-bold leading-none text-[#052F28] ring-2 ring-white">
           {currentRoom.seatNumber}
         </span>
       ) : null}

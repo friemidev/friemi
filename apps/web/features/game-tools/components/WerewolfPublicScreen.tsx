@@ -1,12 +1,14 @@
 "use client";
 
-import { Crown, Moon, UsersRound } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Crown, Moon, UsersRound } from "lucide-react";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import {
   getWerewolfRoleCardImage,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
 import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
+import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
 import { cn } from "@/lib/utils";
 
 type WerewolfPublicSeat = {
@@ -26,6 +28,7 @@ type WerewolfPublicSeat = {
 type WerewolfPublicScreenProps = {
   joinUrl: string;
   locale: string;
+  roomHref: string;
   room: {
     code: string;
     events: Array<{
@@ -48,6 +51,7 @@ type WerewolfPublicScreenProps = {
 const copy = {
   "zh-CN": {
     alive: "存活",
+    backToRoom: "返回房间",
     dead: "出局",
     events: "最新记录",
     finished: "本局结束",
@@ -68,6 +72,7 @@ const copy = {
   },
   en: {
     alive: "Alive",
+    backToRoom: "Back to room",
     dead: "Dead",
     events: "Latest",
     finished: "Finished",
@@ -88,6 +93,7 @@ const copy = {
   },
   fr: {
     alive: "Vivant",
+    backToRoom: "Retour à la table",
     dead: "Mort",
     events: "Dernières actions",
     finished: "Terminée",
@@ -224,21 +230,32 @@ export function WerewolfPublicScreen({
   joinUrl,
   locale,
   room,
+  roomHref,
 }: WerewolfPublicScreenProps) {
   const t = copy[locale as keyof typeof copy] ?? copy.en;
   const playerSeats = room.seats.filter((seat) => seat.isPlayerSeat);
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
-  const claimedPlayerCount = playerSeats.filter((seat) => seat.isClaimed).length;
+  const claimedPlayerCount = playerSeats.filter(
+    (seat) => seat.isClaimed,
+  ).length;
   const deadCount = playerSeats.filter((seat) => seat.isDead).length;
   const aliveCount = Math.max(0, claimedPlayerCount - deadCount);
   const statusLabel = getStatusLabel({ room, t });
   const showRoles = room.status === "FINISHED";
 
   return (
-    <section className="min-h-[calc(100svh-6rem)] overflow-hidden rounded-[2rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-2xl shadow-[#1E1718]/12">
+    <section className="relative min-h-[calc(100svh-6rem)] overflow-hidden rounded-[2rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-2xl shadow-[#1E1718]/12">
+      <Link
+        aria-label={t.backToRoom}
+        className="absolute left-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-[#153B31] text-[#F1F2E3] shadow-lg transition hover:bg-[#245748] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]"
+        href={roomHref}
+        title={t.backToRoom}
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
       <div className="grid min-h-[calc(100svh-6rem)] gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_21rem] lg:p-8">
         <div className="grid content-between gap-6">
-          <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_32rem] xl:items-start">
+          <header className="grid gap-5 pl-14 xl:grid-cols-[minmax(0,1fr)_32rem] xl:items-start">
             <div className="min-w-0">
               <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-normal text-[#7A1F2B]">
                 <Moon className="h-4 w-4" />
@@ -253,7 +270,10 @@ export function WerewolfPublicScreen({
             </div>
 
             <div className="grid grid-cols-4 gap-2">
-              <PublicStat label={t.players} value={`${claimedPlayerCount}/${room.variant.playerSeatCount}`} />
+              <PublicStat
+                label={t.players}
+                value={`${claimedPlayerCount}/${room.variant.playerSeatCount}`}
+              />
               <PublicStat label={t.alive} tone="alive" value={aliveCount} />
               <PublicStat label={t.dead} tone="dead" value={deadCount} />
               <PublicStat label={t.seats} value={room.variant.totalSeats} />
@@ -267,88 +287,94 @@ export function WerewolfPublicScreen({
                 : null;
 
               return (
-              <div
-                className={cn(
-                  "relative grid min-h-32 place-items-center rounded-[1.3rem] border bg-white p-3 text-center shadow-lg transition",
-                  seat.isDead
-                    ? "border-[#C8B9AA] bg-[#E8E1D8] grayscale"
-                    : seat.isClaimed
-                      ? "border-[#7A1F2B]/35"
-                      : "border-[#D9C7B4] opacity-60",
-                )}
-                key={seat.id}
-              >
-                <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white">
-                  {seat.seatNumber}
-                </span>
-                {roleCard ? (
-                  <span className="aspect-[2/3] h-20 overflow-hidden rounded-[0.75rem] border border-[#D9C7B4] bg-white shadow-sm">
-                    <img
-                      alt={seat.roleLabel ?? ""}
-                      className="h-full w-full object-cover"
-                      draggable={false}
-                      src={roleCard}
-                    />
+                <div
+                  className={cn(
+                    "relative grid min-h-32 place-items-center rounded-[1.3rem] border bg-white p-3 text-center shadow-lg transition",
+                    seat.isDead
+                      ? "border-[#C8B9AA] bg-[#E8E1D8] grayscale"
+                      : seat.isClaimed
+                        ? "border-[#7A1F2B]/35"
+                        : "border-[#D9C7B4] opacity-60",
+                  )}
+                  key={seat.id}
+                >
+                  <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white">
+                    {seat.seatNumber}
                   </span>
-                ) : (
-                  <span className="relative grid h-16 w-16 place-items-center text-lg font-bold">
-                    <img
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full"
-                      draggable={false}
-                      src={
-                        seat.isClaimed
-                          ? seat.isDead
-                            ? werewolfUiAssets.seatPlayerDead
-                            : seat.readyAt || room.status !== "LOBBY"
-                              ? werewolfUiAssets.seatPlayerReady
-                              : werewolfUiAssets.seatPlayerOccupied
-                          : werewolfUiAssets.seatPlayerEmpty
-                      }
-                    />
-                    <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#1E1718] text-sm text-white shadow-sm">
-                      {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                  {roleCard ? (
+                    <span className="aspect-[2/3] h-20 overflow-hidden rounded-[0.75rem] border border-[#D9C7B4] bg-white shadow-sm">
+                      <img
+                        alt={seat.roleLabel ?? ""}
+                        className="h-full w-full object-cover"
+                        draggable={false}
+                        src={roleCard}
+                      />
                     </span>
-                  </span>
-                )}
-                <span className="line-clamp-1 max-w-full text-sm font-bold text-[#1E1718]">
-                  {seat.displayName}
-                </span>
-                {showRoles && seat.roleLabel ? (
-                  <span className="line-clamp-1 max-w-full rounded-full bg-[#F4ECE6] px-2 py-1 text-[0.68rem] font-bold text-[#7A1F2B]">
-                    {seat.roleLabel}
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.68rem] font-bold",
-                      seat.isDead
-                        ? "bg-[#1E1718] text-white"
-                        : "bg-[#F4ECE6] text-[#7A1F2B]",
-                    )}
-                  >
-                    {seat.isDead ? (
+                  ) : (
+                    <span className="relative grid h-16 w-16 place-items-center text-lg font-bold">
                       <img
                         alt=""
                         aria-hidden="true"
-                        className="h-4 w-4"
+                        className="absolute inset-0 h-full w-full"
                         draggable={false}
-                        src={werewolfUiAssets.seatPlayerDead}
+                        src={
+                          seat.isClaimed
+                            ? seat.isDead
+                              ? werewolfUiAssets.seatPlayerDead
+                              : seat.readyAt || room.status !== "LOBBY"
+                                ? werewolfUiAssets.seatPlayerReady
+                                : werewolfUiAssets.seatPlayerOccupied
+                            : werewolfUiAssets.seatPlayerEmpty
+                        }
                       />
-                    ) : (
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="h-4 w-4"
-                        draggable={false}
-                        src={werewolfUiAssets.seatPlayerReady}
-                      />
-                    )}
-                    {seat.isDead ? t.dead : room.status === "LOBBY" ? seat.readyAt ? t.ready : t.unready : t.alive}
+                      <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#1E1718] text-sm text-white shadow-sm">
+                        {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                      </span>
+                    </span>
+                  )}
+                  <span className="line-clamp-1 max-w-full text-sm font-bold text-[#1E1718]">
+                    {seat.displayName}
                   </span>
-                )}
-              </div>
+                  {showRoles && seat.roleLabel ? (
+                    <span className="line-clamp-1 max-w-full rounded-full bg-[#F4ECE6] px-2 py-1 text-[0.68rem] font-bold text-[#7A1F2B]">
+                      {seat.roleLabel}
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.68rem] font-bold",
+                        seat.isDead
+                          ? "bg-[#1E1718] text-white"
+                          : "bg-[#F4ECE6] text-[#7A1F2B]",
+                      )}
+                    >
+                      {seat.isDead ? (
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                          draggable={false}
+                          src={werewolfUiAssets.seatPlayerDead}
+                        />
+                      ) : (
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                          draggable={false}
+                          src={werewolfUiAssets.seatPlayerReady}
+                        />
+                      )}
+                      {seat.isDead
+                        ? t.dead
+                        : room.status === "LOBBY"
+                          ? seat.readyAt
+                            ? t.ready
+                            : t.unready
+                          : t.alive}
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -359,12 +385,12 @@ export function WerewolfPublicScreen({
             <p className="text-xs font-bold uppercase tracking-normal text-white/55">
               {t.roomCode}
             </p>
-            <p className="mt-2 friemi-tabular text-5xl font-bold tracking-[0.18em] text-[#F0C36A]">
+            <p className="mt-2 friemi-tabular text-5xl font-bold tracking-[0.18em] text-[#F1F2E3]">
               {room.code}
             </p>
             <div className="mt-5 rounded-[1rem] border border-white/12 bg-white/8 p-3">
               <p className="inline-flex items-center gap-2 text-sm font-bold">
-                <Crown className="h-4 w-4 text-[#F0C36A]" />
+                <Crown className="h-4 w-4 text-[#F1F2E3]" />
                 {t.judge}
               </p>
               <p className="mt-2 truncate text-lg font-bold">
@@ -378,6 +404,7 @@ export function WerewolfPublicScreen({
             copiedLabel={t.copied}
             copyLabel={t.copyInvite}
             label={t.join}
+            qrValue={getWerewolfAppJoinUrl(room.code)}
             roomCode={room.code}
             unavailableLabel={t.qrUnavailable}
             value={joinUrl}
@@ -441,7 +468,7 @@ function PublicStat({
           ? "border-[#8AB68E]"
           : tone === "dead"
             ? "border-[#7A1F2B]"
-          : "border-[#D9C7B4]",
+            : "border-[#D9C7B4]",
       )}
     >
       <img

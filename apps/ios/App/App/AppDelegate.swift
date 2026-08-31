@@ -3,10 +3,10 @@ import Capacitor
 import GoogleSignIn
 
 extension Notification.Name {
-    static let friemiAuthCompleteURL = Notification.Name("FriemiAuthCompleteURL")
+    static let friemiOpenURL = Notification.Name("FriemiOpenURL")
 }
 
-let friemiPendingAuthCompleteURLKey = "FriemiPendingAuthCompleteURL"
+let friemiPendingOpenURLKey = "FriemiPendingOpenURL"
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -48,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
-        if handleFriemiAuthComplete(url) {
+        if handleFriemiURL(url) {
             return true
         }
 
@@ -66,15 +66,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
-    private func handleFriemiAuthComplete(_ url: URL) -> Bool {
-        guard url.scheme?.lowercased() == "friemi",
-              url.host?.lowercased() == "auth-complete"
-        else {
+    private func handleFriemiURL(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "friemi" else {
             return false
         }
 
-        UserDefaults.standard.set(url.absoluteString, forKey: friemiPendingAuthCompleteURLKey)
-        NotificationCenter.default.post(name: .friemiAuthCompleteURL, object: url)
+        UserDefaults.standard.set(url.absoluteString, forKey: friemiPendingOpenURLKey)
+        NotificationCenter.default.post(name: .friemiOpenURL, object: url)
         return true
     }
 

@@ -61,6 +61,7 @@ import {
   werewolfUiAssets,
   type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
+import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
@@ -644,8 +645,8 @@ function JudgeSheriffButton({
       aria-label={label}
       className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
         isSheriff
-          ? "bg-[#F8DDA8] text-[#704515] ring-1 ring-white/70"
-          : "bg-white/18 text-[#FFF1C8] ring-1 ring-white/35 hover:bg-white/28"
+          ? "bg-[#F1F2E3] text-[#153B31] ring-1 ring-white/70"
+          : "bg-white/18 text-[#F1F2E3] ring-1 ring-white/35 hover:bg-white/28"
       }`}
       disabled={pending}
       onClick={onClick}
@@ -737,7 +738,7 @@ function WerewolfAtmospherePicker({
     <div className="relative">
       <button
         aria-label={`${t.atmosphere}: ${selectedAtmosphere.name}`}
-        className="relative grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F] active:scale-95"
+        className="relative grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F] active:scale-95"
         onClick={cycleAtmosphere}
         title={selectedAtmosphere.name}
         type="button"
@@ -746,7 +747,7 @@ function WerewolfAtmospherePicker({
       </button>
 
       {showHint ? (
-        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-semibold text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
+        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-semibold text-[#F1F2E3] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
           <span className="block truncate">{selectedAtmosphere.name}</span>
         </div>
       ) : null}
@@ -769,7 +770,7 @@ function WerewolfRoomQrDialog({
     <>
       <button
         aria-label={t.scanJoin}
-        className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F] active:scale-95"
+        className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F] active:scale-95"
         onClick={() => setOpen(true)}
         title={t.scanJoin}
         type="button"
@@ -804,6 +805,7 @@ function WerewolfRoomQrDialog({
               copiedLabel={t.copied}
               copyLabel={t.copyInvite}
               label={t.scanJoin}
+              qrValue={getWerewolfAppJoinUrl(roomCode)}
               roomCode={roomCode}
               unavailableLabel={t.qrUnavailable}
               value={joinUrl}
@@ -1737,10 +1739,10 @@ export function WerewolfRoomOverview({
             className="group flex min-h-[4.5rem] w-full items-center gap-3 px-3 py-2.5 text-left text-white transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-55"
             type="submit"
           >
-            <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-white/10 px-1 text-[11px] font-bold text-[#F8DDA8] ring-1 ring-white/20 friemi-tabular">
+            <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-white/10 px-1 text-[11px] font-bold text-[#F1F2E3] ring-1 ring-white/20 friemi-tabular">
               {seat.seatNumber}
             </span>
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F8DDA8]/55 bg-[#062A24]/70 text-[#F8DDA8]">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F1F2E3]/55 bg-[#062A24]/70 text-[#F1F2E3]">
               <Plus className="h-4 w-4 transition group-hover:scale-110" />
             </span>
             <span className="min-w-0 flex-1">
@@ -1759,15 +1761,15 @@ export function WerewolfRoomOverview({
     return (
       <div
         className={`relative z-20 flex min-h-[4.5rem] items-center gap-3 px-3 py-2.5 transition ${
-          isCurrentSeat ? "bg-[#F8DDA8]/10" : ""
+          isCurrentSeat ? "bg-[#F1F2E3]/10" : ""
         }`}
         key={seat.id}
       >
         <span
           className={`grid h-7 min-w-7 shrink-0 place-items-center rounded-full px-1 text-[11px] font-bold ring-1 friemi-tabular ${
             isCurrentSeat
-              ? "bg-[#F8DDA8] text-[#153B31] ring-white/55"
-              : "bg-white/10 text-[#F8DDA8] ring-white/20"
+              ? "bg-[#F1F2E3] text-[#153B31] ring-white/55"
+              : "bg-white/10 text-[#F1F2E3] ring-white/20"
           }`}
         >
           {seat.seatNumber}
@@ -1777,24 +1779,24 @@ export function WerewolfRoomOverview({
             seat.isDead ? "grayscale opacity-55" : ""
           } ${
             isCurrentSeat
-              ? "ring-2 ring-[#F8DDA8] ring-offset-2 ring-offset-[#082E28]"
+              ? "ring-2 ring-[#F1F2E3] ring-offset-2 ring-offset-[#082E28]"
               : ""
           }`}
         >
           {seat.isClaimed ? (
             renderClaimedSeatAvatar(
               seat,
-              "h-11 w-11 border border-[#F8DDA8]/34 text-sm",
+              "h-11 w-11 border border-[#F1F2E3]/34 text-sm",
             )
           ) : (
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F8DDA8] ring-1 ring-white/16 friemi-tabular">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F1F2E3] ring-1 ring-white/16 friemi-tabular">
               {seat.seatNumber}
             </span>
           )}
           {isSheriff ? (
             <span
               aria-label={t.setSheriff}
-              className="absolute -right-1 -top-1 z-30 grid h-5 w-5 place-items-center rounded-full bg-[#F8DDA8] text-[#704515] shadow-md ring-1 ring-white/75"
+              className="absolute -right-1 -top-1 z-30 grid h-5 w-5 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-md ring-1 ring-white/75"
               title={t.setSheriff}
             >
               <Crown className="h-3 w-3" />
@@ -1807,7 +1809,7 @@ export function WerewolfRoomOverview({
               seat.isDead
                 ? "text-white/45"
                 : isCurrentSeat
-                  ? "text-[#F8DDA8]"
+                  ? "text-[#F1F2E3]"
                   : "text-white"
             }`}
           >
@@ -1815,7 +1817,7 @@ export function WerewolfRoomOverview({
           </p>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
             {showRoleIdentity ? (
-              <span className="max-w-full truncate rounded-full bg-[#F8DDA8] px-2 py-0.5 text-[10px] font-bold text-[#153B31]">
+              <span className="max-w-full truncate rounded-full bg-[#F1F2E3] px-2 py-0.5 text-[10px] font-bold text-[#153B31]">
                 {seat.roleLabel ?? t.roleUnknown}
               </span>
             ) : null}
@@ -1836,7 +1838,7 @@ export function WerewolfRoomOverview({
               </span>
             ) : null}
             {isCurrentSeat ? (
-              <span className="text-[10px] font-bold text-[#F8DDA8]">
+              <span className="text-[10px] font-bold text-[#F1F2E3]">
                 {t.currentMember}
               </span>
             ) : null}
@@ -1874,14 +1876,14 @@ export function WerewolfRoomOverview({
             className="group flex min-h-[4.75rem] w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.06]"
             type="submit"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F8DDA8] text-[#704515] shadow-sm">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-sm">
               <Crown className="h-4 w-4" />
             </span>
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F8DDA8]/55 bg-[#062A24]/70 text-[#F8DDA8]">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#F1F2E3]/55 bg-[#062A24]/70 text-[#F1F2E3]">
               <Plus className="h-4 w-4 transition group-hover:scale-110" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-[#F8DDA8]">
+              <span className="block text-sm font-bold text-[#F1F2E3]">
                 {t.judge}
               </span>
               <span className="mt-0.5 block text-xs font-semibold text-white/58">
@@ -1896,37 +1898,37 @@ export function WerewolfRoomOverview({
     return (
       <div
         className={`flex min-h-[4.75rem] items-center gap-3 px-3 py-2.5 ${
-          isCurrentSeat ? "bg-[#F8DDA8]/10" : ""
+          isCurrentSeat ? "bg-[#F1F2E3]/10" : ""
         }`}
         key={seat.id}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F8DDA8] text-[#704515] shadow-sm">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-sm">
           <Crown className="h-4 w-4" />
         </span>
         <div
           className={`shrink-0 rounded-full ${
             isCurrentSeat
-              ? "ring-2 ring-[#F8DDA8] ring-offset-2 ring-offset-[#082E28]"
+              ? "ring-2 ring-[#F1F2E3] ring-offset-2 ring-offset-[#082E28]"
               : ""
           }`}
         >
           {seat.isClaimed ? (
             renderClaimedSeatAvatar(
               seat,
-              "h-11 w-11 border border-[#F8DDA8]/34 text-sm",
+              "h-11 w-11 border border-[#F1F2E3]/34 text-sm",
             )
           ) : (
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F8DDA8] ring-1 ring-white/16">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-bold text-[#F1F2E3] ring-1 ring-white/16">
               {t.empty}
             </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-[#F8DDA8]">
+          <p className="truncate text-sm font-bold text-[#F1F2E3]">
             {seat.isClaimed ? seat.displayName : t.empty}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-[#F8DDA8]/14 px-2 py-0.5 text-[10px] font-bold text-[#F8DDA8]">
+            <span className="rounded-full bg-[#F1F2E3]/14 px-2 py-0.5 text-[10px] font-bold text-[#F1F2E3]">
               {t.judge}
             </span>
             {isLobby && seat.isClaimed ? (
@@ -1941,7 +1943,7 @@ export function WerewolfRoomOverview({
               </span>
             ) : null}
             {isCurrentSeat ? (
-              <span className="text-[10px] font-bold text-[#F8DDA8]">
+              <span className="text-[10px] font-bold text-[#F1F2E3]">
                 {t.currentMember}
               </span>
             ) : null}
@@ -1952,9 +1954,9 @@ export function WerewolfRoomOverview({
   };
 
   return (
-    <div className="h-[100dvh] min-h-[100svh] w-full overflow-hidden bg-[#062A24] md:h-full md:min-h-[32rem]">
+    <div className="h-full min-h-0 w-full overflow-hidden bg-[#062A24] md:min-h-[32rem]">
       <section className="h-full min-h-0 md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
-        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
           <img
             alt=""
             aria-hidden="true"
@@ -1965,14 +1967,14 @@ export function WerewolfRoomOverview({
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/56 via-black/18 to-black/42" />
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[calc(var(--app-top-safe-area)+4.35rem)] bg-[#052A24]" />
-          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.35rem)] z-10 h-px bg-[#F8DDA8]/24" />
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.35rem)] z-10 h-px bg-[#F1F2E3]/24" />
           <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.38rem)] z-10 h-8 bg-gradient-to-b from-[#052A24]/58 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))] h-28 bg-gradient-to-t from-[#031F1B]/46 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-[var(--app-bottom-safe-area)] h-28 bg-gradient-to-t from-[#031F1B]/46 to-transparent" />
 
           <div className="relative z-20 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
             <button
               aria-label={t.back}
-              className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
+              className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F]"
               onClick={() => {
                 if (canExitRoom) {
                   setExitDialogOpen(true);
@@ -1987,12 +1989,12 @@ export function WerewolfRoomOverview({
             </button>
 
             <div className="min-w-0 px-1 text-center">
-              <p className="truncate text-sm font-bold tracking-normal text-[#FFE1A6] [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
+              <p className="truncate text-sm font-bold tracking-normal text-[#F1F2E3] [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
                 {room.variant.label}
               </p>
               <p className="mt-0.5 text-[10px] font-semibold text-white/88 [text-shadow:0_1px_1px_rgba(0,0,0,0.62)]">
                 {t.code} ·{" "}
-                <span className="friemi-tabular tracking-[0.18em] text-[#FFE1A6]">
+                <span className="friemi-tabular tracking-[0.18em] text-[#F1F2E3]">
                   {room.code}
                 </span>
               </p>
@@ -2023,7 +2025,7 @@ export function WerewolfRoomOverview({
               />
               <Link
                 aria-label={t.publicScreen}
-                className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
+                className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F]"
                 href={screenHref}
                 target="_blank"
               >
@@ -2039,7 +2041,7 @@ export function WerewolfRoomOverview({
             >
               <section
                 aria-modal="true"
-                className="w-full max-w-[22rem] rounded-[1.35rem] border border-[#F8DDA8]/32 bg-[#FFFDF7] p-4 text-[#153B31] shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
+                className="w-full max-w-[22rem] rounded-[1.35rem] border border-[#F1F2E3]/32 bg-[#FFFDF7] p-4 text-[#153B31] shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
                 role="dialog"
               >
                 <div className="flex items-start gap-3">
@@ -2123,7 +2125,7 @@ export function WerewolfRoomOverview({
           ) : null}
 
           {noticeLabel ? (
-            <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#D8A84E]/28 bg-[#F8DDA8]/12 px-3 py-2 text-xs font-semibold text-[#F8DDA8]">
+            <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#F1F2E3]/28 bg-[#F1F2E3]/12 px-3 py-2 text-xs font-semibold text-[#F1F2E3]">
               <Check className="h-4 w-4" />
               {noticeLabel}
             </div>
@@ -2131,7 +2133,7 @@ export function WerewolfRoomOverview({
 
           <div className="relative z-10 mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="relative px-2 py-2">
-              <div className="flex items-center gap-3 rounded-2xl border border-[#F8DDA8]/22 bg-[#031F1B]/68 px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
                 <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#062A24] ring-1 ring-white/20">
                   <img
                     alt=""
@@ -2142,7 +2144,7 @@ export function WerewolfRoomOverview({
                   />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold text-[#F8DDA8]">
+                  <p className="truncate text-base font-bold text-[#F1F2E3]">
                     {centerTitle}
                   </p>
                   <p className="mt-0.5 truncate text-xs font-semibold text-white/68">
@@ -2155,7 +2157,7 @@ export function WerewolfRoomOverview({
                 </span>
               </div>
 
-              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-2xl border border-[#F8DDA8]/22 bg-[#031F1B]/68 shadow-[0_16px_38px_rgba(0,0,0,0.2)] backdrop-blur-sm">
+              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 shadow-[0_16px_38px_rgba(0,0,0,0.2)] backdrop-blur-sm">
                 {judgeSeat ? renderJudgeSeatNode(judgeSeat) : null}
                 {playerSeats.map((seat) => renderSeatNode(seat))}
               </div>
@@ -2177,13 +2179,13 @@ export function WerewolfRoomOverview({
                 <input name="locale" type="hidden" value={locale} />
                 <input name="roomId" type="hidden" value={room.id} />
                 <input
-                  className="h-12 min-w-0 rounded-full border border-[#D8A84E]/45 bg-[#F8DDA8]/95 px-4 text-sm font-semibold text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F0C36A]"
+                  className="h-12 min-w-0 rounded-full border border-[#F1F2E3]/45 bg-[#F1F2E3]/95 px-4 text-sm font-semibold text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F1F2E3]"
                   maxLength={40}
                   name="displayName"
                   placeholder={t.joinName}
                 />
                 <SubmitButton
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F8DDA8] px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F1F2E3] px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
                   label={t.enterMember}
                 />
                 {joinState.formError ? (
@@ -2231,7 +2233,7 @@ export function WerewolfRoomOverview({
                       />
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
-                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
                         label={
                           currentViewerSeat.readyAt
                             ? t.unreadyAction
@@ -2267,7 +2269,7 @@ export function WerewolfRoomOverview({
                       ) : null}
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
-                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.leaveSeat}
                       />
                     </form>
@@ -2282,7 +2284,7 @@ export function WerewolfRoomOverview({
                   >
                     {judgeIsViewer && room.status === "IN_PROGRESS" ? (
                       <button
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] active:scale-[0.98]"
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] active:scale-[0.98]"
                         onClick={() => setFinishDialogOpen(true)}
                         type="button"
                       >
@@ -2291,7 +2293,7 @@ export function WerewolfRoomOverview({
                       </button>
                     ) : !judgeIsViewer ? (
                       <Link
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7]"
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3]"
                         href={withLocale(
                           locale,
                           `/game-tools/werewolf/seats/${currentViewerSeat.privateToken}`,
@@ -2302,7 +2304,7 @@ export function WerewolfRoomOverview({
                       </Link>
                     ) : null}
                     <button
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-semibold text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 active:scale-[0.98]"
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F1F2E3]/55 bg-transparent px-5 text-sm font-semibold text-[#F1F2E3] transition hover:bg-[#F1F2E3]/10 active:scale-[0.98]"
                       onClick={() => setExitDialogOpen(true)}
                       type="button"
                     >
@@ -2332,7 +2334,7 @@ export function WerewolfRoomOverview({
                       value={judgeSeat.privateToken}
                     />
                     <SubmitButton
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-45"
                       disabled={!allSeatsReady}
                       label={t.start}
                     />
@@ -2347,7 +2349,7 @@ export function WerewolfRoomOverview({
             ) : null}
 
             {!canExitRoom && !isLobby ? (
-              <p className="rounded-2xl border border-[#D8A84E]/25 bg-[#F8DDA8]/10 px-3 py-2 text-center text-xs font-bold text-[#F8DDA8]">
+              <p className="rounded-2xl border border-[#F1F2E3]/25 bg-[#F1F2E3]/10 px-3 py-2 text-center text-xs font-bold text-[#F1F2E3]">
                 {t.locked}
               </p>
             ) : null}
@@ -2386,7 +2388,7 @@ export function WerewolfRoomOverview({
             aria-describedby="werewolf-death-confirm-description"
             aria-labelledby="werewolf-death-confirm-title"
             aria-modal="true"
-            className="w-full max-w-[20rem] rounded-[1.2rem] border border-[#D8A84E]/45 bg-white p-5 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.34)]"
+            className="w-full max-w-[20rem] rounded-[1.2rem] border border-[#F1F2E3]/45 bg-white p-5 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.34)]"
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               if (!canSubmitOnline(event)) {
@@ -2491,14 +2493,14 @@ export function WerewolfRoomOverview({
             aria-describedby="werewolf-sheriff-confirm-description"
             aria-labelledby="werewolf-sheriff-confirm-title"
             aria-modal="true"
-            className="w-full max-w-[20rem] rounded-[1.2rem] border border-[#D8A84E]/45 bg-white p-5 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.34)]"
+            className="w-full max-w-[20rem] rounded-[1.2rem] border border-[#F1F2E3]/45 bg-white p-5 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.34)]"
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={canSubmitOnline}
             role="alertdialog"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8A5C1F]">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-[#153B31]">
                   <Crown className="h-3.5 w-3.5" />
                   {pendingSheriffIsCurrent ? t.removeSheriff : t.setSheriff}
                 </p>
@@ -2532,7 +2534,7 @@ export function WerewolfRoomOverview({
                   {pendingSheriffSeat.seatNumber}.{" "}
                   {pendingSheriffSeat.displayName}
                 </p>
-                <p className="mt-1 text-xs font-bold text-[#8A5C1F]">
+                <p className="mt-1 text-xs font-bold text-[#153B31]">
                   {pendingSheriffSeat.roleLabel ?? t.roleUnknown}
                 </p>
               </div>
@@ -2587,7 +2589,7 @@ export function WerewolfRoomOverview({
                 {t.deathConfirmCancel}
               </button>
               <SubmitButton
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#C58B32] px-4 text-sm font-bold text-white transition hover:bg-[#A87125] disabled:cursor-not-allowed disabled:opacity-55"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#F1F2E3] px-4 text-sm font-bold text-[#153B31] ring-1 ring-[#D6D5B2] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
                 label={pendingSheriffIsCurrent ? t.removeSheriff : t.setSheriff}
               />
             </div>
@@ -2605,7 +2607,7 @@ export function WerewolfRoomOverview({
             aria-describedby="werewolf-finish-description"
             aria-labelledby="werewolf-finish-title"
             aria-modal="true"
-            className="w-full max-w-[21rem] overflow-hidden rounded-[1.25rem] border border-[#D8A84E]/45 bg-white text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
+            className="w-full max-w-[21rem] overflow-hidden rounded-[1.25rem] border border-[#F1F2E3]/45 bg-white text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={canSubmitOnline}
             role="alertdialog"
@@ -2613,7 +2615,7 @@ export function WerewolfRoomOverview({
             <div className="bg-[#153B31] px-5 pb-5 pt-4 text-white">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F8DDA8]">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F1F2E3]">
                     <Flag className="h-3.5 w-3.5" />
                     {t.finishGame}
                   </p>
@@ -2690,14 +2692,14 @@ export function WerewolfRoomOverview({
           <section
             aria-labelledby="werewolf-result-title"
             aria-modal="true"
-            className="flex max-h-[82dvh] w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.25rem] border border-[#D8A84E]/45 bg-[#FFFDF7] text-[#18221F] shadow-[0_28px_80px_rgba(0,0,0,0.42)]"
+            className="flex max-h-[82dvh] w-full max-w-[22rem] flex-col overflow-hidden rounded-[1.25rem] border border-[#F1F2E3]/45 bg-[#FFFDF7] text-[#18221F] shadow-[0_28px_80px_rgba(0,0,0,0.42)]"
             onMouseDown={(event) => event.stopPropagation()}
             role="dialog"
           >
             <div className="bg-[#153B31] px-5 pb-5 pt-4 text-white">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold text-[#F8DDA8]">
+                  <p className="text-xs font-bold text-[#F1F2E3]">
                     {t.resultDialogTitle}
                   </p>
                   <h2
