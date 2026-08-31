@@ -2,7 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +77,7 @@ export function UserProfilePreviewPopover({
   const closeTimerRef = useRef<number | null>(null);
   const instanceIdRef = useRef<string | null>(null);
   const isPinnedOpenRef = useRef(false);
+  const persistentOverlayOpenRef = useRef(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const redirectPath = useMemo(
@@ -84,7 +92,10 @@ export function UserProfilePreviewPopover({
   }
 
   function isDesktopPointer() {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return false;
     }
 
@@ -98,6 +109,7 @@ export function UserProfilePreviewPopover({
   useEffect(() => {
     cancelScheduledClose();
     isPinnedOpenRef.current = false;
+    persistentOverlayOpenRef.current = false;
     setIsOpen(false);
   }, [pathname]);
 
@@ -231,7 +243,7 @@ export function UserProfilePreviewPopover({
   function scheduleClose() {
     cancelScheduledClose();
 
-    if (isPinnedOpenRef.current) {
+    if (isPinnedOpenRef.current || persistentOverlayOpenRef.current) {
       return;
     }
 
@@ -243,6 +255,16 @@ export function UserProfilePreviewPopover({
       }
     }, 70);
   }
+
+  const handlePersistentOverlayOpenChange = useCallback((open: boolean) => {
+    persistentOverlayOpenRef.current = open;
+
+    if (open) {
+      cancelScheduledClose();
+      isPinnedOpenRef.current = true;
+      setIsOpen(true);
+    }
+  }, []);
 
   return (
     <div
@@ -301,6 +323,9 @@ export function UserProfilePreviewPopover({
                 isAuthenticated={isAuthenticated}
                 locale={locale}
                 nickname={nickname}
+                onPersistentOverlayOpenChange={
+                  handlePersistentOverlayOpenChange
+                }
                 profileId={profileId}
                 redirectPath={redirectPath}
               />

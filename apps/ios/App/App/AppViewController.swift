@@ -17,8 +17,8 @@ class AppViewController: CAPBridgeViewController {
         navigationController?.interactivePopGestureRecognizer?.isEnabled = false
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleAuthCompleteNotification(_:)),
-            name: .friemiAuthCompleteURL,
+            selector: #selector(handleFriemiOpenURLNotification(_:)),
+            name: .friemiOpenURL,
             object: nil
         )
         CAPLog.print("Friemi iOS navigation plugin registered v2")
@@ -32,41 +32,64 @@ class AppViewController: CAPBridgeViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         navigationController?.interactivePopGestureRecognizer?.isEnabled = false
-        consumePendingAuthCompleteURL()
+        consumePendingFriemiOpenURL()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
 
-    @objc private func handleAuthCompleteNotification(_ notification: Notification) {
+    @objc private func handleFriemiOpenURLNotification(_ notification: Notification) {
         guard let url = notification.object as? URL else {
-            consumePendingAuthCompleteURL()
+            consumePendingFriemiOpenURL()
             return
         }
 
-        openAuthCompleteURL(url)
+        openFriemiURL(url)
     }
 
-    private func consumePendingAuthCompleteURL() {
-        guard let rawUrl = UserDefaults.standard.string(forKey: friemiPendingAuthCompleteURLKey),
+    private func consumePendingFriemiOpenURL() {
+        guard let rawUrl = UserDefaults.standard.string(forKey: friemiPendingOpenURLKey),
               let url = URL(string: rawUrl)
         else {
             return
         }
 
-        UserDefaults.standard.removeObject(forKey: friemiPendingAuthCompleteURLKey)
-        openAuthCompleteURL(url)
+        UserDefaults.standard.removeObject(forKey: friemiPendingOpenURLKey)
+        openFriemiURL(url)
     }
 
-    private func openAuthCompleteURL(_ url: URL) {
-        guard let targetUrl = buildWebUrlFromAuthCompleteURL(url) else {
+    private func openFriemiURL(_ url: URL) {
+        guard let targetUrl = buildWebUrlFromFriemiURL(url) else {
             return
         }
 
         DispatchQueue.main.async { [weak self] in
             self?.webView?.load(URLRequest(url: targetUrl))
         }
+    }
+
+    private func buildWebUrlFromFriemiURL(_ url: URL) -> URL? {
+        if url.host?.lowercased() == "auth-complete" {
+            return buildWebUrlFromAuthCompleteURL(url)
+        }
+
+        guard url.host?.lowercased() == "game-tools",
+              url.path.hasPrefix("/werewolf/join/")
+        else {
+            return nil
+        }
+
+        let route = "/game-tools\(url.path)"
+        guard var webComponents = URLComponents(
+            string: "\(getCurrentBaseUrl())/\(getCurrentLocale())\(route)"
+        ) else {
+            return nil
+        }
+
+        webComponents.query = url.query
+        webComponents.fragment = url.fragment
+        return webComponents.url
     }
 
     private func buildWebUrlFromAuthCompleteURL(_ url: URL) -> URL? {

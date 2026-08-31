@@ -45,6 +45,7 @@ import {
   getWerewolfRoomCodeFromScan,
   parseAndroidQrScanPayload,
 } from "@/features/scan/globalQrScanner";
+import { getWerewolfAllRolesShopPath } from "@/features/charm/profileShopProducts";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
@@ -71,6 +72,7 @@ type Copy = {
   joinCodePlaceholder: string;
   joinCodeTitle: string;
   judge: string;
+  openingRoom: string;
   unlockAllRoles: string;
   players: string;
   preview: string;
@@ -110,6 +112,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "例如 C2E848",
     joinCodeTitle: "加入已有房间",
     judge: "含 1 位法官",
+    openingRoom: "正在进入房间...",
     unlockAllRoles: "解锁全部角色",
     players: "席",
     preview: "卡牌预览",
@@ -148,6 +151,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "e.g. C2E848",
     joinCodeTitle: "Join a room",
     judge: "includes 1 judge",
+    openingRoom: "Opening room...",
     unlockAllRoles: "Unlock all roles",
     players: "Seats",
     preview: "Card preview",
@@ -189,6 +193,7 @@ const copies: Record<string, Copy> = {
     joinCodePlaceholder: "ex. C2E848",
     joinCodeTitle: "Entrer dans une table",
     judge: "inclut 1 maître",
+    openingRoom: "Ouverture...",
     unlockAllRoles: "Débloquer tous les rôles",
     players: "Places",
     preview: "Aperçu cartes",
@@ -260,8 +265,8 @@ function RoleSeatDots({ roles }: { roles: WerewolfRoleKey[] }) {
             role === "werewolf"
               ? "bg-[#7D2B24]"
               : role === "villager"
-                ? "bg-[#C9A66D]/55"
-                : "bg-[#F4C76D]"
+                ? "bg-[#F1F2E3]/55"
+                : "bg-[#F1F2E3]"
           }`}
           key={`${role}-${index}`}
         />
@@ -275,16 +280,28 @@ function VariantSeatDots({ variant }: { variant: WerewolfVariant }) {
   return <RoleSeatDots roles={variant.roles} />;
 }
 
-function VariantSubmitOverlay({ label }: { label: string }) {
+function VariantSubmitOverlay({
+  label,
+  pendingLabel,
+}: {
+  label: string;
+  pendingLabel: string;
+}) {
   const { pending } = useFormStatus();
 
   return (
     <button
       aria-label={label}
-      className="absolute inset-0 z-20 rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F4C76D]/70 disabled:cursor-not-allowed disabled:opacity-60"
+      className="absolute inset-0 z-20 grid place-items-center rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 disabled:cursor-wait"
       disabled={pending}
       type="submit"
-    />
+    >
+      {pending ? (
+        <span className="rounded-full bg-[#06231F]/94 px-4 py-2 text-xs font-bold text-[#F1F2E3] shadow-lg">
+          {pendingLabel}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -309,7 +326,7 @@ function WerewolfVariantModeCard({
   return (
     <form
       action={formAction}
-      className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-3 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F4C76D]/70"
+      className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#F1F2E3]/55 bg-[#083C34]/88 px-4 py-3 shadow-[inset_0_0_0_1px_rgba(241,242,227,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F1F2E3]/70"
     >
       <input name="locale" type="hidden" value={locale} />
       <input
@@ -318,11 +335,14 @@ function WerewolfVariantModeCard({
         value={`${getWerewolfDefaultRoomTitle(locale)} · ${title}`}
       />
       <input name="variantKey" type="hidden" value={variant.key} />
-      <VariantSubmitOverlay label={`${title} ${t.create}`} />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
+      <VariantSubmitOverlay
+        label={`${title} ${t.create}`}
+        pendingLabel={t.openingRoom}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(241,242,227,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
       <div
         aria-hidden="true"
-        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#F1F2E3]/45 to-transparent"
       />
       <Image
         alt=""
@@ -332,21 +352,21 @@ function WerewolfVariantModeCard({
         width={252}
       />
       <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
-        <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+        <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#F1F2E3]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
           {title}
         </span>
-        <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F5E7C8]/82">
+        <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F1F2E3]/82">
           {coreRoles}
         </p>
         <VariantSeatDots variant={variant} />
-        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F2E1B8]/76">
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
           <span className="inline-flex items-center gap-1">
-            <UsersRound className="h-3 w-3 text-[#EAC36D]" />
+            <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
             {variant.totalSeats}
             {locale === "zh-CN" ? "人" : ""}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Clock3 className="h-3 w-3 text-[#EAC36D]" />
+            <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
             {t.duration}
           </span>
         </div>
@@ -426,14 +446,14 @@ function CustomModeCard({
   if (!open) {
     return (
       <button
-        className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F4C76D]/70"
+        className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#F1F2E3]/55 bg-[#083C34]/88 px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(241,242,227,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F1F2E3]/70"
         onClick={() => setOpen(true)}
         type="button"
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(241,242,227,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
         <div
           aria-hidden="true"
-          className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+          className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#F1F2E3]/45 to-transparent"
         />
         <Image
           alt=""
@@ -443,21 +463,21 @@ function CustomModeCard({
           width={252}
         />
         <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
-          <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+          <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#F1F2E3]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
             {t.customTitle}
           </span>
-          <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F5E7C8]/82">
+          <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F1F2E3]/82">
             {t.customSubtitle}
           </p>
           <RoleSeatDots roles={roleDeck} />
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F2E1B8]/76">
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
             <span className="inline-flex items-center gap-1">
-              <UsersRound className="h-3 w-3 text-[#EAC36D]" />
+              <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
               {roleDeck.length}
               {locale === "zh-CN" ? "人" : ""}
             </span>
             <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3 w-3 text-[#EAC36D]" />
+              <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
               {t.duration}
             </span>
           </div>
@@ -469,7 +489,7 @@ function CustomModeCard({
   return (
     <form
       action={formAction}
-      className="relative overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)]"
+      className="relative overflow-hidden rounded-[1.15rem] border border-[#F1F2E3]/55 bg-[#083C34]/88 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(241,242,227,0.08),0_16px_34px_rgba(0,0,0,0.23)]"
     >
       <input name="locale" type="hidden" value={locale} />
       <input
@@ -483,22 +503,22 @@ function CustomModeCard({
         type="hidden"
         value={JSON.stringify(roleDeck)}
       />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.13),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_42%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(241,242,227,0.13),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_42%)]" />
       <div
         aria-hidden="true"
-        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#F1F2E3]/45 to-transparent"
       />
       <div className="relative flex items-start justify-between gap-3 pt-1">
         <div>
-          <h3 className="text-lg font-bold text-[#F8E9C8]">{t.customTitle}</h3>
-          <p className="text-xs font-bold text-[#F5E7C8]/68">
+          <h3 className="text-lg font-bold text-[#F1F2E3]">{t.customTitle}</h3>
+          <p className="text-xs font-bold text-[#F1F2E3]/68">
             {roleDeck.length}
             {locale === "zh-CN" ? "人" : ` ${t.roleCount}`}
           </p>
         </div>
         <button
           aria-label={locale === "zh-CN" ? "收起" : "Close"}
-          className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/55 bg-[#08231F] text-[#F8E9C8] transition hover:bg-[#0A3A32]"
+          className="grid h-9 w-9 place-items-center rounded-full border border-[#F1F2E3]/55 bg-[#08231F] text-[#F1F2E3] transition hover:bg-[#0A3A32]"
           onClick={() => setOpen(false)}
           type="button"
         >
@@ -509,28 +529,28 @@ function CustomModeCard({
       <div className="relative mt-4 grid grid-cols-2 gap-2">
         {customRoleOptions.map((role) => (
           <div
-            className="rounded-2xl border border-[#CFA76A]/28 bg-[#F9ECD2]/8 p-2"
+            className="rounded-2xl border border-[#F1F2E3]/28 bg-[#F1F2E3]/8 p-2"
             key={role}
           >
-            <p className="truncate text-[11px] font-semibold text-[#F8E9C8]">
+            <p className="truncate text-[11px] font-semibold text-[#F1F2E3]">
               {getWerewolfRoleLabel(locale, role)}
             </p>
             <div className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-1">
               <button
                 aria-label={`${t.decrease} ${getWerewolfRoleLabel(locale, role)}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-bold text-[#F8E9C8] disabled:opacity-35 friemi-tabular"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#F1F2E3]/36 bg-[#061E1B] text-sm font-bold text-[#F1F2E3] disabled:opacity-35 friemi-tabular"
                 disabled={roleCounts[role] <= 0}
                 onClick={() => updateRoleCount(role, roleCounts[role] - 1)}
                 type="button"
               >
                 -
               </button>
-              <span className="text-center text-sm font-bold text-[#F4C76D] friemi-tabular">
+              <span className="text-center text-sm font-bold text-[#F1F2E3] friemi-tabular">
                 {roleCounts[role]}
               </span>
               <button
                 aria-label={`${t.increase} ${getWerewolfRoleLabel(locale, role)}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-bold text-[#F8E9C8] disabled:opacity-35 friemi-tabular"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#F1F2E3]/36 bg-[#061E1B] text-sm font-bold text-[#F1F2E3] disabled:opacity-35 friemi-tabular"
                 disabled={roleDeck.length >= 15}
                 onClick={() => updateRoleCount(role, roleCounts[role] + 1)}
                 type="button"
@@ -551,8 +571,8 @@ function CustomModeCard({
       <div className="relative mt-4 flex justify-end">
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Link
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F4C76D]/55 bg-[#08231F] px-4 text-sm font-semibold text-[#F8E9C8] transition hover:bg-[#0A3A32]"
-            href={withLocale(locale, "/profile/shop?recharge=1")}
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F1F2E3]/55 bg-[#08231F] px-4 text-sm font-semibold text-[#F1F2E3] transition hover:bg-[#0A3A32]"
+            href={withLocale(locale, getWerewolfAllRolesShopPath())}
           >
             {t.unlockAllRoles}
           </Link>
@@ -590,6 +610,12 @@ export function WerewolfCreateRoomPanel({
   ]
     .map((key) => werewolfVariants.find((variant) => variant.key === key))
     .filter((variant): variant is WerewolfVariant => Boolean(variant));
+
+  useEffect(() => {
+    if (state.redirectHref) {
+      router.push(state.redirectHref);
+    }
+  }, [router, state.redirectHref]);
 
   const goToJoinCode = useCallback(
     (code: string) => {
@@ -779,14 +805,14 @@ export function WerewolfCreateRoomPanel({
 
   return (
     <section className="mx-auto w-full">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#CFA76A]/45 bg-[#042F2C] px-3.5 pb-5 pt-3 text-[#F8E9C8] shadow-[0_28px_80px_rgba(4,47,44,0.26)] sm:px-5 sm:pb-6">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(239,200,112,0.22),transparent_28%),radial-gradient(circle_at_86%_18%,rgba(81,167,130,0.16),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.32))]" />
-        <div className="pointer-events-none absolute inset-x-6 top-0 h-28 rounded-b-full border-b border-[#CFA76A]/20 bg-[#F2D17B]/5 blur-[1px]" />
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#F1F2E3]/45 bg-[#042F2C] px-3.5 pb-5 pt-3 text-[#F1F2E3] shadow-[0_28px_80px_rgba(4,47,44,0.26)] sm:px-5 sm:pb-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(241,242,227,0.22),transparent_28%),radial-gradient(circle_at_86%_18%,rgba(81,167,130,0.16),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.32))]" />
+        <div className="pointer-events-none absolute inset-x-6 top-0 h-28 rounded-b-full border-b border-[#F1F2E3]/20 bg-[#F1F2E3]/5 blur-[1px]" />
         <div className="relative">
           <div className="flex items-center justify-between">
             <button
               aria-label={locale === "zh-CN" ? "返回" : "Back"}
-              className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/65 bg-[#06231F]/72 text-[#F8E9C8] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
+              className="grid h-9 w-9 place-items-center rounded-full border border-[#F1F2E3]/65 bg-[#06231F]/72 text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
               onClick={() => {
                 router.push(withLocale(locale, "/game-tools"));
               }}
@@ -796,7 +822,7 @@ export function WerewolfCreateRoomPanel({
             </button>
             <Link
               aria-label={t.preview}
-              className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/65 bg-[#06231F]/72 text-[#F8E9C8] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
+              className="grid h-9 w-9 place-items-center rounded-full border border-[#F1F2E3]/65 bg-[#06231F]/72 text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
               href={withLocale(locale, "/game-tools/werewolf/card-preview")}
             >
               <img
@@ -810,30 +836,30 @@ export function WerewolfCreateRoomPanel({
           </div>
 
           <div className="mt-1 text-center">
-            <div className="flex items-center justify-center gap-2 text-[#DAB866]">
-              <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#DAB866]/75" />
+            <div className="flex items-center justify-center gap-2 text-[#F1F2E3]">
+              <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#F1F2E3]/75" />
               <Sparkles className="h-3.5 w-3.5" />
-              <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#DAB866]/75" />
+              <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#F1F2E3]/75" />
             </div>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-normal text-[#DAB866]/90">
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-normal text-[#F1F2E3]/90">
               {locale === "zh-CN" ? "WEREWOLF" : t.eyebrow}
             </p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-normal text-[#F8E9C8]">
+            <h1 className="mt-0.5 text-2xl font-bold tracking-normal text-[#F1F2E3]">
               {t.eyebrow}
             </h1>
           </div>
 
           <form
-            className="mx-auto mt-3 max-w-[21rem] rounded-[1rem] border border-[#CFA76A]/36 bg-[#061E1B]/72 p-2.5 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.05)]"
+            className="mx-auto mt-3 max-w-[21rem] rounded-[1rem] border border-[#F1F2E3]/36 bg-[#061E1B]/72 p-2.5 shadow-[inset_0_0_0_1px_rgba(241,242,227,0.05)]"
             onSubmit={handleJoinByCode}
           >
             <div className="grid grid-cols-[minmax(0,1fr)_2.55rem_4.6rem] gap-1.5">
               <label className="relative">
-                <Hash className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#DAB866]/78" />
+                <Hash className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#F1F2E3]/78" />
                 <span className="sr-only">{t.joinCodeLabel}</span>
                 <input
                   autoCapitalize="characters"
-                  className="h-10 w-full rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] pl-8 pr-2 text-xs font-semibold uppercase tracking-normal text-[#10332D] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#10332D]/42 focus:border-[#F4C76D] focus:ring-2 focus:ring-[#F4C76D]/20"
+                  className="h-10 w-full rounded-xl border border-[#F1F2E3]/42 bg-[#F1F2E3] pl-8 pr-2 text-xs font-semibold uppercase tracking-normal text-[#10332D] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#10332D]/42 focus:border-[#F1F2E3] focus:ring-2 focus:ring-[#F1F2E3]/20"
                   inputMode="text"
                   maxLength={12}
                   onChange={(event) => {
@@ -849,7 +875,7 @@ export function WerewolfCreateRoomPanel({
               </label>
               <button
                 aria-label={t.scanCodeAction}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] text-[#10332D] transition hover:bg-white"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F1F2E3]/42 bg-[#F1F2E3] text-[#10332D] transition hover:bg-white"
                 onClick={handleScanButtonClick}
                 title={t.scanCodeAction}
                 type="button"
@@ -872,12 +898,18 @@ export function WerewolfCreateRoomPanel({
           </form>
 
           <div className="mx-auto mt-3 flex max-w-[17rem] items-center gap-2">
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#CFA76A]/65" />
-            <span className="rounded-full border border-[#CFA76A]/50 bg-[#F7DCA0] px-8 py-2 text-sm font-bold text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#F1F2E3]/65" />
+            <span className="rounded-full border border-[#F1F2E3]/50 bg-[#F1F2E3] px-8 py-2 text-sm font-bold text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
               {t.selectMode}
             </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#CFA76A]/65" />
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#F1F2E3]/65" />
           </div>
+
+          {state.formError ? (
+            <p className="mt-3 rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
+              {state.formError}
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3">
             {featuredVariants.map((variant) => (
@@ -891,12 +923,6 @@ export function WerewolfCreateRoomPanel({
             ))}
             <CustomModeCard formAction={formAction} locale={locale} t={t} />
           </div>
-
-          {state.formError ? (
-            <p className="mt-3 rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
-              {state.formError}
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -919,7 +945,7 @@ export function WerewolfCreateRoomPanel({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="relative mx-4 aspect-square overflow-hidden rounded-[1.15rem] border border-[#F0C36A]/32 bg-black">
+            <div className="relative mx-4 aspect-square overflow-hidden rounded-[1.15rem] border border-[#F1F2E3]/32 bg-black">
               <video
                 className="h-full w-full object-cover"
                 muted
@@ -928,9 +954,9 @@ export function WerewolfCreateRoomPanel({
               />
               <canvas className="hidden" ref={canvasRef} />
               <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                <div className="h-[72%] w-[72%] rounded-[1rem] border border-[#F0C36A] shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
+                <div className="h-[72%] w-[72%] rounded-[1rem] border border-[#F1F2E3] shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
               </div>
-              <div className="pointer-events-none absolute inset-x-[18%] top-1/2 h-px bg-[#F0C36A]/90 shadow-[0_0_18px_rgba(240,195,106,0.85)]" />
+              <div className="pointer-events-none absolute inset-x-[18%] top-1/2 h-px bg-[#F1F2E3]/90 shadow-[0_0_18px_rgba(241,242,227,0.85)]" />
             </div>
             <div className="p-4">
               {scannerError ? (
@@ -938,7 +964,7 @@ export function WerewolfCreateRoomPanel({
                   {scannerError}
                 </p>
               ) : (
-                <p className="text-center text-xs font-semibold uppercase tracking-normal text-[#F0C36A]">
+                <p className="text-center text-xs font-semibold uppercase tracking-normal text-[#F1F2E3]">
                   {t.scannerSearching}
                 </p>
               )}

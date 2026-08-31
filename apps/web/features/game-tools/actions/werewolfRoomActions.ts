@@ -37,6 +37,7 @@ import {
   createGameToolPrivateToken,
   createUniqueGameToolRoomCode,
   getActiveGameToolRoomForProfile,
+  getGameToolRoomPath,
   revalidateGameToolRoom,
 } from "@/features/game-tools/gameToolRooms";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
@@ -45,6 +46,7 @@ export type WerewolfRoomActionState = {
   fieldErrors?: Record<string, string[]>;
   formError?: string;
   formNotice?: string;
+  redirectHref?: string;
 };
 
 const roomTitleMaxLength = 80;
@@ -143,12 +145,9 @@ const leaveWerewolfSeatSchema = z
     privateToken: z.string().min(16).max(40).optional(),
     roomId: z.string().min(1).optional(),
   })
-  .refine(
-    (input) => input.privateToken || input.roomId,
-    {
-      path: ["privateToken"],
-    },
-  );
+  .refine((input) => input.privateToken || input.roomId, {
+    path: ["privateToken"],
+  });
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -797,9 +796,16 @@ export async function createWerewolfRoomAction(
     werewolfToolPath,
   );
 
-  if (await hasOtherActiveGameToolRoom({ profileId: host.id })) {
+  const activeRoom = await getActiveGameToolRoomForProfile({
+    profileId: host.id,
+  });
+
+  if (activeRoom) {
     return {
-      formError: t.activeRoomConflict,
+      redirectHref: withLocale(
+        result.data.locale,
+        getGameToolRoomPath({ kind: activeRoom.kind, roomId: activeRoom.id }),
+      ),
     };
   }
 
@@ -882,9 +888,12 @@ export async function createWerewolfRoomAction(
     roomId,
     toolPath: werewolfToolPath,
   });
-  redirect(
-    withLocale(result.data.locale, `${werewolfToolPath}/rooms/${roomId}`),
-  );
+  return {
+    redirectHref: withLocale(
+      result.data.locale,
+      `${werewolfToolPath}/rooms/${roomId}`,
+    ),
+  };
 }
 
 export async function joinWerewolfRoomAction(
@@ -1658,6 +1667,12 @@ export async function updateWerewolfReadyAction(
     }
 
     updates.push(
+      prisma.gameToolRoom.update({
+        where: { id: room.id },
+        data: {
+          revision: { increment: 1 },
+        },
+      }),
       prisma.gameToolEvent.create({
         data: {
           actorId: seat.profileId,
@@ -1882,6 +1897,12 @@ export async function leaveWerewolfSeatAction(
     }
 
     updates.push(
+      prisma.gameToolRoom.update({
+        where: { id: room.id },
+        data: {
+          revision: { increment: 1 },
+        },
+      }),
       prisma.gameToolEvent.create({
         data: {
           actorId: member?.profileId ?? targetSeat?.profileId ?? null,
@@ -1915,8 +1936,7 @@ export async function leaveWerewolfSeatAction(
 
   if (returnInline) {
     return {
-      formNotice:
-        result.data.intent === "exit_room" ? "exited" : "left",
+      formNotice: result.data.intent === "exit_room" ? "exited" : "left",
     };
   }
 
@@ -2208,6 +2228,7 @@ export async function updateWerewolfPlayerLifeAction(
       prisma.gameToolRoom.update({
         where: { id: room.id },
         data: {
+          revision: { increment: 1 },
           state: {
             ...currentState,
             deadSeatNumbers,
