@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   globalSearchQueryMaxLength,
   normalizeGlobalSearchQuery,
+  type GlobalSearchSource,
 } from "../utils/searchQuery";
 
 type GlobalSearchFormProps = {
@@ -17,6 +18,7 @@ type GlobalSearchFormProps = {
   inputId?: string;
   locale: string;
   placeholder?: string;
+  source?: GlobalSearchSource | null;
   variant?: "header" | "page";
 };
 
@@ -49,7 +51,10 @@ function SearchSubmitButton({
           />
           <span className="hidden sm:inline-flex items-center gap-2">
             {pending ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <LoaderCircle
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
             ) : null}
             {label}
           </span>
@@ -70,6 +75,7 @@ export function GlobalSearchForm({
   inputId,
   locale,
   placeholder,
+  source,
   variant = "header",
 }: GlobalSearchFormProps) {
   const t = getCopy(locale).globalSearch;
@@ -86,6 +92,7 @@ export function GlobalSearchForm({
       )}
       role="search"
     >
+      {source ? <input name="source" type="hidden" value={source} /> : null}
       <label className="sr-only" htmlFor={searchInputId}>
         {t.inputLabel}
       </label>

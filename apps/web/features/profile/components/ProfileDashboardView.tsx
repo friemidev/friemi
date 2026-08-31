@@ -714,9 +714,9 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
+      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-[31px] font-bold leading-tight tracking-normal text-[#111210]">
+          <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
           </h1>
         </header>
@@ -3136,8 +3136,8 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:2.35rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
-      <h1 className="mb-6 text-[31px] font-bold leading-none tracking-normal text-[#111210]">
+    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
+      <h1 className="mb-6 min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
         {copy.title}
       </h1>
       <section>

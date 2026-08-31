@@ -13,6 +13,8 @@ class AppViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(FriemiNavigationPlugin())
         capacitorUIDelegate = webView?.uiDelegate
         webView?.uiDelegate = self
+        webView?.allowsBackForwardNavigationGestures = true
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAuthCompleteNotification(_:)),
@@ -29,6 +31,7 @@ class AppViewController: CAPBridgeViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
         consumePendingAuthCompleteURL()
     }
 

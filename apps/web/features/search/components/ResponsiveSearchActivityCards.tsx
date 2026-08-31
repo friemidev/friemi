@@ -7,6 +7,7 @@ import { MobileActivityListRow } from "@/features/activities/components/MobileAc
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityCardMasonryWeight } from "@/features/activities/utils/activityCardMasonry";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import { getSearchActivityRenderKey } from "../utils/searchActivityIdentity";
 import { SearchHighlightedText } from "./SearchHighlightedText";
 
 type ResponsiveSearchActivityCardsProps = {
@@ -16,12 +17,6 @@ type ResponsiveSearchActivityCardsProps = {
   query?: string;
   viewerProfileId?: string | null;
 };
-
-function getActivityKey(activity: ActivityCardViewModel) {
-  return isPublicEventCard(activity)
-    ? `event-${activity.publicEventId ?? activity.id}`
-    : `crew-${activity.id}`;
-}
 
 export function ResponsiveSearchActivityCards({
   activities,
@@ -46,7 +41,7 @@ export function ResponsiveSearchActivityCards({
         {activities.map((activity) => (
           <MobileActivityListRow
             activity={activity}
-            key={getActivityKey(activity)}
+            key={getSearchActivityRenderKey(activity)}
             locale={locale}
           />
         ))}
@@ -58,7 +53,7 @@ export function ResponsiveSearchActivityCards({
         >
           {activities.map((activity) => (
             <ActivityCard
-              key={getActivityKey(activity)}
+              key={getSearchActivityRenderKey(activity)}
               activity={activity}
               isAuthenticated={isAuthenticated}
               isOwnActivity={
