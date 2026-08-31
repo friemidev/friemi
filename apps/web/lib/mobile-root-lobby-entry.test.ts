@@ -30,6 +30,16 @@ test("isMobileUserAgent detects common mobile browsers", () => {
     ),
     true,
   );
+  assert.equal(
+    isMobileUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit FriemiIOS/1",
+    ),
+    true,
+  );
+  assert.equal(
+    isMobileUserAgent("Mozilla/5.0 AppleWebKit FriemiAndroid/2.7"),
+    true,
+  );
 });
 
 test("isMobileUserAgent does not redirect search crawlers with mobile user agents", () => {
@@ -40,7 +50,7 @@ test("isMobileUserAgent does not redirect search crawlers with mobile user agent
   assert.equal(isMobileUserAgent(googlebotUserAgent), false);
 });
 
-test("isMobileViewportRequest prefers viewport client hints and falls back to the user agent", () => {
+test("isMobileViewportRequest keeps mobile and native app requests on the mobile layout", () => {
   assert.equal(
     isMobileViewportRequest(
       new Headers({
@@ -57,13 +67,43 @@ test("isMobileViewportRequest prefers viewport client hints and falls back to th
         "user-agent": "Mozilla/5.0 (iPhone) Mobile",
       }),
     ),
-    false,
+    true,
   );
   assert.equal(
     isMobileViewportRequest(
       new Headers({ "user-agent": "Mozilla/5.0 (iPhone) Mobile" }),
     ),
     true,
+  );
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({
+        "sec-ch-viewport-width": "1280",
+        "user-agent": "Mozilla/5.0 AppleWebKit FriemiIOS/1",
+      }),
+    ),
+    true,
+  );
+});
+
+test("isMobileViewportRequest uses viewport hints for desktop user agents", () => {
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({
+        "sec-ch-viewport-width": "430",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/125",
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    isMobileViewportRequest(
+      new Headers({
+        "sec-ch-viewport-width": "1280",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/125",
+      }),
+    ),
+    false,
   );
 });
 
