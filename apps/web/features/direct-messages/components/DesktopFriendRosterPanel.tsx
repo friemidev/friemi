@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { getGlobalSearchHref } from "@/features/search/utils/searchQuery";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -60,7 +61,7 @@ export function DesktopFriendRosterPanel({
         <Link
           className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:-translate-y-0.5 hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           aria-label={t.findPeople}
-          href={withLocale(locale, "/search")}
+          href={getGlobalSearchHref(locale, "", { source: "messages" })}
           title={t.findPeople}
         >
           <Search className="h-4 w-4" />

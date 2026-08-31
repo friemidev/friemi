@@ -6,6 +6,7 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { cn } from "@/lib/utils";
 import {
   defaultProfileAvatars,
@@ -32,7 +33,7 @@ function getAvatarPickerCopy(locale: string) {
   if (locale === "fr") {
     return {
       current: "Avatar actuel",
-      fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 Mo",
+      fileHint: "JPG, PNG, WebP, GIF, HEIC · 10 Mo",
       fileTooLarge: "Image trop grande.",
       female: "Femme",
       gender: "Genre",
@@ -50,7 +51,7 @@ function getAvatarPickerCopy(locale: string) {
   if (locale === "en") {
     return {
       current: "Current avatar",
-      fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 MB",
+      fileHint: "JPG, PNG, WebP, GIF, HEIC · 10 MB",
       fileTooLarge: "Image is too large.",
       female: "Female",
       gender: "Gender",
@@ -67,7 +68,7 @@ function getAvatarPickerCopy(locale: string) {
 
   return {
     current: "当前头像",
-    fileHint: "JPG、PNG、WebP、GIF、HEIC · 8 MB",
+    fileHint: "JPG、PNG、WebP、GIF、HEIC · 10 MB",
     fileTooLarge: "图片太大。",
     female: "女生",
     gender: "选择性别",
@@ -167,24 +168,17 @@ export function ProfileAvatarPicker({
     onUploadingChange?.(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const result = await uploadImageWithSignedUrl(
+        "/api/uploads/profile-avatar",
+        file,
+      );
 
-      const response = await fetch("/api/uploads/profile-avatar", {
-        method: "POST",
-        body: formData,
-      });
-      const json = (await response.json().catch(() => null)) as {
-        error?: string;
-        url?: string;
-      } | null;
-
-      if (!response.ok || !json?.url) {
-        setError(getUploadErrorMessage(locale, json?.error));
+      if ("error" in result) {
+        setError(getUploadErrorMessage(locale, result.error));
         return;
       }
 
-      onChange(json.url);
+      onChange(result.url);
     } catch {
       setError(copy.uploadFailed);
     } finally {

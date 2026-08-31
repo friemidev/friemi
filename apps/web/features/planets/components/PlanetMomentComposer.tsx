@@ -7,6 +7,7 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 
 const maxMomentImageCount = 12;
 
@@ -18,7 +19,7 @@ type PlanetMomentComposerProps = {
 
 const copy = {
   "zh-CN": {
-    invalidFile: "请选择支持的图片，普通图片最大 10MB，GIF 最大 20MB。",
+    invalidFile: "请选择支持的图片，所有图片最大 10MB。",
     partialUploadFailed: "有图片上传失败，请稍后重试。",
     uploadFailed: "图片上传失败，请稍后重试。",
     createMoment: "发布精彩瞬间",
@@ -32,7 +33,7 @@ const copy = {
     submit: "发布",
   },
   en: {
-    invalidFile: "Choose supported images. Regular images max 10 MB, GIF max 20 MB.",
+    invalidFile: "Choose supported images. All images max 10 MB.",
     partialUploadFailed: "Some images failed to upload. Please try again.",
     uploadFailed: "Image upload failed. Please try again.",
     createMoment: "Create a moment",
@@ -46,7 +47,7 @@ const copy = {
     submit: "Post",
   },
   fr: {
-    invalidFile: "Choisissez des images prises en charge. 10 Mo max, GIF 20 Mo.",
+    invalidFile: "Choisissez des images prises en charge. 10 Mo maximum.",
     partialUploadFailed: "Certaines images n'ont pas pu être envoyées. Réessayez plus tard.",
     uploadFailed: "Échec de l'envoi de l'image. Réessayez plus tard.",
     createMoment: "Publier un moment",
@@ -93,23 +94,17 @@ export function PlanetMomentComposer({
       const uploadedUrls: string[] = [];
 
       for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const response = await fetch("/api/uploads/moment-image", {
-          method: "POST",
-          body: formData,
-        });
-        const payload = (await response.json().catch(() => null)) as {
-          url?: string;
-        } | null;
-        const imageUrl = payload?.url;
+        const result = await uploadImageWithSignedUrl(
+          "/api/uploads/moment-image",
+          file,
+        );
 
-        if (!response.ok || !imageUrl) {
+        if ("error" in result) {
           setUploadError(t.partialUploadFailed);
           break;
         }
 
-        uploadedUrls.push(imageUrl);
+        uploadedUrls.push(result.url);
       }
 
       setImageUrls((current) =>

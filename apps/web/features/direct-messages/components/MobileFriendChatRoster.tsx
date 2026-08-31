@@ -15,6 +15,7 @@ import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { getGlobalSearchHref } from "@/features/search/utils/searchQuery";
 import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
@@ -52,7 +53,7 @@ export function MobileFriendChatRoster({
           <Link
             className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
             aria-label={t.findPeople}
-            href={withLocale(locale, "/search")}
+            href={getGlobalSearchHref(locale, "", { source: "messages" })}
             title={t.findPeople}
           >
             <Search className="h-4 w-4" />
@@ -81,7 +82,7 @@ export function MobileFriendChatRoster({
           </p>
           <Link
             className="relative mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-moss ring-1 ring-sand"
-            href={withLocale(locale, "/search")}
+            href={getGlobalSearchHref(locale, "", { source: "messages" })}
           >
             <Search className="h-4 w-4" />
             {t.findPeople}

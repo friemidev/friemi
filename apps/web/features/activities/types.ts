@@ -69,6 +69,7 @@ export type ActivityCardViewModel = ActivitySummary & {
     | "REJECTED"
     | "CANCELLED"
     | null;
+  viewerCanAccess?: boolean;
 };
 
 export type ActivityMerchantViewModel = {

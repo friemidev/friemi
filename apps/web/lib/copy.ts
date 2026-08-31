@@ -818,7 +818,7 @@ const copy = {
       coverDefault: "使用默认封面",
       coverImageHint: "上传后会展示在聚吧卡片和详情页顶部。",
       coverFileHint:
-        "支持 JPG、PNG、WebP、GIF、AVIF、HEIC 等图片，普通图片最大 10MB，GIF 最大 20MB。",
+        "支持 JPG、PNG、WebP、GIF、AVIF、HEIC 等图片，所有图片最大 10MB。",
       coverUpload: "上传封面",
       coverTapToUpload: "点击上传封面",
       coverDropHere: "松开即可上传",
@@ -826,7 +826,7 @@ const copy = {
       coverRemove: "移除",
       coverUploadFailed: "封面上传失败，请稍后重试。",
       coverTypeError: "请上传常见图片格式。",
-      coverSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
+      coverSizeError: "图片不能超过 10MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
       coverStorageConfigError: "图片上传暂不可用，请稍后再试。",
       linkImportTitle: "从链接导入",
@@ -1853,7 +1853,7 @@ const copy = {
       coverDefault: "Use the default cover",
       coverImageHint: "Uploaded images appear on plan cards and detail pages.",
       coverFileHint:
-        "JPG, PNG, WebP, GIF, AVIF, HEIC and more. Regular images max 10 MB, GIF max 20 MB.",
+        "JPG, PNG, WebP, GIF, AVIF, HEIC and more. All images max 10 MB.",
       coverUpload: "Upload cover",
       coverTapToUpload: "Tap to upload cover",
       coverDropHere: "Drop to upload",
@@ -1861,7 +1861,7 @@ const copy = {
       coverRemove: "Remove",
       coverUploadFailed: "Cover upload failed. Please try again later.",
       coverTypeError: "Please upload a common image format.",
-      coverSizeError: "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
+      coverSizeError: "Images must be 10 MB or smaller.",
       coverInvalidContentError:
         "The image content is invalid. Please choose the original image file.",
       coverStorageConfigError:
@@ -2932,7 +2932,7 @@ const copy = {
       coverImageHint:
         "L'image s'affiche sur les cartes de sortie et la page détail.",
       coverFileHint:
-        "JPG, PNG, WebP, GIF, AVIF, HEIC, etc. 10 Mo max, GIF 20 Mo.",
+        "JPG, PNG, WebP, GIF, AVIF, HEIC, etc. Toutes les images : 10 Mo max.",
       coverUpload: "Importer",
       coverTapToUpload: "Touchez pour importer",
       coverDropHere: "Relâchez pour importer",
@@ -2942,7 +2942,7 @@ const copy = {
         "Échec de l'import de la couverture. Réessayez plus tard.",
       coverTypeError: "Importez un format d'image courant.",
       coverSizeError:
-        "Les images doivent faire 10 Mo max ; les GIF 20 Mo max.",
+        "Les images doivent faire 10 Mo maximum.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:

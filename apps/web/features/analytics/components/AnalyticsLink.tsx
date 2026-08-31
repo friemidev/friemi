@@ -16,6 +16,7 @@ type AnalyticsLinkProps = {
   event: Omit<AnalyticsEventInput, "locale" | "route">;
   href: string;
   detailSource?: DetailSourceInput;
+  disabled?: boolean;
   prefetch?: boolean;
 };
 
@@ -24,10 +25,19 @@ export function AnalyticsLink({
   children,
   className,
   detailSource,
+  disabled = false,
   event,
   href,
   prefetch = false,
 }: AnalyticsLinkProps) {
+  if (disabled) {
+    return (
+      <div aria-disabled="true" className={className}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <Link
       aria-label={ariaLabel}

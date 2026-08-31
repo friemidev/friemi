@@ -1,6 +1,6 @@
 export const maxImageUploadFileSize = 10 * 1024 * 1024;
-export const maxAnimatedImageUploadFileSize = 20 * 1024 * 1024;
-export const maxProfileAvatarUploadFileSize = 8 * 1024 * 1024;
+export const maxAnimatedImageUploadFileSize = maxImageUploadFileSize;
+export const maxProfileAvatarUploadFileSize = maxImageUploadFileSize;
 export const maxImageBucketFileSize = maxAnimatedImageUploadFileSize;
 
 export const allowedImageMimeTypes = {

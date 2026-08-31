@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import {
   getDetailSourceTargetSelector,
   isDetailSourceReturnPage,
@@ -11,6 +10,10 @@ import {
   type DetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
+import {
+  dedupeSearchActivities,
+  filterUniqueSearchActivities,
+} from "../utils/searchActivityIdentity";
 import { ResponsiveSearchActivityCards } from "./ResponsiveSearchActivityCards";
 
 type SearchActivityResultsFeedProps = {
@@ -38,50 +41,6 @@ type SearchActivityResultsResponse = {
   totalCount?: number;
 };
 
-function getSearchActivityKey(activity: ActivityCardViewModel) {
-  return isPublicEventCard(activity)
-    ? `event-${activity.publicEventId ?? activity.id}`
-    : `crew-${activity.id}`;
-}
-
-function getSearchActivityPublicEventKey(activity: ActivityCardViewModel) {
-  return activity.publicEventId
-    ? `event-${activity.publicEventId}`
-    : isPublicEventCard(activity)
-      ? `event-${activity.id}`
-      : null;
-}
-
-function filterUniqueSearchActivities(
-  current: ActivityCardViewModel[],
-  nextItems: ActivityCardViewModel[],
-) {
-  const currentKeys = new Set(current.map(getSearchActivityKey));
-  const currentPublicEventKeys = new Set(
-    current.map(getSearchActivityPublicEventKey).filter(Boolean),
-  );
-
-  return nextItems.filter((activity) => {
-    const key = getSearchActivityKey(activity);
-    const publicEventKey = getSearchActivityPublicEventKey(activity);
-
-    if (
-      currentKeys.has(key) ||
-      (publicEventKey && currentPublicEventKeys.has(publicEventKey))
-    ) {
-      return false;
-    }
-
-    currentKeys.add(key);
-
-    if (publicEventKey) {
-      currentPublicEventKeys.add(publicEventKey);
-    }
-
-    return true;
-  });
-}
-
 const searchActivityResultsPageSize = 18;
 
 export function SearchActivityResultsFeed({
@@ -100,13 +59,15 @@ export function SearchActivityResultsFeed({
   viewerProfileId,
 }: SearchActivityResultsFeedProps) {
   const t = getCopy(locale).globalSearch;
-  const [activities, setActivities] = useState(initialActivities);
+  const [activities, setActivities] = useState(() =>
+    dedupeSearchActivities(initialActivities),
+  );
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextOffset, setNextOffset] = useState(initialNextOffset);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [relatedActivities, setRelatedActivities] = useState(
-    initialRelatedActivities,
+  const [relatedActivities, setRelatedActivities] = useState(() =>
+    filterUniqueSearchActivities(initialActivities, initialRelatedActivities),
   );
   const [relatedHasMore, setRelatedHasMore] = useState(initialRelatedHasMore);
   const [relatedNextOffset, setRelatedNextOffset] = useState(
@@ -125,18 +86,24 @@ export function SearchActivityResultsFeed({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setActivities(initialActivities);
+    const uniqueInitialActivities = dedupeSearchActivities(initialActivities);
+    const uniqueRelatedActivities = filterUniqueSearchActivities(
+      uniqueInitialActivities,
+      initialRelatedActivities,
+    );
+
+    setActivities(uniqueInitialActivities);
     setHasMore(initialHasMore);
     setNextOffset(initialNextOffset);
     setLoading(false);
     setLoadFailed(false);
-    setRelatedActivities(initialRelatedActivities);
+    setRelatedActivities(uniqueRelatedActivities);
     setRelatedHasMore(initialRelatedHasMore);
     setRelatedNextOffset(initialRelatedNextOffset);
     setRelatedTotalCount(initialRelatedTotalCount);
     setRelatedLoading(false);
     setRelatedLoadFailed(false);
-    setRelatedStarted(initialRelatedActivities.length > 0);
+    setRelatedStarted(uniqueRelatedActivities.length > 0);
   }, [
     initialActivities,
     initialHasMore,

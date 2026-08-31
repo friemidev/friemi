@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
+  createSignedChatImageUpload,
+  finalizeSignedChatImageUpload,
   getActivityCoverStorageConfig,
   uploadChatImageBuffer,
   validateImageUploadFile,
@@ -8,6 +10,10 @@ import {
 } from "@/lib/activity-cover-storage";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getUploadRateLimitRejection } from "@/lib/uploadRateLimit";
+import {
+  getSignedImageUploadErrorStatus,
+  parseSignedImageUploadRequest,
+} from "@/lib/signed-image-upload-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +42,27 @@ export async function POST(request: Request) {
 
   if (!getActivityCoverStorageConfig()) {
     return uploadError("STORAGE_NOT_CONFIGURED", 500);
+  }
+
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    const body = await parseSignedImageUploadRequest(request);
+
+    if (!body) {
+      return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
+    }
+
+    const result =
+      body.action === "create"
+        ? await createSignedChatImageUpload(userId, {
+            name: body.fileName,
+            size: body.fileSize,
+            type: body.fileType,
+          })
+        : await finalizeSignedChatImageUpload(userId, body.path);
+
+    return "error" in result
+      ? uploadError(result.error, getSignedImageUploadErrorStatus(result.error))
+      : NextResponse.json(result);
   }
 
   const formData = await request.formData();

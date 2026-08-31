@@ -25,8 +25,11 @@ import {
   getActivityTimeState,
 } from "../utils/activityDisplay";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
-import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import { compareLobbyActivityStatusAndOwnership } from "../utils/lobbyActivitySort";
+import {
+  applyPrivateActivityCardAccess,
+  canAccessPrivateActivityCard,
+} from "../utils/privateActivityCardAccess";
 import type { Prisma } from "@prisma/client";
 
 const activityLobbyFeedPageSize = 8;
@@ -84,7 +87,6 @@ const getCachedOpenLobbyActivities = unstable_cache(
             includePast: false,
             visibility: null,
           }),
-          { visibility: "PUBLIC" },
           strictTeamCardWhere,
         ],
       },
@@ -165,6 +167,7 @@ async function decorateLobbyActivities(
   activities: ActivityCardViewModel[],
   viewerProfileId: string,
   viewerFriendIds: string[],
+  viewerAccessFriendIds: string[] = viewerFriendIds,
 ) {
   const publicEventActivities = activities.filter(
     (activity) =>
@@ -237,15 +240,29 @@ async function decorateLobbyActivities(
     publicEventActivitiesWithState.map((activity) => [activity.id, activity]),
   );
   const teamActivityById = new Map(
-    teamActivitiesWithState.map((activity) => [
-      activity.id,
-      {
+    teamActivitiesWithState.map((activity) => {
+      const viewerParticipationStatus =
+        viewerParticipationByActivityId.get(activity.id) ?? null;
+      const viewerCanAccess = canAccessPrivateActivityCard(activity, {
+        friendIds: viewerAccessFriendIds,
+        viewerParticipationStatus,
+        viewerProfileId,
+      });
+      const activityWithViewerState: ActivityCardViewModel = {
         ...activity,
         friendSignal: teamActivitySignalMap.get(activity.id) ?? null,
-        viewerParticipationStatus:
-          viewerParticipationByActivityId.get(activity.id) ?? null,
-      },
-    ]),
+        viewerCanAccess,
+        viewerParticipationStatus,
+      };
+
+      return [
+        activity.id,
+        applyPrivateActivityCardAccess(
+          activityWithViewerState,
+          viewerCanAccess,
+        ),
+      ] as const;
+    }),
   );
 
   const activitiesWithViewerState = activities.map((activity) => {
@@ -852,14 +869,6 @@ async function getLobbyQueryContext(
   });
   const teamCardWhere = strictTeamCardWhere;
   const ownTeamCardWhere = baseTeamCardWhere;
-  const accessibleFeedTeamWhere: Prisma.ActivityWhereInput = {
-    OR: [
-      strictTeamCardWhere,
-      {
-        AND: [{ organizerId: viewerProfileId }, ownTeamCardWhere],
-      },
-    ],
-  };
   const getAccessibleWhere = (
     baseWhere: Prisma.ActivityWhereInput,
   ): Prisma.ActivityWhereInput => ({
@@ -868,7 +877,9 @@ async function getLobbyQueryContext(
       {
         OR: [
           {
-            visibility: "PUBLIC",
+            visibility: {
+              in: ["PUBLIC", "PRIVATE"],
+            },
           },
           {
             organizerId: viewerProfileId,
@@ -883,7 +894,6 @@ async function getLobbyQueryContext(
               },
             },
           },
-          ...buildPrivateActivityFriendAccessWhere(mutualFollowIds),
         ],
       },
     ],
@@ -1003,6 +1013,7 @@ export async function getActivityLobbyFeedPage(
             activityCards,
             viewerProfileId,
             context.friendIds,
+            context.mutualFollowIds,
           )
         : activityCards,
       countsApproximate: true,
@@ -1089,6 +1100,7 @@ export async function getActivityLobbyFeedPage(
           activityCards,
           viewerProfileId,
           context.friendIds,
+          context.mutualFollowIds,
         )
       : activityCards,
     endedCount,
@@ -1112,7 +1124,6 @@ async function getOpenLobbySection(
         AND: [
           context.activeVisibleWhere,
           { organizerId: viewerProfileId },
-          { visibility: "PUBLIC" },
           context.ownTeamCardWhere,
         ],
       },
@@ -1321,6 +1332,7 @@ export async function getActivityLobbyInitial(
     uniqueActivities,
     viewerProfileId,
     followedProfileIds,
+    mutualFollowIds,
   );
   const decoratedByKey = new Map(
     decoratedActivities.map((activity) => [
@@ -1390,6 +1402,7 @@ export async function getActivityLobbySection(
     activities,
     viewerProfileId,
     context.friendIds,
+    context.mutualFollowIds,
   );
 }
 
@@ -1435,7 +1448,7 @@ export async function getActivityLobby(
 async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
   const now = getActivityFloatingNow();
   const categoryWhere: Prisma.ActivityWhereInput = category ? { category } : {};
-  const publicTeamWhere: Prisma.ActivityWhereInput = {
+  const visibleTeamWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({
         includeEnded: true,
@@ -1443,12 +1456,11 @@ async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
         visibility: null,
         now,
       }),
-      { visibility: "PUBLIC" },
       strictTeamCardWhere,
       categoryWhere,
     ],
   };
-  const publicActiveTeamWhere: Prisma.ActivityWhereInput = {
+  const visibleActiveTeamWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({
         includeEnded: false,
@@ -1456,21 +1468,20 @@ async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
         visibility: null,
         now,
       }),
-      { visibility: "PUBLIC" },
       strictTeamCardWhere,
       categoryWhere,
     ],
   };
   const [activeActivities, archivedActivities] = await Promise.all([
     prisma.activity.findMany({
-      where: publicActiveTeamWhere,
+      where: visibleActiveTeamWhere,
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: activityLobbyPreviewLimit,
       select: activityCardSelect,
     }),
     prisma.activity.findMany({
       where: {
-        AND: [publicTeamWhere, getArchivedLobbyActivityWhere(now)],
+        AND: [visibleTeamWhere, getArchivedLobbyActivityWhere(now)],
       },
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: activityLobbyPreviewLimit,
@@ -1478,7 +1489,11 @@ async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
     }),
   ]);
   const activities = [...activeActivities, ...archivedActivities].map(
-    getActivityCardViewModel,
+    (activity) => {
+      const card = getActivityCardViewModel(activity);
+
+      return applyPrivateActivityCardAccess(card, false);
+    },
   );
 
   return Array.from(

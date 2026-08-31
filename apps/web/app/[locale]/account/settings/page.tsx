@@ -82,7 +82,7 @@ export default async function AccountSettingsPage({
   ]);
 
   return (
-    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1.15rem] [--app-mobile-page-bottom-gap:1.75rem] relative isolate max-w-xl overflow-hidden px-5 md:min-h-[70vh] md:pb-12 md:pt-10">
+    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] relative isolate max-w-xl overflow-hidden px-5 md:min-h-[70vh] md:pb-12 md:pt-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
@@ -93,16 +93,18 @@ export default async function AccountSettingsPage({
       </div>
 
       <header className="relative">
-        <Link
-          href={withLocale(locale, "/profile")}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#FEFFF9]/76 text-[#1D1D1B] shadow-[0_14px_34px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]/72 backdrop-blur transition active:scale-95"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        </Link>
-        <h1 className="mt-8 text-[2.75rem] font-bold leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
-          {copy.title}
-        </h1>
+        <div className="flex min-h-11 items-center justify-between gap-4">
+          <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
+            {copy.title}
+          </h1>
+          <Link
+            href={withLocale(locale, "/profile")}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FEFFF9]/76 text-[#1D1D1B] shadow-[0_14px_34px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]/72 backdrop-blur transition active:scale-95"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+          </Link>
+        </div>
         <p className="mt-3 max-w-[24rem] text-[15px] font-semibold leading-7 text-[#156240]/78 md:text-base">
           {copy.description}
         </p>

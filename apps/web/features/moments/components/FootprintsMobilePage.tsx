@@ -84,7 +84,9 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { withLocale } from "@/lib/routes";
+import { getGlobalSearchHref } from "@/features/search/utils/searchQuery";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
@@ -243,8 +245,9 @@ const copyByLocale = {
     photoInvalidContentError: "图片内容无效，请重新选择原始图片。",
     photoLimitError: "一次晒晒最多可以上传 6 张照片。",
     photoRemove: "移除照片",
+    photoRateLimitError: "上传过于频繁，请稍等片刻后重试。",
     photoRetry: "重新上传",
-    photoSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
+    photoSizeError: "图片不能超过 10MB。",
     photoStorageError: "照片存储暂时不可用，请稍后再试。",
     photoTypeError: "请选择常见图片格式。",
     photoUploadFailed: "部分照片上传失败，请重试或移除。",
@@ -343,9 +346,10 @@ const copyByLocale = {
       "This image is invalid. Choose the original file.",
     photoLimitError: "You can upload up to 6 photos per moment.",
     photoRemove: "Remove photo",
+    photoRateLimitError: "Too many uploads. Wait a moment and try again.",
     photoRetry: "Retry upload",
     photoSizeError:
-      "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
+      "Images must be 10 MB or smaller.",
     photoStorageError:
       "Photo storage is temporarily unavailable. Try again later.",
     photoTypeError: "Choose a common image format.",
@@ -449,9 +453,11 @@ const copyByLocale = {
       "Cette image est invalide. Choisissez le fichier original.",
     photoLimitError: "Vous pouvez ajouter jusqu'à 6 photos par publication.",
     photoRemove: "Retirer la photo",
+    photoRateLimitError:
+      "Trop d'envois successifs. Patientez un instant puis réessayez.",
     photoRetry: "Réessayer",
     photoSizeError:
-      "Les images doivent faire 10 Mo maximum, ou 20 Mo pour un GIF.",
+      "Les images doivent faire 10 Mo maximum.",
     photoStorageError:
       "Le stockage des photos est indisponible. Réessayez plus tard.",
     photoTypeError: "Choisissez un format d'image courant.",
@@ -1921,16 +1927,20 @@ const createMomentInitialState: CreateMomentState = {
 };
 
 const maxMomentImageCount = 6;
-const momentImageUploadConcurrency = 3;
+const momentImageUploadConcurrency = 2;
+const momentImageUploadMaxAttempts = 3;
 
 type MomentImageUploadErrorCode =
   | "BUCKET_NOT_AVAILABLE"
   | "FILE_TOO_LARGE"
   | "INVALID_IMAGE_CONTENT"
+  | "INVALID_REQUEST"
+  | "INVALID_UPLOAD_PATH"
   | "MISSING_FILE"
   | "STORAGE_NOT_CONFIGURED"
   | "UNAUTHORIZED"
   | "UNSUPPORTED_FILE_TYPE"
+  | "UPLOAD_RATE_LIMITED"
   | "UPLOAD_FAILED";
 
 type MomentImageUploadItem =
@@ -2008,6 +2018,10 @@ function MomentImageUploadGrid({
       return copy.photoStorageError;
     }
 
+    if (code === "UPLOAD_RATE_LIMITED") {
+      return copy.photoRateLimitError;
+    }
+
     return copy.photoUploadFailed;
   }
 
@@ -2025,51 +2039,59 @@ function MomentImageUploadGrid({
   ) {
     const controller = new AbortController();
     uploadControllersRef.current.set(item.id, controller);
+    let lastErrorCode: MomentImageUploadErrorCode = "UPLOAD_FAILED";
 
     try {
-      const formData = new FormData();
-      formData.append("file", item.file);
-
-      const response = await fetch("/api/uploads/moment-image", {
-        body: formData,
-        method: "POST",
-        signal: controller.signal,
-      });
-      const payload = (await response.json().catch(() => null)) as {
-        error?: MomentImageUploadErrorCode;
-        url?: string;
-      } | null;
-
-      if (!response.ok || !payload?.url) {
-        const message = getUploadErrorMessage(payload?.error);
-        setItems((current) =>
-          current.map((currentItem) =>
-            currentItem.id === item.id && currentItem.status !== "uploaded"
-              ? { ...currentItem, error: message, status: "failed" }
-              : currentItem,
-          ),
-        );
-        setError(message);
-        return;
-      }
-
-      setItems((current) =>
-        current.map((currentItem) =>
-          currentItem.id === item.id
-            ? { id: item.id, status: "uploaded", url: payload.url! }
-            : currentItem,
-        ),
-      );
-      window.setTimeout(() => releasePreview(item.previewUrl), 0);
-    } catch (uploadError) {
-      if (
-        uploadError instanceof DOMException &&
-        uploadError.name === "AbortError"
+      for (
+        let attempt = 0;
+        attempt < momentImageUploadMaxAttempts;
+        attempt += 1
       ) {
-        return;
+        try {
+          const result = await uploadImageWithSignedUrl(
+            "/api/uploads/moment-image",
+            item.file,
+            { signal: controller.signal },
+          );
+
+          if ("url" in result) {
+            setItems((current) =>
+              current.map((currentItem) =>
+                currentItem.id === item.id
+                  ? { id: item.id, status: "uploaded", url: result.url }
+                  : currentItem,
+              ),
+            );
+            window.setTimeout(() => releasePreview(item.previewUrl), 0);
+            return;
+          }
+
+          lastErrorCode = result.error;
+        } catch (uploadError) {
+          if (
+            uploadError instanceof DOMException &&
+            uploadError.name === "AbortError"
+          ) {
+            return;
+          }
+
+          lastErrorCode = "UPLOAD_FAILED";
+        }
+
+        const canRetry =
+          lastErrorCode === "UPLOAD_FAILED" &&
+          attempt < momentImageUploadMaxAttempts - 1;
+
+        if (!canRetry) {
+          break;
+        }
+
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, 500 * 2 ** attempt),
+        );
       }
 
-      const message = copy.photoUploadFailed;
+      const message = getUploadErrorMessage(lastErrorCode);
       setItems((current) =>
         current.map((currentItem) =>
           currentItem.id === item.id && currentItem.status !== "uploaded"
@@ -2578,7 +2600,17 @@ function FootprintsMessageList({
   const pageCopy = getFootprintsCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<PlanetChatListFilter>("all");
+  const [dismissedEntryIds, setDismissedEntryIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [hasRestoredListState, setHasRestoredListState] = useState(false);
+  const dismissEntry = useCallback((entryId: string) => {
+    setDismissedEntryIds((current) => {
+      const next = new Set(current);
+      next.add(entryId);
+      return next;
+    });
+  }, []);
   const returnHref = useMemo(
     () =>
       buildPlanetChatListReturnHref({
@@ -2726,8 +2758,12 @@ function FootprintsMessageList({
   }, [activityRoomChats, friends, officialMessages, planetChats]);
   const visibleEntries = useMemo(
     () =>
-      filterUnifiedChatRosterEntries(sortedEntries, activeFilter, searchTerm),
-    [activeFilter, searchTerm, sortedEntries],
+      filterUnifiedChatRosterEntries(
+        sortedEntries,
+        activeFilter,
+        searchTerm,
+      ).filter((entry) => !dismissedEntryIds.has(entry.id)),
+    [activeFilter, dismissedEntryIds, searchTerm, sortedEntries],
   );
   const directUnreadTotal = friends.reduce(
     (total, friend) => total + (friend.isMuted ? 0 : friend.unreadCount),
@@ -2817,7 +2853,7 @@ function FootprintsMessageList({
         <Link
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
           aria-label={t.findPeople}
-          href={withLocale(locale, "/search")}
+          href={getGlobalSearchHref(locale, "", { source: "messages" })}
           title={t.findPeople}
         >
           <Search className="h-4 w-4" />
@@ -2916,6 +2952,7 @@ function FootprintsMessageList({
                 currentUserProfileId={currentUserProfileId}
                 friend={entry.friend}
                 locale={locale}
+                onDismiss={() => dismissEntry(entry.id)}
                 showBackFollowAction={false}
               />
             ) : entry.kind === "official" ? (
@@ -2928,12 +2965,14 @@ function FootprintsMessageList({
               <FootprintsRoomChatRow
                 key={entry.id}
                 locale={locale}
+                onDismiss={() => dismissEntry(entry.id)}
                 room={entry.room}
               />
             ) : (
               <FootprintsPlanetChatRow
                 key={entry.id}
                 locale={locale}
+                onDismiss={() => dismissEntry(entry.id)}
                 planet={entry.planet}
                 returnHref={returnHref}
               />
@@ -3014,9 +3053,11 @@ function getUnreadMentionPreview(locale: string, kind: "ALL" | "ME") {
 
 function FootprintsRoomChatRow({
   locale,
+  onDismiss,
   room,
 }: {
   locale: string;
+  onDismiss: () => void;
   room: ActivityRoomChatRosterItemViewModel;
 }) {
   const t = getDirectMessagesCopy(locale);
@@ -3119,6 +3160,7 @@ function FootprintsRoomChatRow({
         className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
         kind="activity"
         locale={locale}
+        onDismiss={onDismiss}
       />
     </article>
   );
@@ -3126,10 +3168,12 @@ function FootprintsRoomChatRow({
 
 function FootprintsPlanetChatRow({
   locale,
+  onDismiss,
   planet,
   returnHref,
 }: {
   locale: string;
+  onDismiss: () => void;
   planet: PlanetChatRosterItemViewModel;
   returnHref: string;
 }) {
@@ -3253,6 +3297,7 @@ function FootprintsPlanetChatRow({
         className="mr-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
         kind="planet"
         locale={locale}
+        onDismiss={onDismiss}
         planetId={planet.id}
         planetSlug={planet.slug}
       />
@@ -3264,11 +3309,13 @@ function FootprintsMessageRow({
   currentUserProfileId,
   friend,
   locale,
+  onDismiss,
   showBackFollowAction,
 }: {
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   locale: string;
+  onDismiss: () => void;
   showBackFollowAction: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
@@ -3387,6 +3434,7 @@ function FootprintsMessageRow({
             conversationId={friend.conversationId}
             kind="direct"
             locale={locale}
+            onDismiss={onDismiss}
           />
         </div>
       ) : (
@@ -3753,10 +3801,7 @@ export function FootprintsMobilePage({
   ]);
 
   useEffect(() => {
-    if (
-      pendingTabRef.current !== initialTab ||
-      !loadedTabs[initialTab]
-    ) {
+    if (pendingTabRef.current !== initialTab || !loadedTabs[initialTab]) {
       return;
     }
 
@@ -3905,10 +3950,7 @@ export function FootprintsMobilePage({
       ? messageRosterMemoryCache.get(messageRosterCacheKey)
       : null;
 
-    if (
-      cachedSnapshot &&
-      Date.now() - cachedSnapshot.updatedAt < 2_000
-    ) {
+    if (cachedSnapshot && Date.now() - cachedSnapshot.updatedAt < 2_000) {
       return;
     }
 
@@ -3917,12 +3959,7 @@ export function FootprintsMobilePage({
     }, 150);
 
     return () => window.clearTimeout(timeoutId);
-  }, [
-    activeTab,
-    messageRosterCacheKey,
-    profileId,
-    refreshMessageRoster,
-  ]);
+  }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
 
   useEffect(
     () => () => {
@@ -3960,7 +3997,7 @@ export function FootprintsMobilePage({
       <main className="min-h-screen bg-white pb-28 text-[#111210] md:pb-12">
         <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-7xl md:px-8 md:pb-12 md:pt-8 lg:px-10 xl:px-12">
           <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5 lg:flex lg:items-end lg:justify-between lg:gap-10 lg:pb-0">
-            <h1 className="pb-3 text-[31px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
+            <h1 className="min-h-[31px] pb-3 text-[31px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
               {copy.title}
             </h1>
             <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center lg:flex lg:w-[30rem] lg:self-stretch lg:translate-y-0">

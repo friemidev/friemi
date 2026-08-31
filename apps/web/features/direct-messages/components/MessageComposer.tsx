@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ImagePlus,
   LoaderCircle,
@@ -18,6 +13,7 @@ import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
+import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import {
@@ -214,28 +210,18 @@ export function MessageComposer({
     setIsImageUploading(true);
 
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
+      const result = await uploadImageWithSignedUrl(
+        "/api/uploads/direct-message-image",
+        file,
+      );
 
-      const response = await fetch("/api/uploads/direct-message-image", {
-        method: "POST",
-        body: uploadFormData,
-      });
-
-      if (!response.ok) {
-        setImageUploadError(t.imageUploadFailed);
-        return;
-      }
-
-      const json = (await response.json()) as { url?: string };
-
-      if (!json.url) {
+      if ("error" in result) {
         setImageUploadError(t.imageUploadFailed);
         return;
       }
 
       setImageUrls((current) =>
-        [...current, json.url as string].slice(0, messageImageMaxCount),
+        [...current, result.url].slice(0, messageImageMaxCount),
       );
     } catch {
       setImageUploadError(t.imageUploadFailed);
@@ -399,14 +385,14 @@ export function MessageComposer({
           ))}
         </div>
       ) : null}
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-end gap-2">
         <div ref={emojiRootRef} className="relative shrink-0">
           <button
             type="button"
             aria-expanded={emojiPanelOpen}
             aria-label={t.addEmoji}
             title={t.addEmoji}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
             disabled={disabled}
             onClick={() => setEmojiPanelOpen((current) => !current)}
           >
@@ -443,7 +429,7 @@ export function MessageComposer({
             isImageUploading ||
             imageUrls.length >= messageImageMaxCount
           }
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
           onClick={() => imageInputRef.current?.click()}
         >
           {isImageUploading ? (
@@ -461,7 +447,7 @@ export function MessageComposer({
             defaultValue={initialBody}
             disabled={disabled}
             placeholder={t.messagePlaceholder}
-            className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
+            className="max-h-28 min-h-11 min-w-0 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] shadow-none outline-none placeholder:text-[#9BA08E] focus-visible:border-[#8AB68E] focus-visible:ring-2 focus-visible:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC]"
             onChange={(event) =>
               setBodyLength(event.currentTarget.value.length)
             }

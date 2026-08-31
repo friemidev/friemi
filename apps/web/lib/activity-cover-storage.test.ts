@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   detectActivityCoverMimeType,
   isActivityCoverUploadPathOwnedByUser,
+  isMomentImageUploadPathOwnedByUser,
   validateImageUploadFile,
 } from "./activity-cover-storage";
 
@@ -70,6 +71,20 @@ test("accepts only signed cover paths owned by the current user", () => {
     isActivityCoverUploadPathOwnedByUser(
       "user-123",
       "user-123/../../another-user/image.jpg",
+    ),
+    false,
+  );
+});
+
+test("accepts only signed moment paths owned by the current user", () => {
+  const path = "moments/user-123/123e4567-e89b-12d3-a456-426614174000.webp";
+
+  assert.equal(isMomentImageUploadPathOwnedByUser("user-123", path), true);
+  assert.equal(isMomentImageUploadPathOwnedByUser("user-456", path), false);
+  assert.equal(
+    isMomentImageUploadPathOwnedByUser(
+      "user-123",
+      "user-123/123e4567-e89b-12d3-a456-426614174000.webp",
     ),
     false,
   );
