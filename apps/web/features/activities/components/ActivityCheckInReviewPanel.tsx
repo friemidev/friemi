@@ -23,6 +23,7 @@ type ActivityCheckInReviewPanelProps = {
   locale: string;
   participants: ActivityCheckInParticipantViewModel[];
   triggerLabel?: string;
+  triggerVariant?: "button" | "icon";
 };
 
 const initialState: ReviewActivityCheckInState = {};
@@ -169,6 +170,7 @@ export function ActivityCheckInReviewPanel({
   locale,
   participants,
   triggerLabel,
+  triggerVariant = "button",
 }: ActivityCheckInReviewPanelProps) {
   const copy = getCopy(locale);
   const [isOpen, setIsOpen] = useState(false);
@@ -278,20 +280,38 @@ export function ActivityCheckInReviewPanel({
 
   return (
     <>
-      <Button
-        className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F1F2EC]"
-        onClick={() => setIsOpen(true)}
-        type="button"
-        variant="secondary"
-      >
-        <CheckCircle2 className="mr-2 h-4 w-4" />
-        {triggerLabel ?? copy.open}
-        {pendingRequestCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-            {pendingRequestCount}
-          </span>
-        ) : null}
-      </Button>
+      {triggerVariant === "icon" ? (
+        <button
+          aria-label={triggerLabel ?? copy.open}
+          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition active:scale-[0.96]"
+          onClick={() => setIsOpen(true)}
+          title={triggerLabel ?? copy.open}
+          type="button"
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          {pendingRequestCount > 0 ? (
+            <span
+              aria-hidden="true"
+              className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+            />
+          ) : null}
+        </button>
+      ) : (
+        <Button
+          className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F1F2EC]"
+          onClick={() => setIsOpen(true)}
+          type="button"
+          variant="secondary"
+        >
+          <CheckCircle2 className="mr-2 h-4 w-4" />
+          {triggerLabel ?? copy.open}
+          {pendingRequestCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+              {pendingRequestCount}
+            </span>
+          ) : null}
+        </Button>
+      )}
 
       {isOpen ? (
         <div
