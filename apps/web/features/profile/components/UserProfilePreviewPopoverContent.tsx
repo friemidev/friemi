@@ -40,6 +40,7 @@ type UserProfilePreviewPopoverContentProps = {
   isGuest?: boolean;
   locale: string;
   nickname: string;
+  onPersistentOverlayOpenChange?: (open: boolean) => void;
   profileId: string;
   redirectPath: string;
 };
@@ -148,6 +149,7 @@ export function UserProfilePreviewPopoverContent({
   isGuest = false,
   locale,
   nickname,
+  onPersistentOverlayOpenChange,
   profileId,
   redirectPath,
 }: UserProfilePreviewPopoverContentProps) {
@@ -319,6 +321,7 @@ export function UserProfilePreviewPopoverContent({
               <CharmGiftDialog
                 isAuthenticated={isAuthenticated}
                 locale={locale}
+                onOpenChange={onPersistentOverlayOpenChange}
                 recipientName={resolvedNickname}
                 recipientProfileId={profileId}
                 redirectPath={redirectPath}

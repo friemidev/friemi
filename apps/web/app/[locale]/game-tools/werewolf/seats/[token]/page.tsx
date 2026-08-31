@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { MobileChromeFullscreenOverride } from "@/features/game-tools/components/MobileChromeFullscreenOverride";
 import { WerewolfPrivateSeatCard } from "@/features/game-tools/components/WerewolfPrivateSeatCard";
 import {
@@ -171,6 +170,7 @@ export default async function WerewolfSeatPage({
           roleAlignment={seat.roleAlignment}
           roomUpdatedAt={seat.room.updatedAt.toISOString()}
           roomHref={roomHref}
+          roomId={seat.roomId}
           roomState={roomState}
           roomStatus={seat.room.status}
           seatDisplayName={seat.displayName}
@@ -190,12 +190,6 @@ export default async function WerewolfSeatPage({
             seatNumber: roomSeat.seatNumber,
           }))}
           variantLabel={getWerewolfVariantLabel(locale, variant)}
-        />
-        <AvalonLiveRefresh
-          enabled={seat.room.status !== "FINISHED"}
-          intervalMs={6000}
-          locale={locale}
-          showIndicator={!showPlayerFullScreenCard}
         />
       </PageContainer>
     </>

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
 import {
@@ -27,6 +33,7 @@ import { cn } from "@/lib/utils";
 type CharmGiftDialogProps = {
   isAuthenticated: boolean;
   locale: string;
+  onOpenChange?: (open: boolean) => void;
   redirectPath?: string;
   recipientName: string;
   recipientProfileId: string;
@@ -141,6 +148,7 @@ function SendGiftSubmitButton({
 export function CharmGiftDialog({
   isAuthenticated,
   locale,
+  onOpenChange,
   redirectPath,
   recipientName,
   recipientProfileId,
@@ -179,6 +187,13 @@ export function CharmGiftDialog({
       <Gift className="h-4 w-4 shrink-0" />
       {copy.sendGift}
     </>
+  );
+  const setDialogOpen = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange],
   );
 
   useEffect(() => {
@@ -252,7 +267,7 @@ export function CharmGiftDialog({
     const previousBodyOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        setDialogOpen(false);
       }
     };
 
@@ -263,7 +278,7 @@ export function CharmGiftDialog({
       document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [open]);
+  }, [open, setDialogOpen]);
 
   if (!isAuthenticated) {
     return (
@@ -295,7 +310,7 @@ export function CharmGiftDialog({
         onClick={() => {
           setAttemptId(createGiftAttemptId());
           setSuccessMessage(null);
-          setOpen(true);
+          setDialogOpen(true);
         }}
         type="button"
       >
@@ -311,7 +326,7 @@ export function CharmGiftDialog({
               <button
                 aria-label={copy.close}
                 className="absolute inset-0 cursor-default"
-                onClick={() => setOpen(false)}
+                onClick={() => setDialogOpen(false)}
                 type="button"
               />
               <div
@@ -344,7 +359,7 @@ export function CharmGiftDialog({
                   <button
                     aria-label={copy.close}
                     className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-                    onClick={() => setOpen(false)}
+                    onClick={() => setDialogOpen(false)}
                     type="button"
                   >
                     <X className="h-4 w-4" />
@@ -512,7 +527,7 @@ export function CharmGiftDialog({
                   <div className="flex items-center justify-end gap-2">
                     <button
                       className="inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-bold text-[#4F574F] transition active:scale-95"
-                      onClick={() => setOpen(false)}
+                      onClick={() => setDialogOpen(false)}
                       type="button"
                     >
                       {copy.cancel}

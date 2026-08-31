@@ -95,6 +95,7 @@ export default async function WerewolfPublicScreenPage({
         joinUrl={joinUrl}
         locale={locale}
         room={roomForClient}
+        roomHref={withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`)}
       />
     </PageContainer>
   );

@@ -4,13 +4,13 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Check, Copy } from "lucide-react";
-import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
 
 type WerewolfQrCodeProps = {
   codeLabel: string;
   copiedLabel: string;
   copyLabel: string;
   label: string;
+  qrValue?: string;
   roomCode: string;
   unavailableLabel: string;
   value: string;
@@ -21,6 +21,7 @@ export function WerewolfQrCode({
   copiedLabel,
   copyLabel,
   label,
+  qrValue,
   roomCode,
   unavailableLabel,
   value,
@@ -35,7 +36,7 @@ export function WerewolfQrCode({
     setDataUrl("");
     setHasQrError(false);
 
-    QRCode.toDataURL(value, {
+    QRCode.toDataURL(qrValue ?? value, {
       color: {
         dark: "#7A1F2B",
         light: "#FFFDF7",
@@ -60,7 +61,7 @@ export function WerewolfQrCode({
     return () => {
       mounted = false;
     };
-  }, [value]);
+  }, [qrValue, value]);
 
   async function handleCopy() {
     try {
@@ -73,39 +74,32 @@ export function WerewolfQrCode({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[1.35rem] border border-[#D9C7B4] bg-[#FFFDF7] p-3 text-center shadow-inner">
+    <div className="relative text-center">
       <div className="relative mb-2 flex items-center justify-center gap-2">
         <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F4ECE6] text-sm font-bold text-[#7A1F2B]">
           QR
         </span>
         <p className="text-xs font-semibold text-[#7A1F2B]">{label}</p>
       </div>
-      <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-white p-3 shadow-sm">
-        <img
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          draggable={false}
-          src={werewolfUiAssets.qrCornerFrame}
-        />
+      <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center bg-white">
         {dataUrl ? (
           <Image
             alt={label}
-            className="h-full w-full rounded-[0.9rem]"
+            className="h-full w-full"
             height={220}
             src={dataUrl}
             unoptimized
             width={220}
           />
         ) : (
-          <div className="grid h-full w-full place-items-center rounded-[0.9rem] bg-[#F4ECE6] p-3">
+          <div className="grid h-full w-full place-items-center bg-[#F4ECE6] p-3">
             <p className="text-xs font-semibold leading-5 text-[#7A1F2B]">
               {hasQrError ? unavailableLabel : roomCode}
             </p>
           </div>
         )}
       </div>
-      <div className="mt-3 grid gap-2 rounded-[1rem] border border-[#D9C7B4] bg-white px-3 py-2 text-left">
+      <div className="mt-3 grid gap-1 px-1 text-left">
         <p className="text-[11px] font-semibold text-[#7A1F2B]/62">
           {codeLabel}
         </p>
@@ -118,7 +112,11 @@ export function WerewolfQrCode({
         onClick={handleCopy}
         type="button"
       >
-        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
         {copied ? copiedLabel : copyLabel}
       </button>
     </div>

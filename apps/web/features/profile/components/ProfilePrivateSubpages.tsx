@@ -50,6 +50,10 @@ import {
   friemiCoinRechargePlans,
 } from "@/features/charm/charm";
 import {
+  type ProfileShopProductId,
+  werewolfAllRolesProductId,
+} from "@/features/charm/profileShopProducts";
+import {
   toggleEquippedAchievementAction,
   type ToggleEquippedAchievementState,
 } from "@/features/achievements/actions/equippedAchievementActions";
@@ -184,8 +188,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         coinEarned: "Reçus",
         coinSpent: "Utilisés",
         emptyChecks: "Aucun objet pour le moment",
-        emptyDescription:
-          "Les objets que vous obtenez apparaîtront ici.",
+        emptyDescription: "Les objets que vous obtenez apparaîtront ici.",
         emptyTitle: "Sac vide pour le moment",
         exchange: "Échanger",
         exchangeReady: "Prêt",
@@ -245,10 +248,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
           "Friemi Coins sert uniquement aux cadeaux. Pas de retrait ni de transfert.",
         coinTitle: "Friemi Coins",
         disabled: "Fermé",
-        emptyDescription:
-          "Les cadeaux disponibles apparaîtront ici.",
+        emptyDescription: "Les cadeaux disponibles apparaîtront ici.",
         emptyTitle: "Boutique en préparation",
         fc: "Friemi Coins",
+        featureCatalog: "Fonctions à débloquer",
         giftCatalog: "Cadeaux",
         giftModeNotice: "Chaque cadeau debite votre solde Friemi Coins.",
         noFriends: "Suivez quelqu'un pour offrir un cadeau.",
@@ -256,17 +259,24 @@ function getProfilePrivateSubpageCopy(locale: string) {
         negativeNotice: "Fermé pour le moment.",
         price: "Prix",
         recharge: "Recharger",
-        rechargeContact: "Pour recharger, contactez l'equipe Friemi officielle.",
+        rechargeContact:
+          "Pour recharger, contactez l'equipe Friemi officielle.",
         rechargeNote: "Recharge bientôt disponible.",
         rechargeSoon: "Bientôt disponible",
         rechargeTitle: "Recharge",
         recommended: "Conseillé",
+        roleUnlockAction: "Recharger pour débloquer",
+        roleUnlockBadge: "Avantage membre",
+        roleUnlockDescription:
+          "Débloquez tous les rôles disponibles pour vos compositions personnalisées.",
+        roleUnlockSelected: "Option sélectionnée pour cette recharge",
+        roleUnlockTitle: "Tous les rôles Loup-Garou",
         seasonalLocked: "Événement",
         send: "Envoyer",
         sendEntry: "Offrir",
         sending: "Envoi...",
         sent: "Cadeau envoyé",
-        subtitle: "Uniquement des cadeaux Friemi.",
+        subtitle: "Cadeaux Friemi et fonctions à débloquer.",
         title: "Boutique",
         totalFc: "Total",
       },
@@ -400,7 +410,8 @@ function getProfilePrivateSubpageCopy(locale: string) {
         bindSuccess: "Invitation linked",
         bindTitle: "Got a code",
         binding: "Linking...",
-        emptyDescription: "Invited people who follow you back will appear here.",
+        emptyDescription:
+          "Invited people who follow you back will appear here.",
         emptyTitle: "No invitations yet",
         firstJoined: "First joined",
         invited: "Invited",
@@ -423,10 +434,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
           "Friemi Coins are for Friemi gifts only. They cannot be withdrawn or transferred.",
         coinTitle: "Friemi Coins",
         disabled: "Closed",
-        emptyDescription:
-          "Available gifts will appear here.",
+        emptyDescription: "Available gifts will appear here.",
         emptyTitle: "Shop is preparing",
         fc: "Friemi Coins",
+        featureCatalog: "Feature unlocks",
         giftCatalog: "Gifts",
         giftModeNotice: "Each gift deducts Friemi coins from your balance.",
         noFriends: "Follow someone to send a gift.",
@@ -439,12 +450,18 @@ function getProfilePrivateSubpageCopy(locale: string) {
         rechargeSoon: "Coming soon",
         rechargeTitle: "Top-up",
         recommended: "Recommended",
+        roleUnlockAction: "Top up to unlock",
+        roleUnlockBadge: "Member benefit",
+        roleUnlockDescription:
+          "Unlock every available role for your custom Werewolf setups.",
+        roleUnlockSelected: "Selected for this top-up",
+        roleUnlockTitle: "All Werewolf roles",
         seasonalLocked: "Event",
         send: "Send",
         sendEntry: "Send gift",
         sending: "Sending...",
         sent: "Gift sent",
-        subtitle: "Friemi gifts only.",
+        subtitle: "Friemi gifts and feature unlocks.",
         title: "Shop",
         totalFc: "Total",
       },
@@ -600,6 +617,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       emptyDescription: "可送礼物会显示在这里。",
       emptyTitle: "商城准备中",
       fc: "Friemi 币",
+      featureCatalog: "功能解锁",
       giftCatalog: "礼物",
       giftModeNotice: "送礼会扣除 Friemi 币。",
       noFriends: "关注用户后可以送礼。",
@@ -612,12 +630,17 @@ function getProfilePrivateSubpageCopy(locale: string) {
       rechargeSoon: "敬请期待",
       rechargeTitle: "充值",
       recommended: "推荐",
+      roleUnlockAction: "充值解锁",
+      roleUnlockBadge: "会员功能",
+      roleUnlockDescription: "解锁全部可用角色，在自定义板子中自由配置。",
+      roleUnlockSelected: "本次充值已选择此功能",
+      roleUnlockTitle: "狼人杀全部角色",
       seasonalLocked: "节日开放",
       send: "送出",
       sendEntry: "去送礼",
       sending: "送出中...",
       sent: "礼物已送出",
-      subtitle: "只提供 Friemi 礼物。",
+      subtitle: "Friemi 礼物与功能解锁。",
       title: "商城",
       totalFc: "总额",
     },
@@ -1321,8 +1344,8 @@ function GiftAvailabilityBadge({
         disabled
           ? "bg-[#F3F1EB] text-[#7A8276] ring-[#DFDAC5]"
           : locked
-          ? "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]"
-          : "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]",
+            ? "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]"
+            : "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]",
       )}
     >
       {disabled
@@ -2446,9 +2469,7 @@ export function ProfileBagPageView({
               <article
                 className={cn(
                   "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
-                  available
-                    ? "ring-[#D6D5B2]"
-                    : "opacity-78 ring-[#E8E1CF]",
+                  available ? "ring-[#D6D5B2]" : "opacity-78 ring-[#E8E1CF]",
                 )}
                 key={check.id}
               >
@@ -2507,6 +2528,7 @@ export function ProfileShopPageView({
   locale,
   negativeGifts,
   openRecharge = false,
+  selectedProductId = null,
 }: {
   coinBalance: FriemiCoinBalanceViewModel;
   giftRecipients: ProfileShopGiftRecipient[];
@@ -2514,15 +2536,16 @@ export function ProfileShopPageView({
   locale: string;
   negativeGifts: ProfileShopGiftItem[];
   openRecharge?: boolean;
+  selectedProductId?: ProfileShopProductId | null;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const charmUnit = getShopCharmUnit(locale);
   const [dialogGiftId, setDialogGiftId] = useState<string | null>(null);
   const [dialogAttemptId, setDialogAttemptId] = useState("");
-  const [localCoinBalance, setLocalCoinBalance] = useState(
-    coinBalance.balance,
-  );
+  const [localCoinBalance, setLocalCoinBalance] = useState(coinBalance.balance);
   const [rechargeOpen, setRechargeOpen] = useState(openRecharge);
+  const [rechargeProductId, setRechargeProductId] =
+    useState<ProfileShopProductId | null>(selectedProductId);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const dialogGift = gifts.find((gift) => gift.id === dialogGiftId) ?? null;
@@ -2533,6 +2556,10 @@ export function ProfileShopPageView({
   const closeGiftDialog = () => {
     setDialogGiftId(null);
     setDialogAttemptId("");
+  };
+  const openRechargeDialog = (productId: ProfileShopProductId | null) => {
+    setRechargeProductId(productId);
+    setRechargeOpen(true);
   };
   const showToast = (message: string) => {
     if (toastTimerRef.current) {
@@ -2567,7 +2594,7 @@ export function ProfileShopPageView({
         <button
           aria-label={copy.shop.recharge}
           className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-transparent px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
-          onClick={() => setRechargeOpen(true)}
+          onClick={() => openRechargeDialog(null)}
           type="button"
         >
           <WalletCards className="h-3.5 w-3.5 shrink-0" />
@@ -2603,6 +2630,45 @@ export function ProfileShopPageView({
             {copy.shop.coinDescription}
           </p>
         </div>
+      </section>
+
+      <section className="mt-7">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
+          {copy.shop.featureCatalog}
+        </h2>
+        <article
+          className={cn(
+            "mt-3 rounded-lg bg-white p-4 ring-1",
+            selectedProductId === werewolfAllRolesProductId
+              ? "ring-[#83B779]"
+              : "ring-[#E3DCC5]",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#F1F2E3] text-[#0A5542] ring-1 ring-[#D6D5B2]">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex rounded-full bg-[#EAF5E8] px-2 py-1 text-[10px] font-bold text-[#156240]">
+                {copy.shop.roleUnlockBadge}
+              </span>
+              <h3 className="mt-2 text-base font-bold text-[#111210]">
+                {copy.shop.roleUnlockTitle}
+              </h3>
+              <p className="mt-1 text-xs font-semibold leading-5 text-[#6C746A]">
+                {copy.shop.roleUnlockDescription}
+              </p>
+            </div>
+          </div>
+          <button
+            className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#156240] px-4 text-sm font-bold text-white transition active:scale-[0.98]"
+            onClick={() => openRechargeDialog(werewolfAllRolesProductId)}
+            type="button"
+          >
+            <WalletCards className="h-4 w-4" />
+            {copy.shop.roleUnlockAction}
+          </button>
+        </article>
       </section>
 
       <section className="mt-7">
@@ -2730,13 +2796,27 @@ export function ProfileShopPageView({
               </button>
             </div>
 
+            {rechargeProductId === werewolfAllRolesProductId ? (
+              <div className="mt-4 flex items-start gap-3 rounded-lg bg-[#F1F2E3] px-4 py-3 ring-1 ring-[#D6D5B2]">
+                <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[#156240]" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#111210]">
+                    {copy.shop.roleUnlockTitle}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#6C746A]">
+                    {copy.shop.roleUnlockSelected}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-4 rounded-[1rem] bg-[#F8F7F2] px-4 py-3">
               <p className="text-sm font-bold leading-6 text-[#156240]">
                 {copy.shop.rechargeContact}
               </p>
               <p className="mt-1 text-xs font-semibold leading-5 text-[#7A8276]">
-                {friemiCoinRate.baseCoins} = €{friemiCoinRate.basePriceEur} ·
-                1 ≈ €{friemiCoinRate.approxUnitPriceEur}
+                {friemiCoinRate.baseCoins} = €{friemiCoinRate.basePriceEur} · 1
+                ≈ €{friemiCoinRate.approxUnitPriceEur}
               </p>
             </div>
 
@@ -2745,9 +2825,7 @@ export function ProfileShopPageView({
                 <article
                   className={cn(
                     "min-w-0 rounded-[1rem] bg-white p-3 text-left ring-1",
-                    plan.recommended
-                      ? "ring-[#83B779]"
-                      : "ring-[#E3DCC5]",
+                    plan.recommended ? "ring-[#83B779]" : "ring-[#E3DCC5]",
                   )}
                   key={plan.priceEur}
                 >
@@ -2861,10 +2939,7 @@ function GiftWallLeaderboardRow({
         {index + 1}
       </span>
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar
-          avatarUrl={item.sender.avatarUrl}
-          name={item.sender.nickname}
-        />
+        <Avatar avatarUrl={item.sender.avatarUrl} name={item.sender.nickname} />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-[#111210]">
             {item.sender.nickname}
@@ -3018,10 +3093,7 @@ export function ProfileGiftWallPageView({
         {giftWall.topGifts.length > 0 ? (
           <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-5">
             {giftWall.topGifts.map((gift) => (
-              <article
-                className="min-w-0"
-                key={gift.giftId}
-              >
+              <article className="min-w-0" key={gift.giftId}>
                 <div className="flex items-center gap-2">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[30px] leading-none">
                     {gift.giftEmoji}

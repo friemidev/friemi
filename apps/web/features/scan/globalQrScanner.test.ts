@@ -26,6 +26,10 @@ test("extracts game room codes from Friemi invite links", () => {
     "C2E848",
   );
   assert.equal(
+    getWerewolfRoomCodeFromScan("friemi://game-tools/werewolf/join/c2e848"),
+    "C2E848",
+  );
+  assert.equal(
     getAvalonRoomCodeFromScan("/en/game-tools/avalon/join/ab-1234"),
     "AB1234",
   );
@@ -45,8 +49,18 @@ test("resolves Friemi full links as internal scan destinations", () => {
   assert.deepEqual(
     resolveGlobalQrScanDestination({
       locale: "zh-CN",
-      rawValue:
-        "https://www.friemi.com/zh-CN/game-tools/werewolf/join/c2e848",
+      rawValue: "https://www.friemi.com/zh-CN/game-tools/werewolf/join/c2e848",
+    }),
+    {
+      href: "/zh-CN/game-tools/werewolf/join/C2E848",
+      kind: "internal",
+      source: "werewolf-room",
+    },
+  );
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "friemi://game-tools/werewolf/join/c2e848",
     }),
     {
       href: "/zh-CN/game-tools/werewolf/join/C2E848",

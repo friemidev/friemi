@@ -5,6 +5,7 @@ import {
 } from "@/features/charm/queries/getProfileShop";
 import { getProfileShopGiftRecipients } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
+import { getProfileShopProductId } from "@/features/charm/profileShopProducts";
 import { ProfileShopPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
@@ -14,6 +15,7 @@ type ProfileShopPageProps = {
     locale: string;
   }>;
   searchParams?: Promise<{
+    product?: string | string[];
     recharge?: string | string[];
   }>;
 };
@@ -30,8 +32,23 @@ export default async function ProfileShopPage({
   const rechargeParam = Array.isArray(resolvedSearchParams.recharge)
     ? resolvedSearchParams.recharge[0]
     : resolvedSearchParams.recharge;
+  const selectedProductId = getProfileShopProductId(
+    resolvedSearchParams.product,
+  );
+  const returnSearchParams = new URLSearchParams();
 
-  const profile = await ensureCurrentUserProfile(locale, "/profile/shop");
+  if (selectedProductId) {
+    returnSearchParams.set("product", selectedProductId);
+  }
+
+  if (rechargeParam === "1") {
+    returnSearchParams.set("recharge", "1");
+  }
+
+  const returnQuery = returnSearchParams.toString();
+  const returnPath = `/profile/shop${returnQuery ? `?${returnQuery}` : ""}`;
+
+  const profile = await ensureCurrentUserProfile(locale, returnPath);
   const gifts = getProfileShopGiftCatalog(locale);
   const negativeGifts = getProfileShopNegativeGiftCatalog(locale);
   const [coinBalance, giftRecipients] = await Promise.all([
@@ -48,6 +65,7 @@ export default async function ProfileShopPage({
         locale={locale}
         negativeGifts={negativeGifts}
         openRecharge={rechargeParam === "1"}
+        selectedProductId={selectedProductId}
       />
     </PageContainer>
   );

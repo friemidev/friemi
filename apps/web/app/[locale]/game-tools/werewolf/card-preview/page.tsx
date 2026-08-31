@@ -4,11 +4,17 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import {
+  getWerewolfRoleCardImage,
   getWerewolfSeatBackImage,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
+import {
+  getWerewolfRoleCopy,
+  type WerewolfRoleKey,
+} from "@/features/game-tools/werewolfConfig";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 type WerewolfCardPreviewPageProps = {
   params: Promise<{
@@ -16,58 +22,54 @@ type WerewolfCardPreviewPageProps = {
   }>;
 };
 
-const roleCards = [
-  { key: "werewolf", label: "Werewolf" },
-  { key: "seer", label: "Seer" },
-  { key: "witch", label: "Witch" },
-  { key: "hunter", label: "Hunter" },
-  { key: "villager", label: "Villager" },
-  { key: "idiot", label: "Idiot" },
-  { key: "guard", label: "Guard" },
-  { key: "cupid", label: "Cupid" },
-  { key: "knight", label: "Knight" },
-  { key: "lovers", label: "Lovers" },
-  { key: "wolf_king", label: "Wolf King" },
-  { key: "white_wolf_king", label: "White Wolf King" },
-] as const;
-
-function getRoleCardImage(roleKey: string) {
-  return `/game-tools/werewolf/recto/${roleKey}_en.png`;
-}
+const previewRoleKeys: WerewolfRoleKey[] = [
+  "werewolf",
+  "seer",
+  "witch",
+  "hunter",
+  "idiot",
+  "villager",
+];
 
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       back: "Retour",
-      backs: "Dos de carte",
-      death: "Effet éliminé",
-      fullscreen: "Carte en jeu",
-      roles: "Faces de rôle",
-      subtitle: "Aperçu direct des cartes et états visuels.",
-      title: "Aperçu cartes Loups-garous",
+      cardBack: "Dos",
+      death: "Éliminée",
+      front: "Face",
+      roleGuide: "Guide des rôles",
+      seatSeven: "Place 7",
+      statePreview: "États d'une carte",
+      subtitle: "Faces, dos et état éliminé dans une fiche compacte.",
+      title: "Cartes Loups-garous",
     };
   }
 
   if (locale === "en") {
     return {
       back: "Back",
-      backs: "Card backs",
-      death: "Out effect",
-      fullscreen: "In-game card",
-      roles: "Role fronts",
-      subtitle: "A direct view of every card and visual state.",
-      title: "Werewolf card preview",
+      cardBack: "Back",
+      death: "Out",
+      front: "Front",
+      roleGuide: "Role guide",
+      seatSeven: "Seat 7",
+      statePreview: "Card states",
+      subtitle: "Fronts, numbered backs, and the eliminated state at a glance.",
+      title: "Werewolf cards",
     };
   }
 
   return {
     back: "返回",
-    backs: "背面牌",
+    cardBack: "背面",
     death: "出局效果",
-    fullscreen: "局内全屏卡牌",
-    roles: "角色正面牌",
-    subtitle: "一次看完卡牌、翻牌、出局和结算视觉。",
-    title: "狼人杀卡牌预览",
+    front: "正面",
+    roleGuide: "狼人杀卡牌预览",
+    seatSeven: "7 号牌",
+    statePreview: "狼人杀卡牌预览",
+    subtitle: "集中查看角色正面、号码背面和出局状态。",
+    title: "狼人杀卡牌",
   };
 }
 
@@ -87,141 +89,161 @@ export default async function WerewolfCardPreviewPage({
 }: WerewolfCardPreviewPageProps) {
   const { locale } = await params;
   const t = getCopy(locale);
+  const roleCopy = getWerewolfRoleCopy(locale);
+  const seerImage =
+    getWerewolfRoleCardImage("seer", locale) ??
+    "/game-tools/werewolf/recto/seer_en.png";
 
   return (
     <PageContainer
-      className="max-w-[108rem] overflow-x-hidden sm:pb-12 sm:pt-7"
+      className="max-w-3xl overflow-x-hidden sm:pb-12 sm:pt-7"
       mobileSafeBottom
       mobileSafeTop
     >
-      <div className="space-y-5">
+      <header className="flex items-start gap-3 border-b border-[#D8DCCB] pb-4">
         <Link
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-bold text-[#7A1F2B] shadow-sm transition hover:bg-[#FFF7F1]"
+          aria-label={t.back}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#CAD0BC] bg-white text-[#153B31] transition hover:bg-[#F1F2E3]"
           href={withLocale(locale, "/game-tools/werewolf")}
         >
           <ArrowLeft className="h-4 w-4" />
-          {t.back}
         </Link>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold leading-tight text-[#132D28]">
+            {t.title}
+          </h1>
+          <p className="mt-1 text-sm font-semibold leading-6 text-[#52655E]">
+            {t.subtitle}
+          </p>
+        </div>
+      </header>
 
-        <section className="overflow-hidden rounded-[1.75rem] border border-[#3A2A2D] bg-[#101316] text-white shadow-[0_28px_90px_rgba(30,23,24,0.28)]">
-          <div className="bg-[radial-gradient(circle_at_50%_18%,rgba(240,195,106,0.16),transparent_34%),linear-gradient(180deg,#15191D,#0C0E10)] p-5 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-normal text-[#F0C36A]">
-              {t.fullscreen}
-            </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-normal sm:text-5xl">
-              {t.title}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm font-bold leading-6 text-white/66">
-              {t.subtitle}
-            </p>
-          </div>
+      <div className="mt-5 overflow-hidden border border-[#BFC7B5] bg-white">
+        <SectionTitle>{t.statePreview}</SectionTitle>
+        <div className="grid grid-cols-3 gap-2 px-3 py-4 sm:gap-5 sm:px-6">
+          <CardStatePreview
+            imageSrc={seerImage}
+            label={t.front}
+            title={roleCopy.roleLabels.seer}
+          />
+          <CardStatePreview
+            imageSrc={getWerewolfSeatBackImage(7)}
+            label={t.cardBack}
+            title={t.seatSeven}
+          />
+          <CardStatePreview
+            dead
+            imageSrc={getWerewolfSeatBackImage(7)}
+            label={t.death}
+            title={t.seatSeven}
+          />
+        </div>
 
-          <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-3">
-            <FullscreenCardPreview
-              imageSrc={getWerewolfSeatBackImage(7)}
-              label="Back"
+        <SectionTitle>{t.roleGuide}</SectionTitle>
+        <div className="divide-y divide-[#D8DCCB]">
+          {previewRoleKeys.map((roleKey) => (
+            <RoleGuideRow
+              description={roleCopy.roleDescriptions[roleKey]}
+              imageSrc={
+                getWerewolfRoleCardImage(roleKey, locale) ??
+                `/game-tools/werewolf/recto/${roleKey}_en.png`
+              }
+              key={roleKey}
+              label={roleCopy.roleLabels[roleKey]}
             />
-            <FullscreenCardPreview
-              imageSrc={getRoleCardImage("seer")}
-              label="Front"
-            />
-            <FullscreenCardPreview
-              dead
-              imageSrc={getWerewolfSeatBackImage(7)}
-              label={t.death}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-xl font-bold text-[#1E1718]">{t.roles}</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {roleCards.map((card) => (
-              <PreviewCard
-                imageSrc={getRoleCardImage(card.key)}
-                key={card.key}
-                label={card.label}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-xl font-bold text-[#1E1718]">{t.backs}</h2>
-          <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12">
-            {Array.from({ length: 12 }, (_, index) => index + 1).map(
-              (seatNumber) => (
-                <PreviewCard
-                  imageSrc={getWerewolfSeatBackImage(seatNumber)}
-                  key={seatNumber}
-                  label={`${seatNumber}`}
-                />
-              ),
-            )}
-          </div>
-        </section>
+          ))}
+        </div>
       </div>
     </PageContainer>
   );
 }
 
-function FullscreenCardPreview({
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <h2 className="border-y border-[#BFC7B5] bg-[#F1F2E3] px-4 py-2 text-center text-sm font-bold text-[#153B31] first:border-t-0">
+      {children}
+    </h2>
+  );
+}
+
+function CardStatePreview({
   dead = false,
   imageSrc,
   label,
+  title,
 }: {
   dead?: boolean;
   imageSrc: string;
   label: string;
+  title: string;
 }) {
   return (
-    <div className="grid place-items-center rounded-[1.3rem] border border-white/10 bg-white/[0.06] p-4 text-center">
+    <figure className="min-w-0 text-center">
       <div
-        className={`relative aspect-[2/3] h-[34rem] max-h-[62svh] max-w-[82vw] overflow-hidden rounded-[1.35rem] border border-[#D9C7B4] bg-[#1E1718] shadow-[0_30px_80px_rgba(0,0,0,0.45)] ${
-          dead ? "grayscale" : ""
-        }`}
+        className={cn(
+          "relative mx-auto aspect-[2/3] w-full max-w-[7rem] overflow-hidden border border-[#68736A] bg-[#F5F6F0]",
+          dead && "grayscale",
+        )}
       >
         <Image
-          alt={label}
-          className="h-full w-full object-cover"
+          alt={title}
+          className="object-cover"
           draggable={false}
           fill
-          sizes="(max-width: 640px) 82vw, 22rem"
+          sizes="7rem"
           src={imageSrc}
         />
         {dead ? (
           <Image
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-90"
+            className="pointer-events-none absolute inset-0 object-cover opacity-90"
             draggable={false}
             fill
-            sizes="(max-width: 640px) 82vw, 22rem"
+            sizes="7rem"
             src={werewolfUiAssets.deathOverlayMask}
           />
         ) : null}
       </div>
-      <p className="mt-3 text-sm font-semibold text-white/78">{label}</p>
-    </div>
+      <figcaption className="mt-2 min-w-0">
+        <span className="block truncate text-xs font-bold text-[#173D33]">
+          {title}
+        </span>
+        <span className="mt-0.5 block text-[11px] font-semibold text-[#68736A]">
+          {label}
+        </span>
+      </figcaption>
+    </figure>
   );
 }
 
-function PreviewCard({ imageSrc, label }: { imageSrc: string; label: string }) {
+function RoleGuideRow({
+  description,
+  imageSrc,
+  label,
+}: {
+  description: string;
+  imageSrc: string;
+  label: string;
+}) {
   return (
-    <div className="grid place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-[#FFFDF7] p-3 text-center shadow-sm">
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[0.9rem] border border-[#D9C7B4] bg-white shadow-sm">
+    <article className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-4 px-4 py-4 sm:grid-cols-[5.25rem_minmax(0,1fr)] sm:px-6">
+      <div className="relative aspect-[2/3] w-full overflow-hidden border border-[#68736A] bg-[#F5F6F0]">
         <Image
           alt={label}
-          className="h-full w-full object-cover"
+          className="object-cover"
           draggable={false}
           fill
-          sizes="(max-width: 640px) 50vw, 12rem"
+          sizes="5.25rem"
           src={imageSrc}
         />
       </div>
-      <p className="mt-2 max-w-full truncate text-xs font-semibold text-[#7A1F2B]">
-        {label}
-      </p>
-    </div>
+      <div className="min-w-0">
+        <h3 className="text-base font-bold text-[#132D28]">{label}</h3>
+        <p className="mt-1 text-sm font-semibold leading-6 text-[#52655E]">
+          {description}
+        </p>
+      </div>
+    </article>
   );
 }
