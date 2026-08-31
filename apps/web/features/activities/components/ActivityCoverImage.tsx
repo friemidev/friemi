@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  defaultActivityCategoryIllustrationSrc,
+  isActivityCategoryIllustrationSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
@@ -23,11 +27,24 @@ export function ActivityCoverImage({
 }: ActivityCoverImageProps) {
   const [hasFailed, setHasFailed] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const usesCategoryArtworkCrop =
+    isActivityCategoryIllustrationSrc(src) &&
+    src !== defaultActivityCategoryIllustrationSrc;
 
   useEffect(() => {
     setHasFailed(false);
     setHasLoaded(false);
   }, [src]);
+
+  useEffect(() => {
+    if (!src || hasLoaded || hasFailed) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setHasFailed(true), 12_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [hasFailed, hasLoaded, src]);
 
   if (!src || hasFailed) {
     return (
@@ -63,7 +80,10 @@ export function ActivityCoverImage({
         src={src}
         alt={alt}
         className={cn(
-          "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover/card:scale-[1.035]",
+          "absolute w-full object-cover transition-[opacity,transform] duration-300 ease-out",
+          usesCategoryArtworkCrop
+            ? "inset-x-0 bottom-0 h-[124%] object-bottom"
+            : "inset-0 h-full group-hover/card:scale-[1.035]",
           hasLoaded ? "opacity-100" : "opacity-0",
           imageClassName,
         )}

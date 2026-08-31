@@ -80,8 +80,8 @@ test("getNotificationCopy includes check-in success copy", () => {
       type: "ACTIVITY_CHECK_IN",
     }),
     {
-      body: "来吧 签到成功",
-      title: "Friemi",
+      body: "信用值 +0.1",
+      title: "签到成功",
     },
   );
 });

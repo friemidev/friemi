@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -165,7 +164,6 @@ export function CharmGiftDialog({
     sendCharmGiftAction,
     initialGiftState,
   );
-  const router = useRouter();
   const giftRedirectPath = redirectPath ?? `/profile/${recipientProfileId}`;
   const formError = state.attemptId === attemptId ? state.formError : undefined;
   const stateBalance =
@@ -227,11 +225,9 @@ export function CharmGiftDialog({
     }
     setSuccessMessage(copy.sent);
     setAttemptId(createGiftAttemptId());
-    router.refresh();
   }, [
     attemptId,
     copy.sent,
-    router,
     state.attemptId,
     state.balance,
     state.eventId,
@@ -308,7 +304,10 @@ export function CharmGiftDialog({
 
       {open && mounted
         ? createPortal(
-            <div className="fixed inset-0 z-[180] flex items-end justify-center overflow-hidden bg-[#111210]/28 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] md:items-center md:px-4 md:pb-6 md:pt-6">
+            <div
+              className="fixed inset-0 z-[180] flex items-end justify-center overflow-hidden bg-[#111210]/28 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] md:items-center md:px-4 md:pb-6 md:pt-6"
+              data-user-preview-persistent-overlay
+            >
               <button
                 aria-label={copy.close}
                 className="absolute inset-0 cursor-default"

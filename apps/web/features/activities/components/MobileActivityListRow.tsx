@@ -10,6 +10,7 @@ import {
 } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { withLocale } from "@/lib/routes";
+import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { cn } from "@/lib/utils";
 
 type MobileActivityListRowProps = {
@@ -117,11 +118,15 @@ export function MobileActivityListRow({
   const displayStatus = getActivityDisplayStatus(activity);
   const isInactiveActivity =
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const coverImageUrl = getActivityCoverThumbnailUrl(
+    activity.coverImageUrl,
+    192,
+  );
 
   return (
     <MobileActivityDetailSheetLink
       className={cn(
-        "group grid w-full grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
+        "group grid w-full grid-cols-[5.5rem_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
         isInactiveActivity ? "bg-zinc-50 text-zinc-500" : "bg-white",
         className,
       )}
@@ -130,7 +135,7 @@ export function MobileActivityListRow({
     >
       <div
         className={cn(
-          "relative aspect-square overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]",
+          "relative h-[5.5rem] w-[5.5rem] overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]",
           isInactiveActivity ? "bg-zinc-200 shadow-none grayscale" : null,
         )}
       >
@@ -142,7 +147,7 @@ export function MobileActivityListRow({
             "bg-gradient-to-t to-transparent",
             isInactiveActivity ? "from-zinc-900/24" : "from-black/10",
           )}
-          src={activity.coverImageUrl}
+          src={coverImageUrl}
         />
       </div>
 

@@ -221,6 +221,23 @@ export function getNotificationCopy(input: {
     };
   }
 
+  if (input.type === "ACTIVITY_CHECK_IN" && !isCheckInRequest) {
+    return {
+      body:
+        input.locale === "zh-CN"
+          ? "信用值 +0.1"
+          : input.locale === "en"
+            ? "Credit +0.1"
+            : "Crédit +0,1",
+      title:
+        input.locale === "zh-CN"
+          ? "签到成功"
+          : input.locale === "en"
+            ? "Check-in confirmed"
+            : "Présence confirmée",
+    };
+  }
+
   return {
     body: copy[input.locale][input.type] ?? activityTitle,
     title: "Friemi",
