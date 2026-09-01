@@ -2288,14 +2288,6 @@ export async function ActivityDetailPageContent({
             </div>
           ) : null}
 
-          {isTeamOperator && activity.requiresApproval ? (
-            <ParticipationApprovalPanel
-              activityId={activity.id}
-              locale={locale}
-              pendingParticipants={pendingParticipants}
-            />
-          ) : null}
-
           {activity.merchant ? (
             <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
               <div className="flex items-center gap-2">
@@ -2826,6 +2818,13 @@ export async function ActivityDetailPageContent({
           </div>
         </aside>
       </section>
+      {isTeamOperator && activity.requiresApproval ? (
+        <ParticipationApprovalPanel
+          activityId={activity.id}
+          locale={locale}
+          pendingParticipants={pendingParticipants}
+        />
+      ) : null}
       {canUseBoardGameTools ? (
         <BoardGameToolFloatingEntry
           gameToolsHref={gameToolsHref}
