@@ -17,10 +17,12 @@ const reviewParticipationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   participationId: z.string().min(1),
   decision: z.enum(["approve", "reject"]),
+  responseMode: z.enum(["redirect", "inline"]).default("redirect"),
 });
 
 export type ReviewParticipationState = {
   formError?: string;
+  reviewedParticipationId?: string;
 };
 
 type ReviewParticipationResult =
@@ -78,6 +80,7 @@ export async function reviewParticipationAction(
     locale: getString(formData, "locale") || "zh-CN",
     participationId: getString(formData, "participationId"),
     decision: getString(formData, "decision"),
+    responseMode: getString(formData, "responseMode") || "redirect",
   };
   const copy = getCopy(rawInput.locale).approval;
   const result = reviewParticipationSchema.safeParse(rawInput);
@@ -331,7 +334,6 @@ export async function reviewParticipationAction(
         formError: reviewResult.error,
       };
     }
-
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {
       return {
@@ -346,5 +348,16 @@ export async function reviewParticipationAction(
     };
   }
 
-  redirect(refreshActivityViews(result.data.locale, result.data.activityId));
+  const activityPath = refreshActivityViews(
+    result.data.locale,
+    result.data.activityId,
+  );
+
+  if (result.data.responseMode === "inline") {
+    return {
+      reviewedParticipationId: result.data.participationId,
+    };
+  }
+
+  redirect(activityPath);
 }
