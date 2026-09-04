@@ -14,8 +14,18 @@ export const activityCategoryIllustrationImages: Partial<
   SPORTS: "sports.png",
 };
 
+const activityCategoryPreviewImages: Partial<Record<ActivityCategory, string>> =
+  Object.fromEntries(
+    Object.entries(activityCategoryIllustrationImages).map(
+      ([category, image]) => [category, image.replace(/\.png$/i, ".webp")],
+    ),
+  );
+
 export const defaultActivityCategoryIllustrationSrc =
   "/brand/v2_1/friemi-icon-square-1024.png";
+
+export const defaultActivityCategoryPreviewSrc =
+  "/brand/v2_1/friemi-icon-pwa-192.png";
 
 const legacyDefaultActivityCategoryIllustrationSrc =
   "/illustrations/design.png";
@@ -33,6 +43,34 @@ export function getActivityCategoryIllustrationSrc(
     : defaultActivityCategoryIllustrationSrc;
 }
 
+export function getActivityCategoryPreviewSrc(
+  category: string | null | undefined,
+) {
+  const image =
+    category && category in activityCategoryPreviewImages
+      ? activityCategoryPreviewImages[category as ActivityCategory]
+      : null;
+
+  return image
+    ? `/illustrations/preview/${image}`
+    : defaultActivityCategoryPreviewSrc;
+}
+
+export function getActivityListCoverSrc(
+  imageUrl: string | null | undefined,
+  category: string | null | undefined,
+) {
+  const normalizedUrl = imageUrl?.trim() || null;
+
+  // Stored category defaults point at multi-megabyte originals. Lists use the
+  // lightweight equivalent so a cold mobile cache never waits on hero assets.
+  if (!normalizedUrl || isActivityCategoryIllustrationSrc(normalizedUrl)) {
+    return getActivityCategoryPreviewSrc(category);
+  }
+
+  return normalizedUrl;
+}
+
 export function isActivityCategoryIllustrationSrc(
   imageUrl: string | null | undefined,
 ) {
@@ -47,7 +85,7 @@ export function isActivityCategoryIllustrationSrc(
     return true;
   }
 
-  return /^\/illustrations\/(?:png|vector)\/[A-Za-z0-9_-]+\.(?:png|svg)$/i.test(
+  return /^\/illustrations\/(?:png|preview|vector)\/[A-Za-z0-9_-]+\.(?:png|svg|webp)$/i.test(
     imageUrl,
   );
 }

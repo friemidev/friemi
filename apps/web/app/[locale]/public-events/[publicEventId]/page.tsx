@@ -65,6 +65,7 @@ import {
   getSharePriceLabel,
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
+import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -72,6 +73,7 @@ type PublicEventDetailPageProps = {
     publicEventId: string;
   }>;
   searchParams?: Promise<{
+    origin?: string | string[];
     sheet?: string | string[];
   }>;
 };
@@ -152,6 +154,11 @@ export default async function PublicEventDetailPage({
     ? resolvedSearchParams?.sheet[0]
     : resolvedSearchParams?.sheet;
   const isSheetPresentation = sheet === "1";
+  const origin = Array.isArray(resolvedSearchParams?.origin)
+    ? resolvedSearchParams?.origin[0]
+    : resolvedSearchParams?.origin;
+  const isLobbyCandidateOrigin =
+    origin === DESKTOP_LOBBY_CANDIDATE_ORIGIN;
   const perf = createPerformanceTracker({
     locale,
     route: "/public-events/[publicEventId]",
@@ -650,7 +657,11 @@ export default async function PublicEventDetailPage({
                 className="block"
                 href={withLocale(
                   locale,
-                  `/public-events/${publicEvent.id}/teams/new`,
+                  `/public-events/${publicEvent.id}/teams/new${
+                    isLobbyCandidateOrigin
+                      ? `?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`
+                      : ""
+                  }`,
                 )}
                 event={{
                   name: "team_create_started",
@@ -664,7 +675,13 @@ export default async function PublicEventDetailPage({
                 }}
               >
                 <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]">
-                  {t.teamUp}
+                  {isLobbyCandidateOrigin
+                    ? locale === "fr"
+                      ? "Créer un groupe"
+                      : locale === "en"
+                        ? "Create a group"
+                        : "创建聚吧"
+                    : t.teamUp}
                 </Button>
               </AnalyticsLink>
             )}

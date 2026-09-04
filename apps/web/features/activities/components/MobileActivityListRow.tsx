@@ -17,6 +17,10 @@ import {
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { isPrivateActivityCardLocked } from "@/features/activities/utils/privateActivityCardAccess";
+import {
+  getActivityCategoryPreviewSrc,
+  getActivityListCoverSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
 import { withLocale } from "@/lib/routes";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { cn } from "@/lib/utils";
@@ -132,7 +136,7 @@ export function MobileActivityListRow({
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
   const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const coverImageUrl = getActivityCoverThumbnailUrl(
-    activity.coverImageUrl,
+    getActivityListCoverSrc(activity.coverImageUrl, activity.category),
     192,
   );
 
@@ -156,6 +160,7 @@ export function MobileActivityListRow({
       >
         <ActivityCoverImage
           alt={activity.title}
+          fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           fetchPriority={prioritizeImage ? "high" : "auto"}
           loading={prioritizeImage ? "eager" : "lazy"}
           overlayClassName={cn(

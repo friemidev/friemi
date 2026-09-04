@@ -28,7 +28,10 @@ import { retainImageSources } from "@/components/media/RetainedImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
-import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
+import {
+  activityCategoryIllustrationImages,
+  getActivityListCoverSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { getCategoryLabel } from "@/lib/copy";
@@ -790,11 +793,7 @@ export function MobileLobbyV23View({
     ],
   );
   const loadTabPage = useCallback(
-    async (
-      tab: MobileLobbyV23TabId,
-      loadNext = false,
-      background = false,
-    ) => {
+    async (tab: MobileLobbyV23TabId, loadNext = false, background = false) => {
       const currentPage = tabPagesRef.current[tab];
       const nextPage = loadNext ? (currentPage?.page ?? 0) + 1 : 1;
       const exposeLoadingState = !background || !currentPage;
@@ -846,7 +845,13 @@ export function MobileLobbyV23View({
         cacheMobileLobbyTabPage(tabCacheKey, tab, nextTabPage);
         retainImageSources(
           nextTabPage.activities.map((activity) =>
-            getActivityCoverThumbnailUrl(activity.coverImageUrl, 192),
+            getActivityCoverThumbnailUrl(
+              getActivityListCoverSrc(
+                activity.coverImageUrl,
+                activity.category,
+              ),
+              192,
+            ),
           ),
           4,
         );
@@ -1029,7 +1034,10 @@ export function MobileLobbyV23View({
     !activePage && Boolean(failedTabs[displayedActiveTab]);
 
   visibleActivities.slice(0, 4).forEach((activity) => {
-    const source = getActivityCoverThumbnailUrl(activity.coverImageUrl, 192);
+    const source = getActivityCoverThumbnailUrl(
+      getActivityListCoverSrc(activity.coverImageUrl, activity.category),
+      192,
+    );
 
     if (source) {
       preload(source, {

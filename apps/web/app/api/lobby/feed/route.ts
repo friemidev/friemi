@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import {
   getActivityLobbyFeedPage,
+  getDesktopActivityLobbyFeedPage,
   type ActivityLobbyFeedStatus,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
@@ -48,6 +49,8 @@ export async function GET(request: Request) {
     const category = parseLobbyFeedCategory(url.searchParams.get("category"));
     const status = parseLobbyFeedStatus(url.searchParams.get("status")) ?? "all";
     const page = parseLobbyFeedPage(url.searchParams.get("page"));
+    const includeDesktopCandidates =
+      url.searchParams.get("surface") === "desktop";
     const viewerProfileId = await getOptionalAuthenticatedProfileId();
 
     if (!viewerProfileId) {
@@ -60,11 +63,17 @@ export async function GET(request: Request) {
       );
     }
 
-    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
-      category,
-      page,
-      status,
-    });
+    const feed = includeDesktopCandidates
+      ? await getDesktopActivityLobbyFeedPage(viewerProfileId, {
+          category,
+          page,
+          status,
+        })
+      : await getActivityLobbyFeedPage(viewerProfileId, {
+          category,
+          page,
+          status,
+        });
 
     return NextResponse.json({
       ok: true,

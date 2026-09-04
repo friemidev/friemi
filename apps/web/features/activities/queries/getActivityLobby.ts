@@ -30,7 +30,11 @@ import {
   applyPrivateActivityCardAccess,
   canAccessPrivateActivityCard,
 } from "../utils/privateActivityCardAccess";
-import type { Prisma } from "@prisma/client";
+import {
+  getDesktopLobbyCandidateWindow,
+  getOrderedPageSlices,
+} from "../utils/desktopLobbyCandidates";
+import type { ActivityStatus, Prisma } from "@prisma/client";
 
 const activityLobbyFeedPageSize = 8;
 const activityLobbySectionLimit = activityLobbyFeedPageSize * 6;
@@ -42,6 +46,12 @@ const activityLobbySwipePublicEventRatio = 3;
 const activityLobbySwipeTeamRatio = 1;
 const mobileHomeTrendingTeamLimit = 8;
 const mobileHomeTrendingTeamCandidateLimit = 48;
+const desktopLobbyCandidateStatuses: ActivityStatus[] = [
+  "OPEN",
+  "RECRUITING",
+  "CONFIRMED",
+  "FULL",
+];
 const visibleLobbyParticipationStatuses = [
   "JOINED",
   "APPROVED",
@@ -313,6 +323,65 @@ function mapPublicEventToActivityCard(
     merchant: null,
     isFavorited: publicEvent.isFavorited,
   };
+}
+
+function getDesktopLobbyCandidateWhere(
+  category?: ActivityCategory,
+  reference = new Date(),
+): Prisma.PublicEventWhereInput {
+  const window = getDesktopLobbyCandidateWindow(reference);
+
+  return {
+    ...(category ? { category } : {}),
+    address: { not: "" },
+    city: { not: "" },
+    startAt: {
+      gte: window.from,
+      lte: window.to,
+    },
+    status: "SCHEDULED",
+    visibility: "PUBLIC",
+    teams: {
+      none: {
+        organizer: {
+          status: "ACTIVE",
+        },
+        status: {
+          in: desktopLobbyCandidateStatuses,
+        },
+        type: {
+          not: "PUBLIC_EVENT",
+        },
+        visibility: "PUBLIC",
+      },
+    },
+  };
+}
+
+async function getDesktopLobbyCandidateActivities(options: {
+  category?: ActivityCategory;
+  reference?: Date;
+  skip?: number;
+  take: number;
+}) {
+  if (options.take <= 0) {
+    return [];
+  }
+
+  const publicEvents = await prisma.publicEvent.findMany({
+    where: getDesktopLobbyCandidateWhere(
+      options.category,
+      options.reference,
+    ),
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    skip: options.skip ?? 0,
+    take: options.take,
+    select: publicEventSelect,
+  });
+
+  return publicEvents.map((publicEvent) =>
+    mapPublicEventToActivityCard(getPublicEventCardViewModel(publicEvent)),
+  );
 }
 
 export async function getLobbySwipePublicEventActivities(
@@ -1113,6 +1182,138 @@ export async function getActivityLobbyFeedPage(
   };
 }
 
+export async function getDesktopActivityLobbyFeedPage(
+  viewerProfileId: string,
+  options: {
+    category?: ActivityCategory;
+    context?: ActivityLobbyQueryContext;
+    decorate?: boolean;
+    page?: number;
+    status?: ActivityLobbyFeedStatus;
+  } = {},
+): Promise<ActivityLobbyFeedPage> {
+  let context = options.context;
+
+  if (!context) {
+    const [mutualFollowIds, followedProfileIds] = await Promise.all([
+      getViewerFriendIds(viewerProfileId),
+      getViewerFollowedProfileIds(viewerProfileId),
+    ]);
+
+    context = await getLobbyQueryContext(
+      viewerProfileId,
+      mutualFollowIds,
+      followedProfileIds,
+    );
+  }
+
+  const decorate = options.decorate ?? true;
+  const status = options.status ?? "all";
+  const categoryWhere: Prisma.ActivityWhereInput = options.category
+    ? { category: options.category }
+    : {};
+  const ongoingWhere: Prisma.ActivityWhereInput = {
+    AND: [context.accessibleActiveWhere, strictTeamCardWhere, categoryWhere],
+  };
+  const endedWhere: Prisma.ActivityWhereInput = {
+    AND: [
+      context.accessibleWhere,
+      strictTeamCardWhere,
+      context.archivedWhere,
+      categoryWhere,
+    ],
+  };
+  const reference = new Date();
+  const candidateWhere = getDesktopLobbyCandidateWhere(
+    options.category,
+    reference,
+  );
+  const [realOngoingCount, candidateCount, endedCount] = await Promise.all([
+    prisma.activity.count({ where: ongoingWhere }),
+    prisma.publicEvent.count({ where: candidateWhere }),
+    prisma.activity.count({ where: endedWhere }),
+  ]);
+  const ongoingCount = realOngoingCount + candidateCount;
+  const totalCount =
+    status === "ongoing"
+      ? ongoingCount
+      : status === "ended"
+        ? endedCount
+        : ongoingCount + endedCount;
+  const totalPages = getActivityLobbyTotalPages(
+    totalCount,
+    activityLobbyFeedPageSize,
+  );
+  const page = getActivityLobbyPage(options.page ?? 1, totalPages);
+  const offset = (page - 1) * activityLobbyFeedPageSize;
+  const bucketCounts =
+    status === "ended"
+      ? [endedCount]
+      : status === "ongoing"
+        ? [realOngoingCount, candidateCount]
+        : [realOngoingCount, candidateCount, endedCount];
+  const slices = getOrderedPageSlices(
+    bucketCounts,
+    offset,
+    activityLobbyFeedPageSize,
+  );
+  const realOngoingSlice = status === "ended" ? null : slices[0];
+  const candidateSlice = status === "ended" ? null : slices[1];
+  const endedSlice = status === "ended" ? slices[0] : slices[2] ?? null;
+  const [ongoingActivities, candidateActivities, endedActivities] =
+    await Promise.all([
+      realOngoingSlice && realOngoingSlice.take > 0
+        ? prisma.activity.findMany({
+            where: ongoingWhere,
+            orderBy: [{ startAt: "asc" }, { id: "asc" }],
+            skip: realOngoingSlice.skip,
+            take: realOngoingSlice.take,
+            select: activityCardSelect,
+          })
+        : Promise.resolve([]),
+      candidateSlice && candidateSlice.take > 0
+        ? getDesktopLobbyCandidateActivities({
+            category: options.category,
+            reference,
+            skip: candidateSlice.skip,
+            take: candidateSlice.take,
+          })
+        : Promise.resolve([]),
+      endedSlice && endedSlice.take > 0
+        ? prisma.activity.findMany({
+            where: endedWhere,
+            orderBy: [{ startAt: "desc" }, { id: "asc" }],
+            skip: endedSlice.skip,
+            take: endedSlice.take,
+            select: activityCardSelect,
+          })
+        : Promise.resolve([]),
+    ]);
+  const activityCards = [
+    ...ongoingActivities.map(getActivityCardViewModel),
+    ...candidateActivities,
+    ...endedActivities.map(getActivityCardViewModel),
+  ];
+
+  return {
+    activities: decorate
+      ? await decorateLobbyActivities(
+          activityCards,
+          viewerProfileId,
+          context.friendIds,
+          context.mutualFollowIds,
+        )
+      : activityCards,
+    endedCount,
+    ongoingCount,
+    page,
+    pageSize: activityLobbyFeedPageSize,
+    status,
+    totalCount,
+    totalPages,
+  };
+}
+
 async function getOpenLobbySection(
   viewerProfileId: string,
   context: ActivityLobbyQueryContext,
@@ -1297,6 +1498,9 @@ async function getFriendJoinedLobbySection(context: ActivityLobbyQueryContext) {
 
 export async function getActivityLobbyInitial(
   viewerProfileId: string,
+  options: {
+    includeDesktopCandidates?: boolean;
+  } = {},
 ): Promise<ActivityLobbyViewModel> {
   const [mutualFollowIds, followedProfileIds] = await Promise.all([
     getViewerFriendIds(viewerProfileId),
@@ -1310,10 +1514,15 @@ export async function getActivityLobbyInitial(
   );
   const [allActivityFeed, openActivities, createdActivities, joinedActivities] =
     await Promise.all([
-      getActivityLobbyFeedPage(viewerProfileId, {
-        context: feedContext,
-        decorate: false,
-      }),
+      options.includeDesktopCandidates
+        ? getDesktopActivityLobbyFeedPage(viewerProfileId, {
+            context: feedContext,
+            decorate: false,
+          })
+        : getActivityLobbyFeedPage(viewerProfileId, {
+            context: feedContext,
+            decorate: false,
+          }),
       getOpenLobbySection(viewerProfileId, sectionContext),
       getCreatedLobbySection(viewerProfileId, sectionContext),
       getJoinedLobbySection(viewerProfileId, sectionContext),
@@ -1514,6 +1723,33 @@ const getCachedActivityLobbyPreview = unstable_cache(
 
 export async function getActivityLobbyPreview(category?: ActivityCategory) {
   return getCachedActivityLobbyPreview(category);
+}
+
+const getCachedDesktopActivityLobbyPreview = unstable_cache(
+  async () => {
+    const [realActivities, candidateActivities] = await Promise.all([
+      getActivityLobbyPreviewUncached(),
+      getDesktopLobbyCandidateActivities({
+        take: activityLobbyPreviewLimit,
+      }),
+    ]);
+    const activeActivities = realActivities.filter(
+      (activity) => !isEndedLobbyActivity(activity),
+    );
+    const endedActivities = realActivities.filter(isEndedLobbyActivity);
+
+    return [
+      ...activeActivities,
+      ...candidateActivities,
+      ...endedActivities,
+    ].slice(0, activityLobbyPreviewLimit * 2);
+  },
+  ["desktop-activity-lobby-preview-v1"],
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
+);
+
+export async function getDesktopActivityLobbyPreview() {
+  return getCachedDesktopActivityLobbyPreview();
 }
 
 const mobileActivityLobbyPageSize = 8;

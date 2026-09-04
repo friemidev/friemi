@@ -28,6 +28,7 @@ export type ActivityFormValues = {
   ticketLabel: string;
   publicEventId?: string;
   importSourceUrl?: string;
+  creationContext?: string;
 };
 
 export type ActivityFormState = {
@@ -191,6 +192,7 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     ticketLabel: getString(formData, "ticketLabel"),
     publicEventId: getString(formData, "publicEventId"),
     importSourceUrl: getString(formData, "importSourceUrl"),
+    creationContext: getString(formData, "creationContext"),
   };
 }
 

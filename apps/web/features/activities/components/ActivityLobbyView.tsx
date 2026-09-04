@@ -50,6 +50,7 @@ type ActivityLobbyViewProps = {
   initialFilter?: LobbyFilterId;
   initialCategoryFilter?: ActivityCategory | null;
   initialStatusFilter?: LobbyStatusFilterId;
+  includeDesktopCandidates?: boolean;
   starterActivities: ActivityCardViewModel[];
   locale: string;
   viewerProfileId: string;
@@ -591,6 +592,16 @@ function sortLobbyActivities(
   viewerProfileId?: string | null,
 ) {
   return sortLobbyActivitiesByStatusAndOwnership(activities, {
+    tieBreaker: (left, right) => {
+      const leftIsCandidate = isPublicEventCard(left);
+      const rightIsCandidate = isPublicEventCard(right);
+
+      return leftIsCandidate === rightIsCandidate
+        ? 0
+        : leftIsCandidate
+          ? 1
+          : -1;
+    },
     viewerProfileId,
   });
 }
@@ -1538,10 +1549,12 @@ function CategoryFallbackSection({
             }}
             favoriteRedirectPath={favoriteRedirectPath}
             isAuthenticated={isAuthenticated}
+            lobbyCandidate={isPublicEventCard(activity)}
             locale={locale}
             mobileDense
+            mobileDetailSheet={isPublicEventCard(activity)}
             showFavoriteButton
-            showPrimaryAction
+            showPrimaryAction={!isPublicEventCard(activity)}
             sourceSurface="activity_list"
           />
         ))}
@@ -1704,10 +1717,12 @@ export function ActivityLobbyPreviewView({
                       activity={activity}
                       favoriteRedirectPath="/lobby"
                       isAuthenticated={false}
+                      lobbyCandidate={isPublicEventCard(activity)}
                       locale={locale}
                       mobileDense
+                      mobileDetailSheet={isPublicEventCard(activity)}
                       showFavoriteButton
-                      showPrimaryAction
+                      showPrimaryAction={!isPublicEventCard(activity)}
                       sourceSurface="activity_list"
                       detailSourceKey="lobby"
                       detailSourceState={{
@@ -1767,6 +1782,7 @@ export function ActivityLobbyView({
   initialFilter = "all",
   initialCategoryFilter = null,
   initialStatusFilter = "all",
+  includeDesktopCandidates = false,
   starterActivities,
   locale,
   viewerProfileId,
@@ -2278,6 +2294,9 @@ export function ActivityLobbyView({
           page: normalizedPage.toString(),
           status,
         });
+        if (includeDesktopCandidates) {
+          params.set("surface", "desktop");
+        }
         if (typeFilter !== "all") {
           params.set("category", typeFilter);
         }
@@ -2335,7 +2354,7 @@ export function ActivityLobbyView({
         setLoadingFeedKey((current) => (current === cacheKey ? null : current));
       }
     },
-    [isDesktopViewport],
+    [includeDesktopCandidates, isDesktopViewport],
   );
 
   const loadDeferredSection = useCallback(
@@ -3081,10 +3100,18 @@ export function ActivityLobbyView({
                   isOwnActivity={createdActivityKeys.has(
                     getLobbyActivityKey(activity),
                   )}
+                  lobbyCandidate={
+                    includeDesktopCandidates && isPublicEventCard(activity)
+                  }
                   locale={locale}
                   mobileDense
+                  mobileDetailSheet={
+                    includeDesktopCandidates && isPublicEventCard(activity)
+                  }
                   showFavoriteButton
-                  showPrimaryAction
+                  showPrimaryAction={
+                    !includeDesktopCandidates || !isPublicEventCard(activity)
+                  }
                   sourceSurface="activity_list"
                   detailSourceKey="lobby"
                   detailSourceState={{

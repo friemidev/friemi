@@ -1891,12 +1891,14 @@ export async function ActivityDetailPageContent({
       className={cn(
         "mobile-v23-lobby-detail space-y-4 md:space-y-6 md:py-8",
         isSheetPresentation
-          ? "mobile-v23-lobby-detail-sheet h-full max-w-none overflow-y-auto px-4 pb-6 pt-0 sm:px-4"
+          ? "mobile-v23-lobby-detail-sheet min-h-full max-w-none px-4 pb-6 pt-3 sm:px-4"
           : "app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)]",
       )}
     >
       {isSheetPresentation ? null : <MobileNavSectionOverride section="lobby" />}
-      <DetailSourceRestore sourceKey="activity_detail" />
+      {isSheetPresentation ? null : (
+        <DetailSourceRestore sourceKey="activity_detail" />
+      )}
       <ClaimAutoCreatedActivityCelebration
         active={claimedSuccess === "1"}
         editHref={activityEditHref}
@@ -2243,6 +2245,14 @@ export async function ActivityDetailPageContent({
           ) : null}
         </div>
       </div>
+
+      {isTeamOperator && activity.requiresApproval ? (
+        <ParticipationApprovalPanel
+          activityId={activity.id}
+          locale={locale}
+          pendingParticipants={pendingParticipants}
+        />
+      ) : null}
 
       <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
@@ -2818,13 +2828,6 @@ export async function ActivityDetailPageContent({
           </div>
         </aside>
       </section>
-      {isTeamOperator && activity.requiresApproval ? (
-        <ParticipationApprovalPanel
-          activityId={activity.id}
-          locale={locale}
-          pendingParticipants={pendingParticipants}
-        />
-      ) : null}
       {canUseBoardGameTools ? (
         <BoardGameToolFloatingEntry
           gameToolsHref={gameToolsHref}

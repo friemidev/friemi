@@ -24,7 +24,7 @@ import { validateActivitySchedule } from "@/features/activities/utils/validateAc
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
-import type { ActivityStatus } from "@prisma/client";
+import { Prisma, type ActivityStatus } from "@prisma/client";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -35,10 +35,27 @@ import {
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
+import {
+  buildDesktopLobbyCandidateSourceUrl,
+  DESKTOP_LOBBY_CANDIDATE_CONTEXT,
+} from "@/features/activities/utils/desktopLobbyCandidates";
 
 export type CreateActivityState = ActivityFormState;
 
 const activeTeamStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
+const lobbyCandidateActiveTeamStatuses: ActivityStatus[] = [
+  "OPEN",
+  "RECRUITING",
+  "CONFIRMED",
+  "FULL",
+];
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
 
 type CreateActivityFailureReasonCode =
   | "duplicate_team"
@@ -237,6 +254,8 @@ export async function createActivityAction(
   );
   const description = formatStoredDescription(result.data);
   const publicEventId = result.data.publicEventId ?? null;
+  const isLobbyCandidateCreation =
+    result.data.creationContext === DESKTOP_LOBBY_CANDIDATE_CONTEXT;
   const publicEvent = publicEventId
     ? await prisma.publicEvent.findFirst({
         where: {
@@ -320,6 +339,34 @@ export async function createActivityAction(
       );
     }
 
+    if (isLobbyCandidateCreation) {
+      const existingPublicTeam = await prisma.activity.findFirst({
+        where: {
+          publicEventId: publicEvent.id,
+          status: {
+            in: lobbyCandidateActiveTeamStatuses,
+          },
+          type: {
+            not: "PUBLIC_EVENT",
+          },
+          visibility: "PUBLIC",
+          organizer: {
+            status: "ACTIVE",
+          },
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingPublicTeam) {
+        redirect(
+          withLocale(locale, getActivityDetailPath(existingPublicTeam.id)),
+        );
+      }
+    }
+
     const existingTeam = await prisma.activity.findFirst({
       where: {
         organizerId: profile.id,
@@ -393,9 +440,17 @@ export async function createActivityAction(
     });
   }
 
+  const lobbyCandidateSourceUrl =
+    isLobbyCandidateCreation && publicEvent
+      ? buildDesktopLobbyCandidateSourceUrl(publicEvent.id)
+      : null;
+  const activityVisibility = isLobbyCandidateCreation
+    ? "PUBLIC"
+    : result.data.visibility;
+  let reusedExistingActivityId: string | null = null;
+
   try {
-    const activity = await prisma.activity.create({
-      data: {
+    const activityData = {
         title: result.data.title,
         description,
         itinerary: result.data.itinerary,
@@ -425,10 +480,10 @@ export async function createActivityAction(
         ),
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
-        visibility: result.data.visibility,
-        shareEnabled: result.data.visibility === "PRIVATE",
+        visibility: activityVisibility,
+        shareEnabled: activityVisibility === "PRIVATE",
         shareToken:
-          result.data.visibility === "PRIVATE"
+          activityVisibility === "PRIVATE"
             ? generateActivityShareToken()
             : null,
         organizerId: profile.id,
@@ -438,14 +493,57 @@ export async function createActivityAction(
             status: "APPROVED",
           },
         },
-      },
-      select: {
-        id: true,
-      },
-    });
+      } satisfies Prisma.ActivityUncheckedCreateInput;
+    const activity = lobbyCandidateSourceUrl
+      ? await prisma.$transaction(async (transaction) => {
+          const createdActivity = await transaction.activity.create({
+            data: activityData,
+            select: {
+              id: true,
+            },
+          });
+
+          await transaction.activitySourceLink.create({
+            data: {
+              activityId: createdActivity.id,
+              source: "desktop-lobby-candidate",
+              sourceUrl: lobbyCandidateSourceUrl,
+            },
+          });
+
+          return createdActivity;
+        })
+      : await prisma.activity.create({
+          data: activityData,
+          select: {
+            id: true,
+          },
+        });
 
     activityId = activity.id;
   } catch (error) {
+    if (lobbyCandidateSourceUrl && isUniqueConstraintError(error)) {
+      const existingSourceLink = await prisma.activitySourceLink.findUnique({
+        where: {
+          sourceUrl: lobbyCandidateSourceUrl,
+        },
+        select: {
+          activityId: true,
+        },
+      });
+
+      if (existingSourceLink) {
+        activityId = existingSourceLink.activityId;
+        reusedExistingActivityId = existingSourceLink.activityId;
+      }
+    }
+
+    if (reusedExistingActivityId) {
+      redirect(
+        withLocale(locale, getActivityDetailPath(reusedExistingActivityId)),
+      );
+    }
+
     console.error("Failed to create activity", error);
     recordLatency({
       status: "failed",
@@ -486,7 +584,7 @@ export async function createActivityAction(
         has_public_event: Boolean(publicEvent?.id),
         public_event_id: publicEvent?.id ?? null,
         requires_approval: result.data.requiresApproval,
-        visibility: result.data.visibility,
+        visibility: activityVisibility,
       },
     },
     {
@@ -520,7 +618,7 @@ export async function createActivityAction(
       category: result.data.category,
       city: result.data.city,
       requires_approval: result.data.requiresApproval,
-      visibility: result.data.visibility,
+      visibility: activityVisibility,
     },
     status: "success",
     userProfileId: profile.id,
