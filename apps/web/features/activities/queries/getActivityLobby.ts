@@ -26,6 +26,7 @@ import {
 } from "../utils/activityDisplay";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { compareLobbyActivityStatusAndOwnership } from "../utils/lobbyActivitySort";
+import { dedupeActivityCards } from "../utils/activityCardIdentity";
 import {
   applyPrivateActivityCardAccess,
   canAccessPrivateActivityCard,
@@ -52,6 +53,16 @@ const desktopLobbyCandidateStatuses: ActivityStatus[] = [
   "CONFIRMED",
   "FULL",
 ];
+const desktopLobbyCandidateIdentitySelect = {
+  address: true,
+  category: true,
+  city: true,
+  coverImageUrl: true,
+  endAt: true,
+  id: true,
+  startAt: true,
+  title: true,
+} satisfies Prisma.PublicEventSelect;
 const visibleLobbyParticipationStatuses = [
   "JOINED",
   "APPROVED",
@@ -366,9 +377,33 @@ function getDesktopLobbyCandidateWhere(
   };
 }
 
+const getCachedUniqueDesktopLobbyCandidateIds = unstable_cache(
+  async (category: ActivityCategory | null) => {
+    const publicEvents = await prisma.publicEvent.findMany({
+      where: getDesktopLobbyCandidateWhere(category ?? undefined),
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      select: desktopLobbyCandidateIdentitySelect,
+    });
+
+    return dedupeActivityCards(
+      publicEvents.map((publicEvent) => ({
+        ...publicEvent,
+        publicEventId: publicEvent.id,
+        type: "PUBLIC_EVENT" as const,
+      })),
+    ).map((publicEvent) => publicEvent.id);
+  },
+  ["unique-desktop-lobby-candidate-ids-v1"],
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
+);
+
+function getUniqueDesktopLobbyCandidateIds(category?: ActivityCategory) {
+  return getCachedUniqueDesktopLobbyCandidateIds(category ?? null);
+}
+
 async function getDesktopLobbyCandidateActivities(options: {
+  candidateIds?: string[];
   category?: ActivityCategory;
-  reference?: Date;
   skip?: number;
   take: number;
 }) {
@@ -376,17 +411,31 @@ async function getDesktopLobbyCandidateActivities(options: {
     return [];
   }
 
+  const candidateIds =
+    options.candidateIds ??
+    (await getUniqueDesktopLobbyCandidateIds(options.category));
+  const start = Math.max(0, options.skip ?? 0);
+  const pageIds = candidateIds.slice(start, start + options.take);
+
+  if (pageIds.length === 0) {
+    return [];
+  }
+
   const publicEvents = await prisma.publicEvent.findMany({
-    where: getDesktopLobbyCandidateWhere(options.category, options.reference),
-    orderBy: [{ startAt: "asc" }, { id: "asc" }],
-    skip: options.skip ?? 0,
-    take: options.take,
+    where: { id: { in: pageIds } },
     select: publicEventSelect,
   });
-
-  return publicEvents.map((publicEvent) =>
-    mapPublicEventToActivityCard(getPublicEventCardViewModel(publicEvent)),
+  const publicEventById = new Map(
+    publicEvents.map((publicEvent) => [publicEvent.id, publicEvent]),
   );
+
+  return pageIds.flatMap((id) => {
+    const publicEvent = publicEventById.get(id);
+
+    return publicEvent
+      ? [mapPublicEventToActivityCard(getPublicEventCardViewModel(publicEvent))]
+      : [];
+  });
 }
 
 export async function getLobbySwipePublicEventActivities(
@@ -744,14 +793,10 @@ export function mergeMobileHomeTrendingActivities(
       return scoreDiff || compareLobbyActivityTime(left, right);
     });
 
-  return Array.from(
-    new Map(
-      [...sortedTeams, ...sortedCandidates].map((activity) => [
-        getLobbyActivityKey(activity),
-        activity,
-      ]),
-    ).values(),
-  ).slice(0, limit);
+  return dedupeActivityCards([...sortedTeams, ...sortedCandidates]).slice(
+    0,
+    limit,
+  );
 }
 
 function getMobileHomeTrendingTeamLimit(limit?: number) {
@@ -1270,16 +1315,12 @@ export async function getDesktopActivityLobbyFeedPage(
       categoryWhere,
     ],
   };
-  const reference = new Date();
-  const candidateWhere = getDesktopLobbyCandidateWhere(
-    options.category,
-    reference,
-  );
-  const [realOngoingCount, candidateCount, endedCount] = await Promise.all([
+  const [realOngoingCount, candidateIds, endedCount] = await Promise.all([
     prisma.activity.count({ where: ongoingWhere }),
-    prisma.publicEvent.count({ where: candidateWhere }),
+    getUniqueDesktopLobbyCandidateIds(options.category),
     prisma.activity.count({ where: endedWhere }),
   ]);
+  const candidateCount = candidateIds.length;
   const ongoingCount = realOngoingCount + candidateCount;
   const totalCount =
     status === "ongoing"
@@ -1320,8 +1361,8 @@ export async function getDesktopActivityLobbyFeedPage(
         : Promise.resolve([]),
       candidateSlice && candidateSlice.take > 0
         ? getDesktopLobbyCandidateActivities({
+            candidateIds,
             category: options.category,
-            reference,
             skip: candidateSlice.skip,
             take: candidateSlice.take,
           })
@@ -1341,16 +1382,17 @@ export async function getDesktopActivityLobbyFeedPage(
     ...candidateActivities,
     ...endedActivities.map(getActivityCardViewModel),
   ];
+  const uniqueActivityCards = dedupeActivityCards(activityCards);
 
   return {
     activities: decorate
       ? await decorateLobbyActivities(
-          activityCards,
+          uniqueActivityCards,
           viewerProfileId,
           context.friendIds,
           context.mutualFollowIds,
         )
-      : activityCards,
+      : uniqueActivityCards,
     endedCount,
     ongoingCount,
     page,
@@ -1785,11 +1827,11 @@ const getCachedDesktopActivityLobbyPreview = unstable_cache(
     );
     const endedActivities = realActivities.filter(isEndedLobbyActivity);
 
-    return [
+    return dedupeActivityCards([
       ...activeActivities,
       ...candidateActivities,
       ...endedActivities,
-    ].slice(0, activityLobbyPreviewLimit * 2);
+    ]).slice(0, activityLobbyPreviewLimit * 2);
   },
   ["desktop-activity-lobby-preview-v2"],
   { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
@@ -1869,11 +1911,7 @@ function paginateMobileLobbyActivities(
 ) {
   const normalizedPage = Math.max(1, Math.floor(page));
   const start = (normalizedPage - 1) * mobileActivityLobbyPageSize;
-  const deduped = Array.from(
-    new Map(
-      activities.map((activity) => [getLobbyActivityKey(activity), activity]),
-    ).values(),
-  );
+  const deduped = dedupeActivityCards(activities);
 
   return {
     activities: deduped.slice(start, start + mobileActivityLobbyPageSize),
