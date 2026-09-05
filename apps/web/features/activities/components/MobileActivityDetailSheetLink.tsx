@@ -102,6 +102,13 @@ export function MobileActivityDetailSheetLink({
           <iframe
             className="h-full w-full border-0 bg-white"
             loading="lazy"
+            onLoad={(event) => {
+              event.currentTarget.contentWindow?.scrollTo({
+                behavior: "auto",
+                left: 0,
+                top: 0,
+              });
+            }}
             src={sheetHref}
             title={label}
           />

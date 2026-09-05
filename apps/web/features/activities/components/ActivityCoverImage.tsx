@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 type ActivityCoverImageProps = {
   alt?: string;
+  fallbackSrc?: string | null;
   fetchPriority?: "auto" | "high" | "low";
   imageClassName?: string;
   loading?: "eager" | "lazy";
@@ -19,6 +20,7 @@ type ActivityCoverImageProps = {
 
 export function ActivityCoverImage({
   alt = "",
+  fallbackSrc,
   fetchPriority = "auto",
   imageClassName,
   loading = "lazy",
@@ -27,9 +29,15 @@ export function ActivityCoverImage({
 }: ActivityCoverImageProps) {
   const [hasFailed, setHasFailed] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const normalizedFallbackSrc = fallbackSrc?.trim() || null;
   const usesCategoryArtworkCrop =
     isActivityCategoryIllustrationSrc(src) &&
     src !== defaultActivityCategoryIllustrationSrc;
+  const fallbackUsesCategoryArtworkCrop =
+    isActivityCategoryIllustrationSrc(normalizedFallbackSrc) &&
+    normalizedFallbackSrc !== defaultActivityCategoryIllustrationSrc;
+  const primarySrc =
+    src && !hasFailed && src !== normalizedFallbackSrc ? src : null;
 
   useEffect(() => {
     setHasFailed(false);
@@ -46,7 +54,7 @@ export function ActivityCoverImage({
     return () => window.clearTimeout(timeoutId);
   }, [hasFailed, hasLoaded, src]);
 
-  if (!src || hasFailed) {
+  if ((!src || hasFailed) && !normalizedFallbackSrc) {
     return (
       <div
         className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[#FEFFF9]"
@@ -74,26 +82,45 @@ export function ActivityCoverImage({
         aria-hidden="true"
         className="absolute inset-0 bg-[linear-gradient(145deg,#F1F2EC_0%,#FEFFF9_58%,#EAF3EC_100%)]"
       />
+      {normalizedFallbackSrc ? (
+        // Category artwork is visible immediately while a remote custom cover loads.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt=""
+          className={cn(
+            "absolute w-full object-cover",
+            fallbackUsesCategoryArtworkCrop
+              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
+              : "inset-0 h-full",
+          )}
+          decoding="sync"
+          fetchPriority={fetchPriority}
+          loading="eager"
+          src={normalizedFallbackSrc}
+        />
+      ) : null}
       {/* Public cover URLs can come from Supabase Storage or Paris OpenData. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className={cn(
-          "absolute w-full object-cover transition-[opacity,transform] duration-300 ease-out",
-          usesCategoryArtworkCrop
-            ? "inset-x-0 bottom-0 h-[124%] object-bottom"
-            : "inset-0 h-full group-hover/card:scale-[1.035]",
-          hasLoaded ? "opacity-100" : "opacity-0",
-          imageClassName,
-        )}
-        decoding="async"
-        fetchPriority={fetchPriority}
-        loading={loading}
-        referrerPolicy="no-referrer"
-        onError={() => setHasFailed(true)}
-        onLoad={() => setHasLoaded(true)}
-      />
+      {primarySrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={primarySrc}
+          alt={alt}
+          className={cn(
+            "absolute w-full object-cover transition-[opacity,transform] duration-300 ease-out",
+            usesCategoryArtworkCrop
+              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
+              : "inset-0 h-full group-hover/card:scale-[1.035]",
+            hasLoaded ? "opacity-100" : "opacity-0",
+            imageClassName,
+          )}
+          decoding="async"
+          fetchPriority={fetchPriority}
+          loading={loading}
+          referrerPolicy="no-referrer"
+          onError={() => setHasFailed(true)}
+          onLoad={() => setHasLoaded(true)}
+        />
+      ) : null}
       <div className={cn("absolute inset-0", overlayClassName)} aria-hidden />
     </>
   );

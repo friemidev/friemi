@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
+import { getActivityListCoverSrc } from "@/features/activities/utils/activityCategoryVisuals";
 import {
   ActivityLobbyPreviewView,
   ActivityLobbyView,
@@ -15,11 +16,13 @@ import {
   createEmptyActivityLobbyFeedPage,
   getActivityLobbyInitial,
   getActivityLobbyPreview,
+  getDesktopActivityLobbyPreview,
   getLobbySwipePublicEventActivities,
   getMobileActivityLobbyPage,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { brand } from "@/lib/brand";
+import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
@@ -189,8 +192,14 @@ export default async function ActivityLobbyPage({
       <>
         <ImageResourcePreloader
           limit={4}
-          sources={mobilePage.activities.map(
-            (activity) => activity.coverImageUrl,
+          sources={mobilePage.activities.map((activity) =>
+            getActivityCoverThumbnailUrl(
+              getActivityListCoverSrc(
+                activity.coverImageUrl,
+                activity.category,
+              ),
+              192,
+            ),
           )}
         />
         <MobileLobbyV23View
@@ -210,7 +219,7 @@ export default async function ActivityLobbyPage({
 
   if (!profile) {
     const previewActivities = await perf.measure("lobby.preview", () =>
-      getActivityLobbyPreview().catch((error: unknown) => {
+      getDesktopActivityLobbyPreview().catch((error: unknown) => {
         console.error("Failed to load public activity lobby preview", error);
 
         return [];
@@ -239,7 +248,9 @@ export default async function ActivityLobbyPage({
   }
 
   const lobby = await perf.measure("lobby.initialData", () =>
-    getActivityLobbyInitial(profile.id).catch((error: unknown) => {
+    getActivityLobbyInitial(profile.id, {
+      includeDesktopCandidates: true,
+    }).catch((error: unknown) => {
       console.error("Failed to load activity lobby", error);
 
       return {
@@ -285,6 +296,7 @@ export default async function ActivityLobbyPage({
         initialFilter={initialFilter}
         initialCategoryFilter={initialCategoryFilter}
         initialStatusFilter={initialStatusFilter}
+        includeDesktopCandidates
         starterActivities={lobby.starterActivities}
         locale={locale}
         viewerProfileId={profile.id}

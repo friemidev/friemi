@@ -17,6 +17,11 @@ import {
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { isPrivateActivityCardLocked } from "@/features/activities/utils/privateActivityCardAccess";
+import {
+  getActivityCategoryPreviewSrc,
+  getActivityListCoverSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
+import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 import { withLocale } from "@/lib/routes";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { cn } from "@/lib/utils";
@@ -62,7 +67,10 @@ function getRowCopy(locale: string) {
 
 function getActivityHref(activity: ActivityCardViewModel, locale: string) {
   if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
-    return withLocale(locale, `/public-events/${activity.publicEventId}`);
+    return withLocale(
+      locale,
+      `/public-events/${activity.publicEventId}?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`,
+    );
   }
 
   return withLocale(locale, getActivityDetailPath(activity.id));
@@ -132,7 +140,7 @@ export function MobileActivityListRow({
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
   const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const coverImageUrl = getActivityCoverThumbnailUrl(
-    activity.coverImageUrl,
+    getActivityListCoverSrc(activity.coverImageUrl, activity.category),
     192,
   );
 
@@ -156,6 +164,7 @@ export function MobileActivityListRow({
       >
         <ActivityCoverImage
           alt={activity.title}
+          fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           fetchPriority={prioritizeImage ? "high" : "auto"}
           loading={prioritizeImage ? "eager" : "lazy"}
           overlayClassName={cn(

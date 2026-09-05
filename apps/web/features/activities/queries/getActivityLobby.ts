@@ -30,7 +30,11 @@ import {
   applyPrivateActivityCardAccess,
   canAccessPrivateActivityCard,
 } from "../utils/privateActivityCardAccess";
-import type { Prisma } from "@prisma/client";
+import {
+  getDesktopLobbyCandidateWindow,
+  getOrderedPageSlices,
+} from "../utils/desktopLobbyCandidates";
+import type { ActivityStatus, Prisma } from "@prisma/client";
 
 const activityLobbyFeedPageSize = 8;
 const activityLobbySectionLimit = activityLobbyFeedPageSize * 6;
@@ -42,6 +46,12 @@ const activityLobbySwipePublicEventRatio = 3;
 const activityLobbySwipeTeamRatio = 1;
 const mobileHomeTrendingTeamLimit = 8;
 const mobileHomeTrendingTeamCandidateLimit = 48;
+const desktopLobbyCandidateStatuses: ActivityStatus[] = [
+  "OPEN",
+  "RECRUITING",
+  "CONFIRMED",
+  "FULL",
+];
 const visibleLobbyParticipationStatuses = [
   "JOINED",
   "APPROVED",
@@ -313,6 +323,70 @@ function mapPublicEventToActivityCard(
     merchant: null,
     isFavorited: publicEvent.isFavorited,
   };
+}
+
+function getDesktopLobbyCandidateWhere(
+  category?: ActivityCategory,
+  reference = new Date(),
+): Prisma.PublicEventWhereInput {
+  const window = getDesktopLobbyCandidateWindow(reference);
+
+  return {
+    ...(category ? { category } : {}),
+    address: { not: "" },
+    city: { not: "" },
+    OR: [
+      {
+        startAt: {
+          gte: window.from,
+          lte: window.to,
+        },
+      },
+      {
+        endAt: { gte: window.from },
+        startAt: { lt: window.from },
+      },
+    ],
+    status: "SCHEDULED",
+    visibility: "PUBLIC",
+    teams: {
+      none: {
+        organizer: {
+          status: "ACTIVE",
+        },
+        status: {
+          in: desktopLobbyCandidateStatuses,
+        },
+        type: {
+          not: "PUBLIC_EVENT",
+        },
+        visibility: "PUBLIC",
+      },
+    },
+  };
+}
+
+async function getDesktopLobbyCandidateActivities(options: {
+  category?: ActivityCategory;
+  reference?: Date;
+  skip?: number;
+  take: number;
+}) {
+  if (options.take <= 0) {
+    return [];
+  }
+
+  const publicEvents = await prisma.publicEvent.findMany({
+    where: getDesktopLobbyCandidateWhere(options.category, options.reference),
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    skip: options.skip ?? 0,
+    take: options.take,
+    select: publicEventSelect,
+  });
+
+  return publicEvents.map((publicEvent) =>
+    mapPublicEventToActivityCard(getPublicEventCardViewModel(publicEvent)),
+  );
 }
 
 export async function getLobbySwipePublicEventActivities(
@@ -650,6 +724,36 @@ export function sortMobileHomeTrendingTeamActivities(
   });
 }
 
+export function mergeMobileHomeTrendingActivities(
+  teamActivities: ActivityCardViewModel[],
+  candidateActivities: ActivityCardViewModel[],
+  limit: number,
+  now = getActivityFloatingNow(),
+) {
+  const sortedTeams = sortMobileHomeTrendingTeamActivities(teamActivities, now);
+  const sortedCandidates = candidateActivities
+    .filter(
+      (activity) =>
+        activity.type === "PUBLIC_EVENT" && Boolean(activity.publicEventId),
+    )
+    .sort((left, right) => {
+      const scoreDiff =
+        getMobileHomeTrendingTeamScore(right, now) -
+        getMobileHomeTrendingTeamScore(left, now);
+
+      return scoreDiff || compareLobbyActivityTime(left, right);
+    });
+
+  return Array.from(
+    new Map(
+      [...sortedTeams, ...sortedCandidates].map((activity) => [
+        getLobbyActivityKey(activity),
+        activity,
+      ]),
+    ).values(),
+  ).slice(0, limit);
+}
+
 function getMobileHomeTrendingTeamLimit(limit?: number) {
   return Math.min(
     Math.max(Math.floor(limit ?? mobileHomeTrendingTeamLimit), 1),
@@ -678,55 +782,67 @@ async function getMobileHomeTrendingTeamActivitiesUncached(
 ) {
   const now = getActivityFloatingNow();
   const limit = getMobileHomeTrendingTeamLimit(options.limit);
-  const activityRows = await prisma.activity.findMany({
-    where: {
-      AND: [
-        getVisibleActivityWhere({
-          includeEnded: false,
-          includePast: false,
-          visibility: null,
-          now,
-        }),
-        { visibility: "PUBLIC" },
-        strictTeamCardWhere,
+  const [activityRows, candidateActivities] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        AND: [
+          getVisibleActivityWhere({
+            includeEnded: false,
+            includePast: false,
+            visibility: null,
+            now,
+          }),
+          { visibility: "PUBLIC" },
+          strictTeamCardWhere,
+        ],
+      },
+      orderBy: [
+        {
+          participants: {
+            _count: "desc",
+          },
+        },
+        {
+          favorites: {
+            _count: "desc",
+          },
+        },
+        { startAt: "asc" },
+        { id: "asc" },
       ],
-    },
-    orderBy: [
-      {
-        participants: {
-          _count: "desc",
-        },
-      },
-      {
-        favorites: {
-          _count: "desc",
-        },
-      },
-      { startAt: "asc" },
-      { id: "asc" },
-    ],
-    take: mobileHomeTrendingTeamCandidateLimit,
-    select: activityCardSelect,
-  });
+      take: mobileHomeTrendingTeamCandidateLimit,
+      select: activityCardSelect,
+    }),
+    getDesktopLobbyCandidateActivities({ take: limit }),
+  ]);
   const teamCards = activityRows.map(getActivityCardViewModel);
-  const decoratedTeamCards = viewerProfileId
+  const combinedCards = [...teamCards, ...candidateActivities];
+  const decoratedCards = viewerProfileId
     ? await decorateLobbyActivities(
-        teamCards,
+        combinedCards,
         viewerProfileId,
         await getViewerFollowedProfileIds(viewerProfileId),
       )
-    : await applyOrganizerParticipationDefaults(teamCards);
+    : await applyOrganizerParticipationDefaults(combinedCards);
+  const decoratedCandidateActivities = decoratedCards.filter(
+    (activity) => activity.type === "PUBLIC_EVENT",
+  );
+  const decoratedTeamCards = decoratedCards.filter(
+    (activity) => activity.type !== "PUBLIC_EVENT",
+  );
 
-  return sortMobileHomeTrendingTeamActivities(decoratedTeamCards, now).slice(
-    0,
+  return mergeMobileHomeTrendingActivities(
+    decoratedTeamCards,
+    decoratedCandidateActivities,
     limit,
+    now,
   );
 }
 
 const getCachedAnonymousMobileHomeTrendingTeamActivities = unstable_cache(
   async (limit: number) =>
     getMobileHomeTrendingTeamActivitiesUncached(null, { limit }),
-  ["anonymous-mobile-home-trending-team-activities-v1"],
+  ["anonymous-mobile-home-trending-team-activities-v2"],
   { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
 );
 
@@ -1113,6 +1229,138 @@ export async function getActivityLobbyFeedPage(
   };
 }
 
+export async function getDesktopActivityLobbyFeedPage(
+  viewerProfileId: string,
+  options: {
+    category?: ActivityCategory;
+    context?: ActivityLobbyQueryContext;
+    decorate?: boolean;
+    page?: number;
+    status?: ActivityLobbyFeedStatus;
+  } = {},
+): Promise<ActivityLobbyFeedPage> {
+  let context = options.context;
+
+  if (!context) {
+    const [mutualFollowIds, followedProfileIds] = await Promise.all([
+      getViewerFriendIds(viewerProfileId),
+      getViewerFollowedProfileIds(viewerProfileId),
+    ]);
+
+    context = await getLobbyQueryContext(
+      viewerProfileId,
+      mutualFollowIds,
+      followedProfileIds,
+    );
+  }
+
+  const decorate = options.decorate ?? true;
+  const status = options.status ?? "all";
+  const categoryWhere: Prisma.ActivityWhereInput = options.category
+    ? { category: options.category }
+    : {};
+  const ongoingWhere: Prisma.ActivityWhereInput = {
+    AND: [context.accessibleActiveWhere, strictTeamCardWhere, categoryWhere],
+  };
+  const endedWhere: Prisma.ActivityWhereInput = {
+    AND: [
+      context.accessibleWhere,
+      strictTeamCardWhere,
+      context.archivedWhere,
+      categoryWhere,
+    ],
+  };
+  const reference = new Date();
+  const candidateWhere = getDesktopLobbyCandidateWhere(
+    options.category,
+    reference,
+  );
+  const [realOngoingCount, candidateCount, endedCount] = await Promise.all([
+    prisma.activity.count({ where: ongoingWhere }),
+    prisma.publicEvent.count({ where: candidateWhere }),
+    prisma.activity.count({ where: endedWhere }),
+  ]);
+  const ongoingCount = realOngoingCount + candidateCount;
+  const totalCount =
+    status === "ongoing"
+      ? ongoingCount
+      : status === "ended"
+        ? endedCount
+        : ongoingCount + endedCount;
+  const totalPages = getActivityLobbyTotalPages(
+    totalCount,
+    activityLobbyFeedPageSize,
+  );
+  const page = getActivityLobbyPage(options.page ?? 1, totalPages);
+  const offset = (page - 1) * activityLobbyFeedPageSize;
+  const bucketCounts =
+    status === "ended"
+      ? [endedCount]
+      : status === "ongoing"
+        ? [realOngoingCount, candidateCount]
+        : [realOngoingCount, candidateCount, endedCount];
+  const slices = getOrderedPageSlices(
+    bucketCounts,
+    offset,
+    activityLobbyFeedPageSize,
+  );
+  const realOngoingSlice = status === "ended" ? null : slices[0];
+  const candidateSlice = status === "ended" ? null : slices[1];
+  const endedSlice = status === "ended" ? slices[0] : (slices[2] ?? null);
+  const [ongoingActivities, candidateActivities, endedActivities] =
+    await Promise.all([
+      realOngoingSlice && realOngoingSlice.take > 0
+        ? prisma.activity.findMany({
+            where: ongoingWhere,
+            orderBy: [{ startAt: "asc" }, { id: "asc" }],
+            skip: realOngoingSlice.skip,
+            take: realOngoingSlice.take,
+            select: activityCardSelect,
+          })
+        : Promise.resolve([]),
+      candidateSlice && candidateSlice.take > 0
+        ? getDesktopLobbyCandidateActivities({
+            category: options.category,
+            reference,
+            skip: candidateSlice.skip,
+            take: candidateSlice.take,
+          })
+        : Promise.resolve([]),
+      endedSlice && endedSlice.take > 0
+        ? prisma.activity.findMany({
+            where: endedWhere,
+            orderBy: [{ startAt: "desc" }, { id: "asc" }],
+            skip: endedSlice.skip,
+            take: endedSlice.take,
+            select: activityCardSelect,
+          })
+        : Promise.resolve([]),
+    ]);
+  const activityCards = [
+    ...ongoingActivities.map(getActivityCardViewModel),
+    ...candidateActivities,
+    ...endedActivities.map(getActivityCardViewModel),
+  ];
+
+  return {
+    activities: decorate
+      ? await decorateLobbyActivities(
+          activityCards,
+          viewerProfileId,
+          context.friendIds,
+          context.mutualFollowIds,
+        )
+      : activityCards,
+    endedCount,
+    ongoingCount,
+    page,
+    pageSize: activityLobbyFeedPageSize,
+    status,
+    totalCount,
+    totalPages,
+  };
+}
+
 async function getOpenLobbySection(
   viewerProfileId: string,
   context: ActivityLobbyQueryContext,
@@ -1297,6 +1545,9 @@ async function getFriendJoinedLobbySection(context: ActivityLobbyQueryContext) {
 
 export async function getActivityLobbyInitial(
   viewerProfileId: string,
+  options: {
+    includeDesktopCandidates?: boolean;
+  } = {},
 ): Promise<ActivityLobbyViewModel> {
   const [mutualFollowIds, followedProfileIds] = await Promise.all([
     getViewerFriendIds(viewerProfileId),
@@ -1310,10 +1561,15 @@ export async function getActivityLobbyInitial(
   );
   const [allActivityFeed, openActivities, createdActivities, joinedActivities] =
     await Promise.all([
-      getActivityLobbyFeedPage(viewerProfileId, {
-        context: feedContext,
-        decorate: false,
-      }),
+      options.includeDesktopCandidates
+        ? getDesktopActivityLobbyFeedPage(viewerProfileId, {
+            context: feedContext,
+            decorate: false,
+          })
+        : getActivityLobbyFeedPage(viewerProfileId, {
+            context: feedContext,
+            decorate: false,
+          }),
       getOpenLobbySection(viewerProfileId, sectionContext),
       getCreatedLobbySection(viewerProfileId, sectionContext),
       getJoinedLobbySection(viewerProfileId, sectionContext),
@@ -1516,6 +1772,33 @@ export async function getActivityLobbyPreview(category?: ActivityCategory) {
   return getCachedActivityLobbyPreview(category);
 }
 
+const getCachedDesktopActivityLobbyPreview = unstable_cache(
+  async () => {
+    const [realActivities, candidateActivities] = await Promise.all([
+      getActivityLobbyPreviewUncached(),
+      getDesktopLobbyCandidateActivities({
+        take: activityLobbyPreviewLimit,
+      }),
+    ]);
+    const activeActivities = realActivities.filter(
+      (activity) => !isEndedLobbyActivity(activity),
+    );
+    const endedActivities = realActivities.filter(isEndedLobbyActivity);
+
+    return [
+      ...activeActivities,
+      ...candidateActivities,
+      ...endedActivities,
+    ].slice(0, activityLobbyPreviewLimit * 2);
+  },
+  ["desktop-activity-lobby-preview-v2"],
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
+);
+
+export async function getDesktopActivityLobbyPreview() {
+  return getCachedDesktopActivityLobbyPreview();
+}
+
 const mobileActivityLobbyPageSize = 8;
 
 function getMobileLobbyDateKey(value: string | Date) {
@@ -1553,6 +1836,33 @@ function sortMobileLobbyPageActivities(
   );
 }
 
+function sortMobileLobbyCandidateAwareActivities(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null,
+  tieBreaker?: (
+    left: ActivityCardViewModel,
+    right: ActivityCardViewModel,
+  ) => number,
+) {
+  const activeTeams = activities.filter(
+    (activity) =>
+      activity.type !== "PUBLIC_EVENT" && !isEndedLobbyActivity(activity),
+  );
+  const candidates = activities.filter(
+    (activity) => activity.type === "PUBLIC_EVENT",
+  );
+  const endedTeams = activities.filter(
+    (activity) =>
+      activity.type !== "PUBLIC_EVENT" && isEndedLobbyActivity(activity),
+  );
+
+  return [
+    ...sortMobileLobbyPageActivities(activeTeams, viewerProfileId, tieBreaker),
+    ...sortMobileLobbyPageActivities(candidates, viewerProfileId, tieBreaker),
+    ...sortMobileLobbyPageActivities(endedTeams, viewerProfileId, tieBreaker),
+  ];
+}
+
 function paginateMobileLobbyActivities(
   activities: ActivityCardViewModel[],
   page: number,
@@ -1584,7 +1894,7 @@ export async function getMobileActivityLobbyPage({
   const normalizedPage = Math.max(1, Math.floor(page));
 
   if (tab === "nearby" && viewerProfileId) {
-    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
+    const feed = await getDesktopActivityLobbyFeedPage(viewerProfileId, {
       page: normalizedPage,
     });
 
@@ -1600,7 +1910,7 @@ export async function getMobileActivityLobbyPage({
   let activities: ActivityCardViewModel[] = [];
 
   if (!viewerProfileId) {
-    activities = await getActivityLobbyPreview();
+    activities = await getDesktopActivityLobbyPreview();
   } else if (tab === "mine") {
     const [created, joined] = await Promise.all([
       getActivityLobbySection(viewerProfileId, "created"),
@@ -1620,7 +1930,18 @@ export async function getMobileActivityLobbyPage({
       viewerProfileId,
     );
   } else {
-    activities = await getActivityLobbySection(viewerProfileId, "open");
+    const [openActivities, candidateActivities] = await Promise.all([
+      getActivityLobbySection(viewerProfileId, "open"),
+      getDesktopLobbyCandidateActivities({
+        take: activityLobbySectionLimit,
+      }),
+    ]);
+    const decoratedCandidateActivities = await decorateLobbyActivities(
+      candidateActivities,
+      viewerProfileId,
+      await getViewerFollowedProfileIds(viewerProfileId),
+    );
+    activities = [...openActivities, ...decoratedCandidateActivities];
   }
 
   if (tab === "today") {
@@ -1629,14 +1950,17 @@ export async function getMobileActivityLobbyPage({
       (activity) => getMobileLobbyDateKey(activity.startAt) === today,
     );
   } else if (tab === "popular") {
-    activities = sortMobileLobbyPageActivities(
+    activities = sortMobileLobbyCandidateAwareActivities(
       activities,
       viewerProfileId,
       (left, right) =>
         getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
     );
   } else if (tab === "nearby") {
-    activities = sortMobileLobbyPageActivities(activities, viewerProfileId);
+    activities = sortMobileLobbyCandidateAwareActivities(
+      activities,
+      viewerProfileId,
+    );
   }
 
   const result = paginateMobileLobbyActivities(activities, normalizedPage);

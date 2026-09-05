@@ -21,7 +21,13 @@ import {
   getMobileHomeTrendingTeamActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import {
+  getActivityCategoryPreviewSrc,
+  getActivityListCoverSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
+import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
@@ -31,6 +37,7 @@ import {
 } from "@/features/home/queries/getMobileHomeTopNews";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCategoryLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -502,7 +509,10 @@ function getMobileHomeActivityHref(
   locale: string,
 ) {
   if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
-    return withLocale(locale, `/public-events/${activity.publicEventId}`);
+    return withLocale(
+      locale,
+      `/public-events/${activity.publicEventId}?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`,
+    );
   }
 
   return withLocale(locale, getActivityDetailPath(activity.id));
@@ -692,6 +702,7 @@ function MobileHomeV23ActivityCard({
   locale: string;
   participantsLabel: string;
 }) {
+  const isPublicEvent = isPublicEventCard(activity);
   const participantLabel =
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity}`
@@ -705,7 +716,11 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
-          src={activity.coverImageUrl}
+          fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
+          src={getActivityCoverThumbnailUrl(
+            getActivityListCoverSrc(activity.coverImageUrl, activity.category),
+            320,
+          )}
           overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
         />
         <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
@@ -717,9 +732,15 @@ function MobileHomeV23ActivityCard({
           {activity.title}
         </h3>
         <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
-          <UsersRound className="h-3 w-3 shrink-0" />
+          {isPublicEvent ? (
+            <MapPin className="h-3 w-3 shrink-0" />
+          ) : (
+            <UsersRound className="h-3 w-3 shrink-0" />
+          )}
           <span className="truncate">
-            {participantLabel} {participantsLabel}
+            {isPublicEvent
+              ? activity.city || activity.address
+              : `${participantLabel} ${participantsLabel}`}
           </span>
         </p>
         <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">

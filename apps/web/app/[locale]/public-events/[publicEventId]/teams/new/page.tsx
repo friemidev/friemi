@@ -17,11 +17,18 @@ import { getPublicEventById } from "@/features/public-events/queries/getPublicEv
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
+import {
+  DESKTOP_LOBBY_CANDIDATE_CONTEXT,
+  DESKTOP_LOBBY_CANDIDATE_ORIGIN,
+} from "@/features/activities/utils/desktopLobbyCandidates";
 
 type NewPublicEventTeamPageProps = {
   params: Promise<{
     locale: string;
     publicEventId: string;
+  }>;
+  searchParams?: Promise<{
+    origin?: string | string[];
   }>;
 };
 
@@ -82,6 +89,7 @@ function getInitialValues(
     ticketLabel: string | null;
   },
   locale: string,
+  creationContext?: string,
 ): ActivityFormValues {
   const t = getPublicEventCopy(locale);
 
@@ -116,13 +124,20 @@ function getInitialValues(
     ticketLabel: publicEvent.ticketLabel ?? "",
     publicEventId: publicEvent.id,
     importSourceUrl: "",
+    creationContext,
   };
 }
 
 export default async function NewPublicEventTeamPage({
   params,
+  searchParams,
 }: NewPublicEventTeamPageProps) {
   const { locale, publicEventId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const origin = Array.isArray(resolvedSearchParams?.origin)
+    ? resolvedSearchParams?.origin[0]
+    : resolvedSearchParams?.origin;
+  const isLobbyCandidateOrigin = origin === DESKTOP_LOBBY_CANDIDATE_ORIGIN;
 
   const t = getPublicEventCopy(locale);
   const [profile, publicEvent] = await Promise.all([
@@ -145,13 +160,26 @@ export default async function NewPublicEventTeamPage({
   const unavailableReason = isCancelled ? t.eventCancelled : t.eventEnded;
   const headerCopy = getCreateTeamHeaderCopy(locale);
   const formId = `public-event-team-form-${publicEvent.id}`;
+  const publicEventDetailHref = withLocale(
+    locale,
+    `/public-events/${publicEvent.id}${
+      isLobbyCandidateOrigin
+        ? `?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`
+        : ""
+    }`,
+  );
+  const createTeamPath = `/public-events/${publicEvent.id}/teams/new${
+    isLobbyCandidateOrigin
+      ? `?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`
+      : ""
+  }`;
 
   return (
     <PageContainer className="max-w-6xl overflow-x-clip space-y-5 py-0 sm:space-y-6 sm:py-8">
       <div className="grid h-16 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center border-b border-[#E7E1C9] sm:hidden">
         <Link
           className="text-sm font-semibold text-ink/80 transition hover:text-moss"
-          href={withLocale(locale, `/public-events/${publicEvent.id}`)}
+          href={publicEventDetailHref}
         >
           {headerCopy.cancel}
         </Link>
@@ -171,7 +199,7 @@ export default async function NewPublicEventTeamPage({
       <div className="hidden grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-center gap-3 sm:grid md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,11rem)] md:gap-4">
         <Link
           className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-moss transition hover:text-ink"
-          href={withLocale(locale, `/public-events/${publicEvent.id}`)}
+          href={publicEventDetailHref}
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
           <span className="truncate">{t.backToEvent}</span>
@@ -225,13 +253,19 @@ export default async function NewPublicEventTeamPage({
           ) : (
             <NewActivityForm
               formId={formId}
-              initialValues={getInitialValues(publicEvent, locale)}
+              initialValues={getInitialValues(
+                publicEvent,
+                locale,
+                isLobbyCandidateOrigin
+                  ? DESKTOP_LOBBY_CANDIDATE_CONTEXT
+                  : undefined,
+              )}
               isAuthenticated={Boolean(profile)}
               locale={locale}
               showFormActions={false}
               signInHref={getSignInHref(
                 locale,
-                `/public-events/${publicEvent.id}/teams/new`,
+                createTeamPath,
               )}
             />
           )}

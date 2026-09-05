@@ -325,31 +325,32 @@ export function ParticipationApprovalPanel({
 
   return (
     <>
-      <div id="participation-approval">
+      <section
+        className="flex w-full px-1 sm:px-0 md:justify-end"
+        id="participation-approval"
+      >
         <button
           aria-expanded={open}
           aria-haspopup="dialog"
           aria-label={dialogCopy.open}
-          className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-3 z-[70] inline-flex min-h-12 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-lg bg-[#156240] px-4 py-2 text-left text-white shadow-[0_16px_34px_rgba(21,98,64,0.24)] transition hover:bg-[#0F4D32] active:scale-[0.97] md:bottom-6 md:right-6"
+          className="relative inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#8AB68E] bg-white px-4 py-2 text-[#156240] transition hover:bg-[#F4F8F1] active:scale-[0.98] md:w-auto md:min-w-52"
           onClick={() => setOpen(true)}
           type="button"
         >
           <ClipboardCheck className="h-5 w-5 shrink-0" />
-          <span className="grid min-w-0">
-            <span className="truncate text-sm font-bold leading-tight">
-              {t.title}
-            </span>
-            <span className="truncate text-[11px] font-semibold text-white/76">
-              {t.pendingCount(pendingCount)}
-            </span>
+          <span className="truncate text-sm font-bold leading-tight">
+            {t.title}
+          </span>
+          <span className="text-xs font-semibold text-[#6C746A]">
+            {t.pendingCount(pendingCount)}
           </span>
           {pendingCount > 0 ? (
-            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#E7455F] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#FEFFF9]">
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#E7455F] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
               {badgeText}
             </span>
           ) : null}
         </button>
-      </div>
+      </section>
       {mounted && dialog ? createPortal(dialog, document.body) : null}
     </>
   );

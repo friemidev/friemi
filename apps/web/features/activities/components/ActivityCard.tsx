@@ -42,6 +42,11 @@ import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ClaimAutoCreatedActivityCardAction } from "./ClaimAutoCreatedActivityCardAction";
 import { MobileActivityDetailSheetLink } from "./MobileActivityDetailSheetLink";
 import { MobileLobbyActionSheet } from "./MobileLobbyActionSheet";
+import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "../utils/desktopLobbyCandidates";
+import {
+  getActivityCategoryPreviewSrc,
+  getActivityListCoverSrc,
+} from "../utils/activityCategoryVisuals";
 
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
@@ -50,6 +55,7 @@ type ActivityCardProps = {
   favoriteRedirectPath?: string;
   isAuthenticated?: boolean;
   isOwnActivity?: boolean;
+  lobbyCandidate?: boolean;
   locale: string;
   mobileDense?: boolean;
   mobileDetailSheet?: boolean;
@@ -637,6 +643,7 @@ export function ActivityCard({
   favoriteRedirectPath = "/activities",
   isAuthenticated = false,
   isOwnActivity = false,
+  lobbyCandidate = false,
   locale,
   mobileDense = false,
   mobileDetailSheet = false,
@@ -657,9 +664,13 @@ export function ActivityCard({
   const isPrivateLocked = isPrivateActivityCardLocked(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const timeState = getActivityTimeState(activity);
-  const activityInfoHref = activity.publicEventId
+  const activityInfoPath = activity.publicEventId
     ? `/public-events/${activity.publicEventId}`
     : `/activities/${activity.id}`;
+  const activityInfoHref =
+    lobbyCandidate && activity.publicEventId
+      ? `${activityInfoPath}?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`
+      : activityInfoPath;
   const activityInfoTeamHref = activity.publicEventId
     ? `/public-events/${activity.publicEventId}/teams/new`
     : `/activities/${activity.id}/teams/new`;
@@ -986,7 +997,11 @@ export function ActivityCard({
           )}
         >
           <ActivityCoverImage
-            src={activity.coverImageUrl}
+            fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
+            src={getActivityListCoverSrc(
+              activity.coverImageUrl,
+              activity.category,
+            )}
             overlayClassName={cn(
               shouldShowInactiveCardState
                 ? "bg-gradient-to-t from-zinc-900/52 via-zinc-800/16 to-zinc-700/10"

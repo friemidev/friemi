@@ -137,6 +137,10 @@ export const createActivitySchema = z
         "来源链接无效",
       )
       .optional(),
+    creationContext: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.literal("LOBBY_CANDIDATE").optional(),
+    ),
   })
   .superRefine((value, ctx) => {
     if (value.category === "OTHER" && !value.otherCategoryText) {

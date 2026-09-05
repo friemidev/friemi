@@ -612,7 +612,7 @@ function JudgeLifeButton({
   return (
     <button
       aria-label={label}
-      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`grid h-9 w-9 shrink-0 touch-manipulation place-items-center rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 ${
         isDead
           ? "bg-[#D8F0DF] text-[#176B45] hover:bg-white"
           : "bg-[#7A1F2B] text-white hover:bg-[#9B2D3C]"
@@ -622,7 +622,7 @@ function JudgeLifeButton({
       title={label}
       type={type}
     >
-      <Icon className="h-3 w-3" />
+      <Icon className="h-4 w-4" />
     </button>
   );
 }
@@ -643,7 +643,7 @@ function JudgeSheriffButton({
   return (
     <button
       aria-label={label}
-      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`grid h-9 w-9 shrink-0 touch-manipulation place-items-center rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 ${
         isSheriff
           ? "bg-[#F1F2E3] text-[#153B31] ring-1 ring-white/70"
           : "bg-white/18 text-[#F1F2E3] ring-1 ring-white/35 hover:bg-white/28"
@@ -653,7 +653,7 @@ function JudgeSheriffButton({
       title={label}
       type={type}
     >
-      <Crown className="h-3 w-3" />
+      <Crown className="h-4 w-4" />
     </button>
   );
 }
@@ -1663,7 +1663,7 @@ export function WerewolfRoomOverview({
       seat.isClaimed &&
       canJudgeControlPlayers &&
       judgePrivateToken ? (
-        <div className="flex shrink-0 items-center justify-end gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-1.5">
           {seat.isDead ? (
             <form
               action={lifeAction}

@@ -23,6 +23,7 @@ import { Button, Card, CardContent, Input, Textarea } from "@chill-club/ui";
 import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { DESKTOP_LOBBY_CANDIDATE_CONTEXT } from "../utils/desktopLobbyCandidates";
 import { getActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
 import {
   createActivityAction,
@@ -196,6 +197,7 @@ function getNewActivityDraftValues(
       "hideAddressFromNonParticipants",
     ),
     importSourceUrl: getFormDataText(formData, "importSourceUrl"),
+    creationContext: getFormDataText(formData, "creationContext"),
     itinerary: getFormDataText(formData, "itinerary"),
     latitude: getFormDataText(formData, "latitude"),
     longitude: getFormDataText(formData, "longitude"),
@@ -2278,6 +2280,8 @@ export function NewActivityForm({
     : null;
   const ticketLinkCopy = getTicketLinkKindCopy(locale);
   const isPublicEventTeam = Boolean(publicEventTeamFormCopy);
+  const isLobbyCandidateCreation =
+    values?.creationContext === DESKTOP_LOBBY_CANDIDATE_CONTEXT;
   const [isCapacityLimited, setIsCapacityLimited] = useState(
     values?.capacityLimitEnabled ?? Number(values?.capacity ?? 0) > 0,
   );
@@ -2494,6 +2498,13 @@ export function NewActivityForm({
               value={values.publicEventId}
             />
           ) : null}
+          {values?.creationContext ? (
+            <input
+              name="creationContext"
+              type="hidden"
+              value={values.creationContext}
+            />
+          ) : null}
 
           {state.formError ? (
             <div
@@ -2603,41 +2614,45 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.title} />
               </div>
 
-              <div className="grid gap-3" data-field-name="visibility">
-                <div className="grid grid-cols-2 gap-2">
-                  {visibilityOptions.map((option) => {
-                    const active = visibility === option;
-                    const isPrivate = option === "PRIVATE";
+              {isLobbyCandidateCreation ? (
+                <input name="visibility" type="hidden" value="PUBLIC" />
+              ) : (
+                <div className="grid gap-3" data-field-name="visibility">
+                  <div className="grid grid-cols-2 gap-2">
+                    {visibilityOptions.map((option) => {
+                      const active = visibility === option;
+                      const isPrivate = option === "PRIVATE";
 
-                    return (
-                      <label
-                        key={option}
-                        className={cn(
-                          "flex h-11 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border px-3 text-sm font-semibold transition sm:px-4 sm:text-base",
-                          active
-                            ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
-                            : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
-                        )}
-                      >
-                        <input
-                          className="sr-only"
-                          name="visibility"
-                          type="radio"
-                          value={option}
-                          checked={active}
-                          onChange={() => setVisibility(option)}
-                        />
-                        <span className="min-w-0 truncate whitespace-nowrap leading-none">
-                          {isPrivate
-                            ? t.form.visibilityPrivate
-                            : t.form.visibilityPublic}
-                        </span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label
+                          key={option}
+                          className={cn(
+                            "flex h-11 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border px-3 text-sm font-semibold transition sm:px-4 sm:text-base",
+                            active
+                              ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
+                              : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+                          )}
+                        >
+                          <input
+                            className="sr-only"
+                            name="visibility"
+                            type="radio"
+                            value={option}
+                            checked={active}
+                            onChange={() => setVisibility(option)}
+                          />
+                          <span className="min-w-0 truncate whitespace-nowrap leading-none">
+                            {isPrivate
+                              ? t.form.visibilityPrivate
+                              : t.form.visibilityPublic}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <FieldError errors={state.fieldErrors?.visibility} />
                 </div>
-                <FieldError errors={state.fieldErrors?.visibility} />
-              </div>
+              )}
 
               <label
                 className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
