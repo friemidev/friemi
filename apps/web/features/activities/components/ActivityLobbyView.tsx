@@ -32,6 +32,10 @@ import { ActivitySwipeDiscovery } from "./ActivitySwipeDiscovery";
 import { isPublicEventCard } from "../utils/activityCardKind";
 import { getActivityTimeState } from "../utils/activityDisplay";
 import { sortLobbyActivitiesByStatusAndOwnership } from "../utils/lobbyActivitySort";
+import {
+  dedupeActivityCards,
+  filterUniqueActivityCards,
+} from "../utils/activityCardIdentity";
 import type {
   ActivityLobbyFeedPage,
   ActivityLobbyFeedStatus,
@@ -150,14 +154,6 @@ function scheduleIdleTask(callback: () => void, timeout = 900) {
   return () => window.clearTimeout(handle);
 }
 
-function getLobbySwipeActivityKey(activity: ActivityCardViewModel) {
-  if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
-    return `public:${activity.publicEventId}`;
-  }
-
-  return `activity:${activity.id}`;
-}
-
 function getLobbySwipeExcludeId(activity: ActivityCardViewModel) {
   if (isPublicEventCard(activity)) {
     return `public:${activity.publicEventId ?? activity.id}`;
@@ -170,21 +166,10 @@ function mergeUniqueLobbySwipeActivities(
   currentActivities: ActivityCardViewModel[],
   nextActivities: ActivityCardViewModel[],
 ) {
-  const seen = new Set(currentActivities.map(getLobbySwipeActivityKey));
-  const merged = [...currentActivities];
-
-  nextActivities.forEach((activity) => {
-    const key = getLobbySwipeActivityKey(activity);
-
-    if (seen.has(key)) {
-      return;
-    }
-
-    seen.add(key);
-    merged.push(activity);
-  });
-
-  return merged;
+  return [
+    ...currentActivities,
+    ...filterUniqueActivityCards(currentActivities, nextActivities),
+  ];
 }
 
 function prepareInitialLobbySwipeActivities(
@@ -574,17 +559,7 @@ function getPagedLobbyActivities(
 }
 
 function dedupeLobbyActivities(activities: ActivityCardViewModel[]) {
-  const activityByKey = new Map<string, ActivityCardViewModel>();
-
-  for (const activity of activities) {
-    const key = getLobbyActivityKey(activity);
-
-    if (!activityByKey.has(key)) {
-      activityByKey.set(key, activity);
-    }
-  }
-
-  return [...activityByKey.values()];
+  return dedupeActivityCards(activities);
 }
 
 function sortLobbyActivities(
@@ -2076,7 +2051,10 @@ export function ActivityLobbyView({
     (loadingFeedKey === activeFeedKey || activeFeedNeedsLoad);
   const visibleActivities =
     activeFilter === "all"
-      ? sortLobbyActivities(activeFeed?.activities ?? [], viewerProfileId)
+      ? sortLobbyActivities(
+          dedupeLobbyActivities(activeFeed?.activities ?? []),
+          viewerProfileId,
+        )
       : clientVisibleActivities;
   const visibleActivityKeys = useMemo(
     () =>

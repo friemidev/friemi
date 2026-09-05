@@ -128,3 +128,32 @@ test("mobile home trending keeps real teams ahead and fills with candidates", ()
     ["real-popular", "real-secondary", "candidate-popular"],
   );
 });
+
+test("mobile home trending shows one card for one public event series", () => {
+  const merged = mergeMobileHomeTrendingActivities(
+    [],
+    [
+      activity({
+        address: "Paris 14e",
+        coverImageUrl: "https://cdn.example/fitness.jpg",
+        id: "fitness",
+        publicEventId: "fitness",
+        title: "Paris Sport Dimanches Estivaux : Fitness et Stretching",
+        type: "PUBLIC_EVENT",
+      }),
+      activity({
+        address: "Paris 12e",
+        coverImageUrl: "https://cdn.example/boxing.jpg",
+        id: "boxing",
+        publicEventId: "boxing",
+        title: "Paris Sport Dimanches Estivaux : Boxe sur la place",
+        type: "PUBLIC_EVENT",
+      }),
+    ],
+    8,
+    new Date("2026-06-20T12:00:00.000Z"),
+  );
+
+  assert.equal(merged.length, 1);
+  assert.match(merged[0]?.title ?? "", /^Paris Sport Dimanches Estivaux/);
+});

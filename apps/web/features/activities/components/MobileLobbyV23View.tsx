@@ -27,6 +27,10 @@ import { MobileActivityListRow } from "@/features/activities/components/MobileAc
 import { retainImageSources } from "@/components/media/RetainedImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
+import {
+  dedupeActivityCards,
+  filterUniqueActivityCards,
+} from "@/features/activities/utils/activityCardIdentity";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import {
   activityCategoryIllustrationImages,
@@ -375,19 +379,7 @@ function getActivityKey(activity: ActivityCardViewModel) {
 }
 
 function dedupeActivities(activities: ActivityCardViewModel[]) {
-  const seen = new Set<string>();
-
-  return activities.filter((activity) => {
-    const key = getActivityKey(activity);
-
-    if (seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-
-    return true;
-  });
+  return dedupeActivityCards(activities);
 }
 
 async function fetchMobileLobbyPage(
@@ -429,19 +421,13 @@ function getPrioritizedMobileLobbySwipeActivities({
   category: MobileLobbyV23CategoryFilterId;
   excludedActivities: ActivityCardViewModel[];
 }) {
-  const seen = new Set(excludedActivities.map(getActivityKey));
   const matchingCategoryActivities: ActivityCardViewModel[] = [];
   const fallbackActivities: ActivityCardViewModel[] = [];
 
-  for (const activity of activities) {
-    const key = getActivityKey(activity);
-
-    if (seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-
+  for (const activity of filterUniqueActivityCards(
+    excludedActivities,
+    activities,
+  )) {
     if (category !== "all" && activity.category === category) {
       matchingCategoryActivities.push(activity);
     } else {
