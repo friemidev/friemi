@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ActivityCardViewModel } from "../types";
-import { sortMobileHomeTrendingTeamActivities } from "./getActivityLobby";
+import {
+  mergeMobileHomeTrendingActivities,
+  sortMobileHomeTrendingTeamActivities,
+} from "./getActivityLobby";
 
 function activity(
   overrides: Partial<ActivityCardViewModel>,
@@ -93,11 +96,35 @@ test("mobile home trending teams rank popularity above zero-count recency", () =
 
   assert.deepEqual(
     sorted.map((item) => item.id),
+    ["popular-participants", "friend-signal", "popular-favorites", "soon-zero"],
+  );
+});
+
+test("mobile home trending keeps real teams ahead and fills with candidates", () => {
+  const merged = mergeMobileHomeTrendingActivities(
     [
-      "popular-participants",
-      "friend-signal",
-      "popular-favorites",
-      "soon-zero",
+      activity({ id: "real-secondary", participantCount: 1 }),
+      activity({ id: "real-popular", participantCount: 3 }),
     ],
+    [
+      activity({
+        favoriteCount: 20,
+        id: "candidate-popular",
+        publicEventId: "candidate-popular",
+        type: "PUBLIC_EVENT",
+      }),
+      activity({
+        id: "candidate-secondary",
+        publicEventId: "candidate-secondary",
+        type: "PUBLIC_EVENT",
+      }),
+    ],
+    3,
+    new Date("2026-08-09T12:00:00.000Z"),
+  );
+
+  assert.deepEqual(
+    merged.map((item) => item.id),
+    ["real-popular", "real-secondary", "candidate-popular"],
   );
 });

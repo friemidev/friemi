@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import {
   finishWerewolfRoomAction,
   leaveWerewolfSeatAction,
@@ -162,8 +163,8 @@ const copies: Record<string, Copy> = {
     notReady: "等人齐",
     ready: "准备",
     reveal: "查看我的角色",
-    revealConfirm: "确认现在查看身份？请先确认屏幕没有朝向其他玩家。",
-    revealConfirmTitle: "确认查看身份",
+    revealConfirm: "身份只会短暂显示，请确认屏幕没有朝向其他玩家。",
+    revealConfirmTitle: "确定要查看身份吗？",
     resultDefeat: "失败",
     resultJudgeBody: "这局你坐法官席。",
     resultOutcome: "本局结果",
@@ -925,20 +926,33 @@ export function WerewolfPrivateSeatCard({
         </div>
       ) : null}
       {showRevealConfirm ? (
-        <div className="fixed inset-0 z-[130] grid place-items-center bg-[#07080A]/72 px-5 backdrop-blur-md">
-          <div className="w-full max-w-sm overflow-hidden rounded-[1.6rem] border border-white/14 bg-[#FFFDF7] text-center shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
-            <div className="grid place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(241,242,227,0.28),transparent_52%),linear-gradient(180deg,#1E1718,#111315)] px-6 pb-6 pt-7 text-white">
-              <span className="grid h-14 w-14 place-items-center rounded-full border border-white/18 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
-                <Eye className="h-7 w-7 text-[#F1F2E3]" />
-              </span>
-              <p className="mt-4 text-xl font-bold tracking-normal">
+        <div
+          className="fixed inset-0 z-[130] grid place-items-center bg-[#07080A]/72 px-5 backdrop-blur-md"
+          role="presentation"
+        >
+          <div
+            aria-describedby="werewolf-role-reveal-description"
+            aria-labelledby="werewolf-role-reveal-title"
+            aria-modal="true"
+            className="w-full max-w-sm overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-[#FFFDF7] text-center shadow-[0_28px_90px_rgba(0,0,0,0.42)]"
+            role="alertdialog"
+          >
+            <div className="grid place-items-center px-6 pb-5 pt-7">
+              <BrandLockup className="h-8 w-[6.75rem]" size="sm" />
+              <h2
+                className="mt-5 text-xl font-bold tracking-normal text-[#153B31]"
+                id="werewolf-role-reveal-title"
+              >
                 {t.revealConfirmTitle}
-              </p>
-              <p className="mt-2 max-w-[16rem] text-sm font-bold leading-6 text-white/70">
+              </h2>
+              <p
+                className="mt-2 max-w-[17rem] text-sm font-medium leading-6 text-[#59635F]"
+                id="werewolf-role-reveal-description"
+              >
                 {t.revealConfirm}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 p-4">
+            <div className="grid grid-cols-2 gap-3 border-t border-[#E7E4D8] p-4">
               <button
                 className="h-11 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-semibold text-[#7A1F2B] transition hover:bg-[#FFF7F1]"
                 onClick={() => setShowRevealConfirm(false)}

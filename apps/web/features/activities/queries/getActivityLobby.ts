@@ -335,10 +335,18 @@ function getDesktopLobbyCandidateWhere(
     ...(category ? { category } : {}),
     address: { not: "" },
     city: { not: "" },
-    startAt: {
-      gte: window.from,
-      lte: window.to,
-    },
+    OR: [
+      {
+        startAt: {
+          gte: window.from,
+          lte: window.to,
+        },
+      },
+      {
+        endAt: { gte: window.from },
+        startAt: { lt: window.from },
+      },
+    ],
     status: "SCHEDULED",
     visibility: "PUBLIC",
     teams: {
@@ -369,10 +377,7 @@ async function getDesktopLobbyCandidateActivities(options: {
   }
 
   const publicEvents = await prisma.publicEvent.findMany({
-    where: getDesktopLobbyCandidateWhere(
-      options.category,
-      options.reference,
-    ),
+    where: getDesktopLobbyCandidateWhere(options.category, options.reference),
     orderBy: [{ startAt: "asc" }, { id: "asc" }],
     skip: options.skip ?? 0,
     take: options.take,
@@ -719,6 +724,36 @@ export function sortMobileHomeTrendingTeamActivities(
   });
 }
 
+export function mergeMobileHomeTrendingActivities(
+  teamActivities: ActivityCardViewModel[],
+  candidateActivities: ActivityCardViewModel[],
+  limit: number,
+  now = getActivityFloatingNow(),
+) {
+  const sortedTeams = sortMobileHomeTrendingTeamActivities(teamActivities, now);
+  const sortedCandidates = candidateActivities
+    .filter(
+      (activity) =>
+        activity.type === "PUBLIC_EVENT" && Boolean(activity.publicEventId),
+    )
+    .sort((left, right) => {
+      const scoreDiff =
+        getMobileHomeTrendingTeamScore(right, now) -
+        getMobileHomeTrendingTeamScore(left, now);
+
+      return scoreDiff || compareLobbyActivityTime(left, right);
+    });
+
+  return Array.from(
+    new Map(
+      [...sortedTeams, ...sortedCandidates].map((activity) => [
+        getLobbyActivityKey(activity),
+        activity,
+      ]),
+    ).values(),
+  ).slice(0, limit);
+}
+
 function getMobileHomeTrendingTeamLimit(limit?: number) {
   return Math.min(
     Math.max(Math.floor(limit ?? mobileHomeTrendingTeamLimit), 1),
@@ -747,55 +782,67 @@ async function getMobileHomeTrendingTeamActivitiesUncached(
 ) {
   const now = getActivityFloatingNow();
   const limit = getMobileHomeTrendingTeamLimit(options.limit);
-  const activityRows = await prisma.activity.findMany({
-    where: {
-      AND: [
-        getVisibleActivityWhere({
-          includeEnded: false,
-          includePast: false,
-          visibility: null,
-          now,
-        }),
-        { visibility: "PUBLIC" },
-        strictTeamCardWhere,
+  const [activityRows, candidateActivities] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        AND: [
+          getVisibleActivityWhere({
+            includeEnded: false,
+            includePast: false,
+            visibility: null,
+            now,
+          }),
+          { visibility: "PUBLIC" },
+          strictTeamCardWhere,
+        ],
+      },
+      orderBy: [
+        {
+          participants: {
+            _count: "desc",
+          },
+        },
+        {
+          favorites: {
+            _count: "desc",
+          },
+        },
+        { startAt: "asc" },
+        { id: "asc" },
       ],
-    },
-    orderBy: [
-      {
-        participants: {
-          _count: "desc",
-        },
-      },
-      {
-        favorites: {
-          _count: "desc",
-        },
-      },
-      { startAt: "asc" },
-      { id: "asc" },
-    ],
-    take: mobileHomeTrendingTeamCandidateLimit,
-    select: activityCardSelect,
-  });
+      take: mobileHomeTrendingTeamCandidateLimit,
+      select: activityCardSelect,
+    }),
+    getDesktopLobbyCandidateActivities({ take: limit }),
+  ]);
   const teamCards = activityRows.map(getActivityCardViewModel);
-  const decoratedTeamCards = viewerProfileId
+  const combinedCards = [...teamCards, ...candidateActivities];
+  const decoratedCards = viewerProfileId
     ? await decorateLobbyActivities(
-        teamCards,
+        combinedCards,
         viewerProfileId,
         await getViewerFollowedProfileIds(viewerProfileId),
       )
-    : await applyOrganizerParticipationDefaults(teamCards);
+    : await applyOrganizerParticipationDefaults(combinedCards);
+  const decoratedCandidateActivities = decoratedCards.filter(
+    (activity) => activity.type === "PUBLIC_EVENT",
+  );
+  const decoratedTeamCards = decoratedCards.filter(
+    (activity) => activity.type !== "PUBLIC_EVENT",
+  );
 
-  return sortMobileHomeTrendingTeamActivities(decoratedTeamCards, now).slice(
-    0,
+  return mergeMobileHomeTrendingActivities(
+    decoratedTeamCards,
+    decoratedCandidateActivities,
     limit,
+    now,
   );
 }
 
 const getCachedAnonymousMobileHomeTrendingTeamActivities = unstable_cache(
   async (limit: number) =>
     getMobileHomeTrendingTeamActivitiesUncached(null, { limit }),
-  ["anonymous-mobile-home-trending-team-activities-v1"],
+  ["anonymous-mobile-home-trending-team-activities-v2"],
   { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
 );
 
@@ -1259,7 +1306,7 @@ export async function getDesktopActivityLobbyFeedPage(
   );
   const realOngoingSlice = status === "ended" ? null : slices[0];
   const candidateSlice = status === "ended" ? null : slices[1];
-  const endedSlice = status === "ended" ? slices[0] : slices[2] ?? null;
+  const endedSlice = status === "ended" ? slices[0] : (slices[2] ?? null);
   const [ongoingActivities, candidateActivities, endedActivities] =
     await Promise.all([
       realOngoingSlice && realOngoingSlice.take > 0
@@ -1744,7 +1791,7 @@ const getCachedDesktopActivityLobbyPreview = unstable_cache(
       ...endedActivities,
     ].slice(0, activityLobbyPreviewLimit * 2);
   },
-  ["desktop-activity-lobby-preview-v1"],
+  ["desktop-activity-lobby-preview-v2"],
   { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
 );
 
@@ -1789,6 +1836,33 @@ function sortMobileLobbyPageActivities(
   );
 }
 
+function sortMobileLobbyCandidateAwareActivities(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null,
+  tieBreaker?: (
+    left: ActivityCardViewModel,
+    right: ActivityCardViewModel,
+  ) => number,
+) {
+  const activeTeams = activities.filter(
+    (activity) =>
+      activity.type !== "PUBLIC_EVENT" && !isEndedLobbyActivity(activity),
+  );
+  const candidates = activities.filter(
+    (activity) => activity.type === "PUBLIC_EVENT",
+  );
+  const endedTeams = activities.filter(
+    (activity) =>
+      activity.type !== "PUBLIC_EVENT" && isEndedLobbyActivity(activity),
+  );
+
+  return [
+    ...sortMobileLobbyPageActivities(activeTeams, viewerProfileId, tieBreaker),
+    ...sortMobileLobbyPageActivities(candidates, viewerProfileId, tieBreaker),
+    ...sortMobileLobbyPageActivities(endedTeams, viewerProfileId, tieBreaker),
+  ];
+}
+
 function paginateMobileLobbyActivities(
   activities: ActivityCardViewModel[],
   page: number,
@@ -1820,7 +1894,7 @@ export async function getMobileActivityLobbyPage({
   const normalizedPage = Math.max(1, Math.floor(page));
 
   if (tab === "nearby" && viewerProfileId) {
-    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
+    const feed = await getDesktopActivityLobbyFeedPage(viewerProfileId, {
       page: normalizedPage,
     });
 
@@ -1836,7 +1910,7 @@ export async function getMobileActivityLobbyPage({
   let activities: ActivityCardViewModel[] = [];
 
   if (!viewerProfileId) {
-    activities = await getActivityLobbyPreview();
+    activities = await getDesktopActivityLobbyPreview();
   } else if (tab === "mine") {
     const [created, joined] = await Promise.all([
       getActivityLobbySection(viewerProfileId, "created"),
@@ -1856,7 +1930,18 @@ export async function getMobileActivityLobbyPage({
       viewerProfileId,
     );
   } else {
-    activities = await getActivityLobbySection(viewerProfileId, "open");
+    const [openActivities, candidateActivities] = await Promise.all([
+      getActivityLobbySection(viewerProfileId, "open"),
+      getDesktopLobbyCandidateActivities({
+        take: activityLobbySectionLimit,
+      }),
+    ]);
+    const decoratedCandidateActivities = await decorateLobbyActivities(
+      candidateActivities,
+      viewerProfileId,
+      await getViewerFollowedProfileIds(viewerProfileId),
+    );
+    activities = [...openActivities, ...decoratedCandidateActivities];
   }
 
   if (tab === "today") {
@@ -1865,14 +1950,17 @@ export async function getMobileActivityLobbyPage({
       (activity) => getMobileLobbyDateKey(activity.startAt) === today,
     );
   } else if (tab === "popular") {
-    activities = sortMobileLobbyPageActivities(
+    activities = sortMobileLobbyCandidateAwareActivities(
       activities,
       viewerProfileId,
       (left, right) =>
         getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
     );
   } else if (tab === "nearby") {
-    activities = sortMobileLobbyPageActivities(activities, viewerProfileId);
+    activities = sortMobileLobbyCandidateAwareActivities(
+      activities,
+      viewerProfileId,
+    );
   }
 
   const result = paginateMobileLobbyActivities(activities, normalizedPage);

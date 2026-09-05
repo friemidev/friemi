@@ -21,6 +21,7 @@ import {
   getActivityCategoryPreviewSrc,
   getActivityListCoverSrc,
 } from "@/features/activities/utils/activityCategoryVisuals";
+import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 import { withLocale } from "@/lib/routes";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { cn } from "@/lib/utils";
@@ -66,7 +67,10 @@ function getRowCopy(locale: string) {
 
 function getActivityHref(activity: ActivityCardViewModel, locale: string) {
   if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
-    return withLocale(locale, `/public-events/${activity.publicEventId}`);
+    return withLocale(
+      locale,
+      `/public-events/${activity.publicEventId}?origin=${DESKTOP_LOBBY_CANDIDATE_ORIGIN}`,
+    );
   }
 
   return withLocale(locale, getActivityDetailPath(activity.id));
