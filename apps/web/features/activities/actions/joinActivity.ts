@@ -7,6 +7,7 @@ import type {
   UserProfileStatus,
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import {
@@ -14,12 +15,13 @@ import {
   recordOperationLatency,
 } from "@/features/analytics/latency";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { resolveJoinParticipantStatus } from "@/features/activities/utils/activityJoinApproval";
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
+import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
-import { getTrustScore } from "@/features/trust/trustScoreEvents";
-import { isLowTrustScore } from "@/features/trust/trustScore";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -88,6 +90,18 @@ function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function refreshActivityViews(locale: string, activityId: string) {
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
+  revalidatePath(withLocale(locale, getActivityDetailPath(activityId)));
+  revalidatePath(withLocale(locale, `/lobby/${activityId}/room`));
+  revalidatePath(withLocale(locale, `/lobby/${activityId}/room/manage`));
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 }
 
 async function trackJoinFormFailure({
@@ -471,16 +485,9 @@ export async function joinActivityAction(
             );
           }
 
-          const trustScore = await getTrustScore(tx, profile.id);
-          const requiresTrustReview = isLowTrustScore(trustScore);
-          const nextStatus: ParticipantStatus =
-            activity.visibility === "PRIVATE" &&
-            !hasMutualFollowAccess &&
-            hasSharedLinkAccess
-              ? "PENDING"
-              : activity.requiresApproval || requiresTrustReview
-                ? "PENDING"
-                : "APPROVED";
+          const nextStatus: ParticipantStatus = resolveJoinParticipantStatus({
+            requiresApproval: activity.requiresApproval,
+          });
 
           if (existingParticipation) {
             await tx.activityParticipant.update({
@@ -510,7 +517,7 @@ export async function joinActivityAction(
             activityId: activity.id,
             organizerId: activity.organizerId,
             participantStatus: nextStatus,
-            requiresApproval: activity.requiresApproval || requiresTrustReview,
+            requiresApproval: activity.requiresApproval,
           };
         },
         {
@@ -659,6 +666,12 @@ export async function joinActivityAction(
         message: rawInput.message,
       },
     };
+  }
+
+  try {
+    refreshActivityViews(result.data.locale, result.data.activityId);
+  } catch (error) {
+    console.error("Failed to refresh activity views after join", error);
   }
 
   perf.finish({
