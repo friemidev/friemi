@@ -85,6 +85,10 @@ export function getFallbackMobileHomeTopNewsItems(locale: string) {
     }));
 }
 
+export function resolveMobileHomeTopNewsHref(href: string) {
+  return href === "/home" ? "/home?view=desktop" : href;
+}
+
 function isVersionReleaseItem(item: MobileHomeTopNewsItem) {
   return (
     item.href.includes("/updates/") ||

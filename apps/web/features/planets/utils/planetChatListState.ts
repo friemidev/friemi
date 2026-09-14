@@ -4,6 +4,7 @@ export type PlanetChatListFilter =
   | "all"
   | "following"
   | "mutual"
+  | "strangers"
   | "official"
   | "rooms";
 
@@ -30,6 +31,7 @@ export function getPlanetChatListState(search: string): {
   const filter: PlanetChatListFilter =
     candidate === "following" ||
     candidate === "mutual" ||
+    candidate === "strangers" ||
     candidate === "official" ||
     candidate === "rooms"
       ? candidate
@@ -82,6 +84,10 @@ export function filterUnifiedChatRosterEntries<
 
     if (filter === "mutual") {
       return entry.kind === "direct" && entry.isMutual;
+    }
+
+    if (filter === "strangers") {
+      return entry.kind === "direct" && !entry.isFollowing && !entry.isMutual;
     }
 
     if (filter === "rooms") {

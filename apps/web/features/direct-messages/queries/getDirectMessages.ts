@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import {
   compareOptionalFriendNearestActivities,
   getFriendNearestActivitySignals,
@@ -821,7 +822,7 @@ export async function markDirectConversationRead({
   currentUserProfileId: string;
   peerProfileId: string;
 }) {
-  return prisma.$transaction([
+  const result = await prisma.$transaction([
     prisma.directMessage.updateMany({
       where: {
         conversationId,
@@ -853,6 +854,10 @@ export async function markDirectConversationRead({
       },
     }),
   ]);
+
+  await invalidateUnreadBadgeCache([currentUserProfileId]);
+
+  return result;
 }
 
 export async function getDirectConversationThread(

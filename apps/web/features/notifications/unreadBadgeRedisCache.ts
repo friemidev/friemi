@@ -90,6 +90,12 @@ export async function setCachedUnreadBadgeCounts(
 
 export async function invalidateUnreadBadgeCache(profileIds: string[]) {
   const uniqueProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
+  const config = getRedisRuntimeConfig();
+
+  if (config.unreadCacheMode === "off") {
+    return false;
+  }
+
   const redis = getOptionalRedis();
 
   if (!redis || uniqueProfileIds.length === 0) {

@@ -942,8 +942,6 @@ const copy = {
         "可选；填写后详情页会展示主要跳转按钮。聚吧报名仍在站内完成。",
       requiresApproval: "加入需要审核",
       requiresApprovalHint: "开启后，别人申请加入需要你审核。",
-      copyTimeReminder:
-        "此为复制聚吧草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
       create: "发布聚吧",
       saving: "保存中...",
@@ -1991,8 +1989,6 @@ const copy = {
       requiresApproval: "Review join requests",
       requiresApprovalHint:
         "When enabled, you review each request before someone joins.",
-      copyTimeReminder:
-        "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -3079,8 +3075,6 @@ const copy = {
       requiresApproval: "Valider les demandes",
       requiresApprovalHint:
         "Si activé, vous validez chaque demande avant l'ajout au groupe.",
-      copyTimeReminder:
-        "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",

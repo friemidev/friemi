@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { prioritizeLatestVersionTopNewsItem } from "./topNewsConfig";
+import {
+  prioritizeLatestVersionTopNewsItem,
+  resolveMobileHomeTopNewsHref,
+} from "./topNewsConfig";
+
+test("mobile home keeps recruitment stories on the full home experience", () => {
+  assert.equal(resolveMobileHomeTopNewsHref("/home"), "/home?view=desktop");
+  assert.equal(
+    resolveMobileHomeTopNewsHref("/game-tools/werewolf"),
+    "/game-tools/werewolf",
+  );
+});
 
 test("mobile home replaces a stale release item with v2.7", () => {
   const items = prioritizeLatestVersionTopNewsItem(

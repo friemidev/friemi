@@ -8,7 +8,7 @@ import {
   Smile,
   X,
 } from "lucide-react";
-import { Button, Textarea } from "@chill-club/ui";
+import { Button } from "@chill-club/ui";
 import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
@@ -440,10 +440,11 @@ export function MessageComposer({
         </button>
         <label className="min-w-0 flex-1">
           <span className="sr-only">{t.messagePlaceholder}</span>
-          <Textarea
+          <textarea
             ref={textareaRef}
             name="body"
             maxLength={messageMaxLength}
+            rows={1}
             defaultValue={initialBody}
             disabled={disabled}
             placeholder={t.messagePlaceholder}
