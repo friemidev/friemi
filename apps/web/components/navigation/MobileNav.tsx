@@ -3,7 +3,14 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import { Compass, Globe2, Plus, UserRound, UsersRound } from "lucide-react";
+import {
+  Compass,
+  Globe2,
+  MessageCircle,
+  Plus,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -59,6 +66,11 @@ export function MobileNav({ locale }: MobileNavProps) {
         icon: Globe2,
       },
       {
+        href: "/footprints?tab=message",
+        label: t.nav.messagesShort,
+        icon: MessageCircle,
+      },
+      {
         href: "/profile",
         label: t.nav.profileShort,
         icon: UserRound,
@@ -68,6 +80,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       t.nav.hallShort,
       t.nav.footprintsShort,
       t.nav.lobbyShort,
+      t.nav.messagesShort,
       t.nav.newActivity,
       t.nav.profileShort,
     ],
@@ -93,6 +106,17 @@ export function MobileNav({ locale }: MobileNavProps) {
 
     const localizedHref = withLocale(currentLocale, baseHref);
 
+    if (baseHref === "/footprints" && pathname === localizedHref) {
+      const targetTab = new URLSearchParams(href.split("?")[1] ?? "").get(
+        "tab",
+      );
+      const currentTab = searchParams.get("tab");
+
+      return targetTab === "message"
+        ? currentTab === "message"
+        : currentTab !== "message";
+    }
+
     if (baseHref === "/") {
       return pathname === localizedHref;
     }
@@ -110,13 +134,13 @@ export function MobileNav({ locale }: MobileNavProps) {
 
   return (
     <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#E9E9E4] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="mx-auto grid h-[var(--app-mobile-nav-height)] max-w-md grid-cols-5 gap-1 px-4 py-1">
+      <div className="mx-auto grid h-[var(--app-mobile-nav-height)] max-w-md grid-cols-6 gap-0 px-2 py-1">
         {items.map((item) => {
           const Icon = item.icon;
           const baseHref = item.href.split("?")[0] ?? item.href;
           const active = isItemActive(item.href);
           const showUnreadBadge =
-            baseHref === "/footprints" && unreadDirectMessageCount > 0;
+            item.href.includes("tab=message") && unreadDirectMessageCount > 0;
 
           return (
             <IntentPrefetchLink

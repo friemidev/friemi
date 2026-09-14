@@ -297,6 +297,7 @@ const copyByLocale = {
       all: "聊聊",
       following: "我关注的",
       mutual: "互相关注",
+      strangers: "陌生人",
       official: "官方",
       rooms: "群聊",
     },
@@ -348,8 +349,7 @@ const copyByLocale = {
     photoRemove: "Remove photo",
     photoRateLimitError: "Too many uploads. Wait a moment and try again.",
     photoRetry: "Retry upload",
-    photoSizeError:
-      "Images must be 10 MB or smaller.",
+    photoSizeError: "Images must be 10 MB or smaller.",
     photoStorageError:
       "Photo storage is temporarily unavailable. Try again later.",
     photoTypeError: "Choose a common image format.",
@@ -402,6 +402,7 @@ const copyByLocale = {
       all: "All chats",
       following: "Following",
       mutual: "Mutual",
+      strangers: "Requests",
       official: "Official",
       rooms: "Groups",
     },
@@ -456,8 +457,7 @@ const copyByLocale = {
     photoRateLimitError:
       "Trop d'envois successifs. Patientez un instant puis réessayez.",
     photoRetry: "Réessayer",
-    photoSizeError:
-      "Les images doivent faire 10 Mo maximum.",
+    photoSizeError: "Les images doivent faire 10 Mo maximum.",
     photoStorageError:
       "Le stockage des photos est indisponible. Réessayez plus tard.",
     photoTypeError: "Choisissez un format d'image courant.",
@@ -513,6 +513,7 @@ const copyByLocale = {
       all: "Tous",
       following: "Suivis",
       mutual: "Mutuels",
+      strangers: "Inconnus",
       official: "Officiel",
       rooms: "Groupes",
     },
@@ -2783,6 +2784,12 @@ function FootprintsMessageList({
   const followingUnreadTotal = friends
     .filter((friend) => friend.isFollowing && !friend.isMuted)
     .reduce((total, friend) => total + friend.unreadCount, 0);
+  const strangerUnreadTotal = friends
+    .filter(
+      (friend) =>
+        !friend.isFollowing && !friend.isMutualFollow && !friend.isMuted,
+    )
+    .reduce((total, friend) => total + friend.unreadCount, 0);
   const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
   const filters: Array<{
     count: number;
@@ -2827,6 +2834,14 @@ function FootprintsMessageList({
       iconFrameClassName: "bg-[#FFF0F5]",
       key: "following",
       label: pageCopy.messageFilters.following,
+    },
+    {
+      count: strangerUnreadTotal,
+      icon: UserRound,
+      iconClassName: "text-[#D6245F]",
+      iconFrameClassName: "bg-[#FFEAF1]",
+      key: "strangers",
+      label: pageCopy.messageFilters.strangers,
     },
     {
       count: officialUnreadTotal,

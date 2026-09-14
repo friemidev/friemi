@@ -332,6 +332,26 @@ html[data-friemi-ios-app="true"] .app-layout-shell::before {
   pointer-events: none;
 }
 
+/* The bottom-sheet shell already clears the native status bar. Its same-origin
+ * detail iframe must not apply the native top/side insets a second time. */
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet),
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet) {
+  --app-top-safe-area: 0px;
+  --app-left-safe-area: 0px;
+  --app-right-safe-area: 0px;
+}
+
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet) body,
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet) body {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet) .app-layout-shell::before,
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet) .app-layout-shell::before {
+  display: none;
+}
+
 .app-layout-shell:has(.auth-page-shell) {
   padding-bottom: 0;
   background: var(--friemi-palette-paper);

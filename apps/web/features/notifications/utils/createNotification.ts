@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { NotificationType, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { sendMobilePushForNotification } from "@/features/mobile/push/sendMobilePush";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import {
   getPerformanceRolloutMode,
   logPerformanceShadow,
@@ -96,11 +97,14 @@ export async function createNotification(
     data: identity,
   });
 
-  after(() =>
-    sendMobilePushForNotification(notification.id).catch((error) => {
-      console.error("Failed to dispatch mobile push notification", error);
-    }),
-  );
+  after(async () => {
+    await Promise.all([
+      sendMobilePushForNotification(notification.id).catch((error) => {
+        console.error("Failed to dispatch mobile push notification", error);
+      }),
+      invalidateUnreadBadgeCache([notification.recipientId]),
+    ]);
+  });
 
   return notification;
 }
@@ -175,12 +179,17 @@ export async function createNotifications(
       skipDuplicates: true,
     });
 
-    pendingIdentities.forEach((identity) => {
-      after(() =>
-        sendMobilePushForNotification(identity.id).catch((error) => {
-          console.error("Failed to dispatch batched mobile push", error);
-        }),
-      );
+    after(async () => {
+      await Promise.all([
+        ...pendingIdentities.map((identity) =>
+          sendMobilePushForNotification(identity.id).catch((error) => {
+            console.error("Failed to dispatch batched mobile push", error);
+          }),
+        ),
+        invalidateUnreadBadgeCache(
+          pendingIdentities.map((identity) => identity.recipientId),
+        ),
+      ]);
     });
 
     logPerformanceShadow("b2_notification_batch", {

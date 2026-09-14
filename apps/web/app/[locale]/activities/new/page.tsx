@@ -12,7 +12,6 @@ import { MobileNewActivityEntryView } from "@/features/activities/components/Mob
 import { getActivityList } from "@/features/activities/queries/getActivities";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getSignInHref } from "@/lib/auth-redirect";
-import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 
@@ -67,7 +66,6 @@ export default async function NewActivityPage({
 }: NewActivityPageProps) {
   const { locale } = await params;
   const resolvedSearchParams = await searchParams;
-  const t = getCopy(locale);
   const copyActivityId = Array.isArray(resolvedSearchParams.copyActivityId)
     ? resolvedSearchParams.copyActivityId[0]
     : resolvedSearchParams.copyActivityId;
@@ -141,12 +139,6 @@ export default async function NewActivityPage({
           <span className="truncate">{headerCopy.publish}</span>
         </button>
       </div>
-
-      {copyActivityId ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {t.form.copyTimeReminder}
-        </div>
-      ) : null}
 
       <NewActivityForm
         formId={formId}

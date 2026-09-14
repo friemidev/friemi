@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   getFallbackMobileHomeTopNewsItems,
   prioritizeLatestVersionTopNewsItem,
+  resolveMobileHomeTopNewsHref,
   type MobileHomeTopNewsItem,
 } from "@/features/home/topNewsConfig";
 
@@ -34,7 +35,7 @@ function getLocalizedTopNewsTitle(row: TopNewsRow, locale: string) {
 
 function mapTopNewsRow(row: TopNewsRow, locale: string): MobileHomeTopNewsItem {
   return {
-    href: row.href,
+    href: resolveMobileHomeTopNewsHref(row.href),
     id: row.id,
     image: row.imageUrl,
     title: getLocalizedTopNewsTitle(row, locale),
