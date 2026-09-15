@@ -23,7 +23,6 @@ const accountSettingsCopy = {
     accountSecurity: "账号与安全",
     activityPriorityAdmin: "活动权重管理",
     officialMessagesAdmin: "官方消息发布",
-    topNewsAdmin: "Top News 管理",
     language: "语言",
     signOut: "退出登录",
   },
@@ -36,7 +35,6 @@ const accountSettingsCopy = {
     accountSecurity: "Account & security",
     activityPriorityAdmin: "Activity priority admin",
     officialMessagesAdmin: "Official messages",
-    topNewsAdmin: "Top News admin",
     language: "Language",
     signOut: "Sign out",
   },
@@ -48,7 +46,6 @@ const accountSettingsCopy = {
     accountSecurity: "Compte et securite",
     activityPriorityAdmin: "Priorite des activites",
     officialMessagesAdmin: "Messages officiels",
-    topNewsAdmin: "Admin Top News",
     language: "Langue",
     signOut: "Deconnexion",
   },
@@ -123,7 +120,6 @@ export default async function AccountSettingsPage({
             adminOfficialMessagesLabel={
               isAdmin ? copy.officialMessagesAdmin : undefined
             }
-            adminTopNewsLabel={isAdmin ? copy.topNewsAdmin : undefined}
             locale={locale}
             signOutLabel={copy.signOut}
           />

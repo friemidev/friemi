@@ -665,7 +665,6 @@ function MobileHomeV23NewsCard({
       className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
       aria-label={title}
     >
-      {/* Admin-managed images can be local paths or HTTPS URLs. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={image}

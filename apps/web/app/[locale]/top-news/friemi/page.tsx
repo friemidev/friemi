@@ -14,7 +14,29 @@ type FriemiTopNewsPageProps = {
   }>;
 };
 
-const friemiTopNewsImage = "/home/friemi_intro.png";
+const friemiTopNewsImages = {
+  en: {
+    height: 2172,
+    src: "/top_news/friemi-intro-en.png",
+    width: 724,
+  },
+  fr: {
+    height: 2170,
+    src: "/top_news/friemi-intro-fr.png",
+    width: 725,
+  },
+  "zh-CN": {
+    height: 2146,
+    src: "/top_news/friemi-intro-zh.png",
+    width: 733,
+  },
+} as const;
+
+function getFriemiTopNewsImage(locale: string) {
+  if (locale === "fr") return friemiTopNewsImages.fr;
+  if (locale === "en") return friemiTopNewsImages.en;
+  return friemiTopNewsImages["zh-CN"];
+}
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -37,7 +59,8 @@ function getCopy(locale: string) {
 
   return {
     back: "返回",
-    description: "了解 Friemi 如何帮你发现活动、约朋友，并在每次相聚后继续联系。",
+    description:
+      "了解 Friemi 如何帮你发现活动、约朋友，并在每次相聚后继续联系。",
     title: "认识 Friemi",
   };
 }
@@ -61,6 +84,7 @@ export default async function FriemiTopNewsPage({
 }: FriemiTopNewsPageProps) {
   const { locale } = await params;
   const copy = getCopy(locale);
+  const image = getFriemiTopNewsImage(locale);
 
   return (
     <main className="top-news-story-page min-h-svh bg-[#FEFDF9] pb-[var(--app-bottom-safe-area)] pt-[var(--app-top-safe-area)]">
@@ -68,15 +92,15 @@ export default async function FriemiTopNewsPage({
         fallbackHref={withLocale(locale, "/mobile-home")}
         label={copy.back}
       />
-      <div className="mx-auto w-full max-w-[721px]">
+      <div className="mx-auto w-full max-w-[733px]">
         <Image
           alt={copy.title}
           className="block h-auto w-full"
-          height={2180}
+          height={image.height}
           priority
-          sizes="(max-width: 721px) 100vw, 721px"
-          src={friemiTopNewsImage}
-          width={721}
+          sizes="(max-width: 733px) 100vw, 733px"
+          src={image.src}
+          width={image.width}
         />
       </div>
     </main>

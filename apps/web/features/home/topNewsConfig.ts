@@ -12,51 +12,47 @@ export type MobileHomeTopNewsItem = {
 };
 
 type MobileHomeTopNewsConfigItem = {
-  active: boolean;
   href: string;
   id: string;
   image: string;
-  order: number;
   title: LocalizedTopNewsTitle;
 };
 
 const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
-    active: true,
-    href: "/updates/v2_7",
-    id: "v2-7-release",
-    image: "/brand/v2_1/friemi-og-default-1200x630.png",
-    order: 10,
+    href: "/top-news/werewolf",
+    id: "werewolf-guide",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/09464e14-8214-45d0-ad9b-916cfacaf64d.png",
     title: {
-      en: "Friemi v2.7 updates",
-      fr: "Nouveautes Friemi v2.7",
-      "zh-CN": "Friemi v2.7 更新",
+      en: "Werewolf game setup guide",
+      fr: "Guide de lancement Loups-garous",
+      "zh-CN": "狼人杀线下开局指南",
     },
   },
   {
-    active: true,
-    href: "/game-tools/werewolf",
-    id: "werewolf-tool",
-    image: "/game-tools/werewolf/werewolf.png",
-    order: 20,
+    href: "/top-news/host-recruitment",
+    id: "founding-host-recruitment",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/c5550d08-54d0-4c63-9232-99cca7fb832e.jpg",
     title: {
-      en: "Werewolf room tool",
-      fr: "Outil loup-garou",
-      "zh-CN": "狼人杀房间工具",
+      en: "Become a Friemi Founding Host",
+      fr: "Devenez hôte fondateur Friemi",
+      "zh-CN": "Friemi 共创主理人招募",
+    },
+  },
+  {
+    href: "/top-news/friemi",
+    id: "friemi-intro",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/ab4ce5ac-1ac3-44a2-aab2-e648492b3e94.png",
+    title: {
+      en: "Discover Friemi",
+      fr: "Découvrez Friemi",
+      "zh-CN": "发现活动，约朋友，一起出发",
     },
   },
 ];
-
-export function getFallbackTopNewsConfigItems() {
-  return mobileHomeTopNewsConfig.map((item) => ({
-    active: item.active,
-    href: item.href,
-    id: item.id,
-    image: item.image,
-    order: item.order,
-    title: { ...item.title },
-  }));
-}
 
 function getLocalizedTopNewsTitle(
   title: LocalizedTopNewsTitle,
@@ -73,47 +69,11 @@ function getLocalizedTopNewsTitle(
   return title["zh-CN"];
 }
 
-export function getFallbackMobileHomeTopNewsItems(locale: string) {
-  return mobileHomeTopNewsConfig
-    .filter((item) => item.active)
-    .sort((left, right) => left.order - right.order)
-    .map<MobileHomeTopNewsItem>((item) => ({
-      href: item.href,
-      id: item.id,
-      image: item.image,
-      title: getLocalizedTopNewsTitle(item.title, locale),
-    }));
-}
-
-export function resolveMobileHomeTopNewsHref(href: string) {
-  return href === "/home" ? "/home?view=desktop" : href;
-}
-
-function isVersionReleaseItem(item: MobileHomeTopNewsItem) {
-  return (
-    item.href.includes("/updates/") ||
-    /(?:^|-)v\d+(?:[-_.]\d+)+(?:-release)?$/i.test(item.id)
-  );
-}
-
-export function prioritizeLatestVersionTopNewsItem(
-  items: MobileHomeTopNewsItem[],
-  locale: string,
-) {
-  const latestRelease = getFallbackMobileHomeTopNewsItems(locale).find(
-    (item) => item.id === "v2-7-release",
-  );
-
-  if (!latestRelease) return items.slice(0, 8);
-
-  const previousRelease = items.find(isVersionReleaseItem);
-  const nonReleaseItems = items.filter((item) => !isVersionReleaseItem(item));
-
-  return [
-    {
-      ...latestRelease,
-      image: previousRelease?.image ?? latestRelease.image,
-    },
-    ...nonReleaseItems,
-  ].slice(0, 8);
+export function getMobileHomeTopNewsConfigItems(locale: string) {
+  return mobileHomeTopNewsConfig.map<MobileHomeTopNewsItem>((item) => ({
+    href: item.href,
+    id: item.id,
+    image: item.image,
+    title: getLocalizedTopNewsTitle(item.title, locale),
+  }));
 }
