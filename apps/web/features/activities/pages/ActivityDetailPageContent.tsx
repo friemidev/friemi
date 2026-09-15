@@ -761,7 +761,6 @@ export async function generateActivityDetailMetadata(
       wechatShareImageUrl: resolveTeamWechatShareImageUrl({
         activityId,
         activityUrl: canonicalUrl,
-        coverImageUrl: activity.coverImageUrl,
         locale,
       }),
       title: activity.title,
