@@ -26,8 +26,23 @@ export const metadata: Metadata = {
   },
   openGraph: {
     description: brand.description,
-    images: [brand.shareImagePath],
+    images: [
+      {
+        alt: brand.name,
+        height: 630,
+        type: "image/png",
+        url: brand.shareImagePath,
+        width: 1200,
+      },
+    ],
     siteName: brand.name,
+    title: brand.name,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    description: brand.description,
+    images: [brand.shareImagePath],
     title: brand.name,
   },
 };

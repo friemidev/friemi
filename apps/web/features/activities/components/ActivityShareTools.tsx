@@ -653,11 +653,10 @@ export function ActivityShareTools({
       resolveTeamWechatShareImageUrl({
         activityId: analyticsEntityId,
         activityUrl,
-        coverImageUrl,
         locale,
       }),
     );
-  }, [activityUrl, analyticsEntityId, coverImageUrl, locale, shareKind]);
+  }, [activityUrl, analyticsEntityId, locale, shareKind]);
 
   useEffect(() => {
     if (!activityUrl) {
