@@ -64,8 +64,6 @@ const copy = {
       activityOpsDescription: "维护活动库与公共活动导入",
       merchantOps: "商家管理",
       merchantOpsDescription: "维护合作商家与场地主页",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "维护移动首页置顶内容",
       reportOps: "举报处理",
       reportOpsDescription: "查看和处理用户举报",
       accountSettings: "账号设置",
@@ -1041,8 +1039,6 @@ const copy = {
       activityOpsDescription: "Maintain activities and public imports",
       merchantOps: "Merchant management",
       merchantOpsDescription: "Maintain partner and venue profiles",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "Maintain mobile home featured news",
       reportOps: "Report review",
       reportOpsDescription: "Review user reports",
       accountSettings: "Account settings",
@@ -1069,7 +1065,8 @@ const copy = {
       recommendationsHangoutsTitle: "Hangouts you may like",
       recommendationsActivitiesTitle: "Activities you may like",
       recommendationsEmptyTitle: "No recommendations yet",
-      recommendationsEmptyDescription: "More things to explore will appear soon.",
+      recommendationsEmptyDescription:
+        "More things to explore will appear soon.",
       emptyTitle: "Enter a keyword to search",
       emptyDescription:
         "Try an activity name, place, Friemi ID, nickname, or merchant name.",
@@ -2089,8 +2086,6 @@ const copy = {
       activityOpsDescription: "Gérer les activités et les imports publics",
       merchantOps: "Gestion partenaires",
       merchantOpsDescription: "Gérer les profils de partenaires et lieux",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "Gérer les contenus en avant sur mobile",
       reportOps: "Signalements",
       reportOpsDescription: "Traiter les signalements utilisateurs",
       accountSettings: "Paramètres du compte",
@@ -2406,8 +2401,7 @@ const copy = {
       teamTitle: "Partage du groupe",
       description:
         "Partagez l'activité ou téléchargez une affiche avec QR code.",
-      activityDescription:
-        "Partagez l'activité ou téléchargez une affiche QR.",
+      activityDescription: "Partagez l'activité ou téléchargez une affiche QR.",
       teamDescription:
         "Partagez l'invitation du groupe ou téléchargez une affiche QR.",
       expand: "Afficher les outils de partage",
@@ -2418,8 +2412,7 @@ const copy = {
       copyPrice: "Copier le coût",
       copyLink: "Copier le lien",
       systemShare: "Partager",
-      systemShareHint:
-        "Ouvrez le panneau de partage système pour l'envoyer.",
+      systemShareHint: "Ouvrez le panneau de partage système pour l'envoyer.",
       wechatShareHint:
         "Dans WeChat, utilisez le menu ··· pour l'envoyer à vos amis ou groupes.",
       shareUnavailable:
@@ -2937,8 +2930,7 @@ const copy = {
       coverUploadFailed:
         "Échec de l'import de la couverture. Réessayez plus tard.",
       coverTypeError: "Importez un format d'image courant.",
-      coverSizeError:
-        "Les images doivent faire 10 Mo maximum.",
+      coverSizeError: "Les images doivent faire 10 Mo maximum.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:

@@ -1,60 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  prioritizeLatestVersionTopNewsItem,
-  resolveMobileHomeTopNewsHref,
-} from "./topNewsConfig";
+import { getMobileHomeTopNewsConfigItems } from "./topNewsConfig";
 
-test("mobile home keeps recruitment stories on the full home experience", () => {
-  assert.equal(resolveMobileHomeTopNewsHref("/home"), "/home?view=desktop");
-  assert.equal(
-    resolveMobileHomeTopNewsHref("/game-tools/werewolf"),
-    "/game-tools/werewolf",
-  );
+test("mobile home top news uses fixed story routes and local images", () => {
+  assert.deepEqual(getMobileHomeTopNewsConfigItems("zh-CN"), [
+    {
+      href: "/top-news/werewolf",
+      id: "werewolf-guide",
+      image: "/game-tools/werewolf/recto/werewolf-promo-landscape.png",
+      title: "狼人杀线下开局指南",
+    },
+    {
+      href: "/top-news/friemi",
+      id: "friemi-intro",
+      image: "/home/friemi_intro.png",
+      title: "发现活动，约朋友，一起出发",
+    },
+  ]);
 });
 
-test("mobile home replaces a stale release item with v2.7", () => {
-  const items = prioritizeLatestVersionTopNewsItem(
-    [
-      {
-        href: "/updates/v2_4",
-        id: "topnews-v2-4-release",
-        image: "/custom-release.jpg",
-        title: "Friemi v2.4 更新",
-      },
-      {
-        href: "/game-tools/werewolf",
-        id: "werewolf",
-        image: "/werewolf.jpg",
-        title: "狼人杀",
-      },
-    ],
-    "zh-CN",
-  );
+test("mobile home top news localizes fixed story titles", () => {
+  const englishItems = getMobileHomeTopNewsConfigItems("en");
+  const frenchItems = getMobileHomeTopNewsConfigItems("fr");
 
-  assert.deepEqual(items[0], {
-    href: "/updates/v2_7",
-    id: "v2-7-release",
-    image: "/custom-release.jpg",
-    title: "Friemi v2.7 更新",
-  });
-  assert.equal(items[1]?.id, "werewolf");
-});
-
-test("mobile home inserts v2.7 when configured news has no release item", () => {
-  const items = prioritizeLatestVersionTopNewsItem(
-    [
-      {
-        href: "/game-tools/werewolf",
-        id: "werewolf",
-        image: "/werewolf.jpg",
-        title: "Werewolf",
-      },
-    ],
-    "en",
-  );
-
-  assert.equal(items[0]?.href, "/updates/v2_7");
-  assert.equal(items[0]?.title, "Friemi v2.7 updates");
-  assert.equal(items[1]?.id, "werewolf");
+  assert.equal(englishItems[0]?.title, "Werewolf game setup guide");
+  assert.equal(englishItems[1]?.title, "Discover Friemi");
+  assert.equal(frenchItems[0]?.title, "Guide de lancement Loups-garous");
+  assert.equal(frenchItems[1]?.title, "Découvrez Friemi");
 });
