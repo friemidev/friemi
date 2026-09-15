@@ -1,7 +1,10 @@
 import { MerchantManagementClient } from "@/components/admin/MerchantManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { requireAdminPageAccess } from "@/lib/admin-auth";
-import { getAdminMerchants } from "@/lib/admin-scraper";
+import {
+  getAdminMerchantCandidates,
+  getAdminMerchants,
+} from "@/lib/admin-scraper";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +19,10 @@ export default async function AdminMerchantsPage({
 }: AdminMerchantsPageProps) {
   const { locale } = await params;
   await requireAdminPageAccess(locale, "/admin/merchants");
-  const merchants = await getAdminMerchants();
+  const [merchants, candidates] = await Promise.all([
+    getAdminMerchants(),
+    getAdminMerchantCandidates(),
+  ]);
 
   return (
     <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:max-w-7xl">
@@ -31,7 +37,11 @@ export default async function AdminMerchantsPage({
           维护可关联到活动的商家、场地或机构资料。创建后，活动运营页只负责选择已有资料进行关联。
         </p>
       </div>
-      <MerchantManagementClient locale={locale} initialMerchants={merchants} />
+      <MerchantManagementClient
+        initialCandidates={candidates}
+        initialMerchants={merchants}
+        locale={locale}
+      />
     </PageContainer>
   );
 }

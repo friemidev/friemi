@@ -53,8 +53,16 @@ export type AdminMerchantListItem = AdminMerchantOption & {
   address: string | null;
   websiteUrl: string | null;
   contactEmail: string | null;
+  owner: AdminMerchantCandidate | null;
   activityCount: number;
   updatedAt: string;
+};
+
+export type AdminMerchantCandidate = {
+  email: string | null;
+  friendCode: string | null;
+  id: string;
+  nickname: string;
 };
 
 export type AdminMerchantCreateInput = {
@@ -181,7 +189,7 @@ function serializeAdminMerchant(merchant: AdminMerchantOption) {
   };
 }
 
-function serializeAdminMerchantListItem(merchant: {
+export function serializeAdminMerchantListItem(merchant: {
   id: string;
   name: string;
   slug: string;
@@ -190,6 +198,7 @@ function serializeAdminMerchantListItem(merchant: {
   address: string | null;
   websiteUrl: string | null;
   contactEmail: string | null;
+  owner: AdminMerchantCandidate | null;
   updatedAt: Date;
   _count: { activities: number };
 }): AdminMerchantListItem {
@@ -202,6 +211,7 @@ function serializeAdminMerchantListItem(merchant: {
     address: merchant.address,
     websiteUrl: merchant.websiteUrl,
     contactEmail: merchant.contactEmail,
+    owner: merchant.owner,
     activityCount: merchant._count.activities,
     updatedAt: merchant.updatedAt.toISOString(),
   };
@@ -300,12 +310,37 @@ export async function getAdminMerchants() {
       address: true,
       websiteUrl: true,
       contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
       updatedAt: true,
       _count: { select: { activities: true } },
     },
   });
 
   return merchants.map(serializeAdminMerchantListItem);
+}
+
+export async function getAdminMerchantCandidates() {
+  return prisma.userProfile.findMany({
+    where: {
+      ownedMerchant: null,
+      status: "ACTIVE",
+    },
+    orderBy: [{ nickname: "asc" }],
+    take: 300,
+    select: {
+      email: true,
+      friendCode: true,
+      id: true,
+      nickname: true,
+    },
+  });
 }
 
 function buildAdminActivityUpdateData(
@@ -441,6 +476,14 @@ export async function createAdminMerchant(data: AdminMerchantCreateInput) {
       address: true,
       websiteUrl: true,
       contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
       updatedAt: true,
       _count: { select: { activities: true } },
     },

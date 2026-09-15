@@ -32,7 +32,7 @@ function getLockedCopy(locale: string) {
   }
 
   return {
-    description: "这是私密聚吧，与发起人成为互相关注好友后即可解锁。",
+    description: "这是私密聚吧，仅限发起人好友才能申请。",
     title: "私密聚吧已锁定",
   };
 }

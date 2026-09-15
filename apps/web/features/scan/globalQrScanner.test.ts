@@ -69,3 +69,28 @@ test("resolves Friemi full links as internal scan destinations", () => {
     },
   );
 });
+
+test("keeps coupon claim and redemption links inside Friemi", () => {
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "https://www.friemi.com/zh-CN/coupons/claim/claim-token",
+    }),
+    {
+      href: "/zh-CN/coupons/claim/claim-token",
+      kind: "internal",
+      source: "internal-link",
+    },
+  );
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "en",
+      rawValue: "/en/coupons/redeem/redemption-token",
+    }),
+    {
+      href: "/en/coupons/redeem/redemption-token",
+      kind: "internal",
+      source: "internal-link",
+    },
+  );
+});

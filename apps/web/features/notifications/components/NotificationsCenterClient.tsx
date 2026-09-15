@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   Repeat2,
   Trash2,
+  TicketCheck,
   UserMinus,
   UserPlus,
   WalletCards,
@@ -138,9 +139,90 @@ function getNotificationText(
   const t = getCopy(locale).notifications;
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
   const actorName = getNotificationActorName(notification, locale) ?? undefined;
+  const couponTitle =
+    notification.couponWalletItem?.coupon.title ?? "Friemi Coupon";
+  const merchantName =
+    notification.couponWalletItem?.coupon.merchant.name ??
+    actorName ??
+    "Friemi";
+
+  if (
+    notification.type === "COUPON_RECEIVED" ||
+    notification.type === "COUPON_CLAIMED" ||
+    notification.type === "COUPON_REDEEMED" ||
+    notification.type === "COUPON_REDEMPTION_COMPLETED"
+  ) {
+    if (locale === "fr") {
+      return notification.type === "COUPON_RECEIVED"
+        ? {
+            title: "Coupon reçu",
+            body: `${couponTitle} de ${merchantName} a été ajouté à votre sac.`,
+          }
+        : notification.type === "COUPON_CLAIMED"
+          ? {
+              title: "Coupon distribué",
+              body: `${actorName ?? "Un client"} a reçu ${couponTitle}.`,
+            }
+          : notification.type === "COUPON_REDEEMED"
+            ? {
+                title: "Coupon utilisé",
+                body: `${couponTitle} a été validé par ${merchantName}.`,
+              }
+            : {
+                title: "Utilisation confirmée",
+                body: `${actorName ?? "Un client"} a utilisé ${couponTitle}.`,
+              };
+    }
+    if (locale === "en") {
+      return notification.type === "COUPON_RECEIVED"
+        ? {
+            title: "Coupon received",
+            body: `${couponTitle} from ${merchantName} was added to your bag.`,
+          }
+        : notification.type === "COUPON_CLAIMED"
+          ? {
+              title: "Coupon claimed",
+              body: `${actorName ?? "A customer"} claimed ${couponTitle}.`,
+            }
+          : notification.type === "COUPON_REDEEMED"
+            ? {
+                title: "Coupon redeemed",
+                body: `${couponTitle} was redeemed at ${merchantName}.`,
+              }
+            : {
+                title: "Redemption complete",
+                body: `${actorName ?? "A customer"} redeemed ${couponTitle}.`,
+              };
+    }
+    return notification.type === "COUPON_RECEIVED"
+      ? {
+          title: "优惠券领取成功",
+          body: `${merchantName}的「${couponTitle}」已放入背包。`,
+        }
+      : notification.type === "COUPON_CLAIMED"
+        ? {
+            title: "优惠券已发放",
+            body: `${actorName ?? "有客人"}领取了「${couponTitle}」。`,
+          }
+        : notification.type === "COUPON_REDEEMED"
+          ? {
+              title: "优惠券核销成功",
+              body: `${merchantName}已核销「${couponTitle}」。`,
+            }
+          : {
+              title: "核销完成",
+              body: `${actorName ?? "有客人"}使用了「${couponTitle}」。`,
+            };
+  }
 
   if (notification.type.startsWith("AA_")) {
-    const by = actorName ?? (locale === "fr" ? "Un participant" : locale === "en" ? "A participant" : "有参与者");
+    const by =
+      actorName ??
+      (locale === "fr"
+        ? "Un participant"
+        : locale === "en"
+          ? "A participant"
+          : "有参与者");
     const text =
       locale === "fr"
         ? {
@@ -210,10 +292,12 @@ function getNotificationText(
                 title: "转账待确认",
               },
             };
-    return text[notification.type as keyof typeof text] ?? {
-      body: activityTitle,
-      title: "AA",
-    };
+    return (
+      text[notification.type as keyof typeof text] ?? {
+        body: activityTitle,
+        title: "AA",
+      }
+    );
   }
 
   if (notification.type === "FRIEND_REQUEST") {
@@ -350,6 +434,26 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (
+    notification.type === "COUPON_RECEIVED" ||
+    notification.type === "COUPON_REDEEMED"
+  ) {
+    return locale === "fr"
+      ? "Ouvrir le sac"
+      : locale === "en"
+        ? "Open bag"
+        : "查看背包";
+  }
+  if (
+    notification.type === "COUPON_CLAIMED" ||
+    notification.type === "COUPON_REDEMPTION_COMPLETED"
+  ) {
+    return locale === "fr"
+      ? "Ouvrir la boutique"
+      : locale === "en"
+        ? "Open store"
+        : "查看门店";
+  }
   if (notification.type === "CHARM_GIFT_RECEIVED") return t.openProfile;
   if (notification.type === "REPORT_CREATED") return t.openReports;
   if (
@@ -824,6 +928,17 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
+  if (type.startsWith("COUPON_")) {
+    return {
+      icon: TicketCheck,
+      iconClassName: isUnread
+        ? "bg-[#156240] text-white"
+        : "bg-fog text-outline",
+      cardClassName: isUnread
+        ? "border-[#BFD8B9] bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
   if (type.startsWith("AA_")) {
     const isWarning =
       type === "AA_DISPUTE_OPENED" || type === "AA_REVIEW_REQUIRED";
@@ -1015,7 +1130,8 @@ function NotificationCard({
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||
-        notification.type === "MOMENT_REPOSTED";
+        notification.type === "MOMENT_REPOSTED" ||
+        notification.type.startsWith("COUPON_");
   const canFollowBack =
     notification.type === "FRIEND_REQUEST" && Boolean(notification.actor);
 
