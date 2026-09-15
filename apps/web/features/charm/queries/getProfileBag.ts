@@ -24,10 +24,28 @@ export type ProfileBagCheckItem = {
   type: "WELCOME" | "BLIND_BOX";
 };
 
+export type ProfileBagCouponItem = {
+  claimedAt: string;
+  coupon: {
+    description: string;
+    expiresAt: string | null;
+    merchant: {
+      logoUrl: string | null;
+      name: string;
+    };
+    terms: string | null;
+    title: string;
+  };
+  id: string;
+  redeemedAt: string | null;
+  status: "AVAILABLE" | "EXPIRED" | "REDEEMED" | "VOIDED";
+};
+
 export type ProfileBagViewModel = {
   availableCheckCount: number;
   blindBoxCheckCount: number;
   checks: ProfileBagCheckItem[];
+  coupons: ProfileBagCouponItem[];
   coinBalance: {
     balance: number;
     earnedTotal: number;
@@ -127,8 +145,33 @@ export async function getProfileBag(profileId: string) {
     }
   }
 
-  const [checks, fragmentBalance, coinBalance] = await Promise.all([
+  const [checks, coupons, fragmentBalance, coinBalance] = await Promise.all([
     getFriemiChecksForBag(profileId),
+    prisma.couponWalletItem.findMany({
+      where: { ownerProfileId: profileId },
+      orderBy: [{ status: "asc" }, { claimedAt: "desc" }],
+      take: 50,
+      select: {
+        claimedAt: true,
+        id: true,
+        redeemedAt: true,
+        status: true,
+        coupon: {
+          select: {
+            description: true,
+            expiresAt: true,
+            terms: true,
+            title: true,
+            merchant: {
+              select: {
+                logoUrl: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    }),
     prisma.userBlindBoxFragmentBalance.findUnique({
       where: {
         profileId,
@@ -160,6 +203,21 @@ export async function getProfileBag(profileId: string) {
     };
   });
   const currentFragments = Math.max(0, fragmentBalance?.fragmentCount ?? 0);
+  const mappedCoupons = coupons.map((item) => ({
+    claimedAt: item.claimedAt.toISOString(),
+    coupon: {
+      ...item.coupon,
+      expiresAt: item.coupon.expiresAt?.toISOString() ?? null,
+    },
+    id: item.id,
+    redeemedAt: item.redeemedAt?.toISOString() ?? null,
+    status:
+      item.status === "AVAILABLE" &&
+      item.coupon.expiresAt &&
+      item.coupon.expiresAt.getTime() <= now.getTime()
+        ? ("EXPIRED" as const)
+        : item.status,
+  }));
 
   return {
     availableCheckCount: mappedChecks.filter(
@@ -169,6 +227,7 @@ export async function getProfileBag(profileId: string) {
       (check) => check.type === "BLIND_BOX",
     ).length,
     checks: mappedChecks,
+    coupons: mappedCoupons,
     coinBalance: {
       balance: coinBalance.balance,
       earnedTotal: coinBalance.earnedTotal,

@@ -17,14 +17,13 @@ import {
   Copy,
   Eye,
   Gift,
-  Gem,
   Hourglass,
   LoaderCircle,
   Lock,
   Medal,
   MessageCircle,
   Package,
-  RefreshCw,
+  QrCode,
   Share2,
   ShoppingBag,
   Sparkles,
@@ -62,13 +61,10 @@ import {
   type AchievementCategory,
 } from "@/features/achievements/achievementCatalog";
 import {
-  redeemBlindBoxCheckAction,
-  type RedeemBlindBoxCheckState,
-} from "@/features/charm/actions/redeemBlindBoxCheck";
-import {
   redeemFriemiCheckToCoinsAction,
   type RedeemFriemiCheckToCoinsState,
 } from "@/features/charm/actions/redeemFriemiCheckToCoins";
+import { CouponClaimScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
   bindReferralCodeAction,
   type ReferralActionState,
@@ -76,6 +72,7 @@ import {
 import type { UserAchievementProgressItem } from "@/features/achievements/queries/getUserAchievements";
 import type {
   ProfileBagCheckItem,
+  ProfileBagCouponItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
 import type { FriemiCoinBalanceViewModel } from "@/features/charm/queries/getFriemiCoinBalance";
@@ -180,6 +177,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         trusted_profile: "Atteindre un score fiable.",
       },
       bag: {
+        all: "Tout",
         available: "Disponibles",
         blindBox: "Mystère",
         checkList: "Objets",
@@ -366,6 +364,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         trusted_profile: "Reach a trusted profile score.",
       },
       bag: {
+        all: "All",
         available: "Available",
         blindBox: "Blind box",
         checkList: "Items",
@@ -548,7 +547,8 @@ function getProfilePrivateSubpageCopy(locale: string) {
       trusted_profile: "信用值达到可信等级。",
     },
     bag: {
-      available: "可用",
+      all: "全部",
+      available: "可使用",
       blindBox: "盲盒",
       checkList: "物品",
       checkCoinValue: "可兑换",
@@ -1150,6 +1150,63 @@ function getCheckStatusCopy(
   return copy.bag.statusAvailable;
 }
 
+function getCouponBagCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      alreadyClaimed: "Ce coupon est déjà dans votre sac.",
+      available: "Disponible",
+      claimed: "Coupon ajouté au sac.",
+      empty: "Scannez le QR code d'une boutique pour recevoir un coupon.",
+      expired: "Expiré",
+      noExpiry: "Sans date limite",
+      open: "Afficher le QR code",
+      redeemed: "Utilisé",
+      section: "Coupons",
+      voided: "Indisponible",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      alreadyClaimed: "This coupon is already in your bag.",
+      available: "Available",
+      claimed: "Coupon added to your bag.",
+      empty: "Scan a store QR code to receive a coupon.",
+      expired: "Expired",
+      noExpiry: "No expiry date",
+      open: "Show redemption QR",
+      redeemed: "Used",
+      section: "Coupons",
+      voided: "Unavailable",
+    };
+  }
+
+  return {
+    alreadyClaimed: "这张优惠券已经在你的背包里。",
+    available: "可使用",
+    claimed: "优惠券已放入背包。",
+    empty: "扫描店家发放二维码后，优惠券会出现在这里。",
+    expired: "已过期",
+    noExpiry: "长期有效",
+    open: "出示核销码",
+    redeemed: "已核销",
+    section: "优惠券",
+    voided: "已失效",
+  };
+}
+
+function getCouponStatusCopy(
+  status: ProfileBagCouponItem["status"],
+  locale: string,
+) {
+  const copy = getCouponBagCopy(locale);
+
+  if (status === "REDEEMED") return copy.redeemed;
+  if (status === "EXPIRED") return copy.expired;
+  if (status === "VOIDED") return copy.voided;
+  return copy.available;
+}
+
 function getCheckTypeCopy(type: ProfileBagCheckItem["type"], locale: string) {
   if (locale === "fr") {
     return type === "BLIND_BOX" ? "Chèque mystère" : "Chèque Friemi";
@@ -1192,68 +1249,7 @@ function CheckStatusIcon({
   return <Ticket className="h-4 w-4" />;
 }
 
-function RedeemBlindBoxSubmitButton({
-  disabled,
-  label,
-}: {
-  disabled: boolean;
-  label: string;
-}) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      aria-busy={pending}
-      disabled={disabled || pending}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_12px_22px_rgba(21,98,64,0.16)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:shadow-none"
-    >
-      {pending ? (
-        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <RefreshCw className="h-3.5 w-3.5" />
-      )}
-      {label}
-    </button>
-  );
-}
-
-const initialRedeemState: RedeemBlindBoxCheckState = {};
 const initialRedeemCheckState: RedeemFriemiCheckToCoinsState = {};
-
-function RedeemBlindBoxForm({
-  canRedeem,
-  locale,
-}: {
-  canRedeem: boolean;
-  locale: string;
-}) {
-  const copy = getProfilePrivateSubpageCopy(locale);
-  const [state, formAction] = useActionState(
-    redeemBlindBoxCheckAction,
-    initialRedeemState,
-  );
-  const router = useRouter();
-
-  useEffect(() => {
-    if (state.ok && state.checkId) {
-      router.refresh();
-    }
-  }, [router, state.checkId, state.ok]);
-
-  return (
-    <form action={formAction} className="grid gap-2">
-      <input name="locale" type="hidden" value={locale} />
-      <RedeemBlindBoxSubmitButton
-        disabled={!canRedeem}
-        label={copy.bag.exchange}
-      />
-      {state.formError ? (
-        <p className="text-xs font-bold text-[#9A2135]">{state.formError}</p>
-      ) : null}
-    </form>
-  );
-}
 
 function RedeemFriemiCheckSubmitButton({
   disabled,
@@ -2348,25 +2344,221 @@ export function ProfileVisitorsPageView({
   );
 }
 
+function CouponBagCard({
+  item,
+  locale,
+}: {
+  item: ProfileBagCouponItem;
+  locale: string;
+}) {
+  const copy = getCouponBagCopy(locale);
+  const available = item.status === "AVAILABLE";
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] ring-1",
+            available
+              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+              : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
+          )}
+        >
+          {item.coupon.merchant.logoUrl ? (
+            // Merchant logos are uploaded assets and may use a remote storage host.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="h-full w-full object-cover"
+              src={item.coupon.merchant.logoUrl}
+            />
+          ) : (
+            <Ticket className="h-5 w-5" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
+            available
+              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+              : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+          )}
+        >
+          {getCouponStatusCopy(item.status, locale)}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <h3 className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
+          {item.coupon.title}
+        </h3>
+        <p className="mt-1 truncate text-xs font-bold text-[#156240]">
+          {item.coupon.merchant.name}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <span className="truncate text-[11px] font-semibold text-[#6C746A]">
+            {item.coupon.expiresAt
+              ? formatDate(item.coupon.expiresAt)
+              : copy.noExpiry}
+          </span>
+          {available ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-[#156240]">
+              <QrCode className="h-3.5 w-3.5" />
+              {copy.open}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+
+  const className = cn(
+    "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
+    available ? "ring-[#D6D5B2]" : "opacity-70 ring-[#E8E1CF]",
+  );
+
+  return available ? (
+    <Link
+      className={`${className} transition active:scale-[0.985]`}
+      href={withLocale(locale, `/profile/bag/coupons/${item.id}`)}
+    >
+      {content}
+    </Link>
+  ) : (
+    <article className={className}>{content}</article>
+  );
+}
+
+function FriemiCoinMark() {
+  return (
+    <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[#D7D2A5] bg-[#F1F2E3] shadow-[inset_3px_3px_6px_rgba(255,255,255,0.9),inset_-5px_-6px_9px_rgba(110,105,54,0.18),0_5px_0_#C7C39A,0_9px_16px_rgba(42,73,57,0.16)]">
+      <Image
+        alt=""
+        className="h-8 w-8 rounded-full object-cover ring-1 ring-white/80"
+        height={32}
+        src="/brand/v2_1/friemi-icon-transparent-512.png"
+        width={32}
+      />
+      <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-white text-[#E5A927] shadow-sm ring-1 ring-[#EFEAD7]">
+        <Sparkles className="h-3 w-3 animate-pulse motion-reduce:animate-none" />
+      </span>
+    </span>
+  );
+}
+
+function CheckBagCard({
+  check,
+  locale,
+}: {
+  check: ProfileBagCheckItem;
+  locale: string;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const available = check.status === "AVAILABLE";
+
+  return (
+    <article
+      className={cn(
+        "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
+        available ? "ring-[#D6D5B2]" : "opacity-70 ring-[#E8E1CF]",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] ring-1",
+            available
+              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+              : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
+          )}
+        >
+          <CheckStatusIcon status={check.status} />
+        </span>
+        <span
+          className={cn(
+            "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
+            available
+              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+              : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+          )}
+        >
+          {getCheckStatusCopy(check.status, locale)}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
+          {getCheckTypeCopy(check.type, locale)}
+        </p>
+        {check.coinValue > 0 ? (
+          <p className="mt-1 text-xs font-bold text-[#156240]">
+            {copy.bag.checkCoinValue} {check.coinValue} {copy.bag.coinBalance}
+          </p>
+        ) : null}
+        <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
+          {getCheckDateCopy(check, locale)}
+        </p>
+      </div>
+      {check.canRedeemToCoins ? (
+        <RedeemFriemiCheckForm check={check} locale={locale} />
+      ) : null}
+    </article>
+  );
+}
+
+type BagItemFilter = "all" | "available" | "used";
+type BagDisplayItem =
+  | {
+      date: string;
+      item: ProfileBagCouponItem;
+      kind: "coupon";
+    }
+  | {
+      date: string;
+      item: ProfileBagCheckItem;
+      kind: "check";
+    };
+
 export function ProfileBagPageView({
   bag,
   hasError,
   locale,
+  notice,
 }: {
   bag: ProfileBagViewModel;
   hasError?: boolean;
   locale: string;
+  notice?: "already-claimed" | "claimed" | null;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
-  const fragmentRatio = Math.min(
-    1,
-    bag.fragmentBalance.current / Math.max(1, bag.fragmentBalance.required),
-  );
+  const couponCopy = getCouponBagCopy(locale);
+  const [itemFilter, setItemFilter] = useState<BagItemFilter>("available");
+  const bagItems: BagDisplayItem[] = [
+    ...bag.coupons.map((item) => ({
+      date: item.claimedAt,
+      item,
+      kind: "coupon" as const,
+    })),
+    ...bag.checks.map((item) => ({
+      date: item.createdAt,
+      item,
+      kind: "check" as const,
+    })),
+  ].sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
+  const filteredItems = bagItems.filter(({ item }) => {
+    if (itemFilter === "all") return true;
+    if (itemFilter === "used") return item.status === "REDEEMED";
+    return item.status === "AVAILABLE";
+  });
+  const filters: Array<{ key: BagItemFilter; label: string }> = [
+    { key: "available", label: copy.bag.available },
+    { key: "used", label: copy.bag.redeemed },
+    { key: "all", label: copy.bag.all },
+  ];
 
   return (
     <ProfilePrivatePageShell
       icon={Package}
       locale={locale}
+      right={<CouponClaimScanner locale={locale} />}
       showIntro={false}
       subtitle={copy.bag.subtitle}
       title={copy.bag.title}
@@ -2380,142 +2572,83 @@ export function ProfileBagPageView({
         />
       ) : null}
 
-      <section className="mt-6 rounded-[1.25rem] bg-white p-4 ring-1 ring-[#D6D5B2]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-normal text-[#6C746A]">
-              {copy.bag.coinBalance}
-            </p>
-            <p className="mt-2 text-3xl font-bold leading-none text-[#111210]">
-              {bag.coinBalance.balance}
-            </p>
-          </div>
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
-            F
-          </span>
+      {notice ? (
+        <div className="mt-6 flex items-center gap-3 rounded-[1rem] bg-[#EAF5E8] px-4 py-3 text-sm font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
+          <BadgeCheck className="h-5 w-5 shrink-0" />
+          <p>
+            {notice === "claimed"
+              ? couponCopy.claimed
+              : couponCopy.alreadyClaimed}
+          </p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#EFEAD7] pt-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold text-[#7A8276]">
-              {copy.bag.coinEarned}
-            </p>
-            <p className="mt-1 truncate text-sm font-bold text-[#156240]">
-              {bag.coinBalance.earnedTotal}
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold text-[#7A8276]">
-              {copy.bag.coinSpent}
-            </p>
-            <p className="mt-1 truncate text-sm font-bold text-[#111210]">
-              {bag.coinBalance.spentTotal}
-            </p>
-          </div>
+      ) : null}
+
+      <section className="mt-6 flex min-h-20 items-center justify-between gap-4 rounded-[1.15rem] bg-white px-4 py-3 ring-1 ring-[#D6D5B2]">
+        <div className="flex min-w-0 items-center gap-3">
+          <FriemiCoinMark />
+          <p className="truncate text-sm font-bold text-[#4F574F]">
+            {copy.bag.coinBalance}
+          </p>
         </div>
+        <p className="friemi-tabular shrink-0 text-2xl font-black text-[#111210]">
+          {bag.coinBalance.balance}
+        </p>
       </section>
 
-      <section className="mt-6">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
-          {copy.bag.checkList}
-        </h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <article className="grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-[#D6D5B2]">
-            <div className="flex items-start justify-between gap-2">
-              <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
-                <Gem className="h-5 w-5" />
-              </span>
-              <span
-                className={cn(
-                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
-                  bag.fragmentBalance.canRedeem
-                    ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                    : "bg-white text-[#6C746A] ring-[#DFDAC5]",
-                )}
-              >
-                {bag.fragmentBalance.canRedeem
-                  ? copy.bag.exchangeReady
-                  : `${bag.fragmentBalance.current}/${bag.fragmentBalance.required}`}
-              </span>
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-[#111210]">
-                {copy.bag.fragment}
-              </p>
-              <p className="mt-1 text-xs font-bold text-[#6C746A]">
-                {copy.bag.redeemedBoxes}:{" "}
-                {bag.fragmentBalance.redeemedBlindBoxCount}
-              </p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#EFEAD7]">
-                <div
-                  className="h-full rounded-full bg-[#156240]"
-                  style={{ width: `${Math.round(fragmentRatio * 100)}%` }}
-                />
-              </div>
-            </div>
-            {bag.fragmentBalance.canRedeem ? (
-              <div className="mt-3">
-                <RedeemBlindBoxForm
-                  canRedeem={bag.fragmentBalance.canRedeem}
+      <div
+        aria-label={copy.bag.checkList}
+        className="mt-5 grid grid-cols-3 rounded-[0.9rem] bg-[#F3F5EF] p-1"
+        role="tablist"
+      >
+        {filters.map((filter) => {
+          const selected = filter.key === itemFilter;
+
+          return (
+            <button
+              aria-selected={selected}
+              className={cn(
+                "h-9 rounded-[0.7rem] px-2 text-xs font-bold transition",
+                selected
+                  ? "bg-white text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]"
+                  : "text-[#6C746A]",
+              )}
+              key={filter.key}
+              onClick={() => setItemFilter(filter.key)}
+              role="tab"
+              type="button"
+            >
+              {filter.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <section className="mt-4">
+        {filteredItems.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredItems.map((displayItem) =>
+              displayItem.kind === "coupon" ? (
+                <CouponBagCard
+                  item={displayItem.item}
+                  key={`coupon-${displayItem.item.id}`}
                   locale={locale}
                 />
-              </div>
-            ) : null}
-          </article>
-
-          {bag.checks.map((check) => {
-            const available = check.status === "AVAILABLE";
-
-            return (
-              <article
-                className={cn(
-                  "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
-                  available ? "ring-[#D6D5B2]" : "opacity-78 ring-[#E8E1CF]",
-                )}
-                key={check.id}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span
-                    className={cn(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] ring-1",
-                      available
-                        ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                        : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
-                    )}
-                  >
-                    <CheckStatusIcon status={check.status} />
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
-                      available
-                        ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                        : "bg-white text-[#6C746A] ring-[#DFDAC5]",
-                    )}
-                  >
-                    {getCheckStatusCopy(check.status, locale)}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
-                    {getCheckTypeCopy(check.type, locale)}
-                  </p>
-                  {check.coinValue > 0 ? (
-                    <p className="mt-1 text-xs font-bold text-[#156240]">
-                      {copy.bag.checkCoinValue} {check.coinValue}{" "}
-                      {copy.bag.coinBalance}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
-                    {getCheckDateCopy(check, locale)}
-                  </p>
-                </div>
-                {check.canRedeemToCoins ? (
-                  <RedeemFriemiCheckForm check={check} locale={locale} />
-                ) : null}
-              </article>
-            );
-          })}
-        </div>
+              ) : (
+                <CheckBagCard
+                  check={displayItem.item}
+                  key={`check-${displayItem.item.id}`}
+                  locale={locale}
+                />
+              ),
+            )}
+          </div>
+        ) : (
+          <div className="grid min-h-28 place-items-center rounded-[1rem] bg-[#F7F8F4] px-4 text-center ring-1 ring-[#E5E2D3]">
+            <p className="text-sm font-semibold text-[#7A8276]">
+              {copy.bag.emptyChecks}
+            </p>
+          </div>
+        )}
       </section>
     </ProfilePrivatePageShell>
   );

@@ -10,13 +10,14 @@ import {
 
 type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
 
-type CreateNotificationInput = {
+export type CreateNotificationInput = {
   actorDisplayName?: string | null;
   actorId?: string | null;
   aaTransactionId?: string | null;
   activityId?: string | null;
   activityAnnouncementId?: string | null;
   charmGiftEventId?: string | null;
+  couponWalletItemId?: string | null;
   dedupe?: boolean;
   dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
@@ -45,6 +46,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.activityId ?? "",
         input.activityAnnouncementId ?? "",
         input.charmGiftEventId ?? "",
+        input.couponWalletItemId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
         input.planetId ?? "",
@@ -61,6 +63,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     activityId: input.activityId ?? null,
     activityAnnouncementId: input.activityAnnouncementId ?? null,
     charmGiftEventId: input.charmGiftEventId ?? null,
+    couponWalletItemId: input.couponWalletItemId ?? null,
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,

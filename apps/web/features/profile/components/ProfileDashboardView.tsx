@@ -27,6 +27,7 @@ import {
   Share2,
   ShieldCheck,
   ShoppingBag,
+  Store,
   Ticket,
   Trophy,
   UsersRound,
@@ -104,6 +105,7 @@ type ProfileDashboardViewProps = {
   isGuestPlaceholder?: boolean;
   isSelf?: boolean;
   locale: string;
+  merchantHref?: string | null;
   profile: PublicProfileViewModel;
   achievementPreviewItems?: PublicAchievementWallItem[];
   publicAchievements?: PublicAchievementWallItem[];
@@ -366,6 +368,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
+      store: "Boutique",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -431,6 +434,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
+      store: "Store",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -495,6 +499,7 @@ function getMobileProfileCopy(locale: string) {
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
+    store: "门店",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -2768,6 +2773,8 @@ function MobileProfileAvatarEditor({
     updateProfileIdentityAction,
     mobileAvatarInitialState,
   );
+  const handledSuccessStateRef =
+    useRef<UpdateProfileIdentityState | null>(null);
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
@@ -2797,9 +2804,11 @@ function MobileProfileAvatarEditor({
   }, [nicknameChangedAt]);
 
   useEffect(() => {
-    if (!state.success) {
+    if (!state.success || handledSuccessStateRef.current === state) {
       return;
     }
+
+    handledSuccessStateRef.current = state;
 
     const savedNickname = state.nickname ?? nicknameValue;
     const savedNicknameChangedAt =
@@ -3011,6 +3020,7 @@ function SelfMobileProfileHome({
   achievementPreviewItems,
   dashboard,
   locale,
+  merchantHref,
   onPresenceStatusChange,
   presenceStatus,
   profile,
@@ -3020,6 +3030,7 @@ function SelfMobileProfileHome({
   achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  merchantHref?: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
@@ -3223,6 +3234,14 @@ function SelfMobileProfileHome({
       </section>
 
       <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
+        {merchantHref ? (
+          <ProfileFeatureLink
+            href={merchantHref}
+            icon={Store}
+            label={copy.store}
+            tone="green"
+          />
+        ) : null}
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/gift-wall")}
           icon={Gift}
@@ -3257,8 +3276,7 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
-          locked
-          lockedLabel={copy.soon}
+          tone="green"
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/account/settings")}
@@ -3344,6 +3362,7 @@ export function ProfileDashboardView({
   isGuestPlaceholder = false,
   isSelf = false,
   locale,
+  merchantHref = null,
   profile,
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
@@ -3401,6 +3420,7 @@ export function ProfileDashboardView({
             achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
+            merchantHref={merchantHref}
             onPresenceStatusChange={setCurrentPresenceStatus}
             presenceStatus={currentPresenceStatus}
             profile={profile}

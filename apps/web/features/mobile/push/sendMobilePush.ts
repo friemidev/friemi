@@ -306,6 +306,20 @@ export async function sendMobilePushForNotification(notificationId: string) {
           quantity: true,
         },
       },
+      couponWalletItem: {
+        select: {
+          coupon: {
+            select: {
+              title: true,
+              merchant: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
       momentId: true,
       planetId: true,
       planet: {
@@ -351,7 +365,8 @@ export async function sendMobilePushForNotification(notificationId: string) {
         })
       : null;
   const messageBody = latestDirectMessage?.body ?? null;
-  const directMessageConversationId = latestDirectMessage?.conversationId ?? null;
+  const directMessageConversationId =
+    latestDirectMessage?.conversationId ?? null;
 
   const devices = await prisma.mobileDevice.findMany({
     where: {
@@ -394,11 +409,13 @@ export async function sendMobilePushForNotification(notificationId: string) {
       actorActivityRole,
       actorName:
         notification.actor?.nickname ?? notification.actorDisplayName ?? null,
+      couponTitle: notification.couponWalletItem?.coupon.title ?? null,
       giftText: notification.charmGiftEvent
         ? formatGiftNotificationText(notification.charmGiftEvent)
         : null,
       locale,
       messageBody,
+      merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
       planetName: notification.planet?.name ?? null,
       type: notification.type,
     });

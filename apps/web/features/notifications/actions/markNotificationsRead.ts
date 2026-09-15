@@ -44,7 +44,9 @@ function trackNotificationOpened({
     | "admin_reports"
     | "messages"
     | "notifications"
-    | "profile";
+    | "profile"
+    | "bag"
+    | "store";
   type: string;
   userProfileId: string;
 }) {
@@ -406,6 +408,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       aaTransactionId: true,
       actorId: true,
       activityId: true,
+      couponWalletItemId: true,
       momentId: true,
       planet: {
         select: {
@@ -415,6 +418,37 @@ export async function openNotificationActivityAction(formData: FormData) {
       type: true,
     },
   });
+
+  if (
+    notification?.type === "COUPON_RECEIVED" ||
+    notification?.type === "COUPON_REDEEMED" ||
+    notification?.type === "COUPON_CLAIMED" ||
+    notification?.type === "COUPON_REDEMPTION_COMPLETED"
+  ) {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+
+    const opensBag =
+      notification.type === "COUPON_RECEIVED" ||
+      notification.type === "COUPON_REDEEMED";
+    const target = opensBag ? "/profile/bag" : "/profile/store";
+    revalidatePath(withLocale(locale, "/notifications"));
+    revalidatePath(withLocale(locale, target));
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: opensBag ? "bag" : "store",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(withLocale(locale, target));
+  }
 
   if (notification?.type === "FRIEND_REQUEST") {
     await prisma.notification.updateMany({
@@ -463,7 +497,9 @@ export async function openNotificationActivityAction(formData: FormData) {
 
     revalidatePath(withLocale(locale, "/notifications"));
     if (notification.planet?.slug) {
-      revalidatePath(withLocale(locale, `/planets/${notification.planet.slug}`));
+      revalidatePath(
+        withLocale(locale, `/planets/${notification.planet.slug}`),
+      );
     }
     trackNotificationOpened({
       locale,

@@ -9,13 +9,20 @@ type ProfileBagPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams: Promise<{
+    couponStatus?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
 
-export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
+export default async function ProfileBagPage({
+  params,
+  searchParams,
+}: ProfileBagPageProps) {
   const { locale } = await params;
+  const { couponStatus } = await searchParams;
   const profile = await ensureCurrentUserProfile(locale, "/profile/bag");
   const result = await getProfileBag(profile.id)
     .then((bag) => ({
@@ -30,6 +37,7 @@ export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
           availableCheckCount: 0,
           blindBoxCheckCount: 0,
           checks: [],
+          coupons: [],
           coinBalance: {
             balance: 0,
             earnedTotal: 0,
@@ -52,6 +60,11 @@ export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
         bag={result.bag}
         hasError={Boolean(result.error)}
         locale={locale}
+        notice={
+          couponStatus === "claimed" || couponStatus === "already-claimed"
+            ? couponStatus
+            : null
+        }
       />
     </PageContainer>
   );

@@ -118,6 +118,12 @@ enum FriemiCheckStatus {
   EXPIRED
 }
 
+enum CouponWalletStatus {
+  AVAILABLE
+  REDEEMED
+  VOIDED
+}
+
 enum FriemiCoinTransactionType {
   CHECK_REDEEMED
   RECHARGE
@@ -177,6 +183,10 @@ enum NotificationType {
   AA_TRANSFER_CONFIRMATION
   AA_DISPUTE_OPENED
   AA_PAYMENT_REQUEST
+  COUPON_RECEIVED
+  COUPON_CLAIMED
+  COUPON_REDEEMED
+  COUPON_REDEMPTION_COMPLETED
 }
 
 enum ReportTargetType {
@@ -387,6 +397,9 @@ model UserProfile {
   submittedReports        Report[]                      @relation("ReportReporter")
   reviewedReports         Report[]                      @relation("ReportReviewer")
   mobileDevices           MobileDevice[]
+  ownedMerchant           Merchant?                     @relation("MerchantOwner")
+  couponWalletItems       CouponWalletItem[]            @relation("CouponWalletOwner")
+  redeemedCouponItems     CouponWalletItem[]            @relation("CouponRedeemer")
   trustScoreEvents        TrustScoreEvent[]
   charmBalance            UserCharmBalance?
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
@@ -806,12 +819,12 @@ model ActivityPriorityOverrideLog {
 }
 
 model Merchant {
-  id             String     @id @default(cuid())
-  slug           String     @unique
+  id             String       @id @default(cuid())
+  slug           String       @unique
   name           String
   description    String
   logoUrl        String?
-  city           String     @default("Paris")
+  city           String       @default("Paris")
   address        String?
   latitude       Float?
   longitude      Float?
@@ -822,15 +835,62 @@ model Merchant {
   externalUrl    String?
   sourcePayload  Json?
   importedAt     DateTime?
-  isActive       Boolean    @default(true)
+  isActive       Boolean      @default(true)
+  ownerProfileId String?      @unique
+  owner          UserProfile? @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
   activities     Activity[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  coupons        Coupon[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([isActive, city])
+  @@index([ownerProfileId, isActive])
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])
+}
+
+model Coupon {
+  id          String             @id @default(cuid())
+  merchantId  String
+  merchant    Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  slug        String             @default("default") @db.VarChar(64)
+  claimToken  String             @unique @db.VarChar(64)
+  title       String             @db.VarChar(120)
+  description String             @db.Text
+  terms       String?            @db.Text
+  validFrom   DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean            @default(true)
+  walletItems CouponWalletItem[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([merchantId, slug])
+  @@index([merchantId, isActive, createdAt])
+  @@index([expiresAt])
+}
+
+model CouponWalletItem {
+  id                  String             @id @default(cuid())
+  couponId            String
+  coupon              Coupon             @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  ownerProfileId      String
+  owner               UserProfile        @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  redemptionToken     String             @unique @db.VarChar(64)
+  status              CouponWalletStatus @default(AVAILABLE)
+  claimedAt           DateTime           @default(now())
+  redeemedAt          DateTime?
+  redeemedByProfileId String?
+  redeemedBy          UserProfile?       @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
+  notifications       Notification[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@unique([couponId, ownerProfileId])
+  @@index([ownerProfileId, status, claimedAt])
+  @@index([couponId, status])
+  @@index([redeemedByProfileId, redeemedAt])
 }
 
 model TopNewsItem {
@@ -1273,6 +1333,8 @@ model Notification {
   planet                 Planet?               @relation(fields: [planetId], references: [id], onDelete: SetNull)
   aaTransactionId        String?
   aaTransaction          AaTransaction?        @relation(fields: [aaTransactionId], references: [id], onDelete: SetNull)
+  couponWalletItemId     String?
+  couponWalletItem       CouponWalletItem?     @relation(fields: [couponWalletItemId], references: [id], onDelete: SetNull)
   dedupeKey              String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
@@ -1286,6 +1348,7 @@ model Notification {
   @@index([momentCommentId])
   @@index([planetId])
   @@index([aaTransactionId])
+  @@index([couponWalletItemId])
 }
 
 model OfficialMessage {

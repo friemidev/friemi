@@ -10,6 +10,8 @@ import {
   Mail,
   MapPin,
   Plus,
+  Store,
+  UserRoundCheck,
   type LucideIcon,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
@@ -23,11 +25,15 @@ import {
   Textarea,
 } from "@chill-club/ui";
 import { FormField } from "@/components/admin/FormField";
-import type { AdminMerchantListItem } from "@/lib/admin-scraper";
+import type {
+  AdminMerchantCandidate,
+  AdminMerchantListItem,
+} from "@/lib/admin-scraper";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type MerchantManagementClientProps = {
+  initialCandidates: AdminMerchantCandidate[];
   initialMerchants: AdminMerchantListItem[];
   locale: string;
 };
@@ -57,10 +63,14 @@ const emptyMerchantForm = (): MerchantFormState => ({
 });
 
 export function MerchantManagementClient({
+  initialCandidates,
   initialMerchants,
   locale,
 }: MerchantManagementClientProps) {
   const [merchants, setMerchants] = useState(initialMerchants);
+  const [candidates, setCandidates] = useState(initialCandidates);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
   const [merchantForm, setMerchantForm] =
     useState<MerchantFormState>(emptyMerchantForm);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,6 +79,45 @@ export function MerchantManagementClient({
     merchantForm.name.trim().length > 0 &&
     merchantForm.description.trim().length > 0 &&
     !isSaving;
+
+  async function assignMerchantAccount(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    if (!selectedProfileId || isAssigning) return;
+    setIsAssigning(true);
+
+    try {
+      const response = await fetch("/api/admin/merchants/assign-owner", {
+        body: JSON.stringify({ profileId: selectedProfileId }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) {
+        toast.error("升级店家失败，请确认账号仍然有效");
+        return;
+      }
+
+      const json = (await response.json()) as {
+        merchant: AdminMerchantListItem;
+      };
+      setMerchants((current) =>
+        [
+          ...current.filter((item) => item.id !== json.merchant.id),
+          json.merchant,
+        ].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setCandidates((current) =>
+        current.filter((item) => item.id !== selectedProfileId),
+      );
+      setSelectedProfileId("");
+      toast.success("账号已升级为店家，默认优惠券已启用");
+    } catch {
+      toast.error("升级店家失败，请稍后重试");
+    } finally {
+      setIsAssigning(false);
+    }
+  }
 
   async function submitMerchantForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,336 +166,394 @@ export function MerchantManagementClient({
   }
 
   return (
-    <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+    <div className="flex flex-col gap-5">
       <Toaster position="top-center" richColors closeButton />
 
-      <Card
-        className={cn(
-          "order-1 shadow-sm",
-          isCreateOpen
-            ? "lg:fixed lg:inset-0 lg:z-50 lg:flex lg:items-center lg:justify-center lg:rounded-none lg:border-0 lg:bg-black/40 lg:p-6 lg:shadow-none"
-            : "lg:hidden",
-        )}
-      >
-        <div
-          className={cn(
-            isCreateOpen &&
-              "lg:max-h-[90vh] lg:w-full lg:max-w-3xl lg:overflow-y-auto lg:rounded-lg lg:border lg:border-zinc-200 lg:bg-white lg:shadow-xl",
-          )}
-        >
-          <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>新增合作商家</CardTitle>
-              <button
-                type="button"
-                aria-expanded={isCreateOpen}
-                onClick={() => setIsCreateOpen((current) => !current)}
-                className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-zinc-950 px-3 text-sm font-medium text-white transition hover:bg-zinc-800"
-              >
-                <span className="lg:hidden">
-                  {isCreateOpen ? "收起" : "展开"}
-                </span>
-                <span className="hidden lg:inline">关闭</span>
-                <ChevronDown
-                  className={
-                    isCreateOpen
-                      ? "h-4 w-4 rotate-180 transition"
-                      : "h-4 w-4 transition"
-                  }
-                  aria-hidden
-                />
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent
-            className={
-              isCreateOpen
-                ? "space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
-                : "hidden space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
-            }
-          >
-            <p className="text-sm leading-6 text-zinc-600">
-              合作商家可以是咖啡馆、展馆、餐厅或活动机构。先维护基础资料，再在活动运营页关联到具体活动。
-            </p>
-            <form className="grid gap-3 sm:gap-4" onSubmit={submitMerchantForm}>
-              <div className="space-y-3">
-                <FormSectionTitle title="基本信息" />
-                <div className="grid gap-3 md:grid-cols-2">
-                  <FormField label="商家名称 *">
-                    <Input
-                      className="h-9"
-                      value={merchantForm.name}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          name: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                  <FormField
-                    label="URL 标识（可选）"
-                    hint="留空时会根据名称自动生成。"
-                  >
-                    <Input
-                      className="h-9"
-                      placeholder="paris-community-cafe"
-                      value={merchantForm.slug}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          slug: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-                <FormField label="商家简介 *">
-                  <Textarea
-                    className="min-h-20"
-                    placeholder="一句话说明商家的类型、特色或适合关联的活动。"
-                    value={merchantForm.description}
-                    onChange={(e) =>
-                      setMerchantForm({
-                        ...merchantForm,
-                        description: e.target.value,
-                      })
-                    }
-                  />
-                </FormField>
-              </div>
-
-              <div className="space-y-3 border-t border-black/5 pt-4">
-                <FormSectionTitle title="地址信息" />
-                <div className="grid gap-3 md:grid-cols-2">
-                  <FormField label="城市">
-                    <Input
-                      className="h-9"
-                      value={merchantForm.city}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          city: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                  <FormField label="地址（可选）">
-                    <Input
-                      className="h-9"
-                      value={merchantForm.address}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          address: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <FormField label="纬度（可选）">
-                    <Input
-                      className="h-9"
-                      inputMode="decimal"
-                      placeholder="48.8566"
-                      value={merchantForm.latitude}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          latitude: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                  <FormField label="经度（可选）">
-                    <Input
-                      className="h-9"
-                      inputMode="decimal"
-                      placeholder="2.3522"
-                      value={merchantForm.longitude}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          longitude: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              <div className="space-y-3 border-t border-black/5 pt-4">
-                <FormSectionTitle title="联系信息" />
-                <div className="grid gap-3 md:grid-cols-2">
-                  <FormField label="官网（可选）">
-                    <Input
-                      className="h-9"
-                      placeholder="https://"
-                      value={merchantForm.websiteUrl}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          websiteUrl: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                  <FormField label="联系邮箱（可选）">
-                    <Input
-                      className="h-9"
-                      type="email"
-                      value={merchantForm.contactEmail}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          contactEmail: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="submit"
-                  disabled={!canCreateMerchant}
-                  className="min-w-32 whitespace-nowrap"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2
-                        className="mr-2 h-4 w-4 animate-spin"
-                        aria-hidden
-                      />
-                      创建中
-                    </>
-                  ) : (
-                    "创建合作商家"
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={isSaving}
-                  className="whitespace-nowrap"
-                  onClick={() => setMerchantForm(emptyMerchantForm())}
-                >
-                  清空
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </div>
-      </Card>
-
-      <Card className="order-2 shadow-sm lg:order-1 lg:min-h-[24rem] lg:flex-1">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>商家列表</CardTitle>
-            <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-              {merchants.length} 个
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-md bg-emerald-50 text-emerald-700">
+              <UserRoundCheck className="h-5 w-5" aria-hidden />
             </span>
+            <div>
+              <CardTitle>升级账号为店家</CardTitle>
+              <p className="mt-1 text-sm text-zinc-500">
+                店家身份独立于管理员权限，管理员账号也可以拥有门店。
+              </p>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-          {merchants.length === 0 ? (
-            <div className="rounded-md border border-dashed border-black/15 bg-paper/70 px-4 py-10 text-center sm:py-12 lg:flex lg:min-h-56 lg:flex-col lg:items-center lg:justify-center">
-              <p className="text-sm font-medium text-ink">暂无商家</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
-                先维护一个合作商家，之后创建或导入活动时可以直接关联到它的主页。
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsCreateOpen(true)}
-                className="mt-5 inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                新增合作商家
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-3 lg:max-h-[calc(100vh-14rem)] lg:overflow-auto lg:pr-1">
-              {merchants.map((merchant) => (
-                <article
-                  key={merchant.id}
-                  className="rounded-md border border-black/10 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 space-y-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white">
-                          <Building2 className="h-4 w-4" aria-hidden />
-                        </span>
-                        <div className="min-w-0">
-                          <h2 className="truncate text-base font-semibold text-ink">
-                            {merchant.name}
-                          </h2>
-                          <p className="truncate text-xs text-zinc-500">
-                            /merchants/{merchant.slug}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="line-clamp-2 text-sm leading-6 text-zinc-600">
-                        {merchant.description}
-                      </p>
-                    </div>
-                    <Link
-                      className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                      href={withLocale(locale, `/merchants/${merchant.slug}`)}
-                    >
-                      查看主页
-                    </Link>
-                  </div>
-
-                  <div className="mt-4 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
-                    <InfoLine
-                      icon={MapPin}
-                      text={merchant.address || merchant.city}
-                    />
-                    {merchant.websiteUrl ? (
-                      <InfoLine icon={Globe2} text={merchant.websiteUrl} />
-                    ) : null}
-                    {merchant.contactEmail ? (
-                      <InfoLine icon={Mail} text={merchant.contactEmail} />
-                    ) : null}
-                    <div className="text-sm font-medium text-zinc-700">
-                      关联活动：{merchant.activityCount}
-                    </div>
-                  </div>
-                </article>
+        <CardContent className="p-4 pt-2 sm:p-5 sm:pt-2">
+          <form
+            className="flex flex-col gap-3 sm:flex-row"
+            onSubmit={assignMerchantAccount}
+          >
+            <select
+              className="h-11 min-w-0 flex-1 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none focus:border-emerald-600"
+              onChange={(event) => setSelectedProfileId(event.target.value)}
+              value={selectedProfileId}
+            >
+              <option value="">选择普通账号</option>
+              {candidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.nickname} ·{" "}
+                  {candidate.friendCode ?? candidate.email ?? candidate.id}
+                </option>
               ))}
-            </div>
-          )}
+            </select>
+            <Button
+              className="h-11 whitespace-nowrap"
+              disabled={!selectedProfileId || isAssigning}
+              type="submit"
+            >
+              {isAssigning ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Store className="mr-2 h-4 w-4" aria-hidden />
+              )}
+              升级并开通门店
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
-      <aside className="order-3 hidden lg:sticky lg:top-24 lg:order-2 lg:block lg:w-72 lg:shrink-0">
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-ink">商家维护</p>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-              {merchants.length} 个
-            </span>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-zinc-600">
-            商家资料只维护一次，后续在活动运营页选择关联，避免每次重复填写地点和联系方式。
-          </p>
-          <div className="mt-5 space-y-3 border-t border-black/5 pt-5">
-            <OperationStep number="1" text="新增合作商家的基础资料" />
-            <OperationStep number="2" text="在活动运营页关联到活动" />
-            <OperationStep number="3" text="前台商家主页自动展示相关活动" />
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white shadow-lg shadow-black/10 transition hover:bg-zinc-800"
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <Card
+          className={cn(
+            "order-1 shadow-sm",
+            isCreateOpen
+              ? "lg:fixed lg:inset-0 lg:z-50 lg:flex lg:items-center lg:justify-center lg:rounded-none lg:border-0 lg:bg-black/40 lg:p-6 lg:shadow-none"
+              : "lg:hidden",
+          )}
+        >
+          <div
+            className={cn(
+              isCreateOpen &&
+                "lg:max-h-[90vh] lg:w-full lg:max-w-3xl lg:overflow-y-auto lg:rounded-lg lg:border lg:border-zinc-200 lg:bg-white lg:shadow-xl",
+            )}
           >
-            <Plus className="h-4 w-4" aria-hidden />
-            新增合作商家
-          </button>
-        </div>
-      </aside>
+            <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>新增合作商家</CardTitle>
+                <button
+                  type="button"
+                  aria-expanded={isCreateOpen}
+                  onClick={() => setIsCreateOpen((current) => !current)}
+                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-zinc-950 px-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+                >
+                  <span className="lg:hidden">
+                    {isCreateOpen ? "收起" : "展开"}
+                  </span>
+                  <span className="hidden lg:inline">关闭</span>
+                  <ChevronDown
+                    className={
+                      isCreateOpen
+                        ? "h-4 w-4 rotate-180 transition"
+                        : "h-4 w-4 transition"
+                    }
+                    aria-hidden
+                  />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent
+              className={
+                isCreateOpen
+                  ? "space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
+                  : "hidden space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
+              }
+            >
+              <p className="text-sm leading-6 text-zinc-600">
+                合作商家可以是咖啡馆、展馆、餐厅或活动机构。先维护基础资料，再在活动运营页关联到具体活动。
+              </p>
+              <form
+                className="grid gap-3 sm:gap-4"
+                onSubmit={submitMerchantForm}
+              >
+                <div className="space-y-3">
+                  <FormSectionTitle title="基本信息" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField label="商家名称 *">
+                      <Input
+                        className="h-9"
+                        value={merchantForm.name}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            name: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField
+                      label="URL 标识（可选）"
+                      hint="留空时会根据名称自动生成。"
+                    >
+                      <Input
+                        className="h-9"
+                        placeholder="paris-community-cafe"
+                        value={merchantForm.slug}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            slug: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                  </div>
+                  <FormField label="商家简介 *">
+                    <Textarea
+                      className="min-h-20"
+                      placeholder="一句话说明商家的类型、特色或适合关联的活动。"
+                      value={merchantForm.description}
+                      onChange={(e) =>
+                        setMerchantForm({
+                          ...merchantForm,
+                          description: e.target.value,
+                        })
+                      }
+                    />
+                  </FormField>
+                </div>
+
+                <div className="space-y-3 border-t border-black/5 pt-4">
+                  <FormSectionTitle title="地址信息" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField label="城市">
+                      <Input
+                        className="h-9"
+                        value={merchantForm.city}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            city: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField label="地址（可选）">
+                      <Input
+                        className="h-9"
+                        value={merchantForm.address}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            address: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField label="纬度（可选）">
+                      <Input
+                        className="h-9"
+                        inputMode="decimal"
+                        placeholder="48.8566"
+                        value={merchantForm.latitude}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            latitude: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField label="经度（可选）">
+                      <Input
+                        className="h-9"
+                        inputMode="decimal"
+                        placeholder="2.3522"
+                        value={merchantForm.longitude}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            longitude: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                  </div>
+                </div>
+
+                <div className="space-y-3 border-t border-black/5 pt-4">
+                  <FormSectionTitle title="联系信息" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField label="官网（可选）">
+                      <Input
+                        className="h-9"
+                        placeholder="https://"
+                        value={merchantForm.websiteUrl}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            websiteUrl: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField label="联系邮箱（可选）">
+                      <Input
+                        className="h-9"
+                        type="email"
+                        value={merchantForm.contactEmail}
+                        onChange={(e) =>
+                          setMerchantForm({
+                            ...merchantForm,
+                            contactEmail: e.target.value,
+                          })
+                        }
+                      />
+                    </FormField>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="submit"
+                    disabled={!canCreateMerchant}
+                    className="min-w-32 whitespace-nowrap"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2
+                          className="mr-2 h-4 w-4 animate-spin"
+                          aria-hidden
+                        />
+                        创建中
+                      </>
+                    ) : (
+                      "创建合作商家"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isSaving}
+                    className="whitespace-nowrap"
+                    onClick={() => setMerchantForm(emptyMerchantForm())}
+                  >
+                    清空
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </div>
+        </Card>
+
+        <Card className="order-2 shadow-sm lg:order-1 lg:min-h-[24rem] lg:flex-1">
+          <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>商家列表</CardTitle>
+              <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+                {merchants.length} 个
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
+            {merchants.length === 0 ? (
+              <div className="rounded-md border border-dashed border-black/15 bg-paper/70 px-4 py-10 text-center sm:py-12 lg:flex lg:min-h-56 lg:flex-col lg:items-center lg:justify-center">
+                <p className="text-sm font-medium text-ink">暂无商家</p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
+                  先维护一个合作商家，之后创建或导入活动时可以直接关联到它的主页。
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(true)}
+                  className="mt-5 inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  新增合作商家
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:max-h-[calc(100vh-14rem)] lg:overflow-auto lg:pr-1">
+                {merchants.map((merchant) => (
+                  <article
+                    key={merchant.id}
+                    className="rounded-md border border-black/10 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white">
+                            <Building2 className="h-4 w-4" aria-hidden />
+                          </span>
+                          <div className="min-w-0">
+                            <h2 className="truncate text-base font-semibold text-ink">
+                              {merchant.name}
+                            </h2>
+                            <p className="truncate text-xs text-zinc-500">
+                              /merchants/{merchant.slug}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="line-clamp-2 text-sm leading-6 text-zinc-600">
+                          {merchant.description}
+                        </p>
+                      </div>
+                      <Link
+                        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                        href={withLocale(locale, `/merchants/${merchant.slug}`)}
+                      >
+                        查看主页
+                      </Link>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
+                      <InfoLine
+                        icon={MapPin}
+                        text={merchant.address || merchant.city}
+                      />
+                      {merchant.websiteUrl ? (
+                        <InfoLine icon={Globe2} text={merchant.websiteUrl} />
+                      ) : null}
+                      {merchant.contactEmail ? (
+                        <InfoLine icon={Mail} text={merchant.contactEmail} />
+                      ) : null}
+                      <div className="text-sm font-medium text-zinc-700">
+                        关联活动：{merchant.activityCount}
+                      </div>
+                      {merchant.owner ? (
+                        <div className="text-sm font-medium text-emerald-700">
+                          店家账号：{merchant.owner.nickname}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <aside className="order-3 hidden lg:sticky lg:top-24 lg:order-2 lg:block lg:w-72 lg:shrink-0">
+          <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-ink">商家维护</p>
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+                {merchants.length} 个
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              商家资料只维护一次，后续在活动运营页选择关联，避免每次重复填写地点和联系方式。
+            </p>
+            <div className="mt-5 space-y-3 border-t border-black/5 pt-5">
+              <OperationStep number="1" text="新增合作商家的基础资料" />
+              <OperationStep number="2" text="在活动运营页关联到活动" />
+              <OperationStep number="3" text="前台商家主页自动展示相关活动" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white shadow-lg shadow-black/10 transition hover:bg-zinc-800"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              新增合作商家
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
