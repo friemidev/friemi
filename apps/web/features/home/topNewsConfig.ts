@@ -22,7 +22,8 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
     href: "/top-news/werewolf",
     id: "werewolf-guide",
-    image: "/game-tools/werewolf/recto/werewolf-promo-landscape.png",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/09464e14-8214-45d0-ad9b-916cfacaf64d.png",
     title: {
       en: "Werewolf game setup guide",
       fr: "Guide de lancement Loups-garous",
@@ -30,9 +31,21 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
     },
   },
   {
+    href: "/top-news/host-recruitment",
+    id: "founding-host-recruitment",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/c5550d08-54d0-4c63-9232-99cca7fb832e.jpg",
+    title: {
+      en: "Become a Friemi Founding Host",
+      fr: "Devenez hôte fondateur Friemi",
+      "zh-CN": "Friemi 共创主理人招募",
+    },
+  },
+  {
     href: "/top-news/friemi",
     id: "friemi-intro",
-    image: "/home/friemi_intro.png",
+    image:
+      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/ab4ce5ac-1ac3-44a2-aab2-e648492b3e94.png",
     title: {
       en: "Discover Friemi",
       fr: "Découvrez Friemi",
