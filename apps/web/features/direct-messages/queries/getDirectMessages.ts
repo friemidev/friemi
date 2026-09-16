@@ -50,6 +50,10 @@ const messageSelect = {
   senderId: true,
   body: true,
   imageUrls: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -192,6 +196,12 @@ export type DirectMessageThreadItemViewModel = {
   senderId: string;
   body: string;
   imageUrls: string[];
+  replyTo: {
+    body: string;
+    hasImage: boolean;
+    messageId: string;
+    senderName: string;
+  } | null;
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
@@ -355,6 +365,15 @@ function mapConversationThread(
       senderId: message.senderId,
       body: message.body,
       imageUrls: message.imageUrls,
+      replyTo:
+        message.replyToMessageId && message.replyToSenderName
+          ? {
+              body: message.replyToBody ?? "",
+              hasImage: message.replyToHasImage,
+              messageId: message.replyToMessageId,
+              senderName: message.replyToSenderName,
+            }
+          : null,
       readAt: message.readAt?.toISOString() ?? null,
       createdAt: message.createdAt.toISOString(),
       isMine: message.senderId === currentUserProfileId,

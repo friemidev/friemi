@@ -37,7 +37,8 @@ export type PlanetChatErrorCode =
   | "CHAT_ACCESS_DENIED"
   | "INVALID_MESSAGE"
   | "INVALID_MENTION"
-  | "MENTION_ALL_FORBIDDEN";
+  | "MENTION_ALL_FORBIDDEN"
+  | "MESSAGE_NOT_FOUND";
 
 export class PlanetChatDomainError extends Error {
   code: PlanetChatErrorCode;
@@ -569,6 +570,7 @@ export async function sendPlanetChatMessage({
   mentionsEveryone = false,
   planetId,
   profileId,
+  replyToMessageId,
 }: {
   content: string;
   imageUrls?: string[];
@@ -576,6 +578,7 @@ export async function sendPlanetChatMessage({
   mentionsEveryone?: boolean;
   planetId: string;
   profileId: string;
+  replyToMessageId?: string | null;
 }) {
   const payload = normalizePlanetChatPayload(content, imageUrls);
 
@@ -589,6 +592,29 @@ export async function sendPlanetChatMessage({
       profileId,
       tx,
     });
+    const replySource = replyToMessageId
+      ? await tx.planetMessage.findFirst({
+          where: {
+            id: replyToMessageId,
+            planetId,
+          },
+          select: {
+            author: {
+              select: {
+                friendCode: true,
+                nickname: true,
+              },
+            },
+            content: true,
+            id: true,
+            imageUrls: true,
+          },
+        })
+      : null;
+
+    if (replyToMessageId && !replySource) {
+      throw new PlanetChatDomainError("MESSAGE_NOT_FOUND");
+    }
 
     const message = await tx.planetMessage.create({
       data: {
@@ -599,6 +625,14 @@ export async function sendPlanetChatMessage({
         mentionedProfileIds: mentions.mentionedProfileIds,
         mentionsEveryone: mentions.mentionsEveryone,
         planetId,
+        replyToBody: replySource?.content ?? null,
+        replyToHasImage: Boolean(replySource?.imageUrls.length),
+        replyToMessageId: replySource?.id ?? null,
+        replyToSenderName: replySource
+          ? replySource.author.nickname.trim() ||
+            replySource.author.friendCode ||
+            "Friemi"
+          : null,
       },
       select: {
         createdAt: true,

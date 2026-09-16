@@ -53,7 +53,7 @@ export const initialFriemiCoinBalanceSourceKey =
   "initial-friemi-coin-balance";
 export const blindBoxFragmentExchangeCount = 10;
 export const successfulActivityFragmentReward = 1;
-export const welcomeFriemiCheckCoinValue = 500;
+export const welcomeFriemiCheckCoinValue = 200;
 export const blindBoxFriemiCheckCoinValue = 0;
 
 export type FriemiCoinRechargePlan = {

@@ -3487,7 +3487,7 @@ function FootprintsMessageRow({
 export function FootprintsMobilePage({
   activityRoomChats: initialActivityRoomChats,
   initialMomentScope = "PUBLIC",
-  initialTab = "moment",
+  initialTab = "message",
   locale,
   messageFriends: initialMessageFriends,
   officialMessages: initialOfficialMessages,

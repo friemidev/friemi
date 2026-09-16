@@ -27,8 +27,11 @@ export type ProfileBagCheckItem = {
 export type ProfileBagCouponItem = {
   claimedAt: string;
   coupon: {
+    accentColor: string;
+    backgroundColor: string;
     description: string;
     expiresAt: string | null;
+    foregroundColor: string;
     merchant: {
       logoUrl: string | null;
       name: string;
@@ -158,8 +161,11 @@ export async function getProfileBag(profileId: string) {
         status: true,
         coupon: {
           select: {
+            accentColor: true,
+            backgroundColor: true,
             description: true,
             expiresAt: true,
+            foregroundColor: true,
             terms: true,
             title: true,
             merchant: {

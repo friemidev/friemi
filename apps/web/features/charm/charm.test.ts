@@ -133,7 +133,7 @@ test("blind box fragment constants match the MVP rule", () => {
 
 test("welcome Friemi check redeems to Friemi coins", () => {
   assert.equal(initialFriemiCoinBalanceAmount, 100);
-  assert.equal(getFriemiCheckCoinValue("WELCOME"), 500);
+  assert.equal(getFriemiCheckCoinValue("WELCOME"), 200);
   assert.equal(getFriemiCheckCoinValue("WELCOME", 300), 300);
   assert.equal(getFriemiCheckCoinValue("BLIND_BOX"), 0);
 });

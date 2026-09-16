@@ -76,7 +76,7 @@ export default async function FootprintsPage({
   const profile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
-  const initialTab = requestedTab ?? "moment";
+  const initialTab = requestedTab ?? "message";
   const viewerProfileId = profile?.id ?? null;
   const [
     momentsResult,
@@ -232,9 +232,7 @@ export default async function FootprintsPage({
           moment.images.map((image) => image.url),
         )
       : initialTab === "message"
-        ? messageFriendsResult.friends.map(
-            (friend) => friend.friend.avatarUrl,
-          )
+        ? messageFriendsResult.friends.map((friend) => friend.friend.avatarUrl)
         : planetsResult.page.items.map((planet) => planet.coverImageUrl);
 
   return (

@@ -22,7 +22,6 @@ import {
   MoreHorizontal,
   Package,
   PencilLine,
-  ScanLine,
   Settings,
   Share2,
   ShieldCheck,
@@ -36,6 +35,7 @@ import {
 } from "lucide-react";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { CouponClaimScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
   updateProfileRemarkAction,
   type UpdateProfileRemarkState,
@@ -45,11 +45,6 @@ import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
-import {
-  canUseNativeAndroidQrScanner,
-  parseAndroidQrScanPayload,
-  resolveGlobalQrScanDestination,
-} from "@/features/scan/globalQrScanner";
 import {
   charmLevels,
   getCharmLevelDescription,
@@ -1889,11 +1884,11 @@ function ProfileRemarkEditor({
   profile: PublicProfileViewModel;
 }) {
   const copy = getProfileRemarkCopy(locale);
+  const router = useRouter();
   const [state, formAction] = useActionState(
     updateProfileRemarkAction,
     profileRemarkInitialState,
   );
-  const router = useRouter();
   const [value, setValue] = useState(profile.remarkName ?? "");
   const savedRemark = state.ok
     ? (state.remarkName ?? "")
@@ -2773,8 +2768,9 @@ function MobileProfileAvatarEditor({
     updateProfileIdentityAction,
     mobileAvatarInitialState,
   );
-  const handledSuccessStateRef =
-    useRef<UpdateProfileIdentityState | null>(null);
+  const handledSuccessStateRef = useRef<UpdateProfileIdentityState | null>(
+    null,
+  );
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
@@ -3038,7 +3034,6 @@ function SelfMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const router = useRouter();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
   const [currentNickname, setCurrentNickname] = useState(profile.nickname);
   const [currentNicknameChangedAt, setCurrentNicknameChangedAt] = useState(
@@ -3048,7 +3043,6 @@ function SelfMobileProfileHome({
     normalizeProfileHomeCity(profile.homeCity),
   );
   const [copied, setCopied] = useState(false);
-  const nativeQrScanPendingRef = useRef(false);
 
   useEffect(() => {
     setCurrentAvatarUrl(profile.avatarUrl);
@@ -3071,79 +3065,6 @@ function SelfMobileProfileHome({
     await navigator.clipboard.writeText(profile.friendCode);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
-  };
-
-  const handleGlobalQrValue = (rawValue: string) => {
-    const destination = resolveGlobalQrScanDestination({ locale, rawValue });
-
-    if (!destination) {
-      window.alert(copy.scanUnknown);
-      return;
-    }
-
-    if (destination.kind === "internal") {
-      router.push(destination.href);
-      return;
-    }
-
-    if (typeof window.FriemiAndroid?.openExternal === "function") {
-      window.FriemiAndroid.openExternal(destination.href);
-      return;
-    }
-
-    window.location.assign(destination.href);
-  };
-
-  useEffect(() => {
-    function handleAndroidQrScan(event: Event) {
-      if (!nativeQrScanPendingRef.current) {
-        return;
-      }
-
-      nativeQrScanPendingRef.current = false;
-      const payload = parseAndroidQrScanPayload(
-        (event as CustomEvent<unknown>).detail,
-      );
-
-      if (!payload?.ok || !payload.rawValue) {
-        if (payload?.reason !== "CANCELLED") {
-          window.alert(copy.scanUnknown);
-        }
-
-        return;
-      }
-
-      handleGlobalQrValue(payload.rawValue);
-    }
-
-    window.addEventListener("friemi:android-qr-scan", handleAndroidQrScan);
-
-    return () => {
-      window.removeEventListener("friemi:android-qr-scan", handleAndroidQrScan);
-    };
-  }, [copy.scanUnknown, locale, router]);
-
-  const openGlobalQrScanner = () => {
-    if (!canUseNativeAndroidQrScanner()) {
-      window.alert(copy.scanUnavailable);
-      return;
-    }
-
-    nativeQrScanPendingRef.current = true;
-
-    try {
-      const payload = parseAndroidQrScanPayload(
-        window.FriemiAndroid?.scanQrCode?.(),
-      );
-
-      if (payload?.supported === false || payload?.ok === false) {
-        nativeQrScanPendingRef.current = false;
-        window.alert(copy.scanUnavailable);
-      }
-    } catch {
-      nativeQrScanPendingRef.current = false;
-      window.alert(copy.scanUnavailable);
-    }
   };
 
   return (
@@ -3217,15 +3138,7 @@ function SelfMobileProfileHome({
             </div>
 
             <div className="flex shrink-0 items-start gap-2">
-              <button
-                type="button"
-                aria-label={copy.scan}
-                title={copy.scan}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-                onClick={openGlobalQrScanner}
-              >
-                <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-              </button>
+              <CouponClaimScanner locale={locale} />
             </div>
           </div>
         </div>

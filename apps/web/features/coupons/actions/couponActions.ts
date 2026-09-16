@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { redeemCouponByToken } from "@/features/coupons/services/couponService";
+import {
+  generateCouponClaimCode,
+  generateCouponRedemptionToken,
+  redeemCouponByToken,
+} from "@/features/coupons/services/couponService";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -19,6 +23,18 @@ export type RedeemCouponState = {
     | "FORBIDDEN"
     | "INVALID"
     | "UNAVAILABLE";
+};
+
+export type GenerateCouponClaimCodeState = {
+  couponId?: string;
+  path?: string;
+  status?: "FORBIDDEN" | "GENERATED" | "INVALID" | "UNAVAILABLE";
+};
+
+export type GenerateCouponRedemptionTokenState = {
+  expiresAt?: string;
+  path?: string;
+  status?: "FORBIDDEN" | "GENERATED" | "INVALID" | "UNAVAILABLE";
 };
 
 const updateStoreSchema = z.object({
@@ -65,6 +81,55 @@ export async function updateMerchantStoreAction(
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/profile/store"));
   return { success: true };
+}
+
+export async function generateCouponClaimCodeAction(
+  _previousState: GenerateCouponClaimCodeState,
+  formData: FormData,
+): Promise<GenerateCouponClaimCodeState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const couponId = getString(formData, "couponId");
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    "/profile/store",
+  );
+  const result = await generateCouponClaimCode({
+    couponId,
+    profileId: profile.id,
+  });
+
+  if (result.status !== "GENERATED") return { status: result.status };
+
+  revalidatePath(withLocale(locale, "/profile/store"));
+  return {
+    couponId: result.couponId,
+    path: withLocale(locale, `/coupons/claim/${result.token}`),
+    status: result.status,
+  };
+}
+
+export async function generateCouponRedemptionTokenAction(
+  _previousState: GenerateCouponRedemptionTokenState,
+  formData: FormData,
+): Promise<GenerateCouponRedemptionTokenState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const itemId = getString(formData, "itemId");
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    `/profile/bag/coupons/${itemId}`,
+  );
+  const result = await generateCouponRedemptionToken({
+    itemId,
+    profileId: profile.id,
+  });
+
+  if (result.status !== "GENERATED") return { status: result.status };
+
+  return {
+    expiresAt: result.expiresAt.toISOString(),
+    path: withLocale(locale, `/coupons/redeem/${result.token}`),
+    status: result.status,
+  };
 }
 
 export async function redeemCouponAction(

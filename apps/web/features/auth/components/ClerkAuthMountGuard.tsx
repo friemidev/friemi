@@ -31,7 +31,8 @@ type FriemiNavigationPlugin = {
   signInWithGoogle: () => Promise<NativeGoogleSignInResult>;
 };
 
-const FriemiNavigation = registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
+const FriemiNavigation =
+  registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
 
 type ClerkAuthMountGuardProps = {
   exitUrl: string;
@@ -78,7 +79,8 @@ const sharedAuthAppearance = {
     header: "mb-5 text-center",
     headerSubtitle: "mt-2 text-sm font-semibold text-[#156240]/68",
     headerTitle: "text-2xl font-bold tracking-normal text-[#1D1D1B]",
-    identityPreview: "rounded-[1rem] border border-[#D6D5B2]/70 bg-[#FEFFF9]/80",
+    identityPreview:
+      "rounded-[1rem] border border-[#D6D5B2]/70 bg-[#FEFFF9]/80",
     main: "w-full",
     rootBox: "w-full",
     socialButtonsBlockButton:
@@ -132,13 +134,7 @@ export function ClerkAuthMountGuard({
     }, 80);
 
     return () => window.clearTimeout(completionTimer);
-  }, [
-    forceRedirectUrl,
-    isAuthLoaded,
-    isFriemiNativeApp,
-    isSignedIn,
-    mounted,
-  ]);
+  }, [forceRedirectUrl, isAuthLoaded, isFriemiNativeApp, isSignedIn, mounted]);
 
   const authAppearance = {
     ...sharedAuthAppearance,
@@ -159,11 +155,7 @@ export function ClerkAuthMountGuard({
   if (!mounted) {
     return (
       <div className="flex min-h-[32rem] w-full items-center justify-center">
-        <BrandLoader
-          label={getLoadingLabel(locale)}
-          showLabel
-          size="md"
-        />
+        <BrandLoader label={getLoadingLabel(locale)} showLabel size="md" />
       </div>
     );
   }
@@ -279,7 +271,9 @@ function NativeIOSAuthButtons({
   mode: "sign-in" | "sign-up";
 }) {
   const { isLoaded, signIn, setActive } = useSignIn();
-  const [busyProvider, setBusyProvider] = useState<NativeAuthProvider | null>(null);
+  const [busyProvider, setBusyProvider] = useState<NativeAuthProvider | null>(
+    null,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const copy = getNativeAuthCopy(locale, mode);
@@ -322,9 +316,11 @@ function NativeIOSAuthButtons({
         ticket: payload.ticket,
       });
 
-      if (signInAttempt.status === "complete" && signInAttempt.createdSessionId) {
+      if (
+        signInAttempt.status === "complete" &&
+        signInAttempt.createdSessionId
+      ) {
         await setActive({ session: signInAttempt.createdSessionId });
-        window.location.assign(forceRedirectUrl);
         return;
       }
 
@@ -394,7 +390,8 @@ function getNativeAuthCopy(locale: string, mode: "sign-in" | "sign-up") {
       error: "La connexion a échoué. Réessayez plus tard.",
       google: "Continuer avec Google",
       loading: "Ouverture...",
-      title: mode === "sign-up" ? "Inscription dans l'app" : "Connexion dans l'app",
+      title:
+        mode === "sign-up" ? "Inscription dans l'app" : "Connexion dans l'app",
     };
   }
 

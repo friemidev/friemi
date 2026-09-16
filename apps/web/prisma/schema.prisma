@@ -124,6 +124,12 @@ enum CouponWalletStatus {
   VOIDED
 }
 
+enum CouponClaimCodeStatus {
+  ACTIVE
+  CLAIMED
+  REVOKED
+}
+
 enum FriemiCoinTransactionType {
   CHECK_REDEEMED
   RECHARGE
@@ -400,6 +406,7 @@ model UserProfile {
   ownedMerchant           Merchant?                     @relation("MerchantOwner")
   couponWalletItems       CouponWalletItem[]            @relation("CouponWalletOwner")
   redeemedCouponItems     CouponWalletItem[]            @relation("CouponRedeemer")
+  claimedCouponCodes      CouponClaimCode[]             @relation("CouponClaimCodeClaimer")
   trustScoreEvents        TrustScoreEvent[]
   charmBalance            UserCharmBalance?
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
@@ -489,6 +496,10 @@ model PlanetMessage {
   mentionedProfileIds String[]    @default([])
   mentionLabels       String[]    @default([])
   mentionsEveryone    Boolean     @default(false)
+  replyToMessageId    String?
+  replyToSenderName   String?
+  replyToBody         String?     @db.Text
+  replyToHasImage     Boolean     @default(false)
   planet              Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
   author              UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt           DateTime    @default(now())
@@ -704,6 +715,10 @@ model ActivityRoomMessage {
   mentionedProfileIds String[]     @default([])
   mentionLabels       String[]     @default([])
   mentionsEveryone    Boolean      @default(false)
+  replyToMessageId    String?
+  replyToSenderName   String?
+  replyToBody         String?      @db.Text
+  replyToHasImage     Boolean      @default(false)
   deletedAt           DateTime?
   deletedById         String?
   activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
@@ -851,46 +866,69 @@ model Merchant {
 }
 
 model Coupon {
-  id          String             @id @default(cuid())
-  merchantId  String
-  merchant    Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  slug        String             @default("default") @db.VarChar(64)
-  claimToken  String             @unique @db.VarChar(64)
-  title       String             @db.VarChar(120)
-  description String             @db.Text
-  terms       String?            @db.Text
-  validFrom   DateTime?
-  expiresAt   DateTime?
-  isActive    Boolean            @default(true)
-  walletItems CouponWalletItem[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  merchantId      String
+  merchant        Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  slug            String             @default("default") @db.VarChar(64)
+  title           String             @db.VarChar(120)
+  description     String             @db.Text
+  terms           String?            @db.Text
+  backgroundColor String             @default("#0F6D46") @db.VarChar(7)
+  foregroundColor String             @default("#FFFFFF") @db.VarChar(7)
+  accentColor     String             @default("#F1F2E3") @db.VarChar(7)
+  validFrom       DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean            @default(true)
+  claimCodes      CouponClaimCode[]
+  walletItems     CouponWalletItem[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([merchantId, slug])
   @@index([merchantId, isActive, createdAt])
   @@index([expiresAt])
 }
 
-model CouponWalletItem {
-  id                  String             @id @default(cuid())
+model CouponClaimCode {
+  id                  String                @id @default(cuid())
   couponId            String
-  coupon              Coupon             @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  ownerProfileId      String
-  owner               UserProfile        @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
-  redemptionToken     String             @unique @db.VarChar(64)
-  status              CouponWalletStatus @default(AVAILABLE)
-  claimedAt           DateTime           @default(now())
-  redeemedAt          DateTime?
-  redeemedByProfileId String?
-  redeemedBy          UserProfile?       @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
-  notifications       Notification[]
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  coupon              Coupon                @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  token               String                @unique @db.VarChar(64)
+  status              CouponClaimCodeStatus @default(ACTIVE)
+  claimedByProfileId  String?
+  claimedBy           UserProfile?          @relation("CouponClaimCodeClaimer", fields: [claimedByProfileId], references: [id], onDelete: SetNull)
+  claimedWalletItemId String?               @unique
+  claimedWalletItem   CouponWalletItem?     @relation(fields: [claimedWalletItemId], references: [id], onDelete: SetNull)
+  claimedAt           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
-  @@unique([couponId, ownerProfileId])
+  @@index([couponId, status, createdAt])
+  @@index([claimedByProfileId, claimedAt])
+}
+
+model CouponWalletItem {
+  id                       String             @id @default(cuid())
+  couponId                 String
+  coupon                   Coupon             @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  ownerProfileId           String
+  owner                    UserProfile        @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  redemptionToken          String?            @unique @db.VarChar(64)
+  redemptionTokenExpiresAt DateTime?
+  status                   CouponWalletStatus @default(AVAILABLE)
+  claimedAt                DateTime           @default(now())
+  redeemedAt               DateTime?
+  redeemedByProfileId      String?
+  redeemedBy               UserProfile?       @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
+  notifications            Notification[]
+  claimCode                CouponClaimCode?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
   @@index([ownerProfileId, status, claimedAt])
   @@index([couponId, status])
   @@index([redeemedByProfileId, redeemedAt])
+  @@index([redemptionTokenExpiresAt])
 }
 
 model TopNewsItem {
@@ -1804,19 +1842,23 @@ model ConversationPreference {
 }
 
 model DirectMessage {
-  id             String                  @id @default(cuid())
-  conversationId String
-  senderId       String
-  activityId     String?
-  body           String
-  imageUrls      String[]                @default([])
-  readAt         DateTime?
-  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  activity       Activity?               @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  deletions      DirectMessageDeletion[]
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  id                String                  @id @default(cuid())
+  conversationId    String
+  senderId          String
+  activityId        String?
+  body              String
+  imageUrls         String[]                @default([])
+  replyToMessageId  String?
+  replyToSenderName String?
+  replyToBody       String?                 @db.Text
+  replyToHasImage   Boolean                 @default(false)
+  readAt            DateTime?
+  conversation      Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  activity          Activity?               @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  deletions         DirectMessageDeletion[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
 
   @@index([conversationId, createdAt])
   @@index([conversationId, createdAt, id])

@@ -84,6 +84,7 @@ type MobileLobbyV23Copy = {
   hostedBadge: string;
   participants: string;
   retryLabel: string;
+  showEndedLabel: string;
   tabs: Record<MobileLobbyV23TabId, string>;
   title: string;
 };
@@ -308,6 +309,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Créé",
       participants: "pers.",
       retryLabel: "Réessayer",
+      showEndedLabel: "Afficher les sorties terminées",
       tabs: {
         nearby: "Proche",
         friends: "Suivis",
@@ -337,6 +339,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Host",
       participants: "people",
       retryLabel: "Retry",
+      showEndedLabel: "Show ended plans",
       tabs: {
         nearby: "Nearby",
         friends: "Following",
@@ -363,6 +366,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     hostedBadge: "我发起的",
     participants: "人",
     retryLabel: "重试",
+    showEndedLabel: "显示已结束",
     tabs: {
       nearby: "附近",
       friends: "关注",
@@ -386,9 +390,11 @@ async function fetchMobileLobbyPage(
   tab: MobileLobbyV23TabId,
   page: number,
   signal: AbortSignal,
+  status: "ongoing" | "ended" = "ongoing",
 ) {
   const params = new URLSearchParams({
     page: String(page),
+    status,
     tab,
   });
   const response = await fetch(`/api/lobby/mobile?${params.toString()}`, {
@@ -710,14 +716,28 @@ export function MobileLobbyV23View({
       [activeTab]: initialTabPage,
     };
   });
+  const [endedTabPages, setEndedTabPages] = useState<
+    Partial<Record<MobileLobbyV23TabId, MobileLobbyTabPageState>>
+  >({});
+  const [showEndedTabs, setShowEndedTabs] = useState<
+    Partial<Record<MobileLobbyV23TabId, boolean>>
+  >({});
   const [loadingTabs, setLoadingTabs] = useState<
+    Partial<Record<MobileLobbyV23TabId, boolean>>
+  >({});
+  const [loadingEndedTabs, setLoadingEndedTabs] = useState<
     Partial<Record<MobileLobbyV23TabId, boolean>>
   >({});
   const [failedTabs, setFailedTabs] = useState<
     Partial<Record<MobileLobbyV23TabId, boolean>>
   >({});
+  const [failedEndedTabs, setFailedEndedTabs] = useState<
+    Partial<Record<MobileLobbyV23TabId, boolean>>
+  >({});
   const tabPagesRef = useRef(tabPages);
+  const endedTabPagesRef = useRef(endedTabPages);
   const inFlightTabsRef = useRef(new Set<MobileLobbyV23TabId>());
+  const inFlightEndedTabsRef = useRef(new Set<MobileLobbyV23TabId>());
   const hasScheduledWarmupRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const categoryFilterOptions = useMemo<MobileLobbyV23CategoryFilterOption[]>(
@@ -746,13 +766,34 @@ export function MobileLobbyV23View({
     ? selectedTab
     : "nearby";
   const activePage = tabPages[displayedActiveTab];
-  const visibleActivities = filterMobileLobbyActivitiesByPrice(
+  const endedPage = endedTabPages[displayedActiveTab];
+  const showEnded = Boolean(showEndedTabs[displayedActiveTab]);
+  const visibleActiveActivities = filterMobileLobbyActivitiesByPrice(
     filterMobileLobbyActivitiesByCategory(
-      activePage?.activities ?? [],
+      (activePage?.activities ?? []).filter((activity) => {
+        const status = getActivityDisplayStatus(activity);
+        return status !== "ENDED" && status !== "CANCELLED";
+      }),
       activeCategory,
     ),
     initialFreeOnly,
   );
+  const visibleEndedActivities = showEnded
+    ? filterMobileLobbyActivitiesByPrice(
+        filterMobileLobbyActivitiesByCategory(
+          (endedPage?.activities ?? []).filter((activity) => {
+            const status = getActivityDisplayStatus(activity);
+            return status === "ENDED" || status === "CANCELLED";
+          }),
+          activeCategory,
+        ),
+        initialFreeOnly,
+      )
+    : [];
+  const visibleActivities = [
+    ...visibleActiveActivities,
+    ...visibleEndedActivities,
+  ];
   const canShowColdStartSwipe =
     displayedActiveTab !== "friends" && displayedActiveTab !== "mine";
   const shouldShowColdStartSwipe =
@@ -862,6 +903,76 @@ export function MobileLobbyV23View({
     },
     [tabCacheKey],
   );
+  const loadEndedTabPage = useCallback(
+    async (tab: MobileLobbyV23TabId, loadNext = false) => {
+      const currentPage = endedTabPagesRef.current[tab];
+      const nextPage = loadNext ? (currentPage?.page ?? 0) + 1 : 1;
+
+      if (
+        inFlightEndedTabsRef.current.has(tab) ||
+        (loadNext && !currentPage?.hasMore)
+      ) {
+        return;
+      }
+
+      inFlightEndedTabsRef.current.add(tab);
+      setLoadingEndedTabs((current) => ({ ...current, [tab]: true }));
+      setFailedEndedTabs((current) => ({ ...current, [tab]: false }));
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15_000);
+
+      try {
+        const result = await fetchMobileLobbyPage(
+          tab,
+          nextPage,
+          controller.signal,
+          "ended",
+        );
+        const previous = endedTabPagesRef.current[tab];
+        const nextTabPage = {
+          activities: loadNext
+            ? dedupeActivities([
+                ...(previous?.activities ?? []),
+                ...result.activities,
+              ])
+            : dedupeActivities(result.activities),
+          hasMore: result.hasMore,
+          page: result.page,
+        };
+        const nextState = {
+          ...endedTabPagesRef.current,
+          [tab]: nextTabPage,
+        };
+
+        endedTabPagesRef.current = nextState;
+        setEndedTabPages(nextState);
+        retainImageSources(
+          nextTabPage.activities.map((activity) =>
+            getActivityCoverThumbnailUrl(
+              getActivityListCoverSrc(
+                activity.coverImageUrl,
+                activity.category,
+              ),
+              192,
+            ),
+          ),
+          4,
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load ended mobile lobby plans", error);
+        }
+
+        setFailedEndedTabs((current) => ({ ...current, [tab]: true }));
+      } finally {
+        window.clearTimeout(timeoutId);
+        inFlightEndedTabsRef.current.delete(tab);
+        setLoadingEndedTabs((current) => ({ ...current, [tab]: false }));
+      }
+    },
+    [],
+  );
   const handleSelectCategory = useCallback(
     (category: MobileLobbyV23CategoryFilterId) => {
       setActiveCategory(category);
@@ -881,6 +992,14 @@ export function MobileLobbyV23View({
     },
     [activeCategory, initialFreeOnly],
   );
+  const handleShowEnded = useCallback(() => {
+    const tab = displayedActiveTab;
+
+    setShowEndedTabs((current) => ({ ...current, [tab]: true }));
+    if (!endedTabPagesRef.current[tab]) {
+      void loadEndedTabPage(tab);
+    }
+  }, [displayedActiveTab, loadEndedTabPage]);
 
   useEffect(() => {
     setSelectedTab(activeTab);
@@ -983,15 +1102,24 @@ export function MobileLobbyV23View({
   }, [isSignedIn, loadTabPage, tabCacheKey]);
   useEffect(() => {
     const target = loadMoreRef.current;
+    const canLoadActive = Boolean(activePage?.hasMore);
+    const canLoadEnded = Boolean(showEnded && endedPage?.hasMore);
+    const loadingMore = canLoadActive
+      ? loadingTabs[displayedActiveTab]
+      : loadingEndedTabs[displayedActiveTab];
 
-    if (!target || !activePage?.hasMore || loadingTabs[displayedActiveTab]) {
+    if (!target || (!canLoadActive && !canLoadEnded) || loadingMore) {
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          void loadTabPage(displayedActiveTab, true);
+          if (canLoadActive) {
+            void loadTabPage(displayedActiveTab, true);
+          } else if (canLoadEnded) {
+            void loadEndedTabPage(displayedActiveTab, true);
+          }
         }
       },
       { rootMargin: "240px 0px" },
@@ -999,7 +1127,16 @@ export function MobileLobbyV23View({
     observer.observe(target);
 
     return () => observer.disconnect();
-  }, [activePage?.hasMore, displayedActiveTab, loadTabPage, loadingTabs]);
+  }, [
+    activePage?.hasMore,
+    displayedActiveTab,
+    endedPage?.hasMore,
+    loadEndedTabPage,
+    loadTabPage,
+    loadingEndedTabs,
+    loadingTabs,
+    showEnded,
+  ]);
   const emptyTitle =
     displayedActiveTab === "friends"
       ? copy.friendEmptyTitle
@@ -1113,7 +1250,7 @@ export function MobileLobbyV23View({
         ) : visibleActivities.length > 0 ? (
           <>
             <div className="mt-5 grid gap-5">
-              {visibleActivities.map((activity, index) => (
+              {visibleActiveActivities.map((activity, index) => (
                 <MobileActivityListRow
                   activity={activity}
                   key={getActivityKey(activity)}
@@ -1126,25 +1263,22 @@ export function MobileLobbyV23View({
                   }
                 />
               ))}
-            </div>
-            <div
-              ref={loadMoreRef}
-              className="flex min-h-12 items-center justify-center"
-            >
-              {loadingTabs[displayedActiveTab] ? (
-                <span
-                  aria-label={copy.loadingLabel}
-                  className="h-5 w-5 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#096B45]"
-                />
-              ) : failedTabs[displayedActiveTab] && activePage?.hasMore ? (
-                <button
-                  className="text-sm font-semibold text-[#096B45]"
-                  type="button"
-                  onClick={() => loadTabPage(displayedActiveTab, true)}
-                >
-                  {copy.retryLabel}
-                </button>
+              {visibleEndedActivities.length > 0 ? (
+                <div className="flex items-center gap-3 pt-2" role="separator">
+                  <span className="h-px flex-1 bg-[#EEEDE4]" />
+                  <span className="text-xs font-bold text-[#111210]/45">
+                    {copy.endedLabel}
+                  </span>
+                  <span className="h-px flex-1 bg-[#EEEDE4]" />
+                </div>
               ) : null}
+              {visibleEndedActivities.map((activity) => (
+                <MobileActivityListRow
+                  activity={activity}
+                  key={getActivityKey(activity)}
+                  locale={locale}
+                />
+              ))}
             </div>
             {coldStartSwipeActivities.length > 0 ? (
               <div className="mt-7 border-t border-[#EEEDE4] pb-10 pt-5">
@@ -1182,6 +1316,47 @@ export function MobileLobbyV23View({
             ) : null}
           </>
         )}
+        <div
+          ref={loadMoreRef}
+          className="flex min-h-12 items-center justify-center"
+        >
+          {loadingTabs[displayedActiveTab] ||
+          loadingEndedTabs[displayedActiveTab] ? (
+            <span
+              aria-label={copy.loadingLabel}
+              className="h-5 w-5 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#096B45]"
+            />
+          ) : failedTabs[displayedActiveTab] && activePage?.hasMore ? (
+            <button
+              className="text-sm font-semibold text-[#096B45]"
+              type="button"
+              onClick={() => loadTabPage(displayedActiveTab, true)}
+            >
+              {copy.retryLabel}
+            </button>
+          ) : showEnded && failedEndedTabs[displayedActiveTab] ? (
+            <button
+              className="text-sm font-semibold text-[#096B45]"
+              type="button"
+              onClick={() =>
+                loadEndedTabPage(displayedActiveTab, Boolean(endedPage))
+              }
+            >
+              {copy.retryLabel}
+            </button>
+          ) : null}
+        </div>
+        {activePage && !activePage.hasMore && !showEnded ? (
+          <div className="flex justify-center pb-8 pt-5">
+            <button
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-6 text-sm font-bold text-[#096B45] shadow-[0_10px_24px_rgba(17,18,16,0.06)] transition active:scale-[0.98]"
+              onClick={handleShowEnded}
+              type="button"
+            >
+              {copy.showEndedLabel}
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

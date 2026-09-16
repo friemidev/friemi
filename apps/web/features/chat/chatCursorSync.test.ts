@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getLatestChatCursor, mergeChatCursorMessages } from "./chatCursorSync";
+import {
+  getEarliestChatCursor,
+  getLatestChatCursor,
+  mergeChatCursorMessages,
+} from "./chatCursorSync";
 
 test("chat cursor synchronization merges and orders messages", () => {
   const result = mergeChatCursorMessages(
@@ -19,6 +23,7 @@ test("chat cursor synchronization merges and orders messages", () => {
     ["a:1", "b:2", "c:1"],
   );
   assert.equal(getLatestChatCursor(result)?.id, "c");
+  assert.equal(getEarliestChatCursor(result)?.id, "a");
 });
 
 test("chat cursor synchronization removes locally deleted message ids", () => {

@@ -5,7 +5,13 @@ export const defaultCouponTitle = "Friemi 门店专享券";
 export const defaultCouponDescription =
   "到店出示此券，可享受门店提供的专属优惠。具体权益以门店现场说明为准。";
 export const defaultCouponTerms =
-  "每位用户限领一张，仅限绑定门店核销，不可转让或兑换现金。";
+  "仅限绑定门店核销，不可转让或兑换现金。每个领取二维码仅可使用一次。";
+export const couponRedemptionQrLifetimeMinutes = 10;
+export const defaultCouponColors = {
+  accent: "#F1F2E3",
+  background: "#0F6D46",
+  foreground: "#FFFFFF",
+} as const;
 
 export function createCouponToken() {
   return randomBytes(24).toString("base64url");

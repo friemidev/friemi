@@ -12,6 +12,8 @@ import { CalendarDays, LoaderCircle, MapPin, Trash2, X } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
+import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ import {
   type OptimisticMessagePayload,
 } from "./MessageComposer";
 import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
+import type { ChatReplyTarget } from "@/features/chat/types";
 
 type MessageThreadClientProps = {
   activityContext?: DirectConversationActivityContextViewModel | null;
@@ -128,6 +131,7 @@ export function MessageThreadClient({
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
   const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
     useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
@@ -136,6 +140,12 @@ export function MessageThreadClient({
     messages,
     setMessages,
     subjectKey: conversationId,
+  });
+  const chatHistory = useChatHistoryPagination({
+    endpoint: `/api/direct-messages/${encodeURIComponent(conversationId)}/messages`,
+    initialPageSize: 50,
+    messages,
+    setMessages,
   });
   const hasMessages = messages.length > 0;
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -152,17 +162,9 @@ export function MessageThreadClient({
   useMobileChatViewportGuard();
 
   useEffect(() => {
-    setMessages((currentMessages) => {
-      const serverMessageIds = new Set(
-        initialMessages.map((message) => message.id),
-      );
-      const optimisticMessages = currentMessages.filter(
-        (message) =>
-          message.deliveryStatus && !serverMessageIds.has(message.id),
-      );
-
-      return [...initialMessages, ...optimisticMessages];
-    });
+    setMessages((currentMessages) =>
+      mergeChatCursorMessages(currentMessages, initialMessages),
+    );
   }, [initialMessages]);
 
   useEffect(() => {
@@ -227,6 +229,7 @@ export function MessageThreadClient({
           senderId: currentUser.id,
           body: payload.body,
           imageUrls: payload.imageUrls,
+          replyTo: payload.replyTo,
           readAt: null,
           createdAt: payload.createdAt,
           isMine: true,
@@ -317,6 +320,9 @@ export function MessageThreadClient({
       for (const imageUrl of message.imageUrls) {
         submitFormData.append("imageUrls", imageUrl);
       }
+      if (message.replyTo) {
+        submitFormData.set("replyToMessageId", message.replyTo.messageId);
+      }
 
       void sendDirectMessageAction(defaultActionState, submitFormData)
         .then((result) => {
@@ -349,6 +355,19 @@ export function MessageThreadClient({
   function handleOpenActionMenu(messageId: string) {
     setDeleteError("");
     setActionMenuMessageId(messageId);
+  }
+
+  function handleReply(message: MessageBubbleViewModel) {
+    const sender = message.isMine ? currentUser : peer;
+    setReplyTo({
+      body: message.body,
+      hasImage: message.imageUrls.length > 0,
+      messageId: message.id,
+      senderName: sender.nickname,
+    });
+    setActionMenuMessageId("");
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
   }
 
   function handleStartSelection(messageId: string) {
@@ -422,7 +441,26 @@ export function MessageThreadClient({
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+        onScroll={chatHistory.onScroll}
+        ref={chatHistory.scrollContainerRef}
+      >
+        {chatHistory.isLoadingOlder ? (
+          <div
+            aria-label={
+              locale === "fr"
+                ? "Chargement des messages"
+                : locale === "en"
+                  ? "Loading messages"
+                  : "正在加载聊天记录"
+            }
+            className="flex h-9 items-center justify-center text-[#7D857D]"
+            role="status"
+          >
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          </div>
+        ) : null}
         {activityContext ? (
           <ActivityContextCard
             activityContext={activityContext}
@@ -470,6 +508,7 @@ export function MessageThreadClient({
                     locale={locale}
                     onDelete={handleDelete}
                     onOpenActionMenu={handleOpenActionMenu}
+                    onReply={handleReply}
                     onRetry={
                       message.deliveryStatus === "failed" && canSendNow
                         ? handleRetryMessage
@@ -550,6 +589,8 @@ export function MessageThreadClient({
           onOptimisticCommit={handleOptimisticCommit}
           onOptimisticFailure={handleOptimisticFailure}
           onOptimisticSend={handleOptimisticSend}
+          onCancelReply={() => setReplyTo(null)}
+          replyTo={replyTo}
         />
       ) : (
         <ReadOnlyMessageComposer

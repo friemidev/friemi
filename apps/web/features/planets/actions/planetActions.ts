@@ -58,6 +58,7 @@ const messageSchema = planetIdSchema
       .max(chatMentionMaxProfileCount)
       .default([]),
     mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
+    replyToMessageId: z.string().trim().max(80).optional(),
   })
   .refine((value) => value.content.length > 0 || value.imageUrls.length > 0, {
     path: ["content"],
@@ -475,6 +476,8 @@ export async function sendPlanetMessageAction(
     imageUrls: readStringList(formData, "imageUrls"),
     mentionedProfileIds: readStringList(formData, "mentionedProfileIds"),
     mentionsEveryone: readString(formData, "mentionsEveryone") || "0",
+    replyToMessageId:
+      readString(formData, "replyToMessageId").trim() || undefined,
   });
   if (!result.success) {
     return {
@@ -493,6 +496,7 @@ export async function sendPlanetMessageAction(
         result.data.mentionsEveryone === "true",
       planetId: result.data.planetId,
       profileId: profile.id,
+      replyToMessageId: result.data.replyToMessageId,
     });
     revalidatePlanet(result.data.locale, result.data.planetSlug);
 

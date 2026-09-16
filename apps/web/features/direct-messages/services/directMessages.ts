@@ -30,7 +30,8 @@ export type DirectMessageErrorCode =
   | "EMPTY_BODY"
   | "BODY_TOO_LONG"
   | "TOO_MANY_IMAGES"
-  | "INVALID_IMAGE_URL";
+  | "INVALID_IMAGE_URL"
+  | "MESSAGE_NOT_FOUND";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
@@ -106,6 +107,10 @@ const directMessageSelect = {
   activityId: true,
   body: true,
   imageUrls: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -796,12 +801,14 @@ export async function sendDirectMessage({
   conversationId,
   body,
   imageUrls,
+  replyToMessageId,
 }: {
   activityId?: string | null;
   currentUserProfileId: string;
   conversationId: string;
   body: string;
   imageUrls?: string[];
+  replyToMessageId?: string | null;
 }): Promise<{
   conversation: DirectMessageSendConversationViewModel;
   message: DirectMessageViewModel;
@@ -844,6 +851,30 @@ export async function sendDirectMessage({
     );
     const accessMs = Date.now() - accessStartedAt;
 
+    const replySource = replyToMessageId
+      ? await tx.directMessage.findFirst({
+          where: {
+            conversationId: conversation.id,
+            id: replyToMessageId,
+          },
+          select: {
+            body: true,
+            id: true,
+            imageUrls: true,
+            sender: {
+              select: {
+                friendCode: true,
+                nickname: true,
+              },
+            },
+          },
+        })
+      : null;
+
+    if (replyToMessageId && !replySource) {
+      throw new DirectMessageDomainError("MESSAGE_NOT_FOUND");
+    }
+
     const createMessageStartedAt = Date.now();
     const message = await tx.directMessage.create({
       data: {
@@ -852,6 +883,14 @@ export async function sendDirectMessage({
         activityId: activityId ?? null,
         body: payload.body,
         imageUrls: payload.imageUrls,
+        replyToBody: replySource?.body ?? null,
+        replyToHasImage: Boolean(replySource?.imageUrls.length),
+        replyToMessageId: replySource?.id ?? null,
+        replyToSenderName: replySource
+          ? replySource.sender.nickname.trim() ||
+            replySource.sender.friendCode ||
+            "Friemi"
+          : null,
       },
       select: directMessageSelect,
     });

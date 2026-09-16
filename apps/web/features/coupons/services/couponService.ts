@@ -2,6 +2,12 @@ import { Prisma } from "@prisma/client";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import {
+  isCouponAvailable,
+  isCouponClaimCodeAvailable,
+  isCouponRedemptionQrAvailable,
+} from "../couponRules";
+import {
+  couponRedemptionQrLifetimeMinutes,
   createCouponToken,
   createMerchantSlug,
   defaultCouponDescription,
@@ -11,8 +17,16 @@ import {
 } from "../couponDefaults";
 
 export type ClaimCouponResult =
-  | { itemId: string; status: "CLAIMED" | "ALREADY_CLAIMED" }
-  | { status: "INVALID" | "OWN_STORE" | "UNAVAILABLE" };
+  | { itemId: string; status: "CLAIMED" }
+  | { status: "CODE_USED" | "INVALID" | "OWN_STORE" | "UNAVAILABLE" };
+
+export type GenerateCouponClaimCodeResult =
+  | { couponId: string; status: "GENERATED"; token: string }
+  | { status: "FORBIDDEN" | "INVALID" | "UNAVAILABLE" };
+
+export type GenerateCouponRedemptionTokenResult =
+  | { expiresAt: Date; status: "GENERATED"; token: string }
+  | { status: "FORBIDDEN" | "INVALID" | "UNAVAILABLE" };
 
 export type RedeemCouponResult =
   | { itemId: string; status: "REDEEMED" }
@@ -33,7 +47,6 @@ export async function ensureDefaultMerchantCoupon(
       },
     },
     create: {
-      claimToken: createCouponToken(),
       description: defaultCouponDescription,
       merchantId,
       slug: defaultCouponSlug,
@@ -112,18 +125,54 @@ export async function promoteProfileToMerchant(profileId: string) {
   });
 }
 
-function couponIsAvailable(coupon: {
-  expiresAt: Date | null;
-  isActive: boolean;
-  validFrom: Date | null;
-}) {
-  const now = Date.now();
+export async function generateCouponClaimCode({
+  couponId,
+  profileId,
+}: {
+  couponId: string;
+  profileId: string;
+}): Promise<GenerateCouponClaimCodeResult> {
+  if (!couponId.trim()) return { status: "INVALID" };
 
-  return (
-    coupon.isActive &&
-    (!coupon.validFrom || coupon.validFrom.getTime() <= now) &&
-    (!coupon.expiresAt || coupon.expiresAt.getTime() > now)
-  );
+  return prisma.$transaction(async (tx) => {
+    const coupon = await tx.coupon.findUnique({
+      where: { id: couponId },
+      include: {
+        merchant: {
+          select: {
+            isActive: true,
+            ownerProfileId: true,
+          },
+        },
+      },
+    });
+
+    if (!coupon) return { status: "INVALID" } as const;
+    if (coupon.merchant.ownerProfileId !== profileId) {
+      return { status: "FORBIDDEN" } as const;
+    }
+    if (!coupon.merchant.isActive || !isCouponAvailable(coupon)) {
+      return { status: "UNAVAILABLE" } as const;
+    }
+
+    await tx.couponClaimCode.updateMany({
+      where: { couponId: coupon.id, status: "ACTIVE" },
+      data: { status: "REVOKED" },
+    });
+    const claimCode = await tx.couponClaimCode.create({
+      data: {
+        couponId: coupon.id,
+        token: createCouponToken(),
+      },
+      select: { token: true },
+    });
+
+    return {
+      couponId: coupon.id,
+      status: "GENERATED",
+      token: claimCode.token,
+    } as const;
+  });
 }
 
 export async function claimCouponByToken({
@@ -138,49 +187,62 @@ export async function claimCouponByToken({
   if (!token) return { status: "INVALID" };
 
   return prisma.$transaction(async (tx) => {
-    const coupon = await tx.coupon.findUnique({
-      where: { claimToken: token },
+    const claimCode = await tx.couponClaimCode.findUnique({
+      where: { token },
       include: {
-        merchant: {
-          select: {
-            id: true,
-            isActive: true,
-            name: true,
-            ownerProfileId: true,
+        coupon: {
+          include: {
+            merchant: {
+              select: {
+                id: true,
+                isActive: true,
+                name: true,
+                ownerProfileId: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!coupon) return { status: "INVALID" } as const;
-    if (!coupon.merchant.isActive || !couponIsAvailable(coupon)) {
+    if (!claimCode) return { status: "INVALID" } as const;
+    if (!isCouponClaimCodeAvailable(claimCode.status)) {
+      return { status: "CODE_USED" } as const;
+    }
+    const coupon = claimCode.coupon;
+    if (!coupon.merchant.isActive || !isCouponAvailable(coupon)) {
       return { status: "UNAVAILABLE" } as const;
     }
     if (coupon.merchant.ownerProfileId === profileId) {
       return { status: "OWN_STORE" } as const;
     }
 
-    const existing = await tx.couponWalletItem.findUnique({
+    const claimed = await tx.couponClaimCode.updateMany({
       where: {
-        couponId_ownerProfileId: {
-          couponId: coupon.id,
-          ownerProfileId: profileId,
-        },
+        id: claimCode.id,
+        status: "ACTIVE",
       },
-      select: { id: true },
+      data: {
+        claimedAt: new Date(),
+        claimedByProfileId: profileId,
+        status: "CLAIMED",
+      },
     });
 
-    if (existing) {
-      return { itemId: existing.id, status: "ALREADY_CLAIMED" } as const;
+    if (claimed.count === 0) {
+      return { status: "CODE_USED" } as const;
     }
 
     const item = await tx.couponWalletItem.create({
       data: {
         couponId: coupon.id,
         ownerProfileId: profileId,
-        redemptionToken: createCouponToken(),
       },
       select: { id: true },
+    });
+    await tx.couponClaimCode.update({
+      where: { id: claimCode.id },
+      data: { claimedWalletItemId: item.id },
     });
     const notifications: Parameters<typeof createNotifications>[1] = [
       {
@@ -209,6 +271,55 @@ export async function claimCouponByToken({
   });
 }
 
+export async function generateCouponRedemptionToken({
+  itemId,
+  profileId,
+}: {
+  itemId: string;
+  profileId: string;
+}): Promise<GenerateCouponRedemptionTokenResult> {
+  if (!itemId.trim()) return { status: "INVALID" };
+
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.couponWalletItem.findUnique({
+      where: { id: itemId },
+      include: {
+        coupon: {
+          include: {
+            merchant: { select: { isActive: true } },
+          },
+        },
+      },
+    });
+
+    if (!item) return { status: "INVALID" } as const;
+    if (item.ownerProfileId !== profileId) {
+      return { status: "FORBIDDEN" } as const;
+    }
+    if (
+      item.status !== "AVAILABLE" ||
+      !item.coupon.merchant.isActive ||
+      !isCouponAvailable(item.coupon)
+    ) {
+      return { status: "UNAVAILABLE" } as const;
+    }
+
+    const token = createCouponToken();
+    const expiresAt = new Date(
+      Date.now() + couponRedemptionQrLifetimeMinutes * 60 * 1000,
+    );
+    await tx.couponWalletItem.update({
+      where: { id: item.id },
+      data: {
+        redemptionToken: token,
+        redemptionTokenExpiresAt: expiresAt,
+      },
+    });
+
+    return { expiresAt, status: "GENERATED", token } as const;
+  });
+}
+
 export async function getCouponRedemptionPreview({
   profileId,
   redemptionToken,
@@ -223,6 +334,7 @@ export async function getCouponRedemptionPreview({
       status: true,
       claimedAt: true,
       redeemedAt: true,
+      redemptionTokenExpiresAt: true,
       owner: {
         select: {
           avatarUrl: true,
@@ -253,7 +365,10 @@ export async function getCouponRedemptionPreview({
   return {
     ...item,
     isAvailable:
-      item.status === "AVAILABLE" &&
+      isCouponRedemptionQrAvailable({
+        expiresAt: item.redemptionTokenExpiresAt,
+        walletStatus: item.status,
+      }) &&
       item.coupon.merchant.isActive &&
       (!item.coupon.expiresAt || item.coupon.expiresAt.getTime() > Date.now()),
   };
@@ -303,8 +418,12 @@ export async function redeemCouponByToken({
     }
     if (
       item.status !== "AVAILABLE" ||
+      !isCouponRedemptionQrAvailable({
+        expiresAt: item.redemptionTokenExpiresAt,
+        walletStatus: item.status,
+      }) ||
       !item.coupon.merchant.isActive ||
-      !couponIsAvailable(item.coupon)
+      !isCouponAvailable(item.coupon)
     ) {
       return { itemId: item.id, status: "UNAVAILABLE" } as const;
     }
@@ -313,6 +432,8 @@ export async function redeemCouponByToken({
     const updated = await tx.couponWalletItem.updateMany({
       where: {
         id: item.id,
+        redemptionToken: token,
+        redemptionTokenExpiresAt: { gt: redeemedAt },
         status: "AVAILABLE",
       },
       data: {

@@ -18,27 +18,33 @@ export const metadata = noIndexMetadata;
 
 function getCopy(
   locale: string,
-  status: "INVALID" | "OWN_STORE" | "UNAVAILABLE",
+  status: "CODE_USED" | "INVALID" | "OWN_STORE" | "UNAVAILABLE",
 ) {
   if (locale === "fr") {
     return status === "OWN_STORE"
       ? "Vous ne pouvez pas recevoir le coupon de votre propre boutique."
-      : status === "UNAVAILABLE"
-        ? "Ce coupon n'est plus disponible."
-        : "Ce QR code de coupon est invalide.";
+      : status === "CODE_USED"
+        ? "Ce QR code a déjà été utilisé. Demandez-en un nouveau à la boutique."
+        : status === "UNAVAILABLE"
+          ? "Ce coupon n'est plus disponible."
+          : "Ce QR code de coupon est invalide.";
   }
   if (locale === "en") {
     return status === "OWN_STORE"
       ? "You cannot claim your own store coupon."
-      : status === "UNAVAILABLE"
-        ? "This coupon is no longer available."
-        : "This coupon QR code is invalid.";
+      : status === "CODE_USED"
+        ? "This QR code has already been used. Ask the store for a new one."
+        : status === "UNAVAILABLE"
+          ? "This coupon is no longer available."
+          : "This coupon QR code is invalid.";
   }
   return status === "OWN_STORE"
     ? "不能领取自己门店的优惠券。"
-    : status === "UNAVAILABLE"
-      ? "这张优惠券暂时无法领取。"
-      : "这个优惠券二维码无效。";
+    : status === "CODE_USED"
+      ? "这个领取二维码已经使用过，请让店家刷新后重新扫码。"
+      : status === "UNAVAILABLE"
+        ? "这张优惠券暂时无法领取。"
+        : "这个优惠券二维码无效。";
 }
 
 export default async function CouponClaimPage({
@@ -54,13 +60,8 @@ export default async function CouponClaimPage({
     profileId: profile.id,
   });
 
-  if (result.status === "CLAIMED" || result.status === "ALREADY_CLAIMED") {
-    redirect(
-      withLocale(
-        locale,
-        `/profile/bag?couponStatus=${result.status === "CLAIMED" ? "claimed" : "already-claimed"}`,
-      ),
-    );
+  if (result.status === "CLAIMED") {
+    redirect(withLocale(locale, "/profile/bag?couponStatus=claimed"));
   }
 
   const backLabel =

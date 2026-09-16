@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const analyticsEventNames = [
+  "app_session_started",
+  "page_viewed",
   "activity_list_viewed",
   "activity_card_clicked",
   "activity_swipe_viewed",

@@ -2,7 +2,7 @@
 
 import { LoaderCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
 import {
@@ -21,6 +21,13 @@ import {
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
 import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
+import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
+import { ChatReplyComposerPreview } from "@/features/chat/components/ChatReplyPreview";
+import {
+  chatReplyRequestEvent,
+  type ChatReplyRequestDetail,
+} from "@/features/chat/chatReplyEvents";
+import type { ChatReplyTarget } from "@/features/chat/types";
 
 type PlanetChatComposerProps = {
   locale: string;
@@ -40,6 +47,7 @@ function getCopy(locale: string) {
       tooManyImages: "Vous pouvez envoyer jusqu'à 4 images.",
       uploadFailed: "Image impossible à importer.",
       uploading: "Import...",
+      sendFailed: "Le message n'a pas pu être envoyé.",
     };
   }
 
@@ -54,6 +62,7 @@ function getCopy(locale: string) {
       tooManyImages: "You can send up to 4 images.",
       uploadFailed: "Image could not be uploaded.",
       uploading: "Uploading...",
+      sendFailed: "Message could not be sent.",
     };
   }
 
@@ -67,6 +76,7 @@ function getCopy(locale: string) {
     tooManyImages: "一次最多发送 4 张图片。",
     uploadFailed: "图片上传失败，请稍后再试。",
     uploading: "上传中...",
+    sendFailed: "消息发送失败，请稍后再试。",
   };
 }
 
@@ -90,26 +100,26 @@ export function PlanetChatComposer({
   );
   const [mentionsEveryone, setMentionsEveryone] = useState(false);
   const initialState: PlanetChatActionState = {};
-  const [state, formAction, isPending] = useActionState(
-    sendPlanetMessageAction,
-    initialState,
-  );
+  const [state, setState] = useState<PlanetChatActionState>(initialState);
+  const [isPending, setIsPending] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
 
   useEffect(() => {
-    if (!state.ok || !state.messageId) return;
+    function handleReplyRequest(event: Event) {
+      const detail = (event as CustomEvent<ChatReplyRequestDetail>).detail;
 
-    formRef.current?.reset();
-    setContent("");
-    setImageUrls([]);
-    setMentionedMembers([]);
-    setMentionsEveryone(false);
-    if (chatCursorMode === "canary") {
-      dispatchChatCursorWake(planetId);
-    } else {
-      router.refresh();
+      if (detail.scopeId !== planetId) {
+        return;
+      }
+
+      setReplyTo(detail.replyTo);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-    keepMobileChatPageAnchored();
-  }, [chatCursorMode, planetId, router, state.messageId, state.ok]);
+
+    window.addEventListener(chatReplyRequestEvent, handleReplyRequest);
+    return () =>
+      window.removeEventListener(chatReplyRequestEvent, handleReplyRequest);
+  }, [planetId]);
 
   function insertEmoji(emoji: string) {
     const input = inputRef.current;
@@ -204,12 +214,85 @@ export function PlanetChatComposer({
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (isPending || isImageUploading) {
+      return;
+    }
+
+    const submissions = splitChatMessageSubmissions(content, imageUrls);
+
+    if (submissions.length === 0) {
+      return;
+    }
+
+    setIsPending(true);
+    setState(initialState);
+    formRef.current?.reset();
+    setContent("");
+    setImageUrls([]);
+    setMentionedMembers([]);
+    setMentionsEveryone(false);
+    setReplyTo(null);
+
+    void (async () => {
+      let failed = false;
+
+      for (const [index, submission] of submissions.entries()) {
+        const formData = new FormData();
+        formData.set("locale", locale);
+        formData.set("planetId", planetId);
+        formData.set("planetSlug", planetSlug);
+        formData.set("content", submission.body);
+        if (index === 0 && replyTo) {
+          formData.set("replyToMessageId", replyTo.messageId);
+        }
+        formData.set(
+          "mentionsEveryone",
+          index === 0 && mentionsEveryone ? "1" : "0",
+        );
+        submission.imageUrls.forEach((imageUrl) =>
+          formData.append("imageUrls", imageUrl),
+        );
+        if (index === 0) {
+          mentionedMembers.forEach((member) =>
+            formData.append("mentionedProfileIds", member.id),
+          );
+        }
+
+        try {
+          const result = await sendPlanetMessageAction(initialState, formData);
+
+          if (!result.ok) {
+            failed = true;
+            setState(result);
+          }
+        } catch {
+          failed = true;
+          setState({ formError: copy.sendFailed });
+        }
+      }
+
+      if (!failed) {
+        setState({ ok: true });
+      }
+
+      if (chatCursorMode === "canary") {
+        dispatchChatCursorWake(planetId);
+      } else {
+        router.refresh();
+      }
+      keepMobileChatPageAnchored();
+    })().finally(() => setIsPending(false));
+  }
+
   return (
     <div>
       <form
-        action={formAction}
         className="grid min-w-0 w-full gap-2"
         data-planet-chat-composer
+        onSubmit={handleSubmit}
         ref={formRef}
       >
         <input name="locale" type="hidden" value={locale} />
@@ -236,6 +319,13 @@ export function PlanetChatComposer({
             value={imageUrl}
           />
         ))}
+        {replyTo ? (
+          <ChatReplyComposerPreview
+            locale={locale}
+            onCancel={() => setReplyTo(null)}
+            replyTo={replyTo}
+          />
+        ) : null}
         <ChatImageAttachmentPreviews
           imageLabel={copy.image}
           imageUrls={imageUrls}

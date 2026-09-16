@@ -54,7 +54,7 @@ export function MobileNav({ locale }: MobileNavProps) {
         isPrimary: true,
       },
       {
-        href: "/footprints?tab=moment",
+        href: "/footprints?tab=message",
         label: t.nav.footprintsShort,
         icon: Globe2,
       },

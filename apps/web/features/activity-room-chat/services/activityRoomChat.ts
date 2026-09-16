@@ -73,6 +73,12 @@ export type ActivityRoomMessageViewModel = {
   mentionedProfileIds: string[];
   mentionLabels: string[];
   mentionsEveryone: boolean;
+  replyTo: {
+    body: string;
+    hasImage: boolean;
+    messageId: string;
+    senderName: string;
+  } | null;
   sender: {
     id: string;
     avatarUrl: string | null;
@@ -204,6 +210,10 @@ const messageSelect = {
   mentionedProfileIds: true,
   mentionLabels: true,
   mentionsEveryone: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
   senderId: true,
   updatedAt: true,
   sender: {
@@ -496,6 +506,15 @@ function mapActivityRoomMessage(
     mentionedProfileIds: isDeleted ? [] : message.mentionedProfileIds,
     mentionLabels: isDeleted ? [] : message.mentionLabels,
     mentionsEveryone: !isDeleted && message.mentionsEveryone,
+    replyTo:
+      !isDeleted && message.replyToMessageId && message.replyToSenderName
+        ? {
+            body: message.replyToBody ?? "",
+            hasImage: message.replyToHasImage,
+            messageId: message.replyToMessageId,
+            senderName: message.replyToSenderName,
+          }
+        : null,
     isDeleted,
     isMine: message.senderId === viewerProfileId,
     sender: {
@@ -1039,6 +1058,57 @@ export async function getActivityRoomMessages(
   return [...messages]
     .reverse()
     .map((message) => mapActivityRoomMessage(message, viewerProfileId));
+}
+
+export async function getOlderActivityRoomMessages({
+  activityId,
+  beforeCreatedAt,
+  beforeId,
+  limit = defaultActivityRoomMessageLimit,
+  viewerProfileId,
+}: {
+  activityId: string;
+  beforeCreatedAt: Date;
+  beforeId: string;
+  limit?: number;
+  viewerProfileId: string;
+}) {
+  const policy = await getActivityRoomPolicy(
+    prisma,
+    viewerProfileId,
+    activityId,
+  );
+
+  if (!policy.canView) {
+    throw new ActivityRoomChatDomainError(
+      getDeniedActivityRoomChatReason(policy),
+    );
+  }
+
+  const pageSize = Math.min(
+    normalizeActivityRoomMessageLimit(limit),
+    defaultActivityRoomMessageLimit,
+  );
+  const messages = await prisma.activityRoomMessage.findMany({
+    where: {
+      activityId,
+      OR: [
+        { createdAt: { lt: beforeCreatedAt } },
+        { createdAt: beforeCreatedAt, id: { lt: beforeId } },
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: pageSize + 1,
+    select: messageSelect,
+  });
+
+  return {
+    hasMore: messages.length > pageSize,
+    messages: messages
+      .slice(0, pageSize)
+      .reverse()
+      .map((message) => mapActivityRoomMessage(message, viewerProfileId)),
+  };
 }
 
 export async function getActivityRoomMessageChanges({
@@ -1676,6 +1746,7 @@ export async function sendActivityRoomMessage({
   imageUrls = [],
   mentionedProfileIds = [],
   mentionsEveryone = false,
+  replyToMessageId,
   senderId,
 }: {
   activityId: string;
@@ -1683,6 +1754,7 @@ export async function sendActivityRoomMessage({
   imageUrls?: string[];
   mentionedProfileIds?: string[];
   mentionsEveryone?: boolean;
+  replyToMessageId?: string | null;
   senderId: string;
 }) {
   const payload = normalizeActivityRoomMessagePayload(body, imageUrls);
@@ -1704,6 +1776,30 @@ export async function sendActivityRoomMessage({
       policy,
       senderId,
     });
+    const replySource = replyToMessageId
+      ? await tx.activityRoomMessage.findFirst({
+          where: {
+            activityId,
+            deletedAt: null,
+            id: replyToMessageId,
+          },
+          select: {
+            body: true,
+            id: true,
+            imageUrls: true,
+            sender: {
+              select: {
+                friendCode: true,
+                nickname: true,
+              },
+            },
+          },
+        })
+      : null;
+
+    if (replyToMessageId && !replySource) {
+      throw new ActivityRoomChatDomainError("MESSAGE_NOT_FOUND");
+    }
 
     const message = await tx.activityRoomMessage.create({
       data: {
@@ -1713,6 +1809,14 @@ export async function sendActivityRoomMessage({
         mentionLabels: mentions.mentionLabels,
         mentionedProfileIds: mentions.mentionedProfileIds,
         mentionsEveryone: mentions.mentionsEveryone,
+        replyToBody: replySource?.body ?? null,
+        replyToHasImage: Boolean(replySource?.imageUrls.length),
+        replyToMessageId: replySource?.id ?? null,
+        replyToSenderName: replySource
+          ? replySource.sender.nickname.trim() ||
+            replySource.sender.friendCode ||
+            "Friemi"
+          : null,
         senderId,
       },
       select: messageSelect,

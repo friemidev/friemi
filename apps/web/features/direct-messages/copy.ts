@@ -187,6 +187,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         BODY_TOO_LONG: "Le message est trop long.",
         TOO_MANY_IMAGES: "Vous pouvez envoyer jusqu'à 4 images à la fois.",
         INVALID_IMAGE_URL: "Une image n'est pas valide.",
+        MESSAGE_NOT_FOUND: "Le message cité n'est plus disponible.",
       },
     };
   }
@@ -289,6 +290,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         BODY_TOO_LONG: "Message is too long.",
         TOO_MANY_IMAGES: "You can send up to 4 images at a time.",
         INVALID_IMAGE_URL: "One image is invalid.",
+        MESSAGE_NOT_FOUND: "The quoted message is no longer available.",
       },
     };
   }
@@ -385,6 +387,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       BODY_TOO_LONG: "消息内容过长。",
       TOO_MANY_IMAGES: "一次最多发送 4 张图片。",
       INVALID_IMAGE_URL: "图片地址无效。",
+      MESSAGE_NOT_FOUND: "引用的消息已不可用。",
     },
   };
 }

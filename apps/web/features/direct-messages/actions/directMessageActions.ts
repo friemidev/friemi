@@ -68,6 +68,7 @@ const sendDirectMessageSchema = z
     conversationId: z.string().min(1),
     activityId: z.string().trim().optional(),
     body: z.string().trim().max(directMessageBodyMaxLength).default(""),
+    replyToMessageId: z.string().trim().max(80).optional(),
     imageUrls: z
       .array(z.string().trim().url())
       .max(directMessageImageMaxCount)
@@ -810,6 +811,8 @@ export async function sendDirectMessageAction(
     conversationId: getString(formData, "conversationId"),
     activityId: getString(formData, "activityId").trim() || undefined,
     body: getString(formData, "body"),
+    replyToMessageId:
+      getString(formData, "replyToMessageId").trim() || undefined,
     imageUrls: [
       ...getStringList(formData, "imageUrls"),
       ...getStringList(formData, "imageUrl"),
@@ -854,6 +857,7 @@ export async function sendDirectMessageAction(
       conversationId: result.data.conversationId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
+      replyToMessageId: result.data.replyToMessageId,
     });
     const sendMs = Date.now() - sendStartedAt;
     const postWriteStartedAt = Date.now();

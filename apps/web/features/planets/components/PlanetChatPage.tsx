@@ -8,14 +8,18 @@ import { PlanetChatComposer } from "./PlanetChatComposer";
 import { PlanetChatSettingsMenu } from "./PlanetChatSettingsMenu";
 import { PlanetChatThread } from "./PlanetChatThread";
 
-type PlanetChat = NonNullable<Awaited<ReturnType<typeof getPlanetChatPageData>>>;
+type PlanetChat = NonNullable<
+  Awaited<ReturnType<typeof getPlanetChatPageData>>
+>;
 
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       back: "Retour",
-      locked: "La discussion est disponible uniquement pour les membres validés.",
-      pending: "Votre demande doit être validée avant d'accéder à la discussion.",
+      locked:
+        "La discussion est disponible uniquement pour les membres validés.",
+      pending:
+        "Votre demande doit être validée avant d'accéder à la discussion.",
       returnToPlanet: "Retour à la planète",
     };
   }
@@ -39,9 +43,14 @@ function getCopy(locale: string) {
 
 function getPlanetName(planet: PlanetChat, locale: string) {
   if (locale !== "en" && locale !== "fr") return planet.name;
-  if (typeof planet.nameTranslations !== "object" || !planet.nameTranslations) return planet.name;
-  const translated = (planet.nameTranslations as Record<string, unknown>)[locale];
-  return typeof translated === "string" && translated.trim() ? translated : planet.name;
+  if (typeof planet.nameTranslations !== "object" || !planet.nameTranslations)
+    return planet.name;
+  const translated = (planet.nameTranslations as Record<string, unknown>)[
+    locale
+  ];
+  return typeof translated === "string" && translated.trim()
+    ? translated
+    : planet.name;
 }
 
 export function PlanetChatPage({
@@ -58,11 +67,26 @@ export function PlanetChatPage({
   const copy = getCopy(locale);
   const planetHref = withLocale(locale, `/planets/${planet.slug}`);
   const name = getPlanetName(planet, locale);
-  const lockedMessage = planet.viewerMembership?.status === "PENDING"
-    ? copy.pending
-    : copy.locked;
+  const lockedMessage =
+    planet.viewerMembership?.status === "PENDING" ? copy.pending : copy.locked;
   const messages = planet.messages.map((message) => ({
-    ...message,
+    id: message.id,
+    author: message.author,
+    authorId: message.authorId,
+    content: message.content,
+    imageUrls: message.imageUrls,
+    mentionedProfileIds: message.mentionedProfileIds,
+    mentionLabels: message.mentionLabels,
+    mentionsEveryone: message.mentionsEveryone,
+    replyTo:
+      message.replyToMessageId && message.replyToSenderName
+        ? {
+            body: message.replyToBody ?? "",
+            hasImage: message.replyToHasImage,
+            messageId: message.replyToMessageId,
+            senderName: message.replyToSenderName,
+          }
+        : null,
     createdAt: message.createdAt.toISOString(),
   }));
 
@@ -103,23 +127,30 @@ export function PlanetChatPage({
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#EEF1EC] text-[#6F786F]">
               <Lock className="h-6 w-6" />
             </span>
-            <p className="mt-4 text-sm font-semibold leading-6 text-[#676E67]">{lockedMessage}</p>
-            <Link className="mt-5 rounded-full bg-[#155F40] px-5 py-2.5 text-sm font-bold text-white" href={planetHref}>
+            <p className="mt-4 text-sm font-semibold leading-6 text-[#676E67]">
+              {lockedMessage}
+            </p>
+            <Link
+              className="mt-5 rounded-full bg-[#155F40] px-5 py-2.5 text-sm font-bold text-white"
+              href={planetHref}
+            >
               {copy.returnToPlanet}
             </Link>
           </div>
         ) : (
           <>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
-              <PlanetChatThread
-                locale={locale}
-                messages={messages}
-                planetId={planet.id}
-                viewerProfileId={viewerProfileId}
-              />
-            </div>
+            <PlanetChatThread
+              locale={locale}
+              messages={messages}
+              planetId={planet.id}
+              viewerProfileId={viewerProfileId}
+            />
             <footer className="min-w-0 shrink-0 border-t border-[#E8E5DA] bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 md:rounded-b-[1.25rem] md:pb-3">
-              <PlanetChatComposer locale={locale} planetId={planet.id} planetSlug={planet.slug} />
+              <PlanetChatComposer
+                locale={locale}
+                planetId={planet.id}
+                planetSlug={planet.slug}
+              />
             </footer>
           </>
         )}

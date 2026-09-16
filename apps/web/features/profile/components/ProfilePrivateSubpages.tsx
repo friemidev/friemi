@@ -2359,10 +2359,16 @@ function CouponBagCard({
         <span
           className={cn(
             "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] ring-1",
-            available
-              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-              : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
+            available ? "ring-black/10" : "opacity-70 ring-[#DFDAC5]",
           )}
+          style={
+            available
+              ? {
+                  backgroundColor: item.coupon.backgroundColor,
+                  color: item.coupon.foregroundColor,
+                }
+              : undefined
+          }
         >
           {item.coupon.merchant.logoUrl ? (
             // Merchant logos are uploaded assets and may use a remote storage host.
@@ -2373,7 +2379,10 @@ function CouponBagCard({
               src={item.coupon.merchant.logoUrl}
             />
           ) : (
-            <Ticket className="h-5 w-5" />
+            <Ticket
+              className="h-5 w-5"
+              style={available ? { color: item.coupon.accentColor } : undefined}
+            />
           )}
         </span>
         <span

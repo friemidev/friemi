@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BadgeCheck, CopyPlus, Home, KeyRound, Loader2, X } from "lucide-react";
 import {
-  BadgeCheck,
-  CopyPlus,
-  Home,
-  KeyRound,
-  Loader2,
-  X,
-} from "lucide-react";
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useFormStatus } from "react-dom";
 import { createPortal } from "react-dom";
 import { getSignInHref } from "@/lib/auth-redirect";
@@ -88,6 +87,14 @@ function withClaimedSuccessParam(href: string) {
   return `${href}${href.includes("?") ? "&" : "?"}claimed=1`;
 }
 
+const claimDialogParamName = "claimDialog";
+
+function withClaimDialogParam(href: string) {
+  const url = new URL(href, "https://www.friemi.com");
+  url.searchParams.set(claimDialogParamName, "1");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function SubmitClaimButton({ locale }: { locale: string }) {
   const { pending } = useFormStatus();
   const copy = getClaimCardCopy(locale);
@@ -129,6 +136,7 @@ export function ClaimAutoCreatedActivityCardAction({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetRendered, setSheetRendered] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const confirmTimerRef = useRef<number | null>(null);
   const didNavigateRef = useRef(false);
   const copy = getClaimCardCopy(locale);
   const signInHref = getSignInHref(locale, redirectPath);
@@ -138,11 +146,57 @@ export function ClaimAutoCreatedActivityCardAction({
   }, []);
   const openConfirm = useCallback(() => {
     setSheetOpen(false);
+    if (confirmTimerRef.current !== null) {
+      window.clearTimeout(confirmTimerRef.current);
+    }
+
+    if (sheetRendered) {
+      confirmTimerRef.current = window.setTimeout(() => {
+        confirmTimerRef.current = null;
+        setConfirmOpen(true);
+      }, 200);
+      return;
+    }
+
     setConfirmOpen(true);
-  }, []);
+  }, [sheetRendered]);
+
+  const openClaimEntry = useCallback(() => {
+    if (window.self !== window.top) {
+      window.top?.location.assign(withClaimDialogParam(detailHref));
+      return;
+    }
+
+    if (
+      variant === "split" &&
+      window.matchMedia("(max-width: 639px)").matches
+    ) {
+      setSheetOpen(true);
+      return;
+    }
+
+    openConfirm();
+  }, [detailHref, openConfirm, variant]);
 
   useEffect(() => {
     setMounted(true);
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(claimDialogParamName) === "1") {
+      url.searchParams.delete(claimDialogParamName);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+      setConfirmOpen(true);
+    }
+
+    return () => {
+      if (confirmTimerRef.current !== null) {
+        window.clearTimeout(confirmTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -289,80 +343,79 @@ export function ClaimAutoCreatedActivityCardAction({
     </div>
   ) : null;
 
-  const mobileSheet =
-    sheetRendered ? (
+  const mobileSheet = sheetRendered ? (
+    <div
+      aria-modal="true"
+      className="fixed inset-0 z-[2147483646] sm:hidden"
+      role="dialog"
+    >
+      <button
+        aria-label={copy.close}
+        className={cn(
+          "absolute inset-0 h-full w-full cursor-default bg-ink/32 backdrop-blur-[2px] transition-opacity duration-200 ease-out motion-reduce:transition-none",
+          sheetVisible ? "opacity-100" : "opacity-0",
+        )}
+        type="button"
+        onClick={() => {
+          setSheetOpen(false);
+        }}
+      />
       <div
-        aria-modal="true"
-        className="fixed inset-0 z-[2147483646] sm:hidden"
-        role="dialog"
+        className={cn(
+          "absolute inset-x-3 bottom-0 rounded-t-[1.65rem] border border-sage/45 bg-paper px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3.5 text-left shadow-[0_-20px_50px_rgba(29,29,27,0.22)] ring-1 ring-white transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          sheetVisible
+            ? "translate-y-0 opacity-100"
+            : "translate-y-5 opacity-0",
+        )}
       >
-        <button
-          aria-label={copy.close}
-          className={cn(
-            "absolute inset-0 h-full w-full cursor-default bg-ink/32 backdrop-blur-[2px] transition-opacity duration-200 ease-out motion-reduce:transition-none",
-            sheetVisible ? "opacity-100" : "opacity-0",
-          )}
-          type="button"
-          onClick={() => {
-            setSheetOpen(false);
-          }}
-        />
-        <div
-          className={cn(
-            "absolute inset-x-3 bottom-0 rounded-t-[1.65rem] border border-sage/45 bg-paper px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3.5 text-left shadow-[0_-20px_50px_rgba(29,29,27,0.22)] ring-1 ring-white transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            sheetVisible
-              ? "translate-y-0 opacity-100"
-              : "translate-y-5 opacity-0",
-          )}
-        >
-          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-sand" />
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase leading-none tracking-normal text-meadow">
-                {copy.eyebrow}
-              </p>
-              <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug text-ink">
-                {activityTitle}
-              </p>
-            </div>
-            <button
-              aria-label={copy.close}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sage/45 bg-paper text-forest shadow-[0_8px_18px_rgba(21,98,64,0.08)]"
-              type="button"
-              onClick={() => {
-                setSheetOpen(false);
-              }}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-sand" />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase leading-none tracking-normal text-meadow">
+              {copy.eyebrow}
+            </p>
+            <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug text-ink">
+              {activityTitle}
+            </p>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
+          <button
+            aria-label={copy.close}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sage/45 bg-paper text-forest shadow-[0_8px_18px_rgba(21,98,64,0.08)]"
+            type="button"
+            onClick={() => {
+              setSheetOpen(false);
+            }}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35"
+            type="button"
+            onClick={openConfirm}
+          >
+            <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-sage bg-fog px-3 text-[13px] font-bold leading-tight text-forest shadow-[0_14px_24px_rgba(21,98,64,0.14)] transition group-active/action:translate-y-px">
+              <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 text-center">{copy.primary}</span>
+            </span>
+          </button>
+          {secondaryHref && secondaryLabel ? (
+            <Link
+              href={secondaryHref}
+              aria-label={secondaryLabel}
               className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35"
-              type="button"
-              onClick={openConfirm}
             >
-              <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-sage bg-fog px-3 text-[13px] font-bold leading-tight text-forest shadow-[0_14px_24px_rgba(21,98,64,0.14)] transition group-active/action:translate-y-px">
-                <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 text-center">{copy.primary}</span>
+              <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-coral/45 bg-cream px-3 text-[13px] font-bold leading-tight text-danger shadow-[0_8px_16px_rgba(240,145,130,0.12)] transition group-active/action:translate-y-px">
+                <CopyPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 text-center">{secondaryLabel}</span>
               </span>
-            </button>
-            {secondaryHref && secondaryLabel ? (
-              <Link
-                href={secondaryHref}
-                aria-label={secondaryLabel}
-                className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35"
-              >
-                <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-coral/45 bg-cream px-3 text-[13px] font-bold leading-tight text-danger shadow-[0_8px_16px_rgba(240,145,130,0.12)] transition group-active/action:translate-y-px">
-                  <CopyPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 text-center">{secondaryLabel}</span>
-                </span>
-              </Link>
-            ) : null}
-          </div>
+            </Link>
+          ) : null}
         </div>
       </div>
-    ) : null;
+    </div>
+  ) : null;
 
   const desktopSplit =
     variant === "split" && secondaryHref && secondaryLabel ? (
@@ -400,7 +453,7 @@ export function ClaimAutoCreatedActivityCardAction({
             aria-label={copy.primary}
             className="group absolute inset-y-0 left-0 z-20 w-1/2 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-cream hover:z-40"
             type="button"
-            onClick={openConfirm}
+            onClick={openClaimEntry}
           >
             <span className="pointer-events-none absolute inset-y-0 left-0 z-30 flex w-[calc(200%+2px)] items-center justify-center gap-2 rounded-[1.45rem] border border-sage bg-forest px-4 text-[13px] font-bold leading-none text-paper opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-hover:shadow-[0_16px_28px_rgba(21,98,64,0.25)] group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 group-focus-visible:shadow-[0_16px_28px_rgba(21,98,64,0.25)] motion-reduce:transition-none">
               <Home
@@ -437,9 +490,7 @@ export function ClaimAutoCreatedActivityCardAction({
           aria-label={copy.mobileOpen}
           className="relative mx-auto flex h-9 min-h-9 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-[1.15rem] border border-sage/55 bg-[linear-gradient(135deg,#F1F2EC_0%,#FEFFF9_54%,#FFF5E6_100%)] px-2.5 text-forest shadow-[0_10px_20px_rgba(21,98,64,0.12),inset_0_1px_0_rgba(255,255,255,0.94)] transition duration-150 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           type="button"
-          onClick={() => {
-            setSheetOpen(true);
-          }}
+          onClick={openClaimEntry}
         >
           <span
             aria-hidden="true"
@@ -470,12 +521,15 @@ export function ClaimAutoCreatedActivityCardAction({
       <button
         className="group w-full min-w-0 rounded-full focus-visible:outline-none"
         type="button"
-        onClick={openConfirm}
+        onClick={openClaimEntry}
       >
         <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-sage bg-fog px-3 text-center text-[13px] font-bold leading-none text-forest shadow-[0_10px_22px_rgba(21,98,64,0.12)] transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-meadow/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-4 sm:text-sm">
           <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="min-w-0 truncate">{copy.primary}</span>
-          <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-meadow" aria-hidden="true" />
+          <BadgeCheck
+            className="h-3.5 w-3.5 shrink-0 text-meadow"
+            aria-hidden="true"
+          />
         </span>
       </button>
     ) : null;
@@ -485,8 +539,12 @@ export function ClaimAutoCreatedActivityCardAction({
       {singleAction}
       {mobileSplit}
       {desktopSplit}
-      {mounted && sheetRendered ? createPortal(mobileSheet, document.body) : null}
-      {mounted && confirmDialog ? createPortal(confirmDialog, document.body) : null}
+      {mounted && sheetRendered
+        ? createPortal(mobileSheet, document.body)
+        : null}
+      {mounted && confirmDialog
+        ? createPortal(confirmDialog, document.body)
+        : null}
     </>
   );
 }

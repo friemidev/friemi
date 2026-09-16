@@ -45,7 +45,11 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       icon: UsersRound,
     },
     { href: "/activities", label: t.nav.activities, icon: Compass },
-    { href: "/footprints", label: t.nav.footprintsShort, icon: Globe2 },
+    {
+      href: "/footprints?tab=message",
+      label: t.nav.footprintsShort,
+      icon: Globe2,
+    },
     {
       href: "/activities/new",
       label: t.nav.newActivity,
@@ -56,21 +60,23 @@ export function DesktopNav({ locale }: DesktopNavProps) {
   ];
 
   function isItemActive(href: string) {
+    const baseHref = href.split("?")[0] ?? href;
+
     if (sectionOverride === "lobby") {
-      return href === "/lobby";
+      return baseHref === "/lobby";
     }
 
     if (sectionOverride === "activities") {
-      return href === "/activities";
+      return baseHref === "/activities";
     }
 
-    const localizedHref = withLocale(currentLocale, href);
+    const localizedHref = withLocale(currentLocale, baseHref);
 
-    if (href === "/") {
+    if (baseHref === "/") {
       return pathname === localizedHref;
     }
 
-    if (href === "/activities") {
+    if (baseHref === "/activities") {
       const newActivityHref = withLocale(currentLocale, "/activities/new");
 
       return (
@@ -80,7 +86,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       );
     }
 
-    if (href === "/footprints") {
+    if (baseHref === "/footprints") {
       const messagesHref = withLocale(currentLocale, "/messages");
 
       return (
