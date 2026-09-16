@@ -65,10 +65,16 @@ function getUi(locale: string) {
   if (locale === "fr") {
     return {
       all: "Tout",
+      activeFilters: "Filtres actifs",
       details: "Détails",
       entries: "Saisies",
       filter: "Rechercher et filtrer",
+      filteredSubtotal: "Sous-total des dépenses filtrées",
       filteredEmpty: "Aucune dépense ne correspond à ces filtres.",
+      future: "À venir",
+      globalTotal: "Dépenses totales du groupe",
+      people: "personnes",
+      pendingExcluded: "Non inclus dans le total",
       participants: "Personnes",
       pending: "à traiter",
       progress: "Voir la progression",
@@ -85,10 +91,16 @@ function getUi(locale: string) {
   if (locale === "en") {
     return {
       all: "All",
+      activeFilters: "Active filters",
       details: "Details",
       entries: "Entered",
       filter: "Search and filter",
+      filteredSubtotal: "Filtered expense subtotal",
       filteredEmpty: "No expenses match these filters.",
+      future: "Future",
+      globalTotal: "Whole-ledger expenses",
+      people: "people",
+      pendingExcluded: "Not included in the total",
       participants: "People",
       pending: "to review",
       progress: "View settlement progress",
@@ -104,10 +116,16 @@ function getUi(locale: string) {
   }
   return {
     all: "全部",
+    activeFilters: "当前筛选",
     details: "详情",
     entries: "已上传",
     filter: "搜索与筛选",
+    filteredSubtotal: "当前筛选支出小计",
     filteredEmpty: "没有符合当前筛选条件的开支。",
+    future: "未来",
+    globalTotal: "全账本总开支",
+    people: "人参与",
+    pendingExcluded: "尚未计入总额",
     participants: "参与人数",
     pending: "待处理",
     progress: "查看结算进度",
@@ -291,17 +309,36 @@ function TransactionRow({
   transaction: ActivityAaSnapshot["transactions"][number];
 }) {
   const copy = getAaCopy(locale);
+  const ui = getUi(locale);
   const TypeIcon = transactionIcon(transaction.type);
   const CategoryIcon = categoryIcon(transaction.categoryName);
-  const meta =
+  const occurredAt = new Date(transaction.occurredAt);
+  const currentDayEnd = new Date();
+  currentDayEnd.setUTCHours(23, 59, 59, 999);
+  const isFuture = occurredAt > currentDayEnd;
+  const isForeignCurrency =
+    transaction.originalCurrency !== snapshot.baseCurrency;
+  const typeLabel =
+    transaction.type === "INCOME"
+      ? copy.income
+      : transaction.type === "TRANSFER"
+        ? copy.transfer
+        : copy.expense;
+  const relationship =
     transaction.type === "TRANSFER"
-      ? `${transaction.transferFrom?.displayName} → ${transaction.transferTo?.displayName}`
-      : `${transaction.contributionNames.join("、")} · ${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(transaction.occurredAt))}`;
+      ? `${transaction.transferFrom?.displayName ?? "—"} → ${transaction.transferTo?.displayName ?? "—"}`
+      : transaction.contributionNames.join("、") || "—";
+  const dateTime = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(occurredAt);
 
   return (
     <article className="border-b border-[#EEEBDD] last:border-0">
       <Link
-        className="flex min-h-[68px] items-center gap-3 py-3"
+        className="flex min-h-[84px] items-center gap-3 py-3"
         href={withLocale(
           locale,
           `/lobby/${activityId}/aa/transactions/${transaction.id}`,
@@ -312,21 +349,54 @@ function TransactionRow({
           <TypeIcon className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-white p-0.5 text-[#369758] ring-1 ring-[#D6D5B2]" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12px] font-black text-[#1D1D1B]">
-            {transaction.title}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[12px] font-black text-[#1D1D1B]">
+              {transaction.title}
+            </span>
+            <span className="shrink-0 rounded-full bg-[#F1F5EE] px-1.5 py-0.5 text-[8px] font-black text-[#156240]">
+              {typeLabel}
+            </span>
           </span>
           <span className="mt-1 block truncate text-[10px] font-semibold text-[#8E8383]">
-            {meta}
+            {transaction.creator.displayName} · {dateTime}
           </span>
+          <span className="mt-0.5 block truncate text-[9px] font-semibold text-[#8E8383]">
+            {relationship} · {transaction.relatedParticipantIds.length}{" "}
+            {ui.people}
+          </span>
+          {transaction.status === "PENDING_REVIEW" || isFuture ? (
+            <span className="mt-1.5 flex flex-wrap gap-1">
+              {transaction.status === "PENDING_REVIEW" ? (
+                <span className="rounded-full bg-[#FFF5DD] px-1.5 py-0.5 text-[8px] font-black text-[#8A641B]">
+                  {ui.pendingExcluded}
+                </span>
+              ) : null}
+              {isFuture ? (
+                <span className="rounded-full bg-[#EEF3FB] px-1.5 py-0.5 text-[8px] font-black text-[#49698E]">
+                  {ui.future}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </span>
         <span className="shrink-0 text-right">
           <span className="block text-[13px] font-black text-[#1D1D1B] friemi-tabular">
             {formatMinorAmount(
-              BigInt(transaction.baseAmountMinor),
-              snapshot.baseCurrency,
+              BigInt(transaction.originalAmountMinor),
+              transaction.originalCurrency,
               locale,
             )}
           </span>
+          {isForeignCurrency ? (
+            <span className="mt-0.5 block text-[9px] font-bold text-[#8E8383] friemi-tabular">
+              ≈{" "}
+              {formatMinorAmount(
+                BigInt(transaction.baseAmountMinor),
+                snapshot.baseCurrency,
+                locale,
+              )}
+            </span>
+          ) : null}
           <span
             className={cn(
               "mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold",
@@ -424,10 +494,32 @@ export default async function AaLedgerPage({
     return (
       (!query || haystack.includes(query)) &&
       (!filters.type || transaction.type === filters.type) &&
-      (!filters.status || transaction.status === filters.status)
+      (!filters.status
+        ? transaction.status !== "VOIDED"
+        : transaction.status === filters.status)
     );
   });
   const hasFilters = Boolean(query || filters.type || filters.status);
+  const activeFilterLabels = [
+    query ? `“${filters.q?.trim()}”` : null,
+    filters.type === "EXPENSE"
+      ? copy.expense
+      : filters.type === "INCOME"
+        ? copy.income
+        : filters.type === "TRANSFER"
+          ? copy.transfer
+          : null,
+    filters.status ? getAaStatusLabel(locale, filters.status) : null,
+  ].filter((label): label is string => Boolean(label));
+  const filteredExpenseSubtotal = filteredTransactions
+    .filter(
+      (transaction) =>
+        transaction.type === "EXPENSE" && transaction.status === "POSTED",
+    )
+    .reduce(
+      (sum, transaction) => sum + BigInt(transaction.baseAmountMinor),
+      0n,
+    );
   const requestedPage = Number.parseInt(filters.page ?? "1", 10);
   const page = Number.isFinite(requestedPage) ? Math.max(1, requestedPage) : 1;
   const pageSize = 100;
@@ -506,6 +598,36 @@ export default async function AaLedgerPage({
           ) : null}
         </div>
 
+        {hasFilters ? (
+          <div className="mt-3 rounded-[14px] border border-[#D8E8DC] bg-[#F4F8F1] px-3 py-2.5">
+            <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#6F756D]">
+              {ui.activeFilters}
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {activeFilterLabels.map((label) => (
+                <span
+                  className="rounded-full bg-white px-2 py-1 text-[9px] font-bold text-[#156240] ring-1 ring-[#D8E8DC]"
+                  key={label}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-[#D8E8DC] pt-2">
+              <span className="text-[10px] font-bold text-[#68736B]">
+                {ui.filteredSubtotal}
+              </span>
+              <strong className="text-[13px] font-black text-[#156240] friemi-tabular">
+                {formatMinorAmount(
+                  filteredExpenseSubtotal,
+                  snapshot.baseCurrency,
+                  locale,
+                )}
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
         {filteredTransactions.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-[16px] border border-[#E7E1CE] bg-white px-4">
             {visibleTransactions.map((transaction) => (
@@ -562,13 +684,7 @@ export default async function AaLedgerPage({
         ) : null}
 
         <div className="mt-3 flex items-center justify-between px-1 text-[11px] font-bold text-[#68736B]">
-          <span>
-            {locale === "fr"
-              ? "Total"
-              : locale === "en"
-                ? "Total"
-                : "总开支（预计）"}
-          </span>
+          <span>{ui.globalTotal}</span>
           <strong className="text-[14px] font-black text-[#1D1D1B] friemi-tabular">
             {formatMinorAmount(
               BigInt(snapshot.summary.expenseTotalMinor),
