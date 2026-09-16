@@ -7,6 +7,7 @@ export type PendingParticipantViewModel = {
   message: string | null;
   joinedAt: string;
   user: {
+    avatarUrl: string | null;
     id: string;
     nickname: string;
     friendCode: string | null;
@@ -62,6 +63,7 @@ export async function getPendingParticipants(
         joinedAt: true,
         userProfile: {
           select: {
+            avatarUrl: true,
             id: true,
             nickname: true,
             friendCode: true,
@@ -91,6 +93,7 @@ export async function getPendingParticipants(
       message: participant.message,
       joinedAt: participant.joinedAt.toISOString(),
       user: {
+        avatarUrl: participant.userProfile.avatarUrl,
         id: participant.userProfile.id,
         nickname: getPublicParticipantName(participant.userProfile),
         friendCode: participant.userProfile.friendCode,
@@ -102,6 +105,7 @@ export async function getPendingParticipants(
       message: participant.message,
       joinedAt: participant.joinedAt.toISOString(),
       user: {
+        avatarUrl: null,
         id: `guest:${participant.id}`,
         nickname: participant.displayName,
         friendCode: null,

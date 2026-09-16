@@ -170,6 +170,7 @@ export async function reviewActivityCheckInAction(
           activityId: true,
           checkInRequestedAt: true,
           checkedInAt: true,
+          id: true,
           status: true,
           userProfileId: true,
           activity: {
@@ -225,13 +226,14 @@ export async function reviewActivityCheckInAction(
         }
 
         const wasAlreadyCheckedIn = Boolean(participation.checkedInAt);
+        const confirmedAt = participation.checkedInAt ?? new Date();
 
         await tx.activityParticipant.update({
           where: {
             id: result.data.participationId,
           },
           data: {
-            checkedInAt: participation.checkedInAt ?? new Date(),
+            checkedInAt: confirmedAt,
             checkInCancelledAt: null,
             checkInReviewedById: profile.id,
           },
@@ -256,6 +258,7 @@ export async function reviewActivityCheckInAction(
           await createNotification(tx, {
             activityId: result.data.activityId,
             dedupeIncludingRead: true,
+            occurrenceId: `check-in-confirm:${participation.id}:${confirmedAt.toISOString()}`,
             recipientId: participation.userProfileId,
             type: "ACTIVITY_CHECK_IN",
           });

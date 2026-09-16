@@ -14,7 +14,29 @@ type HostRecruitmentTopNewsPageProps = {
   }>;
 };
 
-const hostRecruitmentImage = "/top_news/founding-host-recruitment-zh.png";
+const hostRecruitmentImages = {
+  en: {
+    height: 4298,
+    src: "/top_news/founding-host-recruitment-en.png",
+    width: 1024,
+  },
+  fr: {
+    height: 4298,
+    src: "/top_news/founding-host-recruitment-fr.png",
+    width: 1024,
+  },
+  "zh-CN": {
+    height: 2167,
+    src: "/top_news/founding-host-recruitment-zh.png",
+    width: 726,
+  },
+} as const;
+
+function getHostRecruitmentImage(locale: string) {
+  if (locale === "fr") return hostRecruitmentImages.fr;
+  if (locale === "en") return hostRecruitmentImages.en;
+  return hostRecruitmentImages["zh-CN"];
+}
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -61,6 +83,7 @@ export default async function HostRecruitmentTopNewsPage({
 }: HostRecruitmentTopNewsPageProps) {
   const { locale } = await params;
   const copy = getCopy(locale);
+  const image = getHostRecruitmentImage(locale);
 
   return (
     <main className="top-news-story-page min-h-svh bg-white pb-[var(--app-bottom-safe-area)] pt-[var(--app-top-safe-area)]">
@@ -68,15 +91,18 @@ export default async function HostRecruitmentTopNewsPage({
         fallbackHref={withLocale(locale, "/mobile-home")}
         label={copy.back}
       />
-      <div className="mx-auto w-full max-w-[726px]">
+      <div
+        className="mx-auto w-full"
+        style={{ maxWidth: `${image.width}px` }}
+      >
         <Image
           alt={copy.title}
           className="block h-auto w-full"
-          height={2167}
+          height={image.height}
           priority
-          sizes="(max-width: 726px) 100vw, 726px"
-          src={hostRecruitmentImage}
-          width={726}
+          sizes={`(max-width: ${image.width}px) 100vw, ${image.width}px`}
+          src={image.src}
+          width={image.width}
         />
       </div>
     </main>

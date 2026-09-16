@@ -13,6 +13,7 @@ import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
+import { ModalViewportGuard } from "@/components/ui/ModalViewportGuard";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notifications/unreadBadgePolling";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
@@ -114,6 +115,7 @@ export default async function LocaleLayout({
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
               <RouteProgress />
               <RouteTransitionMetrics locale={locale} />
+              <ModalViewportGuard />
               <AndroidAppBridge locale={locale} />
               {clerkEnabled ? <IOSAppBridge /> : null}
               <AppHeader

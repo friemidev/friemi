@@ -6,6 +6,13 @@ export type ChatMentionMember = {
   nickname: string;
 };
 
+export type ChatReplyTarget = {
+  body: string;
+  hasImage: boolean;
+  messageId: string;
+  senderName: string;
+};
+
 export type ChatUnreadMention = {
   createdAt: string;
   kind: "ALL" | "ME";

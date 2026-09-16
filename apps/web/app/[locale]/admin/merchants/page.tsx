@@ -1,6 +1,7 @@
 import { MerchantManagementClient } from "@/components/admin/MerchantManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { requireAdminPageAccess } from "@/lib/admin-auth";
+import { getAdminCouponTemplates } from "@/features/coupons/adminCoupons";
 import {
   getAdminMerchantCandidates,
   getAdminMerchants,
@@ -19,9 +20,10 @@ export default async function AdminMerchantsPage({
 }: AdminMerchantsPageProps) {
   const { locale } = await params;
   await requireAdminPageAccess(locale, "/admin/merchants");
-  const [merchants, candidates] = await Promise.all([
+  const [merchants, candidates, coupons] = await Promise.all([
     getAdminMerchants(),
     getAdminMerchantCandidates(),
+    getAdminCouponTemplates(),
   ]);
 
   return (
@@ -39,6 +41,7 @@ export default async function AdminMerchantsPage({
       </div>
       <MerchantManagementClient
         initialCandidates={candidates}
+        initialCoupons={coupons}
         initialMerchants={merchants}
         locale={locale}
       />

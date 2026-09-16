@@ -13,11 +13,9 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
-  Coins,
   Copy,
   Eye,
   Gift,
-  Hourglass,
   LoaderCircle,
   Lock,
   Medal,
@@ -48,6 +46,7 @@ import {
   friemiCoinRate,
   friemiCoinRechargePlans,
 } from "@/features/charm/charm";
+import { FriemiCoinIcon } from "@/features/charm/components/FriemiCoinIcon";
 import {
   type ProfileShopProductId,
   werewolfAllRolesProductId,
@@ -1233,22 +1232,6 @@ function getCheckDateCopy(check: ProfileBagCheckItem, locale: string) {
   return formatDate(check.createdAt);
 }
 
-function CheckStatusIcon({
-  status,
-}: {
-  status: ProfileBagCheckItem["status"];
-}) {
-  if (status === "REDEEMED") {
-    return <Check className="h-4 w-4" />;
-  }
-
-  if (status === "EXPIRED") {
-    return <Hourglass className="h-4 w-4" />;
-  }
-
-  return <Ticket className="h-4 w-4" />;
-}
-
 const initialRedeemCheckState: RedeemFriemiCheckToCoinsState = {};
 
 function RedeemFriemiCheckSubmitButton({
@@ -1537,7 +1520,7 @@ function ShopGiftRecipientDialog({
 
         <div className="max-h-[min(70dvh,30rem)] overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EAF5E8] px-3 py-1.5 text-[11px] font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
-            <Coins className="h-3.5 w-3.5 shrink-0" />
+            <FriemiCoinIcon className="h-4 w-4" />
             <span className="truncate">
               {copy.shop.coinTitle}: {visibleCoinBalance} {copy.shop.fc}
             </span>
@@ -2355,39 +2338,73 @@ function CouponBagCard({
   const available = item.status === "AVAILABLE";
   const content = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span
-          className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] ring-1",
-            available
-              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-              : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
-          )}
-        >
-          {item.coupon.merchant.logoUrl ? (
-            // Merchant logos are uploaded assets and may use a remote storage host.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt=""
-              className="h-full w-full object-cover"
-              src={item.coupon.merchant.logoUrl}
-            />
-          ) : (
-            <Ticket className="h-5 w-5" />
-          )}
-        </span>
-        <span
-          className={cn(
-            "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
-            available
-              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-              : "bg-white text-[#6C746A] ring-[#DFDAC5]",
-          )}
-        >
-          {getCouponStatusCopy(item.status, locale)}
-        </span>
-      </div>
-      <div className="min-w-0">
+      {item.coupon.imageUrl ? (
+        <div className="relative overflow-hidden rounded-[0.8rem] ring-1 ring-black/10">
+          <Image
+            alt={item.coupon.title}
+            className="aspect-[4/3] h-auto w-full object-cover"
+            height={1086}
+            sizes="(max-width: 640px) calc(50vw - 2.5rem), 16rem"
+            src={item.coupon.imageUrl}
+            width={1448}
+          />
+          <span
+            className={cn(
+              "absolute right-2 top-2 inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold shadow-sm ring-1",
+              available
+                ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+            )}
+          >
+            {getCouponStatusCopy(item.status, locale)}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <span
+            className={cn(
+              "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] ring-1",
+              available ? "ring-black/10" : "opacity-70 ring-[#DFDAC5]",
+            )}
+            style={
+              available
+                ? {
+                    backgroundColor: item.coupon.backgroundColor,
+                    color: item.coupon.foregroundColor,
+                  }
+                : undefined
+            }
+          >
+            {item.coupon.merchant.logoUrl ? (
+              // Merchant logos are uploaded assets and may use a remote storage host.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt=""
+                className="h-full w-full object-cover"
+                src={item.coupon.merchant.logoUrl}
+              />
+            ) : (
+              <Ticket
+                className="h-5 w-5"
+                style={
+                  available ? { color: item.coupon.accentColor } : undefined
+                }
+              />
+            )}
+          </span>
+          <span
+            className={cn(
+              "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
+              available
+                ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+            )}
+          >
+            {getCouponStatusCopy(item.status, locale)}
+          </span>
+        </div>
+      )}
+      <div className={cn("min-w-0", item.coupon.imageUrl ? "mt-3" : "")}>
         <h3 className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
           {item.coupon.title}
         </h3>
@@ -2412,7 +2429,8 @@ function CouponBagCard({
   );
 
   const className = cn(
-    "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
+    "grid content-between rounded-[1.15rem] bg-white p-3 ring-1",
+    item.coupon.imageUrl ? "min-h-[15rem]" : "min-h-[10.5rem]",
     available ? "ring-[#D6D5B2]" : "opacity-70 ring-[#E8E1CF]",
   );
 
@@ -2430,15 +2448,9 @@ function CouponBagCard({
 
 function FriemiCoinMark() {
   return (
-    <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[#D7D2A5] bg-[#F1F2E3] shadow-[inset_3px_3px_6px_rgba(255,255,255,0.9),inset_-5px_-6px_9px_rgba(110,105,54,0.18),0_5px_0_#C7C39A,0_9px_16px_rgba(42,73,57,0.16)]">
-      <Image
-        alt=""
-        className="h-8 w-8 rounded-full object-cover ring-1 ring-white/80"
-        height={32}
-        src="/brand/v2_1/friemi-icon-transparent-512.png"
-        width={32}
-      />
-      <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-white text-[#E5A927] shadow-sm ring-1 ring-[#EFEAD7]">
+    <span className="relative grid h-14 w-14 shrink-0 place-items-center">
+      <FriemiCoinIcon className="h-full w-full drop-shadow-[0_7px_7px_rgba(124,88,15,0.24)]" />
+      <span className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-full bg-white/95 text-[#E5A927] shadow-sm ring-1 ring-[#EFEAD7]">
         <Sparkles className="h-3 w-3 animate-pulse motion-reduce:animate-none" />
       </span>
     </span>
@@ -2462,20 +2474,33 @@ function CheckBagCard({
         available ? "ring-[#D6D5B2]" : "opacity-70 ring-[#E8E1CF]",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <span
+      <div className="relative">
+        <div
           className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] ring-1",
+            "aspect-[2/1] overflow-hidden rounded-[0.8rem] bg-[#F8FAF4] ring-1",
             available
-              ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-              : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
+              ? "ring-[#BFD8B9]"
+              : "grayscale ring-[#DFDAC5]",
           )}
         >
-          <CheckStatusIcon status={check.status} />
-        </span>
+          {check.type === "WELCOME" ? (
+            <Image
+              alt={getCheckTypeCopy(check.type, locale)}
+              className="h-full w-full object-cover"
+              height={887}
+              sizes="(max-width: 640px) calc(50vw - 2.5rem), 16rem"
+              src="/items/FMCheque.png"
+              width={1774}
+            />
+          ) : (
+            <span className="grid h-full w-full place-items-center bg-[#EAF5E8] text-[#156240]">
+              <Ticket className="h-8 w-8" />
+            </span>
+          )}
+        </div>
         <span
           className={cn(
-            "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
+            "absolute right-2 top-2 inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold shadow-sm ring-1",
             available
               ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
               : "bg-white text-[#6C746A] ring-[#DFDAC5]",
@@ -2484,7 +2509,7 @@ function CheckBagCard({
           {getCheckStatusCopy(check.status, locale)}
         </span>
       </div>
-      <div className="min-w-0">
+      <div className="mt-3 min-w-0">
         <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
           {getCheckTypeCopy(check.type, locale)}
         </p>
@@ -2744,11 +2769,8 @@ export function ProfileShopPageView({
       <section className="mt-5">
         <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-white px-4 py-3 ring-1 ring-[#E3DCC5]">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
-              <Coins className="h-6 w-6" />
-              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-bold leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
-                FC
-              </span>
+            <span className="relative grid h-14 w-14 shrink-0 place-items-center">
+              <FriemiCoinIcon className="h-full w-full drop-shadow-[0_7px_7px_rgba(124,88,15,0.24)]" />
             </span>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-[#7A8276]">

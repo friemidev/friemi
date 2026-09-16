@@ -27,6 +27,10 @@ function parsePage(value: string | null) {
   return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 }
 
+function parseStatus(value: string | null) {
+  return value === "ended" ? "ended" : "ongoing";
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -50,6 +54,7 @@ export async function GET(request: Request) {
 
     const page = await getMobileActivityLobbyPage({
       page: parsePage(url.searchParams.get("page")),
+      status: parseStatus(url.searchParams.get("status")),
       tab,
       viewerProfileId,
     });

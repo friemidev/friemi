@@ -14,7 +14,6 @@ import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
   CheckCircle2,
-  Coins,
   Gift,
   Minus,
   Plus,
@@ -22,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { getActiveCharmGifts, getCharmGiftLabel } from "@/features/charm/charm";
+import { FriemiCoinIcon } from "@/features/charm/components/FriemiCoinIcon";
 import {
   getViewerFriemiCoinBalanceClientAction,
   sendCharmGiftAction,
@@ -347,7 +347,7 @@ export function CharmGiftDialog({
                       {copy.testMode}
                     </p>
                     <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#D8E4C9]">
-                      <Coins className="h-3.5 w-3.5 shrink-0" />
+                      <FriemiCoinIcon className="h-4 w-4" />
                       <span className="truncate">
                         {copy.balanceLabel}:{" "}
                         {balanceLoading && visibleCoinBalance === null

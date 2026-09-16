@@ -507,7 +507,7 @@ export function ChatImagePreviewGrid({
 
       {activeImageUrl ? (
         <div
-          className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-black/92 text-white backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-black text-white"
           role="dialog"
           aria-modal="true"
           aria-label={imageLabel}
@@ -517,7 +517,6 @@ export function ChatImagePreviewGrid({
             setActiveIndex(null);
           }}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/92 via-black/58 to-transparent" />
           <div
             className="relative z-10 flex items-center justify-between gap-3 px-3 pb-2 pt-[calc(0.9rem+env(safe-area-inset-top))] sm:px-6"
             onClick={(event) => event.stopPropagation()}
@@ -525,16 +524,16 @@ export function ChatImagePreviewGrid({
             <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/16 text-white transition hover:bg-white/24 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-[0_6px_24px_rgba(0,0,0,0.42)] ring-1 ring-black/10 transition hover:bg-[#F1F2EC] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 aria-label={saveLabel}
                 title={saveLabel}
                 onClick={() => void saveActiveImage()}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-5 w-5" />
               </button>
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#151515]/85 px-3 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)] ring-1 ring-white/35 backdrop-blur-md transition hover:bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#151515] px-3 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)] ring-1 ring-white/35 transition hover:bg-[#242424] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 aria-label={resetLabel}
                 onClick={resetPreviewTransform}
               >
@@ -542,7 +541,7 @@ export function ChatImagePreviewGrid({
                 <span>{resetLabel}</span>
               </button>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-[#151515]/70 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-white/28 backdrop-blur-md">
+            <div className="flex items-center gap-2 rounded-full bg-[#151515] p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-white/28">
               <button
                 type="button"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/16 text-white transition hover:bg-white/24 focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45"
@@ -670,7 +669,7 @@ export function ChatImagePreviewGrid({
           {saveNotice ? (
             <div
               aria-live="polite"
-              className="pointer-events-none absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/78 px-4 py-2 text-xs font-semibold text-white shadow-lg ring-1 ring-white/20"
+              className="pointer-events-none absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 min-w-max -translate-x-1/2 rounded-lg bg-white px-4 py-2.5 text-sm font-bold text-black shadow-[0_10px_34px_rgba(0,0,0,0.5)] ring-1 ring-black/10"
               role="status"
             >
               {saveNotice}

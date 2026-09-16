@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+const messageSelect = {
+  id: true,
+  content: true,
+  imageUrls: true,
+  mentionedProfileIds: true,
+  mentionLabels: true,
+  mentionsEveryone: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
+  createdAt: true,
+  authorId: true,
+  author: { select: { nickname: true, avatarUrl: true } },
+} satisfies Prisma.PlanetMessageSelect;
+
+type PlanetMessageApiRow = Prisma.PlanetMessageGetPayload<{
+  select: typeof messageSelect;
+}>;
 
 function parseDate(value: string | null) {
   if (!value) return null;
@@ -32,6 +53,65 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const serializeMessage = (message: PlanetMessageApiRow) => ({
+    id: message.id,
+    author: message.author,
+    authorId: message.authorId,
+    content: message.content,
+    imageUrls: message.imageUrls,
+    mentionedProfileIds: message.mentionedProfileIds,
+    mentionLabels: message.mentionLabels,
+    mentionsEveryone: message.mentionsEveryone,
+    replyTo:
+      message.replyToMessageId && message.replyToSenderName
+        ? {
+            body: message.replyToBody ?? "",
+            hasImage: message.replyToHasImage,
+            messageId: message.replyToMessageId,
+            senderName: message.replyToSenderName,
+          }
+        : null,
+    createdAt: message.createdAt.toISOString(),
+  });
+  const beforeCreatedAt = parseDate(
+    request.nextUrl.searchParams.get("beforeCreatedAt"),
+  );
+  const beforeId = request.nextUrl.searchParams.get("beforeId");
+  const requestedLimit = Number.parseInt(
+    request.nextUrl.searchParams.get("limit") ?? "40",
+    10,
+  );
+  const historyLimit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 50)
+    : 40;
+
+  if (beforeCreatedAt && beforeId) {
+    const olderMessages = await prisma.planetMessage.findMany({
+      where: {
+        planetId,
+        OR: [
+          { createdAt: { lt: beforeCreatedAt } },
+          { createdAt: beforeCreatedAt, id: { lt: beforeId } },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: historyLimit + 1,
+      select: messageSelect,
+    });
+
+    return NextResponse.json(
+      {
+        hasMore: olderMessages.length > historyLimit,
+        messages: olderMessages
+          .slice(0, historyLimit)
+          .reverse()
+          .map(serializeMessage),
+        serverTime: new Date().toISOString(),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
   const afterCreatedAt = parseDate(
     request.nextUrl.searchParams.get("afterCreatedAt"),
   );
@@ -50,25 +130,12 @@ export async function GET(
     where: { planetId, ...cursorWhere },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: 50,
-    select: {
-      id: true,
-      content: true,
-      imageUrls: true,
-      mentionedProfileIds: true,
-      mentionLabels: true,
-      mentionsEveryone: true,
-      createdAt: true,
-      authorId: true,
-      author: { select: { nickname: true, avatarUrl: true } },
-    },
+    select: messageSelect,
   });
 
   return NextResponse.json(
     {
-      messages: messages.map((message) => ({
-        ...message,
-        createdAt: message.createdAt.toISOString(),
-      })),
+      messages: messages.map(serializeMessage),
       serverTime: serverTime.toISOString(),
     },
     { headers: { "Cache-Control": "private, no-store" } },

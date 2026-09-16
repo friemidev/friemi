@@ -48,6 +48,7 @@ import {
   getGeneralPageShareDescription,
 } from "@/lib/share-metadata";
 import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
+import { MobileHomeV23CitySelector } from "./MobileHomeV23CitySelector";
 import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 
 type MobileHomePageProps = {
@@ -545,7 +546,10 @@ function MobileHomeV23Experience({
           </Link>
 
           <div className="flex min-w-0 items-center justify-end gap-1.5 pt-3">
-            <MobileHomeV23CitySelector currentCity={copy.location} />
+            <MobileHomeV23CitySelector
+              currentCity={copy.location}
+              locale={locale}
+            />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
@@ -676,19 +680,6 @@ function MobileHomeV23NewsCard({
         {title}
       </span>
     </Link>
-  );
-}
-
-function MobileHomeV23CitySelector({ currentCity }: { currentCity: string }) {
-  return (
-    <span
-      className="inline-flex h-9 min-w-0 cursor-default select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-semibold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
-      aria-label={currentCity}
-      title={currentCity}
-    >
-      <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
-      <span className="max-w-[4.4rem] truncate">{currentCity}</span>
-    </span>
   );
 }
 

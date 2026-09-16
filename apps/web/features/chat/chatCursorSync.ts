@@ -5,6 +5,7 @@ export type ChatCursorMessage = {
 
 export type ChatCursorResponse<TMessage extends ChatCursorMessage> = {
   deletedMessageIds?: string[];
+  hasMore?: boolean;
   messages: TMessage[];
   serverTime: string;
 };
@@ -45,6 +46,12 @@ export function mergeChatCursorMessages<TMessage extends ChatCursorMessage>(
 export function getLatestChatCursor(messages: ChatCursorMessage[]) {
   return messages.length > 0
     ? ([...messages].sort(compareChatCursorMessages).at(-1) ?? null)
+    : null;
+}
+
+export function getEarliestChatCursor(messages: ChatCursorMessage[]) {
+  return messages.length > 0
+    ? ([...messages].sort(compareChatCursorMessages).at(0) ?? null)
     : null;
 }
 

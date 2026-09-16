@@ -75,8 +75,6 @@ public final class MainActivity extends Activity {
     private static final String LOCALE_FR = "fr";
     private static final long EXIT_CONFIRM_MS = 1800L;
     private static final long SLOW_LOAD_NOTICE_MS = 8500L;
-    private static final long AUTH_BROWSER_AUTO_RETRY_MIN_MS = 3500L;
-    private static final long AUTH_BROWSER_AUTO_RETRY_MAX_MS = 180000L;
     private static final String AUTH_COMPLETE_HOST = "auth-complete";
     private static final String ANDROID_AUTH_RETURN_PARAM = "__friemi_android_auth_return";
     private static final String ANDROID_AUTH_TS_PARAM = "__friemi_android_auth_ts";
@@ -98,10 +96,7 @@ public final class MainActivity extends Activity {
     private SharedPreferences preferences;
     private ValueCallback<Uri[]> filePathCallback;
     private String currentUrl;
-    private String pendingAuthBrowserUrl;
     private String pendingGalleryImageUrl;
-    private long pendingAuthStartedAt;
-    private boolean pendingAuthAutoRetryUsed;
     private boolean webBackRequested;
     private boolean pageLoading;
     private long lastBackPressedAt;
@@ -127,8 +122,13 @@ public final class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        clearPendingAuthBrowser();
         loadUrl(buildLaunchUrl(intent));
+    }
+
+    @Override
+    protected void onPause() {
+        CookieManager.getInstance().flush();
+        super.onPause();
     }
 
     @Override
@@ -136,7 +136,6 @@ public final class MainActivity extends Activity {
         super.onResume();
         configureWindow();
         refreshSafeArea();
-        maybeResumePendingAuthBrowser();
     }
 
     @Override
@@ -470,7 +469,6 @@ public final class MainActivity extends Activity {
     private String normalizeIncomingUri(Uri uri) {
         if ("friemi".equalsIgnoreCase(uri.getScheme())) {
             if (AUTH_COMPLETE_HOST.equalsIgnoreCase(uri.getHost())) {
-                clearPendingAuthBrowser();
                 return buildUrlFromAuthCompleteTarget(uri.getQueryParameter("target"));
             }
             String route = buildRouteFromCustomScheme(uri);
@@ -1280,17 +1278,8 @@ public final class MainActivity extends Activity {
     }
 
     private void openAuthBrowser(String url) {
-        openAuthBrowser(url, false);
-    }
-
-    private void openAuthBrowser(String url, boolean autoRetry) {
         if (isBlank(url)) {
             return;
-        }
-        if (!autoRetry) {
-            pendingAuthBrowserUrl = url;
-            pendingAuthStartedAt = System.currentTimeMillis();
-            pendingAuthAutoRetryUsed = false;
         }
         try {
             CustomTabColorSchemeParams colors = new CustomTabColorSchemeParams.Builder()
@@ -1310,30 +1299,6 @@ public final class MainActivity extends Activity {
         } catch (ActivityNotFoundException error) {
             openExternal(url);
         }
-    }
-
-    private void maybeResumePendingAuthBrowser() {
-        if (isBlank(pendingAuthBrowserUrl) || pendingAuthAutoRetryUsed) {
-            return;
-        }
-
-        long elapsed = System.currentTimeMillis() - pendingAuthStartedAt;
-        if (elapsed < AUTH_BROWSER_AUTO_RETRY_MIN_MS || elapsed > AUTH_BROWSER_AUTO_RETRY_MAX_MS) {
-            return;
-        }
-
-        pendingAuthAutoRetryUsed = true;
-        mainHandler.postDelayed(() -> {
-            if (!isBlank(pendingAuthBrowserUrl) && isAuthRoute(currentUrl)) {
-                openAuthBrowser(pendingAuthBrowserUrl, true);
-            }
-        }, 350L);
-    }
-
-    private void clearPendingAuthBrowser() {
-        pendingAuthBrowserUrl = null;
-        pendingAuthStartedAt = 0L;
-        pendingAuthAutoRetryUsed = false;
     }
 
     private int dp(int value) {
@@ -1412,9 +1377,6 @@ public final class MainActivity extends Activity {
         public void onPageFinished(WebView view, String url) {
             currentUrl = url;
             CookieManager.getInstance().flush();
-            if (!isAuthRoute(url)) {
-                clearPendingAuthBrowser();
-            }
             hideLoading();
             hideError();
             injectAndroidAppContext(true);

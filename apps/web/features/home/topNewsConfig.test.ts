@@ -14,15 +14,13 @@ test("mobile home top news uses fixed story routes and preview images", () => {
     {
       href: "/top-news/host-recruitment",
       id: "founding-host-recruitment",
-      image:
-        "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/c5550d08-54d0-4c63-9232-99cca7fb832e.jpg",
+      image: "/top_news/founding-host-recruitment-cover.png",
       title: "Friemi 共创主理人招募",
     },
     {
       href: "/top-news/friemi",
       id: "friemi-intro",
-      image:
-        "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/ab4ce5ac-1ac3-44a2-aab2-e648492b3e94.png",
+      image: "/top_news/friemi-intro-cover.png",
       title: "发现活动，约朋友，一起出发",
     },
   ]);

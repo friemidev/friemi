@@ -10,18 +10,22 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, LoaderCircle, X } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, LoaderCircle, X } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import {
   confirmSelectedActivityCheckInsAction,
   type ReviewActivityCheckInState,
 } from "../actions/reviewActivityCheckIn";
 import type { ActivityCheckInParticipantViewModel } from "../queries/getActivityCheckInRoster";
+import type { PendingParticipantViewModel } from "../queries/getPendingParticipants";
+import { ParticipationApprovalList } from "./ParticipationApprovalPanel";
 
 type ActivityCheckInReviewPanelProps = {
   activityId: string;
   locale: string;
+  pendingParticipants?: PendingParticipantViewModel[];
   participants: ActivityCheckInParticipantViewModel[];
+  showParticipationApproval?: boolean;
   triggerLabel?: string;
   triggerVariant?: "button" | "icon";
 };
@@ -32,6 +36,8 @@ function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       cancel: "Fermer",
+      approvalTab: "Inscriptions",
+      checkInTab: "Pointages",
       confirm: "Confirmer les pointages",
       confirmed: "Confirme",
       empty: "Aucun participant a pointer.",
@@ -41,7 +47,7 @@ function getCopy(locale: string) {
       pendingRequests: "A confirmer",
       remove: "Marquer absent",
       selected: "Present",
-      title: "Pointages",
+      title: "Gestion des participants",
       unselected: "Absent",
     };
   }
@@ -49,6 +55,8 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       cancel: "Close",
+      approvalTab: "Requests",
+      checkInTab: "Check-ins",
       confirm: "Confirm check-ins",
       confirmed: "Confirmed",
       empty: "No participants need check-in.",
@@ -58,13 +66,15 @@ function getCopy(locale: string) {
       pendingRequests: "Waiting",
       remove: "Mark absent",
       selected: "Present",
-      title: "Check-ins",
+      title: "Participant management",
       unselected: "Absent",
     };
   }
 
   return {
     cancel: "关闭",
+    approvalTab: "报名审核",
+    checkInTab: "签到管理",
     confirm: "签到确认",
     confirmed: "已确认",
     empty: "暂无需要签到的参与者。",
@@ -74,7 +84,7 @@ function getCopy(locale: string) {
     pendingRequests: "待确认",
     remove: "取消签到",
     selected: "已到场",
-    title: "签到管理",
+    title: "参与管理",
     unselected: "未到场",
   };
 }
@@ -168,12 +178,22 @@ function ActivityCheckInRosterForm({
 export function ActivityCheckInReviewPanel({
   activityId,
   locale,
+  pendingParticipants = [],
   participants,
+  showParticipationApproval = false,
   triggerLabel,
   triggerVariant = "button",
 }: ActivityCheckInReviewPanelProps) {
   const copy = getCopy(locale);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"approval" | "checkIn">(
+    showParticipationApproval && pendingParticipants.length > 0
+      ? "approval"
+      : "checkIn",
+  );
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(
+    pendingParticipants.length,
+  );
   const initialSelectedIds = useMemo(
     () =>
       participants
@@ -227,6 +247,28 @@ export function ActivityCheckInReviewPanel({
     confirmedIdSet.has(participant.id),
   ).length;
   const pendingRequestCount = pendingRequestIds.length;
+  const totalPendingCount = pendingApprovalCount + pendingRequestCount;
+
+  useEffect(() => {
+    setPendingApprovalCount(pendingParticipants.length);
+  }, [pendingParticipants.length]);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      if (
+        showParticipationApproval &&
+        window.location.hash === "#participation-approval"
+      ) {
+        setActiveTab("approval");
+        setIsOpen(true);
+      }
+    };
+
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, [showParticipationApproval]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -289,7 +331,7 @@ export function ActivityCheckInReviewPanel({
           type="button"
         >
           <CheckCircle2 className="h-4 w-4" />
-          {pendingRequestCount > 0 ? (
+          {totalPendingCount > 0 ? (
             <span
               aria-hidden="true"
               className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
@@ -305,9 +347,9 @@ export function ActivityCheckInReviewPanel({
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
           {triggerLabel ?? copy.open}
-          {pendingRequestCount > 0 ? (
+          {totalPendingCount > 0 ? (
             <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-              {pendingRequestCount}
+              {totalPendingCount > 99 ? "99+" : totalPendingCount}
             </span>
           ) : null}
         </Button>
@@ -321,6 +363,7 @@ export function ActivityCheckInReviewPanel({
           <div
             aria-modal="true"
             className="max-h-[86vh] w-full max-w-md overflow-y-auto rounded-[1.4rem] border border-[#D6D5B2] bg-[#FEFFF9] p-4 shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
+            id="participation-approval"
             role="dialog"
           >
             <div className="flex items-start justify-between gap-3">
@@ -339,6 +382,56 @@ export function ActivityCheckInReviewPanel({
               </button>
             </div>
 
+            {showParticipationApproval ? (
+            <div className="mt-4 grid grid-cols-2 rounded-lg bg-[#F1F2EC] p-1">
+              <button
+                className={
+                  activeTab === "approval"
+                    ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
+                    : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
+                }
+                onClick={() => setActiveTab("approval")}
+                type="button"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                {copy.approvalTab}
+                {pendingApprovalCount > 0 ? (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
+                    {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                className={
+                  activeTab === "checkIn"
+                    ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
+                    : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
+                }
+                onClick={() => setActiveTab("checkIn")}
+                type="button"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {copy.checkInTab}
+                {pendingRequestCount > 0 ? (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
+                    {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+            ) : null}
+
+            {showParticipationApproval && activeTab === "approval" ? (
+              <div className="mt-4">
+                <ParticipationApprovalList
+                  activityId={activityId}
+                  locale={locale}
+                  onPendingCountChange={setPendingApprovalCount}
+                  pendingParticipants={pendingParticipants}
+                />
+              </div>
+            ) : (
+              <>
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
               <span className="text-sm font-bold text-[#156240]">
                 {copy.confirmed} {confirmedCount}/{participants.length} 人
@@ -452,7 +545,8 @@ export function ActivityCheckInReviewPanel({
                 })}
               </div>
             )}
-
+              </>
+            )}
           </div>
         </div>
       ) : null}

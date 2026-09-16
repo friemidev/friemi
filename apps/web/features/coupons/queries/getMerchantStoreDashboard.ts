@@ -1,4 +1,5 @@
 import { ensureDefaultMerchantCoupon } from "@/features/coupons/services/couponService";
+import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 import { prisma } from "@/lib/prisma";
 
 export type MerchantStoreDashboardViewModel = NonNullable<
@@ -24,41 +25,69 @@ export async function getMerchantStoreDashboard(profileId: string) {
 
   if (!merchant) return null;
 
-  const coupon = await ensureDefaultMerchantCoupon(merchant.id);
-  const [availableCount, redeemedCount, recentItems] = await Promise.all([
-    prisma.couponWalletItem.count({
-      where: { couponId: coupon.id, status: "AVAILABLE" },
-    }),
-    prisma.couponWalletItem.count({
-      where: { couponId: coupon.id, status: "REDEEMED" },
-    }),
-    prisma.couponWalletItem.findMany({
-      where: { couponId: coupon.id },
-      orderBy: [{ claimedAt: "desc" }],
-      take: 8,
-      select: {
-        claimedAt: true,
-        id: true,
-        redeemedAt: true,
-        status: true,
-        owner: {
-          select: {
-            avatarUrl: true,
-            nickname: true,
+  await ensureDefaultMerchantCoupon(merchant.id);
+  const [coupons, availableCount, redeemedCount, recentItems] =
+    await Promise.all([
+      prisma.coupon.findMany({
+        where: { merchantId: merchant.id, isActive: true },
+        orderBy: [{ createdAt: "asc" }],
+        select: {
+          accentColor: true,
+          backgroundColor: true,
+          description: true,
+          expiresAt: true,
+          foregroundColor: true,
+          id: true,
+          slug: true,
+          terms: true,
+          title: true,
+          claimCodes: {
+            where: { status: "ACTIVE" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { token: true },
           },
         },
-      },
-    }),
-  ]);
+      }),
+      prisma.couponWalletItem.count({
+        where: {
+          coupon: { merchantId: merchant.id },
+          status: "AVAILABLE",
+        },
+      }),
+      prisma.couponWalletItem.count({
+        where: {
+          coupon: { merchantId: merchant.id },
+          status: "REDEEMED",
+        },
+      }),
+      prisma.couponWalletItem.findMany({
+        where: { coupon: { merchantId: merchant.id } },
+        orderBy: [{ claimedAt: "desc" }],
+        take: 8,
+        select: {
+          claimedAt: true,
+          coupon: { select: { title: true } },
+          id: true,
+          redeemedAt: true,
+          status: true,
+          owner: {
+            select: {
+              avatarUrl: true,
+              nickname: true,
+            },
+          },
+        },
+      }),
+    ]);
 
   return {
-    coupon: {
-      claimToken: coupon.claimToken,
-      description: coupon.description,
+    coupons: coupons.map(({ claimCodes, ...coupon }) => ({
+      ...coupon,
+      activeClaimToken: claimCodes[0]?.token ?? null,
       expiresAt: coupon.expiresAt?.toISOString() ?? null,
-      id: coupon.id,
-      title: coupon.title,
-    },
+      imageUrl: getPlatformCouponImageUrl(coupon.slug),
+    })),
     merchant,
     stats: {
       availableCount,

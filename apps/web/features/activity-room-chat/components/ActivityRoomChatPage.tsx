@@ -18,6 +18,7 @@ import {
   Minus,
   MoreHorizontal,
   Plus,
+  Reply,
   SendHorizontal,
   Trash2,
   UserMinus,
@@ -45,10 +46,18 @@ import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
 } from "@/features/chat/components/ChatImageAttachmentPicker";
+import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import {
+  ChatReplyBubblePreview,
+  ChatReplyComposerPreview,
+  getChatReplyCopy,
+} from "@/features/chat/components/ChatReplyPreview";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
+import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
-import type { ChatMentionMember } from "@/features/chat/types";
+import type { ChatMentionMember, ChatReplyTarget } from "@/features/chat/types";
 import {
   getChatMentionEveryoneToken,
   getChatMentionMemberToken,
@@ -1791,6 +1800,7 @@ function MessageRow({
   message,
   onDelete,
   onOpenActionMenu,
+  onReply,
   onStartSelection,
   onToggleSelection,
   selectionMode,
@@ -1804,13 +1814,16 @@ function MessageRow({
   message: ActivityRoomMessageViewModel;
   onDelete: (messageIds: string[]) => void;
   onOpenActionMenu: (messageId: string) => void;
+  onReply: (message: ActivityRoomMessageViewModel) => void;
   onStartSelection: (messageId: string) => void;
   onToggleSelection: (messageId: string) => void;
   selectionMode: boolean;
   viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
+  const replyCopy = getChatReplyCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
+  const canOpenActions = !message.isDeleted;
   const sender = message.isMine && viewer ? viewer : message.sender;
   const senderProfileHref = withLocale(locale, `/profile/${sender.id}`);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1841,7 +1854,7 @@ function MessageRow({
       return;
     }
 
-    if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
+    if (!canOpenActions || isDeleting || selectionMode || event.button !== 0) {
       return;
     }
 
@@ -1885,7 +1898,7 @@ function MessageRow({
 
   function handleMessageKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (
-      !canDelete ||
+      !canOpenActions ||
       isDeleting ||
       (event.key !== "Enter" && event.key !== " ")
     ) {
@@ -1923,37 +1936,50 @@ function MessageRow({
     ) : null;
 
   const actionMenu =
-    actionMenuOpen && canDelete && !selectionMode ? (
+    actionMenuOpen && canOpenActions && !selectionMode ? (
       <div
-        aria-label={`${copy.selectMessage} / ${copy.deleteMessage}`}
+        aria-label={`${replyCopy.reply}${canDelete ? ` / ${copy.selectMessage} / ${copy.deleteMessage}` : ""}`}
         className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
         data-room-message-action-menu
         role="toolbar"
       >
         <button
-          aria-label={copy.selectMessage}
+          aria-label={replyCopy.reply}
           className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
-          onClick={() => onStartSelection(message.id)}
-          title={copy.selectMessage}
+          onClick={() => onReply(message)}
+          title={replyCopy.reply}
           type="button"
         >
-          <ListChecks className="h-4 w-4" />
+          <Reply className="h-4 w-4" />
         </button>
-        <button
-          aria-busy={isDeleting}
-          aria-label={copy.deleteMessage}
-          className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
-          disabled={isDeleting}
-          onClick={() => onDelete([message.id])}
-          title={copy.deleteMessage}
-          type="button"
-        >
-          {isDeleting ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </button>
+        {canDelete ? (
+          <>
+            <button
+              aria-label={copy.selectMessage}
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+              onClick={() => onStartSelection(message.id)}
+              title={copy.selectMessage}
+              type="button"
+            >
+              <ListChecks className="h-4 w-4" />
+            </button>
+            <button
+              aria-busy={isDeleting}
+              aria-label={copy.deleteMessage}
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
+              disabled={isDeleting}
+              onClick={() => onDelete([message.id])}
+              title={copy.deleteMessage}
+              type="button"
+            >
+              {isDeleting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </button>
+          </>
+        ) : null}
       </div>
     ) : null;
 
@@ -1996,7 +2022,7 @@ function MessageRow({
           aria-pressed={selectionMode && canDelete ? isSelected : undefined}
           className={cn(
             "relative touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
-            canDelete && "select-none [-webkit-touch-callout:none]",
+            canOpenActions && "select-none [-webkit-touch-callout:none]",
             selectionMode && canDelete && "cursor-pointer",
             isSelected &&
               "outline outline-2 outline-offset-2 outline-[#36A15F]",
@@ -2011,7 +2037,7 @@ function MessageRow({
           data-room-message-id={message.id}
           onClick={handleMessageClick}
           onContextMenu={(event) => {
-            if (!canDelete || isDeleting || selectionMode) {
+            if (!canOpenActions || isDeleting || selectionMode) {
               return;
             }
 
@@ -2023,9 +2049,16 @@ function MessageRow({
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
-          role={canDelete ? "button" : undefined}
-          tabIndex={canDelete ? 0 : undefined}
+          role={canOpenActions ? "button" : undefined}
+          tabIndex={canOpenActions ? 0 : undefined}
         >
+          {!message.isDeleted && message.replyTo ? (
+            <ChatReplyBubblePreview
+              inverted={message.isMine}
+              locale={locale}
+              replyTo={message.replyTo}
+            />
+          ) : null}
           {!message.isDeleted && message.imageUrls.length ? (
             <ChatImagePreviewGrid
               imageLabel={copy.imageMessage}
@@ -2115,12 +2148,16 @@ function RoomComposer({
   disabled,
   locale,
   onSent,
+  onCancelReply,
+  replyTo,
   viewer,
 }: {
   activityId: string;
   disabled: boolean;
   locale: string;
   onSent: (message: ActivityRoomMessageViewModel) => void;
+  onCancelReply: () => void;
+  replyTo: ChatReplyTarget | null;
   viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
@@ -2237,44 +2274,70 @@ function RoomComposer({
       return;
     }
 
-    const trimmedBody = body.trim();
+    const submissions = splitChatMessageSubmissions(body, imageUrls);
 
-    if (!trimmedBody && imageUrls.length === 0) {
+    if (submissions.length === 0) {
       setBody("");
       setFormError("");
       return;
     }
 
-    const formData = new FormData();
-    formData.set("activityId", activityId);
-    formData.set("body", trimmedBody);
-    formData.set("locale", locale);
-    formData.set("mentionsEveryone", mentionsEveryone ? "1" : "0");
-    imageUrls.forEach((imageUrl) => formData.append("imageUrls", imageUrl));
-    mentionedMembers.forEach((member) =>
-      formData.append("mentionedProfileIds", member.id),
-    );
-
     setFormError("");
     setIsSending(true);
+    setBody("");
+    setImageUrls([]);
+    setMentionedMembers([]);
+    setMentionsEveryone(false);
+    onCancelReply();
 
-    void sendActivityRoomMessageAction(initialActionState, formData)
-      .then((state) => {
-        if (state.ok && state.messageId) {
-          setBody("");
-          setImageUrls([]);
-          setMentionedMembers([]);
-          setMentionsEveryone(false);
+    void (async () => {
+      for (const [index, submission] of submissions.entries()) {
+        const formData = new FormData();
+        formData.set("activityId", activityId);
+        formData.set("body", submission.body);
+        formData.set("locale", locale);
+        if (index === 0 && replyTo) {
+          formData.set("replyToMessageId", replyTo.messageId);
+        }
+        formData.set(
+          "mentionsEveryone",
+          index === 0 && mentionsEveryone ? "1" : "0",
+        );
+        submission.imageUrls.forEach((imageUrl) =>
+          formData.append("imageUrls", imageUrl),
+        );
+        if (index === 0) {
+          mentionedMembers.forEach((member) =>
+            formData.append("mentionedProfileIds", member.id),
+          );
+        }
+
+        try {
+          const state = await sendActivityRoomMessageAction(
+            initialActionState,
+            formData,
+          );
+
+          if (!state.ok || !state.messageId) {
+            setFormError(state.formError ?? copy.sendFailed);
+            continue;
+          }
+
           onSent({
-            body: trimmedBody,
-            createdAt: new Date().toISOString(),
+            body: submission.body,
+            createdAt: new Date(Date.now() + index).toISOString(),
             id: state.messageId,
             isDeleted: false,
             isMine: true,
-            imageUrls,
-            mentionedProfileIds: mentionedMembers.map((member) => member.id),
-            mentionLabels: mentionedMembers.map((member) => member.nickname),
-            mentionsEveryone,
+            imageUrls: submission.imageUrls,
+            mentionedProfileIds:
+              index === 0 ? mentionedMembers.map((member) => member.id) : [],
+            mentionLabels:
+              index === 0
+                ? mentionedMembers.map((member) => member.nickname)
+                : [],
+            mentionsEveryone: index === 0 && mentionsEveryone,
+            replyTo: index === 0 ? replyTo : null,
             sender: {
               avatarUrl: viewer?.avatarUrl ?? null,
               friendCode: null,
@@ -2282,18 +2345,11 @@ function RoomComposer({
               nickname: viewer?.nickname ?? "Friemi",
             },
           });
-
-          return;
+        } catch {
+          setFormError(copy.sendFailed);
         }
-
-        setFormError(state.formError ?? copy.sendFailed);
-        setBody(state.values?.body ?? trimmedBody);
-      })
-      .catch(() => {
-        setFormError(copy.sendFailed);
-        setBody(trimmedBody);
-      })
-      .finally(() => setIsSending(false));
+      }
+    })().finally(() => setIsSending(false));
   }
 
   return (
@@ -2304,13 +2360,20 @@ function RoomComposer({
       onFocusCapture={keepMobileChatPageAnchored}
       onSubmit={handleSubmit}
     >
+      {replyTo ? (
+        <ChatReplyComposerPreview
+          locale={locale}
+          onCancel={onCancelReply}
+          replyTo={replyTo}
+        />
+      ) : null}
       <ChatImageAttachmentPreviews
         imageLabel={copy.imageMessage}
         imageUrls={imageUrls}
         onChange={setImageUrls}
         removeLabel={copy.removeImage}
       />
-      <div className="flex items-end gap-2">
+      <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
         <ChatEmojiPicker
           disabled={disabled || isSending}
           label={copy.addEmoji}
@@ -2340,7 +2403,7 @@ function RoomComposer({
           uploadingLabel={copy.imageUploading}
         />
         <textarea
-          className="max-h-28 min-h-11 min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC]"
+          className="max-h-28 min-h-11 w-full min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC] max-[360px]:min-h-10 max-[360px]:px-3 max-[360px]:py-2.5"
           disabled={disabled || isSending}
           maxLength={500}
           name="body"
@@ -2357,7 +2420,7 @@ function RoomComposer({
         />
         <Button
           aria-busy={isSending}
-          className="h-11 min-w-11 shrink-0 rounded-full bg-[#156240] px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5rem] sm:px-4"
+          className="h-11 min-w-11 shrink-0 rounded-full bg-[#156240] px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] max-[360px]:h-10 max-[360px]:min-w-10 sm:min-w-[5rem] sm:px-4"
           disabled={disabled || isSending || isImageUploading}
           type="submit"
         >
@@ -2403,11 +2466,18 @@ export function ActivityRoomChatPage({
   const [manageSheetOpen, setManageSheetOpen] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
   const chatCursorMode = useChatCursorSync({
     endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
     messages,
     setMessages,
     subjectKey: activityId,
+  });
+  const chatHistory = useChatHistoryPagination({
+    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    initialPageSize: 50,
+    messages,
+    setMessages,
   });
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -2426,7 +2496,7 @@ export function ActivityRoomChatPage({
   });
 
   useEffect(() => {
-    setMessages(initialMessages);
+    setMessages((current) => mergeChatCursorMessages(current, initialMessages));
   }, [initialMessages]);
 
   useEffect(() => {
@@ -2472,6 +2542,18 @@ export function ActivityRoomChatPage({
   function handleOpenActionMenu(messageId: string) {
     setDeleteError("");
     setActionMenuMessageId(messageId);
+  }
+
+  function handleReply(message: ActivityRoomMessageViewModel) {
+    setReplyTo({
+      body: message.body,
+      hasImage: message.imageUrls.length > 0,
+      messageId: message.id,
+      senderName: message.sender.nickname,
+    });
+    setActionMenuMessageId("");
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
   }
 
   function handleStartSelection(messageId: string) {
@@ -2583,7 +2665,26 @@ export function ActivityRoomChatPage({
         />
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+        onScroll={chatHistory.onScroll}
+        ref={chatHistory.scrollContainerRef}
+      >
+        {chatHistory.isLoadingOlder ? (
+          <div
+            aria-label={
+              locale === "fr"
+                ? "Chargement des messages"
+                : locale === "en"
+                  ? "Loading messages"
+                  : "正在加载聊天记录"
+            }
+            className="flex h-9 items-center justify-center text-[#7D857D]"
+            role="status"
+          >
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          </div>
+        ) : null}
         {policy.canView ? (
           messages.length > 0 ? (
             <div className="grid gap-3">
@@ -2616,6 +2717,7 @@ export function ActivityRoomChatPage({
                       message={message}
                       onDelete={handleDelete}
                       onOpenActionMenu={handleOpenActionMenu}
+                      onReply={handleReply}
                       onStartSelection={handleStartSelection}
                       onToggleSelection={handleToggleSelection}
                       selectionMode={selectionMode}
@@ -2692,7 +2794,9 @@ export function ActivityRoomChatPage({
           activityId={activity.id}
           disabled={deletingMessageIds.length > 0}
           locale={locale}
+          onCancelReply={() => setReplyTo(null)}
           onSent={handleSent}
+          replyTo={replyTo}
           viewer={viewer}
         />
       ) : policy.canView ? (

@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, BadgeCheck, CalendarDays, Store } from "lucide-react";
 import { notFound } from "next/navigation";
-import { CouponQrCode } from "@/features/coupons/components/CouponQrCode";
+import { CouponRedemptionQrGenerator } from "@/features/coupons/components/CouponRedemptionQrGenerator";
+import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -22,9 +23,6 @@ function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       back: "Retour au sac",
-      copy: "Copier le lien",
-      copied: "Lien copié",
-      hint: "Présentez ce QR code à la boutique pour utiliser le coupon.",
       noExpiry: "Sans date limite",
       title: "Coupon",
       unavailable: "Ce coupon ne peut plus être utilisé.",
@@ -33,9 +31,6 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       back: "Back to bag",
-      copy: "Copy link",
-      copied: "Link copied",
-      hint: "Show this QR code to the store to redeem your coupon.",
       noExpiry: "No expiry date",
       title: "Coupon",
       unavailable: "This coupon can no longer be used.",
@@ -43,9 +38,6 @@ function getCopy(locale: string) {
   }
   return {
     back: "返回背包",
-    copy: "复制核销链接",
-    copied: "链接已复制",
-    hint: "向店家出示此二维码，由店家扫码确认核销。",
     noExpiry: "长期有效",
     title: "优惠券",
     unavailable: "这张优惠券已无法使用。",
@@ -67,12 +59,15 @@ export default async function CouponWalletDetailPage({
     },
     select: {
       redeemedAt: true,
-      redemptionToken: true,
       status: true,
       coupon: {
         select: {
           description: true,
+          accentColor: true,
+          backgroundColor: true,
           expiresAt: true,
+          foregroundColor: true,
+          slug: true,
           terms: true,
           title: true,
           merchant: {
@@ -89,6 +84,7 @@ export default async function CouponWalletDetailPage({
   if (!item) notFound();
 
   const copy = getCopy(locale);
+  const couponImageUrl = getPlatformCouponImageUrl(item.coupon.slug);
   const available =
     item.status === "AVAILABLE" &&
     item.coupon.merchant.isActive &&
@@ -108,26 +104,54 @@ export default async function CouponWalletDetailPage({
         <span className="h-10 w-10" />
       </header>
 
-      <section className="mt-6 overflow-hidden rounded-[1.25rem] bg-[#0F6D46] p-5 text-white shadow-[0_20px_46px_rgba(15,109,70,0.2)]">
+      {couponImageUrl ? (
+        <div className="mt-6 overflow-hidden rounded-[1.25rem] bg-white shadow-[0_20px_46px_rgba(15,109,70,0.14)] ring-1 ring-[#D6D5B2]">
+          <Image
+            alt={item.coupon.title}
+            className="aspect-[4/3] h-auto w-full object-cover"
+            height={1086}
+            priority
+            sizes="(max-width: 640px) calc(100vw - 2.5rem), 36rem"
+            src={couponImageUrl}
+            width={1448}
+          />
+        </div>
+      ) : null}
+
+      <section
+        className={`${couponImageUrl ? "mt-3" : "mt-6"} overflow-hidden rounded-[1.25rem] p-5 shadow-[0_20px_46px_rgba(15,109,70,0.2)]`}
+        style={{
+          backgroundColor: item.coupon.backgroundColor,
+          color: item.coupon.foregroundColor,
+        }}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <Image
-              alt="Friemi"
-              className="h-auto w-20 object-contain"
-              height={24}
-              src="/brand/v2_1/friemi-lockup-horizontal-white.png"
-              width={80}
-            />
+            <span className="inline-flex rounded-md bg-white/95 px-2 py-1 shadow-sm">
+              <Image
+                alt="Friemi"
+                className="h-auto w-20 object-contain"
+                height={24}
+                src="/brand/v2_1/friemi-lockup-horizontal-navy.png"
+                width={80}
+              />
+            </span>
             <h2 className="mt-2 text-2xl font-black leading-8">
               {item.coupon.title}
             </h2>
           </div>
-          <BadgeCheck className="h-8 w-8 shrink-0 text-[#F1F2E3]" />
+          <BadgeCheck
+            className="h-8 w-8 shrink-0"
+            style={{ color: item.coupon.accentColor }}
+          />
         </div>
-        <p className="mt-5 text-sm font-semibold leading-6 text-white/76">
+        <p className="mt-5 text-sm font-semibold leading-6 opacity-75">
           {item.coupon.description}
         </p>
-        <div className="mt-5 grid gap-2 border-t border-dashed border-white/30 pt-4 text-xs font-bold text-white/82">
+        <div
+          className="mt-5 grid gap-2 border-t border-dashed pt-4 text-xs font-bold"
+          style={{ borderColor: item.coupon.accentColor }}
+        >
           <p className="flex items-center gap-2">
             <Store className="h-4 w-4" />
             {item.coupon.merchant.name}
@@ -144,16 +168,7 @@ export default async function CouponWalletDetailPage({
       </section>
 
       {available ? (
-        <section className="mt-6 rounded-[1.25rem] bg-white p-5 ring-1 ring-[#D6D5B2]">
-          <CouponQrCode
-            copiedLabel={copy.copied}
-            copyLabel={copy.copy}
-            path={withLocale(locale, `/coupons/redeem/${item.redemptionToken}`)}
-          />
-          <p className="mx-auto mt-4 max-w-xs text-center text-xs font-semibold leading-5 text-[#6C746A]">
-            {copy.hint}
-          </p>
-        </section>
+        <CouponRedemptionQrGenerator itemId={itemId} locale={locale} />
       ) : (
         <p className="mt-6 rounded-[1rem] bg-white px-4 py-5 text-center text-sm font-bold text-[#7A8276] ring-1 ring-[#D6D5B2]">
           {copy.unavailable}

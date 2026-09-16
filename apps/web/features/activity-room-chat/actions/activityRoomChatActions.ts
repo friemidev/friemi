@@ -61,6 +61,7 @@ const sendActivityRoomMessageSchema = z
       .max(chatMentionMaxProfileCount)
       .default([]),
     mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
+    replyToMessageId: z.string().trim().max(80).optional(),
     locale: z.string().min(1).max(16).default("zh-CN"),
   })
   .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
@@ -237,6 +238,8 @@ export async function sendActivityRoomMessageAction(
     imageUrls: getStringList(formData, "imageUrls"),
     mentionedProfileIds: getStringList(formData, "mentionedProfileIds"),
     mentionsEveryone: getString(formData, "mentionsEveryone") || "0",
+    replyToMessageId:
+      getString(formData, "replyToMessageId").trim() || undefined,
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = sendActivityRoomMessageSchema.safeParse(rawInput);
@@ -266,6 +269,7 @@ export async function sendActivityRoomMessageAction(
       mentionsEveryone:
         result.data.mentionsEveryone === "1" ||
         result.data.mentionsEveryone === "true",
+      replyToMessageId: result.data.replyToMessageId,
       senderId: profile.id,
     });
 

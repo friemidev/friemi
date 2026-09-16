@@ -75,7 +75,10 @@ function isFriemiNativeWebView() {
   return isFriemiAndroidWebView() || isFriemiIOSWebView();
 }
 
-function withoutAndroidAuthParams(pathname: string, searchParams: URLSearchParams) {
+function withoutAndroidAuthParams(
+  pathname: string,
+  searchParams: URLSearchParams,
+) {
   const nextParams = new URLSearchParams(searchParams.toString());
   nextParams.delete(androidAuthReturnParamName);
   nextParams.delete(androidAuthRetryParamName);
@@ -104,7 +107,8 @@ export function AndroidAuthReturnRefresh({
   const activatedAtRef = useRef<number | null>(null);
   const retryStartedRef = useRef(false);
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const isAndroidAuthReturn = searchParams.get(androidAuthReturnParamName) === "1";
+  const isAndroidAuthReturn =
+    searchParams.get(androidAuthReturnParamName) === "1";
   const hasRetried = searchParams.get(androidAuthRetryParamName) === "1";
 
   const cleanTarget = useMemo(
@@ -123,14 +127,12 @@ export function AndroidAuthReturnRefresh({
     setPhase("syncing");
     setVisible(true);
 
-    const refreshTimers = [120, 650, 1500].map((delay) =>
-      window.setTimeout(() => {
-        router.refresh();
-      }, delay),
-    );
+    const refreshTimer = window.setTimeout(() => {
+      router.refresh();
+    }, 120);
 
     return () => {
-      refreshTimers.forEach((timer) => window.clearTimeout(timer));
+      window.clearTimeout(refreshTimer);
     };
   }, [isAndroidAuthReturn, routeKey, router]);
 
@@ -142,7 +144,7 @@ export function AndroidAuthReturnRefresh({
     if (serverAuthenticated || (isLoaded && isSignedIn)) {
       setPhase("finishing");
       const elapsed = Date.now() - (activatedAtRef.current ?? Date.now());
-      const delay = Math.max(260, 900 - elapsed);
+      const delay = Math.max(80, 320 - elapsed);
       const finishTimer = window.setTimeout(() => {
         window.location.replace(cleanTarget);
       }, delay);
@@ -176,8 +178,10 @@ export function AndroidAuthReturnRefresh({
       const query = new URLSearchParams({
         [authRedirectParamName]: targetWithRetry,
       });
-      window.location.replace(withLocale(locale, `/sign-in?${query.toString()}`));
-    }, 950);
+      window.location.replace(
+        withLocale(locale, `/sign-in?${query.toString()}`),
+      );
+    }, 1800);
 
     return () => {
       window.clearTimeout(retryTimer);

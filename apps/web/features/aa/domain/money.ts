@@ -82,7 +82,7 @@ export function allocateByWeights(
     throw new Error("EMPTY_PARTICIPANTS");
   }
 
-  if (participants.some((participant) => participant.weight <= 0n)) {
+  if (participants.some((participant) => participant.weight < 0n)) {
     throw new Error("INVALID_WEIGHT");
   }
 
@@ -96,11 +96,19 @@ export function allocateByWeights(
     seen.add(participant.participantId);
   });
 
-  const totalWeight = participants.reduce(
+  const includedParticipants = participants.filter(
+    (participant) => participant.weight > 0n,
+  );
+
+  if (includedParticipants.length === 0) {
+    throw new Error("EMPTY_TOTAL_WEIGHT");
+  }
+
+  const totalWeight = includedParticipants.reduce(
     (sum, participant) => sum + participant.weight,
     0n,
   );
-  const raw = participants.map((participant) => {
+  const raw = includedParticipants.map((participant) => {
     const numerator = totalMinor * participant.weight;
 
     return {
@@ -110,7 +118,7 @@ export function allocateByWeights(
     };
   });
   const allocated = raw.reduce((sum, item) => sum + item.amountMinor, 0n);
-  let remaining = totalMinor - allocated;
+  const remaining = totalMinor - allocated;
   const remainderOrder = [...raw].sort((left, right) => {
     if (left.remainder === right.remainder) {
       return left.participantId.localeCompare(right.participantId);

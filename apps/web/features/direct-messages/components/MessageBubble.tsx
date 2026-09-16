@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, ListChecks, LoaderCircle, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  ListChecks,
+  LoaderCircle,
+  Reply,
+  Trash2,
+} from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -14,6 +20,11 @@ import { getDirectMessagesCopy } from "../copy";
 import type { DirectMessageUserViewModel } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import {
+  ChatReplyBubblePreview,
+  getChatReplyCopy,
+} from "@/features/chat/components/ChatReplyPreview";
+import type { ChatReplyTarget } from "@/features/chat/types";
 
 export type MessageBubbleDeliveryStatus = "sending" | "failed";
 
@@ -23,6 +34,7 @@ export type MessageBubbleViewModel = {
   body: string;
   imageUrls: string[];
   readAt: string | null;
+  replyTo: ChatReplyTarget | null;
   createdAt: string;
   isMine: boolean;
   deliveryStatus?: MessageBubbleDeliveryStatus;
@@ -41,10 +53,12 @@ export function MessageBubble({
   locale,
   onDelete,
   onOpenActionMenu,
+  onReply,
   onRetry,
   onStartSelection,
   onToggleSelection,
   readAt,
+  replyTo,
   sender,
   senderId,
   selectionMode = false,
@@ -55,6 +69,7 @@ export function MessageBubble({
   locale: string;
   onDelete?: (messageIds: string[]) => void;
   onOpenActionMenu?: (messageId: string) => void;
+  onReply?: (message: MessageBubbleViewModel) => void;
   onRetry?: (message: MessageBubbleViewModel) => void;
   onStartSelection?: (messageId: string) => void;
   onToggleSelection?: (messageId: string) => void;
@@ -64,6 +79,7 @@ export function MessageBubble({
   const hasBody = body.trim().length > 0;
   const hasImages = imageUrls.length > 0;
   const t = getDirectMessagesCopy(locale);
+  const replyCopy = getChatReplyCopy(locale);
   const statusLabel =
     deliveryStatus === "sending"
       ? t.sendingStatus
@@ -187,14 +203,35 @@ export function MessageBubble({
   const actionMenu =
     actionMenuOpen && canDelete && !selectionMode ? (
       <div
-        aria-label={`${t.selectMessage} / ${t.deleteMessage}`}
+        aria-label={`${replyCopy.reply} / ${t.selectMessage} / ${t.deleteMessage}`}
         className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
         data-direct-message-action-menu
         role="toolbar"
       >
         <button
-          aria-label={t.selectMessage}
+          aria-label={replyCopy.reply}
           className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+          onClick={() =>
+            onReply?.({
+              body,
+              createdAt,
+              deliveryStatus,
+              id,
+              imageUrls,
+              isMine,
+              readAt,
+              replyTo,
+              senderId,
+            })
+          }
+          title={replyCopy.reply}
+          type="button"
+        >
+          <Reply className="h-4 w-4" />
+        </button>
+        <button
+          aria-label={t.selectMessage}
+          className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
           onClick={() => onStartSelection?.(id)}
           title={t.selectMessage}
           type="button"
@@ -265,6 +302,13 @@ export function MessageBubble({
         role={canDelete ? "button" : undefined}
         tabIndex={canDelete ? 0 : undefined}
       >
+        {replyTo ? (
+          <ChatReplyBubblePreview
+            inverted={isMine}
+            locale={locale}
+            replyTo={replyTo}
+          />
+        ) : null}
         {hasImages ? (
           <ChatImagePreviewGrid
             imageLabel={t.imageMessage}
@@ -298,6 +342,7 @@ export function MessageBubble({
                 body,
                 imageUrls,
                 readAt,
+                replyTo,
                 createdAt,
                 isMine,
                 deliveryStatus,

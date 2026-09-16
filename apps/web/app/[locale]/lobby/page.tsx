@@ -156,6 +156,7 @@ export default async function ActivityLobbyPage({
           hasMore: false,
           page: 1,
           pageSize: 8,
+          status: "ongoing" as const,
           tab: initialMobileTab,
         };
       }),

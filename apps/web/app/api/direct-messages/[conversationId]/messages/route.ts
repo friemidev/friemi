@@ -33,6 +33,76 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const messageSelect = {
+    id: true,
+    senderId: true,
+    body: true,
+    imageUrls: true,
+    replyToMessageId: true,
+    replyToSenderName: true,
+    replyToBody: true,
+    replyToHasImage: true,
+    readAt: true,
+    createdAt: true,
+  } as const;
+  const beforeCreatedAt = parseDate(
+    request.nextUrl.searchParams.get("beforeCreatedAt"),
+  );
+  const beforeId = request.nextUrl.searchParams.get("beforeId");
+  const requestedLimit = Number.parseInt(
+    request.nextUrl.searchParams.get("limit") ?? "50",
+    10,
+  );
+  const historyLimit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 50)
+    : 50;
+
+  if (beforeCreatedAt && beforeId) {
+    const olderMessages = await prisma.directMessage.findMany({
+      where: {
+        conversationId,
+        OR: [
+          { createdAt: { lt: beforeCreatedAt } },
+          { createdAt: beforeCreatedAt, id: { lt: beforeId } },
+        ],
+        deletions: { none: { profileId: profile.id } },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: historyLimit + 1,
+      select: messageSelect,
+    });
+    const hasMore = olderMessages.length > historyLimit;
+
+    return NextResponse.json(
+      {
+        hasMore,
+        messages: olderMessages
+          .slice(0, historyLimit)
+          .reverse()
+          .map((message) => ({
+            id: message.id,
+            senderId: message.senderId,
+            body: message.body,
+            imageUrls: message.imageUrls,
+            replyTo:
+              message.replyToMessageId && message.replyToSenderName
+                ? {
+                    body: message.replyToBody ?? "",
+                    hasImage: message.replyToHasImage,
+                    messageId: message.replyToMessageId,
+                    senderName: message.replyToSenderName,
+                  }
+                : null,
+            createdAt: message.createdAt.toISOString(),
+            isMine: message.senderId === profile.id,
+            readAt: message.readAt?.toISOString() ?? null,
+          })),
+        serverTime: new Date().toISOString(),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
   const afterCreatedAt = parseDate(
     request.nextUrl.searchParams.get("afterCreatedAt"),
   );
@@ -49,14 +119,6 @@ export async function GET(
           ],
         }
       : {};
-  const messageSelect = {
-    id: true,
-    senderId: true,
-    body: true,
-    imageUrls: true,
-    readAt: true,
-    createdAt: true,
-  } as const;
   const [createdMessages, changedMessages, deletions] = await Promise.all([
     prisma.directMessage.findMany({
       where: {
@@ -116,7 +178,19 @@ export async function GET(
     {
       deletedMessageIds: deletions.map((deletion) => deletion.messageId),
       messages: messages.map((message) => ({
-        ...message,
+        id: message.id,
+        senderId: message.senderId,
+        body: message.body,
+        imageUrls: message.imageUrls,
+        replyTo:
+          message.replyToMessageId && message.replyToSenderName
+            ? {
+                body: message.replyToBody ?? "",
+                hasImage: message.replyToHasImage,
+                messageId: message.replyToMessageId,
+                senderName: message.replyToSenderName,
+              }
+            : null,
         createdAt: message.createdAt.toISOString(),
         isMine: message.senderId === profile.id,
         readAt:
