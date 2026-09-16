@@ -21,6 +21,9 @@ import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { isIOSWebUserAgent } from "@/features/mobile/iosAppStore";
+import { IOSReferralAppBanner } from "@/features/referrals/components/IOSReferralAppBanner";
+import { normalizeReferralCode } from "@/features/referrals/referralCode";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -36,6 +39,7 @@ type HomePageProps = {
     locale: string;
   }>;
   searchParams?: Promise<{
+    ref?: string | string[];
     view?: string | string[];
   }>;
 };
@@ -347,14 +351,23 @@ export default async function HomePage({
 }: HomePageProps) {
   const { locale } = await params;
   const query = (await searchParams) ?? {};
+  const rawReferralCode = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const referralCode = normalizeReferralCode(rawReferralCode);
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
   const requestHeaders = await headers();
+  const userAgent = requestHeaders.get("user-agent");
+  const showIOSReferralBanner = Boolean(
+    referralCode && isIOSWebUserAgent(userAgent),
+  );
 
-  if (
-    view !== "desktop" &&
-    isMobileUserAgent(requestHeaders.get("user-agent"))
-  ) {
-    redirect(withLocale(locale, "/mobile-home"));
+  if (view !== "desktop" && isMobileUserAgent(userAgent)) {
+    const mobileHomePath = withLocale(locale, "/mobile-home");
+
+    redirect(
+      referralCode
+        ? `${mobileHomePath}?ref=${encodeURIComponent(referralCode)}`
+        : mobileHomePath,
+    );
   }
 
   const t = getLuxuryHomeCopy(locale);
@@ -384,6 +397,7 @@ export default async function HomePage({
       <JsonLd data={createSiteStructuredData(locale)} />
       <HomeLuxuryMotion />
       <DetailSourceRestore sourceKey="home" />
+      {showIOSReferralBanner ? <IOSReferralAppBanner locale={locale} /> : null}
       <main className="overflow-hidden bg-white text-[#1D1D1B]">
         <MobileLuxuryHome
           activities={activitiesResult.activities}

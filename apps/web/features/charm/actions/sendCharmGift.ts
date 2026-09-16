@@ -137,7 +137,6 @@ export async function sendCharmGiftAction(
 
   if (
     !gift?.launchEnabled ||
-    gift.charmValue <= 0 ||
     gift.availability !== "standard"
   ) {
     return {

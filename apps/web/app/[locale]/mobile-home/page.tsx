@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
@@ -31,6 +32,9 @@ import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desk
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
+import { isIOSWebUserAgent } from "@/features/mobile/iosAppStore";
+import { IOSReferralAppBanner } from "@/features/referrals/components/IOSReferralAppBanner";
+import { normalizeReferralCode } from "@/features/referrals/referralCode";
 import {
   getMobileHomeTopNewsItems,
   type MobileHomeTopNewsItem,
@@ -54,6 +58,9 @@ import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 type MobileHomePageProps = {
   params: Promise<{
     locale: string;
+  }>;
+  searchParams?: Promise<{
+    ref?: string | string[];
   }>;
 };
 
@@ -96,6 +103,7 @@ type MobileHomeExperienceProps = {
 };
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
+  showIOSReferralBanner: boolean;
   topNewsItems: MobileHomeTopNewsItem[];
   trendingActivities: ActivityCardViewModel[];
   viewerName: string | null;
@@ -427,8 +435,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function MobileHomePage({ params }: MobileHomePageProps) {
-  const { locale } = await params;
+export default async function MobileHomePage({
+  params,
+  searchParams,
+}: MobileHomePageProps) {
+  const [{ locale }, requestHeaders] = await Promise.all([params, headers()]);
+  const query = (await searchParams) ?? {};
+  const rawReferralCode = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const showIOSReferralBanner = Boolean(
+    normalizeReferralCode(rawReferralCode) &&
+    isIOSWebUserAgent(requestHeaders.get("user-agent")),
+  );
   const perf = createPerformanceTracker({
     locale,
     route: "/mobile-home",
@@ -489,6 +506,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
       <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
           locale={locale}
+          showIOSReferralBanner={showIOSReferralBanner}
           swipeActivities={activitiesResult.swipeActivities}
           topNewsItems={topNewsItems}
           trendingActivities={trendingActivitiesResult.trendingActivities}
@@ -521,6 +539,7 @@ function getMobileHomeActivityHref(
 
 function MobileHomeV23Experience({
   locale,
+  showIOSReferralBanner,
   topNewsItems,
   trendingActivities,
   viewerName,
@@ -535,6 +554,12 @@ function MobileHomeV23Experience({
         aria-hidden="true"
         className="pointer-events-none fixed inset-x-0 top-0 z-[65] h-[var(--app-top-safe-area)] bg-white"
       />
+      {showIOSReferralBanner ? (
+        <IOSReferralAppBanner
+          className="mx-auto w-full max-w-[430px]"
+          locale={locale}
+        />
+      ) : null}
       <div className="mx-auto flex w-full max-w-[430px] flex-col pl-5 pr-0">
         <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pr-5 pt-1">
           <Link

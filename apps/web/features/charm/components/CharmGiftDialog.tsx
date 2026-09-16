@@ -429,7 +429,8 @@ export function CharmGiftDialog({
                               {gift.coinCost ?? "-"} {copy.currency}
                             </span>
                             <span>
-                              +{gift.charmValue} {copy.charmUnit}
+                              {gift.charmValue > 0 ? "+" : ""}
+                              {gift.charmValue} {copy.charmUnit}
                             </span>
                           </span>
                         </button>
