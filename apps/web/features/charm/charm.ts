@@ -348,8 +348,8 @@ export const charmGiftCatalog = [
     referenceRmb: -50,
     coinCost: 5,
     category: "negative",
-    availability: "disabled",
-    launchEnabled: false,
+    availability: "standard",
+    launchEnabled: true,
   },
   {
     id: "bomb",
@@ -359,8 +359,8 @@ export const charmGiftCatalog = [
     referenceRmb: -200,
     coinCost: 20,
     category: "negative",
-    availability: "disabled",
-    launchEnabled: false,
+    availability: "standard",
+    launchEnabled: true,
   },
   {
     id: "police_car",
@@ -370,8 +370,8 @@ export const charmGiftCatalog = [
     referenceRmb: -1000,
     coinCost: 100,
     category: "negative",
-    availability: "disabled",
-    launchEnabled: false,
+    availability: "standard",
+    launchEnabled: true,
   },
 ] as const satisfies readonly CharmGiftDefinition[];
 
@@ -428,7 +428,6 @@ export function getActiveCharmGifts(
   return charmGiftCatalog.filter(
     (gift) =>
       gift.launchEnabled &&
-      gift.charmValue > 0 &&
       (options.includeSeasonal || gift.availability === "standard"),
   );
 }

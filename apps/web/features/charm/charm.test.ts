@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   blindBoxFragmentExchangeCount,
+  calculateCharmDeltaFromGift,
   calculateCharmFromReceivedGifts,
   canRedeemBlindBoxFragments,
   charmGiftCatalog,
@@ -55,15 +56,23 @@ test("werewolf gifts expose the current Chinese product names", () => {
   assert.equal(getCharmGiftLabel(wolfGift, "zh-CN"), "狼王之王");
 });
 
-test("negative gifts stay in the catalog but are disabled for launch", () => {
-  assert.equal(getCharmGiftDefinition("egg")?.launchEnabled, false);
+test("negative gifts are available in the active gift catalog", () => {
+  assert.equal(getCharmGiftDefinition("egg")?.launchEnabled, true);
   assert.equal(getCharmGiftDefinition("egg")?.coinCost, 5);
-  assert.equal(getCharmGiftDefinition("bomb")?.launchEnabled, false);
+  assert.equal(getCharmGiftDefinition("bomb")?.launchEnabled, true);
   assert.equal(getCharmGiftDefinition("bomb")?.coinCost, 20);
-  assert.equal(getCharmGiftDefinition("police_car")?.launchEnabled, false);
+  assert.equal(getCharmGiftDefinition("police_car")?.launchEnabled, true);
   assert.equal(getCharmGiftDefinition("police_car")?.coinCost, 100);
   assert.ok(
-    !getActiveCharmGifts().some((gift) => gift.category === "negative"),
+    getActiveCharmGifts().some((gift) => gift.category === "negative"),
+  );
+});
+
+test("negative gifts calculate a negative charm delta", () => {
+  assert.equal(
+    calculateCharmDeltaFromGift({ giftId: "bomb", quantity: 2 })
+      .totalCharmDelta,
+    -40,
   );
 });
 

@@ -46,6 +46,7 @@ import {
   friemiCoinRate,
   friemiCoinRechargePlans,
 } from "@/features/charm/charm";
+import { CharmGiftArtwork } from "@/features/charm/components/CharmGiftArtwork";
 import { FriemiCoinIcon } from "@/features/charm/components/FriemiCoinIcon";
 import {
   type ProfileShopProductId,
@@ -250,10 +251,13 @@ function getProfilePrivateSubpageCopy(locale: string) {
         fc: "Friemi Coins",
         featureCatalog: "Fonctions à débloquer",
         giftCatalog: "Cadeaux",
+        classicCatalog: "Classiques",
+        activityCatalog: "Activités",
+        seasonalCatalog: "Éditions limitées",
         giftModeNotice: "Chaque cadeau debite votre solde Friemi Coins.",
         noFriends: "Suivez quelqu'un pour offrir un cadeau.",
         negativeCatalog: "Cadeaux négatifs",
-        negativeNotice: "Fermé pour le moment.",
+        negativeNotice: "Réduit le charme du destinataire.",
         price: "Prix",
         recharge: "Recharger",
         rechargeContact:
@@ -437,10 +441,13 @@ function getProfilePrivateSubpageCopy(locale: string) {
         fc: "Friemi Coins",
         featureCatalog: "Feature unlocks",
         giftCatalog: "Gifts",
+        classicCatalog: "Classic gifts",
+        activityCatalog: "Activity gifts",
+        seasonalCatalog: "Seasonal gifts",
         giftModeNotice: "Each gift deducts Friemi coins from your balance.",
         noFriends: "Follow someone to send a gift.",
         negativeCatalog: "Negative gifts",
-        negativeNotice: "Closed for now.",
+        negativeNotice: "Reduces the recipient's charm.",
         price: "Price",
         recharge: "Top up",
         rechargeContact: "To top up, contact the official Friemi team.",
@@ -618,10 +625,13 @@ function getProfilePrivateSubpageCopy(locale: string) {
       fc: "Friemi 币",
       featureCatalog: "功能解锁",
       giftCatalog: "礼物",
+      classicCatalog: "经典礼物",
+      activityCatalog: "活动礼物",
+      seasonalCatalog: "节日限定",
       giftModeNotice: "送礼会扣除 Friemi 币。",
       noFriends: "关注用户后可以送礼。",
       negativeCatalog: "负向礼物",
-      negativeNotice: "暂未开放，请理性使用。",
+      negativeNotice: "会减少对方魅力值，请理性使用。",
       price: "价格",
       recharge: "充值",
       rechargeContact: "充值请联系 Friemi 官方。",
@@ -1348,6 +1358,112 @@ function getShopCharmUnit(locale: string) {
   return "魅力值";
 }
 
+function ShopGiftCard({
+  charmUnit,
+  gift,
+  locale,
+  onSend,
+}: {
+  charmUnit: string;
+  gift: ProfileShopGiftItem;
+  locale: string;
+  onSend: (giftId: string) => void;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const available = gift.availability === "available";
+  const charmPrefix = gift.charmValue > 0 ? "+" : "";
+
+  return (
+    <article
+      className={cn(
+        "relative flex min-h-[17.75rem] min-w-0 flex-col overflow-hidden rounded-lg bg-white ring-1 ring-[#E3DCC5]",
+        available ? "shadow-[0_9px_24px_rgba(42,55,40,0.06)]" : "bg-[#FBFAF6]",
+      )}
+    >
+      <div className="relative grid h-[7.25rem] shrink-0 place-items-center overflow-hidden bg-[#F8F7F2]">
+        <CharmGiftArtwork
+          className="h-24 w-24 bg-transparent"
+          emoji={gift.emoji}
+          giftId={gift.id}
+          label={gift.label}
+          sizes="96px"
+        />
+        <span className="absolute right-2 top-2">
+          <GiftAvailabilityBadge gift={gift} locale={locale} />
+        </span>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col p-3">
+        <h4 className="line-clamp-2 min-h-10 text-sm font-bold leading-5 text-[#111210] [overflow-wrap:anywhere]">
+          {gift.label}
+        </h4>
+
+        <dl className="mt-2 grid grid-cols-2 divide-x divide-[#E6E1D2] border-y border-[#E6E1D2] py-2">
+          <div className="min-w-0 pr-2">
+            <dt className="truncate text-[10px] font-semibold text-[#7A8276]">
+              {copy.shop.price}
+            </dt>
+            <dd className="mt-1 flex min-w-0 items-center gap-1 text-xs font-bold text-[#6C5515]">
+              <FriemiCoinIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{gift.coinCost ?? "-"}</span>
+            </dd>
+          </div>
+          <div className="min-w-0 pl-2">
+            <dt className="truncate text-[10px] font-semibold text-[#7A8276]">
+              {copy.shop.charm}
+            </dt>
+            <dd
+              className={cn(
+                "mt-1 flex min-w-0 items-center gap-1 text-xs font-bold",
+                gift.charmValue < 0 ? "text-[#9A2135]" : "text-[#7D58C6]",
+              )}
+              title={`${charmPrefix}${gift.charmValue} ${charmUnit}`}
+            >
+              <Image
+                alt=""
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 object-contain"
+                height={16}
+                src="/items/gift/shop/charm-heart.webp"
+                width={16}
+              />
+              <span className="truncate">
+                {charmPrefix}
+                {gift.charmValue}
+              </span>
+            </dd>
+          </div>
+        </dl>
+
+        <button
+          className={cn(
+            "mt-auto inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition",
+            available
+              ? "bg-[#156240] text-white shadow-[0_9px_18px_rgba(21,98,64,0.16)] active:scale-[0.98]"
+              : "cursor-not-allowed bg-[#F0EFE9] text-[#7A8276] ring-1 ring-inset ring-[#DFDAC5]",
+          )}
+          disabled={!available}
+          onClick={() => onSend(gift.id)}
+          type="button"
+        >
+          {available ? (
+            <Gift className="h-4 w-4 shrink-0" />
+          ) : (
+            <Lock className="h-4 w-4 shrink-0" />
+          )}
+          <span className="line-clamp-2">
+            {available
+              ? copy.shop.sendEntry
+              : gift.availability === "seasonal_locked"
+                ? copy.shop.seasonalLocked
+                : copy.shop.disabled}
+          </span>
+        </button>
+      </div>
+    </article>
+  );
+}
+
 const shopGiftInitialState: SendCharmGiftState = {};
 
 function ShopGiftSubmitButton({
@@ -1492,9 +1608,13 @@ function ShopGiftRecipientDialog({
       >
         <header className="flex items-center justify-between gap-3 border-b border-[#ECE5CD] px-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-transparent text-[25px] leading-none ring-1 ring-[#E8D59D]">
-              {gift.emoji}
-            </span>
+            <CharmGiftArtwork
+              className="h-11 w-11 ring-1 ring-[#E8D59D]"
+              emoji={gift.emoji}
+              giftId={gift.id}
+              label={gift.label}
+              sizes="44px"
+            />
             <div className="min-w-0">
               <p className="truncate text-base font-bold text-[#111210]">
                 {gift.label}
@@ -1503,8 +1623,9 @@ function ShopGiftRecipientDialog({
                 {copy.shop.chooseFriend}
               </p>
               <p className="mt-1 truncate text-[11px] font-bold text-[#7A8276]">
-                {gift.coinCost ?? "-"} {copy.shop.fc} · +{gift.charmValue}{" "}
-                {charmUnit}
+                {gift.coinCost ?? "-"} {copy.shop.fc} ·{" "}
+                {gift.charmValue > 0 ? "+" : ""}
+                {gift.charmValue} {charmUnit}
               </p>
             </div>
           </div>
@@ -2706,7 +2827,9 @@ export function ProfileShopPageView({
     useState<ProfileShopProductId | null>(selectedProductId);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const dialogGift = gifts.find((gift) => gift.id === dialogGiftId) ?? null;
+  const dialogGift =
+    [...gifts, ...negativeGifts].find((gift) => gift.id === dialogGiftId) ??
+    null;
   const openGiftDialog = (giftId: string) => {
     setDialogGiftId(giftId);
     setDialogAttemptId(createShopGiftAttemptId());
@@ -2744,6 +2867,24 @@ export function ProfileShopPageView({
     setLocalCoinBalance(coinBalance.balance);
   }, [coinBalance.balance]);
 
+  const giftGroups = [
+    {
+      id: "classic",
+      label: copy.shop.classicCatalog,
+      items: gifts.filter((gift) => gift.category === "classic"),
+    },
+    {
+      id: "activity",
+      label: copy.shop.activityCatalog,
+      items: gifts.filter((gift) => gift.category === "activity"),
+    },
+    {
+      id: "seasonal",
+      label: copy.shop.seasonalCatalog,
+      items: gifts.filter((gift) => gift.category === "seasonal"),
+    },
+  ].filter((group) => group.items.length > 0);
+
   return (
     <ProfilePrivatePageShell
       icon={ShoppingBag}
@@ -2751,12 +2892,12 @@ export function ProfileShopPageView({
       right={
         <button
           aria-label={copy.shop.recharge}
-          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-transparent px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
+          className="inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-full bg-transparent text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95 min-[360px]:h-9 min-[360px]:w-auto min-[360px]:max-w-[5.8rem] min-[360px]:px-2.5"
           onClick={() => openRechargeDialog(null)}
           type="button"
         >
-          <WalletCards className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate whitespace-nowrap">
+          <WalletCards className="h-4 w-4 shrink-0 min-[360px]:h-3.5 min-[360px]:w-3.5" />
+          <span className="hidden truncate whitespace-nowrap min-[360px]:inline">
             {copy.shop.recharge}
           </span>
         </button>
@@ -2767,7 +2908,7 @@ export function ProfileShopPageView({
       tone="gold"
     >
       <section className="mt-5">
-        <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-white px-4 py-3 ring-1 ring-[#E3DCC5]">
+        <div className="grid gap-2 rounded-[1.3rem] bg-white px-4 py-3 ring-1 ring-[#E3DCC5] min-[360px]:grid-cols-[minmax(0,1fr)_auto] min-[360px]:items-center min-[360px]:gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative grid h-14 w-14 shrink-0 place-items-center">
               <FriemiCoinIcon className="h-full w-full drop-shadow-[0_7px_7px_rgba(124,88,15,0.24)]" />
@@ -2781,13 +2922,51 @@ export function ProfileShopPageView({
               </p>
             </div>
           </div>
-          <p className="max-w-[9.25rem] text-right text-[11px] font-semibold leading-4 text-[#7A8276]">
+          <p className="text-left text-[11px] font-semibold leading-4 text-[#7A8276] min-[360px]:max-w-[9.25rem] min-[360px]:text-right">
             {copy.shop.coinDescription}
           </p>
         </div>
       </section>
 
       <section className="mt-7">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
+          {copy.shop.giftCatalog}
+        </h2>
+        <p className="mt-2 px-1 text-xs font-semibold text-[#7A8276]">
+          {copy.shop.giftModeNotice}
+        </p>
+        {gifts.length > 0 ? (
+          <div className="mt-5 space-y-7">
+            {giftGroups.map((group) => (
+              <div key={group.id}>
+                <h3 className="px-1 text-sm font-bold text-[#111210]">
+                  {group.label}
+                </h3>
+                <div className="mt-3 grid grid-cols-2 gap-2.5 min-[390px]:gap-3">
+                  {group.items.map((gift) => (
+                    <ShopGiftCard
+                      charmUnit={charmUnit}
+                      gift={gift}
+                      key={gift.id}
+                      locale={locale}
+                      onSend={openGiftDialog}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <StatusPanel
+            icon={Gift}
+            title={copy.shop.emptyTitle}
+            description={copy.shop.emptyDescription}
+            tone="gold"
+          />
+        )}
+      </section>
+
+      <section className="mt-8">
         <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
           {copy.shop.featureCatalog}
         </h2>
@@ -2816,7 +2995,7 @@ export function ProfileShopPageView({
             </div>
           </div>
           <button
-            className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#156240] px-4 text-sm font-bold text-white transition active:scale-[0.98]"
+            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#156240] px-4 text-sm font-bold text-white transition active:scale-[0.98]"
             onClick={() => openRechargeDialog(werewolfAllRolesProductId)}
             type="button"
           >
@@ -2824,69 +3003,6 @@ export function ProfileShopPageView({
             {copy.shop.roleUnlockAction}
           </button>
         </article>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
-          {copy.shop.giftCatalog}
-        </h2>
-        <p className="mt-2 px-1 text-xs font-semibold text-[#7A8276]">
-          {copy.shop.giftModeNotice}
-        </p>
-        {gifts.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {gifts.map((gift) => {
-              const locked = gift.availability === "seasonal_locked";
-
-              return (
-                <article
-                  className={cn(
-                    "grid min-h-[9.7rem] content-between rounded-[1.2rem] bg-white/86 p-3 ring-1 ring-[#E3DCC5] transition",
-                    locked ? "opacity-78" : "",
-                  )}
-                  key={gift.id}
-                >
-                  <span className="flex items-start justify-between gap-2">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-transparent text-[30px] leading-none ring-1 ring-[#EFE0AF]">
-                      {gift.emoji}
-                    </span>
-                    <GiftAvailabilityBadge gift={gift} locale={locale} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-[#111210]">
-                      {gift.label}
-                    </span>
-                    <span className="mt-2 grid gap-1.5 text-[11px] font-bold">
-                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
-                        {gift.coinCost ?? "-"} {copy.shop.fc}
-                      </span>
-                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
-                        +{gift.charmValue} {charmUnit}
-                      </span>
-                    </span>
-                  </span>
-                  {locked ? null : (
-                    <button
-                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
-                      onClick={() => openGiftDialog(gift.id)}
-                      type="button"
-                    >
-                      <Gift className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{copy.shop.sendEntry}</span>
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <StatusPanel
-            icon={Gift}
-            title={copy.shop.emptyTitle}
-            description={copy.shop.emptyDescription}
-            tone="gold"
-          />
-        )}
       </section>
 
       {negativeGifts.length > 0 ? (
@@ -2899,23 +3015,15 @@ export function ProfileShopPageView({
               {copy.shop.negativeNotice}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2.5 min-[390px]:gap-3">
             {negativeGifts.map((gift) => (
-              <article
-                className="grid min-h-[6.4rem] justify-items-center rounded-[1rem] bg-[#F8F7F2] p-2.5 text-center ring-1 ring-[#E3DCC5]"
+              <ShopGiftCard
+                charmUnit={charmUnit}
+                gift={gift}
                 key={gift.id}
-              >
-                <span className="text-2xl leading-none">{gift.emoji}</span>
-                <span className="max-w-full truncate text-xs font-bold text-[#111210]">
-                  {gift.label}
-                </span>
-                <span className="text-[11px] font-bold text-[#9A2135]">
-                  {gift.charmValue} {charmUnit}
-                </span>
-                <span className="text-[10px] font-bold text-[#7A8276]">
-                  {gift.coinCost} {copy.shop.fc}
-                </span>
-              </article>
+                locale={locale}
+                onSend={openGiftDialog}
+              />
             ))}
           </div>
         </section>
@@ -3035,16 +3143,20 @@ function GiftWallMetric({
   value: number | string;
 }) {
   return (
-    <div className="min-w-0 px-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6C746A]">
-        <Icon className="h-3.5 w-3.5 shrink-0" />
+    <div className="min-w-0 px-2.5 text-center">
+      <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-[#6C746A]">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-[#156240]" />
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-xl font-bold leading-none text-[#111210]">
+      <p className="mt-1.5 truncate text-xl font-bold leading-none text-[#111210]">
         {value}
       </p>
     </div>
   );
+}
+
+function formatGiftWallCharm(value: number) {
+  return `${value > 0 ? "+" : ""}${value}`;
 }
 
 function GiftWallRoomGift({
@@ -3058,24 +3170,27 @@ function GiftWallRoomGift({
 }) {
   return (
     <div
+      aria-label={`${gift.giftLabel}, x${gift.quantity}`}
       className={cn(
-        "absolute z-20 grid -translate-x-1/2 justify-items-center gap-1",
+        "absolute z-20 -translate-x-1/2 -translate-y-1/2",
         className,
       )}
+      role="img"
     >
-      <span
-        className={cn(
-          "relative flex items-center justify-center rounded-[1.05rem] bg-[#FFFDF8] leading-none ring-1 ring-[#E5CF95] shadow-[0_10px_22px_rgba(92,64,22,0.1)]",
-          "after:absolute after:-bottom-2 after:left-1/2 after:h-2 after:w-[72%] after:-translate-x-1/2 after:rounded-[999px] after:bg-[#D8C28C]/55",
-          featured
-            ? "h-[4.8rem] w-[4.8rem] text-[42px]"
-            : "h-14 w-14 text-[32px]",
-        )}
-      >
-        {gift.giftEmoji}
-      </span>
-      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-bold text-[#6C5515] ring-1 ring-[#E8D59D]">
-        x{gift.quantity}
+      <span className="relative block">
+        <CharmGiftArtwork
+          className={cn(
+            "bg-white/84 ring-2 ring-white shadow-[0_10px_20px_rgba(57,68,54,0.16)]",
+            featured ? "h-[4.5rem] w-[4.5rem]" : "h-14 w-14",
+          )}
+          emoji={gift.giftEmoji}
+          giftId={gift.giftId}
+          label={gift.giftLabel}
+          sizes={featured ? "72px" : "56px"}
+        />
+        <span className="absolute -bottom-1.5 -right-1.5 inline-flex min-w-6 items-center justify-center rounded-full bg-[#156240] px-1.5 py-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+          x{gift.quantity}
+        </span>
       </span>
     </div>
   );
@@ -3099,9 +3214,20 @@ function GiftWallLeaderboardRow({
           <p className="truncate text-sm font-bold text-[#111210]">
             {item.sender.nickname}
           </p>
-          <p className="mt-0.5 text-xs font-semibold text-[#6C746A]">
-            {item.quantity} · +{item.charm}
-          </p>
+          <span className="mt-1 flex items-center gap-2 text-xs font-semibold text-[#6C746A]">
+            <span>x{item.quantity}</span>
+            <span className="inline-flex items-center gap-1">
+              <Image
+                alt=""
+                aria-hidden="true"
+                className="h-3.5 w-3.5 object-contain"
+                height={14}
+                src="/items/gift/shop/charm-heart.webp"
+                width={14}
+              />
+              {formatGiftWallCharm(item.charm)}
+            </span>
+          </span>
         </div>
       </div>
       <Trophy
@@ -3124,14 +3250,13 @@ export function ProfileGiftWallPageView({
   locale: string;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
-  const roomGifts = giftWall.topGifts.slice(0, 6);
+  const roomGifts = giftWall.topGifts.slice(0, 5);
   const roomGiftSpots = [
-    "left-[50%] top-[36%]",
-    "left-[25%] top-[30%] rotate-[-7deg]",
-    "left-[75%] top-[30%] rotate-[7deg]",
-    "left-[20%] top-[56%] rotate-[5deg]",
-    "left-[80%] top-[56%] rotate-[-5deg]",
-    "left-[50%] top-[63%] rotate-[2deg]",
+    "left-[50%] top-[43%]",
+    "left-[19%] top-[20%]",
+    "left-[81%] top-[20%]",
+    "left-[19%] top-[67%]",
+    "left-[81%] top-[67%]",
   ];
 
   return (
@@ -3153,32 +3278,31 @@ export function ProfileGiftWallPageView({
       ) : null}
 
       <section className="mt-6">
-        <div className="flex items-end justify-between gap-3 px-1">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-normal text-[#B7892A]">
-              {copy.giftWall.giftStats}
-            </p>
-            <h2 className="mt-1 truncate text-lg font-bold text-[#111210]">
-              {copy.giftWall.roomTitle}
-            </h2>
-          </div>
+        <div className="px-1">
+          <h2 className="text-lg font-bold text-[#111210]">
+            {copy.giftWall.roomTitle}
+          </h2>
           {giftWall.lastGiftAt ? (
-            <p className="shrink-0 text-xs font-bold text-[#6C746A]">
-              {copy.giftWall.lastGift} {formatDate(giftWall.lastGiftAt)}
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-[#6C746A]">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#156240]" />
+              <span className="truncate">
+                {copy.giftWall.lastGift} {formatDate(giftWall.lastGiftAt)}
+              </span>
             </p>
           ) : null}
         </div>
 
-        <div className="relative mt-3 h-[24rem] overflow-hidden rounded-[1.6rem] bg-[#F5EFE3]">
-          <div className="absolute inset-x-[9%] top-6 bottom-[6.8rem] rounded-t-[1.7rem] bg-[#FFFDF6]" />
-          <div className="absolute bottom-[6.8rem] left-[9%] top-10 w-[14%] origin-right -skew-y-6 bg-[#EFE7D7]" />
-          <div className="absolute bottom-[6.8rem] right-[9%] top-10 w-[14%] origin-left skew-y-6 bg-[#EFE7D7]" />
-          <div className="absolute inset-x-[8%] bottom-0 h-[8rem] bg-[#E9E0CF] [clip-path:polygon(7%_0,93%_0,100%_100%,0_100%)]" />
-          <div className="absolute left-[17%] right-[17%] top-[42%] h-2 rounded-full bg-[#D7C28D]" />
-          <div className="absolute left-[20%] right-[20%] top-[69%] h-2 rounded-full bg-[#D7C28D]" />
-          <div className="absolute bottom-8 left-1/2 h-16 w-[11rem] -translate-x-1/2 rounded-[50%] bg-[#D4BE87]/55" />
-          <div className="absolute bottom-12 left-1/2 h-16 w-[9rem] -translate-x-1/2 rounded-t-[50%] bg-[#FDF7E8]" />
-          <div className="absolute bottom-12 left-1/2 h-px w-[9rem] -translate-x-1/2 bg-[#D7C28D]" />
+        <div className="relative mt-3 aspect-square w-full overflow-hidden rounded-lg bg-[#F8F8F4] ring-1 ring-[#E3DCC5]">
+          <Image
+            alt=""
+            aria-hidden="true"
+            className="object-cover"
+            fill
+            loading="eager"
+            sizes="(max-width: 640px) calc(100vw - 2.5rem), 536px"
+            src="/items/gift/shop/gift-wall-room.webp"
+            unoptimized
+          />
 
           {roomGifts.length > 0 ? (
             roomGifts.map((gift, index) => (
@@ -3190,11 +3314,8 @@ export function ProfileGiftWallPageView({
               />
             ))
           ) : (
-            <div className="absolute inset-x-8 top-[37%] z-20 grid justify-items-center gap-3 text-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-[#FFF7DC] text-3xl ring-1 ring-[#E8D59D]">
-                🎁
-              </span>
-              <p className="text-sm font-bold leading-6 text-[#6C746A]">
+            <div className="absolute inset-x-6 bottom-5 z-20 rounded-lg bg-white/90 px-4 py-3 text-center shadow-[0_8px_22px_rgba(57,68,54,0.12)] ring-1 ring-white">
+              <p className="text-sm font-bold leading-5 text-[#4F574F]">
                 {copy.giftWall.emptyRoom}
               </p>
             </div>
@@ -3202,7 +3323,7 @@ export function ProfileGiftWallPageView({
         </div>
       </section>
 
-      <section className="mt-4 grid grid-cols-3 rounded-[1.2rem] bg-[#F7F7F0] px-2 py-3">
+      <section className="mt-4 grid grid-cols-3 divide-x divide-[#E4E0D2] border-y border-[#E4E0D2] py-4">
         <GiftWallMetric
           icon={Gift}
           label={copy.giftWall.totalGifts}
@@ -3216,11 +3337,61 @@ export function ProfileGiftWallPageView({
         <GiftWallMetric
           icon={Sparkles}
           label={copy.giftWall.charm}
-          value={`+${giftWall.totalCharm}`}
+          value={formatGiftWallCharm(giftWall.totalCharm)}
         />
       </section>
 
-      <section className="mt-6">
+      {giftWall.topGifts.length > 0 ? (
+        <section className="mt-7">
+          <h2 className="px-1 text-sm font-bold text-[#111210]">
+            {copy.giftWall.giftCount}
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-2.5 min-[390px]:gap-3">
+            {giftWall.topGifts.map((gift) => (
+              <article
+                className="flex min-h-[7.25rem] min-w-0 flex-col rounded-lg bg-white p-2.5 ring-1 ring-[#E3DCC5] min-[390px]:p-3"
+                key={gift.giftId}
+              >
+                <div className="flex min-w-0 items-start gap-2">
+                  <CharmGiftArtwork
+                    className="h-12 w-12 bg-[#F8F7F2] min-[390px]:h-14 min-[390px]:w-14"
+                    emoji={gift.giftEmoji}
+                    giftId={gift.giftId}
+                    label={gift.giftLabel}
+                    sizes="56px"
+                  />
+                  <h3 className="line-clamp-2 min-w-0 flex-1 text-xs font-bold leading-5 text-[#111210] [overflow-wrap:anywhere] min-[390px]:text-sm">
+                    {gift.giftLabel}
+                  </h3>
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#E8E3D5] pt-2 text-xs font-bold">
+                  <span className="text-[#6C746A]">x{gift.quantity}</span>
+                  <span
+                    className={cn(
+                      "inline-flex min-w-0 items-center gap-1",
+                      gift.charm < 0 ? "text-[#9A2135]" : "text-[#7D58C6]",
+                    )}
+                  >
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 object-contain"
+                      height={16}
+                      src="/items/gift/shop/charm-heart.webp"
+                      width={16}
+                    />
+                    <span className="truncate">
+                      {formatGiftWallCharm(gift.charm)}
+                    </span>
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mt-7">
         <h2 className="px-1 text-sm font-bold text-[#111210]">
           {copy.giftWall.leaderboard}
         </h2>
@@ -3239,36 +3410,6 @@ export function ProfileGiftWallPageView({
             {copy.giftWall.emptyLeaderboard}
           </p>
         )}
-      </section>
-
-      <section className="mt-6">
-        <h2 className="px-1 text-sm font-bold text-[#111210]">
-          {copy.giftWall.giftCount}
-        </h2>
-        {giftWall.topGifts.length > 0 ? (
-          <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-5">
-            {giftWall.topGifts.map((gift) => (
-              <article className="min-w-0" key={gift.giftId}>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[30px] leading-none">
-                    {gift.giftEmoji}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-[#111210]">
-                      {gift.giftLabel}
-                    </p>
-                    <p className="mt-0.5 text-xs font-bold text-[#6C746A]">
-                      x{gift.quantity}
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-2 truncate text-sm font-bold text-[#111210]">
-                  +{gift.charm}
-                </p>
-              </article>
-            ))}
-          </div>
-        ) : null}
       </section>
     </ProfilePrivatePageShell>
   );
