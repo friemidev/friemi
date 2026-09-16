@@ -33,6 +33,7 @@ import {
   ImagePlus,
   Loader2,
   MessageCircle,
+  MessageSquareText,
   MoreHorizontal,
   Pin,
   RefreshCw,
@@ -56,7 +57,10 @@ import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-m
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
-import type { OfficialMessageRosterViewModel } from "@/features/official-messages/services/officialMessages";
+import type {
+  OfficialFeedbackRosterViewModel,
+  OfficialMessageRosterViewModel,
+} from "@/features/official-messages/services/officialMessages";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import type { PlanetChatRosterItemViewModel } from "@/features/planets/services/planetChat";
@@ -108,6 +112,7 @@ type FootprintsMobilePageProps = {
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   messageRosterError?: boolean;
   messageRosterLoaded: boolean;
@@ -130,6 +135,7 @@ type MessageRosterSnapshot = {
   activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError: boolean;
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   planetChats: PlanetChatRosterItemViewModel[];
   updatedAt: number;
@@ -2586,6 +2592,7 @@ function FootprintsMessageList({
   friends,
   hasError,
   locale,
+  officialFeedbackInbox,
   officialMessages,
   planetChats,
 }: {
@@ -2594,6 +2601,7 @@ function FootprintsMessageList({
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   planetChats: PlanetChatRosterItemViewModel[];
 }) {
@@ -2744,19 +2752,48 @@ function FootprintsMessageList({
           },
         ]
       : [];
+    const feedbackEntries = officialFeedbackInbox
+      ? [
+          {
+            kind: "feedback" as const,
+            id: officialFeedbackInbox.id,
+            searchText: [
+              officialFeedbackInbox.title,
+              officialFeedbackInbox.preview,
+              "Friemi feedback 用户反馈 retour",
+            ].join(" "),
+            sortTime: new Date(
+              officialFeedbackInbox.publishedAt,
+            ).getTime(),
+            hasContent: true,
+            isFollowing: false,
+            isMutual: false,
+            isOfficial: true,
+            isPinned: false,
+            feedback: officialFeedbackInbox,
+          },
+        ]
+      : [];
 
     return [
       ...directEntries,
       ...roomEntries,
       ...planetEntries,
       ...officialEntries,
+      ...feedbackEntries,
     ].sort(
       (entryA, entryB) =>
         Number(entryB.isPinned) - Number(entryA.isPinned) ||
         entryB.sortTime - entryA.sortTime ||
         entryA.id.localeCompare(entryB.id),
     );
-  }, [activityRoomChats, friends, officialMessages, planetChats]);
+  }, [
+    activityRoomChats,
+    friends,
+    officialFeedbackInbox,
+    officialMessages,
+    planetChats,
+  ]);
   const visibleEntries = useMemo(
     () =>
       filterUnifiedChatRosterEntries(
@@ -2791,6 +2828,7 @@ function FootprintsMessageList({
     )
     .reduce((total, friend) => total + friend.unreadCount, 0);
   const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
+  const feedbackUnreadTotal = officialFeedbackInbox?.unreadCount ?? 0;
   const filters: Array<{
     count: number;
     icon: ComponentType<{ className?: string }>;
@@ -2804,7 +2842,8 @@ function FootprintsMessageList({
         directUnreadTotal +
         roomUnreadTotal +
         planetUnreadTotal +
-        officialUnreadTotal,
+        officialUnreadTotal +
+        feedbackUnreadTotal,
       icon: MessageCircle,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2844,7 +2883,7 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.strangers,
     },
     {
-      count: officialUnreadTotal,
+      count: officialUnreadTotal + feedbackUnreadTotal,
       icon: BadgeCheck,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2938,6 +2977,7 @@ function FootprintsMessageList({
     friends.length === 0 &&
     activityRoomChats.length === 0 &&
     !officialMessages &&
+    !officialFeedbackInbox &&
     planetChats.length === 0
   ) {
     return (
@@ -2975,6 +3015,12 @@ function FootprintsMessageList({
                 key={entry.id}
                 locale={locale}
                 official={entry.official}
+              />
+            ) : entry.kind === "feedback" ? (
+              <FootprintsOfficialFeedbackRow
+                feedback={entry.feedback}
+                key={entry.id}
+                locale={locale}
               />
             ) : entry.kind === "room" ? (
               <FootprintsRoomChatRow
@@ -3019,8 +3065,14 @@ function FootprintsOfficialMessageRow({
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, "/official-messages")}
       >
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#156240] text-white">
-          <BadgeCheck className="h-5 w-5" />
+        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#156240] ring-1 ring-[#D6D5B2]">
+          <Image
+            alt="Friemi"
+            className="h-full w-full object-cover"
+            height={44}
+            src="/brand/v2_1/friemi-icon-transparent-512.png"
+            width={44}
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-start gap-2">
@@ -3043,6 +3095,57 @@ function FootprintsOfficialMessageRow({
               {official.preview}
             </span>
             {official.unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
+  );
+}
+
+function FootprintsOfficialFeedbackRow({
+  feedback,
+  locale,
+}: {
+  feedback: OfficialFeedbackRosterViewModel;
+  locale: string;
+}) {
+  const unreadBadgeText =
+    feedback.unreadCount > 99 ? "99+" : String(feedback.unreadCount);
+
+  return (
+    <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
+      <Link
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={withLocale(locale, "/official-feedback")}
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#FFF5E6] text-[#9A5E00] ring-1 ring-[#F2CC83]/60">
+          <MessageSquareText className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
+              {feedback.title}
+            </span>
+            <span className="shrink-0 text-[11px] font-semibold text-[#8F9189]">
+              {formatChatListTimestamp(feedback.publishedAt, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                feedback.unreadCount > 0
+                  ? "font-bold text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {feedback.preview}
+            </span>
+            {feedback.unreadCount > 0 ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
                 {unreadBadgeText}
               </span>
@@ -3490,6 +3593,7 @@ export function FootprintsMobilePage({
   initialTab = "message",
   locale,
   messageFriends: initialMessageFriends,
+  officialFeedbackInbox: initialOfficialFeedbackInbox,
   officialMessages: initialOfficialMessages,
   messageRosterError = false,
   messageRosterLoaded,
@@ -3531,6 +3635,9 @@ export function FootprintsMobilePage({
   );
   const [officialMessages, setOfficialMessages] = useState(
     cachedMessageRoster?.officialMessages ?? initialOfficialMessages,
+  );
+  const [officialFeedbackInbox, setOfficialFeedbackInbox] = useState(
+    cachedMessageRoster?.officialFeedbackInbox ?? initialOfficialFeedbackInbox,
   );
   const [activityRoomChats, setActivityRoomChats] = useState(
     cachedMessageRoster?.activityRoomChats ?? initialActivityRoomChats,
@@ -3579,8 +3686,15 @@ export function FootprintsMobilePage({
         (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
         0,
       ) +
-      (officialMessages?.unreadCount ?? 0),
-    [activityRoomChats, messageFriends, officialMessages, planetChats],
+      (officialMessages?.unreadCount ?? 0) +
+      (officialFeedbackInbox?.unreadCount ?? 0),
+    [
+      activityRoomChats,
+      messageFriends,
+      officialFeedbackInbox,
+      officialMessages,
+      planetChats,
+    ],
   );
   const { unreadDirectMessageCount } = useNotificationBadge(
     initialUnreadMessageCount,
@@ -3672,6 +3786,7 @@ export function FootprintsMobilePage({
         activityRoomChats: payload.activityRoomChats,
         friends: payload.friends,
         hasError: false,
+        officialFeedbackInbox: payload.officialFeedbackInbox,
         officialMessages: payload.officialMessages,
         planetChats: payload.planetChats,
         updatedAt: Date.now(),
@@ -3679,6 +3794,7 @@ export function FootprintsMobilePage({
 
       messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
       setMessageFriends(nextSnapshot.friends);
+      setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
       setOfficialMessages(nextSnapshot.officialMessages);
       setActivityRoomChats(nextSnapshot.activityRoomChats);
       setPlanetChats(nextSnapshot.planetChats);
@@ -3790,6 +3906,7 @@ export function FootprintsMobilePage({
         activityRoomChats: initialActivityRoomChats,
         friends: initialMessageFriends,
         hasError: messageRosterError,
+        officialFeedbackInbox: initialOfficialFeedbackInbox,
         officialMessages: initialOfficialMessages,
         planetChats: initialPlanetChats,
         updatedAt: Date.now(),
@@ -3800,6 +3917,7 @@ export function FootprintsMobilePage({
     }
 
     setMessageFriends(nextSnapshot.friends);
+    setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
     setOfficialMessages(nextSnapshot.officialMessages);
     setActivityRoomChats(nextSnapshot.activityRoomChats);
     setPlanetChats(nextSnapshot.planetChats);
@@ -3808,6 +3926,7 @@ export function FootprintsMobilePage({
   }, [
     initialActivityRoomChats,
     initialMessageFriends,
+    initialOfficialFeedbackInbox,
     initialOfficialMessages,
     initialPlanetChats,
     messageRosterCacheKey,
@@ -4133,6 +4252,7 @@ export function FootprintsMobilePage({
                   friends={messageFriends}
                   hasError={messageRosterHasError}
                   locale={locale}
+                  officialFeedbackInbox={officialFeedbackInbox}
                   officialMessages={officialMessages}
                   planetChats={planetChats}
                 />

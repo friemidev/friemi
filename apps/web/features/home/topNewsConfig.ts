@@ -33,8 +33,7 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
     href: "/top-news/host-recruitment",
     id: "founding-host-recruitment",
-    image:
-      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/c5550d08-54d0-4c63-9232-99cca7fb832e.jpg",
+    image: "/top_news/founding-host-recruitment-cover.png",
     title: {
       en: "Become a Friemi Founding Host",
       fr: "Devenez hôte fondateur Friemi",
@@ -44,8 +43,7 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
     href: "/top-news/friemi",
     id: "friemi-intro",
-    image:
-      "https://xyavgkupjnoumlzwkzoq.supabase.co/storage/v1/object/public/activity-covers/top-news/user_3FXtMqINQEiVVZMBm7Ypi2rgx7Q/ab4ce5ac-1ac3-44a2-aab2-e648492b3e94.png",
+    image: "/top_news/friemi-intro-cover.png",
     title: {
       en: "Discover Friemi",
       fr: "Découvrez Friemi",

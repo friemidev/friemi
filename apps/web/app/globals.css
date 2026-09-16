@@ -550,6 +550,16 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.official-message-page) {
+    padding-bottom: 0;
+  }
+
+  html:has(.official-message-page),
+  body:has(.official-message-page) {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) > .app-header,
   .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-home) [data-route-progress],

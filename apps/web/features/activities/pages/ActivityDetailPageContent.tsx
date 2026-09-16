@@ -54,7 +54,6 @@ import {
   AdminGuestParticipantControl,
   JoinActivityForm,
 } from "@/features/activities/components/JoinActivityForm";
-import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
 import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
 import { TeamDetailMobileCtaSheet } from "@/features/activities/components/TeamDetailMobileCtaSheet";
 import {
@@ -2041,7 +2040,9 @@ export async function ActivityDetailPageContent({
                   <ActivityCheckInReviewPanel
                     activityId={activity.id}
                     locale={locale}
+                    pendingParticipants={pendingParticipants}
                     participants={activityCheckInRoster}
+                    showParticipationApproval={activity.requiresApproval}
                     triggerLabel={operatorActionCopy.checkIn}
                     triggerVariant="icon"
                   />
@@ -2176,14 +2177,6 @@ export async function ActivityDetailPageContent({
           ) : null}
         </div>
       </div>
-
-      {isTeamOperator && activity.requiresApproval ? (
-        <ParticipationApprovalPanel
-          activityId={activity.id}
-          locale={locale}
-          pendingParticipants={pendingParticipants}
-        />
-      ) : null}
 
       <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
@@ -2348,7 +2341,9 @@ export async function ActivityDetailPageContent({
                   <ActivityCheckInReviewPanel
                     activityId={activity.id}
                     locale={locale}
+                    pendingParticipants={pendingParticipants}
                     participants={activityCheckInRoster}
+                    showParticipationApproval={activity.requiresApproval}
                     triggerLabel={operatorActionCopy.checkIn}
                   />
                 </div>

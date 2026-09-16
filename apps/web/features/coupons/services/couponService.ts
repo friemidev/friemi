@@ -54,6 +54,7 @@ export async function ensureDefaultMerchantCoupon(
       title: defaultCouponTitle,
     },
     update: {},
+    select: { id: true },
   });
 }
 

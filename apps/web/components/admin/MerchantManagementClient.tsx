@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   Palette,
   Plus,
   Store,
+  TicketCheck,
   TicketPlus,
   UserRoundCheck,
   type LucideIcon,
@@ -32,6 +34,7 @@ import type {
   AdminMerchantListItem,
 } from "@/lib/admin-scraper";
 import type { AdminCouponTemplate } from "@/features/coupons/adminCoupons";
+import { platformCouponTemplates } from "@/features/coupons/platformCouponTemplates";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +110,12 @@ export function MerchantManagementClient({
   const [couponForm, setCouponForm] =
     useState<CouponFormState>(emptyCouponForm);
   const [isCouponSaving, setIsCouponSaving] = useState(false);
+  const [couponTemplateSelections, setCouponTemplateSelections] = useState<
+    Record<string, string>
+  >({});
+  const [bindingTemplateMerchantId, setBindingTemplateMerchantId] = useState<
+    string | null
+  >(null);
   const canCreateMerchant =
     merchantForm.name.trim().length > 0 &&
     merchantForm.description.trim().length > 0 &&
@@ -237,6 +246,45 @@ export function MerchantManagementClient({
       toast.error("优惠券创建失败，请稍后重试");
     } finally {
       setIsCouponSaving(false);
+    }
+  }
+
+  async function bindPlatformCoupon(merchantId: string) {
+    if (bindingTemplateMerchantId) return;
+    const platformTemplateKey =
+      couponTemplateSelections[merchantId] ??
+      platformCouponTemplates[0]?.key ??
+      "";
+    if (!platformTemplateKey) return;
+
+    setBindingTemplateMerchantId(merchantId);
+    try {
+      const response = await fetch(
+        `/api/admin/merchants/${merchantId}/coupons`,
+        {
+          body: JSON.stringify({ platformTemplateKey }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+
+      if (!response.ok) {
+        toast.error("平台优惠券绑定失败，请稍后重试");
+        return;
+      }
+
+      const json = (await response.json()) as {
+        coupon: AdminCouponTemplate;
+      };
+      setCoupons((current) => [
+        ...current.filter((coupon) => coupon.id !== json.coupon.id),
+        json.coupon,
+      ]);
+      toast.success("平台优惠券已绑定，店家现在可以选择发放");
+    } catch {
+      toast.error("平台优惠券绑定失败，请稍后重试");
+    } finally {
+      setBindingTemplateMerchantId(null);
     }
   }
 
@@ -627,6 +675,76 @@ export function MerchantManagementClient({
                         </button>
                       </div>
 
+                      {platformCouponTemplates.length > 0 ? (
+                        <div className="mt-3 grid gap-3 rounded-md bg-emerald-50/60 p-3 ring-1 ring-emerald-100 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                          {(() => {
+                            const selectedTemplate =
+                              platformCouponTemplates.find(
+                                (template) =>
+                                  template.key ===
+                                  (couponTemplateSelections[merchant.id] ??
+                                    platformCouponTemplates[0]?.key),
+                              ) ?? platformCouponTemplates[0];
+
+                            return selectedTemplate ? (
+                              <>
+                                <div className="overflow-hidden rounded-md bg-white ring-1 ring-black/10">
+                                  <Image
+                                    alt={selectedTemplate.title}
+                                    className="aspect-[4/3] h-full w-full object-cover"
+                                    height={1086}
+                                    sizes="144px"
+                                    src={selectedTemplate.imageUrl}
+                                    width={1448}
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-emerald-800">
+                                    平台设计优惠券
+                                  </p>
+                                  <select
+                                    className="mt-2 h-10 w-full rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-emerald-600"
+                                    onChange={(event) =>
+                                      setCouponTemplateSelections((current) => ({
+                                        ...current,
+                                        [merchant.id]: event.target.value,
+                                      }))
+                                    }
+                                    value={selectedTemplate.key}
+                                  >
+                                    {platformCouponTemplates.map((template) => (
+                                      <option
+                                        key={template.key}
+                                        value={template.key}
+                                      >
+                                        {template.title}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    className="mt-2 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-55"
+                                    disabled={
+                                      bindingTemplateMerchantId === merchant.id
+                                    }
+                                    onClick={() =>
+                                      void bindPlatformCoupon(merchant.id)
+                                    }
+                                    type="button"
+                                  >
+                                    {bindingTemplateMerchantId === merchant.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <TicketCheck className="h-4 w-4" />
+                                    )}
+                                    绑定到此门店
+                                  </button>
+                                </div>
+                              </>
+                            ) : null;
+                          })()}
+                        </div>
+                      ) : null}
+
                       <div className="mt-3 flex flex-wrap gap-2">
                         {coupons
                           .filter((coupon) => coupon.merchantId === merchant.id)
@@ -639,10 +757,22 @@ export function MerchantManagementClient({
                                 color: coupon.foregroundColor,
                               }}
                             >
-                              <span
-                                className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
-                                style={{ backgroundColor: coupon.accentColor }}
-                              />
+                              {coupon.imageUrl ? (
+                                <Image
+                                  alt=""
+                                  className="h-5 w-7 rounded-sm object-cover"
+                                  height={21}
+                                  src={coupon.imageUrl}
+                                  width={28}
+                                />
+                              ) : (
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+                                  style={{
+                                    backgroundColor: coupon.accentColor,
+                                  }}
+                                />
+                              )}
                               {coupon.title}
                             </span>
                           ))}

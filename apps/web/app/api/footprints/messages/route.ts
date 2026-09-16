@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
-import { getOfficialMessageRoster } from "@/features/official-messages/services/officialMessages";
+import {
+  getOfficialFeedbackRoster,
+  getOfficialMessageRoster,
+} from "@/features/official-messages/services/officialMessages";
 import { getPlanetChatRoster } from "@/features/planets/services/planetChat";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
@@ -25,8 +28,13 @@ export async function GET(request: Request) {
     }
 
     const locale = getSupportedLocale(new URL(request.url).searchParams.get("locale"));
-    const [friendsResult, officialResult, activityRoomsResult, planetsResult] =
-      await Promise.all([
+    const [
+      friendsResult,
+      officialResult,
+      officialFeedbackResult,
+      activityRoomsResult,
+      planetsResult,
+    ] = await Promise.all([
         getDirectMessageFriendRoster(viewerProfileId)
           .then((friends) => ({ data: friends, error: null }))
           .catch((error: unknown) => {
@@ -37,6 +45,15 @@ export async function GET(request: Request) {
           .then((officialMessages) => ({ data: officialMessages, error: null }))
           .catch((error: unknown) => {
             console.error("Failed to refresh official message roster", error);
+            return { data: null, error };
+          }),
+        getOfficialFeedbackRoster(viewerProfileId, locale)
+          .then((officialFeedbackInbox) => ({
+            data: officialFeedbackInbox,
+            error: null,
+          }))
+          .catch((error: unknown) => {
+            console.error("Failed to refresh official feedback roster", error);
             return { data: null, error };
           }),
         getActivityRoomChatRoster(viewerProfileId)
@@ -63,10 +80,12 @@ export async function GET(request: Request) {
         hasError: Boolean(
           friendsResult.error ||
             officialResult.error ||
+            officialFeedbackResult.error ||
             activityRoomsResult.error ||
             planetsResult.error,
         ),
         officialMessages: officialResult.data,
+        officialFeedbackInbox: officialFeedbackResult.data,
         ok: true,
         planetChats: planetsResult.data,
       },

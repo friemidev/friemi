@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  TicketCheck,
 } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 
@@ -16,6 +17,7 @@ type AccountSettingsActionListProps = {
   accountSecurityLabel: string;
   accountSettingsLabel: string;
   adminActivityPriorityLabel?: string;
+  adminCouponMerchantLabel?: string;
   adminOfficialMessagesLabel?: string;
   locale: string;
   signOutLabel: string;
@@ -25,6 +27,7 @@ export function AccountSettingsActionList({
   accountSecurityLabel,
   accountSettingsLabel,
   adminActivityPriorityLabel,
+  adminCouponMerchantLabel,
   adminOfficialMessagesLabel,
   locale,
   signOutLabel,
@@ -85,6 +88,21 @@ export function AccountSettingsActionList({
           </span>
           <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
             {adminActivityPriorityLabel}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
+        </Link>
+      ) : null}
+
+      {adminCouponMerchantLabel ? (
+        <Link
+          href={withLocale(locale, "/admin/merchants")}
+          className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF5E6] text-[#9A5E00] ring-1 ring-[#F2CC83]/56 transition group-hover:bg-[#FEFFF9]">
+            <TicketCheck className="h-[1.125rem] w-[1.125rem]" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
+            {adminCouponMerchantLabel}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
         </Link>

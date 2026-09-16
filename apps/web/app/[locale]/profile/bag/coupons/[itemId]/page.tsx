@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowLeft, BadgeCheck, CalendarDays, Store } from "lucide-react";
 import { notFound } from "next/navigation";
 import { CouponRedemptionQrGenerator } from "@/features/coupons/components/CouponRedemptionQrGenerator";
+import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -66,6 +67,7 @@ export default async function CouponWalletDetailPage({
           backgroundColor: true,
           expiresAt: true,
           foregroundColor: true,
+          slug: true,
           terms: true,
           title: true,
           merchant: {
@@ -82,6 +84,7 @@ export default async function CouponWalletDetailPage({
   if (!item) notFound();
 
   const copy = getCopy(locale);
+  const couponImageUrl = getPlatformCouponImageUrl(item.coupon.slug);
   const available =
     item.status === "AVAILABLE" &&
     item.coupon.merchant.isActive &&
@@ -101,8 +104,22 @@ export default async function CouponWalletDetailPage({
         <span className="h-10 w-10" />
       </header>
 
+      {couponImageUrl ? (
+        <div className="mt-6 overflow-hidden rounded-[1.25rem] bg-white shadow-[0_20px_46px_rgba(15,109,70,0.14)] ring-1 ring-[#D6D5B2]">
+          <Image
+            alt={item.coupon.title}
+            className="aspect-[4/3] h-auto w-full object-cover"
+            height={1086}
+            priority
+            sizes="(max-width: 640px) calc(100vw - 2.5rem), 36rem"
+            src={couponImageUrl}
+            width={1448}
+          />
+        </div>
+      ) : null}
+
       <section
-        className="mt-6 overflow-hidden rounded-[1.25rem] p-5 shadow-[0_20px_46px_rgba(15,109,70,0.2)]"
+        className={`${couponImageUrl ? "mt-3" : "mt-6"} overflow-hidden rounded-[1.25rem] p-5 shadow-[0_20px_46px_rgba(15,109,70,0.2)]`}
         style={{
           backgroundColor: item.coupon.backgroundColor,
           color: item.coupon.foregroundColor,

@@ -376,6 +376,7 @@ model UserProfile {
   sentNotifications       Notification[]                @relation("NotificationActor")
   officialMessages        OfficialMessage[]             @relation("OfficialMessageAuthor")
   officialReadState       OfficialMessageReadState?
+  officialFeedbacks       OfficialFeedback[]            @relation("OfficialFeedbackSender")
   favoriteActivities      ActivityFavorite[]
   following               UserFollow[]                  @relation("UserFollowing")
   followers               UserFollow[]                  @relation("UserFollowers")
@@ -1411,6 +1412,20 @@ model OfficialMessageReadState {
   updatedAt  DateTime    @updatedAt
 
   @@index([lastReadAt])
+}
+
+model OfficialFeedback {
+  id              String      @id @default(cuid())
+  senderProfileId String
+  sender          UserProfile @relation("OfficialFeedbackSender", fields: [senderProfileId], references: [id], onDelete: Cascade)
+  content         String      @db.Text
+  readAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([createdAt])
+  @@index([readAt, createdAt])
+  @@index([senderProfileId, createdAt])
 }
 
 model ActivityAnnouncement {

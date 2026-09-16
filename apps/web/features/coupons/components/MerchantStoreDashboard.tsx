@@ -208,46 +208,79 @@ export function MerchantStoreDashboard({
 
         {selectedCoupon ? (
           <>
-            <div
-              className="relative mt-4 overflow-hidden rounded-[1rem] p-5 shadow-[0_18px_40px_rgba(15,109,70,0.2)]"
-              style={{
-                backgroundColor: selectedCoupon.backgroundColor,
-                color: selectedCoupon.foregroundColor,
-              }}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <span className="inline-flex rounded-md bg-white/95 px-2 py-1 shadow-sm">
-                    <Image
-                      alt="Friemi"
-                      className="h-auto w-20 object-contain"
-                      height={24}
-                      src="/brand/v2_1/friemi-lockup-horizontal-navy.png"
-                      width={80}
-                    />
-                  </span>
-                  <h3 className="mt-2 text-2xl font-black leading-8">
-                    {selectedCoupon.title}
-                  </h3>
-                </div>
-                <BadgeCheck
-                  className="h-8 w-8 shrink-0"
-                  style={{ color: selectedCoupon.accentColor }}
+            {selectedCoupon.imageUrl ? (
+              <div className="mt-4 overflow-hidden rounded-[1rem] bg-white shadow-[0_18px_40px_rgba(15,109,70,0.14)] ring-1 ring-[#D6D5B2]">
+                <Image
+                  alt={selectedCoupon.title}
+                  className="aspect-[4/3] h-auto w-full object-cover"
+                  height={1086}
+                  priority
+                  sizes="(max-width: 640px) calc(100vw - 2.5rem), 36rem"
+                  src={selectedCoupon.imageUrl}
+                  width={1448}
                 />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black text-[#111210]">
+                        {selectedCoupon.title}
+                      </h3>
+                      <p className="mt-1 text-xs font-bold text-[#156240]">
+                        {dashboard.merchant.name}
+                      </p>
+                    </div>
+                    <BadgeCheck
+                      className="h-6 w-6 shrink-0"
+                      style={{ color: selectedCoupon.accentColor }}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold leading-5 text-[#6C746A]">
+                    {selectedCoupon.description}
+                  </p>
+                </div>
               </div>
-              <p className="mt-5 text-sm font-semibold leading-6 opacity-75">
-                {selectedCoupon.description}
-              </p>
-              <p
-                className="mt-5 border-t border-dashed pt-4 text-sm font-black"
+            ) : (
+              <div
+                className="relative mt-4 overflow-hidden rounded-[1rem] p-5 shadow-[0_18px_40px_rgba(15,109,70,0.2)]"
                 style={{
-                  borderColor: selectedCoupon.accentColor,
-                  color: selectedCoupon.accentColor,
+                  backgroundColor: selectedCoupon.backgroundColor,
+                  color: selectedCoupon.foregroundColor,
                 }}
               >
-                {dashboard.merchant.name}
-              </p>
-            </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="inline-flex rounded-md bg-white/95 px-2 py-1 shadow-sm">
+                      <Image
+                        alt="Friemi"
+                        className="h-auto w-20 object-contain"
+                        height={24}
+                        src="/brand/v2_1/friemi-lockup-horizontal-navy.png"
+                        width={80}
+                      />
+                    </span>
+                    <h3 className="mt-2 text-2xl font-black leading-8">
+                      {selectedCoupon.title}
+                    </h3>
+                  </div>
+                  <BadgeCheck
+                    className="h-8 w-8 shrink-0"
+                    style={{ color: selectedCoupon.accentColor }}
+                  />
+                </div>
+                <p className="mt-5 text-sm font-semibold leading-6 opacity-75">
+                  {selectedCoupon.description}
+                </p>
+                <p
+                  className="mt-5 border-t border-dashed pt-4 text-sm font-black"
+                  style={{
+                    borderColor: selectedCoupon.accentColor,
+                    color: selectedCoupon.accentColor,
+                  }}
+                >
+                  {dashboard.merchant.name}
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 rounded-[1rem] bg-white p-4 ring-1 ring-[#D6D5B2]">
               {activeClaimPath ? (

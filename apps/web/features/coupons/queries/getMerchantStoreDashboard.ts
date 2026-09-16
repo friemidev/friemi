@@ -1,4 +1,5 @@
 import { ensureDefaultMerchantCoupon } from "@/features/coupons/services/couponService";
+import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 import { prisma } from "@/lib/prisma";
 
 export type MerchantStoreDashboardViewModel = NonNullable<
@@ -37,6 +38,7 @@ export async function getMerchantStoreDashboard(profileId: string) {
           expiresAt: true,
           foregroundColor: true,
           id: true,
+          slug: true,
           terms: true,
           title: true,
           claimCodes: {
@@ -84,6 +86,7 @@ export async function getMerchantStoreDashboard(profileId: string) {
       ...coupon,
       activeClaimToken: claimCodes[0]?.token ?? null,
       expiresAt: coupon.expiresAt?.toISOString() ?? null,
+      imageUrl: getPlatformCouponImageUrl(coupon.slug),
     })),
     merchant,
     stats: {

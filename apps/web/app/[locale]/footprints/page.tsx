@@ -7,7 +7,10 @@ import {
   getMomentFeedPage,
   momentFeedPageSize,
 } from "@/features/moments/queries/getMomentFeed";
-import { getOfficialMessageRoster } from "@/features/official-messages/services/officialMessages";
+import {
+  getOfficialFeedbackRoster,
+  getOfficialMessageRoster,
+} from "@/features/official-messages/services/officialMessages";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import { getPlanetSquarePage } from "@/features/planets/queries/planetQueries";
 import { getPlanetChatRoster } from "@/features/planets/services/planetChat";
@@ -82,6 +85,7 @@ export default async function FootprintsPage({
     momentsResult,
     messageFriendsResult,
     officialMessagesResult,
+    officialFeedbackResult,
     activityRoomChatsResult,
     planetChatsResult,
     planetsResult,
@@ -135,6 +139,17 @@ export default async function FootprintsPage({
               roster: null,
               error,
             };
+          })
+      : Promise.resolve({ roster: null, error: null }),
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.officialFeedback", () =>
+            getOfficialFeedbackRoster(profile.id, locale),
+          )
+          .then((roster) => ({ roster, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load official feedback roster", error);
+            return { roster: null, error };
           })
       : Promise.resolve({ roster: null, error: null }),
     profile && initialTab === "message"
@@ -212,6 +227,8 @@ export default async function FootprintsPage({
       messageFriendCount: messageFriendsResult.friends.length,
       officialMessageLoaded:
         initialTab === "message" && !officialMessagesResult.error,
+      officialFeedbackLoaded:
+        initialTab === "message" && !officialFeedbackResult.error,
       planetChatCount: planetChatsResult.planetChats.length,
       momentCount: momentsResult.page.items.length,
       planetCount: planetsResult.page.items.length,
@@ -249,12 +266,14 @@ export default async function FootprintsPage({
         momentFeedError={Boolean(momentsResult.error)}
         messageFriends={messageFriendsResult.friends}
         officialMessages={officialMessagesResult.roster}
+        officialFeedbackInbox={officialFeedbackResult.roster}
         activityRoomChats={activityRoomChatsResult.rooms}
         planetChats={planetChatsResult.planetChats}
         messageRosterLoaded={!profile || initialTab === "message"}
         messageRosterError={Boolean(
           messageFriendsResult.error ||
           officialMessagesResult.error ||
+          officialFeedbackResult.error ||
           activityRoomChatsResult.error ||
           planetChatsResult.error,
         )}
