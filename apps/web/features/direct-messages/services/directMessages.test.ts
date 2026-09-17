@@ -37,7 +37,7 @@ test("direct message policy blocks self and low-trust senders", () => {
   );
 });
 
-test("direct message policy lets non-mutual users start with a two-message limit", () => {
+test("direct message policy lets non-mutual users start with one message", () => {
   const policy = resolveDirectMessageSendPolicy({
     currentUserProfileId: "u1",
     peerProfileId: "u2",
@@ -49,10 +49,10 @@ test("direct message policy lets non-mutual users start with a two-message limit
   assert.equal(policy.remainingNonFriendMessages, nonFriendDirectMessageLimit);
 });
 
-test("direct message policy enforces two non-mutual messages until peer replies", () => {
-  assert.equal(nonFriendDirectMessageLimit, 2);
+test("direct message policy waits for a reply after one non-mutual message", () => {
+  assert.equal(nonFriendDirectMessageLimit, 1);
 
-  const secondAllowed = resolveDirectMessageSendPolicy({
+  const secondBlocked = resolveDirectMessageSendPolicy({
     conversationId: "c1",
     currentUserMessageCount: 1,
     currentUserProfileId: "u1",
@@ -60,20 +60,9 @@ test("direct message policy enforces two non-mutual messages until peer replies"
     trustScore: 80,
   });
 
-  assert.equal(secondAllowed.canSend, true);
-  assert.equal(secondAllowed.remainingNonFriendMessages, 1);
-
-  const thirdBlocked = resolveDirectMessageSendPolicy({
-    conversationId: "c1",
-    currentUserMessageCount: 2,
-    currentUserProfileId: "u1",
-    peerProfileId: "u2",
-    trustScore: 80,
-  });
-
-  assert.equal(thirdBlocked.canSend, false);
-  assert.equal(thirdBlocked.reason, "NON_FRIEND_LIMIT_REACHED");
-  assert.equal(thirdBlocked.remainingNonFriendMessages, 0);
+  assert.equal(secondBlocked.canSend, false);
+  assert.equal(secondBlocked.reason, "NON_FRIEND_LIMIT_REACHED");
+  assert.equal(secondBlocked.remainingNonFriendMessages, 0);
 
   const unlocked = resolveDirectMessageSendPolicy({
     conversationId: "c1",

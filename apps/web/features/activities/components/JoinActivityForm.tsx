@@ -14,6 +14,7 @@ import {
 } from "@/features/guest-participants/actions/joinAsGuest";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { getCopy } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import {
   joinActivityAction,
   type JoinActivityState,
@@ -486,12 +487,14 @@ function AdminGuestParticipantControlInstance({
   formInstanceId,
   locale,
   onReset,
+  triggerVariant,
 }: {
   activityId: string;
   closeOnSuccess: boolean;
   formInstanceId?: string;
   locale: string;
   onReset: () => void;
+  triggerVariant: "button" | "tool";
 }) {
   const [state, formAction] = useActionState(
     joinActivityAsGuestAction,
@@ -526,7 +529,12 @@ function AdminGuestParticipantControlInstance({
 
   if (state.success) {
     return (
-      <div className="grid gap-2.5 rounded-lg border border-[#8AB68E] bg-[#F6FAF4] p-3 text-sm">
+      <div
+        className={cn(
+          "grid gap-2.5 rounded-lg border border-[#8AB68E] bg-[#F6FAF4] p-3 text-sm",
+          triggerVariant === "tool" ? "col-span-full my-2" : null,
+        )}
+      >
         <div>
           <p className="font-semibold text-[#156240]">{t.successTitle}</p>
           <p className="mt-1 leading-5 text-[#156240]/70">
@@ -546,20 +554,36 @@ function AdminGuestParticipantControlInstance({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className={triggerVariant === "tool" ? "contents" : "grid gap-3"}>
       <button
         aria-controls={guestFormId}
         aria-expanded={showGuestForm}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E] bg-white px-4 text-sm font-semibold text-[#156240] transition hover:bg-[#F6FAF4] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25"
+        className={cn(
+          triggerVariant === "tool"
+            ? "group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
+            : "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E] bg-white px-4 text-sm font-semibold text-[#156240] transition hover:bg-[#F6FAF4] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25",
+        )}
         onClick={() => setShowGuestForm((current) => !current)}
         type="button"
       >
-        <UserPlus aria-hidden="true" className="h-4 w-4" />
-        {t.adminEntry}
+        <UserPlus
+          aria-hidden="true"
+          className={
+            triggerVariant === "tool" ? "h-[18px] w-[18px]" : "h-4 w-4"
+          }
+        />
+        <span className="max-w-full truncate">{t.adminEntry}</span>
       </button>
 
       {showGuestForm ? (
-        <div id={guestFormId}>
+        <div
+          className={
+            triggerVariant === "tool"
+              ? "col-span-full my-2 rounded-lg border border-[#D6D5B2] bg-white p-3"
+              : undefined
+          }
+          id={guestFormId}
+        >
           <GuestJoinForm
             activityId={activityId}
             formAction={formAction}
@@ -577,11 +601,13 @@ export function AdminGuestParticipantControl({
   closeOnSuccess = false,
   formInstanceId,
   locale,
+  triggerVariant = "button",
 }: {
   activityId: string;
   closeOnSuccess?: boolean;
   formInstanceId?: string;
   locale: string;
+  triggerVariant?: "button" | "tool";
 }) {
   const [formVersion, setFormVersion] = useState(0);
 
@@ -593,6 +619,7 @@ export function AdminGuestParticipantControl({
       key={formVersion}
       locale={locale}
       onReset={() => setFormVersion((current) => current + 1)}
+      triggerVariant={triggerVariant}
     />
   );
 }

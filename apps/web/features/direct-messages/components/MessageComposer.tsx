@@ -211,46 +211,43 @@ export function MessageComposer({
       return;
     }
 
-    if (files.some((file) => getImageUploadClientValidationError(file))) {
+    const validFiles = files.filter(
+      (file) => !getImageUploadClientValidationError(file),
+    );
+    let hadUploadFailure = validFiles.length !== files.length;
+
+    if (validFiles.length === 0) {
       setImageUploadError(t.imageUploadFailed);
       return;
     }
 
     setImageUploadError("");
     setIsImageUploading(true);
-    const uploadedUrls: string[] = [];
-
     try {
-      for (const file of files) {
-        const result = await uploadImageWithSignedUrl(
-          "/api/uploads/direct-message-image",
-          file,
-        );
+      for (const file of validFiles) {
+        try {
+          const result = await uploadImageWithSignedUrl(
+            "/api/uploads/direct-message-image",
+            file,
+          );
 
-        if ("error" in result) {
-          throw new Error("DIRECT_MESSAGE_IMAGE_UPLOAD_FAILED");
+          if ("error" in result) {
+            hadUploadFailure = true;
+            continue;
+          }
+
+          setImageUrls((current) =>
+            [...new Set([...current, result.url])].slice(
+              0,
+              messageImageMaxCount,
+            ),
+          );
+        } catch {
+          hadUploadFailure = true;
         }
-
-        uploadedUrls.push(result.url);
       }
-
-      setImageUrls((current) =>
-        [...new Set([...current, ...uploadedUrls])].slice(
-          0,
-          messageImageMaxCount,
-        ),
-      );
-    } catch {
-      if (uploadedUrls.length > 0) {
-        setImageUrls((current) =>
-          [...new Set([...current, ...uploadedUrls])].slice(
-            0,
-            messageImageMaxCount,
-          ),
-        );
-      }
-      setImageUploadError(t.imageUploadFailed);
     } finally {
+      setImageUploadError(hadUploadFailure ? t.imageUploadFailed : "");
       setIsImageUploading(false);
       if (imageInputRef.current) {
         imageInputRef.current.value = "";

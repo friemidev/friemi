@@ -22,6 +22,7 @@ type MobileBottomSheetProps = {
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  headerAction?: ReactNode;
   heightClassName?: string;
   initiallyExpanded?: boolean;
   onClose: () => void;
@@ -35,6 +36,7 @@ export function MobileBottomSheet({
   children,
   className,
   closeLabel,
+  headerAction,
   heightClassName = "h-[85%]",
   initiallyExpanded = false,
   onClose,
@@ -290,7 +292,7 @@ export function MobileBottomSheet({
       >
         <div
           className={cn(
-            "shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2",
+            "relative shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2",
             isExpanded ? "pt-[calc(0.5rem_+_var(--app-top-safe-area))]" : null,
           )}
           onPointerCancel={handleDragCancel}
@@ -313,6 +315,14 @@ export function MobileBottomSheet({
           >
             <span className="h-1.5 w-12 rounded-full bg-[#D6D5B2]" />
           </button>
+          {headerAction ? (
+            <div
+              className="absolute bottom-0.5 right-3 z-10"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {headerAction}
+            </div>
+          ) : null}
         </div>
         <div
           className={cn(

@@ -1137,7 +1137,7 @@ function NotificationCard({
 
   const mobileDeleteAction = (
     <button
-      className="flex min-h-[calc(100%-0.5rem)] w-full flex-col items-center justify-center gap-1 rounded-[1rem] bg-paper/88 px-3 py-4 text-center text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/55"
+      className="flex min-h-[calc(100%-0.5rem)] w-full flex-col items-center justify-center gap-1 rounded-md bg-paper/88 px-3 py-4 text-center text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/55"
       data-no-swipe
       disabled={pending}
       onClick={() => onDelete(notification.id)}
@@ -1152,21 +1152,16 @@ function NotificationCard({
     <NotificationSwipeCard mobileDeleteAction={mobileDeleteAction}>
       <article
         className={cn(
-          "group relative overflow-hidden rounded-[1rem] border px-3 py-3 transition duration-150 ease-out hover:bg-white sm:px-4 sm:py-3.5",
-          visual.cardClassName,
-          selected ? "border-[#156240] ring-1 ring-[#156240]/30" : null,
+          "group relative overflow-hidden px-1 py-3.5 transition-colors duration-150 ease-out sm:px-2",
+          isUnread
+            ? "bg-[#F7FAF6] hover:bg-[#F2F7F1]"
+            : "bg-white hover:bg-[#FAFAF7]",
+          selected ? "bg-[#EEF6EC] ring-1 ring-inset ring-[#156240]/35" : null,
           pending ? "pointer-events-none opacity-70" : null,
         )}
       >
-        <span
-          aria-hidden="true"
-          className={cn(
-            "absolute inset-y-3 left-0 w-1 rounded-r-full transition",
-            isUnread ? "bg-coral" : "bg-sand/70",
-          )}
-        />
         <div
-          className="flex gap-3 pl-1"
+          className="flex gap-3 px-2"
           onClick={(event) => {
             const isInteractiveTarget = isNotificationInteractiveTarget(
               event.target,
@@ -1220,41 +1215,48 @@ function NotificationCard({
           ) : null}
           <span
             className={cn(
-              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-paper/75",
+              "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1 ring-paper/75",
               visual.iconClassName,
             )}
           >
-            <NotificationIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <NotificationIcon className="h-4 w-4" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2.5">
               <div className="min-w-0">
-                <h2 className="text-[15px] font-bold leading-5 text-ink sm:text-base">
-                  {text.title}
-                </h2>
-                <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6C746A]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h2
+                    className={cn(
+                      "truncate text-[15px] leading-5 text-ink sm:text-base",
+                      isUnread ? "font-bold" : "font-semibold",
+                    )}
+                  >
+                    {text.title}
+                  </h2>
+                  {isUnread ? (
+                    <span
+                      aria-label={t.unread}
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-coral"
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-[#6C746A]">
                   {text.body}
                 </p>
               </div>
 
-              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap pt-0.5 text-[11px] font-medium text-outline sm:text-xs">
+              <span className="inline-flex shrink-0 whitespace-nowrap pt-0.5 text-[11px] font-medium text-outline sm:text-xs">
                 {formatActivityDate(notification.createdAt, locale)}
-                {isUnread ? (
-                  <span
-                    aria-label={t.unread}
-                    className="h-2 w-2 rounded-full bg-coral shadow-[0_0_0_3px_rgba(222,170,179,0.28)]"
-                  />
-                ) : null}
               </span>
             </div>
 
             {!selectionMode ? (
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <div className="mt-2 flex min-h-8 flex-wrap items-center gap-2">
                 {canFollowBack ? (
                   <button
                     className={cn(
-                      "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
+                      "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
                       notification.viewerFollowsActor
                         ? "bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]"
                         : "bg-[#156240] text-white shadow-[0_10px_22px_rgba(21,98,64,0.12)] hover:bg-[#0F5134]",
@@ -1277,10 +1279,7 @@ function NotificationCard({
                   notification.type === "CHARM_GIFT_RECEIVED" ? (
                     <button
                       className={cn(
-                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
-                        isUnread
-                          ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
-                          : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
+                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-1 text-xs font-semibold text-[#156240] transition hover:text-[#0F5134] focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
                       )}
                       disabled={pending}
                       onClick={() => onOpenGift(notification.id)}
@@ -1298,12 +1297,7 @@ function NotificationCard({
                         value={notification.id}
                       />
                       <button
-                        className={cn(
-                          "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
-                          isUnread
-                            ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
-                            : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
-                        )}
+                        className="inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-1 text-xs font-semibold text-[#156240] transition hover:text-[#0F5134] focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
                         type="submit"
                       >
                         {getNotificationActionLabel(notification, locale)}
@@ -1314,23 +1308,28 @@ function NotificationCard({
                 ) : null}
                 {isUnread ? (
                   <button
-                    className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 text-xs font-semibold text-forest/70 ring-1 ring-sand transition hover:bg-fog hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                    aria-label={t.markOneRead}
+                    className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-forest/65 transition hover:bg-white hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
                     disabled={pending}
                     onClick={() => onMarkRead(notification.id)}
+                    title={t.markOneRead}
                     type="button"
                   >
-                    <CheckCheck className="h-3.5 w-3.5" />
-                    {t.markOneRead}
+                    <CheckCheck className="h-4 w-4" />
                   </button>
                 ) : null}
                 <button
-                  className="hidden min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-rose/58 px-3 text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/78 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:inline-flex"
+                  aria-label={deleteCopy.delete}
+                  className={cn(
+                    "hidden h-8 w-8 items-center justify-center rounded-md text-outline transition hover:bg-rose/65 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:inline-flex",
+                    !isUnread ? "ml-auto" : null,
+                  )}
                   disabled={pending}
                   onClick={() => onDelete(notification.id)}
+                  title={deleteCopy.delete}
                   type="button"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {deleteCopy.delete}
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             ) : null}
@@ -1944,7 +1943,7 @@ export function NotificationsCenterClient({
         />
       ) : null}
 
-      <section className="space-y-4 border-b border-[#EEEDE4] pb-4">
+      <section className="space-y-3 pb-2">
         <div className="relative flex items-center justify-between gap-3">
           <h1 className="min-w-0 text-3xl font-bold tracking-normal text-[#111210] sm:text-4xl">
             {t.title}
@@ -1976,9 +1975,9 @@ export function NotificationsCenterClient({
           )}
 
           {!isSelecting && isActionMenuOpen ? (
-            <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-2 rounded-[1rem] border border-[#D6D5B2] bg-white p-2 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
+            <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-1 rounded-lg border border-[#D6D5B2] bg-white p-1.5 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-md px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || notifications.length === 0}
                 onClick={() => {
                   setIsSelecting(true);
@@ -1991,7 +1990,7 @@ export function NotificationsCenterClient({
                 {selectionCopy.select}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-md px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || unreadCount === 0}
                 onClick={() => {
                   setPendingBulkAction("mark-all-read");
@@ -2003,7 +2002,7 @@ export function NotificationsCenterClient({
                 {t.markAllRead}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-md px-3 text-sm font-semibold text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || readNotifications.length === 0}
                 onClick={() => {
                   setPendingBulkAction("delete-read");
@@ -2059,7 +2058,7 @@ export function NotificationsCenterClient({
 
         <nav
           aria-label={t.title}
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+          className="grid w-full grid-cols-5 gap-1.5 pb-1 sm:flex sm:gap-2"
         >
           {filters.map((filter) => {
             const active = activeFilter === filter;
@@ -2069,10 +2068,10 @@ export function NotificationsCenterClient({
               <button
                 key={filter}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                  "relative inline-flex h-9 min-w-0 items-center justify-center whitespace-nowrap rounded-lg px-1 text-[13px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30 sm:w-auto sm:shrink-0 sm:gap-1.5 sm:px-3 sm:text-sm",
                   active
-                    ? "bg-[#156240] text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
-                    : "bg-white text-[#111210] ring-1 ring-[#EEEDE4] hover:bg-[#F7F7F0]",
+                    ? "bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]"
+                    : "bg-white text-[#4F574E] ring-1 ring-[#EEEDE4] hover:bg-[#F7F7F0]",
                 )}
                 type="button"
                 onClick={() => setActiveFilter(filter)}
@@ -2081,9 +2080,9 @@ export function NotificationsCenterClient({
                 {count > 0 ? (
                   <span
                     className={cn(
-                      "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none",
+                      "absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] leading-none shadow-[0_0_0_2px_white] sm:static sm:h-5 sm:min-w-5 sm:text-[10px] sm:shadow-none",
                       active
-                        ? "bg-white/20 text-white"
+                        ? "bg-[#156240] text-white"
                         : "bg-[#EAF5E8] text-[#156240]",
                     )}
                   >
@@ -2104,8 +2103,15 @@ export function NotificationsCenterClient({
           description=""
           title={t.emptyTitle}
         />
+      ) : visibleNotifications.length === 0 ? (
+        <section className="flex min-h-44 flex-col items-center justify-center gap-3 border-y border-[#EEEDE4] py-10 text-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F5EF] text-[#6C746A]">
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-semibold text-[#6C746A]">{t.emptyTitle}</p>
+        </section>
       ) : (
-        <section className="grid gap-2.5 pb-4">
+        <section className="divide-y divide-[#EEEDE4] overflow-hidden border-y border-[#EEEDE4] bg-white">
           {visibleNotifications.map((notification) => (
             <NotificationCard
               key={notification.id}

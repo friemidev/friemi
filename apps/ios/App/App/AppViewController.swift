@@ -23,6 +23,18 @@ class AppViewController: CAPBridgeViewController {
             name: .friemiOpenURL,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
         CAPLog.print("Friemi iOS navigation plugin registered v2")
     }
 
@@ -58,6 +70,23 @@ class AppViewController: CAPBridgeViewController {
         }
 
         openFriemiURL(url)
+    }
+
+    @objc private func handleAppDidBecomeActive() {
+        dispatchWebLifecycleEvent("friemi:ios-resume")
+        dispatchWebLifecycleEvent("friemi:app-foreground")
+    }
+
+    @objc private func handleAppWillResignActive() {
+        dispatchWebLifecycleEvent("friemi:app-background")
+    }
+
+    private func dispatchWebLifecycleEvent(_ eventName: String) {
+        let script = "window.dispatchEvent(new CustomEvent('\(eventName)'))"
+
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.evaluateJavaScript(script, completionHandler: nil)
+        }
     }
 
     private func consumePendingFriemiOpenURL() {

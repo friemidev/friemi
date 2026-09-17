@@ -2036,17 +2036,6 @@ export async function ActivityDetailPageContent({
                     </span>
                   ) : null}
                 </div>
-                {isTeamOperator ? (
-                  <ActivityCheckInReviewPanel
-                    activityId={activity.id}
-                    locale={locale}
-                    pendingParticipants={pendingParticipants}
-                    participants={activityCheckInRoster}
-                    showParticipationApproval={activity.requiresApproval}
-                    triggerLabel={operatorActionCopy.checkIn}
-                    triggerVariant="icon"
-                  />
-                ) : null}
               </div>
             </div>
           ) : null}
@@ -2063,6 +2052,63 @@ export async function ActivityDetailPageContent({
             }
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
+            additionalTools={
+              <>
+                {canUseBoardGameTools ? (
+                  <BoardGameToolFloatingEntry
+                    gameToolsHref={gameToolsHref}
+                    locale={locale}
+                    variant="tool"
+                  />
+                ) : null}
+                {isTeamOperator ? (
+                  <>
+                    <ActivityCheckInReviewPanel
+                      activityId={activity.id}
+                      locale={locale}
+                      pendingParticipants={pendingParticipants}
+                      participants={activityCheckInRoster}
+                      showParticipationApproval={activity.requiresApproval}
+                      triggerLabel={operatorActionCopy.checkIn}
+                      triggerVariant="tool"
+                    />
+                    <Link
+                      aria-label={operatorActionCopy.edit}
+                      className="group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
+                      href={activityEditHref}
+                      target="_top"
+                      title={operatorActionCopy.edit}
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center text-[#5C8A6C] transition group-hover:text-[#156240]">
+                        <PencilLine
+                          className="h-[18px] w-[18px]"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="max-w-full truncate">
+                        {operatorActionCopy.edit}
+                      </span>
+                    </Link>
+                    {canCancelActivity ? (
+                      <CancelActivityForm
+                        activityId={activity.id}
+                        activityTitle={activity.title}
+                        locale={locale}
+                        triggerVariant="tool"
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+                {isAdmin && !isClosed && !isFull ? (
+                  <AdminGuestParticipantControl
+                    activityId={activity.id}
+                    formInstanceId="mobile-admin"
+                    locale={locale}
+                    triggerVariant="tool"
+                  />
+                ) : null}
+              </>
+            }
             announcementContent={
               showActivityAnnouncementPanel ? (
                 <ActivityAnnouncementDetailPanel
@@ -2097,26 +2143,6 @@ export async function ActivityDetailPageContent({
             participants={participantPreview}
             variant="bare"
           />
-          {isTeamOperator ? (
-            <>
-              <div className="grid gap-2">
-                <Link
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
-                  href={activityEditHref}
-                >
-                  <PencilLine className="h-4 w-4" />
-                  <span className="truncate">{operatorActionCopy.edit}</span>
-                </Link>
-              </div>
-              {canCancelActivity ? (
-                <CancelActivityForm
-                  activityId={activity.id}
-                  activityTitle={activity.title}
-                  locale={locale}
-                />
-              ) : null}
-            </>
-          ) : null}
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
               activityId={activity.id}
@@ -2168,13 +2194,6 @@ export async function ActivityDetailPageContent({
               </div>
             </TeamDetailMobileCtaSheet>
           ) : null}
-          {isAdmin && !isClosed && !isFull ? (
-            <AdminGuestParticipantControl
-              activityId={activity.id}
-              formInstanceId="mobile-admin"
-              locale={locale}
-            />
-          ) : null}
         </div>
       </div>
 
@@ -2185,6 +2204,15 @@ export async function ActivityDetailPageContent({
             aaActionCount={activityAaEntryState.actionCount}
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
+            additionalTools={
+              canUseBoardGameTools ? (
+                <BoardGameToolFloatingEntry
+                  gameToolsHref={gameToolsHref}
+                  locale={locale}
+                  variant="tool"
+                />
+              ) : undefined
+            }
             announcementHref="#activity-announcement-desktop"
             announcementUnread={activityRoomUnreadState.hasUnreadAnnouncement}
             canAccessAa={activityAaEntryState.canAccess}
@@ -2683,12 +2711,6 @@ export async function ActivityDetailPageContent({
           </div>
         </aside>
       </section>
-      {canUseBoardGameTools ? (
-        <BoardGameToolFloatingEntry
-          gameToolsHref={gameToolsHref}
-          locale={locale}
-        />
-      ) : null}
     </PageContainer>
   );
 }

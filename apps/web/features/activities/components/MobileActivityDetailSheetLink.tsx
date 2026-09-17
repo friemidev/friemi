@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { LockKeyhole } from "lucide-react";
+import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,9 @@ function getLockedCopy(locale: string) {
 function appendActivitySheetParam(href: string) {
   try {
     const base =
-      typeof window === "undefined" ? "https://friemi.local" : window.location.origin;
+      typeof window === "undefined"
+        ? "https://friemi.local"
+        : window.location.origin;
     const url = new URL(href, base);
     url.searchParams.set("sheet", "1");
 
@@ -55,6 +58,13 @@ function appendActivitySheetParam(href: string) {
   }
 }
 
+function getOpenPageLabel(locale: string) {
+  if (locale === "fr") return "Ouvrir la page complète";
+  if (locale === "en") return "Open full page";
+
+  return "打开完整页面";
+}
+
 export function MobileActivityDetailSheetLink({
   children,
   className,
@@ -66,6 +76,7 @@ export function MobileActivityDetailSheetLink({
   const [open, setOpen] = useState(false);
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
+  const openPageLabel = getOpenPageLabel(locale);
 
   return (
     <>
@@ -81,6 +92,19 @@ export function MobileActivityDetailSheetLink({
         ariaLabel={label}
         bodyClassName="overflow-hidden"
         closeLabel={label}
+        headerAction={
+          locked ? undefined : (
+            <Link
+              aria-label={openPageLabel}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95"
+              href={href}
+              onClick={() => setOpen(false)}
+              title={openPageLabel}
+            >
+              <Maximize2 className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          )
+        }
         initiallyExpanded
         onClose={() => setOpen(false)}
         open={open}

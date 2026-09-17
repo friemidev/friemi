@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -98,10 +99,21 @@ export async function toggleFollowUserAction(
   const localizedPath = withLocale(locale, redirectPath);
 
   if (existingFollow) {
-    await prisma.userFollow.delete({
-      where: {
-        id: existingFollow.id,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.userFollow.delete({
+        where: {
+          id: existingFollow.id,
+        },
+      });
+
+      if (targetFollowsViewer) {
+        await tx.conversation.updateMany({
+          where: getConversationPair(viewerProfile.id, targetUserProfileId),
+          data: {
+            nonFriendResetAt: new Date(),
+          },
+        });
+      }
     });
 
     revalidatePath(localizedPath);
@@ -132,6 +144,15 @@ export async function toggleFollowUserAction(
       recipientId: targetUserProfileId,
       type: "FRIEND_REQUEST",
     });
+
+    if (targetFollowsViewer) {
+      await tx.conversation.updateMany({
+        where: getConversationPair(viewerProfile.id, targetUserProfileId),
+        data: {
+          nonFriendResetAt: null,
+        },
+      });
+    }
   });
 
   const isMutualFollow = Boolean(targetFollowsViewer);

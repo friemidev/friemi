@@ -524,7 +524,7 @@ export function ChatImagePreviewGrid({
             <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-[0_6px_24px_rgba(0,0,0,0.42)] ring-1 ring-black/10 transition hover:bg-[#F1F2EC] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_8px_28px_rgba(0,0,0,0.65)] ring-2 ring-white transition hover:bg-[#0F5134] focus:outline-none focus-visible:ring-4 focus-visible:ring-white/70"
                 aria-label={saveLabel}
                 title={saveLabel}
                 onClick={() => void saveActiveImage()}
@@ -669,9 +669,10 @@ export function ChatImagePreviewGrid({
           {saveNotice ? (
             <div
               aria-live="polite"
-              className="pointer-events-none absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 min-w-max -translate-x-1/2 rounded-lg bg-white px-4 py-2.5 text-sm font-bold text-black shadow-[0_10px_34px_rgba(0,0,0,0.5)] ring-1 ring-black/10"
+              className="pointer-events-none absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex min-w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-bold text-black shadow-[0_12px_38px_rgba(0,0,0,0.72)] ring-2 ring-white/60"
               role="status"
             >
+              <Download className="h-4 w-4 shrink-0 text-[#156240]" />
               {saveNotice}
             </div>
           ) : null}

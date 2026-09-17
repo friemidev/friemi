@@ -2,9 +2,10 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle, Trash2 } from "lucide-react";
+import { CalendarX2, LoaderCircle, Trash2 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import {
   cancelActivityAction,
   type CancelActivityState,
@@ -17,6 +18,7 @@ type CancelActivityFormProps = {
   activityTitle: string;
   disabled?: boolean;
   locale: string;
+  triggerVariant?: "button" | "tool";
 };
 
 const initialState: CancelActivityState = {};
@@ -26,10 +28,12 @@ function CancelActivityButton({
   disabled,
   locale,
   onOpen,
+  triggerVariant,
 }: {
   disabled?: boolean;
   locale: string;
   onOpen: () => void;
+  triggerVariant: "button" | "tool";
 }) {
   const { pending } = useFormStatus();
   const t = getCopy(locale).activityOwner;
@@ -38,15 +42,29 @@ function CancelActivityButton({
     <Button
       type="button"
       variant="secondary"
-      className="h-11 w-full gap-2 rounded-full border border-[#DEAAB3] bg-white text-[#B5301F] shadow-none hover:bg-[#DEAAB3]"
+      className={cn(
+        triggerVariant === "tool"
+          ? "group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border-0 bg-transparent px-1 text-[11px] font-semibold text-[#A3473B] shadow-none transition hover:bg-[#FFF4F1] hover:text-[#B5301F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F09182] active:scale-[0.97]"
+          : "h-11 w-full gap-2 rounded-full border border-[#DEAAB3] bg-white text-[#B5301F] shadow-none hover:bg-[#DEAAB3]",
+      )}
       disabled={disabled || pending}
       aria-busy={pending}
       onClick={onOpen}
     >
       {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <LoaderCircle
+          className={cn(
+            "h-4 w-4 animate-spin",
+            triggerVariant === "tool" ? "h-[18px] w-[18px]" : null,
+          )}
+          aria-hidden="true"
+        />
+      ) : triggerVariant === "tool" ? (
+        <CalendarX2 className="h-[18px] w-[18px]" aria-hidden="true" />
       ) : null}
-      <span className="truncate">{pending ? t.cancelling : t.cancel}</span>
+      <span className="max-w-full truncate">
+        {pending ? t.cancelling : t.cancel}
+      </span>
     </Button>
   );
 }
@@ -128,7 +146,13 @@ function CancelActivityConfirmDialog({
   );
 }
 
-function PendingCancelNotice({ locale }: { locale: string }) {
+function PendingCancelNotice({
+  className,
+  locale,
+}: {
+  className?: string;
+  locale: string;
+}) {
   const { pending } = useFormStatus();
   const t = getCopy(locale).activityOwner;
 
@@ -138,7 +162,10 @@ function PendingCancelNotice({ locale }: { locale: string }) {
 
   return (
     <div
-      className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+      className={cn(
+        "flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800",
+        className,
+      )}
       aria-live="polite"
     >
       <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -152,6 +179,7 @@ export function CancelActivityForm({
   activityTitle,
   disabled,
   locale,
+  triggerVariant = "button",
 }: CancelActivityFormProps) {
   const [state, formAction] = useActionState(
     cancelActivityAction,
@@ -167,13 +195,20 @@ export function CancelActivityForm({
   }, [state.formError]);
 
   return (
-    <form action={formAction} className="grid gap-2" noValidate>
+    <form
+      action={formAction}
+      className={triggerVariant === "tool" ? "contents" : "grid gap-2"}
+      noValidate
+    >
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 
       {state.formError ? (
         <div
-          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className={cn(
+            "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700",
+            triggerVariant === "tool" ? "col-span-full my-2" : null,
+          )}
           role="alert"
         >
           <p className="font-medium">{state.formError}</p>
@@ -181,11 +216,15 @@ export function CancelActivityForm({
         </div>
       ) : null}
 
-      <PendingCancelNotice locale={locale} />
+      <PendingCancelNotice
+        className={triggerVariant === "tool" ? "col-span-full my-2" : undefined}
+        locale={locale}
+      />
       <CancelActivityButton
         disabled={disabled}
         locale={locale}
         onOpen={() => setIsConfirmOpen(true)}
+        triggerVariant={triggerVariant}
       />
       {isConfirmOpen ? (
         <CancelActivityConfirmDialog

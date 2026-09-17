@@ -1905,16 +1905,17 @@ model Friendship {
 }
 
 model Conversation {
-  id            String                   @id @default(cuid())
-  userAId       String
-  userBId       String
-  userA         UserProfile              @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB         UserProfile              @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
-  messages      DirectMessage[]
-  preferences   ConversationPreference[]
-  lastMessageAt DateTime?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  id               String                   @id @default(cuid())
+  userAId          String
+  userBId          String
+  userA            UserProfile              @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB            UserProfile              @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages         DirectMessage[]
+  preferences      ConversationPreference[]
+  lastMessageAt    DateTime?
+  nonFriendResetAt DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@unique([userAId, userBId])
   @@index([userAId, lastMessageAt])
@@ -1952,6 +1953,7 @@ model DirectMessage {
   replyToSenderName String?
   replyToBody       String?                 @db.Text
   replyToHasImage   Boolean                 @default(false)
+  recalledAt        DateTime?
   readAt            DateTime?
   conversation      Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender            UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
