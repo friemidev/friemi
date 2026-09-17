@@ -18,33 +18,59 @@ export const metadata = noIndexMetadata;
 
 function getCopy(
   locale: string,
-  status: "CODE_USED" | "INVALID" | "OWN_STORE" | "UNAVAILABLE",
+  status:
+    | "ALREADY_CLAIMED"
+    | "EXPIRED"
+    | "INVALID"
+    | "NOT_STARTED"
+    | "OWN_STORE"
+    | "SOLD_OUT"
+    | "UNAVAILABLE"
+    | "UNLISTED",
 ) {
   if (locale === "fr") {
     return status === "OWN_STORE"
       ? "Vous ne pouvez pas recevoir le coupon de votre propre boutique."
-      : status === "CODE_USED"
-        ? "Ce QR code a déjà été utilisé. Demandez-en un nouveau à la boutique."
-        : status === "UNAVAILABLE"
-          ? "Ce coupon n'est plus disponible."
-          : "Ce QR code de coupon est invalide.";
+      : status === "ALREADY_CLAIMED"
+        ? "Vous avez déjà reçu ce coupon. Vous pouvez le retrouver dans votre sac."
+        : status === "SOLD_OUT"
+          ? "Tous les coupons de cette campagne ont été distribués."
+          : status === "NOT_STARTED"
+            ? "Cette campagne n'a pas encore commencé."
+            : status === "EXPIRED" ||
+                status === "UNLISTED" ||
+                status === "UNAVAILABLE"
+              ? "Ce coupon n'est plus disponible."
+              : "Ce QR code de coupon est invalide.";
   }
   if (locale === "en") {
     return status === "OWN_STORE"
       ? "You cannot claim your own store coupon."
-      : status === "CODE_USED"
-        ? "This QR code has already been used. Ask the store for a new one."
-        : status === "UNAVAILABLE"
-          ? "This coupon is no longer available."
-          : "This coupon QR code is invalid.";
+      : status === "ALREADY_CLAIMED"
+        ? "You already claimed this coupon. It is available in your bag."
+        : status === "SOLD_OUT"
+          ? "All coupons in this campaign have been claimed."
+          : status === "NOT_STARTED"
+            ? "This coupon campaign has not started yet."
+            : status === "EXPIRED" ||
+                status === "UNLISTED" ||
+                status === "UNAVAILABLE"
+              ? "This coupon is no longer available."
+              : "This coupon QR code is invalid.";
   }
   return status === "OWN_STORE"
     ? "不能领取自己门店的优惠券。"
-    : status === "CODE_USED"
-      ? "这个领取二维码已经使用过，请让店家刷新后重新扫码。"
-      : status === "UNAVAILABLE"
-        ? "这张优惠券暂时无法领取。"
-        : "这个优惠券二维码无效。";
+    : status === "ALREADY_CLAIMED"
+      ? "你已经领取过本期优惠券，可在背包中查看。"
+      : status === "SOLD_OUT"
+        ? "本期优惠券已经领完。"
+        : status === "NOT_STARTED"
+          ? "本期优惠券还未开始领取。"
+          : status === "EXPIRED" ||
+              status === "UNLISTED" ||
+              status === "UNAVAILABLE"
+            ? "这张优惠券暂时无法领取。"
+            : "这个优惠券二维码无效。";
 }
 
 export default async function CouponClaimPage({

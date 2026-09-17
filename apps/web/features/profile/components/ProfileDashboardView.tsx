@@ -714,7 +714,7 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
+      <div className="friemi-native-app-mobile-only app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
           <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
@@ -780,7 +780,7 @@ function GuestProfilePlaceholder({
         </section>
       </div>
 
-      <div className="hidden space-y-5 md:block md:space-y-7">
+      <div className="friemi-native-app-desktop-only hidden space-y-5 md:block md:space-y-7">
         <section className="rounded-[1.35rem] border border-[#8AB68E]/40 bg-[linear-gradient(145deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-5 shadow-[0_14px_34px_rgba(21,98,64,0.07)] ring-1 ring-white/70">
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
             <div className="flex min-w-0 items-center gap-4">
@@ -3327,7 +3327,7 @@ export function ProfileDashboardView({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="md:hidden">
+      <div className="friemi-native-app-mobile-only md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
             achievementPreviewItems={achievementPreviewItems}
@@ -3352,7 +3352,7 @@ export function ProfileDashboardView({
         )}
       </div>
 
-      <div className="hidden space-y-5 md:block md:space-y-7">
+      <div className="friemi-native-app-desktop-only hidden space-y-5 md:block md:space-y-7">
         <section
           className={
             isSelf

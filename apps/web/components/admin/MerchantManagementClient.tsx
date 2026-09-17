@@ -152,7 +152,7 @@ export function MerchantManagementClient({
         current.filter((item) => item.id !== selectedProfileId),
       );
       setSelectedProfileId("");
-      toast.success("账号已升级为店家，默认优惠券已启用");
+      toast.success("账号已升级为店家，默认优惠券样式已分配");
     } catch {
       toast.error("升级店家失败，请稍后重试");
     } finally {
@@ -241,7 +241,7 @@ export function MerchantManagementClient({
       setCoupons((current) => [...current, json.coupon]);
       setCouponForm(emptyCouponForm());
       setCouponEditorMerchantId(null);
-      toast.success("优惠券已添加，店家现在可以选择并生成领取码");
+      toast.success("优惠券样式已添加，店家现在可以用它发布优惠券");
     } catch {
       toast.error("优惠券创建失败，请稍后重试");
     } finally {
@@ -280,7 +280,7 @@ export function MerchantManagementClient({
         ...current.filter((coupon) => coupon.id !== json.coupon.id),
         json.coupon,
       ]);
-      toast.success("平台优惠券已绑定，店家现在可以选择发放");
+      toast.success("平台优惠券样式已绑定，店家现在可以选择发布");
     } catch {
       toast.error("平台优惠券绑定失败，请稍后重试");
     } finally {
@@ -705,10 +705,12 @@ export function MerchantManagementClient({
                                   <select
                                     className="mt-2 h-10 w-full rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-emerald-600"
                                     onChange={(event) =>
-                                      setCouponTemplateSelections((current) => ({
-                                        ...current,
-                                        [merchant.id]: event.target.value,
-                                      }))
+                                      setCouponTemplateSelections(
+                                        (current) => ({
+                                          ...current,
+                                          [merchant.id]: event.target.value,
+                                        }),
+                                      )
                                     }
                                     value={selectedTemplate.key}
                                   >
@@ -731,7 +733,8 @@ export function MerchantManagementClient({
                                     }
                                     type="button"
                                   >
-                                    {bindingTemplateMerchantId === merchant.id ? (
+                                    {bindingTemplateMerchantId ===
+                                    merchant.id ? (
                                       <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
                                       <TicketCheck className="h-4 w-4" />

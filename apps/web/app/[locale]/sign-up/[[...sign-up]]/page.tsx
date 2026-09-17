@@ -109,6 +109,7 @@ export default async function SignUpPage({
           exitUrl={withLocale(locale, "/mobile-home")}
           fallbackRedirectUrl={fallbackRedirectUrl}
           forceRedirectUrl={forceRedirectUrl}
+          nativeDirectRedirectUrl={profileSetupTarget}
           locale={locale}
           mode="sign-up"
           path={`/${locale}/sign-up`}

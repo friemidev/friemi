@@ -27,6 +27,24 @@ export function isLargeActivityCapacity(capacity: number | null | undefined) {
   return Number(capacity ?? 0) >= largeActivityCapacityThreshold;
 }
 
+export function isActivityEndedForTrustSettlement(
+  activity: {
+    endAt: Date | null;
+    startAt: Date;
+    status: string;
+  },
+  now = new Date(),
+) {
+  if (activity.status === "CANCELLED") {
+    return false;
+  }
+
+  return (
+    activity.status === "ENDED" ||
+    (activity.endAt ?? activity.startAt).getTime() <= now.getTime()
+  );
+}
+
 export function getTrustLevel(score: number): TrustLevel {
   if (score >= 90) {
     return "TRUSTED";

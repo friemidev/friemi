@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
+  createCouponCampaign,
   generateCouponClaimCode,
   generateCouponRedemptionToken,
+  grantFollowUpCoupon,
   redeemCouponByToken,
+  unlistCouponCampaign,
 } from "@/features/coupons/services/couponService";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -37,15 +40,108 @@ export type GenerateCouponRedemptionTokenState = {
   status?: "FORBIDDEN" | "GENERATED" | "INVALID" | "UNAVAILABLE";
 };
 
+export type CreateCouponCampaignState = {
+  couponId?: string;
+  path?: string;
+  status?: "CREATED" | "FORBIDDEN" | "INVALID";
+};
+
+export type UnlistCouponCampaignState = {
+  couponId?: string;
+  status?: "FORBIDDEN" | "INVALID" | "UNLISTED";
+};
+
+export type GrantFollowUpCouponState = {
+  itemId?: string;
+  status?:
+    | "ALREADY_GRANTED"
+    | "FORBIDDEN"
+    | "GRANTED"
+    | "INVALID"
+    | "UNAVAILABLE";
+};
+
 const updateStoreSchema = z.object({
   description: z.string().trim().min(1).max(1200),
   locale: z.string().trim().min(1),
   name: z.string().trim().min(1).max(80),
 });
 
+const createCampaignSchema = z
+  .object({
+    description: z.string().trim().min(1).max(1200),
+    expiresAt: z.coerce.date(),
+    quantityLimit: z.coerce.number().int().min(1).max(100000),
+    templateId: z.string().trim().min(1),
+    terms: z.string().trim().max(1200).optional(),
+    title: z.string().trim().min(1).max(120),
+    validFrom: z.coerce.date().optional(),
+  })
+  .refine(
+    (value) =>
+      !value.validFrom || value.validFrom.getTime() < value.expiresAt.getTime(),
+    { path: ["expiresAt"] },
+  );
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+export async function createCouponCampaignAction(
+  _previousState: CreateCouponCampaignState,
+  formData: FormData,
+): Promise<CreateCouponCampaignState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const parsed = createCampaignSchema.safeParse({
+    description: getString(formData, "description"),
+    expiresAt: getString(formData, "expiresAt"),
+    quantityLimit: getString(formData, "quantityLimit"),
+    templateId: getString(formData, "templateId"),
+    terms: getString(formData, "terms"),
+    title: getString(formData, "title"),
+    validFrom: getString(formData, "validFrom") || undefined,
+  });
+  if (!parsed.success) return { status: "INVALID" };
+
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    "/profile/store",
+  );
+  const result = await createCouponCampaign({
+    input: {
+      ...parsed.data,
+      terms: parsed.data.terms || null,
+      validFrom: parsed.data.validFrom ?? null,
+    },
+    profileId: profile.id,
+  });
+  if (result.status !== "CREATED") return { status: result.status };
+
+  revalidatePath(withLocale(locale, "/profile/store"));
+  return {
+    couponId: result.couponId,
+    path: withLocale(locale, `/coupons/claim/${result.token}`),
+    status: "CREATED",
+  };
+}
+
+export async function unlistCouponCampaignAction(
+  _previousState: UnlistCouponCampaignState,
+  formData: FormData,
+): Promise<UnlistCouponCampaignState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const couponId = getString(formData, "couponId");
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    "/profile/store",
+  );
+  const result = await unlistCouponCampaign({
+    couponId,
+    profileId: profile.id,
+  });
+  revalidatePath(withLocale(locale, "/profile/store"));
+  return result;
 }
 
 export async function updateMerchantStoreAction(
@@ -151,4 +247,26 @@ export async function redeemCouponAction(
   revalidatePath(withLocale(locale, "/profile/bag"));
   revalidatePath(withLocale(locale, "/notifications"));
   return { status: result.status };
+}
+
+export async function grantFollowUpCouponAction(
+  _previousState: GrantFollowUpCouponState,
+  formData: FormData,
+): Promise<GrantFollowUpCouponState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const redemptionItemId = getString(formData, "redemptionItemId");
+  const redemptionToken = getString(formData, "redemptionToken");
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    `/coupons/redeem/${redemptionToken}`,
+  );
+  const result = await grantFollowUpCoupon({
+    profileId: profile.id,
+    redemptionItemId,
+  });
+
+  revalidatePath(withLocale(locale, "/profile/store"));
+  revalidatePath(withLocale(locale, "/profile/bag"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  return result;
 }

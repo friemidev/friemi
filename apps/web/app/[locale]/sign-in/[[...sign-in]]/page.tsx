@@ -132,6 +132,7 @@ export default async function SignInPage({
           exitUrl={withLocale(locale, "/mobile-home")}
           fallbackRedirectUrl={fallbackRedirectUrl}
           forceRedirectUrl={forceRedirectUrl}
+          nativeDirectRedirectUrl={redirectTarget}
           locale={locale}
           mode="sign-in"
           path={`/${locale}/sign-in`}

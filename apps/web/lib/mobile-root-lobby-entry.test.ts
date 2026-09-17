@@ -3,11 +3,33 @@ import test from "node:test";
 import {
   getMobileRootLobbyRedirectPath,
   getRootHomeRedirectPath,
+  isFriemiNativeAppUserAgent,
   isMobileUserAgent,
   isMobileViewportRequest,
   isSearchCrawlerUserAgent,
   resolveRootEntryLocale,
 } from "./mobile-root-lobby-entry";
+
+test("isFriemiNativeAppUserAgent identifies native app WebViews only", () => {
+  assert.equal(
+    isFriemiNativeAppUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit FriemiIOS/1",
+    ),
+    true,
+  );
+  assert.equal(
+    isFriemiNativeAppUserAgent(
+      "Mozilla/5.0 (Linux; Android 16) AppleWebKit FriemiAndroid/2.7",
+    ),
+    true,
+  );
+  assert.equal(
+    isFriemiNativeAppUserAgent(
+      "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) Mobile Safari",
+    ),
+    false,
+  );
+});
 
 test("isMobileUserAgent treats unknown and desktop user agents conservatively", () => {
   assert.equal(isMobileUserAgent(null), false);

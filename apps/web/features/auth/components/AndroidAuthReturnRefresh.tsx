@@ -106,6 +106,7 @@ export function AndroidAuthReturnRefresh({
   const [phase, setPhase] = useState<AuthReturnPhase>("syncing");
   const activatedAtRef = useRef<number | null>(null);
   const retryStartedRef = useRef(false);
+  const sessionRefreshStartedRef = useRef(false);
   const routeKey = `${pathname}?${searchParams.toString()}`;
   const isAndroidAuthReturn =
     searchParams.get(androidAuthReturnParamName) === "1";
@@ -120,38 +121,44 @@ export function AndroidAuthReturnRefresh({
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       setVisible(false);
       activatedAtRef.current = null;
+      retryStartedRef.current = false;
+      sessionRefreshStartedRef.current = false;
       return;
     }
 
     activatedAtRef.current ??= Date.now();
     setPhase("syncing");
     setVisible(true);
-
-    const refreshTimer = window.setTimeout(() => {
-      router.refresh();
-    }, 120);
-
-    return () => {
-      window.clearTimeout(refreshTimer);
-    };
-  }, [isAndroidAuthReturn, routeKey, router]);
+  }, [isAndroidAuthReturn, routeKey]);
 
   useEffect(() => {
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       return;
     }
 
-    if (serverAuthenticated || (isLoaded && isSignedIn)) {
+    if (serverAuthenticated) {
       setPhase("finishing");
       const elapsed = Date.now() - (activatedAtRef.current ?? Date.now());
-      const delay = Math.max(80, 320 - elapsed);
+      const delay = Math.max(40, 160 - elapsed);
       const finishTimer = window.setTimeout(() => {
-        window.location.replace(cleanTarget);
+        window.history.replaceState(window.history.state, "", cleanTarget);
+        setVisible(false);
       }, delay);
 
       return () => {
         window.clearTimeout(finishTimer);
       };
+    }
+
+    if (isLoaded && isSignedIn) {
+      setPhase("finishing");
+
+      if (!sessionRefreshStartedRef.current) {
+        sessionRefreshStartedRef.current = true;
+        router.refresh();
+      }
+
+      return;
     }
 
     if (isLoaded && !isSignedIn && hasRetried) {

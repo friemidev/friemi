@@ -181,6 +181,51 @@ body {
   }
 }
 
+/* Native tablets keep the app navigation and purpose-built mobile screens.
+ * Browser tablets continue to use the regular responsive desktop layout. */
+@media (min-width: 768px) {
+  .friemi-native-app-shell {
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area)
+    ) !important;
+  }
+
+  .friemi-native-app-shell > .app-header {
+    display: none !important;
+  }
+
+  .friemi-native-app-shell > .app-mobile-nav,
+  .friemi-native-app-shell .friemi-native-app-mobile-only {
+    display: block !important;
+  }
+
+  .friemi-native-app-shell .friemi-native-app-mobile-only {
+    margin-inline: auto;
+    max-width: 430px;
+    width: 100%;
+  }
+
+  .friemi-native-app-shell .friemi-native-app-desktop-only {
+    display: none !important;
+  }
+
+  .friemi-native-app-shell .app-mobile-page-shell {
+    min-height: calc(100svh - var(--app-bottom-safe-area));
+    min-height: calc(100dvh - var(--app-bottom-safe-area));
+    padding-top: calc(
+      var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)
+    );
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area) +
+        var(--app-mobile-page-bottom-gap, 1rem)
+    );
+  }
+
+  .friemi-native-app-shell:has(.mobile-v23-home) {
+    padding-bottom: 0 !important;
+  }
+}
+
 .friemi-display-1 {
   font-size: var(--friemi-text-display-1-size);
   font-weight: var(--friemi-text-display-1-weight);

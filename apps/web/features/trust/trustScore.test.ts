@@ -4,6 +4,7 @@ import {
   calculateTrustScore,
   getTrustLevel,
   initialTrustScore,
+  isActivityEndedForTrustSettlement,
   isLargeActivityCapacity,
   isLowTrustScore,
   largeActivityCapacityThreshold,
@@ -22,6 +23,48 @@ test("trust score starts at 95 and clamps between 0 and 100", () => {
 
 test("confirmed check-in adds one tenth of a trust point", () => {
   assert.equal(getTrustScoreEventDelta("ACTIVITY_CHECK_IN"), 0.1);
+});
+
+test("an approved participant who misses check-in loses two trust points", () => {
+  assert.equal(getTrustScoreEventDelta("NO_SHOW"), -2);
+});
+
+test("no-show settlement starts after the activity ends and skips cancellations", () => {
+  const now = new Date("2026-09-17T18:00:00.000Z");
+
+  assert.equal(
+    isActivityEndedForTrustSettlement(
+      {
+        endAt: new Date("2026-09-17T17:00:00.000Z"),
+        startAt: new Date("2026-09-17T16:00:00.000Z"),
+        status: "CONFIRMED",
+      },
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isActivityEndedForTrustSettlement(
+      {
+        endAt: new Date("2026-09-17T19:00:00.000Z"),
+        startAt: new Date("2026-09-17T16:00:00.000Z"),
+        status: "CONFIRMED",
+      },
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    isActivityEndedForTrustSettlement(
+      {
+        endAt: new Date("2026-09-17T17:00:00.000Z"),
+        startAt: new Date("2026-09-17T16:00:00.000Z"),
+        status: "CANCELLED",
+      },
+      now,
+    ),
+    false,
+  );
 });
 
 test("trust levels resolve from product thresholds", () => {

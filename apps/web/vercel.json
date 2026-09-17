@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/reconcile-guest-participations",
       "schedule": "15 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-trust-score",
+      "schedule": "45 4 * * *"
     }
   ]
 }

@@ -117,7 +117,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
 
   return (
     <>
-      <main className="mobile-v23-game-tools app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.2rem] bg-white text-[#111210] md:hidden">
+      <main className="friemi-native-app-mobile-only mobile-v23-game-tools app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.2rem] bg-white text-[#111210] md:hidden">
         <div className="mx-auto w-full max-w-[430px] px-5">
           <header className="space-y-6">
             <GameToolBackButton
@@ -207,7 +207,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
         </div>
       </main>
 
-      <PageContainer className="hidden max-w-[94rem] space-y-6 pb-28 pt-4 md:block sm:pb-14 sm:pt-7">
+      <PageContainer className="friemi-native-app-desktop-only hidden max-w-[94rem] space-y-6 pb-28 pt-4 md:block sm:pb-14 sm:pt-7">
         <section className="relative isolate overflow-hidden rounded-[2.1rem] border border-[#8AB68E]/40 bg-[#FEFFF9] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.12)] sm:p-7 lg:p-9">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F09182]/18 blur-3xl" />
           <div className="absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-[#DEEBFF]/55 blur-3xl" />

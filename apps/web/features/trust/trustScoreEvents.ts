@@ -214,6 +214,7 @@ export async function syncActivityNoShowTrustScoreEvents({
     where: {
       activityId,
       checkedInAt: null,
+      OR: [{ checkInRequestedAt: null }, { checkInCancelledAt: { not: null } }],
       status: {
         in: ["JOINED", "APPROVED"],
       },

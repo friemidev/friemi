@@ -279,7 +279,7 @@ export function MobileActivitiesToolbar({
   ];
 
   return (
-    <div className="space-y-2 md:hidden">
+    <div className="friemi-native-app-mobile-only space-y-2 md:hidden">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
         <button
           aria-label={copy.back}

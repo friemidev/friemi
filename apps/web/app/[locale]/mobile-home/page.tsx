@@ -512,7 +512,7 @@ export default async function MobileHomePage({
           trendingActivities={trendingActivitiesResult.trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
         />
-        <div className="hidden md:block">
+        <div className="friemi-native-app-desktop-only hidden md:block">
           <MobileHomeExperience
             locale={locale}
             swipeActivities={activitiesResult.swipeActivities}
@@ -549,7 +549,7 @@ function MobileHomeV23Experience({
   const displayTrendingActivities = trendingActivities.slice(0, 5);
 
   return (
-    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
+    <section className="friemi-native-app-mobile-only mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-x-0 top-0 z-[65] h-[var(--app-top-safe-area)] bg-white"
@@ -629,7 +629,7 @@ function MobileHomeV23Experience({
             <h2 className="text-[17px] font-bold tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
                   href={withLocale(locale, item.href)}
@@ -688,17 +688,23 @@ function MobileHomeV23NewsCard({
   image: string;
   title: string;
 }) {
+  const hasEmbeddedCanvasMargin =
+    image === "/top_news/founding-host-recruitment-cover.png" ||
+    image === "/top_news/friemi-intro-cover.png";
+
   return (
     <Link
       href={href}
-      className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+      className="relative h-[7.2rem] w-[17.8rem] flex-none snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
       aria-label={title}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={image}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover"
+        className={`absolute inset-0 h-full w-full object-cover ${
+          hasEmbeddedCanvasMargin ? "scale-x-[1.05] scale-y-[1.28]" : ""
+        }`}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
       <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold text-[#123D31] shadow-sm">

@@ -61,6 +61,7 @@ import type {
   OfficialFeedbackRosterViewModel,
   OfficialMessageRosterViewModel,
 } from "@/features/official-messages/services/officialMessages";
+import { buildOfficialMessageDetailHref } from "@/features/official-messages/utils/officialMessageReturn";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import type { PlanetChatRosterItemViewModel } from "@/features/planets/services/planetChat";
@@ -2762,9 +2763,7 @@ function FootprintsMessageList({
               officialFeedbackInbox.preview,
               "Friemi feedback 用户反馈 retour",
             ].join(" "),
-            sortTime: new Date(
-              officialFeedbackInbox.publishedAt,
-            ).getTime(),
+            sortTime: new Date(officialFeedbackInbox.publishedAt).getTime(),
             hasContent: true,
             isFollowing: false,
             isMutual: false,
@@ -3015,12 +3014,14 @@ function FootprintsMessageList({
                 key={entry.id}
                 locale={locale}
                 official={entry.official}
+                returnHref={returnHref}
               />
             ) : entry.kind === "feedback" ? (
               <FootprintsOfficialFeedbackRow
                 feedback={entry.feedback}
                 key={entry.id}
                 locale={locale}
+                returnHref={returnHref}
               />
             ) : entry.kind === "room" ? (
               <FootprintsRoomChatRow
@@ -3052,9 +3053,11 @@ function FootprintsMessageList({
 function FootprintsOfficialMessageRow({
   locale,
   official,
+  returnHref,
 }: {
   locale: string;
   official: OfficialMessageRosterViewModel;
+  returnHref: string;
 }) {
   const unreadBadgeText =
     official.unreadCount > 99 ? "99+" : String(official.unreadCount);
@@ -3063,7 +3066,17 @@ function FootprintsOfficialMessageRow({
     <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
       <Link
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
-        href={withLocale(locale, "/official-messages")}
+        href={buildOfficialMessageDetailHref({
+          detailPath: "/official-messages",
+          locale,
+          returnHref,
+        })}
+        onClick={() => {
+          window.sessionStorage.setItem(
+            getPlanetChatListScrollStorageKey(returnHref),
+            String(window.scrollY),
+          );
+        }}
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#156240] ring-1 ring-[#D6D5B2]">
           <Image
@@ -3109,9 +3122,11 @@ function FootprintsOfficialMessageRow({
 function FootprintsOfficialFeedbackRow({
   feedback,
   locale,
+  returnHref,
 }: {
   feedback: OfficialFeedbackRosterViewModel;
   locale: string;
+  returnHref: string;
 }) {
   const unreadBadgeText =
     feedback.unreadCount > 99 ? "99+" : String(feedback.unreadCount);
@@ -3120,7 +3135,17 @@ function FootprintsOfficialFeedbackRow({
     <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
       <Link
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
-        href={withLocale(locale, "/official-feedback")}
+        href={buildOfficialMessageDetailHref({
+          detailPath: "/official-feedback",
+          locale,
+          returnHref,
+        })}
+        onClick={() => {
+          window.sessionStorage.setItem(
+            getPlanetChatListScrollStorageKey(returnHref),
+            String(window.scrollY),
+          );
+        }}
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#FFF5E6] text-[#9A5E00] ring-1 ring-[#F2CC83]/60">
           <MessageSquareText className="h-5 w-5" />
