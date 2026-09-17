@@ -417,7 +417,7 @@ export default async function HomePage({
 
 function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
-    <div className="md:hidden">
+    <div className="friemi-native-app-mobile-only md:hidden">
       <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
         <BrandBackdrop
           className="-right-28 top-10 z-0 h-[30rem] w-[18rem] opacity-35 blur-[0.2px]"
@@ -712,7 +712,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
 function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
-    <div className="hidden md:block">
+    <div className="friemi-native-app-desktop-only hidden md:block">
       <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
         <HomeHeroMedia
           imageSrc={homeMedia.heroMobile}

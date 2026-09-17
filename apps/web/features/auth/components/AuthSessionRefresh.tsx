@@ -51,7 +51,11 @@ export function AuthSessionRefresh({
     lastRefreshKeyRef.current = refreshKey;
     // A native WebView can restore Clerk's cookie a moment after hydration.
     // Do not replace a valid server session with a transient anonymous client.
-    const refreshDelays = clientAuthenticated ? [0, 650] : [5000];
+    const refreshDelays = clientAuthenticated
+      ? isFriemiNativeApp()
+        ? [120]
+        : [0, 650]
+      : [5000];
     const refreshTimers = refreshDelays.map((delay) =>
       window.setTimeout(() => {
         router.refresh();

@@ -20,8 +20,7 @@ export const platformCouponTemplates = [
     imageUrl: "/items/coupon/001_momentea/omelette-rice-promo.png",
     key: "omeriz-omelette-rice-promo",
     slug: "omeriz-omelette-rice-promo",
-    terms:
-      "仅限绑定门店核销，不可转让或兑换现金。每个领取二维码仅可使用一次。",
+    terms: "仅限绑定门店核销，不可转让或兑换现金。同一账号每期优惠券限领一次。",
     title: "滑蛋饭 Promo",
   },
 ] as const satisfies readonly PlatformCouponTemplate[];

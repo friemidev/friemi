@@ -7,6 +7,7 @@ import {
   applyStandardTrustScoreEvent,
   removeTrustScoreEvent,
 } from "@/features/trust/trustScoreEvents";
+import { isActivityEndedForTrustSettlement } from "@/features/trust/trustScore";
 import {
   createNotification,
   createNotifications,
@@ -86,13 +87,20 @@ async function getActivityCheckInManagementScope({
 }: {
   activityId: string;
   managerProfileId: string;
-}): Promise<{ canManage: boolean; exemptProfileIds: string[] }> {
+}): Promise<{
+  canManage: boolean;
+  canSettleNoShows: boolean;
+  exemptProfileIds: string[];
+}> {
   const activity = await prisma.activity.findUnique({
     where: {
       id: activityId,
     },
     select: {
+      endAt: true,
       organizerId: true,
+      startAt: true,
+      status: true,
       coManagers: {
         select: {
           managerProfileId: true,
@@ -104,6 +112,7 @@ async function getActivityCheckInManagementScope({
   if (!activity) {
     return {
       canManage: false,
+      canSettleNoShows: false,
       exemptProfileIds: [],
     };
   }
@@ -117,6 +126,7 @@ async function getActivityCheckInManagementScope({
     canManage:
       activity.organizerId === managerProfileId ||
       exemptProfileIds.includes(managerProfileId),
+    canSettleNoShows: isActivityEndedForTrustSettlement(activity),
     exemptProfileIds,
   };
 }
@@ -175,7 +185,10 @@ export async function reviewActivityCheckInAction(
           userProfileId: true,
           activity: {
             select: {
+              endAt: true,
               organizerId: true,
+              startAt: true,
+              status: true,
               coManagers: {
                 select: {
                   managerProfileId: true,
@@ -267,6 +280,8 @@ export async function reviewActivityCheckInAction(
         return { ok: true as const };
       }
 
+      const reviewedAt = new Date();
+
       await tx.activityParticipant.update({
         where: {
           id: result.data.participationId,
@@ -274,7 +289,7 @@ export async function reviewActivityCheckInAction(
         data: {
           checkInRequestedAt: null,
           checkedInAt: null,
-          checkInCancelledAt: new Date(),
+          checkInCancelledAt: reviewedAt,
           checkInReviewedById: profile.id,
         },
       });
@@ -284,6 +299,17 @@ export async function reviewActivityCheckInAction(
         profileId: participation.userProfileId,
         type: "ACTIVITY_CHECK_IN",
       });
+
+      if (
+        isActivityEndedForTrustSettlement(participation.activity, reviewedAt)
+      ) {
+        await applyStandardTrustScoreEvent(tx, {
+          activityId: result.data.activityId,
+          note: "Approved hangout participant was marked absent",
+          profileId: participation.userProfileId,
+          type: "NO_SHOW",
+        });
+      }
 
       return { ok: true as const };
     });
@@ -563,18 +589,6 @@ export async function confirmSelectedActivityCheckInsAction(
             id: {
               in: cancelledParticipants.map((participant) => participant.id),
             },
-            OR: [
-              {
-                checkInRequestedAt: {
-                  not: null,
-                },
-              },
-              {
-                checkedInAt: {
-                  not: null,
-                },
-              },
-            ],
           },
           data: {
             checkInRequestedAt: null,
@@ -585,13 +599,22 @@ export async function confirmSelectedActivityCheckInsAction(
         });
 
         await Promise.all(
-          cancelledParticipants.map((participant) =>
-            removeTrustScoreEvent(tx, {
+          cancelledParticipants.map(async (participant) => {
+            await removeTrustScoreEvent(tx, {
               activityId: result.data.activityId,
               profileId: participant.userProfileId,
               type: "ACTIVITY_CHECK_IN",
-            }),
-          ),
+            });
+
+            if (managementScope.canSettleNoShows) {
+              await applyStandardTrustScoreEvent(tx, {
+                activityId: result.data.activityId,
+                note: "Approved hangout participant was absent from final roster",
+                profileId: participant.userProfileId,
+                type: "NO_SHOW",
+              });
+            }
+          }),
         );
       }
 

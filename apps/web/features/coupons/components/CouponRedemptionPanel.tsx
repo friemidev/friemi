@@ -4,16 +4,20 @@ import Image from "next/image";
 import { useActionState } from "react";
 import {
   BadgeCheck,
+  Gift,
   LoaderCircle,
   ShieldCheck,
   TicketCheck,
 } from "lucide-react";
 import {
   redeemCouponAction,
+  grantFollowUpCouponAction,
+  type GrantFollowUpCouponState,
   type RedeemCouponState,
 } from "@/features/coupons/actions/couponActions";
 
 const initialState: RedeemCouponState = {};
+const initialGrantState: GrantFollowUpCouponState = {};
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -24,6 +28,10 @@ function getCopy(locale: string) {
       customer: "Client",
       error: "Ce coupon ne peut pas être utilisé ici.",
       hint: "Vérifiez le client et le coupon avant de confirmer.",
+      grant: "Offrir le même coupon",
+      granted: "Un nouveau coupon a été envoyé au client.",
+      grantError: "Le nouveau coupon n'a pas pu être envoyé.",
+      granting: "Envoi...",
       processing: "Validation...",
     };
   }
@@ -35,6 +43,10 @@ function getCopy(locale: string) {
       customer: "Customer",
       error: "This coupon cannot be redeemed here.",
       hint: "Check the customer and coupon before confirming.",
+      grant: "Send the same coupon again",
+      granted: "A new coupon was sent to the customer.",
+      grantError: "The new coupon could not be sent.",
+      granting: "Sending...",
       processing: "Redeeming...",
     };
   }
@@ -45,6 +57,10 @@ function getCopy(locale: string) {
     customer: "持券用户",
     error: "此优惠券无法在当前门店核销。",
     hint: "请核对持券用户和优惠券信息，确认后无法撤销。",
+    grant: "再送一张同款优惠券",
+    granted: "新优惠券已放入该用户背包。",
+    grantError: "赠送失败，请稍后重试。",
+    granting: "赠送中...",
     processing: "核销中...",
   };
 }
@@ -52,16 +68,22 @@ function getCopy(locale: string) {
 export function CouponRedemptionPanel({
   couponTitle,
   customerName,
+  followUpGranted,
   initialAvailable,
+  initialRedeemed,
   locale,
   merchantName,
+  redemptionItemId,
   redemptionToken,
 }: {
   couponTitle: string;
   customerName: string;
+  followUpGranted: boolean;
   initialAvailable: boolean;
+  initialRedeemed: boolean;
   locale: string;
   merchantName: string;
+  redemptionItemId: string;
   redemptionToken: string;
 }) {
   const copy = getCopy(locale);
@@ -69,12 +91,23 @@ export function CouponRedemptionPanel({
     redeemCouponAction,
     initialState,
   );
+  const [grantState, grantAction, grantPending] = useActionState(
+    grantFollowUpCouponAction,
+    initialGrantState,
+  );
   const success = state.status === "REDEEMED";
-  const already = state.status === "ALREADY_REDEEMED" || !initialAvailable;
+  const already = state.status === "ALREADY_REDEEMED" || initialRedeemed;
+  const unavailable = !initialAvailable && !initialRedeemed;
   const error =
     state.status === "FORBIDDEN" ||
     state.status === "INVALID" ||
-    state.status === "UNAVAILABLE";
+    state.status === "UNAVAILABLE" ||
+    unavailable;
+  const canGrant = success || already;
+  const granted =
+    followUpGranted ||
+    grantState.status === "GRANTED" ||
+    grantState.status === "ALREADY_GRANTED";
 
   return (
     <section className="w-full max-w-sm overflow-hidden rounded-[1.25rem] bg-white shadow-[0_24px_60px_rgba(16,37,31,0.16)] ring-1 ring-[#D6D5B2]">
@@ -110,7 +143,7 @@ export function CouponRedemptionPanel({
             <BadgeCheck className="h-5 w-5 shrink-0" />
             {copy.confirmed}
           </div>
-        ) : (
+        ) : !already ? (
           <>
             <p className="mt-5 text-sm font-semibold leading-6 text-[#6C746A]">
               {already ? copy.already : error ? copy.error : copy.hint}
@@ -134,7 +167,56 @@ export function CouponRedemptionPanel({
               </button>
             </form>
           </>
+        ) : (
+          <p className="mt-5 text-sm font-semibold leading-6 text-[#6C746A]">
+            {copy.already}
+          </p>
         )}
+
+        {canGrant ? (
+          <form
+            action={grantAction}
+            className="mt-4 border-t border-[#EFEAD7] pt-4"
+          >
+            <input name="locale" type="hidden" value={locale} />
+            <input
+              name="redemptionItemId"
+              type="hidden"
+              value={redemptionItemId}
+            />
+            <input
+              name="redemptionToken"
+              type="hidden"
+              value={redemptionToken}
+            />
+            {granted ? (
+              <p className="flex items-center gap-2 text-sm font-black text-[#156240]">
+                <Gift className="h-4 w-4" />
+                {copy.granted}
+              </p>
+            ) : (
+              <button
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-black text-[#156240] ring-1 ring-[#8AB68E] disabled:opacity-50"
+                disabled={grantPending}
+                type="submit"
+              >
+                {grantPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Gift className="h-4 w-4" />
+                )}
+                {grantPending ? copy.granting : copy.grant}
+              </button>
+            )}
+            {grantState.status &&
+            grantState.status !== "GRANTED" &&
+            grantState.status !== "ALREADY_GRANTED" ? (
+              <p className="mt-2 text-center text-xs font-bold text-[#A62834]">
+                {copy.grantError}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
       </div>
     </section>
   );

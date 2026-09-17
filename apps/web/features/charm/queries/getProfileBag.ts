@@ -10,7 +10,6 @@ import {
   isFriemiCoinSchemaUnavailable,
 } from "./getFriemiCoinBalance";
 import { grantStarterFriemiWallet } from "../services/charmRewards";
-import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 
 export type FriemiCheckDisplayStatus = "AVAILABLE" | "REDEEMED" | "EXPIRED";
 
@@ -168,9 +167,11 @@ export async function getProfileBag(profileId: string) {
             description: true,
             expiresAt: true,
             foregroundColor: true,
-            slug: true,
             terms: true,
             title: true,
+            template: {
+              select: { imageUrl: true },
+            },
             merchant: {
               select: {
                 logoUrl: true,
@@ -217,7 +218,7 @@ export async function getProfileBag(profileId: string) {
     coupon: {
       ...item.coupon,
       expiresAt: item.coupon.expiresAt?.toISOString() ?? null,
-      imageUrl: getPlatformCouponImageUrl(item.coupon.slug),
+      imageUrl: item.coupon.template?.imageUrl ?? null,
     },
     id: item.id,
     redeemedAt: item.redeemedAt?.toISOString() ?? null,

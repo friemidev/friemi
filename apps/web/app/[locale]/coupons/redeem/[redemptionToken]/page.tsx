@@ -49,9 +49,12 @@ export default async function CouponRedemptionPage({
           <CouponRedemptionPanel
             couponTitle={item.coupon.title}
             customerName={item.owner.nickname}
+            followUpGranted={Boolean(item.followUpItemId)}
             initialAvailable={item.isAvailable}
+            initialRedeemed={item.status === "REDEEMED"}
             locale={locale}
             merchantName={item.coupon.merchant.name}
+            redemptionItemId={item.id}
             redemptionToken={redemptionToken}
           />
         ) : (

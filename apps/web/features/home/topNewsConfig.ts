@@ -20,6 +20,16 @@ type MobileHomeTopNewsConfigItem = {
 
 const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
+    href: "/top-news/host-recruitment",
+    id: "founding-host-recruitment",
+    image: "/top_news/founding-host-recruitment-cover.png",
+    title: {
+      en: "Become a Friemi Founding Host",
+      fr: "Devenez hôte fondateur Friemi",
+      "zh-CN": "Friemi 共创主理人招募",
+    },
+  },
+  {
     href: "/top-news/werewolf",
     id: "werewolf-guide",
     image:
@@ -28,16 +38,6 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
       en: "Werewolf game setup guide",
       fr: "Guide de lancement Loups-garous",
       "zh-CN": "狼人杀线下开局指南",
-    },
-  },
-  {
-    href: "/top-news/host-recruitment",
-    id: "founding-host-recruitment",
-    image: "/top_news/founding-host-recruitment-cover.png",
-    title: {
-      en: "Become a Friemi Founding Host",
-      fr: "Devenez hôte fondateur Friemi",
-      "zh-CN": "Friemi 共创主理人招募",
     },
   },
   {

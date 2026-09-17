@@ -6,9 +6,9 @@ import {
   getOfficialFeedbackInbox,
   markOfficialFeedbackRead,
 } from "@/features/official-messages/services/officialMessages";
+import { normalizeOfficialMessageReturnHref } from "@/features/official-messages/utils/officialMessageReturn";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { ensureCurrentUserProfile } from "@/lib/auth";
-import { withLocale } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -38,16 +38,23 @@ function getCopy(locale: string) {
 
 export default async function OfficialFeedbackPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ returnTo?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const query = await searchParams;
   const profile = await ensureCurrentUserProfile(locale, "/official-feedback");
   const feedback = await getOfficialFeedbackInbox(profile.id);
 
   if (!feedback) notFound();
   await markOfficialFeedbackRead(profile.id);
   const copy = getCopy(locale);
+  const returnHref = normalizeOfficialMessageReturnHref(
+    locale,
+    query?.returnTo,
+  );
 
   return (
     <PageContainer className="official-message-page flex max-w-xl flex-col overflow-hidden bg-white max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:min-h-0 max-md:!px-0 max-md:!py-0 md:min-h-[calc(100dvh-8rem)] md:px-5 md:py-8">
@@ -55,7 +62,7 @@ export default async function OfficialFeedbackPage({
         <Link
           aria-label="Back"
           className="grid h-10 w-10 shrink-0 place-items-center rounded-full ring-1 ring-[#D6D5B2]"
-          href={withLocale(locale, "/footprints?tab=message&chatFilter=official")}
+          href={returnHref}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>

@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ArrowLeft, BadgeCheck, CalendarDays, Store } from "lucide-react";
 import { notFound } from "next/navigation";
 import { CouponRedemptionQrGenerator } from "@/features/coupons/components/CouponRedemptionQrGenerator";
-import { getPlatformCouponImageUrl } from "@/features/coupons/platformCouponTemplates";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -67,9 +66,10 @@ export default async function CouponWalletDetailPage({
           backgroundColor: true,
           expiresAt: true,
           foregroundColor: true,
-          slug: true,
           terms: true,
           title: true,
+          validFrom: true,
+          template: { select: { imageUrl: true } },
           merchant: {
             select: {
               isActive: true,
@@ -84,10 +84,11 @@ export default async function CouponWalletDetailPage({
   if (!item) notFound();
 
   const copy = getCopy(locale);
-  const couponImageUrl = getPlatformCouponImageUrl(item.coupon.slug);
+  const couponImageUrl = item.coupon.template?.imageUrl ?? null;
   const available =
     item.status === "AVAILABLE" &&
     item.coupon.merchant.isActive &&
+    (!item.coupon.validFrom || item.coupon.validFrom.getTime() <= Date.now()) &&
     (!item.coupon.expiresAt || item.coupon.expiresAt.getTime() > Date.now());
 
   return (

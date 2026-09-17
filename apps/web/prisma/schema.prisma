@@ -130,6 +130,23 @@ enum CouponClaimCodeStatus {
   REVOKED
 }
 
+enum CouponCampaignStatus {
+  DRAFT
+  PUBLISHED
+  UNLISTED
+}
+
+enum CouponDistributionMode {
+  PUBLIC_QR
+  DIRECT_GRANT
+}
+
+enum CouponClaimSource {
+  PUBLIC_QR
+  POST_REDEMPTION_GIFT
+  LEGACY
+}
+
 enum FriemiCoinTransactionType {
   CHECK_REDEEMED
   RECHARGE
@@ -408,6 +425,7 @@ model UserProfile {
   couponWalletItems       CouponWalletItem[]            @relation("CouponWalletOwner")
   redeemedCouponItems     CouponWalletItem[]            @relation("CouponRedeemer")
   claimedCouponCodes      CouponClaimCode[]             @relation("CouponClaimCodeClaimer")
+  couponCampaignClaims    CouponCampaignClaim[]         @relation("CouponCampaignClaimant")
   trustScoreEvents        TrustScoreEvent[]
   charmBalance            UserCharmBalance?
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
@@ -835,29 +853,30 @@ model ActivityPriorityOverrideLog {
 }
 
 model Merchant {
-  id             String       @id @default(cuid())
-  slug           String       @unique
-  name           String
-  description    String
-  logoUrl        String?
-  city           String       @default("Paris")
-  address        String?
-  latitude       Float?
-  longitude      Float?
-  websiteUrl     String?
-  contactEmail   String?
-  externalSource String?
-  externalId     String?
-  externalUrl    String?
-  sourcePayload  Json?
-  importedAt     DateTime?
-  isActive       Boolean      @default(true)
-  ownerProfileId String?      @unique
-  owner          UserProfile? @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
-  activities     Activity[]
-  coupons        Coupon[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String                   @id @default(cuid())
+  slug            String                   @unique
+  name            String
+  description     String
+  logoUrl         String?
+  city            String                   @default("Paris")
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  websiteUrl      String?
+  contactEmail    String?
+  externalSource  String?
+  externalId      String?
+  externalUrl     String?
+  sourcePayload   Json?
+  importedAt      DateTime?
+  isActive        Boolean                  @default(true)
+  ownerProfileId  String?                  @unique
+  owner           UserProfile?             @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  activities      Activity[]
+  coupons         Coupon[]
+  couponTemplates MerchantCouponTemplate[]
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   @@index([isActive, city])
   @@index([ownerProfileId, isActive])
@@ -866,28 +885,92 @@ model Merchant {
   @@index([importedAt])
 }
 
+model CouponTemplate {
+  id               String                   @id @default(cuid())
+  key              String                   @unique @db.VarChar(80)
+  slug             String                   @unique @db.VarChar(80)
+  title            String                   @db.VarChar(120)
+  description      String                   @db.Text
+  defaultTerms     String?                  @db.Text
+  imageUrl         String?
+  backgroundColor  String                   @default("#0F6D46") @db.VarChar(7)
+  foregroundColor  String                   @default("#FFFFFF") @db.VarChar(7)
+  accentColor      String                   @default("#F1F2E3") @db.VarChar(7)
+  isActive         Boolean                  @default(true)
+  merchantBindings MerchantCouponTemplate[]
+  campaigns        Coupon[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([isActive, createdAt])
+}
+
+model MerchantCouponTemplate {
+  id                  String         @id @default(cuid())
+  merchantId          String
+  merchant            Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  templateId          String
+  template            CouponTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  assignedByProfileId String?
+  isActive            Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([merchantId, templateId])
+  @@index([merchantId, isActive, createdAt])
+  @@index([templateId, isActive])
+}
+
 model Coupon {
-  id              String             @id @default(cuid())
-  merchantId      String
-  merchant        Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  slug            String             @default("default") @db.VarChar(64)
-  title           String             @db.VarChar(120)
-  description     String             @db.Text
-  terms           String?            @db.Text
-  backgroundColor String             @default("#0F6D46") @db.VarChar(7)
-  foregroundColor String             @default("#FFFFFF") @db.VarChar(7)
-  accentColor     String             @default("#F1F2E3") @db.VarChar(7)
-  validFrom       DateTime?
-  expiresAt       DateTime?
-  isActive        Boolean            @default(true)
-  claimCodes      CouponClaimCode[]
-  walletItems     CouponWalletItem[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                     String                 @id @default(cuid())
+  merchantId             String
+  merchant               Merchant               @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  templateId             String?
+  template               CouponTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  slug                   String                 @default("default") @db.VarChar(64)
+  title                  String                 @db.VarChar(120)
+  description            String                 @db.Text
+  terms                  String?                @db.Text
+  backgroundColor        String                 @default("#0F6D46") @db.VarChar(7)
+  foregroundColor        String                 @default("#FFFFFF") @db.VarChar(7)
+  accentColor            String                 @default("#F1F2E3") @db.VarChar(7)
+  validFrom              DateTime?
+  expiresAt              DateTime?
+  isActive               Boolean                @default(true)
+  campaignStatus         CouponCampaignStatus   @default(PUBLISHED)
+  distributionMode       CouponDistributionMode @default(PUBLIC_QR)
+  claimToken             String?                @unique @db.VarChar(64)
+  quantityLimit          Int?
+  claimedCount           Int                    @default(0)
+  publishedAt            DateTime?
+  unlistedAt             DateTime?
+  sourceRedemptionItemId String?                @unique
+  sourceRedemptionItem   CouponWalletItem?      @relation("PostRedemptionGiftSource", fields: [sourceRedemptionItemId], references: [id], onDelete: SetNull)
+  claimCodes             CouponClaimCode[]
+  claims                 CouponCampaignClaim[]
+  walletItems            CouponWalletItem[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   @@unique([merchantId, slug])
-  @@index([merchantId, isActive, createdAt])
+  @@index([merchantId, campaignStatus, createdAt])
+  @@index([templateId, campaignStatus])
   @@index([expiresAt])
+}
+
+model CouponCampaignClaim {
+  id            String            @id @default(cuid())
+  couponId      String
+  coupon        Coupon            @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userProfileId String
+  claimant      UserProfile       @relation("CouponCampaignClaimant", fields: [userProfileId], references: [id], onDelete: Cascade)
+  walletItemId  String            @unique
+  walletItem    CouponWalletItem  @relation(fields: [walletItemId], references: [id], onDelete: Cascade)
+  source        CouponClaimSource @default(PUBLIC_QR)
+  createdAt     DateTime          @default(now())
+
+  @@unique([couponId, userProfileId])
+  @@index([userProfileId, createdAt])
 }
 
 model CouponClaimCode {
@@ -909,22 +992,24 @@ model CouponClaimCode {
 }
 
 model CouponWalletItem {
-  id                       String             @id @default(cuid())
+  id                       String               @id @default(cuid())
   couponId                 String
-  coupon                   Coupon             @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  coupon                   Coupon               @relation(fields: [couponId], references: [id], onDelete: Cascade)
   ownerProfileId           String
-  owner                    UserProfile        @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
-  redemptionToken          String?            @unique @db.VarChar(64)
+  owner                    UserProfile          @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  redemptionToken          String?              @unique @db.VarChar(64)
   redemptionTokenExpiresAt DateTime?
-  status                   CouponWalletStatus @default(AVAILABLE)
-  claimedAt                DateTime           @default(now())
+  status                   CouponWalletStatus   @default(AVAILABLE)
+  claimedAt                DateTime             @default(now())
   redeemedAt               DateTime?
   redeemedByProfileId      String?
-  redeemedBy               UserProfile?       @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
+  redeemedBy               UserProfile?         @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
   notifications            Notification[]
   claimCode                CouponClaimCode?
-  createdAt                DateTime           @default(now())
-  updatedAt                DateTime           @updatedAt
+  campaignClaim            CouponCampaignClaim?
+  followUpCampaign         Coupon?              @relation("PostRedemptionGiftSource")
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
 
   @@index([ownerProfileId, status, claimedAt])
   @@index([couponId, status])

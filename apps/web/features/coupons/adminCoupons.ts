@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { createCouponToken } from "./couponDefaults";
 import {
-  getPlatformCouponImageUrl,
   getPlatformCouponTemplate,
+  platformCouponTemplates,
 } from "./platformCouponTemplates";
 
 export type AdminCouponTemplate = {
@@ -40,50 +40,100 @@ function slugifyCouponTitle(value: string) {
     .slice(0, 40);
 }
 
-function serializeCouponTemplate(coupon: {
-  accentColor: string;
-  backgroundColor: string;
-  description: string;
-  expiresAt: Date | null;
-  foregroundColor: string;
+async function syncPlatformTemplates() {
+  await prisma.$transaction(
+    platformCouponTemplates.map((template) =>
+      prisma.couponTemplate.upsert({
+        where: { key: template.key },
+        create: {
+          accentColor: template.accentColor,
+          backgroundColor: template.backgroundColor,
+          defaultTerms: template.terms,
+          description: template.description,
+          foregroundColor: template.foregroundColor,
+          imageUrl: template.imageUrl,
+          key: template.key,
+          slug: template.slug,
+          title: template.title,
+        },
+        update: {
+          accentColor: template.accentColor,
+          backgroundColor: template.backgroundColor,
+          defaultTerms: template.terms,
+          description: template.description,
+          foregroundColor: template.foregroundColor,
+          imageUrl: template.imageUrl,
+          isActive: true,
+          slug: template.slug,
+          title: template.title,
+        },
+      }),
+    ),
+  );
+}
+
+function serializeBinding(binding: {
   id: string;
   isActive: boolean;
   merchantId: string;
-  slug: string;
-  terms: string | null;
-  title: string;
+  template: {
+    accentColor: string;
+    backgroundColor: string;
+    defaultTerms: string | null;
+    description: string;
+    foregroundColor: string;
+    imageUrl: string | null;
+    key: string;
+    slug: string;
+    title: string;
+  };
 }): AdminCouponTemplate {
-  const imageUrl = getPlatformCouponImageUrl(coupon.slug);
-
+  const isPlatformTemplate = Boolean(
+    getPlatformCouponTemplate(binding.template.key),
+  );
   return {
-    ...coupon,
-    expiresAt: coupon.expiresAt?.toISOString() ?? null,
-    imageUrl,
-    platformTemplateKey: imageUrl ? coupon.slug : null,
+    accentColor: binding.template.accentColor,
+    backgroundColor: binding.template.backgroundColor,
+    description: binding.template.description,
+    expiresAt: null,
+    foregroundColor: binding.template.foregroundColor,
+    id: binding.id,
+    imageUrl: binding.template.imageUrl,
+    isActive: binding.isActive,
+    merchantId: binding.merchantId,
+    platformTemplateKey: isPlatformTemplate ? binding.template.key : null,
+    slug: binding.template.slug,
+    terms: binding.template.defaultTerms,
+    title: binding.template.title,
   };
 }
 
-const couponSelect = {
-  accentColor: true,
-  backgroundColor: true,
-  description: true,
-  expiresAt: true,
-  foregroundColor: true,
+const bindingSelect = {
   id: true,
   isActive: true,
   merchantId: true,
-  slug: true,
-  terms: true,
-  title: true,
+  template: {
+    select: {
+      accentColor: true,
+      backgroundColor: true,
+      defaultTerms: true,
+      description: true,
+      foregroundColor: true,
+      imageUrl: true,
+      key: true,
+      slug: true,
+      title: true,
+    },
+  },
 } as const;
 
 export async function getAdminCouponTemplates() {
-  const coupons = await prisma.coupon.findMany({
+  await syncPlatformTemplates();
+  const bindings = await prisma.merchantCouponTemplate.findMany({
     orderBy: [{ merchantId: "asc" }, { createdAt: "asc" }],
-    select: couponSelect,
+    select: bindingSelect,
   });
-
-  return coupons.map(serializeCouponTemplate);
+  return bindings.map(serializeBinding);
 }
 
 export async function createAdminCouponTemplate(
@@ -94,73 +144,81 @@ export async function createAdminCouponTemplate(
     where: { id: merchantId, isActive: true },
     select: { id: true },
   });
-
   if (!merchant) throw new Error("MERCHANT_NOT_FOUND");
 
   const title = input.title.trim();
+  const suffix = createCouponToken().slice(0, 10).toLowerCase();
   const baseSlug = slugifyCouponTitle(title) || "coupon";
-  const coupon = await prisma.coupon.create({
+  const binding = await prisma.merchantCouponTemplate.create({
     data: {
-      accentColor: input.accentColor,
-      backgroundColor: input.backgroundColor,
-      description: input.description.trim(),
-      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-      foregroundColor: input.foregroundColor,
-      merchantId,
-      slug: `${baseSlug}-${createCouponToken().slice(0, 8)}`.slice(0, 64),
-      terms: input.terms?.trim() || null,
-      title,
+      merchant: { connect: { id: merchantId } },
+      template: {
+        create: {
+          accentColor: input.accentColor,
+          backgroundColor: input.backgroundColor,
+          defaultTerms: input.terms?.trim() || null,
+          description: input.description.trim(),
+          foregroundColor: input.foregroundColor,
+          key: `custom-${suffix}`,
+          slug: `${baseSlug}-${suffix}`.slice(0, 80),
+          title,
+        },
+      },
     },
-    select: couponSelect,
+    select: bindingSelect,
   });
-
-  return serializeCouponTemplate(coupon);
+  return serializeBinding(binding);
 }
 
 export async function bindPlatformCouponTemplate(
   merchantId: string,
   platformTemplateKey: string,
 ) {
-  const [merchant, template] = await Promise.all([
+  const [merchant, platformTemplate] = await Promise.all([
     prisma.merchant.findFirst({
       where: { id: merchantId, isActive: true },
       select: { id: true },
     }),
     Promise.resolve(getPlatformCouponTemplate(platformTemplateKey)),
   ]);
-
   if (!merchant) throw new Error("MERCHANT_NOT_FOUND");
-  if (!template) throw new Error("COUPON_TEMPLATE_NOT_FOUND");
+  if (!platformTemplate) throw new Error("COUPON_TEMPLATE_NOT_FOUND");
 
-  const coupon = await prisma.coupon.upsert({
-    where: {
-      merchantId_slug: {
-        merchantId,
-        slug: template.slug,
+  const binding = await prisma.$transaction(async (tx) => {
+    const template = await tx.couponTemplate.upsert({
+      where: { key: platformTemplate.key },
+      create: {
+        accentColor: platformTemplate.accentColor,
+        backgroundColor: platformTemplate.backgroundColor,
+        defaultTerms: platformTemplate.terms,
+        description: platformTemplate.description,
+        foregroundColor: platformTemplate.foregroundColor,
+        imageUrl: platformTemplate.imageUrl,
+        key: platformTemplate.key,
+        slug: platformTemplate.slug,
+        title: platformTemplate.title,
       },
-    },
-    create: {
-      accentColor: template.accentColor,
-      backgroundColor: template.backgroundColor,
-      description: template.description,
-      foregroundColor: template.foregroundColor,
-      isActive: true,
-      merchantId,
-      slug: template.slug,
-      terms: template.terms,
-      title: template.title,
-    },
-    update: {
-      accentColor: template.accentColor,
-      backgroundColor: template.backgroundColor,
-      description: template.description,
-      foregroundColor: template.foregroundColor,
-      isActive: true,
-      terms: template.terms,
-      title: template.title,
-    },
-    select: couponSelect,
+      update: {
+        accentColor: platformTemplate.accentColor,
+        backgroundColor: platformTemplate.backgroundColor,
+        defaultTerms: platformTemplate.terms,
+        description: platformTemplate.description,
+        foregroundColor: platformTemplate.foregroundColor,
+        imageUrl: platformTemplate.imageUrl,
+        isActive: true,
+        slug: platformTemplate.slug,
+        title: platformTemplate.title,
+      },
+      select: { id: true },
+    });
+    return tx.merchantCouponTemplate.upsert({
+      where: {
+        merchantId_templateId: { merchantId, templateId: template.id },
+      },
+      create: { merchantId, templateId: template.id },
+      update: { isActive: true },
+      select: bindingSelect,
+    });
   });
-
-  return serializeCouponTemplate(coupon);
+  return serializeBinding(binding);
 }

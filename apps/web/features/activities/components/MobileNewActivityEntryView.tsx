@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ChevronRight, Clock3, Dice5, LockKeyhole, UsersRound } from "lucide-react";
+import {
+  ChevronRight,
+  Clock3,
+  Dice5,
+  LockKeyhole,
+  UsersRound,
+} from "lucide-react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
@@ -256,7 +262,9 @@ function MobileActivityPreviewCard({
           alt={activity.title}
           overlayClassName={cn(
             "bg-gradient-to-t to-transparent",
-            isInactive ? "from-zinc-900/38 via-zinc-800/5" : "from-black/34 via-black/4",
+            isInactive
+              ? "from-zinc-900/38 via-zinc-800/5"
+              : "from-black/34 via-black/4",
           )}
           src={activity.coverImageUrl}
         />
@@ -301,7 +309,7 @@ export function MobileNewActivityEntryView({
   const copy = getMobileEntryCopy(locale);
 
   return (
-    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
+    <main className="friemi-native-app-mobile-only mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>

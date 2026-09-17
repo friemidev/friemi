@@ -169,7 +169,9 @@ export default async function NewActivityPage({
         activities={activityPreviewList?.activities ?? []}
         locale={locale}
       />
-      <div className="hidden md:block">{formContent}</div>
+      <div className="friemi-native-app-desktop-only hidden md:block">
+        {formContent}
+      </div>
     </>
   );
 }

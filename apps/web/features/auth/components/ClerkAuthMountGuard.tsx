@@ -38,6 +38,7 @@ type ClerkAuthMountGuardProps = {
   exitUrl: string;
   fallbackRedirectUrl: string;
   forceRedirectUrl: string;
+  nativeDirectRedirectUrl: string;
   mode: "sign-in" | "sign-up";
   path: string;
   secondaryUrl: string;
@@ -94,6 +95,7 @@ export function ClerkAuthMountGuard({
   exitUrl,
   fallbackRedirectUrl,
   forceRedirectUrl,
+  nativeDirectRedirectUrl,
   mode,
   path,
   secondaryUrl,
@@ -104,6 +106,11 @@ export function ClerkAuthMountGuard({
   const [isFriemiIOSApp, setIsFriemiIOSApp] = useState(false);
   const [isFriemiNativeApp, setIsFriemiNativeApp] = useState(false);
   const completionStartedRef = useRef(false);
+
+  function finishNativeIOSSignIn() {
+    completionStartedRef.current = true;
+    window.location.replace(nativeDirectRedirectUrl);
+  }
 
   useEffect(() => {
     const userAgent = window.navigator.userAgent;
@@ -180,9 +187,9 @@ export function ClerkAuthMountGuard({
         ) : null}
         {isFriemiIOSApp ? (
           <NativeIOSAuthButtons
-            forceRedirectUrl={forceRedirectUrl}
             locale={locale}
             mode={mode}
+            onSessionActivated={finishNativeIOSSignIn}
           />
         ) : null}
         <SignIn
@@ -206,9 +213,9 @@ export function ClerkAuthMountGuard({
       ) : null}
       {isFriemiIOSApp ? (
         <NativeIOSAuthButtons
-          forceRedirectUrl={forceRedirectUrl}
           locale={locale}
           mode={mode}
+          onSessionActivated={finishNativeIOSSignIn}
         />
       ) : null}
       <SignUp
@@ -262,13 +269,13 @@ function getNativeCompletionLabel(locale: string) {
 }
 
 function NativeIOSAuthButtons({
-  forceRedirectUrl,
   locale,
   mode,
+  onSessionActivated,
 }: {
-  forceRedirectUrl: string;
   locale: string;
   mode: "sign-in" | "sign-up";
+  onSessionActivated: () => void;
 }) {
   const { isLoaded, signIn, setActive } = useSignIn();
   const [busyProvider, setBusyProvider] = useState<NativeAuthProvider | null>(
@@ -321,6 +328,7 @@ function NativeIOSAuthButtons({
         signInAttempt.createdSessionId
       ) {
         await setActive({ session: signInAttempt.createdSessionId });
+        onSessionActivated();
         return;
       }
 

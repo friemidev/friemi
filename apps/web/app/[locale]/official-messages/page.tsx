@@ -7,8 +7,8 @@ import {
   getOfficialMessagesForProfile,
   markOfficialMessagesRead,
 } from "@/features/official-messages/services/officialMessages";
+import { normalizeOfficialMessageReturnHref } from "@/features/official-messages/utils/officialMessageReturn";
 import { ensureCurrentUserProfile } from "@/lib/auth";
-import { withLocale } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +22,13 @@ function getCopy(locale: string) {
 
 export default async function OfficialMessagesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ returnTo?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const query = await searchParams;
   const profile = await ensureCurrentUserProfile(locale, "/official-messages");
   const messages = await getOfficialMessagesForProfile(profile.id, locale);
   await markOfficialMessagesRead(
@@ -33,6 +36,10 @@ export default async function OfficialMessagesPage({
     messages.at(-1)?.publishedAt ?? null,
   );
   const copy = getCopy(locale);
+  const returnHref = normalizeOfficialMessageReturnHref(
+    locale,
+    query?.returnTo,
+  );
 
   return (
     <PageContainer className="official-message-page flex max-w-xl flex-col overflow-hidden bg-white max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:min-h-0 max-md:!px-0 max-md:!py-0 md:min-h-[calc(100dvh-8rem)] md:px-5 md:py-8">
@@ -40,7 +47,7 @@ export default async function OfficialMessagesPage({
         <Link
           aria-label="Back"
           className="grid h-10 w-10 shrink-0 place-items-center rounded-full ring-1 ring-[#D6D5B2]"
-          href={withLocale(locale, "/footprints?tab=message&chatFilter=official")}
+          href={returnHref}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
