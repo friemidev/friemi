@@ -127,6 +127,10 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        dispatchAppLifecycleEvent("friemi:android-pause");
+        if (webView != null) {
+            webView.onPause();
+        }
         CookieManager.getInstance().flush();
         super.onPause();
     }
@@ -136,6 +140,22 @@ public final class MainActivity extends Activity {
         super.onResume();
         configureWindow();
         refreshSafeArea();
+        if (webView != null) {
+            webView.onResume();
+        }
+        CookieManager.getInstance().flush();
+        dispatchAppLifecycleEvent("friemi:android-resume");
+    }
+
+    private void dispatchAppLifecycleEvent(String eventName) {
+        if (webView == null || isBlank(eventName)) {
+            return;
+        }
+
+        webView.post(() -> webView.evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('" + eventName + "'))",
+            null
+        ));
     }
 
     @Override

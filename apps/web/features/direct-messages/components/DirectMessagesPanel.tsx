@@ -133,7 +133,9 @@ function ConversationListItem({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
+    ? lastMessage.isRecalled
+      ? t.recalledMessagePreview
+      : `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.lastMessageEmpty;
   const time = lastMessage?.createdAt ?? conversation.createdAt;
   const showPublicNickname =

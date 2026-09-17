@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -1280,6 +1281,7 @@ function ProfilePreviewEmpty({ href, label }: { href: string; label: string }) {
 }
 
 function ProfileFeatureLink({
+  artwork,
   href,
   icon: Icon,
   label,
@@ -1288,6 +1290,7 @@ function ProfileFeatureLink({
   status,
   tone = "green",
 }: {
+  artwork?: ProfileFeatureArtworkKey;
   href: string;
   icon: LucideIcon;
   label: string;
@@ -1313,10 +1316,14 @@ function ProfileFeatureLink({
       <span
         className={cn(
           "relative flex h-12 w-12 items-center justify-center rounded-full",
-          toneClass,
+          artwork ? "overflow-hidden bg-white" : toneClass,
         )}
       >
-        <Icon className="h-5 w-5" strokeWidth={2.25} />
+        {artwork ? (
+          <ProfileFeatureArtwork artwork={artwork} />
+        ) : (
+          <Icon className="h-5 w-5" strokeWidth={2.25} />
+        )}
         {locked ? (
           <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
             <Lock className="h-3 w-3" strokeWidth={2.4} />
@@ -1358,6 +1365,50 @@ function ProfileFeatureLink({
     >
       {content}
     </Link>
+  );
+}
+
+type ProfileFeatureArtworkKey =
+  | "achievements"
+  | "bag"
+  | "friends"
+  | "giftWall"
+  | "invite"
+  | "settings"
+  | "shop";
+
+const profileFeatureArtworkOffsets: Record<
+  ProfileFeatureArtworkKey,
+  { left: number; top: number }
+> = {
+  achievements: { left: -28, top: -108 },
+  bag: { left: -95, top: -108 },
+  friends: { left: -95, top: -21 },
+  giftWall: { left: -28, top: -21 },
+  invite: { left: -163, top: -21 },
+  settings: { left: -163, top: -108 },
+  shop: { left: -229, top: -21 },
+};
+
+function ProfileFeatureArtwork({
+  artwork,
+}: {
+  artwork: ProfileFeatureArtworkKey;
+}) {
+  const offset = profileFeatureArtworkOffsets[artwork];
+
+  return (
+    <Image
+      alt=""
+      aria-hidden="true"
+      className="pointer-events-none absolute max-w-none select-none"
+      height={195}
+      quality={70}
+      sizes="298px"
+      src="/profile/buttons/buttons.png"
+      style={offset}
+      width={298}
+    />
   );
 }
 
@@ -3156,42 +3207,49 @@ function SelfMobileProfileHome({
           />
         ) : null}
         <ProfileFeatureLink
+          artwork="giftWall"
           href={withLocale(locale, "/profile/gift-wall")}
           icon={Gift}
           label={copy.giftWall}
           tone="pink"
         />
         <ProfileFeatureLink
+          artwork="friends"
           href={withLocale(locale, "/profile/network")}
           icon={UsersRound}
           label={copy.friendsFeature}
           tone="blue"
         />
         <ProfileFeatureLink
+          artwork="invite"
           href={withLocale(locale, "/profile/invite")}
           icon={Ticket}
           label={copy.inviteCode}
           tone="pink"
         />
         <ProfileFeatureLink
+          artwork="shop"
           href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
           tone="gold"
         />
         <ProfileFeatureLink
+          artwork="achievements"
           href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
           label={copy.achievements}
           tone="gold"
         />
         <ProfileFeatureLink
+          artwork="bag"
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
           tone="green"
         />
         <ProfileFeatureLink
+          artwork="settings"
           href={withLocale(locale, "/account/settings")}
           icon={Settings}
           label={copy.settings}

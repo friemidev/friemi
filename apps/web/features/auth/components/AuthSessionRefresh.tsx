@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useSession } from "@clerk/nextjs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { androidAuthReturnParamName } from "@/lib/auth-redirect";
@@ -17,6 +17,14 @@ function isFriemiNativeApp() {
   return /\bFriemi(?:Android|IOS)\//i.test(window.navigator.userAgent);
 }
 
+const nativeForegroundEvents = [
+  "resume",
+  "friemi:app-foreground",
+  "friemi:android-ready",
+  "friemi:android-resume",
+  "friemi:ios-resume",
+] as const;
+
 export function AuthSessionRefresh({
   serverAuthenticated,
 }: AuthSessionRefreshProps) {
@@ -24,6 +32,7 @@ export function AuthSessionRefresh({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { session } = useSession();
   const lastRefreshKeyRef = useRef<string | null>(null);
   const lastNativeSessionRefreshAtRef = useRef(0);
   const routeKey = `${pathname}?${searchParams.toString()}`;
@@ -98,6 +107,7 @@ export function AuthSessionRefresh({
       lastNativeSessionRefreshAtRef.current = Date.now();
 
       try {
+        await session?.touch({ intent: "focus" });
         const token = await getToken({ skipCache: true });
 
         if (active && token && !serverAuthenticated) {
@@ -121,6 +131,9 @@ export function AuthSessionRefresh({
     window.addEventListener("focus", refreshNativeSession);
     window.addEventListener("online", refreshNativeSession);
     window.addEventListener("pageshow", refreshNativeSession);
+    for (const eventName of nativeForegroundEvents) {
+      window.addEventListener(eventName, refreshNativeSession);
+    }
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
@@ -129,6 +142,9 @@ export function AuthSessionRefresh({
       window.removeEventListener("focus", refreshNativeSession);
       window.removeEventListener("online", refreshNativeSession);
       window.removeEventListener("pageshow", refreshNativeSession);
+      for (const eventName of nativeForegroundEvents) {
+        window.removeEventListener(eventName, refreshNativeSession);
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [
@@ -138,6 +154,7 @@ export function AuthSessionRefresh({
     isSignedIn,
     pathname,
     router,
+    session,
     serverAuthenticated,
   ]);
 

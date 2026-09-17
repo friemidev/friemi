@@ -54,6 +54,7 @@ import { MessageAvatar } from "@/features/direct-messages/components/MessageAvat
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
+import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
@@ -2826,6 +2827,12 @@ function FootprintsMessageList({
         !friend.isFollowing && !friend.isMutualFollow && !friend.isMuted,
     )
     .reduce((total, friend) => total + friend.unreadCount, 0);
+  const strangerUnreadLabel =
+    locale === "fr"
+      ? `${strangerUnreadTotal} nouveau${strangerUnreadTotal > 1 ? "x" : ""} message${strangerUnreadTotal > 1 ? "s" : ""} d'inconnu`
+      : locale === "en"
+        ? `${strangerUnreadTotal} new message${strangerUnreadTotal === 1 ? "" : "s"} from strangers`
+        : `${strangerUnreadTotal} 条陌生人新消息`;
   const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
   const feedbackUnreadTotal = officialFeedbackInbox?.unreadCount ?? 0;
   const filters: Array<{
@@ -2997,55 +3004,82 @@ function FootprintsMessageList({
   return (
     <section className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
       {toolbar}
-      {visibleEntries.length > 0 ? (
-        <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent lg:mt-0">
-          {visibleEntries.map((entry) =>
-            entry.kind === "direct" ? (
-              <FootprintsMessageRow
-                key={entry.id}
-                currentUserProfileId={currentUserProfileId}
-                friend={entry.friend}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                showBackFollowAction={false}
-              />
-            ) : entry.kind === "official" ? (
-              <FootprintsOfficialMessageRow
-                key={entry.id}
-                locale={locale}
-                official={entry.official}
-                returnHref={returnHref}
-              />
-            ) : entry.kind === "feedback" ? (
-              <FootprintsOfficialFeedbackRow
-                feedback={entry.feedback}
-                key={entry.id}
-                locale={locale}
-                returnHref={returnHref}
-              />
-            ) : entry.kind === "room" ? (
-              <FootprintsRoomChatRow
-                key={entry.id}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                room={entry.room}
-              />
-            ) : (
-              <FootprintsPlanetChatRow
-                key={entry.id}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                planet={entry.planet}
-                returnHref={returnHref}
-              />
-            ),
-          )}
-        </div>
-      ) : (
-        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74] lg:mt-0">
-          {t.emptyListTitle}
-        </div>
-      )}
+      <div className="mt-3 min-w-0 lg:mt-0">
+        {strangerUnreadTotal > 0 && activeFilter !== "strangers" ? (
+          <button
+            aria-live="polite"
+            className="flex w-full items-center gap-3 rounded-lg border border-[#F3C7D5] bg-[#FFF4F7] px-3 py-2.5 text-left text-[#A51D4D] transition hover:bg-[#FFEAF1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E7457A]/30"
+            onClick={() => setActiveFilter("strangers")}
+            type="button"
+          >
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#D6245F] ring-1 ring-[#F3C7D5]">
+              <UserRound className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 text-sm font-bold">
+              {strangerUnreadLabel}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0" />
+          </button>
+        ) : null}
+
+        {visibleEntries.length > 0 ? (
+          <div
+            className={cn(
+              "divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent",
+              strangerUnreadTotal > 0 && activeFilter !== "strangers"
+                ? "mt-2"
+                : null,
+            )}
+          >
+            {visibleEntries.map((entry) =>
+              entry.kind === "direct" ? (
+                <FootprintsMessageRow
+                  key={entry.id}
+                  currentUserProfileId={currentUserProfileId}
+                  friend={entry.friend}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  returnHref={returnHref}
+                  showBackFollowAction={false}
+                />
+              ) : entry.kind === "official" ? (
+                <FootprintsOfficialMessageRow
+                  key={entry.id}
+                  locale={locale}
+                  official={entry.official}
+                  returnHref={returnHref}
+                />
+              ) : entry.kind === "feedback" ? (
+                <FootprintsOfficialFeedbackRow
+                  feedback={entry.feedback}
+                  key={entry.id}
+                  locale={locale}
+                  returnHref={returnHref}
+                />
+              ) : entry.kind === "room" ? (
+                <FootprintsRoomChatRow
+                  key={entry.id}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  room={entry.room}
+                />
+              ) : (
+                <FootprintsPlanetChatRow
+                  key={entry.id}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  planet={entry.planet}
+                  returnHref={returnHref}
+                />
+              ),
+            )}
+          </div>
+        ) : (
+          <div className="border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
+            {t.emptyListTitle}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -3453,12 +3487,14 @@ function FootprintsMessageRow({
   friend,
   locale,
   onDismiss,
+  returnHref,
   showBackFollowAction,
 }: {
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   locale: string;
   onDismiss: () => void;
+  returnHref: string;
   showBackFollowAction: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
@@ -3469,7 +3505,9 @@ function FootprintsMessageRow({
   const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
+    ? lastMessage.isRecalled
+      ? t.recalledMessagePreview
+      : `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
@@ -3568,6 +3606,7 @@ function FootprintsMessageRow({
             aria-label={t.openConversation(friend.friend.nickname)}
             className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
             href={withLocale(locale, `/messages/${friend.conversationId}`)}
+            onClick={() => saveMessageThreadReturnHref(returnHref)}
           >
             {content}
           </Link>
@@ -3585,6 +3624,7 @@ function FootprintsMessageRow({
           <form
             action={openDirectConversationAction}
             className="min-w-0 flex-1"
+            onSubmit={() => saveMessageThreadReturnHref(returnHref)}
           >
             <input name="locale" type="hidden" value={locale} />
             <input

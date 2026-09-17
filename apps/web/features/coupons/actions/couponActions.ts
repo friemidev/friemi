@@ -106,7 +106,7 @@ export async function createCouponCampaignAction(
 
   const profile = await getCurrentUserProfileForMutation(
     locale,
-    "/profile/store",
+    "/profile/store/coupons/new",
   );
   const result = await createCouponCampaign({
     input: {
@@ -119,6 +119,7 @@ export async function createCouponCampaignAction(
   if (result.status !== "CREATED") return { status: result.status };
 
   revalidatePath(withLocale(locale, "/profile/store"));
+  revalidatePath(withLocale(locale, "/profile/store/coupons/new"));
   return {
     couponId: result.couponId,
     path: withLocale(locale, `/coupons/claim/${result.token}`),

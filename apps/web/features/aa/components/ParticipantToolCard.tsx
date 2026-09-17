@@ -16,6 +16,7 @@ type ParticipantToolCardProps = {
   aaContent?: ReactNode;
   aaHref: string;
   aaUnavailable?: boolean;
+  additionalTools?: ReactNode;
   announcementContent?: ReactNode;
   announcementHref: string;
   announcementUnread?: boolean;
@@ -180,6 +181,7 @@ export function ParticipantToolCard({
   aaContent,
   aaHref,
   aaUnavailable = false,
+  additionalTools,
   announcementContent,
   announcementHref,
   announcementUnread = false,
@@ -299,6 +301,7 @@ export function ParticipantToolCard({
             label={aaUnavailable ? copy.unavailable : copy.aa}
           />
         )}
+        {additionalTools}
       </div>
       {bare && openPanel ? (
         <div className="mt-2 border-t border-[#EEEBDD] pt-4">

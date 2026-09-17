@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 
+const actionIconClassName =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]/62 transition group-hover:bg-[#FEFFF9]";
+
 type AccountSettingsActionListProps = {
   accountSecurityLabel: string;
   accountSettingsLabel: string;
@@ -41,7 +44,7 @@ export function AccountSettingsActionList({
         onClick={() => openUserProfile()}
         type="button"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]/62 transition group-hover:bg-[#FEFFF9]">
+        <span className={actionIconClassName}>
           <Settings className="h-[1.125rem] w-[1.125rem]" />
         </span>
         <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
@@ -54,7 +57,7 @@ export function AccountSettingsActionList({
         href={withLocale(locale, "/account/security")}
         className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]/62 transition group-hover:bg-[#FEFFF9]">
+        <span className={actionIconClassName}>
           <ShieldCheck className="h-[1.125rem] w-[1.125rem]" />
         </span>
         <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
@@ -68,7 +71,7 @@ export function AccountSettingsActionList({
           href={withLocale(locale, "/admin/official-messages")}
           className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7F0EA] text-[#0F6D46] ring-1 ring-[#8AB68E]/56 transition group-hover:bg-[#FEFFF9]">
+          <span className={actionIconClassName}>
             <Newspaper className="h-[1.125rem] w-[1.125rem]" />
           </span>
           <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
@@ -83,7 +86,7 @@ export function AccountSettingsActionList({
           href={withLocale(locale, "/admin/activity-priority")}
           className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7F0EA] text-[#0F6D46] ring-1 ring-[#8AB68E]/56 transition group-hover:bg-[#FEFFF9]">
+          <span className={actionIconClassName}>
             <SlidersHorizontal className="h-[1.125rem] w-[1.125rem]" />
           </span>
           <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
@@ -98,7 +101,7 @@ export function AccountSettingsActionList({
           href={withLocale(locale, "/admin/merchants")}
           className="group flex items-center gap-3 rounded-[1.15rem] px-1 py-3.5 transition hover:bg-[#FEFFF9]/72 active:scale-[0.99]"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF5E6] text-[#9A5E00] ring-1 ring-[#F2CC83]/56 transition group-hover:bg-[#FEFFF9]">
+          <span className={actionIconClassName}>
             <TicketCheck className="h-[1.125rem] w-[1.125rem]" />
           </span>
           <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
@@ -115,7 +118,7 @@ export function AccountSettingsActionList({
         }}
         type="button"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF5E6] text-[#B5301F] ring-1 ring-[#F09182]/42">
+        <span className={actionIconClassName}>
           <LogOut className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1 text-sm font-bold text-[#B5301F]">

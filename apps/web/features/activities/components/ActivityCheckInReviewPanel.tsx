@@ -27,7 +27,7 @@ type ActivityCheckInReviewPanelProps = {
   participants: ActivityCheckInParticipantViewModel[];
   showParticipationApproval?: boolean;
   triggerLabel?: string;
-  triggerVariant?: "button" | "icon";
+  triggerVariant?: "button" | "icon" | "tool";
 };
 
 const initialState: ReviewActivityCheckInState = {};
@@ -160,7 +160,12 @@ function ActivityCheckInRosterForm({
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
       {selectedIds.map((id) => (
-        <input key={id} name="selectedParticipationIds" type="hidden" value={id} />
+        <input
+          key={id}
+          name="selectedParticipationIds"
+          type="hidden"
+          value={id}
+        />
       ))}
       <ConfirmRosterButton
         disabled={participants.length === 0}
@@ -281,7 +286,9 @@ export function ActivityCheckInReviewPanel({
   useEffect(() => {
     setReviewedSelectedIds((current) =>
       current
-        ? current.filter((participantId) => participantIds.includes(participantId))
+        ? current.filter((participantId) =>
+            participantIds.includes(participantId),
+          )
         : current,
     );
   }, [participantIds]);
@@ -322,7 +329,27 @@ export function ActivityCheckInReviewPanel({
 
   return (
     <>
-      {triggerVariant === "icon" ? (
+      {triggerVariant === "tool" ? (
+        <button
+          aria-label={triggerLabel ?? copy.open}
+          className="group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
+          onClick={() => setIsOpen(true)}
+          title={triggerLabel ?? copy.open}
+          type="button"
+        >
+          <span className="relative flex h-6 w-6 items-center justify-center text-[#5C8A6C] transition group-hover:text-[#156240]">
+            <CheckCircle2 className="h-[18px] w-[18px]" />
+            {totalPendingCount > 0 ? (
+              <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
+                {totalPendingCount > 9 ? "9+" : totalPendingCount}
+              </span>
+            ) : null}
+          </span>
+          <span className="max-w-full truncate">
+            {triggerLabel ?? copy.open}
+          </span>
+        </button>
+      ) : triggerVariant === "icon" ? (
         <button
           aria-label={triggerLabel ?? copy.open}
           className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition active:scale-[0.96]"
@@ -383,42 +410,42 @@ export function ActivityCheckInReviewPanel({
             </div>
 
             {showParticipationApproval ? (
-            <div className="mt-4 grid grid-cols-2 rounded-lg bg-[#F1F2EC] p-1">
-              <button
-                className={
-                  activeTab === "approval"
-                    ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
-                    : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
-                }
-                onClick={() => setActiveTab("approval")}
-                type="button"
-              >
-                <ClipboardCheck className="h-4 w-4" />
-                {copy.approvalTab}
-                {pendingApprovalCount > 0 ? (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
-                    {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
-                  </span>
-                ) : null}
-              </button>
-              <button
-                className={
-                  activeTab === "checkIn"
-                    ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
-                    : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
-                }
-                onClick={() => setActiveTab("checkIn")}
-                type="button"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {copy.checkInTab}
-                {pendingRequestCount > 0 ? (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
-                    {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
-                  </span>
-                ) : null}
-              </button>
-            </div>
+              <div className="mt-4 grid grid-cols-2 rounded-lg bg-[#F1F2EC] p-1">
+                <button
+                  className={
+                    activeTab === "approval"
+                      ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
+                      : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
+                  }
+                  onClick={() => setActiveTab("approval")}
+                  type="button"
+                >
+                  <ClipboardCheck className="h-4 w-4" />
+                  {copy.approvalTab}
+                  {pendingApprovalCount > 0 ? (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
+                      {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  className={
+                    activeTab === "checkIn"
+                      ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
+                      : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
+                  }
+                  onClick={() => setActiveTab("checkIn")}
+                  type="button"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {copy.checkInTab}
+                  {pendingRequestCount > 0 ? (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
+                      {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
             ) : null}
 
             {showParticipationApproval && activeTab === "approval" ? (
@@ -432,119 +459,128 @@ export function ActivityCheckInReviewPanel({
               </div>
             ) : (
               <>
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
-              <span className="text-sm font-bold text-[#156240]">
-                {copy.confirmed} {confirmedCount}/{participants.length} 人
-              </span>
-              {pendingRequestCount > 0 ? (
-                <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-bold text-[#E7457A]">
-                  {copy.pendingRequests} {pendingRequestCount}
-                </span>
-              ) : null}
-              <ActivityCheckInRosterForm
-                activityId={activityId}
-                className="grid justify-items-end gap-1"
-                locale={locale}
-                onConfirmed={(confirmedIds) => {
-                  setReviewedSelectedIds(confirmedIds);
-                  setFocusedParticipantId(null);
-                }}
-                participants={participants}
-                selectedIds={selectedIds}
-              />
-            </div>
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
+                  <span className="text-sm font-bold text-[#156240]">
+                    {copy.confirmed} {confirmedCount}/{participants.length} 人
+                  </span>
+                  {pendingRequestCount > 0 ? (
+                    <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-bold text-[#E7457A]">
+                      {copy.pendingRequests} {pendingRequestCount}
+                    </span>
+                  ) : null}
+                  <ActivityCheckInRosterForm
+                    activityId={activityId}
+                    className="grid justify-items-end gap-1"
+                    locale={locale}
+                    onConfirmed={(confirmedIds) => {
+                      setReviewedSelectedIds(confirmedIds);
+                      setFocusedParticipantId(null);
+                    }}
+                    participants={participants}
+                    selectedIds={selectedIds}
+                  />
+                </div>
 
-            {participants.length === 0 ? (
-              <p className="mt-4 rounded-xl bg-zinc-50 px-3 py-4 text-center text-sm font-semibold text-zinc-500">
-                {copy.empty}
-              </p>
-            ) : (
-              <div className="mt-4 grid grid-cols-5 gap-2.5">
-                {participants.map((participant) => {
-                  const selected = selectedIds.includes(participant.id);
-                  const focused = focusedParticipantId === participant.id;
-                  const confirmed = confirmedIdSet.has(participant.id);
-                  const needsReview = pendingRequestIdSet.has(participant.id);
+                {participants.length === 0 ? (
+                  <p className="mt-4 rounded-xl bg-zinc-50 px-3 py-4 text-center text-sm font-semibold text-zinc-500">
+                    {copy.empty}
+                  </p>
+                ) : (
+                  <div className="mt-4 grid grid-cols-5 gap-2.5">
+                    {participants.map((participant) => {
+                      const selected = selectedIds.includes(participant.id);
+                      const focused = focusedParticipantId === participant.id;
+                      const confirmed = confirmedIdSet.has(participant.id);
+                      const needsReview = pendingRequestIdSet.has(
+                        participant.id,
+                      );
 
-                  return (
-                    <div className="relative grid min-w-0 justify-items-center" key={participant.id}>
-                      <button
-                        aria-pressed={selected}
-                        className="grid min-w-0 justify-items-center"
-                        data-checkin-avatar
-                        onClick={() =>
-                          setFocusedParticipantId(selected ? participant.id : null)
-                        }
-                        type="button"
-                      >
-                        <span
-                          className={
-                            confirmed
-                              ? focused
-                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-4 ring-[#8AB68E]"
-                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-2 ring-[#8AB68E]"
-                              : needsReview
-                                ? focused
-                                  ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-4 ring-[#F2B1A7]"
-                                  : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-2 ring-[#F2B1A7]"
-                              : focused
-                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
-                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
-                          }
-                        >
-                          {participant.user.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              alt=""
-                              className="h-full w-full object-cover"
-                              src={participant.user.avatarUrl}
-                            />
-                          ) : (
-                            getInitial(participant.user.nickname)
-                          )}
-                          {confirmed ? (
-                            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
-                              <CheckCircle2 className="h-3 w-3" />
-                            </span>
-                          ) : needsReview ? (
-                            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#E7457A] ring-2 ring-white" />
-                          ) : null}
-                        </span>
-                        <span className="mt-1 max-w-full truncate text-[10px] font-bold leading-none text-[#111210]/70">
-                          {participant.user.nickname}
-                        </span>
-                        {confirmed || needsReview ? (
-                          <span
-                            className={
-                              confirmed
-                                ? "mt-0.5 text-[9px] font-bold leading-none text-[#156240]"
-                                : "mt-0.5 text-[9px] font-bold leading-none text-[#E7457A]"
-                            }
-                          >
-                            {confirmed ? copy.confirmed : copy.needsReview}
-                          </span>
-                        ) : null}
-                      </button>
-
-                      {focused ? (
+                      return (
                         <div
-                          className="absolute left-1/2 top-[calc(100%+0.35rem)] z-20 w-24 -translate-x-1/2 rounded-xl border border-[#D6D5B2] bg-white p-1.5 text-center shadow-[0_12px_26px_rgba(17,18,16,0.14)]"
-                          ref={actionPopoverRef}
+                          className="relative grid min-w-0 justify-items-center"
+                          key={participant.id}
                         >
                           <button
-                            className="inline-flex min-h-8 w-full items-center justify-center rounded-full border border-red-200 bg-white px-2 text-[11px] font-bold text-red-700"
-                            onClick={() => toggleParticipant(participant.id)}
+                            aria-pressed={selected}
+                            className="grid min-w-0 justify-items-center"
+                            data-checkin-avatar
+                            onClick={() =>
+                              setFocusedParticipantId(
+                                selected ? participant.id : null,
+                              )
+                            }
                             type="button"
                           >
-                            {copy.remove}
+                            <span
+                              className={
+                                confirmed
+                                  ? focused
+                                    ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-4 ring-[#8AB68E]"
+                                    : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-2 ring-[#8AB68E]"
+                                  : needsReview
+                                    ? focused
+                                      ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-4 ring-[#F2B1A7]"
+                                      : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-2 ring-[#F2B1A7]"
+                                    : focused
+                                      ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
+                                      : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
+                              }
+                            >
+                              {participant.user.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                  src={participant.user.avatarUrl}
+                                />
+                              ) : (
+                                getInitial(participant.user.nickname)
+                              )}
+                              {confirmed ? (
+                                <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                </span>
+                              ) : needsReview ? (
+                                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#E7457A] ring-2 ring-white" />
+                              ) : null}
+                            </span>
+                            <span className="mt-1 max-w-full truncate text-[10px] font-bold leading-none text-[#111210]/70">
+                              {participant.user.nickname}
+                            </span>
+                            {confirmed || needsReview ? (
+                              <span
+                                className={
+                                  confirmed
+                                    ? "mt-0.5 text-[9px] font-bold leading-none text-[#156240]"
+                                    : "mt-0.5 text-[9px] font-bold leading-none text-[#E7457A]"
+                                }
+                              >
+                                {confirmed ? copy.confirmed : copy.needsReview}
+                              </span>
+                            ) : null}
                           </button>
+
+                          {focused ? (
+                            <div
+                              className="absolute left-1/2 top-[calc(100%+0.35rem)] z-20 w-24 -translate-x-1/2 rounded-xl border border-[#D6D5B2] bg-white p-1.5 text-center shadow-[0_12px_26px_rgba(17,18,16,0.14)]"
+                              ref={actionPopoverRef}
+                            >
+                              <button
+                                className="inline-flex min-h-8 w-full items-center justify-center rounded-full border border-red-200 bg-white px-2 text-[11px] font-bold text-red-700"
+                                onClick={() =>
+                                  toggleParticipant(participant.id)
+                                }
+                                type="button"
+                              >
+                                {copy.remove}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
           </div>

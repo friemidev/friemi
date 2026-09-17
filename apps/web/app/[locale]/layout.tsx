@@ -172,5 +172,9 @@ export default async function LocaleLayout({
     </NextIntlClientProvider>
   );
 
-  return clerkEnabled ? <ClerkProvider>{content}</ClerkProvider> : content;
+  return clerkEnabled ? (
+    <ClerkProvider touchSession>{content}</ClerkProvider>
+  ) : (
+    content
+  );
 }

@@ -42,6 +42,7 @@ export async function GET(
     replyToSenderName: true,
     replyToBody: true,
     replyToHasImage: true,
+    recalledAt: true,
     readAt: true,
     createdAt: true,
   } as const;
@@ -82,10 +83,12 @@ export async function GET(
           .map((message) => ({
             id: message.id,
             senderId: message.senderId,
-            body: message.body,
-            imageUrls: message.imageUrls,
+            body: message.recalledAt ? "" : message.body,
+            imageUrls: message.recalledAt ? [] : message.imageUrls,
             replyTo:
-              message.replyToMessageId && message.replyToSenderName
+              !message.recalledAt &&
+              message.replyToMessageId &&
+              message.replyToSenderName
                 ? {
                     body: message.replyToBody ?? "",
                     hasImage: message.replyToHasImage,
@@ -93,6 +96,7 @@ export async function GET(
                     senderName: message.replyToSenderName,
                   }
                 : null,
+            recalledAt: message.recalledAt?.toISOString() ?? null,
             createdAt: message.createdAt.toISOString(),
             isMine: message.senderId === profile.id,
             readAt: message.readAt?.toISOString() ?? null,
@@ -180,10 +184,12 @@ export async function GET(
       messages: messages.map((message) => ({
         id: message.id,
         senderId: message.senderId,
-        body: message.body,
-        imageUrls: message.imageUrls,
+        body: message.recalledAt ? "" : message.body,
+        imageUrls: message.recalledAt ? [] : message.imageUrls,
         replyTo:
-          message.replyToMessageId && message.replyToSenderName
+          !message.recalledAt &&
+          message.replyToMessageId &&
+          message.replyToSenderName
             ? {
                 body: message.replyToBody ?? "",
                 hasImage: message.replyToHasImage,
@@ -191,6 +197,7 @@ export async function GET(
                 senderName: message.replyToSenderName,
               }
             : null,
+        recalledAt: message.recalledAt?.toISOString() ?? null,
         createdAt: message.createdAt.toISOString(),
         isMine: message.senderId === profile.id,
         readAt:

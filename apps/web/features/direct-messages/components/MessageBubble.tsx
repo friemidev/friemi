@@ -5,6 +5,7 @@ import {
   ListChecks,
   LoaderCircle,
   Reply,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import {
@@ -33,6 +34,7 @@ export type MessageBubbleViewModel = {
   senderId: string;
   body: string;
   imageUrls: string[];
+  recalledAt: string | null;
   readAt: string | null;
   replyTo: ChatReplyTarget | null;
   createdAt: string;
@@ -49,15 +51,18 @@ export function MessageBubble({
   imageUrls,
   isMine,
   isDeleting = false,
+  isRecalling = false,
   isSelected = false,
   locale,
   onDelete,
   onOpenActionMenu,
+  onRecall,
   onReply,
   onRetry,
   onStartSelection,
   onToggleSelection,
   readAt,
+  recalledAt,
   replyTo,
   sender,
   senderId,
@@ -65,10 +70,12 @@ export function MessageBubble({
 }: MessageBubbleViewModel & {
   actionMenuOpen?: boolean;
   isDeleting?: boolean;
+  isRecalling?: boolean;
   isSelected?: boolean;
   locale: string;
   onDelete?: (messageIds: string[]) => void;
   onOpenActionMenu?: (messageId: string) => void;
+  onRecall?: (messageId: string) => void;
   onReply?: (message: MessageBubbleViewModel) => void;
   onRetry?: (message: MessageBubbleViewModel) => void;
   onStartSelection?: (messageId: string) => void;
@@ -91,6 +98,12 @@ export function MessageBubble({
     Boolean(
       onDelete && onOpenActionMenu && onStartSelection && onToggleSelection,
     );
+  const canRecall =
+    isMine &&
+    !deliveryStatus &&
+    !recalledAt &&
+    Boolean(onRecall && onOpenActionMenu);
+  const canOpenActionMenu = canDelete || canRecall;
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressNextClickRef = useRef(false);
@@ -119,7 +132,13 @@ export function MessageBubble({
       return;
     }
 
-    if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
+    if (
+      !canOpenActionMenu ||
+      isDeleting ||
+      isRecalling ||
+      selectionMode ||
+      event.button !== 0
+    ) {
       return;
     }
 
@@ -163,8 +182,9 @@ export function MessageBubble({
 
   function handleMessageKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (
-      !canDelete ||
+      !canOpenActionMenu ||
       isDeleting ||
+      isRecalling ||
       (event.key !== "Enter" && event.key !== " ")
     ) {
       return;
@@ -178,6 +198,16 @@ export function MessageBubble({
     }
 
     onOpenActionMenu?.(id);
+  }
+
+  if (recalledAt) {
+    return (
+      <div className="flex justify-center px-4 py-0.5">
+        <p className="rounded-full bg-[#F2F2EF] px-3 py-1 text-center text-[11px] font-semibold leading-5 text-[#6C746A] ring-1 ring-[#E7E2D6]">
+          {isMine ? t.recalledByMe : t.recalledByPeer}
+        </p>
+      </div>
+    );
   }
 
   const selectionControl =
@@ -203,7 +233,7 @@ export function MessageBubble({
   const actionMenu =
     actionMenuOpen && canDelete && !selectionMode ? (
       <div
-        aria-label={`${replyCopy.reply} / ${t.selectMessage} / ${t.deleteMessage}`}
+        aria-label={`${replyCopy.reply}${canRecall ? ` / ${t.recallMessage}` : ""} / ${t.selectMessage} / ${t.deleteMessage}`}
         className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
         data-direct-message-action-menu
         role="toolbar"
@@ -219,6 +249,7 @@ export function MessageBubble({
               id,
               imageUrls,
               isMine,
+              recalledAt,
               readAt,
               replyTo,
               senderId,
@@ -229,6 +260,23 @@ export function MessageBubble({
         >
           <Reply className="h-4 w-4" />
         </button>
+        {canRecall ? (
+          <button
+            aria-busy={isRecalling}
+            aria-label={t.recallMessage}
+            className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#9A2135] transition hover:bg-[#FFF5E6] active:bg-[#FDECDD] disabled:cursor-wait disabled:opacity-60"
+            disabled={isRecalling}
+            onClick={() => onRecall?.(id)}
+            title={t.recallMessage}
+            type="button"
+          >
+            {isRecalling ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <RotateCcw className="h-4 w-4" />
+            )}
+          </button>
+        ) : null}
         <button
           aria-label={t.selectMessage}
           className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
@@ -275,7 +323,7 @@ export function MessageBubble({
               ? "max-w-[65%] sm:max-w-[60%]"
               : "max-w-[76%] sm:max-w-[64%]",
           hasImages ? "p-1.5" : "px-3 py-2",
-          canDelete && "select-none [-webkit-touch-callout:none]",
+          canOpenActionMenu && "select-none [-webkit-touch-callout:none]",
           selectionMode && canDelete && "cursor-pointer",
           isSelected && "outline outline-2 outline-offset-2 outline-[#36A15F]",
           isMine
@@ -287,7 +335,12 @@ export function MessageBubble({
         data-direct-message-id={id}
         onClick={handleMessageClick}
         onContextMenu={(event) => {
-          if (!canDelete || isDeleting || selectionMode) {
+          if (
+            !canOpenActionMenu ||
+            isDeleting ||
+            isRecalling ||
+            selectionMode
+          ) {
             return;
           }
 
@@ -299,8 +352,8 @@ export function MessageBubble({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
-        role={canDelete ? "button" : undefined}
-        tabIndex={canDelete ? 0 : undefined}
+        role={canOpenActionMenu ? "button" : undefined}
+        tabIndex={canOpenActionMenu ? 0 : undefined}
       >
         {replyTo ? (
           <ChatReplyBubblePreview
@@ -341,6 +394,7 @@ export function MessageBubble({
                 senderId,
                 body,
                 imageUrls,
+                recalledAt,
                 readAt,
                 replyTo,
                 createdAt,

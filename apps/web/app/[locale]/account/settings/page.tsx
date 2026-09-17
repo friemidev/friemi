@@ -105,12 +105,9 @@ export default async function AccountSettingsPage({
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
         </div>
-        <p className="mt-3 max-w-[24rem] text-[15px] font-semibold leading-7 text-[#156240]/78 md:text-base">
-          {copy.description}
-        </p>
       </header>
 
-      <div className="mt-9 space-y-8">
+      <div className="mt-6 space-y-8">
         <AccountLanguageSettingsSection label={copy.language} locale={locale} />
 
         {profile ? (

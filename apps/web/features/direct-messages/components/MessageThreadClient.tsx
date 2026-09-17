@@ -4,6 +4,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -27,6 +28,7 @@ import {
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
 import {
   deleteDirectMessagesAction,
+  recallDirectMessageAction,
   sendDirectMessageAction,
   type DirectMessageActionState,
 } from "../actions/directMessageActions";
@@ -129,9 +131,16 @@ export function MessageThreadClient({
   const [actionMenuMessageId, setActionMenuMessageId] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
+  const [recallingMessageIds, setRecallingMessageIds] = useState<string[]>([]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
+  const initialMessageIdsRef = useRef(
+    new Set(initialMessages.map((message) => message.id)),
+  );
+  const [peerReplyUnlocked, setPeerReplyUnlocked] = useState(
+    sendPolicy.hasPeerReplied,
+  );
   const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
     useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
@@ -150,14 +159,13 @@ export function MessageThreadClient({
   const hasMessages = messages.length > 0;
   const lastMessageId = messages[messages.length - 1]?.id;
   const canSendNow =
-    canSend &&
-    (localRemainingNonFriendMessages === null ||
+    (canSend || peerReplyUnlocked) &&
+    (peerReplyUnlocked ||
+      localRemainingNonFriendMessages === null ||
       localRemainingNonFriendMessages > 0);
-  const policyNotice = getSendPolicyNotice(
-    sendPolicy,
-    locale,
-    localRemainingNonFriendMessages,
-  );
+  const policyNotice = peerReplyUnlocked
+    ? null
+    : getSendPolicyNotice(sendPolicy, locale, localRemainingNonFriendMessages);
 
   useMobileChatViewportGuard();
 
@@ -200,6 +208,34 @@ export function MessageThreadClient({
     setLocalRemainingNonFriendMessages(sendPolicy.remainingNonFriendMessages);
   }, [sendPolicy.remainingNonFriendMessages]);
 
+  useEffect(() => {
+    if (
+      peerReplyUnlocked ||
+      sendPolicy.isMutualFollow ||
+      (sendPolicy.reason !== "ALLOWED" &&
+        sendPolicy.reason !== "NON_FRIEND_LIMIT_REACHED")
+    ) {
+      return;
+    }
+
+    const hasNewPeerReply = messages.some(
+      (message) =>
+        !message.isMine &&
+        !message.recalledAt &&
+        !initialMessageIdsRef.current.has(message.id),
+    );
+
+    if (hasNewPeerReply) {
+      setPeerReplyUnlocked(true);
+      setLocalRemainingNonFriendMessages(null);
+    }
+  }, [
+    messages,
+    peerReplyUnlocked,
+    sendPolicy.isMutualFollow,
+    sendPolicy.reason,
+  ]);
+
   const decrementLocalRemainingNonFriendMessages = useCallback(() => {
     if (sendPolicy.remainingNonFriendMessages !== null) {
       setLocalRemainingNonFriendMessages((current) =>
@@ -229,6 +265,7 @@ export function MessageThreadClient({
           senderId: currentUser.id,
           body: payload.body,
           imageUrls: payload.imageUrls,
+          recalledAt: null,
           replyTo: payload.replyTo,
           readAt: null,
           createdAt: payload.createdAt,
@@ -439,6 +476,56 @@ export function MessageThreadClient({
       .finally(() => setDeletingMessageIds([]));
   }
 
+  function handleRecall(messageId: string) {
+    if (recallingMessageIds.length > 0) {
+      return;
+    }
+
+    const message = messages.find((item) => item.id === messageId);
+
+    if (!message?.isMine || message.deliveryStatus || message.recalledAt) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("conversationId", conversationId);
+    formData.set("locale", locale);
+    formData.set("messageId", messageId);
+
+    setDeleteError("");
+    setRecallingMessageIds([messageId]);
+
+    void recallDirectMessageAction(defaultActionState, formData)
+      .then((result) => {
+        if (result.ok && result.messageId && result.recalledAt) {
+          setMessages((current) =>
+            current.map((currentMessage) =>
+              currentMessage.id === result.messageId
+                ? {
+                    ...currentMessage,
+                    body: "",
+                    imageUrls: [],
+                    recalledAt: result.recalledAt ?? new Date().toISOString(),
+                    replyTo: null,
+                  }
+                : currentMessage,
+            ),
+          );
+          setActionMenuMessageId("");
+          if (chatCursorMode === "canary") {
+            dispatchChatCursorWake(conversationId);
+          } else {
+            startTransition(() => router.refresh());
+          }
+          return;
+        }
+
+        setDeleteError(result.formError ?? t.recallFailed);
+      })
+      .catch(() => setDeleteError(t.recallFailed))
+      .finally(() => setRecallingMessageIds([]));
+  }
+
   return (
     <>
       <div
@@ -504,10 +591,12 @@ export function MessageThreadClient({
                     {...message}
                     actionMenuOpen={actionMenuMessageId === message.id}
                     isDeleting={deletingMessageIds.includes(message.id)}
+                    isRecalling={recallingMessageIds.includes(message.id)}
                     isSelected={selectedMessageIds.includes(message.id)}
                     locale={locale}
                     onDelete={handleDelete}
                     onOpenActionMenu={handleOpenActionMenu}
+                    onRecall={handleRecall}
                     onReply={handleReply}
                     onRetry={
                       message.deliveryStatus === "failed" && canSendNow
@@ -579,7 +668,7 @@ export function MessageThreadClient({
             )}
           </button>
         </div>
-      ) : canSend ? (
+      ) : canSend || peerReplyUnlocked ? (
         <MessageComposer
           activityId={activityContext?.id}
           conversationId={conversationId}

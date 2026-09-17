@@ -27,6 +27,11 @@ type DirectMessagesCopy = {
   cancelSelection: string;
   deleteFailed: string;
   deleteMessage: string;
+  recallFailed: string;
+  recallMessage: string;
+  recalledByMe: string;
+  recalledByPeer: string;
+  recalledMessagePreview: string;
   selectMessage: string;
   selectedMessages: (count: number) => string;
   readOnlyTitle: string;
@@ -114,7 +119,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       pinConversation: "Épingler la discussion",
       cancelSelection: "Annuler la sélection",
       deleteFailed: "Impossible de supprimer les messages.",
-      deleteMessage: "Supprimer",
+      deleteMessage: "Supprimer pour moi",
+      recallFailed: "Impossible de retirer ce message.",
+      recallMessage: "Retirer pour tous",
+      recalledByMe: "Vous avez retiré un message",
+      recalledByPeer: "Ce message a été retiré",
+      recalledMessagePreview: "Message retiré",
       selectMessage: "Sélectionner",
       selectedMessages: (count) =>
         `${count} sélectionné${count > 1 ? "s" : ""}`,
@@ -147,9 +157,9 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       searchPlaceholder: "Rechercher une discussion",
       startConversation: "Message",
       nonFriendLimitNotice: (remaining) =>
-        remaining > 1
-          ? "Vous pouvez envoyer 2 messages. La discussion continue après sa réponse."
-          : "Encore 1 message. La discussion continue après sa réponse.",
+        remaining > 0
+          ? "Vous pouvez envoyer 1 message. La discussion continue après sa réponse."
+          : "Attendez sa réponse pour continuer.",
       nonFriendWaitNotice: "Attendez sa réponse pour continuer.",
       activityContextLabel: "À propos de cette sortie",
       activityContextCta: "Voir la sortie",
@@ -220,7 +230,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       pinConversation: "Pin chat",
       cancelSelection: "Cancel selection",
       deleteFailed: "Could not delete the messages.",
-      deleteMessage: "Delete",
+      deleteMessage: "Delete for me",
+      recallFailed: "Could not recall this message.",
+      recallMessage: "Recall for everyone",
+      recalledByMe: "You recalled a message",
+      recalledByPeer: "This message was recalled",
+      recalledMessagePreview: "Message recalled",
       selectMessage: "Select",
       selectedMessages: (count) => `${count} selected`,
       readOnlyTitle: "Messages paused",
@@ -252,9 +267,9 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       searchPlaceholder: "Search chats",
       startConversation: "Message",
       nonFriendLimitNotice: (remaining) =>
-        remaining > 1
-          ? "You can send 2 messages. Keep chatting after they reply."
-          : "1 message left. Keep chatting after they reply.",
+        remaining > 0
+          ? "You can send 1 message. Keep chatting after they reply."
+          : "Wait for a reply to keep chatting.",
       nonFriendWaitNotice: "Wait for a reply to keep chatting.",
       activityContextLabel: "About this activity",
       activityContextCta: "View activity",
@@ -320,7 +335,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     pinConversation: "置顶聊天",
     cancelSelection: "取消多选",
     deleteFailed: "消息暂时无法删除。",
-    deleteMessage: "删除",
+    deleteMessage: "仅对我删除",
+    recallFailed: "消息暂时无法撤回。",
+    recallMessage: "撤回",
+    recalledByMe: "你撤回了一条消息",
+    recalledByPeer: "对方撤回了一条消息",
+    recalledMessagePreview: "消息已撤回",
     selectMessage: "多选",
     selectedMessages: (count) => `已选择 ${count} 条`,
     readOnlyTitle: "暂时不能发送",
@@ -351,9 +371,9 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     searchPlaceholder: "搜索聊天",
     startConversation: "发消息",
     nonFriendLimitNotice: (remaining) =>
-      remaining > 1
-        ? "可以先发 2 条消息，对方回复后继续聊。"
-        : "还可以再发 1 条，对方回复后继续聊。",
+      remaining > 0
+        ? "可以先发 1 条消息，对方回复后继续聊。"
+        : "等对方回复后，就可以继续聊。",
     nonFriendWaitNotice: "等对方回复后，就可以继续聊。",
     activityContextLabel: "关于这个聚吧",
     activityContextCta: "查看聚吧",

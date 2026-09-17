@@ -21,6 +21,7 @@ import {
   getOrCreateActivityParticipantConversation,
   getOrCreateActivityOrganizerConversation,
   getOrCreateOpenDirectConversation,
+  recallDirectMessage,
   sendDirectMessage,
   sendDirectMessageToFriend,
 } from "../services/directMessages";
@@ -29,6 +30,7 @@ export type DirectMessageActionState = {
   ok?: boolean;
   conversationId?: string;
   createdAt?: string;
+  recalledAt?: string;
   messageId?: string;
   messageIds?: string[];
   formError?: string;
@@ -113,6 +115,12 @@ const deleteDirectMessagesSchema = z.object({
   conversationId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
   messageIds: z.array(z.string().min(1).max(80)).min(1).max(50),
+});
+
+const recallDirectMessageSchema = z.object({
+  conversationId: z.string().min(1),
+  locale: z.string().min(1).default("zh-CN"),
+  messageId: z.string().min(1).max(80),
 });
 
 const directMessageTimingEnabled =
@@ -461,6 +469,47 @@ export async function deleteDirectMessagesAction(
     console.error("Failed to delete direct messages", error);
 
     return { formError: t.deleteFailed };
+  }
+}
+
+export async function recallDirectMessageAction(
+  _previousState: DirectMessageActionState,
+  formData: FormData,
+): Promise<DirectMessageActionState> {
+  const rawInput = {
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    messageId: getString(formData, "messageId"),
+  };
+  const result = recallDirectMessageSchema.safeParse(rawInput);
+  const t = getDirectMessagesCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  try {
+    const profile = await getCurrentUserProfileForMutation(
+      result.data.locale,
+      `/messages/${result.data.conversationId}`,
+    );
+    const message = await recallDirectMessage({
+      conversationId: result.data.conversationId,
+      currentUserProfileId: profile.id,
+      messageId: result.data.messageId,
+    });
+
+    refreshDirectMessageSurfaces(result.data.locale, message.conversationId);
+
+    return {
+      messageId: message.id,
+      ok: true,
+      recalledAt: message.recalledAt?.toISOString(),
+    };
+  } catch (error) {
+    console.error("Failed to recall direct message", error);
+
+    return { formError: t.recallFailed };
   }
 }
 
