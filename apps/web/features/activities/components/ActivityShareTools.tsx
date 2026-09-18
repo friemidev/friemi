@@ -12,6 +12,7 @@ import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
+import { shareCardVersion } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
 import { resolveTeamWechatShareImageUrl } from "@/features/activities/utils/teamWechatShareImage";
 import { WechatShareConfigurator } from "./WechatShareConfigurator";
@@ -625,9 +626,14 @@ export function ActivityShareTools({
     const resolvedUrl = sharePath
       ? new URL(sharePath, window.location.origin).toString()
       : window.location.href;
+    const versionedUrl = new URL(resolvedUrl);
 
-    setActivityUrl(resolvedUrl);
-  }, [sharePath]);
+    if (shareKind === "team") {
+      versionedUrl.searchParams.set("share", shareCardVersion);
+    }
+
+    setActivityUrl(versionedUrl.toString());
+  }, [shareKind, sharePath]);
 
   useEffect(() => {
     const userAgent = navigator.userAgent;

@@ -115,12 +115,12 @@ import {
   buildTeamShareImageUrl,
   buildTeamShareMetadata,
   getCanonicalMetadataBaseUrl,
+  getRequestBaseUrl,
   getShareDateLabel,
   getShareLocationLabel,
   getSharePriceLabel,
   resolveShareImageUrl,
 } from "@/lib/share-metadata";
-import { resolveTeamWechatShareImageUrl } from "@/features/activities/utils/teamWechatShareImage";
 import {
   ensurePrivateActivityShareToken,
   getPrivateActivitySharePath,
@@ -706,10 +706,11 @@ export async function generateActivityDetailMetadata(
     locale,
     getActivityDetailPath(activityId),
   );
-  const activity = await getActivityShareMetadataById(
-    activityId,
-    accessToken ?? null,
-  );
+  const [activity, requestHeaders] = await Promise.all([
+    getActivityShareMetadataById(activityId, accessToken ?? null),
+    headers(),
+  ]);
+  const requestBaseUrl = getRequestBaseUrl(requestHeaders);
 
   if (!activity) {
     return buildFallbackShareMetadata(baseUrl, fallbackActivityPath);
@@ -756,13 +757,16 @@ export async function generateActivityDetailMetadata(
         accessToken:
           activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
         activityId,
-        baseUrl,
+        baseUrl: requestBaseUrl,
         locale,
       }),
-      wechatShareImageUrl: resolveTeamWechatShareImageUrl({
+      wechatShareImageUrl: buildTeamShareImageUrl({
+        accessToken:
+          activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
         activityId,
-        activityUrl: canonicalUrl,
+        baseUrl: requestBaseUrl,
         locale,
+        variant: "wechat",
       }),
       title: activity.title,
     });

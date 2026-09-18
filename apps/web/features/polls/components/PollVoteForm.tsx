@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Check, CheckCircle2, Loader2 } from "lucide-react";
+import { Check, CheckCircle2, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   submitActivityPollVoteAction,
@@ -10,6 +10,7 @@ import {
 } from "../actions/pollActions";
 import { getPollCopy } from "../copy";
 import type { ActivityPollViewData } from "../server/pollService";
+import { PollVoterNames } from "./PollVoterNames";
 
 const initialState: PollActionState = {};
 
@@ -25,6 +26,9 @@ export function PollVoteForm({
   const [selected, setSelected] = useState<string[]>(poll.viewerSelectionIds);
   const [guestNickname, setGuestNickname] = useState(
     poll.viewerGuestNickname ?? "",
+  );
+  const [isAnonymous, setIsAnonymous] = useState(
+    poll.viewerIsAnonymousGuest,
   );
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [voteState, voteAction, votePending] = useActionState(
@@ -88,6 +92,11 @@ export function PollVoteForm({
       <form action={voteAction} className="space-y-4">
         <input name="locale" type="hidden" value={locale} />
         <input name="pollId" type="hidden" value={poll.id} />
+        <input
+          name="isAnonymous"
+          type="hidden"
+          value={isAnonymous ? "1" : "0"}
+        />
         {poll.shareToken ? (
           <input name="shareToken" type="hidden" value={poll.shareToken} />
         ) : null}
@@ -95,9 +104,13 @@ export function PollVoteForm({
         <div className="overflow-hidden border-y border-[#E3DFD0] bg-white">
           {poll.options.map((option, optionIndex) => {
             const checked = selected.includes(option.id);
+            const voterNames = option.voters.map((voter) =>
+              voter.isAnonymous ? copy.anonymous : voter.nickname,
+            );
+
             return (
-              <label
-                className={`relative block cursor-pointer overflow-hidden px-1 transition ${
+              <div
+                className={`relative overflow-hidden px-1 transition ${
                   checked ? "bg-[#F2F8F3]" : "hover:bg-[#FAFBF7]"
                 } ${optionIndex > 0 ? "border-t border-[#EEEBDD]" : ""}`}
                 key={option.id}
@@ -111,7 +124,7 @@ export function PollVoteForm({
                 {checked ? (
                   <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-[#369758]" />
                 ) : null}
-                <span className="relative flex min-h-[58px] items-start gap-3 px-2 py-4">
+                <label className="relative flex min-h-[58px] cursor-pointer items-start gap-3 px-2 py-4">
                   <input
                     checked={checked}
                     className="sr-only"
@@ -140,40 +153,80 @@ export function PollVoteForm({
                         </span>
                       ) : null}
                     </span>
-                    {option.voters.length > 0 ? (
-                      <span className="mt-1 block text-[11px] leading-5 text-[#6E756F]">
-                        {option.voters
-                          .map((voter) =>
-                            voter === "ANONYMOUS_GUEST"
-                              ? copy.anonymous
-                              : voter,
-                          )
-                          .join(" · ")}
-                      </span>
-                    ) : null}
                   </span>
-                </span>
-              </label>
+                </label>
+                {voterNames.length > 0 ? (
+                  <div className="relative -mt-3 pb-3 pl-10 pr-2">
+                    <PollVoterNames
+                      collapseLabel={copy.collapseVoters}
+                      expandLabel={copy.expandVoters}
+                      voters={voterNames}
+                    />
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </div>
 
-        {isGuest ? (
-          <div className="space-y-3 border-y border-[#E3DFD0] bg-[#F6F7F1] px-3 py-4">
-            <label className="block space-y-2">
-              <span className="text-xs font-bold text-[#607268]">
-                {copy.guestNickname}
-              </span>
-              <input
-                className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 text-sm outline-none focus:border-[#369758]"
-                maxLength={30}
-                name="guestNickname"
-                onChange={(event) => setGuestNickname(event.target.value)}
-                placeholder={copy.guestNicknamePlaceholder}
-                required
-                value={guestNickname}
-              />
-            </label>
+        {isGuest && poll.canVote ? (
+          <div className="border-y border-[#E3DFD0] bg-[#F6F7F1] px-3 py-4">
+            <div className="flex items-end gap-2">
+              <label className="min-w-0 flex-1 space-y-2">
+                <span className="text-xs font-bold text-[#607268]">
+                  {isAnonymous
+                    ? copy.guestNicknameOptional
+                    : copy.guestNickname}
+                </span>
+                <input
+                  className={`min-h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:border-[#369758] disabled:cursor-not-allowed ${
+                    isAnonymous
+                      ? "border-[#DFE1D8] bg-[#ECEEE8] text-[#858C85]"
+                      : "border-[#D8D7C5] bg-white"
+                  }`}
+                  disabled={isAnonymous}
+                  maxLength={30}
+                  name="guestNickname"
+                  onChange={(event) => setGuestNickname(event.target.value)}
+                  placeholder={
+                    isAnonymous ? copy.anonymous : copy.guestNicknamePlaceholder
+                  }
+                  required={!isAnonymous}
+                  value={isAnonymous ? "" : guestNickname}
+                />
+              </label>
+              <button
+                aria-pressed={isAnonymous}
+                className={`flex min-h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-black transition active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35 ${
+                  isAnonymous
+                    ? "border-[#156240] bg-[#156240] text-white shadow-[0_6px_16px_rgba(21,98,64,0.18)]"
+                    : "border-[#B8CDBB] bg-white text-[#156240] hover:bg-[#EEF6F0]"
+                }`}
+                onClick={() => setIsAnonymous((current) => !current)}
+                type="button"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                {copy.anonymousConfirm}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {!isGuest && poll.canVote ? (
+          <div className="flex justify-end px-1">
+            <button
+              aria-pressed={isAnonymous}
+              className={`flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-xs font-black transition active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35 ${
+                isAnonymous
+                  ? "border-[#156240] bg-[#156240] text-white shadow-[0_6px_16px_rgba(21,98,64,0.18)]"
+                  : "border-[#B8CDBB] bg-white text-[#156240] hover:bg-[#EEF6F0]"
+              }`}
+              onClick={() => setIsAnonymous((current) => !current)}
+              type="button"
+            >
+              <EyeOff className="h-3.5 w-3.5" />
+              {copy.anonymousConfirm}
+            </button>
           </div>
         ) : null}
 

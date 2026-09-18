@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { WechatShareConfigurator } from "@/features/activities/components/WechatShareConfigurator";
 import { PollDetailView } from "@/features/polls/components/PollDetailView";
 import {
   getSharedActivityPollMetadata,
@@ -10,7 +12,10 @@ import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import {
   buildCanonicalUrl,
   buildDetailShareMetadata,
+  buildPollShareImageUrl,
   getCanonicalMetadataBaseUrl,
+  getRequestBaseUrl,
+  shareCardVersion,
 } from "@/lib/share-metadata";
 import { withLocale } from "@/lib/routes";
 
@@ -48,8 +53,11 @@ function getPollShareDescription({
     : `参与「${activityTitle}」的投票，打开链接进行选择。`;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, shareToken } = await params;
+  const requestBaseUrl = getRequestBaseUrl(await headers());
   const canonicalUrl = buildCanonicalUrl(
     getCanonicalMetadataBaseUrl(),
     withLocale(locale, `/poll/${shareToken}`),
@@ -73,6 +81,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description: poll.description,
         locale,
       }),
+      shareImage: {
+        height: 420,
+        type: "image/png",
+        url: buildPollShareImageUrl({
+          baseUrl: requestBaseUrl,
+          locale,
+          shareToken,
+          variant: "wechat",
+        }),
+        width: 420,
+      },
       title: poll.question,
     }),
     alternates: { canonical: canonicalUrl },
@@ -82,7 +101,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function SharedActivityPollPage({ params }: PageProps) {
   const { locale, shareToken } = await params;
-  const profile = await getOptionalCurrentUserProfileSnapshot();
+  const [profile, requestHeaders] = await Promise.all([
+    getOptionalCurrentUserProfileSnapshot(),
+    headers(),
+  ]);
   const poll = await getSharedActivityPollView({
     profileId: profile?.id ?? null,
     shareToken,
@@ -90,16 +112,42 @@ export default async function SharedActivityPollPage({ params }: PageProps) {
 
   if (!poll) notFound();
 
+  const requestBaseUrl = getRequestBaseUrl(requestHeaders);
+  const shareUrl = buildCanonicalUrl(
+    requestBaseUrl,
+    withLocale(locale, `/poll/${shareToken}`),
+    { share: shareCardVersion },
+  );
+  const shareDescription = getPollShareDescription({
+    activityTitle: poll.activity.title,
+    description: poll.description,
+    locale,
+  });
+
   return (
-    <PageContainer
-      className="min-h-dvh max-w-[640px] bg-[#FEFFF9] pb-12 pt-4 sm:py-8"
-      mobileSafeTop
-    >
-      <PollDetailView
-        locale={locale}
-        poll={poll}
-        returnHref={withLocale(locale, "/mobile-home")}
+    <>
+      <WechatShareConfigurator
+        description={shareDescription}
+        enabled
+        imageUrl={buildPollShareImageUrl({
+          baseUrl: requestBaseUrl,
+          locale,
+          shareToken,
+          variant: "wechat",
+        })}
+        link={shareUrl}
+        title={poll.question}
       />
-    </PageContainer>
+      <PageContainer
+        className="shared-poll-page min-h-dvh max-w-[640px] bg-[#FEFFF9] pb-12 pt-4 sm:py-8"
+        mobileSafeTop
+      >
+        <PollDetailView
+          locale={locale}
+          poll={poll}
+          returnHref={withLocale(locale, "/mobile-home")}
+        />
+      </PageContainer>
+    </>
   );
 }

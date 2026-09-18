@@ -495,6 +495,14 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   right: var(--app-right-safe-area);
 }
 
+.app-layout-shell:has(.shared-poll-page) {
+  padding-bottom: 0 !important;
+}
+
+.app-layout-shell:has(.shared-poll-page) > .app-mobile-nav {
+  display: none !important;
+}
+
 @media (max-width: 767px) {
   html[data-friemi-android-app="true"] .app-layout-shell {
     padding-bottom: calc(
