@@ -24,6 +24,7 @@ import {
   Palette,
   Plus,
   QrCode,
+  RotateCcw,
   Skull,
   Ticket,
   X,
@@ -278,6 +279,10 @@ function getCopy(locale: string) {
       locked: "La partie a commencé.",
       members: "À placer",
       noMembers: "Personne en attente.",
+      nextRound: "Rejouer",
+      nextRoundConfirm:
+        "Redistribuer les rôles et commencer la manche suivante avec les mêmes places ?",
+      stayInRoom: "Rester dans la salle",
       noticeJoined: "Vous êtes dans la table.",
       noticeLeft: "Place quittée.",
       noticeReady: "Vous êtes prêt.",
@@ -385,6 +390,10 @@ function getCopy(locale: string) {
       locked: "The game has started.",
       members: "Waiting to sit",
       noMembers: "No one is waiting.",
+      nextRound: "Next game",
+      nextRoundConfirm:
+        "Redeal roles and start the next game with the same seats?",
+      stayInRoom: "Stay in room",
       noticeJoined: "You are in the table.",
       noticeLeft: "Seat left.",
       noticeReady: "You are ready.",
@@ -487,6 +496,9 @@ function getCopy(locale: string) {
     locked: "本局已经开始。",
     members: "待入座",
     noMembers: "没人等座。",
+    nextRound: "重新发牌开下一局",
+    nextRoundConfirm: "保留当前房间和座位，重新发身份并开始下一局？",
+    stayInRoom: "留在房间",
     noticeJoined: "已进入房间。",
     noticeLeft: "已离座。",
     noticeReady: "已准备。",
@@ -560,6 +572,25 @@ function SubmitButton({
       disabled={pending || disabled}
       type="submit"
     >
+      {label}
+    </button>
+  );
+}
+
+function NextRoundSubmitButton({
+  className,
+  disabled = false,
+  label,
+}: {
+  className: string;
+  disabled?: boolean;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button className={className} disabled={pending || disabled} type="submit">
+      <RotateCcw className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} />
       {label}
     </button>
   );
@@ -950,7 +981,10 @@ export function WerewolfRoomOverview({
       ? `?${roomHrefParams.toString()}`
       : "";
 
-    if (room.status === "IN_PROGRESS" && room.currentMember) {
+    if (
+      (room.status === "IN_PROGRESS" || room.status === "FINISHED") &&
+      room.currentMember
+    ) {
       try {
         window.sessionStorage.removeItem(
           DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
@@ -979,28 +1013,6 @@ export function WerewolfRoomOverview({
       }
 
       return;
-    }
-
-    if (room.status === "FINISHED") {
-      try {
-        const storedValue = window.localStorage.getItem(
-          ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
-        );
-        const storedRoom = storedValue
-          ? (JSON.parse(storedValue) as Partial<StoredActiveGameToolRoom>)
-          : null;
-
-        if (storedRoom?.id === room.id) {
-          window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
-          window.sessionStorage.setItem(
-            DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
-            room.id,
-          );
-          window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
-        }
-      } catch {
-        // Ignore local shortcut cleanup failures.
-      }
     }
   }, [
     currentMemberToken,
@@ -1182,14 +1194,14 @@ export function WerewolfRoomOverview({
   }, [pollRoomSync, realtimeConnected]);
 
   useEffect(() => {
-    if (room.status === "FINISHED") {
-      return;
-    }
-
-    const intervalMs = realtimeConnected
-      ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
-        Math.floor(Math.random() * 3_000)
-      : getWerewolfSyncIntervalMs(room.status) + Math.floor(Math.random() * 900);
+    const intervalMs =
+      room.status === "FINISHED"
+        ? 8_000 + Math.floor(Math.random() * 1_200)
+        : realtimeConnected
+          ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
+            Math.floor(Math.random() * 3_000)
+          : getWerewolfSyncIntervalMs(room.status) +
+            Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
       if (!document.hidden) {
         void pollRoomSync();
@@ -1952,9 +1964,7 @@ export function WerewolfRoomOverview({
     const directionClass =
       side === "left" ? "flex-row-reverse text-right" : "flex-row text-left";
     const avatarClassName = `h-14 w-14 border-2 text-sm shadow-[0_8px_20px_rgba(0,0,0,0.34)] ${
-      seat.isDead
-        ? "border-white/35 grayscale opacity-60"
-        : "border-[#F1F2E3]"
+      seat.isDead ? "border-white/35 grayscale opacity-60" : "border-[#F1F2E3]"
     }`;
 
     if (!seat.isClaimed && isLobby && canChooseSeat) {
@@ -2522,13 +2532,7 @@ export function WerewolfRoomOverview({
                     </form>
                   </div>
                 ) : currentViewerSeat.privateToken ? (
-                  <div
-                    className={`grid gap-2 ${
-                      judgeIsViewer && room.status === "FINISHED"
-                        ? "grid-cols-1"
-                        : "grid-cols-2"
-                    }`}
-                  >
+                  <div className="grid grid-cols-2 gap-2">
                     {judgeIsViewer && room.status === "IN_PROGRESS" ? (
                       <button
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] active:scale-[0.98]"
@@ -2538,6 +2542,33 @@ export function WerewolfRoomOverview({
                         <Flag className="h-4 w-4" />
                         {t.finishGame}
                       </button>
+                    ) : judgeIsViewer &&
+                      room.status === "FINISHED" &&
+                      judgeSeat?.privateToken ? (
+                      <form
+                        action={startAction}
+                        onSubmit={(event) => {
+                          if (!canSubmitOnline(event)) {
+                            return;
+                          }
+
+                          if (!window.confirm(t.nextRoundConfirm)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <input name="locale" type="hidden" value={locale} />
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={judgeSeat.privateToken}
+                        />
+                        <NextRoundSubmitButton
+                          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                          disabled={!allSeatsReady}
+                          label={t.nextRound}
+                        />
+                      </form>
                     ) : !judgeIsViewer ? (
                       <Link
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3]"
@@ -3110,20 +3141,45 @@ export function WerewolfRoomOverview({
               </div>
             </div>
 
-            <div className="border-t border-[#E3DFCE] p-4">
+            <div
+              className={`grid gap-2 border-t border-[#E3DFCE] p-4 ${
+                judgeIsViewer && judgeSeat?.privateToken
+                  ? "grid-cols-2"
+                  : "grid-cols-1"
+              }`}
+            >
+              {judgeIsViewer && judgeSeat?.privateToken ? (
+                <form
+                  action={startAction}
+                  onSubmit={(event) => {
+                    if (!canSubmitOnline(event)) {
+                      return;
+                    }
+
+                    if (!window.confirm(t.nextRoundConfirm)) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgeSeat.privateToken}
+                  />
+                  <NextRoundSubmitButton
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#176B45] px-3 text-sm font-bold text-white transition hover:bg-[#125739] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={!allSeatsReady}
+                    label={t.nextRound}
+                  />
+                </form>
+              ) : null}
               <button
-                className="h-11 w-full rounded-full bg-[#176B45] text-sm font-bold text-white transition hover:bg-[#125739]"
-                onClick={() => {
-                  setResultDialogOpen(false);
-                  if (canExitRoom) {
-                    setExitDialogOpen(true);
-                  } else {
-                    router.push(werewolfHomeHref);
-                  }
-                }}
+                className="h-11 w-full rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-bold text-[#153B31] transition hover:bg-[#F7FAF4]"
+                onClick={() => setResultDialogOpen(false)}
                 type="button"
               >
-                {canExitRoom ? t.exitGame : t.resultDialogClose}
+                {t.stayInRoom}
               </button>
             </div>
           </section>

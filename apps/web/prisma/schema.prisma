@@ -2293,6 +2293,7 @@ model GameToolPlayerRecord {
   roleAlignment String?
   result        String?
   isJudge       Boolean      @default(false)
+  roundNumber   Int          @default(1)
   playedAt      DateTime     @default(now())
   metadata      Json?
   room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -2300,7 +2301,7 @@ model GameToolPlayerRecord {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@unique([roomId, profileId])
+  @@unique([roomId, profileId, roundNumber])
   @@index([profileId, kind, playedAt])
   @@index([roomId])
 }
