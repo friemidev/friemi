@@ -326,7 +326,10 @@ function shuffleRoles(roles: WerewolfRoleKey[]) {
   return shuffled;
 }
 
-function buildStartedWerewolfRoomState(now: Date): WerewolfRoomState {
+function buildStartedWerewolfRoomState(
+  now: Date,
+  roundNumber: number,
+): WerewolfRoomState {
   const timestamp = now.toISOString();
 
   return {
@@ -335,6 +338,7 @@ function buildStartedWerewolfRoomState(now: Date): WerewolfRoomState {
     lockedAt: timestamp,
     phase: "IN_PROGRESS",
     resultRecordedAt: null,
+    roundNumber,
     sheriffSeatNumber: null,
     startedAt: timestamp,
     winner: null,
@@ -2000,7 +2004,7 @@ export async function startWerewolfRoomAction(
       return { formError: t.notJudge };
     }
 
-    if (room.status !== "LOBBY") {
+    if (room.status !== "LOBBY" && room.status !== "FINISHED") {
       return { formError: t.notLobby };
     }
 
@@ -2052,17 +2056,21 @@ export async function startWerewolfRoomAction(
       }
     }
 
+    const currentState = normalizeWerewolfRoomState(room.state);
+    const isNextRound = room.status === "FINISHED";
+    const roundNumber = isNextRound
+      ? currentState.roundNumber + 1
+      : currentState.roundNumber;
     const now = new Date();
     const roleDeck = shuffleRoles(variant.roles);
-    const roleUpdates = playerSeats.map((seat, index) => {
+    const roleAssignments = playerSeats.map((seat, index) => {
       const roleKey = roleDeck[index];
 
       if (!roleKey) {
         throw new Error("Missing Werewolf role assignment");
       }
 
-      return prisma.gameToolSeat.update({
-        where: { id: seat.id },
+      return {
         data: {
           privatePayload: createWerewolfPrivatePayload({
             locale: room.locale,
@@ -2072,43 +2080,66 @@ export async function startWerewolfRoomAction(
           roleAlignment: werewolfRoleAlignments[roleKey],
           roleKey,
         },
-      });
+        seatId: seat.id,
+      };
     });
 
-    await prisma.$transaction([
-      ...roleUpdates,
-      prisma.gameToolSeat.update({
+    const didStart = await prisma.$transaction(async (tx) => {
+      const updatedRoom = await tx.gameToolRoom.updateMany({
+        where: { id: room.id, status: room.status },
+        data: {
+          finishedAt: null,
+          revision: { increment: 1 },
+          startedAt: now,
+          state: {
+            ...currentState,
+            ...buildStartedWerewolfRoomState(now, roundNumber),
+          },
+          status: "IN_PROGRESS",
+        },
+      });
+
+      if (updatedRoom.count !== 1) {
+        return false;
+      }
+
+      await Promise.all(
+        roleAssignments.map((assignment) =>
+          tx.gameToolSeat.update({
+            where: { id: assignment.seatId },
+            data: assignment.data,
+          }),
+        ),
+      );
+      await tx.gameToolSeat.update({
         where: { id: judgeSeat.id },
         data: {
           privatePayload: Prisma.JsonNull,
           roleAlignment: null,
           roleKey: null,
         },
-      }),
-      prisma.gameToolRoom.update({
-        where: { id: room.id },
-        data: {
-          startedAt: now,
-          state: {
-            ...normalizeWerewolfRoomState(room.state),
-            ...buildStartedWerewolfRoomState(now),
-          },
-          status: "IN_PROGRESS",
-        },
-      }),
-      prisma.gameToolEvent.create({
+      });
+      await tx.gameToolEvent.create({
         data: {
           actorId: judgeSeat.profileId,
           payload: {
             playerSeatCount: variant.playerSeatCount,
+            roundNumber,
+            startedFromFinishedRoom: isNextRound,
             totalSeats: variant.totalSeats,
             variantKey: variant.key,
           },
           roomId: room.id,
           type: "werewolf_room_started",
         },
-      }),
-    ]);
+      });
+
+      return true;
+    });
+
+    if (!didStart) {
+      return { formError: t.startFailed };
+    }
 
     await revalidateWerewolfRoom({
       locale: result.data.locale,
@@ -2556,6 +2587,7 @@ export async function finishWerewolfRoomAction(
           payload: {
             finishedAt: finishedAt.toISOString(),
             judgeSeatNumber: judgeSeat.seatNumber,
+            roundNumber: currentState.roundNumber,
             results: eventPlayerResults,
             terminated: wasTerminated,
             winner,
@@ -2568,9 +2600,10 @@ export async function finishWerewolfRoomAction(
         recordInputs.map((record) =>
           tx.gameToolPlayerRecord.upsert({
             where: {
-              roomId_profileId: {
+              roomId_profileId_roundNumber: {
                 profileId: record.profileId,
                 roomId: room.id,
+                roundNumber: currentState.roundNumber,
               },
             },
             create: {
@@ -2578,6 +2611,7 @@ export async function finishWerewolfRoomAction(
               metadata: {
                 displayName: record.displayName,
                 roomCode: room.code,
+                roundNumber: currentState.roundNumber,
                 winner,
               },
               isJudge: record.isJudge,
@@ -2586,6 +2620,7 @@ export async function finishWerewolfRoomAction(
               result: record.result,
               roleAlignment: record.roleAlignment,
               roleKey: record.roleKey,
+              roundNumber: currentState.roundNumber,
               roomId: room.id,
               seatNumber: record.seatNumber,
               variantKey: variant.key,
@@ -2596,6 +2631,7 @@ export async function finishWerewolfRoomAction(
               metadata: {
                 displayName: record.displayName,
                 roomCode: room.code,
+                roundNumber: currentState.roundNumber,
                 winner,
               },
               isJudge: record.isJudge,
@@ -2603,6 +2639,7 @@ export async function finishWerewolfRoomAction(
               result: record.result,
               roleAlignment: record.roleAlignment,
               roleKey: record.roleKey,
+              roundNumber: currentState.roundNumber,
               seatNumber: record.seatNumber,
               variantKey: variant.key,
               variantName,
@@ -2873,7 +2910,10 @@ export async function runWerewolfTestBotAction(
               startedAt: now,
               state: {
                 ...normalizeWerewolfRoomState(room.state),
-                ...buildStartedWerewolfRoomState(now),
+                ...buildStartedWerewolfRoomState(
+                  now,
+                  normalizeWerewolfRoomState(room.state).roundNumber,
+                ),
               },
               status: "IN_PROGRESS",
             },
