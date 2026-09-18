@@ -7,7 +7,12 @@ import {
   type PollActionState,
 } from "../actions/pollActions";
 import { getPollCopy } from "../copy";
-import { MAX_POLL_OPTIONS, MIN_POLL_OPTIONS } from "../pollRules";
+import {
+  DEFAULT_POLL_RESULT_VISIBILITY,
+  DEFAULT_POLL_VOTER_VISIBILITY,
+  MAX_POLL_OPTIONS,
+  MIN_POLL_OPTIONS,
+} from "../pollRules";
 
 const initialState: PollActionState = {};
 
@@ -31,11 +36,11 @@ export function PollCreateForm({
   );
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={action} className="space-y-5">
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 
-      <section className="space-y-4 rounded-lg border border-[#E3DFD0] bg-white p-4 shadow-[0_8px_24px_rgba(21,98,64,0.04)]">
+      <section className="space-y-4 border-b border-[#E8E5D8] pb-5">
         <label className="block space-y-2">
           <span className="text-sm font-bold text-[#1D1D1B]">
             {copy.question}
@@ -62,7 +67,7 @@ export function PollCreateForm({
         </label>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-[#E3DFD0] bg-white p-4">
+      <section className="space-y-4 border-b border-[#E8E5D8] pb-5">
         <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#F3F5EE] p-1">
           {(["SINGLE_CHOICE", "MULTIPLE_CHOICE"] as const).map((value) => (
             <label
@@ -93,42 +98,51 @@ export function PollCreateForm({
               {options.length}/{MAX_POLL_OPTIONS}
             </span>
           </div>
-          {options.map((option, index) => (
-            <div className="flex items-center gap-2" key={index}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-xs font-black text-[#156240]">
-                {index + 1}
-              </span>
-              <input
-                className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#D8D7C5] px-3 text-sm font-semibold outline-none focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/15"
-                maxLength={80}
-                name="option"
-                onChange={(event) =>
-                  setOptions((current) =>
-                    current.map((value, optionIndex) =>
-                      optionIndex === index ? event.target.value : value,
-                    ),
-                  )
-                }
-                placeholder={`${copy.option} ${index + 1}`}
-                required={index < MIN_POLL_OPTIONS}
-                value={option}
-              />
-              {options.length > MIN_POLL_OPTIONS ? (
-                <button
-                  aria-label={`${copy.option} ${index + 1}`}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#A34242] transition hover:bg-[#FFF0ED]"
-                  onClick={() =>
+          <div className="overflow-hidden border-y border-[#E3DFD0] bg-white">
+            {options.map((option, index) => (
+              <div
+                className={`flex min-h-12 items-center gap-2 px-1 ${
+                  index > 0 ? "border-t border-[#EEEBDD]" : ""
+                }`}
+                key={index}
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-xs font-black text-[#156240]">
+                  {index + 1}
+                </span>
+                <input
+                  className="min-h-12 min-w-0 flex-1 border-0 bg-transparent px-2 text-sm font-semibold outline-none placeholder:text-[#92978F]"
+                  maxLength={80}
+                  name="option"
+                  onChange={(event) =>
                     setOptions((current) =>
-                      current.filter((_, optionIndex) => optionIndex !== index),
+                      current.map((value, optionIndex) =>
+                        optionIndex === index ? event.target.value : value,
+                      ),
                     )
                   }
-                  type="button"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          ))}
+                  placeholder={`${copy.option} ${index + 1}`}
+                  required={index < MIN_POLL_OPTIONS}
+                  value={option}
+                />
+                {options.length > MIN_POLL_OPTIONS ? (
+                  <button
+                    aria-label={`${copy.option} ${index + 1}`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#A34242] transition hover:bg-[#FFF0ED]"
+                    onClick={() =>
+                      setOptions((current) =>
+                        current.filter(
+                          (_, optionIndex) => optionIndex !== index,
+                        ),
+                      )
+                    }
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
           {options.length < MAX_POLL_OPTIONS ? (
             <button
               className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-bold text-[#156240] transition hover:bg-[#F2F8F3]"
@@ -156,7 +170,7 @@ export function PollCreateForm({
         ) : null}
       </section>
 
-      <section className="space-y-4 rounded-lg border border-[#E3DFD0] bg-white p-4">
+      <section className="space-y-3">
         <label className="block space-y-2 text-sm font-bold text-[#1D1D1B]">
           <span>{copy.deadlineOptional}</span>
           <input
@@ -168,8 +182,8 @@ export function PollCreateForm({
         <label className="block space-y-2 text-sm font-bold text-[#1D1D1B]">
           <span>{copy.resultVisibility}</span>
           <select
-            className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 font-medium outline-none focus:border-[#369758]"
-            defaultValue="AFTER_VOTE"
+            className="min-h-11 w-full border-0 border-b border-[#D8D7C5] bg-transparent px-1 font-medium outline-none focus:border-[#369758]"
+            defaultValue={DEFAULT_POLL_RESULT_VISIBILITY}
             name="resultVisibility"
           >
             <option value="AFTER_VOTE">{copy.resultAfterVote}</option>
@@ -181,8 +195,8 @@ export function PollCreateForm({
         <label className="block space-y-2 text-sm font-bold text-[#1D1D1B]">
           <span>{copy.voterVisibility}</span>
           <select
-            className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 font-medium outline-none focus:border-[#369758]"
-            defaultValue="COUNTS_ONLY"
+            className="min-h-11 w-full border-0 border-b border-[#D8D7C5] bg-transparent px-1 font-medium outline-none focus:border-[#369758]"
+            defaultValue={DEFAULT_POLL_VOTER_VISIBILITY}
             name="voterVisibility"
           >
             <option value="COUNTS_ONLY">{copy.voterCountsOnly}</option>

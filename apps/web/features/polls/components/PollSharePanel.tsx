@@ -14,16 +14,11 @@ const initialState: PollActionState = {};
 
 export function PollSharePanel({
   initialAudience,
-  initialGuestIdentityMode,
   locale,
   pollId,
   shareActive,
 }: {
   initialAudience: "MEMBERS_ONLY" | "SIGNED_IN_WITH_LINK" | "ANYONE_WITH_LINK";
-  initialGuestIdentityMode:
-    | "NICKNAME_REQUIRED"
-    | "NICKNAME_OPTIONAL_ANONYMOUS"
-    | null;
   locale: string;
   pollId: string;
   shareActive: boolean;
@@ -82,18 +77,14 @@ export function PollSharePanel({
   }
 
   return (
-    <section className="space-y-4 rounded-lg border border-[#DADCC5] bg-[#FBFCF6] p-4">
-      <div className="flex items-center gap-2">
-        <Share2 className="h-4 w-4 text-[#156240]" />
-        <h2 className="text-sm font-black text-[#1D1D1B]">{copy.shareTitle}</h2>
-      </div>
-      <form action={action} className="space-y-3">
+    <section className="space-y-4">
+      <form action={action} className="space-y-2">
         <input name="locale" type="hidden" value={locale} />
         <input name="pollId" type="hidden" value={pollId} />
         <label className="block text-xs font-bold text-[#607268]">
           <span className="sr-only">{copy.shareTitle}</span>
           <select
-            className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 text-sm font-semibold text-[#1D1D1B] outline-none focus:border-[#369758]"
+            className="min-h-10 w-full border-0 border-b border-[#D8D7C5] bg-transparent px-1 text-sm font-semibold text-[#1D1D1B] outline-none focus:border-[#369758]"
             name="audience"
             onChange={(event) =>
               setAudience(
@@ -111,16 +102,9 @@ export function PollSharePanel({
           </select>
         </label>
         {audience === "ANYONE_WITH_LINK" ? (
-          <select
-            className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 text-sm font-semibold text-[#1D1D1B] outline-none focus:border-[#369758]"
-            defaultValue={initialGuestIdentityMode ?? "NICKNAME_REQUIRED"}
-            name="guestIdentityMode"
-          >
-            <option value="NICKNAME_REQUIRED">{copy.nicknameRequired}</option>
-            <option value="NICKNAME_OPTIONAL_ANONYMOUS">
-              {copy.nicknameOptional}
-            </option>
-          </select>
+          <p className="px-1 py-1 text-[11px] font-semibold text-[#607268]">
+            {copy.nicknameRequired}
+          </p>
         ) : null}
         <button
           className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-bold text-white disabled:opacity-60"
@@ -141,7 +125,7 @@ export function PollSharePanel({
         <p className="text-sm font-semibold text-[#9D332B]">{state.error}</p>
       ) : null}
       {active ? (
-        <form action={revokeAction} className="border-t border-[#E3DFD0] pt-3">
+        <form action={revokeAction} className="border-t border-[#E8E5D8] pt-3">
           <input name="locale" type="hidden" value={locale} />
           <input name="pollId" type="hidden" value={pollId} />
           <button
@@ -167,8 +151,8 @@ export function PollSharePanel({
         </p>
       ) : null}
       {shareUrl ? (
-        <div className="space-y-3 border-t border-[#E3DFD0] pt-4">
-          <div className="overflow-hidden rounded-lg border border-[#D8D7C5] bg-white px-3 py-2 text-xs text-[#607268]">
+        <div className="space-y-3 border-t border-[#E8E5D8] pt-4">
+          <div className="overflow-hidden bg-[#F5F7F2] px-3 py-2 text-xs text-[#607268]">
             <p className="truncate">{shareUrl}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -194,7 +178,7 @@ export function PollSharePanel({
             </button>
           </div>
           {qrDataUrl ? (
-            <div className="mx-auto w-full max-w-[250px] rounded-lg border border-[#E3DFD0] bg-white p-3">
+            <div className="mx-auto w-full max-w-[230px] bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt={copy.shareQr}

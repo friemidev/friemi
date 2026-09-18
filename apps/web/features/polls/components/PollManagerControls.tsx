@@ -35,14 +35,16 @@ export function PollManagerControls({
   }, [finalState.ok, router, statusState.ok]);
 
   return (
-    <section className="space-y-3 rounded-lg border border-[#E3DFD0] bg-white p-4">
-      <h2 className="text-sm font-black text-[#1D1D1B]">{copy.manage}</h2>
-      <form action={statusAction} className="grid grid-cols-2 gap-2">
+    <section className="space-y-4">
+      <form
+        action={statusAction}
+        className="grid grid-cols-2 divide-x divide-[#E8E5D8] border-y border-[#E8E5D8]"
+      >
         <input name="locale" type="hidden" value={locale} />
         <input name="pollId" type="hidden" value={poll.id} />
         {poll.effectiveStatus === "OPEN" ? (
           <button
-            className="min-h-10 rounded-full border border-[#D3BEB9] text-xs font-bold text-[#8E3F37] disabled:opacity-60"
+            className="min-h-11 text-xs font-bold text-[#8E3F37] transition hover:bg-[#FFF5F2] disabled:opacity-60"
             disabled={statusPending}
             name="intent"
             type="submit"
@@ -52,7 +54,7 @@ export function PollManagerControls({
           </button>
         ) : poll.status !== "CANCELLED" ? (
           <button
-            className="min-h-10 rounded-full border border-[#B8CDBB] text-xs font-bold text-[#156240] disabled:opacity-60"
+            className="min-h-11 text-xs font-bold text-[#156240] transition hover:bg-[#F2F8F3] disabled:opacity-60"
             disabled={statusPending}
             name="intent"
             type="submit"
@@ -63,13 +65,13 @@ export function PollManagerControls({
         ) : null}
         {poll.status !== "CANCELLED" ? (
           <button
-            className="min-h-10 rounded-full border border-[#E3DFD0] text-xs font-bold text-[#6D625D] disabled:opacity-60"
+            className="min-h-11 text-xs font-bold text-[#6D625D] transition hover:bg-[#F5F5F0] disabled:opacity-60"
             disabled={statusPending}
             name="intent"
             type="submit"
             value="cancel"
           >
-            {copy.cancelled}
+            {copy.cancel}
           </button>
         ) : null}
       </form>
@@ -81,7 +83,7 @@ export function PollManagerControls({
 
       <form
         action={finalAction}
-        className="space-y-2 border-t border-[#EEEBDD] pt-3"
+        className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2"
       >
         <input name="locale" type="hidden" value={locale} />
         <input name="pollId" type="hidden" value={poll.id} />
@@ -104,14 +106,14 @@ export function PollManagerControls({
           </select>
         </label>
         <button
-          className="min-h-10 w-full rounded-full bg-[#F1F2E3] text-xs font-black text-[#1D1D1B] disabled:opacity-60"
+          className="min-h-10 rounded-lg bg-[#F1F2E3] px-4 text-xs font-black text-[#1D1D1B] disabled:opacity-60"
           disabled={finalPending}
           type="submit"
         >
           {copy.finalDecision}
         </button>
         {finalState.error ? (
-          <p className="text-xs font-semibold text-[#9D332B]">
+          <p className="col-span-2 text-xs font-semibold text-[#9D332B]">
             {finalState.error}
           </p>
         ) : null}

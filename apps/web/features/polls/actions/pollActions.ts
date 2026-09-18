@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
   ActivityPollAudience,
-  ActivityPollGuestIdentityMode,
   ActivityPollKind,
   ActivityPollResultVisibility,
   ActivityPollVoterVisibility,
@@ -22,6 +21,7 @@ import { getPollCopy } from "../copy";
 import {
   MAX_POLL_OPTIONS,
   MIN_POLL_OPTIONS,
+  POLL_GUEST_IDENTITY_MODE,
   isValidPollSelection,
   normalizePollOptions,
 } from "../pollRules";
@@ -60,10 +60,6 @@ const audienceSchema = z.enum([
   "MEMBERS_ONLY",
   "SIGNED_IN_WITH_LINK",
   "ANYONE_WITH_LINK",
-]);
-const guestIdentityModeSchema = z.enum([
-  "NICKNAME_REQUIRED",
-  "NICKNAME_OPTIONAL_ANONYMOUS",
 ]);
 
 function getString(formData: FormData, key: string) {
@@ -246,7 +242,6 @@ export async function submitActivityPollVoteAction(
   const pollId = getString(formData, "pollId");
   const shareToken = getString(formData, "shareToken");
   const guestNickname = getString(formData, "guestNickname").slice(0, 30);
-  const anonymousConfirmed = formData.get("anonymousConfirmed") === "on";
   const selectedOptionIds = Array.from(
     new Set(getStrings(formData, "optionId")),
   );
@@ -299,7 +294,7 @@ export async function submitActivityPollVoteAction(
 
   let rawGuestToken: string | null = null;
   let guestKeyHash: string | null = null;
-  let isAnonymousGuest = false;
+  const isAnonymousGuest = false;
 
   if (!profile) {
     if (
@@ -310,17 +305,7 @@ export async function submitActivityPollVoteAction(
       return { error: copy.loginRequired };
     }
 
-    if (
-      poll.share.guestIdentityMode === "NICKNAME_REQUIRED" &&
-      !guestNickname
-    ) {
-      return { error: copy.invalid };
-    }
-
-    isAnonymousGuest =
-      poll.share.guestIdentityMode === "NICKNAME_OPTIONAL_ANONYMOUS" &&
-      !guestNickname;
-    if (isAnonymousGuest && !anonymousConfirmed) {
+    if (!guestNickname) {
       return { error: copy.invalid };
     }
     const cookieStore = await cookies();
@@ -478,9 +463,6 @@ export async function configureActivityPollShareAction(
   const audienceResult = audienceSchema.safeParse(
     getString(formData, "audience"),
   );
-  const guestModeResult = guestIdentityModeSchema.safeParse(
-    getString(formData, "guestIdentityMode"),
-  );
 
   if (!pollId || !audienceResult.success) return { error: copy.invalid };
 
@@ -491,12 +473,8 @@ export async function configureActivityPollShareAction(
   if (!access.isManager) return { error: copy.forbidden };
 
   const audience = audienceResult.data as ActivityPollAudience;
-  const guestIdentityMode: ActivityPollGuestIdentityMode | null =
-    audience === "ANYONE_WITH_LINK"
-      ? guestModeResult.success
-        ? (guestModeResult.data as ActivityPollGuestIdentityMode)
-        : "NICKNAME_REQUIRED"
-      : null;
+  const guestIdentityMode =
+    audience === "ANYONE_WITH_LINK" ? POLL_GUEST_IDENTITY_MODE : null;
   const rawToken = createPollBearerToken();
   const tokenHash = hashPollToken(rawToken);
 

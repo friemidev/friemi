@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   submitActivityPollVoteAction,
@@ -26,6 +26,7 @@ export function PollVoteForm({
   const [guestNickname, setGuestNickname] = useState(
     poll.viewerGuestNickname ?? "",
   );
+  const [showSavedToast, setShowSavedToast] = useState(false);
   const [voteState, voteAction, votePending] = useActionState(
     submitActivityPollVoteAction,
     initialState,
@@ -35,12 +36,23 @@ export function PollVoteForm({
     initialState,
   );
   const isGuest = Boolean(poll.shareToken && !poll.viewerIsAuthenticated);
-  const optionalGuestName =
-    isGuest && poll.share?.guestIdentityMode === "NICKNAME_OPTIONAL_ANONYMOUS";
 
   useEffect(() => {
-    if (voteState.ok || withdrawState.ok) router.refresh();
-  }, [router, voteState.ok, withdrawState.ok]);
+    if (!voteState.ok) return;
+
+    setShowSavedToast(true);
+    const refreshTimer = window.setTimeout(() => router.refresh(), 1600);
+    const hideTimer = window.setTimeout(() => setShowSavedToast(false), 1900);
+
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [router, voteState]);
+
+  useEffect(() => {
+    if (withdrawState.ok) router.refresh();
+  }, [router, withdrawState]);
 
   function toggleOption(optionId: string) {
     setSelected((current) => {
@@ -57,81 +69,100 @@ export function PollVoteForm({
 
   return (
     <div className="space-y-4">
-      <form action={voteAction} className="space-y-3">
+      <div
+        aria-live="polite"
+        className={`pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+1rem)] z-[110] flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-[0_12px_32px_rgba(21,98,64,0.28)] transition-all duration-300 ease-out sm:top-20 ${
+          showSavedToast
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-3 opacity-0"
+        }`}
+        role="status"
+      >
+        {showSavedToast ? (
+          <>
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            {copy.voteSuccess}
+          </>
+        ) : null}
+      </div>
+      <form action={voteAction} className="space-y-4">
         <input name="locale" type="hidden" value={locale} />
         <input name="pollId" type="hidden" value={poll.id} />
         {poll.shareToken ? (
           <input name="shareToken" type="hidden" value={poll.shareToken} />
         ) : null}
 
-        {poll.options.map((option) => {
-          const checked = selected.includes(option.id);
-          return (
-            <label
-              className={`relative block cursor-pointer overflow-hidden rounded-lg border p-4 transition ${
-                checked
-                  ? "border-[#369758] bg-[#F2F8F3]"
-                  : "border-[#E3DFD0] bg-white hover:border-[#AFC9B4]"
-              }`}
-              key={option.id}
-            >
-              {poll.resultVisible ? (
-                <span
-                  className="absolute inset-y-0 left-0 bg-[#DCEEDF]/55 transition-[width]"
-                  style={{ width: `${option.percentage}%` }}
-                />
-              ) : null}
-              <span className="relative flex items-start gap-3">
-                <input
-                  checked={checked}
-                  className="sr-only"
-                  name="optionId"
-                  onChange={() => toggleOption(option.id)}
-                  type={poll.kind === "SINGLE_CHOICE" ? "radio" : "checkbox"}
-                  value={option.id}
-                />
-                <span
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
-                    poll.kind === "SINGLE_CHOICE" ? "rounded-full" : "rounded"
-                  } ${checked ? "border-[#156240] bg-[#156240] text-white" : "border-[#AEB7AE] bg-white"}`}
-                >
-                  {checked ? (
-                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                  ) : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="break-words text-sm font-bold text-[#1D1D1B]">
-                      {option.label}
+        <div className="overflow-hidden border-y border-[#E3DFD0] bg-white">
+          {poll.options.map((option, optionIndex) => {
+            const checked = selected.includes(option.id);
+            return (
+              <label
+                className={`relative block cursor-pointer overflow-hidden px-1 transition ${
+                  checked ? "bg-[#F2F8F3]" : "hover:bg-[#FAFBF7]"
+                } ${optionIndex > 0 ? "border-t border-[#EEEBDD]" : ""}`}
+                key={option.id}
+              >
+                {poll.resultVisible ? (
+                  <span
+                    className="absolute inset-y-0 left-0 bg-[#DCEEDF]/55 transition-[width]"
+                    style={{ width: `${option.percentage}%` }}
+                  />
+                ) : null}
+                {checked ? (
+                  <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-[#369758]" />
+                ) : null}
+                <span className="relative flex min-h-[58px] items-start gap-3 px-2 py-4">
+                  <input
+                    checked={checked}
+                    className="sr-only"
+                    name="optionId"
+                    onChange={() => toggleOption(option.id)}
+                    type={poll.kind === "SINGLE_CHOICE" ? "radio" : "checkbox"}
+                    value={option.id}
+                  />
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
+                      poll.kind === "SINGLE_CHOICE" ? "rounded-full" : "rounded"
+                    } ${checked ? "border-[#156240] bg-[#156240] text-white" : "border-[#AEB7AE] bg-white"}`}
+                  >
+                    {checked ? (
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="break-words text-sm font-bold leading-5 text-[#1D1D1B]">
+                        {option.label}
+                      </span>
+                      {poll.resultVisible ? (
+                        <span className="shrink-0 text-xs font-black leading-5 text-[#156240]">
+                          {option.count} · {option.percentage}%
+                        </span>
+                      ) : null}
                     </span>
-                    {poll.resultVisible ? (
-                      <span className="shrink-0 text-xs font-black text-[#156240]">
-                        {option.count} · {option.percentage}%
+                    {option.voters.length > 0 ? (
+                      <span className="mt-1 block text-[11px] leading-5 text-[#6E756F]">
+                        {option.voters
+                          .map((voter) =>
+                            voter === "ANONYMOUS_GUEST"
+                              ? copy.anonymous
+                              : voter,
+                          )
+                          .join(" · ")}
                       </span>
                     ) : null}
                   </span>
-                  {option.voters.length > 0 ? (
-                    <span className="mt-2 block text-[11px] leading-5 text-[#6E756F]">
-                      {option.voters
-                        .map((voter) =>
-                          voter === "ANONYMOUS_GUEST" ? copy.anonymous : voter,
-                        )
-                        .join(" · ")}
-                    </span>
-                  ) : null}
                 </span>
-              </span>
-            </label>
-          );
-        })}
+              </label>
+            );
+          })}
+        </div>
 
         {isGuest ? (
-          <div className="space-y-3 rounded-lg bg-[#F6F7F1] p-3">
+          <div className="space-y-3 border-y border-[#E3DFD0] bg-[#F6F7F1] px-3 py-4">
             <label className="block space-y-2">
               <span className="text-xs font-bold text-[#607268]">
-                {optionalGuestName
-                  ? copy.guestNicknameOptional
-                  : copy.guestNickname}
+                {copy.guestNickname}
               </span>
               <input
                 className="min-h-11 w-full rounded-lg border border-[#D8D7C5] bg-white px-3 text-sm outline-none focus:border-[#369758]"
@@ -139,24 +170,10 @@ export function PollVoteForm({
                 name="guestNickname"
                 onChange={(event) => setGuestNickname(event.target.value)}
                 placeholder={copy.guestNicknamePlaceholder}
-                required={!optionalGuestName}
+                required
                 value={guestNickname}
               />
             </label>
-            {optionalGuestName && !guestNickname.trim() ? (
-              <label className="flex cursor-pointer items-start gap-2 text-xs font-semibold leading-5 text-[#535A54]">
-                <input
-                  className="mt-1 h-4 w-4 accent-[#156240]"
-                  name="anonymousConfirmed"
-                  required
-                  type="checkbox"
-                />
-                {copy.anonymousConfirm}
-              </label>
-            ) : null}
-            <p className="text-[11px] leading-5 text-[#777E77]">
-              {copy.guestLimit}
-            </p>
           </div>
         ) : null}
 
@@ -170,7 +187,7 @@ export function PollVoteForm({
             {poll.viewerBallotId ? copy.update : copy.submit}
           </button>
         ) : (
-          <p className="rounded-lg bg-[#F3F4EE] px-4 py-3 text-center text-sm font-semibold text-[#687069]">
+          <p className="border-y border-[#E3DFD0] bg-[#F3F4EE] px-4 py-3 text-center text-sm font-semibold text-[#687069]">
             {poll.accessDeniedReason === "LOGIN_REQUIRED"
               ? copy.loginRequired
               : poll.accessDeniedReason === "MEMBER_REQUIRED"
@@ -183,10 +200,6 @@ export function PollVoteForm({
         {voteState.error ? (
           <p className="text-center text-sm font-semibold text-[#9D332B]">
             {voteState.error}
-          </p>
-        ) : voteState.ok ? (
-          <p className="text-center text-sm font-semibold text-[#156240]">
-            {copy.voteSuccess}
           </p>
         ) : null}
       </form>

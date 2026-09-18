@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DEFAULT_POLL_RESULT_VISIBILITY,
+  DEFAULT_POLL_VOTER_VISIBILITY,
   MAX_POLL_OPTIONS,
   MIN_POLL_OPTIONS,
+  POLL_GUEST_IDENTITY_MODE,
   isValidPollSelection,
   normalizePollOptions,
   resolveEffectivePollStatus,
@@ -11,6 +14,12 @@ import {
 test("poll option limits allow up to twenty choices", () => {
   assert.equal(MIN_POLL_OPTIONS, 2);
   assert.equal(MAX_POLL_OPTIONS, 20);
+});
+
+test("poll defaults expose totals after voting and require guest nicknames", () => {
+  assert.equal(DEFAULT_POLL_RESULT_VISIBILITY, "AFTER_VOTE");
+  assert.equal(DEFAULT_POLL_VOTER_VISIBILITY, "COUNTS_ONLY");
+  assert.equal(POLL_GUEST_IDENTITY_MODE, "NICKNAME_REQUIRED");
 });
 
 test("poll options are trimmed, deduplicated, and length bounded", () => {

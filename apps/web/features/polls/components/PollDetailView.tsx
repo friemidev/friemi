@@ -8,8 +8,7 @@ import {
 } from "lucide-react";
 import { getPollCopy } from "../copy";
 import type { ActivityPollViewData } from "../server/pollService";
-import { PollManagerControls } from "./PollManagerControls";
-import { PollSharePanel } from "./PollSharePanel";
+import { PollOwnerTools } from "./PollOwnerTools";
 import { PollVoteForm } from "./PollVoteForm";
 
 function formatDate(locale: string, value: string) {
@@ -40,8 +39,8 @@ export function PollDetailView({
         : copy.closed;
 
   return (
-    <div className="space-y-5">
-      <header className="grid grid-cols-[42px_minmax(0,1fr)_42px] items-center">
+    <div className="space-y-4">
+      <header className="grid grid-cols-[42px_minmax(0,1fr)_42px] items-center border-b border-[#E8E5D8] pb-4">
         <Link
           aria-label={copy.back}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3DFD0] bg-white text-[#156240]"
@@ -60,7 +59,7 @@ export function PollDetailView({
         <span />
       </header>
 
-      <section className="rounded-lg border border-[#E3DFD0] bg-white p-5 shadow-[0_10px_30px_rgba(21,98,64,0.05)]">
+      <section className="px-1 pb-2 pt-1">
         <div className="flex items-center justify-between gap-3">
           <span
             className={`rounded-full px-3 py-1 text-[11px] font-black ${
@@ -76,9 +75,9 @@ export function PollDetailView({
             {poll.participantCount} {copy.people}
           </span>
         </div>
-        <div className="mt-5 flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240]">
-            <Vote className="h-5 w-5" />
+        <div className="mt-5 flex items-start gap-3.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240]">
+            <Vote className="h-[18px] w-[18px]" />
           </span>
           <div className="min-w-0">
             <h2 className="break-words text-xl font-black leading-7 text-[#1D1D1B]">
@@ -91,7 +90,7 @@ export function PollDetailView({
             ) : null}
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-[#EEEBDD] pt-3 text-[11px] font-semibold text-[#777E77]">
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 pl-[50px] text-[11px] font-semibold text-[#777E77]">
           <span>
             {poll.kind === "SINGLE_CHOICE" ? copy.single : copy.multiple}
           </span>
@@ -105,7 +104,7 @@ export function PollDetailView({
       </section>
 
       {finalOption ? (
-        <section className="flex items-start gap-3 rounded-lg border border-[#AFC9B4] bg-[#F2F8F3] p-4">
+        <section className="flex items-start gap-3 border-l-2 border-[#369758] bg-[#F2F8F3] px-4 py-3">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#156240]" />
           <div>
             <p className="text-xs font-bold text-[#607268]">
@@ -121,23 +120,12 @@ export function PollDetailView({
       <PollVoteForm locale={locale} poll={poll} />
 
       {!poll.resultVisible ? (
-        <p className="rounded-lg bg-[#F4F5EF] px-4 py-3 text-center text-xs font-semibold text-[#697069]">
+        <p className="border-y border-[#E8E5D8] px-4 py-3 text-center text-xs font-semibold text-[#697069]">
           {copy.noResults}
         </p>
       ) : null}
 
-      {poll.canManage ? (
-        <>
-          <PollSharePanel
-            initialAudience={poll.share?.audience ?? "MEMBERS_ONLY"}
-            initialGuestIdentityMode={poll.share?.guestIdentityMode ?? null}
-            locale={locale}
-            pollId={poll.id}
-            shareActive={poll.share?.active ?? false}
-          />
-          <PollManagerControls locale={locale} poll={poll} />
-        </>
-      ) : null}
+      {poll.canManage ? <PollOwnerTools locale={locale} poll={poll} /> : null}
     </div>
   );
 }

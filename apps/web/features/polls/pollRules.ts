@@ -2,6 +2,9 @@ import type { ActivityPollKind, ActivityPollStatus } from "@prisma/client";
 
 export const MIN_POLL_OPTIONS = 2;
 export const MAX_POLL_OPTIONS = 20;
+export const DEFAULT_POLL_RESULT_VISIBILITY = "AFTER_VOTE" as const;
+export const DEFAULT_POLL_VOTER_VISIBILITY = "COUNTS_ONLY" as const;
+export const POLL_GUEST_IDENTITY_MODE = "NICKNAME_REQUIRED" as const;
 
 export function normalizePollOptions(values: string[]) {
   const seen = new Set<string>();
