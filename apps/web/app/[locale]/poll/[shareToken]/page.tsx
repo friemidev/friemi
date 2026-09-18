@@ -2,19 +2,83 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PollDetailView } from "@/features/polls/components/PollDetailView";
-import { getSharedActivityPollView } from "@/features/polls/server/pollService";
+import {
+  getSharedActivityPollMetadata,
+  getSharedActivityPollView,
+} from "@/features/polls/server/pollService";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import {
+  buildCanonicalUrl,
+  buildDetailShareMetadata,
+  getCanonicalMetadataBaseUrl,
+} from "@/lib/share-metadata";
 import { withLocale } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  robots: { follow: false, index: false },
-};
-
 type PageProps = {
   params: Promise<{ locale: string; shareToken: string }>;
 };
+
+function getPollShareDescription({
+  activityTitle,
+  description,
+  locale,
+}: {
+  activityTitle: string;
+  description: string | null;
+  locale: string;
+}) {
+  const detail = description?.trim();
+
+  if (locale === "fr") {
+    return detail
+      ? `Sondage de « ${activityTitle} » : ${detail}`
+      : `Participez au sondage de « ${activityTitle} ».`;
+  }
+
+  if (locale === "en") {
+    return detail
+      ? `Poll for “${activityTitle}”: ${detail}`
+      : `Open the poll for “${activityTitle}” and cast your vote.`;
+  }
+
+  return detail
+    ? `「${activityTitle}」投票：${detail}`
+    : `参与「${activityTitle}」的投票，打开链接进行选择。`;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale, shareToken } = await params;
+  const canonicalUrl = buildCanonicalUrl(
+    getCanonicalMetadataBaseUrl(),
+    withLocale(locale, `/poll/${shareToken}`),
+  );
+  const poll = await getSharedActivityPollMetadata(shareToken);
+
+  if (!poll) {
+    return {
+      alternates: { canonical: canonicalUrl },
+      robots: { follow: false, index: false },
+      title: "Friemi",
+    };
+  }
+
+  return {
+    ...buildDetailShareMetadata({
+      canonicalUrl,
+      coverImageUrl: poll.coverImageUrl,
+      description: getPollShareDescription({
+        activityTitle: poll.activityTitle,
+        description: poll.description,
+        locale,
+      }),
+      title: poll.question,
+    }),
+    alternates: { canonical: canonicalUrl },
+    robots: { follow: false, index: false },
+  };
+}
 
 export default async function SharedActivityPollPage({ params }: PageProps) {
   const { locale, shareToken } = await params;

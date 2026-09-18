@@ -876,6 +876,9 @@ export function WerewolfRoomOverview({
   const [pendingSheriffSeatNumber, setPendingSheriffSeatNumber] = useState<
     number | null
   >(null);
+  const [managedSeatNumber, setManagedSeatNumber] = useState<number | null>(
+    null,
+  );
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const t = getCopy(locale);
   const selectedAtmosphere = getWerewolfAtmosphereById(selectedAtmosphereId);
@@ -1342,6 +1345,7 @@ export function WerewolfRoomOverview({
 
     if (previousStatus !== "FINISHED" && room.status === "FINISHED") {
       setFinishDialogOpen(false);
+      setManagedSeatNumber(null);
       setPendingDeathSeatNumber(null);
       setPendingSheriffSeatNumber(null);
       setResultDialogOpen(true);
@@ -1556,6 +1560,12 @@ export function WerewolfRoomOverview({
           (seat) =>
             seat.seatNumber === pendingSheriffSeatNumber && seat.isClaimed,
         ) ?? null);
+  const managedSeat =
+    managedSeatNumber === null
+      ? null
+      : (playerSeats.find(
+          (seat) => seat.seatNumber === managedSeatNumber && seat.isClaimed,
+        ) ?? null);
   const pendingSheriffIsCurrent = Boolean(
     pendingSheriffSeat &&
     room.state.sheriffSeatNumber === pendingSheriffSeat.seatNumber,
@@ -1573,6 +1583,13 @@ export function WerewolfRoomOverview({
       : room.status === "IN_PROGRESS"
         ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
         : room.variant.label;
+  const leftPlayerSeats = playerSeats.filter((_, index) => index % 2 === 0);
+  const rightPlayerSeats = playerSeats.filter((_, index) => index % 2 === 1);
+  const arenaRowCount = Math.max(
+    leftPlayerSeats.length,
+    rightPlayerSeats.length,
+  );
+  const arenaMinHeightRem = Math.max(34, 12 + arenaRowCount * 6.25);
 
   const renderClaimedSeatAvatar = (seat: WerewolfSeat, className: string) => {
     const avatar = (
@@ -1912,25 +1929,276 @@ export function WerewolfRoomOverview({
     );
   };
 
+  const renderArenaSeatNode = (
+    seat: WerewolfSeat,
+    side: "left" | "right",
+    rowIndex: number,
+    sideCount: number,
+  ) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+    const isSheriff = room.state.sheriffSeatNumber === seat.seatNumber;
+    const emptySeatActionLabel = room.currentMember?.seatedSeatNumber
+      ? t.changeSeat
+      : t.selectSeat;
+    const showRoleIdentity =
+      !isLobby &&
+      seat.isClaimed &&
+      (judgeIsViewer || room.status === "FINISHED");
+    const topPercent =
+      sideCount <= 1 ? 52 : 22 + (rowIndex / (sideCount - 1)) * 64;
+    const sidePositionClass = side === "left" ? "left-[4%]" : "right-[4%]";
+    const directionClass =
+      side === "left" ? "flex-row-reverse text-right" : "flex-row text-left";
+    const avatarClassName = `h-14 w-14 border-2 text-sm shadow-[0_8px_20px_rgba(0,0,0,0.34)] ${
+      seat.isDead
+        ? "border-white/35 grayscale opacity-60"
+        : "border-[#F1F2E3]"
+    }`;
+
+    if (!seat.isClaimed && isLobby && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          className={`absolute z-20 w-[31%] max-w-[7.5rem] -translate-y-1/2 ${sidePositionClass}`}
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+          style={{ top: `${topPercent}%` }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            aria-label={`${emptySeatActionLabel} ${seat.seatNumber}`}
+            className={`group flex w-full items-center gap-1.5 text-white transition active:scale-95 ${directionClass}`}
+            type="submit"
+          >
+            <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-dashed border-[#F1F2E3] bg-[#082E28]/88 text-sm font-bold text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.34)] friemi-tabular">
+              {seat.seatNumber}
+              <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-md">
+                <Plus className="h-3 w-3 transition group-hover:scale-110" />
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[11px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                {t.empty}
+              </span>
+              <span className="mt-0.5 block text-[9px] font-semibold text-white/70">
+                {emptySeatActionLabel}
+              </span>
+            </span>
+          </button>
+        </form>
+      );
+    }
+
+    const avatar = seat.isClaimed ? (
+      canJudgeControlPlayers ? (
+        <button
+          aria-label={`${t.judgeControls}: ${seat.displayName}`}
+          className="relative shrink-0 rounded-full transition active:scale-95"
+          onClick={() => setManagedSeatNumber(seat.seatNumber)}
+          type="button"
+        >
+          <WerewolfAvatar
+            avatarLabel={seat.avatarLabel}
+            avatarUrl={seat.avatarUrl}
+            className={avatarClassName}
+          />
+        </button>
+      ) : (
+        renderClaimedSeatAvatar(seat, avatarClassName)
+      )
+    ) : (
+      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-dashed border-[#F1F2E3] bg-[#082E28]/86 text-sm font-bold text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.34)] friemi-tabular">
+        {seat.seatNumber}
+      </span>
+    );
+
+    return (
+      <div
+        className={`absolute z-20 flex w-[31%] max-w-[7.5rem] -translate-y-1/2 items-center gap-1.5 ${directionClass} ${sidePositionClass}`}
+        key={seat.id}
+        style={{ top: `${topPercent}%` }}
+      >
+        <div
+          className={`relative shrink-0 rounded-full bg-[#F1F2E3]/14 p-0.5 shadow-[0_7px_20px_rgba(0,0,0,0.32)] ring-2 ${
+            isCurrentSeat
+              ? "ring-[#76D6A3] ring-offset-2 ring-offset-[#082E28]"
+              : "ring-[#F1F2E3]/80"
+          }`}
+        >
+          {avatar}
+          {isSheriff ? (
+            <span
+              aria-label={t.setSheriff}
+              className="absolute -right-1 -top-1 z-30 grid h-5 w-5 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-md ring-1 ring-white/75"
+              title={t.setSheriff}
+            >
+              <Crown className="h-3 w-3" />
+            </span>
+          ) : null}
+          <span
+            className={`absolute -bottom-1 z-30 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-bold text-[#153B31] shadow-md friemi-tabular ${
+              side === "left" ? "-left-1" : "-right-1"
+            }`}
+          >
+            {seat.seatNumber}
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`truncate text-[11px] font-bold leading-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] ${
+              seat.isDead ? "text-white/48" : "text-white"
+            }`}
+          >
+            {seat.isClaimed ? seat.displayName : t.empty}
+          </p>
+          <div
+            className={`mt-0.5 flex min-w-0 flex-wrap items-center gap-1 ${
+              side === "left" ? "justify-end" : ""
+            }`}
+          >
+            {showRoleIdentity ? (
+              <span className="max-w-full truncate rounded-full bg-[#F1F2E3] px-1.5 py-0.5 text-[9px] font-bold text-[#153B31]">
+                {seat.roleLabel ?? t.roleUnknown}
+              </span>
+            ) : null}
+            {seat.isDead ? (
+              <span className="rounded-full bg-[#7A1F2B] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                {t.dead}
+              </span>
+            ) : null}
+            {isLobby && seat.isClaimed ? (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                  seat.readyAt
+                    ? "bg-[#38A96D] text-white"
+                    : "bg-[#082E28]/88 text-white/70"
+                }`}
+              >
+                {seat.readyAt ? t.ready : t.unready}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderArenaJudgeSeatNode = (seat: WerewolfSeat) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+
+    if (!seat.isClaimed && isLobby && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          className="absolute left-1/2 top-4 z-30 -translate-x-1/2"
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            aria-label={`${t.selectSeat}: ${t.judge}`}
+            className="group flex flex-col items-center gap-1.5 text-center transition active:scale-95"
+            type="submit"
+          >
+            <span className="relative flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-full border-[3px] border-[#AAB48E] bg-[#F1F2E3] text-[#153B31] shadow-[0_10px_26px_rgba(0,0,0,0.38)] ring-2 ring-[#F1F2E3]/45 ring-offset-2 ring-offset-[#082E28]/80">
+              <Crown className="h-6 w-6" />
+              <span className="text-[9px] font-bold leading-3">{t.judge}</span>
+              <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-[#176E4B] text-white shadow-md ring-2 ring-[#F1F2E3]">
+                <Plus className="h-3.5 w-3.5 transition group-hover:scale-110" />
+              </span>
+            </span>
+            <span className="rounded-full bg-[#031F1B]/88 px-3 py-1 shadow-md ring-1 ring-[#F1F2E3]/65">
+              <span className="block text-[11px] font-bold leading-4 text-[#F1F2E3]">
+                {t.judge}
+              </span>
+              <span className="block text-[9px] font-semibold leading-3 text-white/72">
+                {t.selectSeat}
+              </span>
+            </span>
+          </button>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 flex-col items-center gap-1 text-center"
+        key={seat.id}
+      >
+        <div
+          className={`relative shrink-0 rounded-full bg-[#F1F2E3] p-1 shadow-[0_10px_26px_rgba(0,0,0,0.38)] ring-[3px] ${
+            isCurrentSeat
+              ? "ring-[#76D6A3] ring-offset-2 ring-offset-[#082E28]"
+              : "ring-[#AAB48E]"
+          }`}
+        >
+          {seat.isClaimed ? (
+            renderClaimedSeatAvatar(
+              seat,
+              "h-14 w-14 border-2 border-[#153B31]/25 text-sm",
+            )
+          ) : (
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E4E8CF] text-[#153B31]">
+              <Crown className="h-6 w-6" />
+            </span>
+          )}
+          <span className="absolute -left-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-[#153B31] text-[#F1F2E3] shadow-md ring-2 ring-[#F1F2E3]">
+            <Crown className="h-3.5 w-3.5" />
+          </span>
+        </div>
+        <div className="min-w-0 rounded-full bg-[#031F1B]/88 px-3 py-1 shadow-md ring-1 ring-[#F1F2E3]/65">
+          <p className="max-w-[6.5rem] truncate text-[11px] font-bold leading-4 text-[#F1F2E3]">
+            {seat.isClaimed ? seat.displayName : t.judge}
+          </p>
+          {isLobby && seat.isClaimed ? (
+            <span
+              className={`mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                seat.readyAt
+                  ? "bg-[#38A96D] text-white"
+                  : "bg-[#082E28]/88 text-white/70"
+              }`}
+            >
+              {seat.readyAt ? t.ready : t.unready}
+            </span>
+          ) : !seat.isClaimed ? (
+            <span className="block text-[9px] font-semibold leading-3 text-white/72">
+              {t.empty}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full min-h-0 w-full overflow-hidden bg-[#062A24] md:min-h-[32rem]">
       <section className="h-full min-h-0 md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
         <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
-          <img
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_62%] brightness-[0.72] contrast-[1.05] saturate-[0.9]"
-            draggable={false}
-            key={selectedAtmosphere.id}
-            src={selectedAtmosphere.src}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/56 via-black/18 to-black/42" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[calc(var(--app-top-safe-area)+4.35rem)] bg-[#052A24]" />
-          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.35rem)] z-10 h-px bg-[#F1F2E3]/24" />
-          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.38rem)] z-10 h-8 bg-gradient-to-b from-[#052A24]/58 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-[var(--app-bottom-safe-area)] h-28 bg-gradient-to-t from-[#031F1B]/46 to-transparent" />
-
-          <div className="relative z-20 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
+          <div className="relative z-30 grid h-10 shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
             <button
               aria-label={t.back}
               className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F]"
@@ -2091,34 +2359,54 @@ export function WerewolfRoomOverview({
           ) : null}
 
           <div className="relative z-10 mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="relative px-2 py-2">
-              <div className="flex items-center gap-3 rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#062A24] ring-1 ring-white/20">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-full w-full object-cover opacity-75"
-                    draggable={false}
-                    src="/game-tools/werewolf/werewolf.png"
-                  />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold text-[#F1F2E3]">
-                    {centerTitle}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-white/68">
-                    {centerSubtitle}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white/78 friemi-tabular">
-                  {playerSeats.filter((seat) => seat.isClaimed).length}/
-                  {playerSeats.length}
-                </span>
-              </div>
+            <div
+              className="relative isolate mx-auto w-full overflow-hidden rounded-b-[1.25rem] border-x border-b border-[#F1F2E3]/18 bg-[#092E28]"
+              style={{
+                minHeight: `max(calc(100% - 0.25rem), ${arenaMinHeightRem}rem)`,
+              }}
+            >
+              <img
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-[center_58%] brightness-[0.62] contrast-[1.08] saturate-[0.88]"
+                draggable={false}
+                key={selectedAtmosphere.id}
+                src={selectedAtmosphere.src}
+              />
+              <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#031F1B]/28 via-black/10 to-[#031F1B]/48" />
+              <img
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-[3%] h-[94%] w-[40%] max-w-[10.5rem] -translate-x-1/2 object-fill drop-shadow-[0_16px_22px_rgba(0,0,0,0.42)]"
+                draggable={false}
+                src="/game-tools/werewolf/table/friemi-stone-table-logo-420x1650.png"
+              />
 
-              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 shadow-[0_16px_38px_rgba(0,0,0,0.2)] backdrop-blur-sm">
-                {judgeSeat ? renderJudgeSeatNode(judgeSeat) : null}
-                {playerSeats.map((seat) => renderSeatNode(seat))}
+              {judgeSeat ? renderArenaJudgeSeatNode(judgeSeat) : null}
+              {leftPlayerSeats.map((seat, index) =>
+                renderArenaSeatNode(
+                  seat,
+                  "left",
+                  index,
+                  leftPlayerSeats.length,
+                ),
+              )}
+              {rightPlayerSeats.map((seat, index) =>
+                renderArenaSeatNode(
+                  seat,
+                  "right",
+                  index,
+                  rightPlayerSeats.length,
+                ),
+              )}
+
+              <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/20 bg-[#031F1B]/78 px-3 py-1.5 text-center shadow-lg">
+                <p className="whitespace-nowrap text-[11px] font-bold text-[#F1F2E3]">
+                  {centerTitle}
+                </p>
+                <p className="mt-0.5 whitespace-nowrap text-[9px] font-semibold text-white/68">
+                  {centerSubtitle}
+                </p>
               </div>
             </div>
 
@@ -2336,6 +2624,116 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
+      {managedSeat && judgePrivateToken && canJudgeControlPlayers ? (
+        <div
+          className="fixed inset-0 z-[90] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
+          onMouseDown={() => setManagedSeatNumber(null)}
+          role="presentation"
+        >
+          <section
+            aria-label={`${t.judgeControls}: ${managedSeat.displayName}`}
+            aria-modal="true"
+            className="w-full max-w-[21rem] rounded-[1.2rem] bg-[#FFFDF7] p-4 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.36)]"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-center gap-3 border-b border-[#E7E4D8] pb-3">
+              <WerewolfAvatar
+                avatarLabel={managedSeat.avatarLabel}
+                avatarUrl={managedSeat.avatarUrl}
+                className="h-12 w-12 shrink-0 text-sm"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold">
+                  {managedSeat.seatNumber}. {managedSeat.displayName}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-[#66706C]">
+                  {managedSeat.roleLabel ?? t.roleUnknown}
+                </p>
+              </div>
+              <button
+                aria-label={t.deathConfirmCancel}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D6D5B2] text-[#59635F] transition active:scale-95"
+                onClick={() => setManagedSeatNumber(null)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                className={`inline-flex h-12 items-center justify-center gap-2 rounded-full border text-sm font-bold transition active:scale-[0.98] ${
+                  room.state.sheriffSeatNumber === managedSeat.seatNumber
+                    ? "border-[#D6D5B2] bg-[#F1F2E3] text-[#153B31]"
+                    : "border-[#D6D5B2] bg-white text-[#153B31]"
+                }`}
+                onClick={() => {
+                  setManagedSeatNumber(null);
+                  setPendingSheriffSeatNumber(managedSeat.seatNumber);
+                }}
+                type="button"
+              >
+                <Crown className="h-4 w-4" />
+                {room.state.sheriffSeatNumber === managedSeat.seatNumber
+                  ? t.removeSheriff
+                  : t.setSheriff}
+              </button>
+
+              {managedSeat.isDead ? (
+                <form
+                  action={lifeAction}
+                  onSubmit={(event) => {
+                    if (!canSubmitOnline(event)) {
+                      return;
+                    }
+
+                    applyOptimisticPlayerLife(managedSeat.seatNumber, false);
+                    setManagedSeatNumber(null);
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  {currentMemberToken ? (
+                    <input
+                      name="memberToken"
+                      type="hidden"
+                      value={currentMemberToken}
+                    />
+                  ) : null}
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgePrivateToken}
+                  />
+                  <input
+                    name="seatNumber"
+                    type="hidden"
+                    value={managedSeat.seatNumber}
+                  />
+                  <input name="operation" type="hidden" value="revive" />
+                  <input name="responseMode" type="hidden" value="inline" />
+                  <SubmitButton
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#D8F0DF] px-3 text-sm font-bold text-[#176B45] transition active:scale-[0.98] disabled:opacity-55"
+                    label={t.revive}
+                  />
+                </form>
+              ) : (
+                <button
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#9B2433] px-3 text-sm font-bold text-white transition active:scale-[0.98]"
+                  onClick={() => {
+                    setManagedSeatNumber(null);
+                    setPendingDeathSeatNumber(managedSeat.seatNumber);
+                  }}
+                  type="button"
+                >
+                  <Skull className="h-4 w-4" />
+                  {t.markDead}
+                </button>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
       {pendingDeathSeat && judgePrivateToken && canJudgeControlPlayers ? (
         <div
           className="fixed inset-0 z-[90] grid place-items-center bg-black/55 px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] backdrop-blur-sm"

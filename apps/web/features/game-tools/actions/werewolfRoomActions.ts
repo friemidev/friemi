@@ -518,9 +518,9 @@ function getWerewolfTestBotWinner(
 ): Exclude<WerewolfWinner, null> | null {
   const aliveSeats = getAliveWerewolfTestBotSeats(playerSeats, deadSeatSet);
   const aliveWerewolves = aliveSeats.filter(
-    (seat) => seat.roleKey === "werewolf",
+    (seat) => seat.roleAlignment === "werewolf",
   );
-  const aliveGood = aliveSeats.filter((seat) => seat.roleKey !== "werewolf");
+  const aliveGood = aliveSeats.filter((seat) => seat.roleAlignment === "good");
 
   if (aliveWerewolves.length === 0) {
     return "GOOD";
@@ -633,7 +633,7 @@ function simulateWerewolfTestBotPhase({
   if (phase === "NIGHT") {
     const aliveSeats = getAliveWerewolfTestBotSeats(playerSeats, deadSeatSet);
     const wolfTarget = pickRandomItem(
-      aliveSeats.filter((seat) => seat.roleKey !== "werewolf"),
+      aliveSeats.filter((seat) => seat.roleAlignment !== "werewolf"),
     );
     const witchAlive = aliveSeats.some((seat) => seat.roleKey === "witch");
     const witchSaves =
@@ -781,12 +781,6 @@ export async function createWerewolfRoomAction(
             roleDeck: customRoleDeck,
             totalSeats: customRoleDeck.length + 1,
             variantKey: "custom",
-            variantName:
-              result.data.locale === "zh-CN"
-                ? "自定义板子"
-                : result.data.locale === "fr"
-                  ? "Configuration libre"
-                  : "Custom setup",
           },
           result.data.locale,
         )

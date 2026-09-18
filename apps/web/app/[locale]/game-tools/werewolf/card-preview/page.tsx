@@ -24,10 +24,16 @@ type WerewolfCardPreviewPageProps = {
 
 const previewRoleKeys: WerewolfRoleKey[] = [
   "werewolf",
+  "wolf_king",
+  "white_wolf_king",
   "seer",
   "witch",
+  "guard",
   "hunter",
+  "knight",
   "idiot",
+  "cupid",
+  "lovers",
   "villager",
 ];
 

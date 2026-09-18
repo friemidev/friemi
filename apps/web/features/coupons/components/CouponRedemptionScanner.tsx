@@ -4,6 +4,8 @@ import jsQR from "jsqr";
 import {
   AlertCircle,
   CheckCircle2,
+  Copy,
+  FileText,
   LoaderCircle,
   ScanLine,
   X,
@@ -15,69 +17,83 @@ import {
   canUseNativeAndroidQrScanner,
   parseAndroidQrScanPayload,
   resolveGlobalQrScanDestination,
+  resolveGlobalQrScanResult,
 } from "@/features/scan/globalQrScanner";
 
-type CouponScannerMode = "claim" | "redeem";
+type QrScannerMode = "global" | "redeem";
 
-function getCopy(locale: string, mode: CouponScannerMode) {
+function getCopy(locale: string, mode: QrScannerMode) {
   if (locale === "fr") {
     return {
       close: "Fermer",
-      detected: "Coupon détecté",
+      copied: "Copié",
+      copy: "Copier le contenu",
+      detected: mode === "global" ? "QR détecté" : "Coupon détecté",
       invalid:
-        mode === "claim"
-          ? "Ce QR code ne permet pas de recevoir un coupon Friemi."
+        mode === "global"
+          ? "Ce QR code ne peut pas être ouvert."
           : "Ce QR code n'est pas un coupon Friemi.",
-      permission: "Autorisez l'accès à la caméra pour scanner le coupon.",
-      scan: mode === "claim" ? "Recevoir un coupon" : "Scanner un coupon",
+      permission:
+        mode === "global"
+          ? "Autorisez l'accès à la caméra pour scanner un QR code."
+          : "Autorisez l'accès à la caméra pour scanner le coupon.",
+      scan: mode === "global" ? "Scanner" : "Scanner un coupon",
       scanning:
-        mode === "claim"
-          ? "Placez le QR code de la boutique dans le cadre."
+        mode === "global"
+          ? "Placez n'importe quel QR code dans le cadre."
           : "Placez le QR code du client dans le cadre.",
+      textTitle: "Contenu du QR code",
     };
   }
   if (locale === "en") {
     return {
       close: "Close",
-      detected: "Coupon found",
+      copied: "Copied",
+      copy: "Copy content",
+      detected: mode === "global" ? "QR code found" : "Coupon found",
       invalid:
-        mode === "claim"
-          ? "This QR code cannot add a Friemi coupon."
+        mode === "global"
+          ? "This QR code cannot be opened."
           : "This is not a Friemi coupon QR code.",
-      permission: "Allow camera access to scan the coupon.",
-      scan: mode === "claim" ? "Claim coupon" : "Scan coupon",
+      permission:
+        mode === "global"
+          ? "Allow camera access to scan a QR code."
+          : "Allow camera access to scan the coupon.",
+      scan: mode === "global" ? "Scan" : "Scan coupon",
       scanning:
-        mode === "claim"
-          ? "Place the store's QR code inside the frame."
+        mode === "global"
+          ? "Place any QR code inside the frame."
           : "Place the customer's QR code inside the frame.",
+      textTitle: "QR code content",
     };
   }
   return {
     close: "关闭",
-    detected: "已识别优惠券",
+    copied: "已复制",
+    copy: "复制内容",
+    detected: mode === "global" ? "已识别二维码" : "已识别优惠券",
     invalid:
-      mode === "claim"
-        ? "这不是有效的优惠券领取二维码。"
+      mode === "global"
+        ? "这个二维码暂时无法打开。"
         : "这不是有效的 Friemi 优惠券二维码。",
-    permission: "请允许使用相机，以便扫描优惠券。",
-    scan: mode === "claim" ? "扫码领取" : "扫码核销",
+    permission:
+      mode === "global"
+        ? "请允许使用相机，以便扫描二维码。"
+        : "请允许使用相机，以便扫描优惠券。",
+    scan: mode === "global" ? "扫码" : "扫码核销",
     scanning:
-      mode === "claim"
-        ? "把店家发放二维码放入框内。"
+      mode === "global"
+        ? "将任意二维码放入框内。"
         : "把客人的优惠券二维码放入框内。",
+    textTitle: "二维码内容",
   };
 }
 
-function getCouponHref(
-  locale: string,
-  mode: CouponScannerMode,
-  rawValue: string,
-) {
+function getRedemptionHref(locale: string, rawValue: string) {
   const destination = resolveGlobalQrScanDestination({ locale, rawValue });
-  const route = mode === "claim" ? "claim" : "redeem";
 
   return destination?.kind === "internal" &&
-    new RegExp(`/(?:zh-CN|en|fr)/coupons/${route}/[^/?#]+`).test(
+    /\/(?:zh-CN|en|fr)\/coupons\/redeem\/[^/?#]+/.test(
       destination.href,
     )
     ? destination.href
@@ -90,7 +106,7 @@ function CouponScanner({
   triggerVariant,
 }: {
   locale: string;
-  mode: CouponScannerMode;
+  mode: QrScannerMode;
   triggerVariant: "full" | "icon";
 }) {
   const router = useRouter();
@@ -99,22 +115,62 @@ function CouponScanner({
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [detected, setDetected] = useState(false);
+  const [textResult, setTextResult] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const nativeQrScanPendingRef = useRef(false);
 
-  const navigateToCoupon = useCallback(
+  const handleScanValue = useCallback(
     (rawValue: string) => {
-      const href = getCouponHref(locale, mode, rawValue);
-      if (!href) {
+      if (mode === "redeem") {
+        const href = getRedemptionHref(locale, rawValue);
+
+        if (!href) {
+          setError(copy.invalid);
+          return false;
+        }
+
+        setDetected(true);
+        window.setTimeout(() => {
+          setOpen(false);
+          router.push(href);
+        }, 180);
+        return true;
+      }
+
+      const result = resolveGlobalQrScanResult({ locale, rawValue });
+
+      if (!result) {
         setError(copy.invalid);
         return false;
       }
 
+      if (result.kind === "text") {
+        setError(null);
+        setTextResult(result.value);
+        setOpen(true);
+        return true;
+      }
+
       setDetected(true);
-      window.setTimeout(() => router.push(href), 180);
+      window.setTimeout(() => {
+        setOpen(false);
+
+        if (result.kind === "internal") {
+          router.push(result.href);
+          return;
+        }
+
+        if (typeof window.FriemiAndroid?.openExternal === "function") {
+          window.FriemiAndroid.openExternal(result.href);
+          return;
+        }
+
+        window.location.assign(result.href);
+      }, 180);
       return true;
     },
     [copy.invalid, locale, mode, router],
@@ -129,7 +185,7 @@ function CouponScanner({
       );
 
       if (payload?.ok && payload.rawValue) {
-        if (!navigateToCoupon(payload.rawValue)) setOpen(true);
+        if (!handleScanValue(payload.rawValue)) setOpen(true);
       } else if (payload?.reason !== "CANCELLED") {
         setOpen(true);
       }
@@ -138,10 +194,10 @@ function CouponScanner({
     window.addEventListener("friemi:android-qr-scan", handleAndroidQrScan);
     return () =>
       window.removeEventListener("friemi:android-qr-scan", handleAndroidQrScan);
-  }, [navigateToCoupon]);
+  }, [handleScanValue]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || textResult) return;
     let closed = false;
 
     function stopCamera() {
@@ -168,7 +224,7 @@ function CouponScanner({
           context.drawImage(video, 0, 0, width, height);
           const imageData = context.getImageData(0, 0, width, height);
           const result = jsQR(imageData.data, width, height);
-          if (result?.data && navigateToCoupon(result.data)) {
+          if (result?.data && handleScanValue(result.data)) {
             stopCamera();
             return;
           }
@@ -208,12 +264,14 @@ function CouponScanner({
       closed = true;
       stopCamera();
     };
-  }, [copy.permission, navigateToCoupon, open]);
+  }, [copy.permission, handleScanValue, open, textResult]);
 
   function startScan() {
     setError(null);
     setReady(false);
     setDetected(false);
+    setTextResult(null);
+    setCopied(false);
 
     if (!canUseNativeAndroidQrScanner()) {
       setOpen(true);
@@ -227,7 +285,7 @@ function CouponScanner({
       );
       if (payload?.ok && payload.rawValue) {
         nativeQrScanPendingRef.current = false;
-        if (!navigateToCoupon(payload.rawValue)) setOpen(true);
+        if (!handleScanValue(payload.rawValue)) setOpen(true);
         return;
       }
       if (payload?.supported === false || payload?.ok === false) {
@@ -238,6 +296,21 @@ function CouponScanner({
       nativeQrScanPendingRef.current = false;
       setOpen(true);
     }
+  }
+
+  async function copyTextResult() {
+    if (!textResult || !navigator.clipboard?.writeText) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(textResult);
+    setCopied(true);
+  }
+
+  function closeScanner() {
+    setOpen(false);
+    setTextResult(null);
+    setCopied(false);
   }
 
   return (
@@ -273,42 +346,70 @@ function CouponScanner({
                   <button
                     aria-label={copy.close}
                     className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-[#D6D5B2]"
-                    onClick={() => setOpen(false)}
+                    onClick={closeScanner}
                     type="button"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </header>
                 <div className="p-4">
-                  <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-[#10251F]">
-                    <video
-                      className="h-full w-full object-cover"
-                      muted
-                      playsInline
-                      ref={videoRef}
-                    />
-                    <canvas className="hidden" ref={canvasRef} />
-                    <div className="pointer-events-none absolute inset-8 rounded-[0.75rem] border-2 border-[#F1F2E3] shadow-[0_0_0_999px_rgba(0,0,0,0.25)]" />
-                    {!ready && !error ? (
-                      <LoaderCircle className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" />
-                    ) : null}
-                    {detected ? (
-                      <div className="absolute inset-0 grid place-items-center bg-black/35">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#156240]">
+                  {textResult ? (
+                    <div className="py-3 text-center">
+                      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#EEF7EF] text-[#156240]">
+                        <FileText className="h-6 w-6" />
+                      </span>
+                      <h3 className="mt-4 text-base font-black text-[#111210]">
+                        {copy.textTitle}
+                      </h3>
+                      <p className="mt-3 max-h-40 overflow-y-auto break-all text-left text-sm font-semibold leading-6 text-[#4F574F]">
+                        {textResult}
+                      </p>
+                      <button
+                        className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+                        onClick={() => void copyTextResult()}
+                        type="button"
+                      >
+                        {copied ? (
                           <CheckCircle2 className="h-4 w-4" />
-                          {copy.detected}
-                        </span>
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                        {copied ? copy.copied : copy.copy}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-[#10251F]">
+                        <video
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                          ref={videoRef}
+                        />
+                        <canvas className="hidden" ref={canvasRef} />
+                        <div className="pointer-events-none absolute inset-8 rounded-[0.75rem] border-2 border-[#F1F2E3] shadow-[0_0_0_999px_rgba(0,0,0,0.25)]" />
+                        {!ready && !error ? (
+                          <LoaderCircle className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" />
+                        ) : null}
+                        {detected ? (
+                          <div className="absolute inset-0 grid place-items-center bg-black/35">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#156240]">
+                              <CheckCircle2 className="h-4 w-4" />
+                              {copy.detected}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                  </div>
-                  <p className="mt-3 flex items-start gap-2 text-sm font-semibold leading-6 text-[#6C746A]">
-                    {error ? (
-                      <AlertCircle className="mt-1 h-4 w-4 shrink-0 text-[#A62834]" />
-                    ) : (
-                      <ScanLine className="mt-1 h-4 w-4 shrink-0 text-[#156240]" />
-                    )}
-                    {error ?? copy.scanning}
-                  </p>
+                      <p className="mt-3 flex items-start gap-2 text-sm font-semibold leading-6 text-[#6C746A]">
+                        {error ? (
+                          <AlertCircle className="mt-1 h-4 w-4 shrink-0 text-[#A62834]" />
+                        ) : (
+                          <ScanLine className="mt-1 h-4 w-4 shrink-0 text-[#156240]" />
+                        )}
+                        {error ?? copy.scanning}
+                      </p>
+                    </>
+                  )}
                 </div>
               </section>
             </div>,
@@ -319,8 +420,8 @@ function CouponScanner({
   );
 }
 
-export function CouponClaimScanner({ locale }: { locale: string }) {
-  return <CouponScanner locale={locale} mode="claim" triggerVariant="icon" />;
+export function ProfileQrScanner({ locale }: { locale: string }) {
+  return <CouponScanner locale={locale} mode="global" triggerVariant="icon" />;
 }
 
 export function CouponRedemptionScanner({ locale }: { locale: string }) {

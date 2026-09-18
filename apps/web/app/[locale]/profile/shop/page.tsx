@@ -5,7 +5,6 @@ import {
 } from "@/features/charm/queries/getProfileShop";
 import { getProfileShopGiftRecipients } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
-import { getProfileShopProductId } from "@/features/charm/profileShopProducts";
 import { ProfileShopPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
@@ -32,14 +31,7 @@ export default async function ProfileShopPage({
   const rechargeParam = Array.isArray(resolvedSearchParams.recharge)
     ? resolvedSearchParams.recharge[0]
     : resolvedSearchParams.recharge;
-  const selectedProductId = getProfileShopProductId(
-    resolvedSearchParams.product,
-  );
   const returnSearchParams = new URLSearchParams();
-
-  if (selectedProductId) {
-    returnSearchParams.set("product", selectedProductId);
-  }
 
   if (rechargeParam === "1") {
     returnSearchParams.set("recharge", "1");
@@ -65,7 +57,6 @@ export default async function ProfileShopPage({
         locale={locale}
         negativeGifts={negativeGifts}
         openRecharge={rechargeParam === "1"}
-        selectedProductId={selectedProductId}
       />
     </PageContainer>
   );

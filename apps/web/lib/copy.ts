@@ -863,7 +863,7 @@ const copy = {
         UNAUTHORIZED: "请登录后再解析链接。",
       },
       title: "聚吧标题",
-      titlePlaceholder: "例如：周五下班后桌游局",
+      titlePlaceholder: "例如：周末一起逛展喝咖啡",
       description: "聚吧说明",
       descriptionPlaceholder: "说明这次想怎么约、适合谁、需要注意什么",
       itinerary: "集合安排",

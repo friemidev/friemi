@@ -16,9 +16,9 @@ test("poll option limits allow up to twenty choices", () => {
   assert.equal(MAX_POLL_OPTIONS, 20);
 });
 
-test("poll defaults expose totals after voting and require guest nicknames", () => {
+test("poll defaults expose voters to participants after voting", () => {
   assert.equal(DEFAULT_POLL_RESULT_VISIBILITY, "AFTER_VOTE");
-  assert.equal(DEFAULT_POLL_VOTER_VISIBILITY, "COUNTS_ONLY");
+  assert.equal(DEFAULT_POLL_VOTER_VISIBILITY, "PARTICIPANTS_VISIBLE");
   assert.equal(POLL_GUEST_IDENTITY_MODE, "NICKNAME_REQUIRED");
 });
 

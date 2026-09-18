@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
-import { CouponClaimScanner } from "@/features/coupons/components/CouponRedemptionScanner";
+import { ProfileQrScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
   updateProfileRemarkAction,
   type UpdateProfileRemarkState,
@@ -3189,7 +3189,7 @@ function SelfMobileProfileHome({
             </div>
 
             <div className="flex shrink-0 items-start gap-2">
-              <CouponClaimScanner locale={locale} />
+              <ProfileQrScanner locale={locale} />
             </div>
           </div>
         </div>

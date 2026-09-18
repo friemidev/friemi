@@ -29,9 +29,11 @@ import {
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
   defaultWerewolfVariantKey,
+  getWerewolfDefaultRoomTitle,
+  getWerewolfPlayerJudgeLabel,
   getWerewolfRoleLabel,
   getWerewolfVariantLabel,
-  getWerewolfDefaultRoomTitle,
+  werewolfRoleAlignments,
   werewolfVariants,
   type WerewolfRoleKey,
   type WerewolfVariant,
@@ -45,7 +47,6 @@ import {
   getWerewolfRoomCodeFromScan,
   parseAndroidQrScanPayload,
 } from "@/features/scan/globalQrScanner";
-import { getWerewolfAllRolesShopPath } from "@/features/charm/profileShopProducts";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
@@ -73,7 +74,6 @@ type Copy = {
   joinCodeTitle: string;
   judge: string;
   openingRoom: string;
-  unlockAllRoles: string;
   players: string;
   preview: string;
   roleCount: string;
@@ -99,7 +99,7 @@ const copies: Record<string, Copy> = {
     customCreate: "创建自定义",
     customInvalid: "至少 5 名玩家，且需要狼人和好人。",
     customSubtitle: "按你们桌上的规则配置",
-    customTitle: "自定义板子",
+    customTitle: "自定义（抢先体验）",
     decrease: "减少",
     duration: "30-40分钟",
     eyebrow: "狼人杀",
@@ -113,7 +113,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "加入已有房间",
     judge: "含 1 位法官",
     openingRoom: "正在进入房间...",
-    unlockAllRoles: "解锁全部角色",
     players: "席",
     preview: "卡牌预览",
     roleCount: "角色",
@@ -138,7 +137,7 @@ const copies: Record<string, Copy> = {
     customCreate: "Create custom",
     customInvalid: "Use at least 5 players, with werewolves and good roles.",
     customSubtitle: "Build your table rules",
-    customTitle: "Custom setup",
+    customTitle: "Custom (Early access)",
     decrease: "Decrease",
     duration: "30-40 min",
     eyebrow: "Werewolf",
@@ -152,7 +151,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "Join a room",
     judge: "includes 1 judge",
     openingRoom: "Opening room...",
-    unlockAllRoles: "Unlock all roles",
     players: "Seats",
     preview: "Card preview",
     roleCount: "Roles",
@@ -180,7 +178,7 @@ const copies: Record<string, Copy> = {
     customInvalid:
       "Ajoutez au moins 5 joueurs, avec des loups et des villageois.",
     customSubtitle: "Configurez les règles de table",
-    customTitle: "Configuration libre",
+    customTitle: "Configuration libre (Accès anticipé)",
     decrease: "Retirer",
     duration: "30-40 min",
     eyebrow: "Loups-garous",
@@ -194,7 +192,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "Entrer dans une table",
     judge: "inclut 1 maître",
     openingRoom: "Ouverture...",
-    unlockAllRoles: "Débloquer tous les rôles",
     players: "Places",
     preview: "Aperçu cartes",
     roleCount: "Rôles",
@@ -241,9 +238,15 @@ function getVariantCoreRoleLabels(locale: string, variant: WerewolfVariant) {
   const preferredOrder: WerewolfRoleKey[] = [
     "seer",
     "witch",
+    "guard",
     "hunter",
+    "knight",
     "idiot",
+    "cupid",
+    "lovers",
     "werewolf",
+    "wolf_king",
+    "white_wolf_king",
     "villager",
   ];
   const roles = new Set(variant.roles);
@@ -262,7 +265,7 @@ function RoleSeatDots({ roles }: { roles: WerewolfRoleKey[] }) {
       {roles.map((role, index) => (
         <span
           className={`h-1.5 w-3 rounded-full ${
-            role === "werewolf"
+            werewolfRoleAlignments[role] === "werewolf"
               ? "bg-[#7D2B24]"
               : role === "villager"
                 ? "bg-[#F1F2E3]/55"
@@ -362,8 +365,7 @@ function WerewolfVariantModeCard({
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
           <span className="inline-flex items-center gap-1">
             <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
-            {variant.totalSeats}
-            {locale === "zh-CN" ? "人" : ""}
+            {getWerewolfPlayerJudgeLabel(locale, variant.playerSeatCount)}
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
@@ -377,20 +379,32 @@ function WerewolfVariantModeCard({
 
 const customRoleOptions: WerewolfRoleKey[] = [
   "werewolf",
+  "wolf_king",
+  "white_wolf_king",
   "seer",
   "witch",
+  "guard",
   "hunter",
+  "knight",
   "idiot",
+  "cupid",
+  "lovers",
   "villager",
 ];
 
 const defaultCustomRoleCounts: Record<WerewolfRoleKey, number> = {
+  cupid: 0,
+  guard: 0,
   hunter: 1,
   idiot: 0,
+  knight: 0,
+  lovers: 0,
   seer: 1,
   villager: 3,
   werewolf: 3,
+  white_wolf_king: 0,
   witch: 1,
+  wolf_king: 0,
 };
 
 function buildCustomRoleDeck(counts: Record<WerewolfRoleKey, number>) {
@@ -431,8 +445,12 @@ function CustomModeCard({
   const [open, setOpen] = useState(false);
   const [roleCounts, setRoleCounts] = useState(defaultCustomRoleCounts);
   const roleDeck = buildCustomRoleDeck(roleCounts);
-  const hasWerewolf = roleCounts.werewolf > 0;
-  const hasGood = roleDeck.some((role) => role !== "werewolf");
+  const hasWerewolf = roleDeck.some(
+    (role) => werewolfRoleAlignments[role] === "werewolf",
+  );
+  const hasGood = roleDeck.some(
+    (role) => werewolfRoleAlignments[role] === "good",
+  );
   const isValid =
     roleDeck.length >= 5 && roleDeck.length <= 15 && hasWerewolf && hasGood;
 
@@ -473,8 +491,7 @@ function CustomModeCard({
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
             <span className="inline-flex items-center gap-1">
               <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
-              {roleDeck.length}
-              {locale === "zh-CN" ? "人" : ""}
+              {getWerewolfPlayerJudgeLabel(locale, roleDeck.length)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
@@ -512,8 +529,7 @@ function CustomModeCard({
         <div>
           <h3 className="text-lg font-bold text-[#F1F2E3]">{t.customTitle}</h3>
           <p className="text-xs font-bold text-[#F1F2E3]/68">
-            {roleDeck.length}
-            {locale === "zh-CN" ? "人" : ` ${t.roleCount}`}
+            {getWerewolfPlayerJudgeLabel(locale, roleDeck.length)}
           </p>
         </div>
         <button
@@ -569,15 +585,7 @@ function CustomModeCard({
       ) : null}
 
       <div className="relative mt-4 flex justify-end">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Link
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F1F2E3]/55 bg-[#08231F] px-4 text-sm font-semibold text-[#F1F2E3] transition hover:bg-[#0A3A32]"
-            href={withLocale(locale, getWerewolfAllRolesShopPath())}
-          >
-            {t.unlockAllRoles}
-          </Link>
-          <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
-        </div>
+        <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
       </div>
     </form>
   );
