@@ -503,6 +503,10 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   display: none !important;
 }
 
+.app-layout-shell:has(.shared-poll-page) [data-mobile-scroll-progress] {
+  display: none !important;
+}
+
 @media (max-width: 767px) {
   html[data-friemi-android-app="true"] .app-layout-shell {
     padding-bottom: calc(
