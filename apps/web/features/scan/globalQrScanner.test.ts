@@ -5,6 +5,7 @@ import {
   getWerewolfRoomCodeFromScan,
   normalizeScannedRoomCode,
   resolveGlobalQrScanDestination,
+  resolveGlobalQrScanResult,
 } from "./globalQrScanner";
 
 test("normalizes manually entered game room codes", () => {
@@ -68,6 +69,17 @@ test("resolves Friemi full links as internal scan destinations", () => {
       source: "werewolf-room",
     },
   );
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "friemi://lobby/activity-123",
+    }),
+    {
+      href: "/lobby/activity-123",
+      kind: "internal",
+      source: "internal-link",
+    },
+  );
 });
 
 test("keeps coupon claim and redemption links inside Friemi", () => {
@@ -92,5 +104,54 @@ test("keeps coupon claim and redemption links inside Friemi", () => {
       kind: "internal",
       source: "internal-link",
     },
+  );
+});
+
+test("resolves safe external QR actions", () => {
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "https://example.com/menu",
+    }),
+    {
+      href: "https://example.com/menu",
+      kind: "external",
+      source: "external-link",
+    },
+  );
+  assert.deepEqual(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "tel:+33123456789",
+    }),
+    {
+      href: "tel:+33123456789",
+      kind: "external",
+      source: "external-link",
+    },
+  );
+});
+
+test("keeps unsupported QR payloads available as plain text", () => {
+  assert.deepEqual(
+    resolveGlobalQrScanResult({
+      locale: "zh-CN",
+      rawValue: "  WIFI:T:WPA;S:Friemi;P:secret;;  ",
+    }),
+    {
+      kind: "text",
+      source: "plain-text",
+      value: "WIFI:T:WPA;S:Friemi;P:secret;;",
+    },
+  );
+});
+
+test("rejects executable URL schemes", () => {
+  assert.equal(
+    resolveGlobalQrScanDestination({
+      locale: "zh-CN",
+      rawValue: "javascript:alert(1)",
+    }),
+    null,
   );
 });

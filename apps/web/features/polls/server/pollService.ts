@@ -482,6 +482,53 @@ export async function getSharedActivityPollView({
   });
 }
 
+export async function getSharedActivityPollMetadata(shareToken: string) {
+  const share = await prisma.activityPollShare.findUnique({
+    where: { tokenHash: hashPollToken(shareToken) },
+    select: {
+      expiresAt: true,
+      revokedAt: true,
+      poll: {
+        select: {
+          description: true,
+          question: true,
+          status: true,
+          activity: {
+            select: {
+              coverImageUrl: true,
+              title: true,
+              publicEvent: {
+                select: {
+                  coverImageUrl: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (
+    !share ||
+    share.revokedAt ||
+    (share.expiresAt && share.expiresAt <= new Date()) ||
+    share.poll.status === "ARCHIVED"
+  ) {
+    return null;
+  }
+
+  return {
+    activityTitle: share.poll.activity.title,
+    coverImageUrl:
+      share.poll.activity.coverImageUrl ??
+      share.poll.activity.publicEvent?.coverImageUrl ??
+      null,
+    description: share.poll.description,
+    question: share.poll.question,
+  };
+}
+
 export async function getPollForMutation(pollId: string) {
   return prisma.activityPoll.findUnique({
     where: { id: pollId },
