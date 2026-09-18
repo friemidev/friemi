@@ -65,6 +65,7 @@ import {
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import {
   CancelActivityForm,
   DeleteActivityForm,
@@ -851,6 +852,7 @@ function ActivityRoomInviteDialog({
 function ActivityRoomMemberPreviewGrid({
   activityId,
   canManage,
+  isAuthenticated,
   inviteCandidates,
   locale,
   members,
@@ -859,6 +861,7 @@ function ActivityRoomMemberPreviewGrid({
 }: {
   activityId: string;
   canManage: boolean;
+  isAuthenticated: boolean;
   inviteCandidates: ActivityRoomInviteCandidateViewModel[];
   locale: string;
   members: ActivityRoomMemberPreviewViewModel[];
@@ -882,19 +885,33 @@ function ActivityRoomMemberPreviewGrid({
         {visibleMembers.map((member) => {
           const removableMember = removableMemberByProfileId.get(member.id);
 
-          return removeMode && removableMember ? (
-            <ActivityRoomGridRemoveMemberButton
-              activityId={activityId}
+          if (removeMode) {
+            return removableMember ? (
+              <ActivityRoomGridRemoveMemberButton
+                activityId={activityId}
+                key={member.id}
+                locale={locale}
+                member={removableMember}
+              />
+            ) : (
+              <RoomInfoAvatar key={member.id} member={member} muted />
+            );
+          }
+
+          return (
+            <UserProfilePreviewPopover
+              avatarUrl={member.avatarUrl}
+              giftSourceContextId={activityId}
+              giftSourceSurface="ACTIVITY"
+              isAuthenticated={isAuthenticated}
               key={member.id}
               locale={locale}
-              member={removableMember}
-            />
-          ) : (
-            <RoomInfoAvatar
-              key={member.id}
-              member={member}
-              muted={removeMode && !removableMember}
-            />
+              nickname={member.nickname}
+              profileId={member.id}
+              triggerClassName="w-full min-w-0 rounded-[0.9rem]"
+            >
+              <RoomInfoAvatar member={member} />
+            </UserProfilePreviewPopover>
           );
         })}
         {canManage ? (
@@ -1607,6 +1624,7 @@ export function ActivityRoomManagePage({
           <ActivityRoomMemberPreviewGrid
             activityId={activity?.id ?? activityId}
             canManage={canManageRoom}
+            isAuthenticated={Boolean(viewer)}
             inviteCandidates={management?.inviteCandidates ?? []}
             locale={locale}
             members={memberPreview}
