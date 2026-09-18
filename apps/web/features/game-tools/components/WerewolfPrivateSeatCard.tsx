@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useActionState,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -37,6 +38,8 @@ import {
   getWerewolfSeatBackImage,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
+import { useWerewolfRoomRealtime } from "@/features/game-tools/hooks/useWerewolfRoomRealtime";
+import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
 import type {
   WerewolfPrivatePayload,
   WerewolfRoleKey,
@@ -477,6 +480,7 @@ export function WerewolfPrivateSeatCard({
   const [isDead, setIsDead] = useState(initialIsDead);
   const roomSyncVersionRef = useRef<string | null>(null);
   const syncInFlightRef = useRef(false);
+  const realtimeSyncRef = useRef<() => void>(() => undefined);
   const wasDeadRef = useRef(initialIsDead);
   const t = copies[locale] ?? copies.en;
   const currentRoleKey = roleKey ?? payload?.roleKey ?? null;
@@ -535,6 +539,13 @@ export function WerewolfPrivateSeatCard({
   );
   const showInGamePlayerCard =
     !isJudgeSeat && roomStatus === "IN_PROGRESS" && Boolean(payload);
+  const handleRealtimeRoomChange = useCallback(() => {
+    realtimeSyncRef.current();
+  }, []);
+  const realtimeConnected = useWerewolfRoomRealtime({
+    onRoomChanged: handleRealtimeRoomChange,
+    roomId,
+  });
 
   useEffect(() => {
     setIsDead(initialIsDead);
@@ -627,8 +638,13 @@ export function WerewolfPrivateSeatCard({
       }
     };
 
+    const triggerRealtimeSync = () => void syncPrivateSeat();
+    realtimeSyncRef.current = triggerRealtimeSync;
     void syncPrivateSeat();
-    const interval = window.setInterval(syncPrivateSeat, 2800);
+    const interval = window.setInterval(
+      syncPrivateSeat,
+      realtimeConnected ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS : 2800,
+    );
     const handleFocus = () => void syncPrivateSeat();
     const handleOnline = () => void syncPrivateSeat();
     const handleVisibility = () => {
@@ -643,12 +659,15 @@ export function WerewolfPrivateSeatCard({
 
     return () => {
       disposed = true;
+      if (realtimeSyncRef.current === triggerRealtimeSync) {
+        realtimeSyncRef.current = () => undefined;
+      }
       window.clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [locale, roomId, roomStatus, router, seatNumber]);
+  }, [locale, realtimeConnected, roomId, roomStatus, router, seatNumber]);
 
   useEffect(() => {
     if (!revealed) {

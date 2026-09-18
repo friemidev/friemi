@@ -47,6 +47,7 @@ import {
 } from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
+import { useWerewolfRoomRealtime } from "@/features/game-tools/hooks/useWerewolfRoomRealtime";
 import {
   countAliveWerewolfPlayers,
   getWerewolfViewerPrivateToken,
@@ -55,13 +56,12 @@ import {
 import {
   defaultWerewolfAtmosphere,
   getWerewolfAtmosphereById,
-  getWerewolfRoleCardImage,
-  getWerewolfSeatBackImage,
   werewolfAtmospheres,
   werewolfUiAssets,
   type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
 import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
+import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
@@ -148,15 +148,6 @@ type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
 const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
 const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
 const WEREWOLF_ATMOSPHERE_STORAGE_KEY = "friemi:werewolf:atmosphere";
-const coreWerewolfRoleKeys = [
-  "hunter",
-  "idiot",
-  "seer",
-  "villager",
-  "werewolf",
-  "witch",
-] as const;
-
 type WerewolfRoomSyncPayload = {
   room?: WerewolfRoomView;
   status?: string;
@@ -203,27 +194,6 @@ function getWerewolfSyncIntervalMs(status: string) {
   }
 
   return baseIntervalMs;
-}
-
-function getWerewolfRoomPreloadAssets({
-  atmosphereSrc,
-  locale,
-}: {
-  atmosphereSrc: string;
-  locale: string;
-}) {
-  return Array.from(
-    new Set([
-      atmosphereSrc,
-      "/game-tools/werewolf/werewolf.png",
-      ...Array.from({ length: 12 }, (_, index) =>
-        getWerewolfSeatBackImage(index + 1),
-      ),
-      ...coreWerewolfRoleKeys
-        .map((roleKey) => getWerewolfRoleCardImage(roleKey, locale))
-        .filter((asset): asset is string => Boolean(asset)),
-    ]),
-  );
 }
 
 function WerewolfAvatar({
@@ -967,30 +937,6 @@ export function WerewolfRoomOverview({
       return;
     }
 
-    const preloadedImages = getWerewolfRoomPreloadAssets({
-      atmosphereSrc: selectedAtmosphere.src,
-      locale,
-    }).map((assetSrc) => {
-      const image = new window.Image();
-      image.decoding = "async";
-      image.src = assetSrc;
-
-      return image;
-    });
-
-    return () => {
-      preloadedImages.forEach((image) => {
-        image.onload = null;
-        image.onerror = null;
-      });
-    };
-  }, [locale, selectedAtmosphere.src]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     const roomHrefParams = new URLSearchParams();
 
     if (currentMemberToken) {
@@ -1221,13 +1167,26 @@ export function WerewolfRoomOverview({
     [refreshRoom, room.id],
   );
 
+  const realtimeConnected = useWerewolfRoomRealtime({
+    onRoomChanged: () => void pollRoomSync({ force: true }),
+    roomId: room.id,
+  });
+
+  useEffect(() => {
+    if (realtimeConnected) {
+      void pollRoomSync({ force: true });
+    }
+  }, [pollRoomSync, realtimeConnected]);
+
   useEffect(() => {
     if (room.status === "FINISHED") {
       return;
     }
 
-    const intervalMs =
-      getWerewolfSyncIntervalMs(room.status) + Math.floor(Math.random() * 900);
+    const intervalMs = realtimeConnected
+      ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
+        Math.floor(Math.random() * 3_000)
+      : getWerewolfSyncIntervalMs(room.status) + Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
       if (!document.hidden) {
         void pollRoomSync();
@@ -1251,7 +1210,7 @@ export function WerewolfRoomOverview({
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [pollRoomSync, room.status]);
+  }, [pollRoomSync, realtimeConnected, room.status]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") {
