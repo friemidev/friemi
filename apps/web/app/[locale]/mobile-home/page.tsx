@@ -7,7 +7,6 @@ import {
   ArrowRight,
   CalendarPlus,
   Clock3,
-  Heart,
   MapPin,
   UsersRound,
 } from "lucide-react";
@@ -737,6 +736,7 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
+          categoryArtworkClassName="h-[140%]"
           fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           src={getActivityCoverThumbnailUrl(
             getActivityListCoverSrc(activity.coverImageUrl, activity.category),
@@ -744,9 +744,6 @@ function MobileHomeV23ActivityCard({
           )}
           overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
         />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
-          <Heart className="h-3.5 w-3.5" />
-        </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
         <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
@@ -796,9 +793,6 @@ function MobileHomeV23FallbackCard({
           className="object-cover transition duration-500 group-active:scale-[1.03]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/24 to-transparent" />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
-          <Heart className="h-3.5 w-3.5" />
-        </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
         <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">

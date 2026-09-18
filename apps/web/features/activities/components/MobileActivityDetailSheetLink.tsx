@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ type MobileActivityDetailSheetLinkProps = {
   locale?: string;
   locked?: boolean;
 };
+
+const fullPageNavigationDelayMs = 1000;
 
 function getLockedCopy(locale: string) {
   if (locale === "fr") {
@@ -73,10 +75,41 @@ export function MobileActivityDetailSheetLink({
   locale = "zh-CN",
   locked = false,
 }: MobileActivityDetailSheetLinkProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const fullPageNavigationTimerRef = useRef<number | null>(null);
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
+
+  useEffect(() => {
+    return () => {
+      if (fullPageNavigationTimerRef.current !== null) {
+        window.clearTimeout(fullPageNavigationTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open && !locked) {
+      router.prefetch(href);
+    }
+  }, [href, locked, open, router]);
+
+  function openFullPage() {
+    if (fullPageNavigationTimerRef.current !== null) {
+      return;
+    }
+
+    // Reveal the existing list while the prefetched detail route settles.
+    // This keeps the route-level loader out of the closing sheet.
+    setOpen(false);
+    router.prefetch(href);
+    fullPageNavigationTimerRef.current = window.setTimeout(() => {
+      fullPageNavigationTimerRef.current = null;
+      router.push(href);
+    }, fullPageNavigationDelayMs);
+  }
 
   return (
     <>
@@ -94,15 +127,15 @@ export function MobileActivityDetailSheetLink({
         closeLabel={label}
         headerAction={
           locked ? undefined : (
-            <Link
+            <button
               aria-label={openPageLabel}
               className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95"
-              href={href}
-              onClick={() => setOpen(false)}
+              onClick={openFullPage}
               title={openPageLabel}
+              type="button"
             >
               <Maximize2 className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            </button>
           )
         }
         initiallyExpanded

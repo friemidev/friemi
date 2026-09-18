@@ -38,7 +38,7 @@ import {
   createUniqueGameToolRoomCode,
   getActiveGameToolRoomForProfile,
   getGameToolRoomPath,
-  revalidateGameToolRoom,
+  revalidateWerewolfRoom,
 } from "@/features/game-tools/gameToolRooms";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 
@@ -883,7 +883,7 @@ export async function createWerewolfRoomAction(
     };
   }
 
-  revalidateGameToolRoom({
+  await revalidateWerewolfRoom({
     locale: result.data.locale,
     roomId,
     toolPath: werewolfToolPath,
@@ -1019,7 +1019,7 @@ export async function joinWerewolfRoomAction(
       },
     });
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -1271,7 +1271,7 @@ export async function claimWerewolfSeatAction(
       await prisma.$transaction(updates);
     }
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -1506,7 +1506,7 @@ export async function manageWerewolfSeatAction(
 
     await prisma.$transaction(updates);
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -1693,7 +1693,7 @@ export async function updateWerewolfReadyAction(
       ? null
       : (member?.memberToken ?? null);
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -1923,7 +1923,7 @@ export async function leaveWerewolfSeatAction(
         ? (member?.memberToken ?? null)
         : null;
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -2116,7 +2116,7 @@ export async function startWerewolfRoomAction(
       }),
     ]);
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -2252,7 +2252,7 @@ export async function updateWerewolfPlayerLifeAction(
       }),
     ]);
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -2387,7 +2387,7 @@ export async function updateWerewolfSheriffAction(
       }),
     ]);
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -2624,7 +2624,7 @@ export async function finishWerewolfRoomAction(
       return { formError: t.notRunning };
     }
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
@@ -3146,7 +3146,7 @@ export async function runWerewolfTestBotAction(
       }
     }
 
-    revalidateGameToolRoom({
+    await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
       toolPath: werewolfToolPath,
