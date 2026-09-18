@@ -2,51 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import {
+  shouldHideMobileScrollProgress,
+} from "./mobileScrollProgressVisibility";
 
 const MOBILE_MEDIA_QUERY = "(max-width: 767px)";
 const MIN_SCROLLABLE_DISTANCE = 24;
-
-function shouldHideMobileScrollProgress(pathname: string) {
-  const segments = pathname.split("/").filter(Boolean);
-  const firstRouteSegment = segments[0];
-  const localizedRouteSegment = segments[1];
-
-  if (
-    firstRouteSegment === "footprints" ||
-    firstRouteSegment === "game-tools" ||
-    firstRouteSegment === "profile" ||
-    localizedRouteSegment === "footprints" ||
-    localizedRouteSegment === "game-tools" ||
-    localizedRouteSegment === "profile" ||
-    (segments.length === 2 && firstRouteSegment === "messages") ||
-    (segments.length === 3 && localizedRouteSegment === "messages")
-  ) {
-    return true;
-  }
-
-  return (
-    (segments.length === 1 &&
-      (firstRouteSegment === "mobile-home" ||
-        firstRouteSegment === "activities" ||
-        firstRouteSegment === "footprints" ||
-        firstRouteSegment === "lobby" ||
-        firstRouteSegment === "planets" ||
-        firstRouteSegment === "profile")) ||
-    (segments.length === 2 &&
-      (localizedRouteSegment === "mobile-home" ||
-        localizedRouteSegment === "activities" ||
-        localizedRouteSegment === "footprints" ||
-        localizedRouteSegment === "lobby" ||
-        localizedRouteSegment === "planets" ||
-        localizedRouteSegment === "profile")) ||
-    (segments.length === 2 &&
-      firstRouteSegment === "activities" &&
-      segments[1] === "new") ||
-    (segments.length === 3 &&
-      localizedRouteSegment === "activities" &&
-      segments[2] === "new")
-  );
-}
 
 function getScrollProgress() {
   const scrollableDistance =
@@ -69,7 +30,9 @@ export function MobileScrollProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const hideForRoute = shouldHideMobileScrollProgress(pathname);
+  const hideForRoute =
+    searchParams.get("sheet") === "1" ||
+    shouldHideMobileScrollProgress(pathname);
   const animationFrameRef = useRef<number | null>(null);
   const [state, setState] = useState({
     isMobile: false,

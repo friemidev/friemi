@@ -1,34 +1,45 @@
 # Google Play 测试轨道发布清单
 
-> 当前候选版本：`versionName 1.0.0` / `versionCode 10`。
+> 当前候选版本：`versionName 1.0.1` / `versionCode 11`。
 >
-> 本清单区分“代码已合并”和“测试轨道已验证”。只有从 Google Play 安装对应版本并复测通过后，才把验证框从 `[ ]` 改为 `[X]`。
+> 对比基线：`versionName 1.0.0` / `versionCode 10`。本次功能与修复范围为 `85acc61..f90dea5`，版本号提交为 `3d2003c`。
+>
+> 状态口径：代码已经进入 `dev` 不代表测试通过。只有从 Google Play 安装对应版本并复测通过后，才把验证框从 `[ ]` 改为 `[X]`。
 
-## 1. 本版本更新内容（中法对照）
+## 1. 本版本修复内容（中法对照，重点）
+
+| ID | 中文：问题与解决结果 `zh-CN` | Français : problème et correction `fr-FR` | 代码依据 | Play 版本验证 |
+|---|---|---|---|---|
+| FIX-101 | 群聊设置中的成员无法正确打开个人主页；现已恢复成员主页跳转。 | Le profil d’un membre ne s’ouvrait pas depuis les réglages du chat de groupe ; l’accès au profil a été rétabli. | `a536075` | [ ] |
+| FIX-102 | 狼人杀房间状态更新不及时；现改为房间级实时失效通知，并保留定时完整性校验。 | L’état des salles Loup-Garou se mettait à jour trop tard ; une synchronisation en temps réel par salle a été ajoutée, avec un contrôle périodique de secours. | `d1c3f74` | [ ] |
+| FIX-103 | 扫码后部分 Friemi 深链、外部操作或普通文本无法正确处理；现支持安全链接、电话、短信、邮件、地图和文本，并拒绝可执行脚本协议。 | Certains liens Friemi, actions externes ou textes étaient mal traités après un scan ; les liens sûrs, appels, SMS, e-mails, cartes et textes sont désormais pris en charge, tandis que les protocoles exécutables sont bloqués. | `3923ed3` | [ ] |
+| FIX-104 | 投票人姓名较多时会挤出页面；现根据可用宽度折叠为姓名加 `+N`。 | Les noms des votants pouvaient déborder ; ils sont maintenant regroupés selon l’espace disponible avec un compteur `+N`. | `f90dea5` | [ ] |
+| FIX-105 | 投票分享卡片和社交平台预览信息不完整；现补充投票分享图和对应页面元数据。 | La carte de partage et l’aperçu social d’un sondage étaient incomplets ; une image de partage et des métadonnées adaptées ont été ajoutées. | `f90dea5` | [ ] |
+| FIX-106 | 投票的重复选项、截止时间、多选上限及游客身份存在边界问题；现已统一清洗和校验。 | Des cas limites existaient pour les choix en double, la date de clôture, la limite de sélection et l’identité des invités ; les règles sont désormais normalisées et validées. | `b017339`、`9ce995c`、`f90dea5` | [ ] |
+
+### 修复项复测重点
+
+- [ ] 从群聊设置依次点击多个成员，均进入对应成员主页，返回后仍停留在原群聊。
+- [ ] 两台设备进入同一狼人杀房间，一端操作后另一端及时刷新；断开实时连接后仍能恢复一致。
+- [ ] 分别扫描 Friemi 内链、优惠券码、HTTPS、电话、短信、邮件、地图和普通文本。
+- [ ] 扫描 `javascript:` 等不安全协议时不会执行或跳转。
+- [ ] 使用窄屏和长昵称验证投票人名单不溢出，并正确显示 `+N`。
+- [ ] 在微信及系统分享中检查投票标题、图片和落地页。
+- [ ] 验证重复选项、已截止投票、单选/多选上限、登录用户和游客投票。
+
+## 2. 本版本更新内容（中法对照）
 
 | ID | 中文 `zh-CN` | Français `fr-FR` | 代码依据 | Play 版本验证 |
 |---|---|---|---|---|
-| UPD-01 | 新增商家优惠券批次、用户领券背包和到店扫码核销流程。 | Ajout des campagnes de coupons commerçants, du portefeuille utilisateur et de la validation par QR code en boutique. | `7b1cd68`、`41da9e5`、`b7a41f7` | [ ] |
-| UPD-02 | 新增移动端首页城市选择，支持选择、搜索和切换城市。 | Ajout du choix de ville sur l’accueil mobile, avec recherche et changement de ville. | `41da9e5`、`9d03d23` | [ ] |
-| UPD-03 | 优化 AA 记账、分摊、多币种显示和付款确认流程。 | Amélioration des comptes partagés AA, des répartitions, de l’affichage multidevise et de la confirmation des paiements. | `7a7d8ee` | [ ] |
-| UPD-04 | 聊天新增回复引用和历史消息分页加载。 | Ajout des réponses citées et du chargement paginé de l’historique des messages. | `41da9e5` | [ ] |
-| UPD-05 | 新增官方反馈入口，并优化官方消息处理流程。 | Ajout d’un canal de retour officiel et amélioration du traitement des messages officiels. | `e1bf9cb`、`b7a41f7` | [ ] |
-| UPD-06 | 更新礼物商店的分类、图片和展示内容。 | Mise à jour des catégories, des visuels et du contenu de la boutique de cadeaux. | `8ef7c49` | [ ] |
+| UPD-101 | 新增活动投票：主理人可创建、管理和分享，参与者及符合规则的游客可以投票。 | Ajout des sondages d’activité : création, gestion et partage par l’organisateur, avec vote des participants et des invités autorisés. | `b017339`、`9ce995c`、`f90dea5` | [ ] |
+| UPD-102 | 投票支持单选、多选、截止时间、结果可见范围、投票人显示和分享落地页。 | Les sondages prennent en charge le choix unique ou multiple, la clôture, la visibilité des résultats et des votants, ainsi qu’une page de partage. | `b017339`、`9ce995c`、`f90dea5` | [ ] |
+| UPD-103 | 优化狼人杀房间配置、桌面展示、座位信息和实时同步。 | Amélioration de la configuration, de la table, des sièges et de la synchronisation en temps réel des salles Loup-Garou. | `d1c3f74`、`3923ed3` | [ ] |
+| UPD-104 | 扩展全局扫码，可识别更多站内页面、安全外部操作和普通文本。 | Extension du scanner global pour reconnaître davantage de pages internes, d’actions externes sûres et de textes simples. | `3923ed3` | [ ] |
+| UPD-105 | 优化 AA 结算进度、付款方式显示及相关账务操作。 | Amélioration du suivi des règlements AA, de l’affichage des moyens de paiement et des opérations associées. | `b017339` | [ ] |
 
-## 2. 本版本修复内容（中法对照）
+## 3. 本轮测试问题与解决记录
 
-| ID | 中文 `zh-CN` | Français `fr-FR` | 代码依据 | Play 版本验证 |
-|---|---|---|---|---|
-| FIX-01 | 修复移动端登录返回后，登录状态没有及时同步的问题。 | Correction de la synchronisation de session après le retour de connexion sur mobile. | `41da9e5`、`b7a41f7` | [ ] |
-| FIX-02 | 修复聊天消息重复发送、历史消息加载不完整的问题。 | Correction des envois en double et du chargement incomplet de l’historique des messages. | `41da9e5` | [ ] |
-| FIX-03 | 修复移动端键盘遮挡输入框、弹窗高度和滚动异常。 | Correction du clavier masquant la saisie ainsi que de la hauteur et du défilement des fenêtres mobiles. | `41da9e5` | [ ] |
-| FIX-04 | 修复活动报名审核与签到审核中的部分状态和显示问题。 | Correction de certains états et affichages lors de l’approbation des participations et des présences. | `e1bf9cb`、`b7a41f7` | [ ] |
-| FIX-05 | 修复从官方消息处理页面返回时进入错误页面的问题。 | Correction du retour vers une page incorrecte après le traitement d’un message officiel. | `b7a41f7` | [ ] |
-| FIX-06 | 修复微信分享时部分页面缩略图不能正确显示的问题。 | Correction de l’affichage incorrect de certaines miniatures lors du partage sur WeChat. | `0bfaa08` | [ ] |
-
-## 3. 本轮测试发现的问题
-
-状态使用：`待复现 / 修复中 / 待复测 / 已验证解决 / 延后并说明`。
+状态使用：`待复现 / 已复现 / 修复中 / 待复测 / 已验证解决 / 延后并说明`。
 
 | 问题 ID | 发现版本 | 设备 / Android | 中文问题描述 | Description française | 解决方式 / commit | 修复版本 | 状态 | 证据 |
 |---|---|---|---|---|---|---|---|---|
@@ -45,42 +56,43 @@
 
 ## 4. 可直接粘贴到 Google Play Console 的版本说明
 
-> 两种语言均低于 Google Play 每种语言 500 个 Unicode 字符的限制。上传前应删除尚未进入本次 AAB 的条目；如果上一测试版本已经包含某项，也不要重复写成新增内容。
+> 以下内容侧重修复，两种语言均不超过 Google Play 每种语言 500 个 Unicode 字符的限制。
 
 ```text
 <fr-FR>
-Nouveautés :
-- Coupons commerçants : campagnes, portefeuille et validation en boutique.
-- Ajout du choix de ville et du canal de retour officiel.
-- Amélioration des comptes AA, des répartitions et des devises.
-- Ajout des réponses et de l’historique du chat.
-
 Correctifs :
-- Synchronisation de session après connexion mobile.
-- Envois en double, chargement des messages et clavier masquant la saisie.
-- Validation des activités, navigation retour et affichage mobile.
+- Accès au profil depuis les réglages du chat de groupe.
+- Synchronisation en temps réel des salles Loup-Garou.
+- Scan QR amélioré pour les liens, actions externes et textes.
+- Affichage des votants et partage des sondages corrigés.
+- Validation renforcée des choix, délais et votes invités.
+
+Nouveautés :
+- Création, vote, gestion et partage de sondages d’activité.
+- Amélioration du suivi des règlements AA et des salles Loup-Garou.
 </fr-FR>
 <zh-CN>
-更新内容：
-- 商家优惠券批次、用户背包与到店核销。
-- 首页城市选择与官方反馈入口。
-- AA 记账、分摊和多币种流程优化。
-- 聊天回复与历史消息加载。
-
 修复内容：
-- 移动端登录后的会话同步。
-- 重复发消息、历史消息加载和键盘遮挡。
-- 活动审核、返回导航和移动端显示问题。
+- 修复群聊设置中无法打开成员主页的问题。
+- 修复狼人杀房间状态更新不及时的问题。
+- 修复部分二维码、外部操作和文本识别问题。
+- 修复投票人名单及投票分享显示问题。
+- 加强投票选项、截止时间和游客投票校验。
+
+更新内容：
+- 新增活动投票的创建、投票、管理和分享。
+- 优化 AA 结算进度和狼人杀房间体验。
 </zh-CN>
 ```
 
 ## 5. 每次更新测试轨道
 
+- [ ] 建立新版本小节，写明上一 Play 版本、当前版本和 Git 范围。
 - [ ] `versionCode` 高于 Play Console 中已经上传的所有版本。
 - [ ] 使用正式签名 AAB，包名和签名与现有应用一致。
 - [ ] 记录本次 AAB 对应的 Git commit。
 - [ ] 从 Google Play 测试链接完成全新安装和覆盖升级各一次。
-- [ ] 检查启动、注册登录、城市切换、聚吧、聊天、AA 和优惠券核心流程。
+- [ ] 优先复测本版本修复清单，再检查新增内容和核心回归流程。
 - [ ] 检查 Pre-launch report 的稳定性、性能、无障碍和截图报告。
 - [ ] 登记测试反馈；修复后上传更高 `versionCode` 再复测。
 - [ ] P0/P1 问题清零后，再申请生产访问或提交正式审核。
@@ -88,12 +100,22 @@ Correctifs :
 
 ## 6. 仍需确认
 
-- [ ] Play Console 上一次实际发布的 `versionName`、`versionCode` 和 Git commit。没有这个基线，不能准确判断哪些内容是“本次新增”。
-- [ ] 当前 `1.0.0 (10)` 是否就是下一次测试轨道版本。
+- [ ] Play Console 是否已经收到 `1.0.0 (10)`；如果没有，本次版本说明还需要合并 1.0.0 的内容。
+- [X] 当前代码中的下一次 Android 测试轨道版本为 `1.0.1 (11)`。
 - [ ] 本次测试使用内部测试还是封闭测试轨道。
 - [ ] 测试人员实际发现的问题、对应设备和复测结果。
 
-## 7. 官方依据
+## 7. 历史版本摘要
+
+### `1.0.0 (10)`
+
+更新内容：商家优惠券、城市选择、AA 流程、聊天回复与历史消息、官方反馈和礼物商店。
+
+修复内容：移动端登录状态同步、聊天重复发送和历史加载、键盘遮挡、活动审核、官方消息返回路径及微信分享缩略图。
+
+对应代码截至 `85acc61`；是否已经上传到 Play Console 仍需确认。
+
+## 8. 官方依据
 
 - [准备和发布版本](https://support.google.com/googleplay/android-developer/answer/9859348)
 - [新个人开发者账号的测试要求](https://support.google.com/googleplay/android-developer/answer/14151465)
