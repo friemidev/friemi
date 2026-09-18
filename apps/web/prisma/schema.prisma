@@ -51,6 +51,49 @@ enum ActivityVisibility {
   PRIVATE
 }
 
+enum ActivityPollKind {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
+enum ActivityPollStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+  ARCHIVED
+}
+
+enum ActivityPollAudience {
+  MEMBERS_ONLY
+  SIGNED_IN_WITH_LINK
+  ANYONE_WITH_LINK
+}
+
+enum ActivityPollGuestIdentityMode {
+  NICKNAME_REQUIRED
+  NICKNAME_OPTIONAL_ANONYMOUS
+}
+
+enum ActivityPollResultVisibility {
+  AFTER_VOTE
+  AFTER_CLOSE
+  ALWAYS
+  ORGANIZER_ONLY
+}
+
+enum ActivityPollVoterVisibility {
+  COUNTS_ONLY
+  PARTICIPANTS_VISIBLE
+  MANAGERS_ONLY
+}
+
+enum ActivityPollBallotStatus {
+  SUBMITTED
+  WITHDRAWN
+  REMOVED_BY_MODERATOR
+}
+
 enum PublicEventStatus {
   SCHEDULED
   CANCELLED
@@ -454,6 +497,10 @@ model UserProfile {
   planetCommentLikes      PlanetMomentCommentLike[]     @relation("PlanetCommentLikeProfile")
   activityPriorityUpdates ActivityPriorityOverride[]    @relation("ActivityPriorityOverrideUpdatedBy")
   activityPriorityLogs    ActivityPriorityOverrideLog[] @relation("ActivityPriorityOverrideLogActor")
+  createdActivityPolls    ActivityPoll[]                @relation("ActivityPollCreator")
+  activityPollBallots     ActivityPollBallot[]          @relation("ActivityPollBallotProfile")
+  activityPollShares      ActivityPollShare[]           @relation("ActivityPollShareCreator")
+  activityPollAuditLogs   ActivityPollAuditLog[]        @relation("ActivityPollAuditActor")
   createdAt               DateTime                      @default(now())
   updatedAt               DateTime                      @updatedAt
   publicEventFavorites    PublicEventFavorite[]
@@ -681,6 +728,7 @@ model Activity {
   announcements     ActivityAnnouncement[]
   trustScoreEvents  TrustScoreEvent[]
   aaLedger          AaLedger?
+  polls             ActivityPoll[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -1526,6 +1574,119 @@ model ActivityAnnouncement {
 
   @@index([activityId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model ActivityPoll {
+  id                 String                       @id @default(cuid())
+  activityId         String
+  createdByProfileId String
+  question           String                       @db.VarChar(120)
+  description        String?                      @db.VarChar(500)
+  kind               ActivityPollKind             @default(SINGLE_CHOICE)
+  maxSelections      Int?
+  status             ActivityPollStatus           @default(OPEN)
+  resultVisibility   ActivityPollResultVisibility @default(AFTER_VOTE)
+  voterVisibility    ActivityPollVoterVisibility  @default(COUNTS_ONLY)
+  closesAt           DateTime?
+  closedAt           DateTime?
+  finalOptionId      String?                      @unique
+  finalNote          String?                      @db.VarChar(300)
+  version            Int                          @default(1)
+  activity           Activity                     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdBy          UserProfile                  @relation("ActivityPollCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  finalOption        ActivityPollOption?          @relation("ActivityPollFinalOption", fields: [finalOptionId], references: [id], onDelete: SetNull)
+  options            ActivityPollOption[]         @relation("ActivityPollOptions")
+  share              ActivityPollShare?
+  ballots            ActivityPollBallot[]
+  auditLogs          ActivityPollAuditLog[]
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  @@index([activityId, status, createdAt])
+  @@index([createdByProfileId, createdAt])
+}
+
+model ActivityPollOption {
+  id             String                  @id @default(cuid())
+  pollId         String
+  label          String                  @db.VarChar(80)
+  position       Int
+  poll           ActivityPoll            @relation("ActivityPollOptions", fields: [pollId], references: [id], onDelete: Cascade)
+  finalizedPolls ActivityPoll[]          @relation("ActivityPollFinalOption")
+  selections     ActivityPollSelection[]
+  createdAt      DateTime                @default(now())
+
+  @@unique([pollId, position])
+  @@index([pollId])
+}
+
+model ActivityPollShare {
+  id                 String                         @id @default(cuid())
+  pollId             String                         @unique
+  tokenHash          String                         @unique @db.VarChar(64)
+  audience           ActivityPollAudience           @default(MEMBERS_ONLY)
+  guestIdentityMode  ActivityPollGuestIdentityMode?
+  expiresAt          DateTime?
+  revokedAt          DateTime?
+  createdByProfileId String
+  poll               ActivityPoll                   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdBy          UserProfile                    @relation("ActivityPollShareCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+
+  @@index([createdByProfileId, createdAt])
+}
+
+model ActivityPollBallot {
+  id               String                   @id @default(cuid())
+  pollId           String
+  profileId        String?
+  guestKeyHash     String?                  @db.VarChar(64)
+  guestNickname    String?                  @db.VarChar(30)
+  guestDisplayCode String?                  @db.VarChar(8)
+  editTokenHash    String?                  @unique @db.VarChar(64)
+  isAnonymousGuest Boolean                  @default(false)
+  status           ActivityPollBallotStatus @default(SUBMITTED)
+  version          Int                      @default(1)
+  removedReason    String?                  @db.VarChar(200)
+  removedAt        DateTime?
+  submittedAt      DateTime                 @default(now())
+  poll             ActivityPoll             @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  profile          UserProfile?             @relation("ActivityPollBallotProfile", fields: [profileId], references: [id], onDelete: SetNull)
+  selections       ActivityPollSelection[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@unique([pollId, profileId])
+  @@unique([pollId, guestKeyHash])
+  @@index([pollId, status, updatedAt])
+  @@index([profileId, updatedAt])
+}
+
+model ActivityPollSelection {
+  id        String             @id @default(cuid())
+  ballotId  String
+  optionId  String
+  ballot    ActivityPollBallot @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  option    ActivityPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+
+  @@unique([ballotId, optionId])
+  @@index([optionId])
+}
+
+model ActivityPollAuditLog {
+  id             String       @id @default(cuid())
+  pollId         String
+  actorProfileId String?
+  action         String       @db.VarChar(64)
+  metadata       Json?
+  poll           ActivityPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  actor          UserProfile? @relation("ActivityPollAuditActor", fields: [actorProfileId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+
+  @@index([pollId, createdAt])
+  @@index([actorProfileId, createdAt])
 }
 
 model Report {

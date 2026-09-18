@@ -89,6 +89,8 @@ import { getActivityRoomUnreadState } from "@/features/activity-room-chat/servic
 import { ParticipantToolCard } from "@/features/aa/components/ParticipantToolCard";
 import { AaActivitySummaryCard } from "@/features/aa/components/AaActivitySummaryCard";
 import { getActivityAaEntryState } from "@/features/aa/server/ledgerService";
+import { PollToolEntry } from "@/features/polls/components/PollToolEntry";
+import { getActivityPollEntrySummary } from "@/features/polls/server/pollService";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
@@ -1514,24 +1516,45 @@ export async function ActivityDetailPageContent({
   const canUseBoardGameTools =
     !activity.isActivityInfo && activity.category === "BOARD_GAME";
   const gameToolsHref = withLocale(locale, "/game-tools");
-  const [pendingParticipants, analyticsSummary, activityCheckInRoster] =
-    await Promise.all([
-      isTeamOperator && activity.requiresApproval && viewerProfile
-        ? perf.measure("activity.pendingParticipants", () =>
-            getPendingParticipants(activity.id, viewerProfile.id),
+  const canAccessPolls =
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT" &&
+    (isTeamOperator ||
+      viewerParticipation?.status === "JOINED" ||
+      viewerParticipation?.status === "APPROVED");
+  const pollsHref = withLocale(locale, `/lobby/${activity.id}/polls`);
+  const [
+    pendingParticipants,
+    analyticsSummary,
+    activityCheckInRoster,
+    pollEntrySummary,
+  ] = await Promise.all([
+    isTeamOperator && activity.requiresApproval && viewerProfile
+      ? perf.measure("activity.pendingParticipants", () =>
+          getPendingParticipants(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    isTeamOperator && !isMobileRequest
+      ? perf.measure("activity.analyticsSummary", () =>
+          getActivityAnalyticsSummary(activity.id),
+        )
+      : Promise.resolve(null),
+    isTeamOperator && viewerProfile
+      ? perf.measure("activity.checkInRoster", () =>
+          getActivityCheckInRoster(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    canAccessPolls
+      ? perf
+          .measure("activity.pollEntrySummary", () =>
+            getActivityPollEntrySummary(activity.id),
           )
-        : Promise.resolve([]),
-      isTeamOperator && !isMobileRequest
-        ? perf.measure("activity.analyticsSummary", () =>
-            getActivityAnalyticsSummary(activity.id),
-          )
-        : Promise.resolve(null),
-      isTeamOperator && viewerProfile
-        ? perf.measure("activity.checkInRoster", () =>
-            getActivityCheckInRoster(activity.id, viewerProfile.id),
-          )
-        : Promise.resolve([]),
-    ]);
+          .catch((error: unknown) => {
+            console.error("Failed to load activity poll summary", error);
+            return { openCount: 0, totalCount: 0 };
+          })
+      : Promise.resolve({ openCount: 0, totalCount: 0 }),
+  ]);
   perf.finish(
     {
       commentCount: 0,
@@ -2061,6 +2084,13 @@ export async function ActivityDetailPageContent({
                     variant="tool"
                   />
                 ) : null}
+                {canAccessPolls ? (
+                  <PollToolEntry
+                    href={pollsHref}
+                    locale={locale}
+                    openCount={pollEntrySummary.openCount}
+                  />
+                ) : null}
                 {isTeamOperator ? (
                   <>
                     <ActivityCheckInReviewPanel
@@ -2205,12 +2235,23 @@ export async function ActivityDetailPageContent({
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
             additionalTools={
-              canUseBoardGameTools ? (
-                <BoardGameToolFloatingEntry
-                  gameToolsHref={gameToolsHref}
-                  locale={locale}
-                  variant="tool"
-                />
+              canUseBoardGameTools || canAccessPolls ? (
+                <>
+                  {canUseBoardGameTools ? (
+                    <BoardGameToolFloatingEntry
+                      gameToolsHref={gameToolsHref}
+                      locale={locale}
+                      variant="tool"
+                    />
+                  ) : null}
+                  {canAccessPolls ? (
+                    <PollToolEntry
+                      href={pollsHref}
+                      locale={locale}
+                      openCount={pollEntrySummary.openCount}
+                    />
+                  ) : null}
+                </>
               ) : undefined
             }
             announcementHref="#activity-announcement-desktop"

@@ -811,10 +811,10 @@ export default async function AaLedgerPage({
                   "requireTransferConfirmation",
                   snapshot.requireTransferConfirmation,
                   locale === "fr"
-                    ? "Confirmation des paiements"
+                    ? "Confirmer aussi les virements manuels"
                     : locale === "en"
-                      ? "Confirm payments on both sides"
-                      : "转账需要双方确认",
+                      ? "Also confirm manual transfers on both sides"
+                      : "手动补录转账也需要双方确认",
                 ],
               ].map(([name, checked, label]) => (
                 <label

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 type ActivityCoverImageProps = {
   alt?: string;
+  categoryArtworkClassName?: string;
   fallbackSrc?: string | null;
   fetchPriority?: "auto" | "high" | "low";
   imageClassName?: string;
@@ -21,6 +22,7 @@ type ActivityCoverImageProps = {
 
 export function ActivityCoverImage({
   alt = "",
+  categoryArtworkClassName,
   fallbackSrc,
   fetchPriority = "auto",
   imageClassName,
@@ -116,6 +118,9 @@ export function ActivityCoverImage({
             fallbackUsesCategoryArtworkCrop
               ? "inset-x-0 bottom-0 h-[124%] object-bottom"
               : "inset-0 h-full",
+            fallbackUsesCategoryArtworkCrop
+              ? categoryArtworkClassName
+              : undefined,
           )}
           decoding="sync"
           fetchPriority={fetchPriority}
@@ -134,6 +139,7 @@ export function ActivityCoverImage({
             usesCategoryArtworkCrop
               ? "inset-x-0 bottom-0 h-[124%] object-bottom"
               : "inset-0 h-full group-hover/card:scale-[1.035]",
+            usesCategoryArtworkCrop ? categoryArtworkClassName : undefined,
             hasLoaded ? "opacity-100" : "opacity-0",
             imageClassName,
           )}

@@ -7,6 +7,7 @@ import { AaPaymentRequestShare } from "@/features/aa/components/AaPaymentRequest
 import { formatMinorAmount } from "@/features/aa/domain/money";
 import { getActivityAaAccess } from "@/features/aa/server/access";
 import { cancelAaPaymentRequestAction } from "@/features/aa/actions/aaPaymentRequestActions";
+import { markAaSettlementPaidAction } from "@/features/aa/actions/aaTransactionActions";
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -20,12 +21,6 @@ type PageProps = {
     requestId: string;
   }>;
 };
-
-function minorToInput(amountMinor: bigint) {
-  const whole = amountMinor / 100n;
-  const fraction = (amountMinor % 100n).toString().padStart(2, "0");
-  return `${whole}.${fraction}`;
-}
 
 function Initial({ name }: { name: string }) {
   return (
@@ -48,7 +43,7 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
         include: {
           creator: true,
           fromParticipant: true,
-          ledger: { select: { titleSnapshot: true } },
+          ledger: { select: { titleSnapshot: true, version: true } },
           toParticipant: {
             include: {
               userProfile: {
@@ -64,6 +59,7 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
     locale === "fr"
       ? {
           back: "Progression",
+          awaiting: "Paiement envoyé, en attente de confirmation.",
           cancelled: "Cette demande n'est plus active.",
           cancel: "Annuler la demande",
           heading: "Détails du paiement",
@@ -71,12 +67,13 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
             `${from} doit ${amount} à ${to} pour les dépenses partagées Friemi.`,
           payer: "Payeur",
           personal: "À payer",
-          record: "Marquer comme payé",
+          record: "J’ai payé",
           total: "Montant",
         }
       : locale === "en"
         ? {
             back: "Progress",
+            awaiting: "Payment sent and awaiting confirmation.",
             cancelled: "This request is no longer active.",
             cancel: "Cancel request",
             heading: "Payment details",
@@ -84,11 +81,12 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
               `${from} owes ${to} ${amount} for shared Friemi costs.`,
             payer: "Payer",
             personal: "You pay",
-            record: "Mark as paid",
+            record: "I’ve paid",
             total: "Amount",
           }
         : {
             back: "返回结算进度",
+            awaiting: "已付款，正在等待收款方确认。",
             cancelled: "该付款请求已失效或取消。",
             cancel: "取消付款请求",
             heading: "付款详情",
@@ -96,7 +94,7 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
               `${from}需要向${to}支付 ${amount}，用于结清 Friemi 聚吧共同开支。`,
             payer: "付款给（垫付人）",
             personal: "个人金额",
-            record: "标记已付款",
+            record: "我已付款",
             total: "总金额",
           };
 
@@ -133,18 +131,27 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
     access?.canManage ||
     viewerParticipant?.id === request.createdByParticipantId,
   );
+  const viewerIsPayer = request.fromParticipant.userProfileId === profile.id;
   const active = request.status === "SENT" || request.status === "VIEWED";
-  const statusLabel = active
+  const awaitingConfirmation = active && Boolean(request.linkedTransferId);
+  const paymentActionAvailable = active && !request.linkedTransferId;
+  const statusLabel = awaitingConfirmation
     ? locale === "fr"
-      ? "En attente"
+      ? "Confirmation"
       : locale === "en"
-        ? "Pending"
-        : "待付款"
-    : locale === "fr"
-      ? "Terminé"
-      : locale === "en"
-        ? "Completed"
-        : "已完成";
+        ? "Awaiting confirmation"
+        : "已付款·待确认"
+    : active
+      ? locale === "fr"
+        ? "En attente"
+        : locale === "en"
+          ? "Pending"
+          : "待付款"
+      : locale === "fr"
+        ? "Terminé"
+        : locale === "en"
+          ? "Completed"
+          : "已完成";
 
   return (
     <PageContainer
@@ -210,32 +217,59 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
         </div>
       </section>
 
-      <AaPaymentMethods
-        contactEmail={request.toParticipant.userProfile?.contactEmail ?? null}
-        locale={locale}
-        payeeName={request.toParticipant.displayNameSnapshot}
-        wechatId={request.toParticipant.userProfile?.wechatId ?? null}
-      />
+      {viewerIsPayer ? (
+        <AaPaymentMethods
+          contactEmail={request.toParticipant.userProfile?.contactEmail ?? null}
+          locale={locale}
+          payeeName={request.toParticipant.displayNameSnapshot}
+          wechatId={request.toParticipant.userProfile?.wechatId ?? null}
+        />
+      ) : null}
 
-      {active ? (
+      {paymentActionAvailable ? (
         <AaPaymentRequestShare compact locale={locale} message={message} />
+      ) : awaitingConfirmation ? (
+        <p className="rounded-[12px] bg-[#FFF5DD] px-4 py-3 text-center text-[11px] font-bold text-[#8A641B]">
+          {copy.awaiting}
+        </p>
       ) : (
         <p className="rounded-[12px] bg-[#FFF0F2] px-4 py-3 text-center text-[11px] font-bold text-[#A53C50]">
           {copy.cancelled}
         </p>
       )}
 
-      {active && request.fromParticipant.userProfileId === profile.id ? (
-        <Link
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#156240] to-[#369758] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
-          href={withLocale(
-            locale,
-            `/lobby/${activityId}/aa/new?type=TRANSFER&from=${encodeURIComponent(request.fromParticipantId)}&to=${encodeURIComponent(request.toParticipantId)}&amount=${minorToInput(request.amountMinor)}`,
-          )}
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          {copy.record}
-        </Link>
+      {paymentActionAvailable && viewerIsPayer ? (
+        <form action={markAaSettlementPaidAction}>
+          <input name="activityId" type="hidden" value={activityId} />
+          <input
+            name="amountMinor"
+            type="hidden"
+            value={request.amountMinor.toString()}
+          />
+          <input
+            name="fromParticipantId"
+            type="hidden"
+            value={request.fromParticipantId}
+          />
+          <input
+            name="ledgerVersion"
+            type="hidden"
+            value={request.ledger.version}
+          />
+          <input name="locale" type="hidden" value={locale} />
+          <input
+            name="toParticipantId"
+            type="hidden"
+            value={request.toParticipantId}
+          />
+          <button
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#156240] to-[#369758] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
+            type="submit"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {copy.record}
+          </button>
+        </form>
       ) : null}
 
       <p className="flex items-start gap-2 rounded-[12px] bg-[#F2F7F0] px-3 py-2.5 text-[10px] font-semibold leading-5 text-[#66736A]">
@@ -243,7 +277,7 @@ export default async function AaPaymentRequestPage({ params }: PageProps) {
         {message}
       </p>
 
-      {active && canCancel ? (
+      {paymentActionAvailable && canCancel ? (
         <form action={cancelAaPaymentRequestAction}>
           <input name="activityId" type="hidden" value={activityId} />
           <input name="locale" type="hidden" value={locale} />

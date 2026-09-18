@@ -215,13 +215,17 @@ export default async function AaTransactionDetailPage({ params }: PageProps) {
               className={`rounded-xl px-2 py-2 ${transaction.payerConfirmedAt ? "bg-[#ECF5EF] text-[#156240]" : "bg-[#FFF5DD] text-[#7A5B13]"}`}
             >
               {transaction.payerConfirmedAt ? "✓ " : ""}
-              {copy.confirm}
+              {transaction.payerConfirmedAt
+                ? copy.payerConfirmed
+                : copy.payerPending}
             </span>
             <span
               className={`rounded-xl px-2 py-2 ${transaction.payeeConfirmedAt ? "bg-[#ECF5EF] text-[#156240]" : "bg-[#FFF5DD] text-[#7A5B13]"}`}
             >
               {transaction.payeeConfirmedAt ? "✓ " : ""}
-              {copy.confirm}
+              {transaction.payeeConfirmedAt
+                ? copy.payeeConfirmed
+                : copy.payeePending}
             </span>
           </div>
         </section>
@@ -597,7 +601,9 @@ export default async function AaTransactionDetailPage({ params }: PageProps) {
                 type="submit"
               >
                 <Check className="h-3.5 w-3.5" />
-                {copy.confirm}
+                {transaction.transferTo?.id === snapshot.viewer.id
+                  ? copy.confirmReceipt
+                  : copy.confirmPayment}
               </button>
             </form>
           ) : null}
