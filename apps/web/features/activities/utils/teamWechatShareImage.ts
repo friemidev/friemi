@@ -1,3 +1,5 @@
+import { shareCardVersion } from "@/lib/share-metadata";
+
 type TeamWechatShareImageInput = {
   activityId: string;
   activityUrl: string;
@@ -15,6 +17,7 @@ export function resolveTeamWechatShareImageUrl({
     shareImageUrl.searchParams.set("activityId", activityId);
     shareImageUrl.searchParams.set("locale", locale);
     shareImageUrl.searchParams.set("variant", "wechat");
+    shareImageUrl.searchParams.set("v", shareCardVersion);
 
     const accessToken = pageUrl.searchParams.get("access");
 

@@ -77,7 +77,10 @@ export type ActivityPollViewData = {
     count: number;
     percentage: number;
     selected: boolean;
-    voters: string[];
+    voters: Array<{
+      isAnonymous: boolean;
+      nickname: string;
+    }>;
   }>;
   finalOptionId: string | null;
   finalNote: string | null;
@@ -352,7 +355,6 @@ async function buildPollView({
         where: { pollId: poll.id, status: "SUBMITTED" },
         select: {
           guestNickname: true,
-          guestDisplayCode: true,
           isAnonymousGuest: true,
           profile: { select: { nickname: true } },
           selections: { select: { optionId: true } },
@@ -408,12 +410,15 @@ async function buildPollView({
           ),
         )
         .map((ballot) => {
-          if (ballot.isAnonymousGuest) return "ANONYMOUS_GUEST";
-          if (ballot.profile?.nickname) return ballot.profile.nickname;
-          const suffix = ballot.guestDisplayCode
-            ? ` · ${ballot.guestDisplayCode}`
-            : "";
-          return `${ballot.guestNickname ?? "Guest"}${suffix}`;
+          if (ballot.isAnonymousGuest) {
+            return { isAnonymous: true, nickname: "" };
+          }
+
+          return {
+            isAnonymous: false,
+            nickname:
+              ballot.profile?.nickname ?? ballot.guestNickname ?? "Guest",
+          };
         });
 
       return {

@@ -1,6 +1,6 @@
-import { ImageResponse } from "next/og";
 import { getActivityShareMetadataById } from "@/features/activities/queries/getActivityById";
 import { brand } from "@/lib/brand";
+import { createShareImageResponse } from "@/lib/share-image-response";
 import {
   getRequestBaseUrl,
   getShareDateLabel,
@@ -351,7 +351,7 @@ export async function GET(request: Request) {
   const copy = getLocaleCopy(locale);
 
   if (!activity) {
-    return new ImageResponse(
+    return createShareImageResponse(
       <FallbackShareImage baseUrl={baseUrl} locale={locale} />,
       variant === "wechat" ? wechatImageSize : defaultImageSize,
     );
@@ -391,7 +391,7 @@ export async function GET(request: Request) {
   });
 
   if (variant === "wechat") {
-    return new ImageResponse(
+    return createShareImageResponse(
       <TeamWechatShareImage
         activity={activity}
         baseUrl={baseUrl}
@@ -403,7 +403,7 @@ export async function GET(request: Request) {
     );
   }
 
-  return new ImageResponse(
+  return createShareImageResponse(
     <div
       style={{
         background:

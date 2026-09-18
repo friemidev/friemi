@@ -4,7 +4,8 @@ export const MIN_POLL_OPTIONS = 2;
 export const MAX_POLL_OPTIONS = 20;
 export const DEFAULT_POLL_RESULT_VISIBILITY = "AFTER_VOTE" as const;
 export const DEFAULT_POLL_VOTER_VISIBILITY = "PARTICIPANTS_VISIBLE" as const;
-export const POLL_GUEST_IDENTITY_MODE = "NICKNAME_REQUIRED" as const;
+export const POLL_GUEST_IDENTITY_MODE =
+  "NICKNAME_OPTIONAL_ANONYMOUS" as const;
 
 export function normalizePollOptions(values: string[]) {
   const seen = new Set<string>();
@@ -49,4 +50,16 @@ export function isValidPollSelection({
   if (kind === "SINGLE_CHOICE") return selectedCount === 1;
 
   return selectedCount <= (maxSelections ?? optionCount);
+}
+
+export function isValidPollVoterIdentity({
+  guestNickname,
+  isAnonymous,
+  isAuthenticated,
+}: {
+  guestNickname: string;
+  isAnonymous: boolean;
+  isAuthenticated: boolean;
+}) {
+  return isAuthenticated || isAnonymous || Boolean(guestNickname.trim());
 }

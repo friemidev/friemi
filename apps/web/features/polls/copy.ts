@@ -1,11 +1,12 @@
 export function getPollCopy(locale: string) {
   if (locale === "fr") {
     return {
-      anonymous: "Invité anonyme",
+      anonymous: "Anonyme",
       anonymousConfirm: "Voter anonymement",
       back: "Retour",
       cancel: "Annuler le sondage",
       cancelled: "Sondage annulé",
+      collapseVoters: "Réduire",
       close: "Clore le sondage",
       closed: "Clôturé",
       closesAt: "Clôture",
@@ -17,6 +18,7 @@ export function getPollCopy(locale: string) {
       descriptionPlaceholder: "Ajoutez un contexte utile (facultatif)",
       empty: "Aucun sondage pour le moment",
       emptyHint: "Créez une décision rapide pour ce groupe.",
+      expandVoters: "Afficher tous les votants",
       finalDecision: "Décision finale",
       guestLimit:
         "Le vote invité facilite la participation, mais ne garantit pas strictement une personne, une voix.",
@@ -65,7 +67,8 @@ export function getPollCopy(locale: string) {
       voterVisibility: "Visibilité des votants",
       withdraw: "Retirer mon vote",
       nicknameRequired: "Pseudo obligatoire",
-      nicknameOptional: "Pseudo facultatif, vote anonyme possible",
+      nicknameOptional:
+        "Les invités peuvent saisir un pseudo ou voter anonymement.",
       options: "Options",
       maxSelections: "Nombre maximum de choix",
       deadlineOptional: "Date limite (facultative)",
@@ -86,11 +89,12 @@ export function getPollCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      anonymous: "Anonymous guest",
+      anonymous: "Anonymous",
       anonymousConfirm: "Vote anonymously",
       back: "Back",
       cancel: "Cancel poll",
       cancelled: "Poll cancelled",
+      collapseVoters: "Collapse",
       close: "Close poll",
       closed: "Closed",
       closesAt: "Closes",
@@ -102,6 +106,7 @@ export function getPollCopy(locale: string) {
       descriptionPlaceholder: "Add helpful context (optional)",
       empty: "No polls yet",
       emptyHint: "Create a quick decision for this group.",
+      expandVoters: "Show all voters",
       finalDecision: "Final decision",
       guestLimit:
         "Guest voting is convenient, but cannot strictly guarantee one real person per vote.",
@@ -150,7 +155,7 @@ export function getPollCopy(locale: string) {
       voterVisibility: "Voter visibility",
       withdraw: "Withdraw my vote",
       nicknameRequired: "Nickname required",
-      nicknameOptional: "Nickname optional; anonymous voting allowed",
+      nicknameOptional: "Guests may enter a nickname or vote anonymously.",
       options: "Options",
       maxSelections: "Maximum selections",
       deadlineOptional: "Deadline (optional)",
@@ -170,11 +175,12 @@ export function getPollCopy(locale: string) {
   }
 
   return {
-    anonymous: "匿名游客",
+    anonymous: "匿名",
     anonymousConfirm: "匿名投票",
     back: "返回",
     cancel: "取消投票",
     cancelled: "投票已取消",
+    collapseVoters: "收起",
     close: "关闭投票",
     closed: "已关闭",
     closesAt: "截止时间",
@@ -186,6 +192,7 @@ export function getPollCopy(locale: string) {
     descriptionPlaceholder: "补充投票背景（选填）",
     empty: "还没有投票",
     emptyHint: "发起一个简单投票，让大家快速做决定。",
+    expandVoters: "显示全部投票人",
     finalDecision: "最终决定",
     guestLimit: "游客投票方便快速收集意见，但无法严格保证现实中的一人一票。",
     guestNickname: "你的昵称",
@@ -233,7 +240,7 @@ export function getPollCopy(locale: string) {
     voterVisibility: "谁可以看到投票人",
     withdraw: "撤销我的投票",
     nicknameRequired: "游客必须输入昵称",
-    nicknameOptional: "昵称选填，留空可匿名",
+    nicknameOptional: "游客可填写昵称，也可选择匿名投票。",
     options: "投票选项",
     maxSelections: "最多可选",
     deadlineOptional: "截止时间（选填）",

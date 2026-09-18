@@ -4,7 +4,7 @@ import { buildCanonicalSiteUrl } from "@/lib/site-url";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
-      allow: "/",
+      allow: ["/", "/api/share/"],
       disallow: ["/api/", "/admin/", "/*/admin/"],
       userAgent: "*",
     },

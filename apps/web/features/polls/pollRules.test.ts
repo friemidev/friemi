@@ -7,6 +7,7 @@ import {
   MIN_POLL_OPTIONS,
   POLL_GUEST_IDENTITY_MODE,
   isValidPollSelection,
+  isValidPollVoterIdentity,
   normalizePollOptions,
   resolveEffectivePollStatus,
 } from "./pollRules";
@@ -19,7 +20,7 @@ test("poll option limits allow up to twenty choices", () => {
 test("poll defaults expose voters to participants after voting", () => {
   assert.equal(DEFAULT_POLL_RESULT_VISIBILITY, "AFTER_VOTE");
   assert.equal(DEFAULT_POLL_VOTER_VISIBILITY, "PARTICIPANTS_VISIBLE");
-  assert.equal(POLL_GUEST_IDENTITY_MODE, "NICKNAME_REQUIRED");
+  assert.equal(POLL_GUEST_IDENTITY_MODE, "NICKNAME_OPTIONAL_ANONYMOUS");
 });
 
 test("poll options are trimmed, deduplicated, and length bounded", () => {
@@ -79,5 +80,40 @@ test("single and multiple choice selection limits are enforced", () => {
       selectedCount: 3,
     }),
     false,
+  );
+});
+
+test("guests may replace a nickname with an explicit anonymous vote", () => {
+  assert.equal(
+    isValidPollVoterIdentity({
+      guestNickname: "",
+      isAnonymous: false,
+      isAuthenticated: false,
+    }),
+    false,
+  );
+  assert.equal(
+    isValidPollVoterIdentity({
+      guestNickname: "",
+      isAnonymous: true,
+      isAuthenticated: false,
+    }),
+    true,
+  );
+  assert.equal(
+    isValidPollVoterIdentity({
+      guestNickname: "Alice",
+      isAnonymous: false,
+      isAuthenticated: false,
+    }),
+    true,
+  );
+  assert.equal(
+    isValidPollVoterIdentity({
+      guestNickname: "",
+      isAnonymous: false,
+      isAuthenticated: true,
+    }),
+    true,
   );
 });

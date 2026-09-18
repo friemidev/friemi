@@ -16,7 +16,11 @@ type MobileNavProps = {
 };
 
 function shouldHideMobileNav(pathname: string, locale: string) {
+  const localizedPollPath = withLocale(locale, "/poll");
+
   return (
+    pathname === localizedPollPath ||
+    pathname.startsWith(`${localizedPollPath}/`) ||
     pathname === withLocale(locale, "/game-tools") ||
     pathname.startsWith(`${withLocale(locale, "/game-tools")}/`) ||
     pathname.startsWith(`${withLocale(locale, "/messages")}/`) ||

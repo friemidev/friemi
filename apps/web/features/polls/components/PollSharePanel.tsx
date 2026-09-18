@@ -103,7 +103,7 @@ export function PollSharePanel({
         </label>
         {audience === "ANYONE_WITH_LINK" ? (
           <p className="px-1 py-1 text-[11px] font-semibold text-[#607268]">
-            {copy.nicknameRequired}
+            {copy.nicknameOptional}
           </p>
         ) : null}
         <button

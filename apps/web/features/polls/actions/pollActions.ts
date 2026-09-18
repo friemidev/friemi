@@ -16,6 +16,7 @@ import {
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { shareCardVersion } from "@/lib/share-metadata";
 import { checkDistributedRateLimit } from "@/lib/distributedRateLimit";
 import { getPollCopy } from "../copy";
 import {
@@ -23,6 +24,7 @@ import {
   MIN_POLL_OPTIONS,
   POLL_GUEST_IDENTITY_MODE,
   isValidPollSelection,
+  isValidPollVoterIdentity,
   normalizePollOptions,
 } from "../pollRules";
 import {
@@ -242,6 +244,7 @@ export async function submitActivityPollVoteAction(
   const pollId = getString(formData, "pollId");
   const shareToken = getString(formData, "shareToken");
   const guestNickname = getString(formData, "guestNickname").slice(0, 30);
+  const isAnonymousVote = getString(formData, "isAnonymous") === "1";
   const selectedOptionIds = Array.from(
     new Set(getStrings(formData, "optionId")),
   );
@@ -294,7 +297,6 @@ export async function submitActivityPollVoteAction(
 
   let rawGuestToken: string | null = null;
   let guestKeyHash: string | null = null;
-  const isAnonymousGuest = false;
 
   if (!profile) {
     if (
@@ -305,7 +307,13 @@ export async function submitActivityPollVoteAction(
       return { error: copy.loginRequired };
     }
 
-    if (!guestNickname) {
+    if (
+      !isValidPollVoterIdentity({
+        guestNickname,
+        isAnonymous: isAnonymousVote,
+        isAuthenticated: false,
+      })
+    ) {
       return { error: copy.invalid };
     }
     const cookieStore = await cookies();
@@ -347,8 +355,9 @@ export async function submitActivityPollVoteAction(
             data: {
               status: "SUBMITTED",
               profileId: profile?.id ?? null,
-              guestNickname: profile ? null : guestNickname || null,
-              isAnonymousGuest: profile ? false : isAnonymousGuest,
+              guestNickname:
+                profile || isAnonymousVote ? null : guestNickname || null,
+              isAnonymousGuest: isAnonymousVote,
               removedAt: null,
               removedReason: null,
               submittedAt: new Date(),
@@ -362,9 +371,10 @@ export async function submitActivityPollVoteAction(
               profileId: profile?.id ?? null,
               guestKeyHash,
               editTokenHash: guestKeyHash,
-              guestNickname: profile ? null : guestNickname || null,
+              guestNickname:
+                profile || isAnonymousVote ? null : guestNickname || null,
               guestDisplayCode: profile ? null : createGuestDisplayCode(),
-              isAnonymousGuest: profile ? false : isAnonymousGuest,
+              isAnonymousGuest: isAnonymousVote,
               status: "SUBMITTED",
             },
             select: { id: true },
@@ -514,7 +524,7 @@ export async function configureActivityPollShareAction(
   refreshPollPaths(locale, poll.activityId, poll.id);
   return {
     ok: true,
-    sharePath: withLocale(locale, `/poll/${rawToken}`),
+    sharePath: `${withLocale(locale, `/poll/${rawToken}`)}?share=${shareCardVersion}`,
   };
 }
 
