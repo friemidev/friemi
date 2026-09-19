@@ -43,6 +43,13 @@ export function getWerewolfWinnerFromFinishSelection(
   return selection === "TERMINATED" ? null : selection;
 }
 
+export function didWerewolfRoomStartNextRound(
+  previousStatus: string,
+  currentStatus: string,
+) {
+  return previousStatus === "FINISHED" && currentStatus === "IN_PROGRESS";
+}
+
 function getPhase(value: unknown): WerewolfRoomPhase {
   if (
     value === "DEALING" ||

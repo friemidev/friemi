@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createInitialWerewolfRoomState,
+  didWerewolfRoomStartNextRound,
   getWerewolfWinnerFromFinishSelection,
   normalizeWerewolfRoomState,
 } from "./werewolfRoomState";
@@ -37,4 +38,19 @@ test("maps a judge finish selection without recording a terminated winner", () =
   assert.equal(getWerewolfWinnerFromFinishSelection("GOOD"), "GOOD");
   assert.equal(getWerewolfWinnerFromFinishSelection("WEREWOLF"), "WEREWOLF");
   assert.equal(getWerewolfWinnerFromFinishSelection("TERMINATED"), null);
+});
+
+test("detects when a finished Werewolf room starts its next round", () => {
+  assert.equal(
+    didWerewolfRoomStartNextRound("FINISHED", "IN_PROGRESS"),
+    true,
+  );
+  assert.equal(
+    didWerewolfRoomStartNextRound("LOBBY", "IN_PROGRESS"),
+    false,
+  );
+  assert.equal(
+    didWerewolfRoomStartNextRound("IN_PROGRESS", "IN_PROGRESS"),
+    false,
+  );
 });

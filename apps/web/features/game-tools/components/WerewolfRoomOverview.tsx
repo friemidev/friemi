@@ -63,6 +63,7 @@ import {
 } from "@/features/game-tools/werewolfCardAssets";
 import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
 import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
+import { didWerewolfRoomStartNextRound } from "@/features/game-tools/werewolfRoomState";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
@@ -928,6 +929,16 @@ export function WerewolfRoomOverview({
     [room.seats],
   );
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
+  const currentViewerSeat =
+    room.seats.find(
+      (seat) =>
+        seat.isViewerSeat ||
+        room.currentMember?.seatedSeatNumber === seat.seatNumber,
+    ) ?? null;
+  const judgeIsViewer = isWerewolfJudgeViewer({
+    currentMemberSeatNumber: room.currentMember?.seatedSeatNumber,
+    judgeSeat,
+  });
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -1363,8 +1374,27 @@ export function WerewolfRoomOverview({
       setResultDialogOpen(true);
     }
 
+    if (didWerewolfRoomStartNextRound(previousStatus, room.status)) {
+      setResultDialogOpen(false);
+
+      if (!judgeIsViewer && currentSeatPrivateToken) {
+        router.replace(
+          withLocale(
+            locale,
+            `/game-tools/werewolf/seats/${currentSeatPrivateToken}`,
+          ),
+        );
+      }
+    }
+
     previousRoomStatusRef.current = room.status;
-  }, [room.status]);
+  }, [
+    currentSeatPrivateToken,
+    judgeIsViewer,
+    locale,
+    room.status,
+    router,
+  ]);
 
   const applyOptimisticSeatClaim = useCallback(
     (seatNumber: number) => {
@@ -1536,16 +1566,6 @@ export function WerewolfRoomOverview({
     });
   }, [t.empty]);
 
-  const currentViewerSeat =
-    room.seats.find(
-      (seat) =>
-        seat.isViewerSeat ||
-        room.currentMember?.seatedSeatNumber === seat.seatNumber,
-    ) ?? null;
-  const judgeIsViewer = isWerewolfJudgeViewer({
-    currentMemberSeatNumber: room.currentMember?.seatedSeatNumber,
-    judgeSeat,
-  });
   const readySeatCount = room.seats.filter(
     (seat) => seat.isClaimed && seat.readyAt,
   ).length;
