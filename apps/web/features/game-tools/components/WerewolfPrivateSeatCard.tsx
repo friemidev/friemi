@@ -552,10 +552,6 @@ export function WerewolfPrivateSeatCard({
   }, [initialIsDead, roomUpdatedAt]);
 
   useEffect(() => {
-    if (roomStatus === "FINISHED") {
-      return;
-    }
-
     let disposed = false;
 
     const syncPrivateSeat = async () => {
@@ -613,11 +609,22 @@ export function WerewolfPrivateSeatCard({
         const payload = (await roomResponse.json()) as {
           room?: {
             seats?: Array<{ isDead: boolean; seatNumber: number }>;
+            state?: { roundNumber?: number };
             status?: string;
             syncVersion?: string;
           };
           syncVersion?: string;
         };
+        const syncedRoundNumber = payload.room?.state?.roundNumber;
+
+        if (
+          typeof syncedRoundNumber === "number" &&
+          syncedRoundNumber !== roomState.roundNumber
+        ) {
+          router.refresh();
+          return;
+        }
+
         const currentSeat = payload.room?.seats?.find(
           (seat) => seat.seatNumber === seatNumber,
         );
@@ -643,7 +650,11 @@ export function WerewolfPrivateSeatCard({
     void syncPrivateSeat();
     const interval = window.setInterval(
       syncPrivateSeat,
-      realtimeConnected ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS : 2800,
+      realtimeConnected
+        ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS
+        : roomStatus === "FINISHED"
+          ? 8000
+          : 2800,
     );
     const handleFocus = () => void syncPrivateSeat();
     const handleOnline = () => void syncPrivateSeat();
@@ -667,7 +678,15 @@ export function WerewolfPrivateSeatCard({
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [locale, realtimeConnected, roomId, roomStatus, router, seatNumber]);
+  }, [
+    locale,
+    realtimeConnected,
+    roomId,
+    roomState.roundNumber,
+    roomStatus,
+    router,
+    seatNumber,
+  ]);
 
   useEffect(() => {
     if (!revealed) {
