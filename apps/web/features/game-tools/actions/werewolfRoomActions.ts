@@ -1982,6 +1982,7 @@ export async function startWerewolfRoomAction(
                 displayName: true,
                 guestName: true,
                 id: true,
+                privateToken: true,
                 profileId: true,
                 readyAt: true,
                 seatNumber: true,
@@ -2141,6 +2142,9 @@ export async function startWerewolfRoomAction(
       return { formError: t.startFailed };
     }
 
+    room.seats.forEach((seat) =>
+      revalidateWerewolfSeatPath(result.data.locale, seat.privateToken),
+    );
     await revalidateWerewolfRoom({
       locale: result.data.locale,
       roomId: room.id,
