@@ -61,7 +61,10 @@ import {
   werewolfUiAssets,
   type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
-import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
+import {
+  getWerewolfAppJoinUrl,
+  getWerewolfPrivateSeatHref,
+} from "@/features/game-tools/werewolfRoomLinks";
 import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
 import { didWerewolfRoomStartNextRound } from "@/features/game-tools/werewolfRoomState";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
@@ -129,6 +132,7 @@ type WerewolfRoomOverviewProps = {
     }>;
     state: {
       phase: string;
+      roundNumber: number;
       sheriffSeatNumber?: number | null;
       winner?: "GOOD" | "WEREWOLF" | null;
     };
@@ -1379,10 +1383,11 @@ export function WerewolfRoomOverview({
 
       if (!judgeIsViewer && currentSeatPrivateToken) {
         router.replace(
-          withLocale(
+          getWerewolfPrivateSeatHref({
             locale,
-            `/game-tools/werewolf/seats/${currentSeatPrivateToken}`,
-          ),
+            privateToken: currentSeatPrivateToken,
+            roundNumber: room.state.roundNumber,
+          }),
         );
       }
     }
@@ -1392,6 +1397,7 @@ export function WerewolfRoomOverview({
     currentSeatPrivateToken,
     judgeIsViewer,
     locale,
+    room.state.roundNumber,
     room.status,
     router,
   ]);
@@ -2592,10 +2598,11 @@ export function WerewolfRoomOverview({
                     ) : !judgeIsViewer ? (
                       <Link
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3]"
-                        href={withLocale(
+                        href={getWerewolfPrivateSeatHref({
                           locale,
-                          `/game-tools/werewolf/seats/${currentViewerSeat.privateToken}`,
-                        )}
+                          privateToken: currentViewerSeat.privateToken,
+                          roundNumber: room.state.roundNumber,
+                        })}
                       >
                         <Ticket className="h-4 w-4" />
                         {t.openSeat}
