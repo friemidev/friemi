@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { CalendarDays, LoaderCircle, MapPin, Trash2, X } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
@@ -124,8 +116,6 @@ export function MessageThreadClient({
   sendPolicy,
   showMutualFollowNotice = false,
 }: MessageThreadClientProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
   const [messages, setMessages] =
     useState<MessageBubbleViewModel[]>(initialMessages);
   const [actionMenuMessageId, setActionMenuMessageId] = useState("");
@@ -144,9 +134,10 @@ export function MessageThreadClient({
   const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
     useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
-  const chatCursorMode = useChatCursorSync({
+  useChatCursorSync({
     endpoint: `/api/direct-messages/${encodeURIComponent(conversationId)}/messages`,
     messages,
+    scope: "direct",
     setMessages,
     subjectKey: conversationId,
   });
@@ -303,15 +294,9 @@ export function MessageThreadClient({
             : message,
         ),
       );
-      if (chatCursorMode === "canary") {
-        dispatchChatCursorWake(conversationId);
-      } else {
-        startTransition(() => {
-          router.refresh();
-        });
-      }
+      dispatchChatCursorWake(conversationId);
     },
-    [chatCursorMode, conversationId, router],
+    [conversationId],
   );
 
   const handleOptimisticFailure = useCallback(
@@ -462,11 +447,7 @@ export function MessageThreadClient({
           );
           setActionMenuMessageId("");
           handleCancelSelection();
-          if (chatCursorMode === "canary") {
-            dispatchChatCursorWake(conversationId);
-          } else {
-            startTransition(() => router.refresh());
-          }
+          dispatchChatCursorWake(conversationId);
           return;
         }
 
@@ -512,11 +493,7 @@ export function MessageThreadClient({
             ),
           );
           setActionMenuMessageId("");
-          if (chatCursorMode === "canary") {
-            dispatchChatCursorWake(conversationId);
-          } else {
-            startTransition(() => router.refresh());
-          }
+          dispatchChatCursorWake(conversationId);
           return;
         }
 

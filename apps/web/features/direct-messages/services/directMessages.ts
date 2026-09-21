@@ -94,6 +94,8 @@ const directConversationSelect = {
 
 const directConversationMessageSendSelect = {
   id: true,
+  userAId: true,
+  userBId: true,
 } satisfies Prisma.ConversationSelect;
 
 const directConversationMessageAccessSelect = {
@@ -1004,7 +1006,10 @@ export async function recallDirectMessage({
   conversationId: string;
   currentUserProfileId: string;
   messageId: string;
-}): Promise<DirectMessageViewModel> {
+}): Promise<{
+  message: DirectMessageViewModel;
+  participantProfileIds: string[];
+}> {
   const result = await prisma.$transaction(async (tx) => {
     const message = await tx.directMessage.findFirst({
       where: {
@@ -1093,7 +1098,10 @@ export async function recallDirectMessage({
 
   await invalidateUnreadBadgeCache([result.recipientId]);
 
-  return result.message;
+  return {
+    message: result.message,
+    participantProfileIds: [currentUserProfileId, result.recipientId],
+  };
 }
 
 export async function sendDirectMessageToFriend({

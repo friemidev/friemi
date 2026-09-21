@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getActivityRoomMessageChanges,
   getOlderActivityRoomMessages,
+  markActivityRoomChatRead,
 } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 
@@ -61,6 +62,14 @@ export async function GET(
         parseDate(request.nextUrl.searchParams.get("since")) ?? serverTime,
       viewerProfileId: profile.id,
     });
+
+    if (messages.length > 0) {
+      await markActivityRoomChatRead({
+        activityId,
+        profileId: profile.id,
+        readAt: serverTime,
+      });
+    }
 
     return NextResponse.json(
       { messages, serverTime: serverTime.toISOString() },

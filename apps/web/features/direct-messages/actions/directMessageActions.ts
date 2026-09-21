@@ -5,6 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
   ensureCurrentUserProfile,
@@ -460,6 +461,11 @@ export async function deleteDirectMessagesAction(
     });
 
     refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [profile.id],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
 
     return {
       ok: true,
@@ -493,13 +499,18 @@ export async function recallDirectMessageAction(
       result.data.locale,
       `/messages/${result.data.conversationId}`,
     );
-    const message = await recallDirectMessage({
+    const { message, participantProfileIds } = await recallDirectMessage({
       conversationId: result.data.conversationId,
       currentUserProfileId: profile.id,
       messageId: result.data.messageId,
     });
 
     refreshDirectMessageSurfaces(result.data.locale, message.conversationId);
+    scheduleChatRealtimeChange({
+      profileIds: participantProfileIds,
+      scope: "direct",
+      subjectKey: message.conversationId,
+    });
 
     return {
       messageId: message.id,
@@ -929,6 +940,11 @@ export async function sendDirectMessageAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [conversation.userAId, conversation.userBId],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
     const postWriteMs = Date.now() - postWriteStartedAt;
 
     logDirectMessageTiming("sendDirectMessageAction", {
@@ -1038,6 +1054,11 @@ export async function sendDirectMessageToFriendAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [conversation.userAId, conversation.userBId],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
     const postWriteMs = Date.now() - postWriteStartedAt;
 
     logDirectMessageTiming("sendDirectMessageToFriendAction", {

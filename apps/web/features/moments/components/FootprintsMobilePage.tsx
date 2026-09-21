@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
+import { chatRosterWakeEvent } from "@/features/chat/chatRealtime";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
@@ -4158,6 +4159,32 @@ export function FootprintsMobilePage({
     }, 150);
 
     return () => window.clearTimeout(timeoutId);
+  }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
+
+  useEffect(() => {
+    if (!profileId || !messageRosterCacheKey) {
+      return;
+    }
+
+    const handleRosterWake = () => {
+      const cachedSnapshot = messageRosterMemoryCache.get(
+        messageRosterCacheKey,
+      );
+
+      if (cachedSnapshot) {
+        cachedSnapshot.updatedAt = 0;
+      }
+
+      if (activeTab === "message") {
+        void refreshMessageRoster();
+      }
+    };
+
+    window.addEventListener(chatRosterWakeEvent, handleRosterWake);
+
+    return () => {
+      window.removeEventListener(chatRosterWakeEvent, handleRosterWake);
+    };
   }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
 
   useEffect(

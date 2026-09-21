@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
@@ -487,7 +488,7 @@ export async function sendPlanetMessageAction(
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
   try {
-    const message = await sendPlanetChatMessage({
+    const { message, participantProfileIds } = await sendPlanetChatMessage({
       content: result.data.content,
       imageUrls: result.data.imageUrls,
       mentionedProfileIds: result.data.mentionedProfileIds,
@@ -499,6 +500,11 @@ export async function sendPlanetMessageAction(
       replyToMessageId: result.data.replyToMessageId,
     });
     revalidatePlanet(result.data.locale, result.data.planetSlug);
+    scheduleChatRealtimeChange({
+      profileIds: participantProfileIds,
+      scope: "planet",
+      subjectKey: result.data.planetId,
+    });
 
     return {
       messageId: message.id,

@@ -8,6 +8,7 @@ import type {
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -261,7 +262,7 @@ export async function sendActivityRoomMessageAction(
       result.data.locale,
       `/lobby/${result.data.activityId}/room`,
     );
-    const message = await sendActivityRoomMessage({
+    const { message, participantProfileIds } = await sendActivityRoomMessage({
       activityId: result.data.activityId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
@@ -274,6 +275,11 @@ export async function sendActivityRoomMessageAction(
     });
 
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      profileIds: participantProfileIds,
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,
@@ -323,6 +329,10 @@ export async function deleteActivityRoomMessageAction(
       messageId: result.data.messageId,
     });
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,
@@ -374,6 +384,10 @@ export async function deleteActivityRoomMessagesAction(
       messageIds,
     });
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,

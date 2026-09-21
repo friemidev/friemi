@@ -165,6 +165,115 @@ export type ActivityRoomInviteCandidateViewModel = {
   nickname: string;
 };
 
+async function loadActivityRoomInviteCandidates({
+  excludedProfileIds,
+  viewerProfileId,
+}: {
+  excludedProfileIds: Iterable<string>;
+  viewerProfileId: string;
+}): Promise<ActivityRoomInviteCandidateViewModel[]> {
+  const excludedIds = new Set(excludedProfileIds);
+  excludedIds.add(viewerProfileId);
+  const mutualFollowIds = await getMutualFollowProfileIds(viewerProfileId);
+  const availableInviteIds = mutualFollowIds.filter(
+    (profileId) => !excludedIds.has(profileId),
+  );
+
+  if (availableInviteIds.length === 0) {
+    return [];
+  }
+
+  return (
+    await prisma.userProfile.findMany({
+      where: {
+        id: {
+          in: availableInviteIds,
+        },
+        status: "ACTIVE",
+      },
+      orderBy: [{ nickname: "asc" }, { id: "asc" }],
+      take: 40,
+      select: {
+        id: true,
+        avatarUrl: true,
+        friendCode: true,
+        nickname: true,
+      },
+    })
+  ).map((profile) => ({
+    id: profile.id,
+    avatarUrl: profile.avatarUrl,
+    friendCode: profile.friendCode,
+    nickname:
+      profile.nickname.trim() ||
+      (profile.friendCode ? `Friemi ${profile.friendCode}` : "Friemi"),
+  }));
+}
+
+export async function getActivityRoomInviteCandidates({
+  activityId,
+  now = new Date(),
+  viewerProfileId,
+}: {
+  activityId: string;
+  now?: Date;
+  viewerProfileId: string;
+}): Promise<ActivityRoomInviteCandidateViewModel[]> {
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    select: {
+      endAt: true,
+      organizerId: true,
+      startAt: true,
+      status: true,
+      visibility: true,
+      coManagers: {
+        select: {
+          managerProfileId: true,
+        },
+      },
+      participants: {
+        where: {
+          status: {
+            in: ["JOINED", "APPROVED", "PENDING"],
+          },
+        },
+        select: {
+          userProfileId: true,
+        },
+      },
+    },
+  });
+
+  if (!activity) {
+    return [];
+  }
+
+  const canManage =
+    activity.organizerId === viewerProfileId ||
+    activity.coManagers.some(
+      (coManager) => coManager.managerProfileId === viewerProfileId,
+    );
+  const activityEndAt = activity.endAt ?? activity.startAt;
+
+  if (
+    !canManage ||
+    !["RECRUITING", "CONFIRMED"].includes(activity.status) ||
+    !["PUBLIC", "PRIVATE"].includes(activity.visibility) ||
+    activityEndAt.getTime() <= now.getTime()
+  ) {
+    return [];
+  }
+
+  return loadActivityRoomInviteCandidates({
+    excludedProfileIds: [
+      activity.organizerId,
+      ...activity.participants.map((participant) => participant.userProfileId),
+    ],
+    viewerProfileId,
+  });
+}
+
 export type ActivityRoomMemberPreviewViewModel = {
   id: string;
   avatarUrl: string | null;
@@ -1454,39 +1563,10 @@ export async function getActivityRoomManagementData({
     };
   }
 
-  let inviteCandidates: ActivityRoomInviteCandidateViewModel[] = [];
-  const mutualFollowIds = await getMutualFollowProfileIds(viewerProfileId);
-  const availableInviteIds = mutualFollowIds.filter(
-    (profileId) => !activeOrPendingMemberIds.has(profileId),
-  );
-
-  if (availableInviteIds.length > 0) {
-    inviteCandidates = (
-      await prisma.userProfile.findMany({
-        where: {
-          id: {
-            in: availableInviteIds,
-          },
-          status: "ACTIVE",
-        },
-        orderBy: [{ nickname: "asc" }, { id: "asc" }],
-        take: 40,
-        select: {
-          id: true,
-          avatarUrl: true,
-          friendCode: true,
-          nickname: true,
-        },
-      })
-    ).map((profile) => ({
-      id: profile.id,
-      avatarUrl: profile.avatarUrl,
-      friendCode: profile.friendCode,
-      nickname:
-        profile.nickname.trim() ||
-        (profile.friendCode ? `Friemi ${profile.friendCode}` : "Friemi"),
-    }));
-  }
+  const inviteCandidates = await loadActivityRoomInviteCandidates({
+    excludedProfileIds: activeOrPendingMemberIds,
+    viewerProfileId,
+  });
 
   return {
     activityTitle: activity.title,
@@ -1863,6 +1943,8 @@ export async function sendActivityRoomMessage({
       },
     });
 
+    const audienceProfileIds = new Set<string>([senderId]);
+
     if (roomAudience) {
       const recipientIds = new Set<string>([
         roomAudience.organizerId,
@@ -1873,6 +1955,9 @@ export async function sendActivityRoomMessage({
           (participant) => participant.userProfileId,
         ),
       ]);
+      for (const recipientId of recipientIds) {
+        audienceProfileIds.add(recipientId);
+      }
       recipientIds.delete(senderId);
 
       const mutedReadStates = await tx.activityRoomReadState.findMany({
@@ -1903,7 +1988,10 @@ export async function sendActivityRoomMessage({
       );
     }
 
-    return mapActivityRoomMessage(message, senderId);
+    return {
+      message: mapActivityRoomMessage(message, senderId),
+      participantProfileIds: [...audienceProfileIds],
+    };
   });
 }
 

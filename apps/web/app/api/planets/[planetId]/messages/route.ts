@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { markPlanetChatRead } from "@/features/planets/services/planetChat";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,14 @@ export async function GET(
     take: 50,
     select: messageSelect,
   });
+
+  if (messages.length > 0) {
+    await markPlanetChatRead({
+      planetId,
+      profileId: profile.id,
+      readAt: serverTime,
+    });
+  }
 
   return NextResponse.json(
     {

@@ -695,7 +695,13 @@ export async function sendPlanetChatMessage({
       })),
     );
 
-    return message;
+    return {
+      message,
+      participantProfileIds: [
+        profileId,
+        ...recipientMembers.map((member) => member.profileId),
+      ],
+    };
   });
 }
 
