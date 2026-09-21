@@ -17,12 +17,10 @@ import {
   MessageCircle,
   Minus,
   MoreHorizontal,
-  Plus,
   Reply,
   SendHorizontal,
   Trash2,
   UserMinus,
-  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -65,6 +63,7 @@ import {
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
+import { ActivityRoomInviteDialog } from "@/features/activity-room-chat/components/ActivityRoomInviteDialog";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import {
   CancelActivityForm,
@@ -86,7 +85,6 @@ import {
 } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
-import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 import {
   formatChatDateSeparator,
   formatChatListTimestamp,
@@ -97,13 +95,11 @@ import {
 import {
   acknowledgeActivityAnnouncementAction,
   deleteActivityRoomMessagesAction,
-  inviteActivityRoomParticipantAction,
   removeActivityRoomParticipantAction,
   sendActivityRoomMessageAction,
   toggleActivityRoomMuteAction,
   toggleActivityRoomPinAction,
   type ActivityRoomChatActionState,
-  type ActivityRoomInviteActionState,
   type ActivityRoomMemberActionState,
 } from "../actions/activityRoomChatActions";
 import { getActivityRoomChatCopy } from "../copy";
@@ -149,7 +145,6 @@ type ActivityRoomManagePageProps = {
 
 const initialActionState: ActivityRoomChatActionState = {};
 const initialLeaveState: CancelParticipationState = {};
-const initialInviteActionState: ActivityRoomInviteActionState = {};
 const initialMemberActionState: ActivityRoomMemberActionState = {};
 const initialAnnouncementDeleteState: DeleteActivityAnnouncementState = {};
 
@@ -161,19 +156,12 @@ function getRoomManagementCopy(locale: string) {
   if (locale === "fr") {
     return {
       backToRoom: "Retour au chat",
-      addMember: "Ajouter",
       close: "Fermer",
       contactParticipants: "Contacter",
       groupAnnouncement: "Annonce",
       checkIn: "Pointage",
       groupName: "Nom du groupe",
       infoTitle: "Membres",
-      invite: "Inviter",
-      inviteEmpty: "Aucun contact mutuel à inviter.",
-      inviteFailed: "Invitation impossible.",
-      invitePending: "Invitation...",
-      inviteSuccess: "Invité.",
-      inviteTitle: "Inviter",
       kick: "Retirer",
       kickCancel: "Annuler",
       kickConfirm: "Retirer",
@@ -209,19 +197,12 @@ function getRoomManagementCopy(locale: string) {
   if (locale === "en") {
     return {
       backToRoom: "Back to chat",
-      addMember: "Add",
       close: "Close",
       contactParticipants: "Contact",
       groupAnnouncement: "Announcement",
       checkIn: "Check-in",
       groupName: "Group name",
       infoTitle: "Members",
-      invite: "Invite",
-      inviteEmpty: "No mutual follows to invite.",
-      inviteFailed: "Could not invite.",
-      invitePending: "Inviting...",
-      inviteSuccess: "Invited.",
-      inviteTitle: "Invite",
       kick: "Remove",
       kickCancel: "Cancel",
       kickConfirm: "Remove",
@@ -257,19 +238,12 @@ function getRoomManagementCopy(locale: string) {
 
   return {
     backToRoom: "返回群聊",
-    addMember: "添加",
     close: "关闭",
     contactParticipants: "联系成员",
     groupAnnouncement: "公告",
     checkIn: "签到",
     groupName: "群聊名称",
     infoTitle: "成员",
-    invite: "邀请",
-    inviteEmpty: "暂无可邀请的互关用户。",
-    inviteFailed: "邀请失败，请稍后再试。",
-    invitePending: "邀请中...",
-    inviteSuccess: "已邀请。",
-    inviteTitle: "邀请互关",
     kick: "移出",
     kickCancel: "取消",
     kickConfirm: "确认移出",
@@ -321,41 +295,6 @@ function RoomAvatar({
       ) : null}
     </span>
   );
-}
-
-function ActivityRoomChatAutoRefresh({
-  activityId,
-  intervalMs = 8000,
-}: {
-  activityId: string;
-  intervalMs?: number;
-}) {
-  const router = useRouter();
-  const mode = getPerformanceRolloutMode("chatCursor", activityId);
-
-  useEffect(() => {
-    if (mode === "canary") {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const activeElement = document.activeElement;
-      const composer = document.querySelector("[data-activity-room-composer]");
-      const textarea = composer?.querySelector("textarea");
-      const isComposing =
-        activeElement instanceof HTMLElement &&
-        Boolean(activeElement.closest("[data-activity-room-composer]"));
-      const hasDraft = Boolean(textarea?.value.trim());
-
-      if (document.visibilityState === "visible" && !isComposing && !hasDraft) {
-        router.refresh();
-      }
-    }, intervalMs);
-
-    return () => window.clearInterval(timer);
-  }, [activityId, intervalMs, mode, router]);
-
-  return null;
 }
 
 function ActivityRoomManagementMenu({
@@ -701,154 +640,6 @@ function ActivityRoomGridRemoveMemberButton({
   );
 }
 
-function ActivityRoomInviteCandidateForm({
-  activityId,
-  candidate,
-  locale,
-  onInvited,
-}: {
-  activityId: string;
-  candidate: ActivityRoomInviteCandidateViewModel;
-  locale: string;
-  onInvited: () => void;
-}) {
-  const router = useRouter();
-  const copy = getRoomManagementCopy(locale);
-  const [state, formAction, isPending] = useActionState(
-    inviteActivityRoomParticipantAction,
-    initialInviteActionState,
-  );
-
-  useEffect(() => {
-    if (!state.ok) {
-      return;
-    }
-
-    onInvited();
-    router.refresh();
-  }, [onInvited, router, state.ok]);
-
-  return (
-    <form action={formAction} className="grid gap-1.5" noValidate>
-      <input name="activityId" type="hidden" value={activityId} />
-      <input name="inviteeProfileId" type="hidden" value={candidate.id} />
-      <input name="locale" type="hidden" value={locale} />
-      <button
-        className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2 text-left ring-1 ring-[#E7E2D6] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-        disabled={isPending}
-        type="submit"
-      >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <RoomAvatar
-            avatarUrl={candidate.avatarUrl}
-            name={candidate.nickname}
-          />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111210]">
-              {candidate.nickname}
-            </span>
-            {candidate.friendCode ? (
-              <span className="block text-xs font-semibold text-[#8B907F]">
-                {candidate.friendCode}
-              </span>
-            ) : null}
-          </span>
-        </span>
-        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white">
-          {isPending ? (
-            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <UserPlus className="h-3.5 w-3.5" />
-          )}
-          {isPending ? copy.invitePending : copy.invite}
-        </span>
-      </button>
-      {state.formError ? (
-        <p className="px-2 text-xs font-bold leading-5 text-[#B5301F]">
-          {state.formError || copy.inviteFailed}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-function ActivityRoomInviteDialog({
-  activityId,
-  candidates,
-  locale,
-}: {
-  activityId: string;
-  candidates: ActivityRoomInviteCandidateViewModel[];
-  locale: string;
-}) {
-  const copy = getRoomManagementCopy(locale);
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <ActivityRoomActionAvatar
-        icon={<Plus className="h-5 w-5" />}
-        label={copy.addMember}
-        onClick={() => setOpen(true)}
-      />
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-end bg-[#111210]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:justify-center sm:p-6"
-          role="presentation"
-        >
-          <section
-            aria-labelledby="activity-room-invite-title"
-            aria-modal="true"
-            className="max-h-[min(82svh,34rem)] w-full max-w-md overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
-            role="dialog"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#EFEFEA] px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
-                  <UserPlus className="h-4 w-4" />
-                </span>
-                <h2
-                  className="truncate text-base font-bold text-[#111210]"
-                  id="activity-room-invite-title"
-                >
-                  {copy.inviteTitle}
-                </h2>
-              </div>
-              <button
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6C746A] transition active:bg-[#F7F7F0]"
-                onClick={() => setOpen(false)}
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="max-h-[calc(min(82svh,34rem)-3.75rem)] overflow-y-auto px-4 py-3">
-              {candidates.length > 0 ? (
-                <div className="grid gap-2">
-                  {candidates.map((candidate) => (
-                    <ActivityRoomInviteCandidateForm
-                      activityId={activityId}
-                      candidate={candidate}
-                      key={candidate.id}
-                      locale={locale}
-                      onInvited={() => setOpen(false)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-2xl bg-[#F7F7F0] px-4 py-5 text-center text-sm font-bold leading-6 text-[#6C746A]">
-                  {copy.inviteEmpty}
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 function ActivityRoomMemberPreviewGrid({
   activityId,
   canManage,
@@ -919,6 +710,7 @@ function ActivityRoomMemberPreviewGrid({
             activityId={activityId}
             candidates={inviteCandidates}
             locale={locale}
+            triggerVariant="avatar"
           />
         ) : null}
         {canManage && removableMembers.length > 0 ? (
@@ -2485,9 +2277,10 @@ export function ActivityRoomChatPage({
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
-  const chatCursorMode = useChatCursorSync({
+  useChatCursorSync({
     endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
     messages,
+    scope: "activity",
     setMessages,
     subjectKey: activityId,
   });
@@ -2550,11 +2343,7 @@ export function ActivityRoomChatPage({
 
   function handleSent(message: ActivityRoomMessageViewModel) {
     setMessages((current) => [...current, message]);
-    if (chatCursorMode === "canary") {
-      dispatchChatCursorWake(activityId);
-    } else {
-      router.refresh();
-    }
+    dispatchChatCursorWake(activityId);
   }
 
   function handleOpenActionMenu(messageId: string) {
@@ -2633,11 +2422,7 @@ export function ActivityRoomChatPage({
           );
           setActionMenuMessageId("");
           handleCancelSelection();
-          if (chatCursorMode === "canary") {
-            dispatchChatCursorWake(activityId);
-          } else {
-            router.refresh();
-          }
+          dispatchChatCursorWake(activityId);
           return;
         }
 
@@ -2649,9 +2434,6 @@ export function ActivityRoomChatPage({
 
   return (
     <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
-      {activity && policy.canView ? (
-        <ActivityRoomChatAutoRefresh activityId={activity.id} />
-      ) : null}
       <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <ActivityRoomChatBackButton
           activityId={activity?.id ?? activityId}

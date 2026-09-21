@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -175,6 +176,11 @@ export async function GET(
     await prisma.directMessage.updateMany({
       where: { id: { in: unreadIncomingIds }, readAt: null },
       data: { readAt: serverTime },
+    });
+    scheduleChatRealtimeChange({
+      profileIds: [profile.id],
+      scope: "direct",
+      subjectKey: conversation.id,
     });
   }
 

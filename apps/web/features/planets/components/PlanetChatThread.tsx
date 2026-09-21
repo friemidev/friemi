@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LoaderCircle, MessageCircle, Reply } from "lucide-react";
 import { RetainedImage } from "@/components/media/RetainedImage";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
@@ -260,12 +259,12 @@ export function PlanetChatThread({
   planetId: string;
   viewerProfileId: string;
 }) {
-  const router = useRouter();
   const [messages, setMessages] =
     useState<PlanetChatThreadMessage[]>(initialMessages);
-  const chatCursorMode = useChatCursorSync({
+  useChatCursorSync({
     endpoint: `/api/planets/${encodeURIComponent(planetId)}/messages`,
     messages,
+    scope: "planet",
     setMessages,
     subjectKey: planetId,
   });
@@ -314,28 +313,6 @@ export function PlanetChatThread({
   useEffect(() => {
     anchorRef.current?.scrollIntoView({ block: "end" });
   }, [lastMessageId]);
-
-  useEffect(() => {
-    if (chatCursorMode === "canary") {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const composer = document.querySelector("[data-planet-chat-composer]");
-      const input = composer?.querySelector("input[name='content']");
-      const isComposing = Boolean(
-        document.activeElement?.closest("[data-planet-chat-composer]"),
-      );
-      const hasDraft =
-        input instanceof HTMLInputElement && Boolean(input.value.trim());
-
-      if (document.visibilityState === "visible" && !isComposing && !hasDraft) {
-        router.refresh();
-      }
-    }, 8000);
-
-    return () => window.clearInterval(timer);
-  }, [chatCursorMode, planetId, router]);
 
   if (!messages.length) {
     return (

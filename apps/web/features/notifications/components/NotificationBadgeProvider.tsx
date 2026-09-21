@@ -12,6 +12,8 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { Badge } from "@capawesome/capacitor-badge";
+import { chatRosterWakeEvent } from "@/features/chat/chatRealtime";
+import { useChatInboxRealtime } from "@/features/chat/useChatRealtime";
 import { isFriemiIOSApp } from "@/features/mobile/push/clientPush";
 import { parseUnreadBadgeCountsPayload } from "@/features/notifications/unreadBadgeCounts";
 import {
@@ -52,12 +54,14 @@ export function NotificationBadgeProvider({
   freshnessGuardEnabled,
   initialUnreadDirectMessageCount = 0,
   initialUnreadNotificationCount,
+  viewerProfileId,
 }: {
   children: ReactNode;
   enabled: boolean;
   freshnessGuardEnabled: boolean;
   initialUnreadDirectMessageCount?: number;
   initialUnreadNotificationCount: number;
+  viewerProfileId: string | null;
 }) {
   const pathname = usePathname();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -202,6 +206,15 @@ export function NotificationBadgeProvider({
 
   const refreshUnreadNotificationCount = refreshUnreadCounts;
   const refreshUnreadDirectMessageCount = refreshUnreadCounts;
+  const handleChatInboxChanged = useCallback(() => {
+    window.dispatchEvent(new Event(chatRosterWakeEvent));
+    void runUnreadCountRefresh();
+  }, [runUnreadCountRefresh]);
+
+  useChatInboxRealtime({
+    onChanged: handleChatInboxChanged,
+    profileId: viewerProfileId,
+  });
 
   useEffect(() => {
     setUnreadNotificationCountState(

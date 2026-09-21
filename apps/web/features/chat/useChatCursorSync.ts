@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
+import { useCallback, useEffect, useRef } from "react";
+import {
+  CHAT_REALTIME_FALLBACK_POLL_MS,
+  CHAT_REALTIME_INTEGRITY_POLL_MS,
+  type ChatRealtimeScope,
+} from "./chatRealtime";
 import {
   chatCursorWakeEvent,
   getLatestChatCursor,
@@ -10,114 +13,100 @@ import {
   type ChatCursorMessage,
   type ChatCursorResponse,
 } from "./chatCursorSync";
+import { useChatRealtime } from "./useChatRealtime";
 
 type UseChatCursorSyncInput<TMessage extends ChatCursorMessage> = {
   endpoint: string;
   messages: TMessage[];
+  scope: ChatRealtimeScope;
   setMessages: (updater: (current: TMessage[]) => TMessage[]) => void;
   subjectKey: string;
 };
 
-const cursorPollIntervalMs = 1500;
-const fullReconciliationIntervalMs = 60_000;
-
-function isChatComposerBusy() {
-  const activeComposer = document.activeElement?.closest(
-    "[data-message-composer], [data-activity-room-composer], [data-planet-chat-composer]",
-  );
-  const draft = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-    "[data-message-composer] textarea, [data-activity-room-composer] textarea, [data-planet-chat-composer] input[name='content']",
-  );
-
-  return Boolean(activeComposer || draft?.value.trim());
-}
+const initialCursorOverlapMs = 10_000;
 
 export function useChatCursorSync<TMessage extends ChatCursorMessage>({
   endpoint,
   messages,
+  scope,
   setMessages,
   subjectKey,
 }: UseChatCursorSyncInput<TMessage>) {
-  const router = useRouter();
   const messagesRef = useRef(messages);
   const serverTimeRef = useRef(
-    getLatestChatCursor(messages)?.createdAt ?? new Date().toISOString(),
+    new Date(Date.now() - initialCursorOverlapMs).toISOString(),
   );
   const inFlightRef = useRef(false);
-  const mode = getPerformanceRolloutMode("chatCursor", subjectKey);
+  const stoppedRef = useRef(false);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
-  useEffect(() => {
-    if (mode === "legacy") {
+  const synchronize = useCallback(async () => {
+    if (
+      stoppedRef.current ||
+      inFlightRef.current ||
+      document.visibilityState !== "visible"
+    ) {
       return;
     }
 
-    let stopped = false;
-    let pollTimer: number | undefined;
+    inFlightRef.current = true;
 
-    async function synchronize() {
-      if (
-        stopped ||
-        inFlightRef.current ||
-        document.visibilityState !== "visible"
-      ) {
+    try {
+      const cursor = getLatestChatCursor(messagesRef.current);
+      const query = new URLSearchParams({ since: serverTimeRef.current });
+
+      if (cursor) {
+        query.set("afterCreatedAt", cursor.createdAt);
+        query.set("afterId", cursor.id);
+      }
+
+      const response = await fetch(`${endpoint}?${query.toString()}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
         return;
       }
 
-      inFlightRef.current = true;
+      const payload = (await response.json()) as ChatCursorResponse<TMessage>;
+      const hasChanges =
+        payload.messages.length > 0 ||
+        Boolean(payload.deletedMessageIds?.length);
 
-      try {
-        const cursor = getLatestChatCursor(messagesRef.current);
-        const query = new URLSearchParams({ since: serverTimeRef.current });
-
-        if (cursor) {
-          query.set("afterCreatedAt", cursor.createdAt);
-          query.set("afterId", cursor.id);
-        }
-
-        const response = await fetch(`${endpoint}?${query.toString()}`, {
-          cache: "no-store",
-          credentials: "same-origin",
+      if (hasChanges) {
+        setMessages((current) => {
+          const merged = mergeChatCursorMessages(
+            current,
+            payload.messages,
+            payload.deletedMessageIds,
+          );
+          messagesRef.current = merged;
+          return merged;
         });
 
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as ChatCursorResponse<TMessage>;
-
-        if (mode === "canary") {
-          setMessages((current) => {
-            const merged = mergeChatCursorMessages(
-              current,
-              payload.messages,
-              payload.deletedMessageIds,
-            );
-            messagesRef.current = merged;
-            return merged;
-          });
-        }
-
-        if (mode === "shadow" && payload.messages.length > 0) {
-          console.info(
-            `[perf-shadow] ${JSON.stringify({
-              event: "b3_chat_cursor",
-              incomingCount: payload.messages.length,
-              subjectKey,
-            })}`,
-          );
-        }
-
-        serverTimeRef.current = payload.serverTime;
-      } catch (error) {
-        console.warn("Incremental chat synchronization failed", error);
-      } finally {
-        inFlightRef.current = false;
+        window.dispatchEvent(new Event("friemi:notifications-refresh"));
       }
+
+      serverTimeRef.current = payload.serverTime;
+    } catch (error) {
+      console.warn("Incremental chat synchronization failed", error);
+    } finally {
+      inFlightRef.current = false;
     }
+  }, [endpoint, setMessages]);
+
+  const isRealtimeConnected = useChatRealtime({
+    onChanged: synchronize,
+    scope,
+    subjectKey,
+  });
+
+  useEffect(() => {
+    stoppedRef.current = false;
 
     function handleWake(event: Event) {
       const detail = (event as CustomEvent<{ subjectKey?: string }>).detail;
@@ -127,41 +116,36 @@ export function useChatCursorSync<TMessage extends ChatCursorMessage>({
       }
     }
 
-    function schedulePoll() {
-      pollTimer = window.setInterval(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
         void synchronize();
-      }, cursorPollIntervalMs);
-    }
+      }
+    };
+    const pollIntervalMs = isRealtimeConnected
+      ? CHAT_REALTIME_INTEGRITY_POLL_MS
+      : CHAT_REALTIME_FALLBACK_POLL_MS;
+    const pollTimer = window.setInterval(() => {
+      void synchronize();
+    }, pollIntervalMs);
 
     window.addEventListener(chatCursorWakeEvent, handleWake);
     window.addEventListener("focus", synchronize);
     window.addEventListener("online", synchronize);
-    schedulePoll();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     void synchronize();
 
     return () => {
-      stopped = true;
+      stoppedRef.current = true;
       inFlightRef.current = false;
       window.removeEventListener(chatCursorWakeEvent, handleWake);
       window.removeEventListener("focus", synchronize);
       window.removeEventListener("online", synchronize);
-      if (pollTimer) window.clearInterval(pollTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(pollTimer);
     };
-  }, [endpoint, mode, setMessages, subjectKey]);
+  }, [isRealtimeConnected, subjectKey, synchronize]);
 
-  useEffect(() => {
-    if (mode !== "canary") {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible" && !isChatComposerBusy()) {
-        router.refresh();
-      }
-    }, fullReconciliationIntervalMs);
-
-    return () => window.clearInterval(timer);
-  }, [mode, router, subjectKey]);
-
-  return mode;
+  // Preserve the existing optimistic-update contract while Realtime replaces
+  // the former rollout-gated polling implementation.
+  return "canary" as const;
 }

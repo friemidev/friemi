@@ -1,7 +1,6 @@
 "use client";
 
 import { LoaderCircle, Send } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
@@ -20,7 +19,6 @@ import {
 } from "@/features/planets/actions/planetActions";
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
-import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
 import { ChatReplyComposerPreview } from "@/features/chat/components/ChatReplyPreview";
 import {
@@ -86,8 +84,6 @@ export function PlanetChatComposer({
   planetSlug,
 }: PlanetChatComposerProps) {
   const copy = getCopy(locale);
-  const router = useRouter();
-  const chatCursorMode = getPerformanceRolloutMode("chatCursor", planetId);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mentionCursorRef = useRef(0);
@@ -278,11 +274,7 @@ export function PlanetChatComposer({
         setState({ ok: true });
       }
 
-      if (chatCursorMode === "canary") {
-        dispatchChatCursorWake(planetId);
-      } else {
-        router.refresh();
-      }
+      dispatchChatCursorWake(planetId);
       keepMobileChatPageAnchored();
     })().finally(() => setIsPending(false));
   }

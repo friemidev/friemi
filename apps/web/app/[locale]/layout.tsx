@@ -116,6 +116,7 @@ export default async function LocaleLayout({
             viewerState.initialUnreadNotificationCount
           }
           key={viewerProfile?.id ?? "anonymous"}
+          viewerProfileId={viewerProfile?.id ?? null}
         >
           <MobileNavSectionProvider>
             <div

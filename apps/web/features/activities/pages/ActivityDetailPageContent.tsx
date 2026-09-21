@@ -85,7 +85,11 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
-import { getActivityRoomUnreadState } from "@/features/activity-room-chat/services/activityRoomChat";
+import { ActivityRoomInviteDialog } from "@/features/activity-room-chat/components/ActivityRoomInviteDialog";
+import {
+  getActivityRoomInviteCandidates,
+  getActivityRoomUnreadState,
+} from "@/features/activity-room-chat/services/activityRoomChat";
 import { ParticipantToolCard } from "@/features/aa/components/ParticipantToolCard";
 import { AaActivitySummaryCard } from "@/features/aa/components/AaActivitySummaryCard";
 import { getActivityAaEntryState } from "@/features/aa/server/ledgerService";
@@ -939,6 +943,8 @@ export async function ActivityDetailPageContent({
           shareToken: accessToken || shareToken || "",
         })
       : null;
+  const participantInvitePath =
+    privateSharePath ?? withLocale(locale, getActivityDetailPath(activity.id));
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
@@ -1526,12 +1532,21 @@ export async function ActivityDetailPageContent({
     (isTeamOperator ||
       viewerParticipation?.status === "JOINED" ||
       viewerParticipation?.status === "APPROVED");
+  const canInviteParticipants = Boolean(
+    viewerProfile &&
+    isTeamOperator &&
+    !isClosed &&
+    !isFull &&
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT",
+  );
   const pollsHref = withLocale(locale, `/lobby/${activity.id}/polls`);
   const [
     pendingParticipants,
     analyticsSummary,
     activityCheckInRoster,
     pollEntrySummary,
+    activityInviteCandidates,
   ] = await Promise.all([
     isTeamOperator && activity.requiresApproval && viewerProfile
       ? perf.measure("activity.pendingParticipants", () =>
@@ -1558,6 +1573,14 @@ export async function ActivityDetailPageContent({
             return { openCount: 0, totalCount: 0 };
           })
       : Promise.resolve({ openCount: 0, totalCount: 0 }),
+    canInviteParticipants && viewerProfile
+      ? perf.measure("activity.inviteCandidates", () =>
+          getActivityRoomInviteCandidates({
+            activityId: activity.id,
+            viewerProfileId: viewerProfile.id,
+          }),
+        )
+      : Promise.resolve([]),
   ]);
   perf.finish(
     {
@@ -2095,6 +2118,14 @@ export async function ActivityDetailPageContent({
                     openCount={pollEntrySummary.openCount}
                   />
                 ) : null}
+                {canInviteParticipants ? (
+                  <ActivityRoomInviteDialog
+                    activityId={activity.id}
+                    candidates={activityInviteCandidates}
+                    locale={locale}
+                    sharePath={participantInvitePath}
+                  />
+                ) : null}
                 {isTeamOperator ? (
                   <>
                     <ActivityCheckInReviewPanel
@@ -2239,7 +2270,9 @@ export async function ActivityDetailPageContent({
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
             additionalTools={
-              canUseBoardGameTools || canAccessPolls ? (
+              canUseBoardGameTools ||
+              canAccessPolls ||
+              canInviteParticipants ? (
                 <>
                   {canUseBoardGameTools ? (
                     <BoardGameToolFloatingEntry
@@ -2253,6 +2286,14 @@ export async function ActivityDetailPageContent({
                       href={pollsHref}
                       locale={locale}
                       openCount={pollEntrySummary.openCount}
+                    />
+                  ) : null}
+                  {canInviteParticipants ? (
+                    <ActivityRoomInviteDialog
+                      activityId={activity.id}
+                      candidates={activityInviteCandidates}
+                      locale={locale}
+                      sharePath={participantInvitePath}
                     />
                   ) : null}
                 </>
