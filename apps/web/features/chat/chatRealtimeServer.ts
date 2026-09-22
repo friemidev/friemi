@@ -10,6 +10,7 @@ import {
 } from "./chatRealtime";
 
 const broadcastTimeoutMs = 1_000;
+const inboxBroadcastConcurrency = 25;
 
 async function broadcastChatEvent({
   body,
@@ -82,14 +83,79 @@ export async function broadcastChatChange({
   });
 }
 
-export async function broadcastChatInboxChange(profileId: string) {
+export async function broadcastChatInboxChange({
+  profileId,
+  scope,
+  subjectKey,
+}: {
+  profileId: string;
+  scope: ChatRealtimeScope;
+  subjectKey: string;
+}) {
   return broadcastChatEvent({
     body: {
       changedAt: new Date().toISOString(),
       profileId,
+      scope,
+      subjectKey,
     },
     event: CHAT_INBOX_REALTIME_EVENT,
     topic: getChatInboxRealtimeTopic(profileId),
+  });
+}
+
+async function broadcastChatInboxChanges({
+  profileIds,
+  scope,
+  subjectKey,
+}: {
+  profileIds: string[];
+  scope: ChatRealtimeScope;
+  subjectKey: string;
+}) {
+  for (
+    let offset = 0;
+    offset < profileIds.length;
+    offset += inboxBroadcastConcurrency
+  ) {
+    const profileIdBatch = profileIds.slice(
+      offset,
+      offset + inboxBroadcastConcurrency,
+    );
+
+    await Promise.allSettled(
+      profileIdBatch.map((profileId) =>
+        broadcastChatInboxChange({ profileId, scope, subjectKey }),
+      ),
+    );
+  }
+}
+
+function normalizeProfileIds(profileIds: string[]) {
+  return [...new Set(profileIds.map((id) => id.trim()))].filter(Boolean);
+}
+
+export function scheduleChatInboxRealtimeChange({
+  profileIds = [],
+  scope,
+  subjectKey,
+}: {
+  profileIds?: string[];
+  scope: ChatRealtimeScope;
+  subjectKey: string;
+}) {
+  const uniqueProfileIds = normalizeProfileIds(profileIds);
+
+  if (uniqueProfileIds.length === 0) {
+    return;
+  }
+
+  after(async () => {
+    await broadcastChatInboxChanges({
+      profileIds: uniqueProfileIds,
+      scope,
+      subjectKey,
+    });
   });
 }
 
@@ -102,16 +168,16 @@ export function scheduleChatRealtimeChange({
   scope: ChatRealtimeScope;
   subjectKey: string;
 }) {
-  const uniqueProfileIds = [
-    ...new Set(profileIds.map((id) => id.trim())),
-  ].filter(Boolean);
+  const uniqueProfileIds = normalizeProfileIds(profileIds);
 
   after(async () => {
-    await Promise.allSettled([
+    await Promise.all([
       broadcastChatChange({ scope, subjectKey }),
-      ...uniqueProfileIds.map((profileId) =>
-        broadcastChatInboxChange(profileId),
-      ),
+      broadcastChatInboxChanges({
+        profileIds: uniqueProfileIds,
+        scope,
+        subjectKey,
+      }),
     ]);
   });
 }

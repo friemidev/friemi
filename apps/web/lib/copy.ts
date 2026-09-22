@@ -39,7 +39,7 @@ const copy = {
       newActivity: "聚聚",
       newActivityShort: "组局",
       messages: "消息",
-      messagesShort: "消息",
+      messagesShort: "聊聊",
       footprints: "世界",
       footprintsShort: "世界",
       planet: "星球",

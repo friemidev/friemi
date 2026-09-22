@@ -5,6 +5,7 @@ import {
   getChatInboxRealtimeTopic,
   getChatRealtimeBrowserConfig,
   getChatRealtimeTopic,
+  parseChatRealtimePayload,
 } from "./chatRealtime";
 
 test("chat realtime topics are stable and scoped", () => {
@@ -59,4 +60,28 @@ test("chat realtime browser config requires a URL and public key", () => {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
     }
   }
+});
+
+test("chat realtime payload keeps the changed inbox partition", () => {
+  assert.deepEqual(
+    parseChatRealtimePayload({
+      payload: {
+        changedAt: "2026-09-22T12:00:00.000Z",
+        scope: "activity",
+        subjectKey: "activity-123",
+      },
+    }),
+    {
+      changedAt: "2026-09-22T12:00:00.000Z",
+      scope: "activity",
+      subjectKey: "activity-123",
+    },
+  );
+});
+
+test("invalid chat realtime payload falls back to a full refresh", () => {
+  assert.equal(
+    parseChatRealtimePayload({ scope: "unknown", subjectKey: "chat-123" }),
+    null,
+  );
 });

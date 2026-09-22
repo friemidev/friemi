@@ -10,11 +10,19 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ClipboardCheck, LoaderCircle, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardCheck,
+  LoaderCircle,
+  Save,
+  UserRoundCheck,
+  UserRoundX,
+  X,
+} from "lucide-react";
 import { Button } from "@chill-club/ui";
 import {
-  confirmSelectedActivityCheckInsAction,
-  type ReviewActivityCheckInState,
+  saveActivityAttendanceAction,
+  type SaveActivityAttendanceState,
 } from "../actions/reviewActivityCheckIn";
 import type { ActivityCheckInParticipantViewModel } from "../queries/getActivityCheckInRoster";
 import type { PendingParticipantViewModel } from "../queries/getPendingParticipants";
@@ -30,62 +38,64 @@ type ActivityCheckInReviewPanelProps = {
   triggerVariant?: "button" | "icon" | "tool";
 };
 
-const initialState: ReviewActivityCheckInState = {};
+const initialState: SaveActivityAttendanceState = {};
 
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      cancel: "Fermer",
+      absent: "Absent",
+      absentCount: "Absents",
       approvalTab: "Inscriptions",
-      checkInTab: "Pointages",
-      confirm: "Confirmer les pointages",
-      confirmed: "Confirme",
-      empty: "Aucun participant a pointer.",
-      needsReview: "A confirmer",
-      open: "Pointages",
-      pending: "Confirmation...",
-      pendingRequests: "A confirmer",
-      remove: "Marquer absent",
-      selected: "Present",
+      attendanceTab: "Presences",
+      cancel: "Fermer",
+      defaultPresent:
+        "Tout le monde est present par defaut. Selectionnez uniquement les absents.",
+      empty: "Aucun participant a enregistrer.",
+      open: "Presences",
+      present: "Present",
+      save: "Enregistrer",
+      saved: (present: number, absent: number) =>
+        `${present} presents, ${absent} absents enregistres.`,
+      saving: "Enregistrement...",
       title: "Gestion des participants",
-      unselected: "Absent",
     };
   }
 
   if (locale === "en") {
     return {
-      cancel: "Close",
+      absent: "Absent",
+      absentCount: "Absent",
       approvalTab: "Requests",
-      checkInTab: "Check-ins",
-      confirm: "Confirm check-ins",
-      confirmed: "Confirmed",
-      empty: "No participants need check-in.",
-      needsReview: "Waiting",
-      open: "Check-ins",
-      pending: "Confirming...",
-      pendingRequests: "Waiting",
-      remove: "Mark absent",
-      selected: "Present",
+      attendanceTab: "Attendance",
+      cancel: "Close",
+      defaultPresent:
+        "Everyone is present by default. Select only the people who did not attend.",
+      empty: "No participants to record.",
+      open: "Attendance",
+      present: "Present",
+      save: "Save attendance",
+      saved: (present: number, absent: number) =>
+        `Saved ${present} present and ${absent} absent.`,
+      saving: "Saving...",
       title: "Participant management",
-      unselected: "Absent",
     };
   }
 
   return {
-    cancel: "关闭",
+    absent: "未到场",
+    absentCount: "未到场",
     approvalTab: "报名审核",
-    checkInTab: "签到管理",
-    confirm: "签到确认",
-    confirmed: "已确认",
-    empty: "暂无需要签到的参与者。",
-    needsReview: "待确认",
+    attendanceTab: "到场记录",
+    cancel: "关闭",
+    defaultPresent: "默认所有人已到场，只需选择实际未到场的人。",
+    empty: "暂无需要记录的参与者。",
     open: "签到管理",
-    pending: "确认中...",
-    pendingRequests: "待确认",
-    remove: "取消签到",
-    selected: "已到场",
+    present: "默认到场",
+    save: "保存未到场名单",
+    saved: (present: number, absent: number) =>
+      `已保存：${present} 人到场，${absent} 人未到场。`,
+    saving: "保存中...",
     title: "参与管理",
-    unselected: "未到场",
   };
 }
 
@@ -93,7 +103,7 @@ function getInitial(name: string) {
   return name.trim().slice(0, 1) || "N";
 }
 
-function ConfirmRosterButton({
+function AttendanceSaveButton({
   disabled,
   locale,
 }: {
@@ -105,43 +115,40 @@ function ConfirmRosterButton({
 
   return (
     <Button
-      className="min-h-9 rounded-full border border-[#8AB68E]/80 bg-white px-3 text-xs font-bold text-[#156240] shadow-none hover:bg-[#FEFFF9]"
+      className="min-h-11 w-full rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-none hover:bg-[#0F5135]"
       disabled={disabled || pending}
       type="submit"
-      variant="secondary"
     >
       {pending ? (
         <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
       ) : (
-        <CheckCircle2 className="mr-2 h-4 w-4" />
+        <Save className="mr-2 h-4 w-4" />
       )}
-      {pending ? copy.pending : copy.confirm}
+      {pending ? copy.saving : copy.save}
     </Button>
   );
 }
 
-function ActivityCheckInRosterForm({
+function ActivityAttendanceForm({
+  absentIds,
   activityId,
-  className,
   locale,
-  onConfirmed,
-  participants,
-  selectedIds,
+  onSaved,
+  participantCount,
 }: {
+  absentIds: string[];
   activityId: string;
-  className?: string;
   locale: string;
-  onConfirmed: (confirmedIds: string[]) => void;
-  participants: ActivityCheckInParticipantViewModel[];
-  selectedIds: string[];
+  onSaved: (absentIds: string[]) => void;
+  participantCount: number;
 }) {
   const [state, formAction] = useActionState(
-    confirmSelectedActivityCheckInsAction,
+    saveActivityAttendanceAction,
     initialState,
   );
   const [, startTransition] = useTransition();
   const router = useRouter();
-  const handledStateRef = useRef<ReviewActivityCheckInState | null>(null);
+  const handledStateRef = useRef<SaveActivityAttendanceState | null>(null);
 
   useEffect(() => {
     if (!state.success || handledStateRef.current === state) {
@@ -149,30 +156,38 @@ function ActivityCheckInRosterForm({
     }
 
     handledStateRef.current = state;
-    onConfirmed(selectedIds);
+    onSaved(absentIds);
     startTransition(() => {
       router.refresh();
     });
-  }, [onConfirmed, router, selectedIds, startTransition, state]);
+  }, [absentIds, onSaved, router, startTransition, state]);
 
   return (
-    <form action={formAction} className={className ?? "grid gap-3"} noValidate>
+    <form action={formAction} className="grid gap-2" noValidate>
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
-      {selectedIds.map((id) => (
+      {absentIds.map((id) => (
         <input
           key={id}
-          name="selectedParticipationIds"
+          name="absentParticipationIds"
           type="hidden"
           value={id}
         />
       ))}
-      <ConfirmRosterButton
-        disabled={participants.length === 0}
+      <AttendanceSaveButton
+        disabled={participantCount === 0}
         locale={locale}
       />
+      {state.success ? (
+        <p className="text-center text-xs font-bold text-[#156240]">
+          {getCopy(locale).saved(
+            state.presentCount ?? participantCount - absentIds.length,
+            state.absentCount ?? absentIds.length,
+          )}
+        </p>
+      ) : null}
       {state.formError ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700">
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-xs font-semibold leading-5 text-red-700">
           {state.formError}
         </p>
       ) : null}
@@ -191,68 +206,23 @@ export function ActivityCheckInReviewPanel({
 }: ActivityCheckInReviewPanelProps) {
   const copy = getCopy(locale);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"approval" | "checkIn">(
+  const [activeTab, setActiveTab] = useState<"approval" | "attendance">(
     showParticipationApproval && pendingParticipants.length > 0
       ? "approval"
-      : "checkIn",
+      : "attendance",
   );
   const [pendingApprovalCount, setPendingApprovalCount] = useState(
     pendingParticipants.length,
   );
-  const initialSelectedIds = useMemo(
+  const initialAbsentIds = useMemo(
     () =>
       participants
-        .filter(
-          (participant) =>
-            participant.checkedInAt || participant.checkInRequestedAt,
-        )
+        .filter((participant) => participant.checkInCancelledAt)
         .map((participant) => participant.id),
     [participants],
   );
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
-  const [reviewedSelectedIds, setReviewedSelectedIds] = useState<
-    string[] | null
-  >(null);
-  const [focusedParticipantId, setFocusedParticipantId] = useState<
-    string | null
-  >(null);
-  const actionPopoverRef = useRef<HTMLDivElement>(null);
-  const initialConfirmedIds = useMemo(
-    () =>
-      participants
-        .filter((participant) => participant.checkedInAt)
-        .map((participant) => participant.id),
-    [participants],
-  );
-  const participantIds = useMemo(
-    () => participants.map((participant) => participant.id),
-    [participants],
-  );
-  const confirmedIdSet = useMemo(
-    () => new Set(reviewedSelectedIds ?? initialConfirmedIds),
-    [initialConfirmedIds, reviewedSelectedIds],
-  );
-  const pendingRequestIds = useMemo(() => {
-    if (reviewedSelectedIds) {
-      return [];
-    }
-
-    return participants
-      .filter(
-        (participant) =>
-          participant.checkInRequestedAt && !confirmedIdSet.has(participant.id),
-      )
-      .map((participant) => participant.id);
-  }, [confirmedIdSet, participants, reviewedSelectedIds]);
-  const pendingRequestIdSet = useMemo(
-    () => new Set(pendingRequestIds),
-    [pendingRequestIds],
-  );
-  const confirmedCount = participants.filter((participant) =>
-    confirmedIdSet.has(participant.id),
-  ).length;
-  const pendingRequestCount = pendingRequestIds.length;
-  const totalPendingCount = pendingApprovalCount + pendingRequestCount;
+  const [absentIds, setAbsentIds] = useState<string[]>(initialAbsentIds);
+  const absentIdSet = useMemo(() => new Set(absentIds), [absentIds]);
 
   useEffect(() => {
     setPendingApprovalCount(pendingParticipants.length);
@@ -277,114 +247,77 @@ export function ActivityCheckInReviewPanel({
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedIds(initialSelectedIds);
-      setReviewedSelectedIds(null);
-      setFocusedParticipantId(null);
+      setAbsentIds(initialAbsentIds);
     }
-  }, [initialSelectedIds, isOpen]);
+  }, [initialAbsentIds, isOpen]);
 
-  useEffect(() => {
-    setReviewedSelectedIds((current) =>
-      current
-        ? current.filter((participantId) =>
-            participantIds.includes(participantId),
-          )
-        : current,
-    );
-  }, [participantIds]);
-
-  function toggleParticipant(id: string) {
-    setSelectedIds((current) =>
+  function toggleAbsent(id: string) {
+    setAbsentIds((current) =>
       current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
+        ? current.filter((participantId) => participantId !== id)
         : [...current, id],
     );
-    setFocusedParticipantId(null);
   }
 
-  useEffect(() => {
-    if (!focusedParticipantId) {
-      return;
-    }
-
-    function dismissFloatingAction(event: PointerEvent) {
-      const target = event.target as Element | null;
-
-      if (
-        actionPopoverRef.current?.contains(event.target as Node) ||
-        target?.closest("[data-checkin-avatar]")
-      ) {
-        return;
-      }
-
-      setFocusedParticipantId(null);
-    }
-
-    document.addEventListener("pointerdown", dismissFloatingAction);
-
-    return () => {
-      document.removeEventListener("pointerdown", dismissFloatingAction);
-    };
-  }, [focusedParticipantId]);
+  const trigger =
+    triggerVariant === "tool" ? (
+      <button
+        aria-label={triggerLabel ?? copy.open}
+        className="group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
+        onClick={() => setIsOpen(true)}
+        title={triggerLabel ?? copy.open}
+        type="button"
+      >
+        <span className="relative flex h-6 w-6 items-center justify-center text-[#5C8A6C] transition group-hover:text-[#156240]">
+          <UserRoundCheck className="h-[18px] w-[18px]" />
+          {pendingApprovalCount > 0 ? (
+            <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
+              {pendingApprovalCount > 9 ? "9+" : pendingApprovalCount}
+            </span>
+          ) : null}
+        </span>
+        <span className="max-w-full truncate">{triggerLabel ?? copy.open}</span>
+      </button>
+    ) : triggerVariant === "icon" ? (
+      <button
+        aria-label={triggerLabel ?? copy.open}
+        className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition active:scale-[0.96]"
+        onClick={() => setIsOpen(true)}
+        title={triggerLabel ?? copy.open}
+        type="button"
+      >
+        <UserRoundCheck className="h-4 w-4" />
+        {pendingApprovalCount > 0 ? (
+          <span
+            aria-hidden="true"
+            className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+          />
+        ) : null}
+      </button>
+    ) : (
+      <Button
+        className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F1F2EC]"
+        onClick={() => setIsOpen(true)}
+        type="button"
+        variant="secondary"
+      >
+        <UserRoundCheck className="mr-2 h-4 w-4" />
+        {triggerLabel ?? copy.open}
+        {pendingApprovalCount > 0 ? (
+          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+            {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+          </span>
+        ) : null}
+      </Button>
+    );
 
   return (
     <>
-      {triggerVariant === "tool" ? (
-        <button
-          aria-label={triggerLabel ?? copy.open}
-          className="group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
-          onClick={() => setIsOpen(true)}
-          title={triggerLabel ?? copy.open}
-          type="button"
-        >
-          <span className="relative flex h-6 w-6 items-center justify-center text-[#5C8A6C] transition group-hover:text-[#156240]">
-            <CheckCircle2 className="h-[18px] w-[18px]" />
-            {totalPendingCount > 0 ? (
-              <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
-                {totalPendingCount > 9 ? "9+" : totalPendingCount}
-              </span>
-            ) : null}
-          </span>
-          <span className="max-w-full truncate">
-            {triggerLabel ?? copy.open}
-          </span>
-        </button>
-      ) : triggerVariant === "icon" ? (
-        <button
-          aria-label={triggerLabel ?? copy.open}
-          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition active:scale-[0.96]"
-          onClick={() => setIsOpen(true)}
-          title={triggerLabel ?? copy.open}
-          type="button"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          {totalPendingCount > 0 ? (
-            <span
-              aria-hidden="true"
-              className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
-            />
-          ) : null}
-        </button>
-      ) : (
-        <Button
-          className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F1F2EC]"
-          onClick={() => setIsOpen(true)}
-          type="button"
-          variant="secondary"
-        >
-          <CheckCircle2 className="mr-2 h-4 w-4" />
-          {triggerLabel ?? copy.open}
-          {totalPendingCount > 0 ? (
-            <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-              {totalPendingCount > 99 ? "99+" : totalPendingCount}
-            </span>
-          ) : null}
-        </Button>
-      )}
+      {trigger}
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[80] grid place-items-end bg-black/45 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm md:place-items-center"
+          className="fixed inset-0 z-[80] grid place-items-end bg-black/45 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
           role="presentation"
         >
           <div
@@ -394,11 +327,7 @@ export function ActivityCheckInReviewPanel({
             role="dialog"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-[#111210]">
-                  {copy.title}
-                </h2>
-              </div>
+              <h2 className="text-xl font-bold text-[#111210]">{copy.title}</h2>
               <button
                 aria-label={copy.cancel}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#D6D5B2]"
@@ -430,20 +359,15 @@ export function ActivityCheckInReviewPanel({
                 </button>
                 <button
                   className={
-                    activeTab === "checkIn"
-                      ? "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
-                      : "relative inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
+                    activeTab === "attendance"
+                      ? "inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-bold text-[#156240] shadow-sm"
+                      : "inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold text-[#6C746A]"
                   }
-                  onClick={() => setActiveTab("checkIn")}
+                  onClick={() => setActiveTab("attendance")}
                   type="button"
                 >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {copy.checkInTab}
-                  {pendingRequestCount > 0 ? (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] text-white">
-                      {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
-                    </span>
-                  ) : null}
+                  <UserRoundCheck className="h-4 w-4" />
+                  {copy.attendanceTab}
                 </button>
               </div>
             ) : null}
@@ -458,130 +382,97 @@ export function ActivityCheckInReviewPanel({
                 />
               </div>
             ) : (
-              <>
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
-                  <span className="text-sm font-bold text-[#156240]">
-                    {copy.confirmed} {confirmedCount}/{participants.length} 人
+              <div className="mt-4">
+                <div className="flex items-start gap-3 border-b border-[#E8E4D8] pb-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF7EA] text-[#156240]">
+                    <UserRoundCheck className="h-5 w-5" />
                   </span>
-                  {pendingRequestCount > 0 ? (
-                    <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-bold text-[#E7457A]">
-                      {copy.pendingRequests} {pendingRequestCount}
-                    </span>
-                  ) : null}
-                  <ActivityCheckInRosterForm
-                    activityId={activityId}
-                    className="grid justify-items-end gap-1"
-                    locale={locale}
-                    onConfirmed={(confirmedIds) => {
-                      setReviewedSelectedIds(confirmedIds);
-                      setFocusedParticipantId(null);
-                    }}
-                    participants={participants}
-                    selectedIds={selectedIds}
-                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-bold text-[#111210]">
+                        {copy.defaultPresent}
+                      </p>
+                      <span className="shrink-0 text-xs font-bold text-[#C43D3D]">
+                        {copy.absentCount} {absentIds.length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {participants.length === 0 ? (
-                  <p className="mt-4 rounded-xl bg-zinc-50 px-3 py-4 text-center text-sm font-semibold text-zinc-500">
+                  <p className="py-8 text-center text-sm font-semibold text-zinc-500">
                     {copy.empty}
                   </p>
                 ) : (
-                  <div className="mt-4 grid grid-cols-5 gap-2.5">
+                  <div className="my-5 grid grid-cols-4 gap-x-3 gap-y-5 sm:grid-cols-5">
                     {participants.map((participant) => {
-                      const selected = selectedIds.includes(participant.id);
-                      const focused = focusedParticipantId === participant.id;
-                      const confirmed = confirmedIdSet.has(participant.id);
-                      const needsReview = pendingRequestIdSet.has(
-                        participant.id,
-                      );
+                      const isAbsent = absentIdSet.has(participant.id);
 
                       return (
-                        <div
-                          className="relative grid min-w-0 justify-items-center"
+                        <button
+                          aria-pressed={isAbsent}
+                          className="group grid min-w-0 justify-items-center gap-1.5"
                           key={participant.id}
+                          onClick={() => toggleAbsent(participant.id)}
+                          type="button"
                         >
-                          <button
-                            aria-pressed={selected}
-                            className="grid min-w-0 justify-items-center"
-                            data-checkin-avatar
-                            onClick={() =>
-                              setFocusedParticipantId(
-                                selected ? participant.id : null,
-                              )
+                          <span
+                            className={
+                              isAbsent
+                                ? "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 grayscale ring-2 ring-[#D75A52]"
+                                : "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF7EA] text-base font-bold text-[#156240] ring-1 ring-[#8AB68E] transition group-active:scale-95"
                             }
-                            type="button"
                           >
+                            {participant.user.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                alt=""
+                                className="h-full w-full object-cover"
+                                src={participant.user.avatarUrl}
+                              />
+                            ) : (
+                              getInitial(participant.user.nickname)
+                            )}
                             <span
                               className={
-                                confirmed
-                                  ? focused
-                                    ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-4 ring-[#8AB68E]"
-                                    : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-2 ring-[#8AB68E]"
-                                  : needsReview
-                                    ? focused
-                                      ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-4 ring-[#F2B1A7]"
-                                      : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-2 ring-[#F2B1A7]"
-                                    : focused
-                                      ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
-                                      : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
+                                isAbsent
+                                  ? "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#C43D3D] text-white ring-2 ring-white"
+                                  : "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#156240] text-white ring-2 ring-white"
                               }
                             >
-                              {participant.user.avatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                  src={participant.user.avatarUrl}
-                                />
+                              {isAbsent ? (
+                                <UserRoundX className="h-3 w-3" />
                               ) : (
-                                getInitial(participant.user.nickname)
+                                <CheckCircle2 className="h-3 w-3" />
                               )}
-                              {confirmed ? (
-                                <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                </span>
-                              ) : needsReview ? (
-                                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#E7457A] ring-2 ring-white" />
-                              ) : null}
                             </span>
-                            <span className="mt-1 max-w-full truncate text-[10px] font-bold leading-none text-[#111210]/70">
-                              {participant.user.nickname}
-                            </span>
-                            {confirmed || needsReview ? (
-                              <span
-                                className={
-                                  confirmed
-                                    ? "mt-0.5 text-[9px] font-bold leading-none text-[#156240]"
-                                    : "mt-0.5 text-[9px] font-bold leading-none text-[#E7457A]"
-                                }
-                              >
-                                {confirmed ? copy.confirmed : copy.needsReview}
-                              </span>
-                            ) : null}
-                          </button>
-
-                          {focused ? (
-                            <div
-                              className="absolute left-1/2 top-[calc(100%+0.35rem)] z-20 w-24 -translate-x-1/2 rounded-xl border border-[#D6D5B2] bg-white p-1.5 text-center shadow-[0_12px_26px_rgba(17,18,16,0.14)]"
-                              ref={actionPopoverRef}
-                            >
-                              <button
-                                className="inline-flex min-h-8 w-full items-center justify-center rounded-full border border-red-200 bg-white px-2 text-[11px] font-bold text-red-700"
-                                onClick={() =>
-                                  toggleParticipant(participant.id)
-                                }
-                                type="button"
-                              >
-                                {copy.remove}
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
+                          </span>
+                          <span className="max-w-full truncate text-[11px] font-bold leading-4 text-[#111210]/75">
+                            {participant.user.nickname}
+                          </span>
+                          <span
+                            className={
+                              isAbsent
+                                ? "text-[10px] font-bold leading-none text-[#C43D3D]"
+                                : "text-[10px] font-semibold leading-none text-[#6C746A]"
+                            }
+                          >
+                            {isAbsent ? copy.absent : copy.present}
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
                 )}
-              </>
+
+                <ActivityAttendanceForm
+                  absentIds={absentIds}
+                  activityId={activityId}
+                  locale={locale}
+                  onSaved={setAbsentIds}
+                  participantCount={participants.length}
+                />
+              </div>
             )}
           </div>
         </div>

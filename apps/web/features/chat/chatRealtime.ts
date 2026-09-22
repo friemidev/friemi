@@ -4,7 +4,58 @@ export const CHAT_REALTIME_FALLBACK_POLL_MS = 3_000;
 export const CHAT_REALTIME_INTEGRITY_POLL_MS = 30_000;
 export const chatRosterWakeEvent = "friemi:chat-roster-wake";
 
-export type ChatRealtimeScope = "activity" | "direct" | "planet";
+export type ChatRealtimeScope = "activity" | "direct" | "official" | "planet";
+
+export type ChatRealtimePayload = {
+  changedAt: string;
+  scope: ChatRealtimeScope;
+  subjectKey: string;
+};
+
+export type ChatRosterWakeDetail = Pick<
+  ChatRealtimePayload,
+  "scope" | "subjectKey"
+>;
+
+export function isChatRealtimeScope(
+  value: unknown,
+): value is ChatRealtimeScope {
+  return (
+    value === "activity" ||
+    value === "direct" ||
+    value === "official" ||
+    value === "planet"
+  );
+}
+
+export function parseChatRealtimePayload(
+  value: unknown,
+): ChatRealtimePayload | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const envelope = value as Record<string, unknown>;
+  const candidate =
+    envelope.payload && typeof envelope.payload === "object"
+      ? (envelope.payload as Record<string, unknown>)
+      : envelope;
+
+  if (
+    typeof candidate.changedAt !== "string" ||
+    !isChatRealtimeScope(candidate.scope) ||
+    typeof candidate.subjectKey !== "string" ||
+    candidate.subjectKey.trim().length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    changedAt: candidate.changedAt,
+    scope: candidate.scope,
+    subjectKey: candidate.subjectKey,
+  };
+}
 
 export function getChatRealtimeTopic(
   scope: ChatRealtimeScope,

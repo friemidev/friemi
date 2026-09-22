@@ -8,34 +8,21 @@ import {
   removeTrustScoreEvent,
 } from "@/features/trust/trustScoreEvents";
 import { isActivityEndedForTrustSettlement } from "@/features/trust/trustScore";
-import {
-  createNotification,
-  createNotifications,
-} from "@/features/notifications/utils/createNotification";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 import { getActivityDetailPath } from "../utils/activityRoutes";
+import { partitionActivityAttendance } from "../utils/attendancePolicy";
 
-const reviewActivityCheckInSchema = z.object({
-  activityId: z.string().min(1),
-  decision: z.enum(["confirm", "cancel"]),
-  locale: z.string().min(1).default("zh-CN"),
-  participationId: z.string().min(1),
-});
-
-const confirmAllActivityCheckInsSchema = z.object({
+const saveActivityAttendanceSchema = z.object({
+  absentParticipationIds: z.array(z.string().min(1)).default([]),
   activityId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
 });
 
-const confirmSelectedActivityCheckInsSchema = z.object({
-  activityId: z.string().min(1),
-  locale: z.string().min(1).default("zh-CN"),
-  selectedParticipationIds: z.array(z.string().min(1)).default([]),
-});
-
-export type ReviewActivityCheckInState = {
+export type SaveActivityAttendanceState = {
   success?: boolean;
-  confirmedCount?: number;
+  absentCount?: number;
+  presentCount?: number;
   formError?: string;
 };
 
@@ -54,471 +41,110 @@ function getStrings(formData: FormData, key: string) {
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      failed: "Impossible de mettre a jour ce pointage.",
-      forbidden: "Seuls les organisateurs et managers peuvent confirmer.",
+      cancelled: "La presence ne peut pas etre enregistree pour ce groupe.",
+      failed: "Impossible d'enregistrer les presences.",
+      forbidden: "Seuls les organisateurs et managers peuvent le faire.",
       invalid: "Demande invalide.",
-      missing: "Ce pointage est introuvable.",
-      none: "Aucun pointage en attente.",
+      notStarted: "La presence peut etre enregistree apres le debut du groupe.",
     };
   }
 
   if (locale === "en") {
     return {
-      failed: "Could not update this check-in.",
-      forbidden: "Only organizers and managers can confirm check-ins.",
+      cancelled: "Attendance cannot be recorded for this plan.",
+      failed: "Could not save attendance.",
+      forbidden: "Only organizers and managers can record attendance.",
       invalid: "Invalid request.",
-      missing: "This check-in was not found.",
-      none: "No pending check-ins.",
+      notStarted: "Attendance can be recorded after the plan starts.",
     };
   }
 
   return {
-    failed: "暂时无法更新这个签到。",
-    forbidden: "只有聚吧发起人和管理人员可以确认签到。",
+    cancelled: "已取消的聚吧不能记录到场情况。",
+    failed: "暂时无法保存到场情况，请稍后再试。",
+    forbidden: "只有聚吧发起人和管理人员可以记录到场情况。",
     invalid: "请求无效。",
-    missing: "没有找到这个签到记录。",
-    none: "暂无待确认签到。",
+    notStarted: "聚吧开始后才能记录未到场人员。",
   };
 }
 
-async function getActivityCheckInManagementScope({
-  activityId,
-  managerProfileId,
-}: {
-  activityId: string;
-  managerProfileId: string;
-}): Promise<{
-  canManage: boolean;
-  canSettleNoShows: boolean;
-  exemptProfileIds: string[];
-}> {
-  const activity = await prisma.activity.findUnique({
-    where: {
-      id: activityId,
-    },
-    select: {
-      endAt: true,
-      organizerId: true,
-      startAt: true,
-      status: true,
-      coManagers: {
-        select: {
-          managerProfileId: true,
-        },
-      },
-    },
-  });
-
-  if (!activity) {
-    return {
-      canManage: false,
-      canSettleNoShows: false,
-      exemptProfileIds: [],
-    };
-  }
-
-  const exemptProfileIds = [
-    activity.organizerId,
-    ...activity.coManagers.map((coManager) => coManager.managerProfileId),
-  ];
-
-  return {
-    canManage:
-      activity.organizerId === managerProfileId ||
-      exemptProfileIds.includes(managerProfileId),
-    canSettleNoShows: isActivityEndedForTrustSettlement(activity),
-    exemptProfileIds,
-  };
-}
-
-function isCheckInExemptProfile(
-  userProfileId: string,
-  exemptProfileIds: string[],
-) {
-  return exemptProfileIds.includes(userProfileId);
-}
-
-export async function reviewActivityCheckInAction(
-  _previousState: ReviewActivityCheckInState,
+export async function saveActivityAttendanceAction(
+  _previousState: SaveActivityAttendanceState,
   formData: FormData,
-): Promise<ReviewActivityCheckInState> {
+): Promise<SaveActivityAttendanceState> {
   const rawInput = {
+    absentParticipationIds: getStrings(formData, "absentParticipationIds"),
     activityId: getString(formData, "activityId"),
-    decision: getString(formData, "decision"),
     locale: getString(formData, "locale") || "zh-CN",
-    participationId: getString(formData, "participationId"),
   };
-  const result = reviewActivityCheckInSchema.safeParse(rawInput);
+  const result = saveActivityAttendanceSchema.safeParse(rawInput);
   const copy = getCopy(rawInput.locale);
 
   if (!result.success) {
     return { formError: copy.invalid };
   }
 
-  let profile: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
+  let manager: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
 
   try {
-    profile = await ensureCurrentUserProfileSnapshot(
+    manager = await ensureCurrentUserProfileSnapshot(
       result.data.locale,
       getActivityDetailPath(result.data.activityId),
     );
   } catch (error) {
-    console.error(
-      "Failed to resolve viewer profile for check-in review",
-      error,
-    );
+    console.error("Failed to resolve attendance manager", error);
     return { formError: copy.failed };
   }
 
   try {
-    const reviewResult = await prisma.$transaction(async (tx) => {
-      const participation = await tx.activityParticipant.findUnique({
+    const now = new Date();
+    const attendanceResult = await prisma.$transaction(async (tx) => {
+      const activity = await tx.activity.findUnique({
         where: {
-          id: result.data.participationId,
+          id: result.data.activityId,
         },
         select: {
-          activityId: true,
-          checkInRequestedAt: true,
-          checkedInAt: true,
-          id: true,
-          status: true,
-          userProfileId: true,
-          activity: {
+          coManagers: {
             select: {
-              endAt: true,
-              organizerId: true,
-              startAt: true,
-              status: true,
-              coManagers: {
-                select: {
-                  managerProfileId: true,
-                },
-              },
+              managerProfileId: true,
             },
           },
+          endAt: true,
+          organizerId: true,
+          startAt: true,
+          status: true,
         },
       });
 
-      if (
-        !participation ||
-        participation.activityId !== result.data.activityId
-      ) {
-        return { ok: false as const, reason: "missing" as const };
+      if (!activity) {
+        return { ok: false as const, reason: "invalid" as const };
       }
 
-      const canManage =
-        participation.activity.organizerId === profile.id ||
-        participation.activity.coManagers.some(
-          (coManager) => coManager.managerProfileId === profile.id,
-        );
+      const operatorProfileIds = [
+        activity.organizerId,
+        ...activity.coManagers.map((coManager) => coManager.managerProfileId),
+      ];
 
-      if (!canManage) {
+      if (!operatorProfileIds.includes(manager.id)) {
         return { ok: false as const, reason: "forbidden" as const };
       }
 
-      const exemptProfileIds = [
-        participation.activity.organizerId,
-        ...participation.activity.coManagers.map(
-          (coManager) => coManager.managerProfileId,
-        ),
-      ];
-
-      if (
-        isCheckInExemptProfile(participation.userProfileId, exemptProfileIds)
-      ) {
-        return { ok: false as const, reason: "missing" as const };
+      if (activity.status === "CANCELLED") {
+        return { ok: false as const, reason: "cancelled" as const };
       }
 
-      if (!["JOINED", "APPROVED"].includes(participation.status)) {
-        return { ok: false as const, reason: "missing" as const };
+      if (activity.startAt.getTime() > now.getTime()) {
+        return { ok: false as const, reason: "notStarted" as const };
       }
 
-      if (result.data.decision === "confirm") {
-        if (!participation.checkInRequestedAt && !participation.checkedInAt) {
-          return { ok: false as const, reason: "missing" as const };
-        }
-
-        const wasAlreadyCheckedIn = Boolean(participation.checkedInAt);
-        const confirmedAt = participation.checkedInAt ?? new Date();
-
-        await tx.activityParticipant.update({
-          where: {
-            id: result.data.participationId,
-          },
-          data: {
-            checkedInAt: confirmedAt,
-            checkInCancelledAt: null,
-            checkInReviewedById: profile.id,
-          },
-        });
-
-        await applyStandardTrustScoreEvent(tx, {
-          activityId: result.data.activityId,
-          note: "Hangout check-in confirmed by organizer or manager",
-          profileId: participation.userProfileId,
-          type: "ACTIVITY_CHECK_IN",
-        });
-        await removeTrustScoreEvent(tx, {
-          activityId: result.data.activityId,
-          profileId: participation.userProfileId,
-          type: "NO_SHOW",
-        });
-
-        if (
-          !wasAlreadyCheckedIn &&
-          participation.userProfileId !== profile.id
-        ) {
-          await createNotification(tx, {
-            activityId: result.data.activityId,
-            dedupeIncludingRead: true,
-            occurrenceId: `check-in-confirm:${participation.id}:${confirmedAt.toISOString()}`,
-            recipientId: participation.userProfileId,
-            type: "ACTIVITY_CHECK_IN",
-          });
-        }
-
-        return { ok: true as const };
-      }
-
-      const reviewedAt = new Date();
-
-      await tx.activityParticipant.update({
-        where: {
-          id: result.data.participationId,
-        },
-        data: {
-          checkInRequestedAt: null,
-          checkedInAt: null,
-          checkInCancelledAt: reviewedAt,
-          checkInReviewedById: profile.id,
-        },
-      });
-
-      await removeTrustScoreEvent(tx, {
-        activityId: result.data.activityId,
-        profileId: participation.userProfileId,
-        type: "ACTIVITY_CHECK_IN",
-      });
-
-      if (
-        isActivityEndedForTrustSettlement(participation.activity, reviewedAt)
-      ) {
-        await applyStandardTrustScoreEvent(tx, {
-          activityId: result.data.activityId,
-          note: "Approved hangout participant was marked absent",
-          profileId: participation.userProfileId,
-          type: "NO_SHOW",
-        });
-      }
-
-      return { ok: true as const };
-    });
-
-    if (!reviewResult.ok) {
-      return {
-        formError:
-          reviewResult.reason === "forbidden" ? copy.forbidden : copy.missing,
-      };
-    }
-
-    if (result.data.decision === "confirm") {
-      await syncActivitySocialRewards({
-        activityId: result.data.activityId,
-      }).catch((error) => {
-        console.error("Failed to sync rewards after check-in review", error);
-      });
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to review activity check-in", error);
-    return { formError: copy.failed };
-  }
-}
-
-export async function confirmAllPendingActivityCheckInsAction(
-  _previousState: ReviewActivityCheckInState,
-  formData: FormData,
-): Promise<ReviewActivityCheckInState> {
-  const rawInput = {
-    activityId: getString(formData, "activityId"),
-    locale: getString(formData, "locale") || "zh-CN",
-  };
-  const result = confirmAllActivityCheckInsSchema.safeParse(rawInput);
-  const copy = getCopy(rawInput.locale);
-
-  if (!result.success) {
-    return { formError: copy.invalid };
-  }
-
-  let profile: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
-
-  try {
-    profile = await ensureCurrentUserProfileSnapshot(
-      result.data.locale,
-      getActivityDetailPath(result.data.activityId),
-    );
-  } catch (error) {
-    console.error("Failed to resolve viewer profile for batch check-in", error);
-    return { formError: copy.failed };
-  }
-
-  try {
-    const managementScope = await getActivityCheckInManagementScope({
-      activityId: result.data.activityId,
-      managerProfileId: profile.id,
-    });
-
-    if (!managementScope.canManage) {
-      return { formError: copy.forbidden };
-    }
-
-    const now = new Date();
-    const confirmResult = await prisma.$transaction(async (tx) => {
-      const pendingParticipants = await tx.activityParticipant.findMany({
-        where: {
-          activityId: result.data.activityId,
-          checkInRequestedAt: {
-            not: null,
-          },
-          checkedInAt: null,
-          userProfileId: {
-            notIn: managementScope.exemptProfileIds,
-          },
-          status: {
-            in: ["JOINED", "APPROVED"],
-          },
-        },
-        select: {
-          checkedInAt: true,
-          id: true,
-          userProfileId: true,
-        },
-      });
-
-      if (pendingParticipants.length === 0) {
-        return { confirmedCount: 0 };
-      }
-
-      await tx.activityParticipant.updateMany({
-        where: {
-          id: {
-            in: pendingParticipants.map((participant) => participant.id),
-          },
-        },
-        data: {
-          checkedInAt: now,
-          checkInCancelledAt: null,
-          checkInReviewedById: profile.id,
-        },
-      });
-
-      await Promise.all(
-        pendingParticipants.map((participant) =>
-          applyStandardTrustScoreEvent(tx, {
-            activityId: result.data.activityId,
-            note: "Hangout check-in confirmed in batch",
-            profileId: participant.userProfileId,
-            type: "ACTIVITY_CHECK_IN",
-          }).then(() =>
-            removeTrustScoreEvent(tx, {
-              activityId: result.data.activityId,
-              profileId: participant.userProfileId,
-              type: "NO_SHOW",
-            }),
-          ),
-        ),
-      );
-      await createNotifications(
-        tx,
-        pendingParticipants
-          .filter((participant) => participant.userProfileId !== profile.id)
-          .map((participant) => ({
-            activityId: result.data.activityId,
-            dedupeIncludingRead: true,
-            occurrenceId: `check-in-confirm:${participant.id}:${now.toISOString()}`,
-            recipientId: participant.userProfileId,
-            type: "ACTIVITY_CHECK_IN",
-          })),
-      );
-
-      return { confirmedCount: pendingParticipants.length };
-    });
-
-    if (confirmResult.confirmedCount === 0) {
-      return { formError: copy.none };
-    }
-
-    await syncActivitySocialRewards({
-      activityId: result.data.activityId,
-    }).catch((error) => {
-      console.error("Failed to sync rewards after batch check-in", error);
-    });
-
-    return {
-      confirmedCount: confirmResult.confirmedCount,
-      success: true,
-    };
-  } catch (error) {
-    console.error("Failed to confirm all activity check-ins", error);
-    return { formError: copy.failed };
-  }
-}
-
-export async function confirmSelectedActivityCheckInsAction(
-  _previousState: ReviewActivityCheckInState,
-  formData: FormData,
-): Promise<ReviewActivityCheckInState> {
-  const rawInput = {
-    activityId: getString(formData, "activityId"),
-    locale: getString(formData, "locale") || "zh-CN",
-    selectedParticipationIds: getStrings(formData, "selectedParticipationIds"),
-  };
-  const result = confirmSelectedActivityCheckInsSchema.safeParse(rawInput);
-  const copy = getCopy(rawInput.locale);
-
-  if (!result.success) {
-    return { formError: copy.invalid };
-  }
-
-  let profile: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
-
-  try {
-    profile = await ensureCurrentUserProfileSnapshot(
-      result.data.locale,
-      getActivityDetailPath(result.data.activityId),
-    );
-  } catch (error) {
-    console.error(
-      "Failed to resolve viewer profile for selected check-ins",
-      error,
-    );
-    return { formError: copy.failed };
-  }
-
-  try {
-    const managementScope = await getActivityCheckInManagementScope({
-      activityId: result.data.activityId,
-      managerProfileId: profile.id,
-    });
-
-    if (!managementScope.canManage) {
-      return { formError: copy.forbidden };
-    }
-
-    const selectedIds = Array.from(
-      new Set(result.data.selectedParticipationIds),
-    );
-    const now = new Date();
-    const reviewResult = await prisma.$transaction(async (tx) => {
       const participants = await tx.activityParticipant.findMany({
         where: {
           activityId: result.data.activityId,
-          userProfileId: {
-            notIn: managementScope.exemptProfileIds,
-          },
           status: {
             in: ["JOINED", "APPROVED"],
+          },
+          userProfileId: {
+            notIn: operatorProfileIds,
           },
         },
         select: {
@@ -527,89 +153,89 @@ export async function confirmSelectedActivityCheckInsAction(
           userProfileId: true,
         },
       });
-      const participantIds = participants.map((participant) => participant.id);
-      const selectedParticipants = participants.filter((participant) =>
-        selectedIds.includes(participant.id),
+      const attendance = partitionActivityAttendance({
+        absentParticipationIds: result.data.absentParticipationIds,
+        participantIds: participants.map((participant) => participant.id),
+      });
+      const presentParticipants = participants.filter((participant) =>
+        attendance.presentIds.includes(participant.id),
       );
-      const newlyConfirmedParticipants = selectedParticipants.filter(
-        (participant) => !participant.checkedInAt,
-      );
-      const cancelledParticipants = participants.filter(
-        (participant) => !selectedIds.includes(participant.id),
+      const absentParticipants = participants.filter((participant) =>
+        attendance.absentIds.includes(participant.id),
       );
 
-      if (selectedParticipants.length > 0) {
+      if (presentParticipants.length > 0) {
         await tx.activityParticipant.updateMany({
           where: {
             id: {
-              in: selectedParticipants.map((participant) => participant.id),
+              in: attendance.presentIds,
             },
           },
           data: {
-            checkedInAt: now,
             checkInCancelledAt: null,
-            checkInReviewedById: profile.id,
+            checkInRequestedAt: null,
+            checkedInAt: now,
+            checkInReviewedById: manager.id,
           },
         });
 
         await Promise.all(
-          selectedParticipants.map((participant) =>
-            applyStandardTrustScoreEvent(tx, {
+          presentParticipants.map(async (participant) => {
+            await applyStandardTrustScoreEvent(tx, {
               activityId: result.data.activityId,
-              note: "Hangout check-in confirmed from roster",
+              note: "Attendance confirmed by organizer or manager",
               profileId: participant.userProfileId,
               type: "ACTIVITY_CHECK_IN",
-            }).then(() =>
-              removeTrustScoreEvent(tx, {
-                activityId: result.data.activityId,
-                profileId: participant.userProfileId,
-                type: "NO_SHOW",
-              }),
-            ),
-          ),
+            });
+            await removeTrustScoreEvent(tx, {
+              activityId: result.data.activityId,
+              profileId: participant.userProfileId,
+              type: "NO_SHOW",
+            });
+          }),
         );
 
         await createNotifications(
           tx,
-          newlyConfirmedParticipants
-            .filter((participant) => participant.userProfileId !== profile.id)
+          presentParticipants
+            .filter((participant) => !participant.checkedInAt)
             .map((participant) => ({
               activityId: result.data.activityId,
               dedupeIncludingRead: true,
-              occurrenceId: `check-in-confirm:${participant.id}:${now.toISOString()}`,
+              occurrenceId: `attendance-present:${participant.id}`,
               recipientId: participant.userProfileId,
-              type: "ACTIVITY_CHECK_IN",
+              type: "ACTIVITY_CHECK_IN" as const,
             })),
         );
       }
 
-      if (cancelledParticipants.length > 0) {
+      if (absentParticipants.length > 0) {
         await tx.activityParticipant.updateMany({
           where: {
             id: {
-              in: cancelledParticipants.map((participant) => participant.id),
+              in: attendance.absentIds,
             },
           },
           data: {
+            checkInCancelledAt: now,
             checkInRequestedAt: null,
             checkedInAt: null,
-            checkInCancelledAt: now,
-            checkInReviewedById: profile.id,
+            checkInReviewedById: manager.id,
           },
         });
 
         await Promise.all(
-          cancelledParticipants.map(async (participant) => {
+          absentParticipants.map(async (participant) => {
             await removeTrustScoreEvent(tx, {
               activityId: result.data.activityId,
               profileId: participant.userProfileId,
               type: "ACTIVITY_CHECK_IN",
             });
 
-            if (managementScope.canSettleNoShows) {
+            if (isActivityEndedForTrustSettlement(activity, now)) {
               await applyStandardTrustScoreEvent(tx, {
                 activityId: result.data.activityId,
-                note: "Approved hangout participant was absent from final roster",
+                note: "Participant explicitly marked absent by organizer or manager",
                 profileId: participant.userProfileId,
                 type: "NO_SHOW",
               });
@@ -619,25 +245,40 @@ export async function confirmSelectedActivityCheckInsAction(
       }
 
       return {
-        confirmedCount: selectedParticipants.length,
-        reviewedCount: participantIds.length,
+        absentCount: absentParticipants.length,
+        ok: true as const,
+        presentCount: presentParticipants.length,
       };
     });
 
-    if (reviewResult.confirmedCount > 0) {
+    if (!attendanceResult.ok) {
+      return {
+        formError:
+          attendanceResult.reason === "forbidden"
+            ? copy.forbidden
+            : attendanceResult.reason === "notStarted"
+              ? copy.notStarted
+              : attendanceResult.reason === "cancelled"
+                ? copy.cancelled
+                : copy.invalid,
+      };
+    }
+
+    if (attendanceResult.presentCount > 0) {
       await syncActivitySocialRewards({
         activityId: result.data.activityId,
       }).catch((error) => {
-        console.error("Failed to sync rewards after selected check-ins", error);
+        console.error("Failed to sync rewards after attendance update", error);
       });
     }
 
     return {
-      confirmedCount: reviewResult.confirmedCount,
+      absentCount: attendanceResult.absentCount,
+      presentCount: attendanceResult.presentCount,
       success: true,
     };
   } catch (error) {
-    console.error("Failed to confirm selected activity check-ins", error);
+    console.error("Failed to save activity attendance", error);
     return { formError: copy.failed };
   }
 }

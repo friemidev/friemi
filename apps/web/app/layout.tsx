@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { MobileViewportProfile } from "@/features/mobile/components/MobileViewportProfile";
 import { brand } from "@/lib/brand";
 import { getCanonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
@@ -56,7 +57,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <MobileViewportProfile />
+        {children}
+      </body>
     </html>
   );
 }

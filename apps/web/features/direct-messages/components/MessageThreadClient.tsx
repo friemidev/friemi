@@ -158,7 +158,7 @@ export function MessageThreadClient({
     ? null
     : getSendPolicyNotice(sendPolicy, locale, localRemainingNonFriendMessages);
 
-  useMobileChatViewportGuard();
+  useMobileChatViewportGuard(chatHistory.scrollContainerRef);
 
   useEffect(() => {
     setMessages((currentMessages) =>

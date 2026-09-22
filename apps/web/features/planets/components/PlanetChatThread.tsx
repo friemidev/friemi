@@ -304,7 +304,7 @@ export function PlanetChatThread({
             saving: "正在保存...",
           };
 
-  useMobileChatViewportGuard();
+  useMobileChatViewportGuard(chatHistory.scrollContainerRef);
 
   useEffect(() => {
     setMessages((current) => mergeChatCursorMessages(current, initialMessages));

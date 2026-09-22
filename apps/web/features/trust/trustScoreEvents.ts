@@ -213,8 +213,10 @@ export async function syncActivityNoShowTrustScoreEvents({
   const participations = await prisma.activityParticipant.findMany({
     where: {
       activityId,
+      checkInCancelledAt: {
+        not: null,
+      },
       checkedInAt: null,
-      OR: [{ checkInRequestedAt: null }, { checkInCancelledAt: { not: null } }],
       status: {
         in: ["JOINED", "APPROVED"],
       },
@@ -259,7 +261,7 @@ export async function syncActivityNoShowTrustScoreEvents({
     participantCheckInRequiredParticipations.map((participation) =>
       applyStandardTrustScoreEvent(prisma, {
         activityId: participation.activityId,
-        note: "Approved hangout participant did not check in after the event",
+        note: "Participant was explicitly marked absent by an organizer or manager",
         profileId: participation.userProfileId,
         type: "NO_SHOW",
       }),

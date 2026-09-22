@@ -25,7 +25,7 @@ test("confirmed check-in adds one tenth of a trust point", () => {
   assert.equal(getTrustScoreEventDelta("ACTIVITY_CHECK_IN"), 0.1);
 });
 
-test("an approved participant who misses check-in loses two trust points", () => {
+test("a participant explicitly marked absent loses two trust points", () => {
   assert.equal(getTrustScoreEventDelta("NO_SHOW"), -2);
 });
 
