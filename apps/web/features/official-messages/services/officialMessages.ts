@@ -278,7 +278,8 @@ export async function getOfficialFeedbackRoster(
     id: "friemi-feedback-inbox",
     preview: latestFeedback?.content ?? copy.feedbackEmpty,
     publishedAt:
-      latestFeedback?.createdAt.toISOString() ?? operator.createdAt.toISOString(),
+      latestFeedback?.createdAt.toISOString() ??
+      operator.createdAt.toISOString(),
     title: copy.feedbackTitle,
     unreadCount,
   };
@@ -379,7 +380,10 @@ export async function createOfficialFeedback({
 
   await invalidateUnreadBadgeCache(operators.map((operator) => operator.id));
 
-  return feedback;
+  return {
+    ...feedback,
+    recipientProfileIds: operators.map((operator) => operator.id),
+  };
 }
 
 export async function createOfficialMessage({
@@ -391,17 +395,28 @@ export async function createOfficialMessage({
   content: string;
   title: string;
 }) {
-  return prisma.officialMessage.create({
-    data: {
-      authorProfileId,
-      content,
-      title,
-    },
-    select: {
-      id: true,
-      title: true,
-      content: true,
-      publishedAt: true,
-    },
-  });
+  const [message, recipients] = await Promise.all([
+    prisma.officialMessage.create({
+      data: {
+        authorProfileId,
+        content,
+        title,
+      },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        publishedAt: true,
+      },
+    }),
+    prisma.userProfile.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true },
+    }),
+  ]);
+  const recipientProfileIds = recipients.map((recipient) => recipient.id);
+
+  await invalidateUnreadBadgeCache(recipientProfileIds);
+
+  return { ...message, recipientProfileIds };
 }

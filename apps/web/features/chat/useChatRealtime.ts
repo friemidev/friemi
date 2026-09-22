@@ -8,6 +8,8 @@ import {
   getChatInboxRealtimeTopic,
   getChatRealtimeBrowserConfig,
   getChatRealtimeTopic,
+  parseChatRealtimePayload,
+  type ChatRealtimePayload,
   type ChatRealtimeScope,
 } from "./chatRealtime";
 
@@ -49,7 +51,7 @@ function useChatRealtimeChannel({
 }: {
   enabled?: boolean;
   event: string;
-  onChanged: () => void;
+  onChanged: (payload: ChatRealtimePayload | null) => void;
   topic: string | null;
 }) {
   const callbackRef = useRef(onChanged);
@@ -70,7 +72,7 @@ function useChatRealtimeChannel({
 
     let channel: RealtimeChannel | null = client
       .channel(topic)
-      .on("broadcast", { event }, () => {
+      .on("broadcast", { event }, (message) => {
         const now = Date.now();
 
         if (now - lastEventAtRef.current < realtimeEventThrottleMs) {
@@ -78,7 +80,7 @@ function useChatRealtimeChannel({
         }
 
         lastEventAtRef.current = now;
-        callbackRef.current();
+        callbackRef.current(parseChatRealtimePayload(message));
       })
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
@@ -103,7 +105,7 @@ export function useChatRealtime({
   scope,
   subjectKey,
 }: {
-  onChanged: () => void;
+  onChanged: (payload: ChatRealtimePayload | null) => void;
   scope: ChatRealtimeScope;
   subjectKey: string;
 }) {
@@ -118,7 +120,7 @@ export function useChatInboxRealtime({
   onChanged,
   profileId,
 }: {
-  onChanged: () => void;
+  onChanged: (payload: ChatRealtimePayload | null) => void;
   profileId: string | null;
 }) {
   return useChatRealtimeChannel({

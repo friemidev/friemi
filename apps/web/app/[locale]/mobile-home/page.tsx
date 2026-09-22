@@ -600,7 +600,10 @@ function MobileHomeV23Experience({
             </h2>
           </div>
 
-          <div className="mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            className="mobile-home-activity-filters mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-mobile-activity-filters
+          >
             {copy.filters.map((filter) => (
               <Link
                 key={filter.label}

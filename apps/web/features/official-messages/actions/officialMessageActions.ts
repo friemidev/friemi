@@ -6,6 +6,7 @@ import {
   createOfficialFeedback,
   createOfficialMessage,
 } from "@/features/official-messages/services/officialMessages";
+import { scheduleChatInboxRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -53,9 +54,14 @@ export async function submitOfficialFeedbackAction(
   }
 
   const profile = await ensureCurrentUserProfile(locale, "/official-messages");
-  await createOfficialFeedback({
+  const feedback = await createOfficialFeedback({
     content: result.data.content,
     senderProfileId: profile.id,
+  });
+  scheduleChatInboxRealtimeChange({
+    profileIds: feedback.recipientProfileIds,
+    scope: "official",
+    subjectKey: `feedback:${feedback.id}`,
   });
 
   revalidatePath(withLocale(locale, "/official-feedback"));
@@ -102,10 +108,15 @@ export async function publishOfficialMessageAction(
     "/admin/official-messages",
   );
 
-  await createOfficialMessage({
+  const message = await createOfficialMessage({
     authorProfileId: profile.id,
     content: result.data.content,
     title: result.data.title,
+  });
+  scheduleChatInboxRealtimeChange({
+    profileIds: message.recipientProfileIds,
+    scope: "official",
+    subjectKey: `message:${message.id}`,
   });
 
   revalidatePath(withLocale(locale, "/admin/official-messages"));

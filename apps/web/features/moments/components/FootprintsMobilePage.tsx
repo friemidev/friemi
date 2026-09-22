@@ -47,7 +47,11 @@ import {
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
-import { chatRosterWakeEvent } from "@/features/chat/chatRealtime";
+import {
+  chatRosterWakeEvent,
+  type ChatRealtimeScope,
+  type ChatRosterWakeDetail,
+} from "@/features/chat/chatRealtime";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
@@ -144,7 +148,10 @@ type MessageRosterSnapshot = {
   updatedAt: number;
 };
 
-type MessageRosterResponse = Omit<MessageRosterSnapshot, "updatedAt"> & {
+type MessageRosterResponse = Partial<
+  Omit<MessageRosterSnapshot, "hasError" | "updatedAt">
+> & {
+  hasError?: boolean;
   ok?: boolean;
 };
 
@@ -247,7 +254,7 @@ const copyByLocale = {
     tabs: {
       message: "聊聊",
       moment: "晒晒",
-      planet: "星星",
+      planet: "星球",
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
@@ -304,8 +311,6 @@ const copyByLocale = {
     messageDescription: "私聊和组局聊天都在这里。",
     messageFilters: {
       all: "聊聊",
-      following: "我关注的",
-      mutual: "互相关注",
       strangers: "陌生人",
       official: "官方",
       rooms: "群聊",
@@ -409,8 +414,6 @@ const copyByLocale = {
     messageDescription: "Chats and plan details stay here.",
     messageFilters: {
       all: "All chats",
-      following: "Following",
-      mutual: "Mutual",
       strangers: "Requests",
       official: "Official",
       rooms: "Groups",
@@ -520,8 +523,6 @@ const copyByLocale = {
     messageDescription: "Les échanges et messages de plans restent ici.",
     messageFilters: {
       all: "Tous",
-      following: "Suivis",
-      mutual: "Mutuels",
       strangers: "Inconnus",
       official: "Officiel",
       rooms: "Groupes",
@@ -2816,12 +2817,6 @@ function FootprintsMessageList({
     (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
     0,
   );
-  const mutualUnreadTotal = friends
-    .filter((friend) => friend.isMutualFollow && !friend.isMuted)
-    .reduce((total, friend) => total + friend.unreadCount, 0);
-  const followingUnreadTotal = friends
-    .filter((friend) => friend.isFollowing && !friend.isMuted)
-    .reduce((total, friend) => total + friend.unreadCount, 0);
   const strangerUnreadTotal = friends
     .filter(
       (friend) =>
@@ -2864,22 +2859,6 @@ function FootprintsMessageList({
       iconFrameClassName: "bg-[#ECF5EF]",
       key: "rooms",
       label: pageCopy.messageFilters.rooms,
-    },
-    {
-      count: mutualUnreadTotal,
-      icon: UsersRound,
-      iconClassName: "text-[#6E46D6]",
-      iconFrameClassName: "bg-[#F0ECFF]",
-      key: "mutual",
-      label: pageCopy.messageFilters.mutual,
-    },
-    {
-      count: followingUnreadTotal,
-      icon: Heart,
-      iconClassName: "text-[#E7457A]",
-      iconFrameClassName: "bg-[#FFF0F5]",
-      key: "following",
-      label: pageCopy.messageFilters.following,
     },
     {
       count: strangerUnreadTotal,
@@ -3730,6 +3709,9 @@ export function FootprintsMobilePage({
   const messageRosterRefreshControllerRef = useRef<AbortController | null>(
     null,
   );
+  const pendingMessageRosterRefreshScopeRef = useRef<
+    ChatRealtimeScope | "all" | null
+  >(null);
   const isAuthenticated = Boolean(profile);
   const [feedScope, setFeedScope] = useState<MomentFeedScope>(
     isAuthenticated ? initialMomentScope : "PUBLIC",
@@ -3824,58 +3806,115 @@ export function FootprintsMobilePage({
       ]
     : [{ key: "PUBLIC", label: copy.feedPublic }];
 
-  const refreshMessageRoster = useCallback(async () => {
-    if (
-      !profileId ||
-      !messageRosterCacheKey ||
-      messageRosterRefreshControllerRef.current
-    ) {
-      return;
-    }
-
-    const controller = new AbortController();
-    messageRosterRefreshControllerRef.current = controller;
-
-    try {
-      const params = new URLSearchParams({ locale });
-      const response = await fetch(`/api/footprints/messages?${params}`, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      const payload = (await response.json()) as MessageRosterResponse;
-
-      if (!response.ok || !payload.ok || payload.hasError) {
-        throw new Error("Message roster refresh failed");
+  const refreshMessageRoster = useCallback(
+    async (scope?: ChatRealtimeScope) => {
+      if (!profileId || !messageRosterCacheKey) {
+        return;
       }
 
-      const nextSnapshot: MessageRosterSnapshot = {
-        activityRoomChats: payload.activityRoomChats,
-        friends: payload.friends,
-        hasError: false,
-        officialFeedbackInbox: payload.officialFeedbackInbox,
-        officialMessages: payload.officialMessages,
-        planetChats: payload.planetChats,
-        updatedAt: Date.now(),
-      };
+      if (messageRosterRefreshControllerRef.current) {
+        const requestedScope = scope ?? "all";
+        const pendingScope = pendingMessageRosterRefreshScopeRef.current;
 
-      messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
-      setMessageFriends(nextSnapshot.friends);
-      setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
-      setOfficialMessages(nextSnapshot.officialMessages);
-      setActivityRoomChats(nextSnapshot.activityRoomChats);
-      setPlanetChats(nextSnapshot.planetChats);
-      setMessageRosterHasError(false);
-      setLoadedTabs((current) => ({ ...current, message: true }));
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        console.error("Failed to refresh message roster", error);
+        pendingMessageRosterRefreshScopeRef.current =
+          pendingScope && pendingScope !== requestedScope
+            ? "all"
+            : requestedScope;
+        return;
       }
-    } finally {
-      if (messageRosterRefreshControllerRef.current === controller) {
-        messageRosterRefreshControllerRef.current = null;
+
+      const controller = new AbortController();
+      messageRosterRefreshControllerRef.current = controller;
+
+      try {
+        const params = new URLSearchParams({ locale });
+
+        if (scope) {
+          params.set("scope", scope);
+        }
+
+        const response = await fetch(`/api/footprints/messages?${params}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as MessageRosterResponse;
+
+        if (!response.ok || !payload.ok || payload.hasError) {
+          throw new Error("Message roster refresh failed");
+        }
+
+        const currentSnapshot = messageRosterMemoryCache.get(
+          messageRosterCacheKey,
+        );
+        const nextSnapshot: MessageRosterSnapshot = {
+          activityRoomChats:
+            payload.activityRoomChats ??
+            currentSnapshot?.activityRoomChats ??
+            activityRoomChats,
+          friends:
+            payload.friends ?? currentSnapshot?.friends ?? messageFriends,
+          hasError: false,
+          officialFeedbackInbox:
+            payload.officialFeedbackInbox !== undefined
+              ? payload.officialFeedbackInbox
+              : (currentSnapshot?.officialFeedbackInbox ??
+                officialFeedbackInbox),
+          officialMessages:
+            payload.officialMessages !== undefined
+              ? payload.officialMessages
+              : (currentSnapshot?.officialMessages ?? officialMessages),
+          planetChats:
+            payload.planetChats ?? currentSnapshot?.planetChats ?? planetChats,
+          updatedAt: Date.now(),
+        };
+
+        messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
+        setMessageFriends(nextSnapshot.friends);
+        setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
+        setOfficialMessages(nextSnapshot.officialMessages);
+        setActivityRoomChats(nextSnapshot.activityRoomChats);
+        setPlanetChats(nextSnapshot.planetChats);
+        setMessageRosterHasError(false);
+        setLoadedTabs((current) => ({ ...current, message: true }));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to refresh message roster", error);
+        }
+      } finally {
+        if (messageRosterRefreshControllerRef.current === controller) {
+          messageRosterRefreshControllerRef.current = null;
+        }
+
+        const pendingScope = pendingMessageRosterRefreshScopeRef.current;
+
+        if (pendingScope) {
+          pendingMessageRosterRefreshScopeRef.current = null;
+          window.setTimeout(() => {
+            window.dispatchEvent(
+              pendingScope === "all"
+                ? new Event(chatRosterWakeEvent)
+                : new CustomEvent(chatRosterWakeEvent, {
+                    detail: {
+                      scope: pendingScope,
+                      subjectKey: "pending-refresh",
+                    } satisfies ChatRosterWakeDetail,
+                  }),
+            );
+          }, 0);
+        }
       }
-    }
-  }, [locale, messageRosterCacheKey, profileId]);
+    },
+    [
+      activityRoomChats,
+      locale,
+      messageFriends,
+      messageRosterCacheKey,
+      officialFeedbackInbox,
+      officialMessages,
+      planetChats,
+      profileId,
+    ],
+  );
 
   useEffect(() => {
     if (!profile && feedScope !== "PUBLIC") {
@@ -4166,17 +4205,21 @@ export function FootprintsMobilePage({
       return;
     }
 
-    const handleRosterWake = () => {
+    const handleRosterWake = (event: Event) => {
       const cachedSnapshot = messageRosterMemoryCache.get(
         messageRosterCacheKey,
       );
+      const detail =
+        event instanceof CustomEvent
+          ? (event.detail as ChatRosterWakeDetail | undefined)
+          : undefined;
 
       if (cachedSnapshot) {
         cachedSnapshot.updatedAt = 0;
       }
 
       if (activeTab === "message") {
-        void refreshMessageRoster();
+        void refreshMessageRoster(detail?.scope);
       }
     };
 

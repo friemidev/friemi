@@ -97,6 +97,14 @@ test("planet chat list state rejects unsupported URL filters", () => {
     filter: "all",
     query: "",
   });
+  assert.deepEqual(getPlanetChatListState("?chatFilter=following"), {
+    filter: "all",
+    query: "",
+  });
+  assert.deepEqual(getPlanetChatListState("?chatFilter=mutual"), {
+    filter: "all",
+    query: "",
+  });
 });
 
 test("planet chat list state builds a minimal localized return URL", () => {
@@ -166,13 +174,7 @@ test("unified chat search matches planet name tags messages and sender text", ()
   );
 });
 
-test("unified chat relationship and official filters use distinct entry kinds", () => {
-  assert.deepEqual(
-    filterUnifiedChatRosterEntries(entries, "mutual", "").map(
-      (entry) => entry.id,
-    ),
-    ["direct-mutual"],
-  );
+test("unified chat stranger and official filters use distinct entry kinds", () => {
   assert.deepEqual(
     filterUnifiedChatRosterEntries(entries, "strangers", "").map(
       (entry) => entry.id,

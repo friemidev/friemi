@@ -1,12 +1,6 @@
 import { withLocale } from "@/lib/routes";
 
-export type PlanetChatListFilter =
-  | "all"
-  | "following"
-  | "mutual"
-  | "strangers"
-  | "official"
-  | "rooms";
+export type PlanetChatListFilter = "all" | "strangers" | "official" | "rooms";
 
 export type UnifiedChatRosterFilterEntry = {
   hasContent: boolean;
@@ -29,8 +23,6 @@ export function getPlanetChatListState(search: string): {
   const params = new URLSearchParams(search);
   const candidate = params.get(FILTER_PARAM);
   const filter: PlanetChatListFilter =
-    candidate === "following" ||
-    candidate === "mutual" ||
     candidate === "strangers" ||
     candidate === "official" ||
     candidate === "rooms"
@@ -74,19 +66,11 @@ export function filterUnifiedChatRosterEntries<
   Entry extends UnifiedChatRosterFilterEntry,
 >(entries: Entry[], filter: PlanetChatListFilter, query: string): Entry[] {
   const filteredEntries = entries.filter((entry) => {
-    if (filter === "following") {
-      return entry.kind === "direct" && entry.isFollowing;
-    }
-
     if (filter === "official") {
       return (
         (entry.kind === "official" || entry.kind === "feedback") &&
         entry.isOfficial
       );
-    }
-
-    if (filter === "mutual") {
-      return entry.kind === "direct" && entry.isMutual;
     }
 
     if (filter === "strangers") {

@@ -37,7 +37,6 @@ import { ActivityStatusBadge } from "@/features/activities/components/ActivitySt
 import { ActivityAnnouncementDetailPanel } from "@/features/activities/components/ActivityAnnouncementDetailPanel";
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
-import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
@@ -1464,10 +1463,6 @@ export async function ActivityDetailPageContent({
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
-  const canCheckInViewerParticipation =
-    !isTeamOperator &&
-    (viewerParticipation?.status === "JOINED" ||
-      viewerParticipation?.status === "APPROVED");
   const hasRoomRelevantParticipation =
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
@@ -2023,19 +2018,6 @@ export async function ActivityDetailPageContent({
                   {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
                 </p>
               </div>
-              {!isTeamOperator && canCheckInViewerParticipation ? (
-                <ActivityCheckInForm
-                  activityId={activity.id}
-                  checkInRequestedAt={
-                    viewerParticipation?.checkInRequestedAt?.toISOString() ??
-                    null
-                  }
-                  checkedInAt={
-                    viewerParticipation?.checkedInAt?.toISOString() ?? null
-                  }
-                  locale={locale}
-                />
-              ) : null}
             </div>
           </div>
           {mobileParticipantPreview.length > 0 ? (
@@ -2509,20 +2491,6 @@ export async function ActivityDetailPageContent({
                 />
               </div>
               <div className="grid gap-3">
-                {canCheckInViewerParticipation ? (
-                  <ActivityCheckInForm
-                    activityId={activity.id}
-                    buttonClassName="min-h-11 px-4 text-sm"
-                    checkInRequestedAt={
-                      viewerParticipation?.checkInRequestedAt?.toISOString() ??
-                      null
-                    }
-                    checkedInAt={
-                      viewerParticipation?.checkedInAt?.toISOString() ?? null
-                    }
-                    locale={locale}
-                  />
-                ) : null}
                 {showActivityRoomEntry ? (
                   <ActivityPlayAgainLink
                     activityId={activity.id}

@@ -3,9 +3,6 @@ import { prisma } from "@/lib/prisma";
 export type ActivityCheckInParticipantViewModel = {
   id: string;
   checkInCancelledAt: string | null;
-  checkInRequestedAt: string | null;
-  checkedInAt: string | null;
-  joinedAt: string;
   user: {
     avatarUrl: string | null;
     friendCode: string | null;
@@ -63,7 +60,7 @@ export async function getActivityCheckInRoster(
       },
       orderBy: [
         {
-          checkInRequestedAt: "desc",
+          checkInCancelledAt: "desc",
         },
         {
           joinedAt: "asc",
@@ -75,9 +72,6 @@ export async function getActivityCheckInRoster(
       select: {
         id: true,
         checkInCancelledAt: true,
-        checkInRequestedAt: true,
-        checkedInAt: true,
-        joinedAt: true,
         userProfile: {
           select: {
             avatarUrl: true,
@@ -91,9 +85,6 @@ export async function getActivityCheckInRoster(
     return participants.map((participant) => ({
       id: participant.id,
       checkInCancelledAt: participant.checkInCancelledAt?.toISOString() ?? null,
-      checkInRequestedAt: participant.checkInRequestedAt?.toISOString() ?? null,
-      checkedInAt: participant.checkedInAt?.toISOString() ?? null,
-      joinedAt: participant.joinedAt.toISOString(),
       user: participant.userProfile,
     }));
   } catch (error) {

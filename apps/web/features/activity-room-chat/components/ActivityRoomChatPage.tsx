@@ -2339,7 +2339,7 @@ export function ActivityRoomChatPage({
     return () => document.removeEventListener("pointerdown", dismissActionMenu);
   }, [actionMenuMessageId]);
 
-  useMobileChatViewportGuard();
+  useMobileChatViewportGuard(chatHistory.scrollContainerRef);
 
   function handleSent(message: ActivityRoomMessageViewModel) {
     setMessages((current) => [...current, message]);

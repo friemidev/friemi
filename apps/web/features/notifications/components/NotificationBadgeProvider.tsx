@@ -12,7 +12,10 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { Badge } from "@capawesome/capacitor-badge";
-import { chatRosterWakeEvent } from "@/features/chat/chatRealtime";
+import {
+  chatRosterWakeEvent,
+  type ChatRealtimePayload,
+} from "@/features/chat/chatRealtime";
 import { useChatInboxRealtime } from "@/features/chat/useChatRealtime";
 import { isFriemiIOSApp } from "@/features/mobile/push/clientPush";
 import { parseUnreadBadgeCountsPayload } from "@/features/notifications/unreadBadgeCounts";
@@ -206,10 +209,22 @@ export function NotificationBadgeProvider({
 
   const refreshUnreadNotificationCount = refreshUnreadCounts;
   const refreshUnreadDirectMessageCount = refreshUnreadCounts;
-  const handleChatInboxChanged = useCallback(() => {
-    window.dispatchEvent(new Event(chatRosterWakeEvent));
-    void runUnreadCountRefresh();
-  }, [runUnreadCountRefresh]);
+  const handleChatInboxChanged = useCallback(
+    (payload: ChatRealtimePayload | null) => {
+      window.dispatchEvent(
+        payload
+          ? new CustomEvent(chatRosterWakeEvent, {
+              detail: {
+                scope: payload.scope,
+                subjectKey: payload.subjectKey,
+              },
+            })
+          : new Event(chatRosterWakeEvent),
+      );
+      void runUnreadCountRefresh();
+    },
+    [runUnreadCountRefresh],
+  );
 
   useChatInboxRealtime({
     onChanged: handleChatInboxChanged,
