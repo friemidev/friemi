@@ -673,6 +673,7 @@ export default async function PublicEventDetailPage({
                     city: publicEvent.city,
                   },
                 }}
+                target={isSheetPresentation ? "_top" : undefined}
               >
                 <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]">
                   {isLobbyCandidateOrigin

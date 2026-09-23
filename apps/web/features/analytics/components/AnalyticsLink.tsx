@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { HTMLAttributeAnchorTarget, ReactNode } from "react";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import type { AnalyticsEventInput } from "@/features/analytics/events";
 import {
@@ -18,6 +18,7 @@ type AnalyticsLinkProps = {
   detailSource?: DetailSourceInput;
   disabled?: boolean;
   prefetch?: boolean;
+  target?: HTMLAttributeAnchorTarget;
 };
 
 export function AnalyticsLink({
@@ -29,6 +30,7 @@ export function AnalyticsLink({
   event,
   href,
   prefetch = false,
+  target,
 }: AnalyticsLinkProps) {
   if (disabled) {
     return (
@@ -50,6 +52,7 @@ export function AnalyticsLink({
         trackClientAnalyticsEvent(event);
       }}
       prefetch={prefetch}
+      target={target}
     >
       {children}
     </Link>
