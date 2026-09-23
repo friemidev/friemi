@@ -1375,19 +1375,18 @@ type ProfileFeatureArtworkKey =
   | "giftWall"
   | "invite"
   | "settings"
-  | "shop";
+  | "shop"
+  | "store";
 
-const profileFeatureArtworkOffsets: Record<
-  ProfileFeatureArtworkKey,
-  { left: number; top: number }
-> = {
-  achievements: { left: -28, top: -108 },
-  bag: { left: -95, top: -108 },
-  friends: { left: -95, top: -21 },
-  giftWall: { left: -28, top: -21 },
-  invite: { left: -163, top: -21 },
-  settings: { left: -163, top: -108 },
-  shop: { left: -229, top: -21 },
+const profileFeatureArtworkSources: Record<ProfileFeatureArtworkKey, string> = {
+  achievements: "/profile/buttons/achievements.png",
+  bag: "/profile/buttons/bag.png",
+  friends: "/profile/buttons/friends.png",
+  giftWall: "/profile/buttons/gift-wall.png",
+  invite: "/profile/buttons/invite.png",
+  settings: "/profile/buttons/settings.png",
+  shop: "/profile/buttons/shop.png",
+  store: "/profile/buttons/store.png",
 };
 
 function ProfileFeatureArtwork({
@@ -1395,19 +1394,16 @@ function ProfileFeatureArtwork({
 }: {
   artwork: ProfileFeatureArtworkKey;
 }) {
-  const offset = profileFeatureArtworkOffsets[artwork];
-
   return (
     <Image
       alt=""
       aria-hidden="true"
-      className="pointer-events-none absolute max-w-none select-none"
-      height={195}
-      quality={70}
-      sizes="298px"
-      src="/profile/buttons/buttons.png"
-      style={offset}
-      width={298}
+      className="pointer-events-none h-full w-full select-none object-cover"
+      height={48}
+      quality={80}
+      sizes="48px"
+      src={profileFeatureArtworkSources[artwork]}
+      width={48}
     />
   );
 }
@@ -3200,6 +3196,7 @@ function SelfMobileProfileHome({
       <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
         {merchantHref ? (
           <ProfileFeatureLink
+            artwork="store"
             href={merchantHref}
             icon={Store}
             label={copy.store}
