@@ -12,8 +12,14 @@ import { MobileNewActivityEntryView } from "@/features/activities/components/Mob
 import { getActivityList } from "@/features/activities/queries/getActivities";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getSignInHref } from "@/lib/auth-redirect";
+import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
+import {
+  canCreateActivityWithTrustScore,
+  getActivityCreationTrustRestrictionMessage,
+} from "@/features/trust/trustScore";
+import { getTrustScore } from "@/features/trust/trustScoreEvents";
 
 type NewActivityPageProps = {
   params: Promise<{
@@ -89,6 +95,14 @@ export default async function NewActivityPage({
     copyActivityId && profile
       ? await getActivityCopyValuesById(copyActivityId, profile.id)
       : undefined;
+  const trustScore = profile
+    ? await getTrustScore(prisma, profile.id)
+    : null;
+  const creationRestricted =
+    trustScore !== null && !canCreateActivityWithTrustScore(trustScore);
+  const creationRestrictionMessage = creationRestricted
+    ? getActivityCreationTrustRestrictionMessage(locale)
+    : null;
   const activityPreviewList = showForm
     ? null
     : await getActivityList(
@@ -132,7 +146,8 @@ export default async function NewActivityPage({
           {headerCopy.title}
         </h1>
         <button
-          className="inline-flex h-9 max-w-[5.75rem] items-center justify-center justify-self-end overflow-hidden whitespace-nowrap rounded-full bg-[#006F52] px-3 text-sm font-semibold leading-none text-white shadow-[0_8px_18px_rgba(0,111,82,0.18)] transition hover:bg-[#075f49]"
+          className="inline-flex h-9 max-w-[5.75rem] items-center justify-center justify-self-end overflow-hidden whitespace-nowrap rounded-full bg-[#006F52] px-3 text-sm font-semibold leading-none text-white shadow-[0_8px_18px_rgba(0,111,82,0.18)] transition hover:bg-[#075f49] disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-600 disabled:shadow-none"
+          disabled={creationRestricted}
           form={formId}
           type="submit"
         >
@@ -140,11 +155,21 @@ export default async function NewActivityPage({
         </button>
       </div>
 
+      {creationRestrictionMessage ? (
+        <div
+          className="rounded-md border border-[#E8D39F] bg-[#FFF8DF] px-4 py-3 text-sm font-semibold leading-6 text-[#785C16]"
+          role="alert"
+        >
+          {creationRestrictionMessage}
+        </div>
+      ) : null}
+
       <NewActivityForm
         formId={formId}
         isAuthenticated={Boolean(profile)}
         locale={locale}
         initialValues={initialValues ?? undefined}
+        submissionDisabled={creationRestricted}
         signInHref={getSignInHref(
           locale,
           copyActivityId
@@ -167,6 +192,8 @@ export default async function NewActivityPage({
     <>
       <MobileNewActivityEntryView
         activities={activityPreviewList?.activities ?? []}
+        creationRestricted={creationRestricted}
+        creationRestrictionMessage={creationRestrictionMessage}
         locale={locale}
       />
       <div className="friemi-native-app-desktop-only hidden md:block">

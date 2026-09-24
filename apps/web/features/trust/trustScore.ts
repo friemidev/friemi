@@ -1,6 +1,5 @@
 export const initialTrustScore = 95;
 export const lowTrustScoreThreshold = 60;
-export const largeActivityCapacityThreshold = 15;
 
 export type TrustLevel =
   | "TRUSTED"
@@ -23,8 +22,20 @@ export function isLowTrustScore(score: number) {
   return score < lowTrustScoreThreshold;
 }
 
-export function isLargeActivityCapacity(capacity: number | null | undefined) {
-  return Number(capacity ?? 0) >= largeActivityCapacityThreshold;
+export function canCreateActivityWithTrustScore(score: number) {
+  return !isLowTrustScore(score);
+}
+
+export function getActivityCreationTrustRestrictionMessage(locale: string) {
+  if (locale === "fr") {
+    return "Un score de confiance d'au moins 60 est requis pour créer une sortie.";
+  }
+
+  if (locale === "en") {
+    return "A trust score of at least 60 is required to create a plan.";
+  }
+
+  return "信用分低于 60 时不能创建聚吧。";
 }
 
 export function isActivityEndedForTrustSettlement(

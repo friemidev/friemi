@@ -5,7 +5,6 @@ import {
   ImagePlus,
   LoaderCircle,
   SendHorizontal,
-  Smile,
   X,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
@@ -18,6 +17,7 @@ import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
 import { ChatReplyComposerPreview } from "@/features/chat/components/ChatReplyPreview";
+import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
 import type { ChatReplyTarget } from "@/features/chat/types";
 import {
   sendDirectMessageAction,
@@ -55,40 +55,6 @@ const defaultInitialState: DirectMessageActionState = {
     imageUrls: [],
   },
 };
-const emojiOptions = [
-  "😂",
-  "😊",
-  "😍",
-  "🥳",
-  "😭",
-  "👍",
-  "🙌",
-  "👌",
-  "🙏",
-  "😎",
-  "😴",
-  "😋",
-  "😅",
-  "😮",
-  "🤔",
-  "😇",
-  "🥰",
-  "😆",
-  "🎉",
-  "🌹",
-  "❤️",
-  "🔥",
-  "✨",
-  "🍻",
-  "☕",
-  "🎬",
-  "🎲",
-  "🏀",
-  "🚇",
-  "📍",
-  "✅",
-  "🕒",
-];
 const messageCounterThreshold = 900;
 const messageMaxLength = 1000;
 const messageImageMaxCount = 4;
@@ -139,11 +105,9 @@ export function MessageComposer({
   replyTo,
 }: MessageComposerProps) {
   const formRef = useRef<HTMLFormElement>(null);
-  const emojiRootRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [bodyLength, setBodyLength] = useState(initialBody?.length ?? 0);
-  const [emojiPanelOpen, setEmojiPanelOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUploadError, setImageUploadError] = useState("");
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -154,32 +118,6 @@ export function MessageComposer({
   useEffect(() => {
     setBodyLength(initialBody?.length ?? 0);
   }, [initialBody]);
-
-  useEffect(() => {
-    if (!emojiPanelOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!emojiRootRef.current?.contains(event.target as Node)) {
-        setEmojiPanelOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setEmojiPanelOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [emojiPanelOpen]);
 
   function insertEmoji(emoji: string) {
     const textarea = textareaRef.current;
@@ -291,7 +229,6 @@ export function MessageComposer({
       textarea.focus();
     }
     setBodyLength(0);
-    setEmojiPanelOpen(false);
     setImageUrls([]);
     setImageUploadError("");
     setFormError("");
@@ -352,7 +289,7 @@ export function MessageComposer({
   return (
     <form
       ref={formRef}
-      className="relative z-20 w-full max-w-full shrink-0 overflow-x-clip border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
+      className="relative z-20 w-full max-w-full shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
       data-message-composer
       noValidate
       onFocusCapture={keepMobileChatPageAnchored}
@@ -424,40 +361,11 @@ export function MessageComposer({
         </div>
       ) : null}
       <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
-        <div ref={emojiRootRef} className="relative shrink-0">
-          <button
-            type="button"
-            aria-expanded={emojiPanelOpen}
-            aria-label={t.addEmoji}
-            title={t.addEmoji}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55 max-[360px]:h-10 max-[360px]:w-10"
-            disabled={disabled}
-            onClick={() => setEmojiPanelOpen((current) => !current)}
-          >
-            <Smile className="h-5 w-5" />
-          </button>
-          {emojiPanelOpen && !disabled ? (
-            <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[1.1rem] border border-sand bg-white p-3 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
-              <p className="px-1 text-xs font-medium text-[#156240]">
-                {t.addEmoji}
-              </p>
-              <div className="mt-2 grid grid-cols-7 gap-1.5 sm:grid-cols-8">
-                {emojiOptions.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-                    aria-label={`${t.addEmoji} ${emoji}`}
-                    title={`${t.addEmoji} ${emoji}`}
-                    onClick={() => insertEmoji(emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <ChatEmojiPicker
+          disabled={disabled}
+          label={t.addEmoji}
+          onSelect={insertEmoji}
+        />
         <button
           type="button"
           aria-label={isImageUploading ? t.imageUploading : t.attachImage}

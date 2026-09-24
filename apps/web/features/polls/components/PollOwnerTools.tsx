@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Settings2, Share2 } from "lucide-react";
 import { getPollCopy } from "../copy";
+import { DEFAULT_POLL_SHARE_AUDIENCE } from "../pollRules";
 import type { ActivityPollViewData } from "../server/pollService";
 import { PollManagerControls } from "./PollManagerControls";
 import { PollSharePanel } from "./PollSharePanel";
@@ -65,7 +66,9 @@ export function PollOwnerTools({
         >
           {openTool === "share" ? (
             <PollSharePanel
-              initialAudience={poll.share?.audience ?? "MEMBERS_ONLY"}
+              initialAudience={
+                poll.share?.audience ?? DEFAULT_POLL_SHARE_AUDIENCE
+              }
               locale={locale}
               pollId={poll.id}
               shareActive={poll.share?.active ?? false}

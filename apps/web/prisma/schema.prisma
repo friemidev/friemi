@@ -386,6 +386,9 @@ enum GameToolSubmissionKind {
   TEAM_VOTE
   MISSION_CARD
   ASSASSINATION_TARGET
+  WEREWOLF_SHERIFF_VOTE
+  WEREWOLF_EXILE_VOTE
+  WEREWOLF_NIGHT_ACTION
 }
 
 model UserProfile {
@@ -2269,6 +2272,7 @@ model GameToolSubmission {
   profileId   String?
   roundIndex  Int                    @default(0)
   kind        GameToolSubmissionKind
+  actionKey   String                 @default("") @db.VarChar(32)
   value       String
   metadata    Json?
   submittedAt DateTime               @default(now())
@@ -2276,7 +2280,7 @@ model GameToolSubmission {
   seat        GameToolSeat?          @relation(fields: [seatId], references: [id], onDelete: SetNull)
   profile     UserProfile?           @relation("GameToolSubmissionProfile", fields: [profileId], references: [id], onDelete: SetNull)
 
-  @@unique([roomId, roundIndex, kind, seatId])
+  @@unique([roomId, roundIndex, kind, seatId, actionKey], map: "GameToolSubmission_room_round_kind_seat_action_key")
   @@index([roomId, kind, roundIndex])
   @@index([profileId, submittedAt])
 }

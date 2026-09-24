@@ -3116,9 +3116,6 @@ function SelfMobileProfileHome({
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
-      <h1 className="mb-6 min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
-        {copy.title}
-      </h1>
       <section>
         <div>
           <div className="flex items-start gap-4">

@@ -3,10 +3,16 @@ import {
   getWerewolfRoleLabel,
   getWerewolfVariantFromRoomConfig,
   getWerewolfVariantLabel,
+  isActiveWerewolfSeatOccupant,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
 } from "@/features/game-tools/werewolfConfig";
-import { normalizeWerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
+import {
+  getWerewolfRoomStateForViewer,
+  isWerewolfEventVisibleToViewer,
+  normalizeWerewolfRoomState,
+} from "@/features/game-tools/werewolfRoomState";
+import { getWerewolfAtmosphereIdFromRoomConfig } from "@/features/game-tools/werewolfCardAssets";
 import { prisma } from "@/lib/prisma";
 
 type ViewerProfile = {
@@ -31,11 +37,13 @@ function getMemberDisplayName(member: {
 export const getWerewolfRoomById = cache(
   async ({
     locale,
+    historyMode = "full",
     memberToken,
     roomId,
     viewerProfile,
   }: {
     locale: string;
+    historyMode?: "full" | "sync";
     memberToken?: string | null;
     roomId: string;
     viewerProfile: ViewerProfile;
@@ -45,7 +53,7 @@ export const getWerewolfRoomById = cache(
       include: {
         events: {
           orderBy: { createdAt: "desc" },
-          take: 30,
+          take: historyMode === "sync" ? 120 : undefined,
           select: {
             actor: {
               select: {
@@ -56,6 +64,19 @@ export const getWerewolfRoomById = cache(
             id: true,
             payload: true,
             type: true,
+          },
+        },
+        submissions: {
+          orderBy: { submittedAt: "desc" },
+          take: historyMode === "sync" ? 120 : undefined,
+          select: {
+            id: true,
+            kind: true,
+            metadata: true,
+            roundIndex: true,
+            seat: { select: { seatNumber: true } },
+            submittedAt: true,
+            value: true,
           },
         },
         host: {
@@ -103,6 +124,7 @@ export const getWerewolfRoomById = cache(
             guestName: true,
             id: true,
             joinedAt: true,
+            leftAt: true,
             privateToken: true,
             profile: {
               select: {
@@ -135,21 +157,101 @@ export const getWerewolfRoomById = cache(
         ? room.members.find((member) => member.memberToken === memberToken)
         : null) ||
       null;
-    const viewerSeat =
+    const viewerSeatCandidate =
       (currentMember?.seatedSeatId &&
         room.seats.find((seat) => seat.id === currentMember.seatedSeatId)) ||
       (viewerProfile &&
         room.seats.find((seat) => seat.profileId === viewerProfile.id)) ||
       null;
+    const viewerSeat =
+      viewerSeatCandidate && isActiveWerewolfSeatOccupant(viewerSeatCandidate)
+        ? viewerSeatCandidate
+        : null;
     const viewerIsJudge = viewerSeat
       ? isWerewolfJudgeSeat(viewerSeat.seatNumber, variant)
       : false;
     const deadSeatSet = new Set(state.deadSeatNumbers);
+    const viewerState = getWerewolfRoomStateForViewer({
+      isFinished: room.status === "FINISHED",
+      isJudge: viewerIsJudge,
+      roleKey: viewerSeat?.roleKey,
+      seatNumber: viewerSeat?.seatNumber,
+      state,
+    });
 
     return {
+      atmosphereId: getWerewolfAtmosphereIdFromRoomConfig(room.config, room.id),
       code: room.code,
       createdAt: room.createdAt,
-      events: room.events,
+      events: room.events.filter((event) =>
+        isWerewolfEventVisibleToViewer({
+          isFinished: room.status === "FINISHED",
+          isJudge: viewerIsJudge,
+          type: event.type,
+        }),
+      ),
+      flowSubmissions: room.submissions.flatMap((submission) => {
+        const isVote =
+          submission.kind === "WEREWOLF_SHERIFF_VOTE" ||
+          submission.kind === "WEREWOLF_EXILE_VOTE";
+        const metadata =
+          submission.metadata && typeof submission.metadata === "object"
+            ? (submission.metadata as Record<string, unknown>)
+            : null;
+        const isWitchKillContext =
+          viewerSeat?.roleKey === "witch" &&
+          submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+          metadata?.actionKind === "WOLF_KILL";
+        const isWolfPackKillContext =
+          viewerSeat?.roleAlignment === "werewolf" &&
+          submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+          metadata?.actionKind === "WOLF_KILL";
+        const isCurrentFlowSession =
+          submission.roundIndex === state.flow.sessionIndex;
+        const canViewNightAction =
+          submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+          (viewerIsJudge ||
+            (isCurrentFlowSession &&
+              (submission.seat?.seatNumber === viewerSeat?.seatNumber ||
+                isWitchKillContext ||
+                isWolfPackKillContext)));
+
+        if (!isVote && !canViewNightAction) {
+          return [];
+        }
+
+        return [
+          {
+            actionKind:
+              typeof metadata?.actionKind === "string"
+                ? metadata.actionKind
+                : null,
+            id: submission.id,
+            kind: submission.kind,
+            roundIndex: submission.roundIndex,
+            secondaryTargetSeatNumber:
+              typeof metadata?.secondaryTargetSeatNumber === "number"
+                ? metadata.secondaryTargetSeatNumber
+                : null,
+            submittedAt: submission.submittedAt,
+            seerResult:
+              typeof metadata?.seerResult === "string"
+                ? metadata.seerResult
+                : null,
+            targetSeatNumber: isVote
+              ? submission.value === "ABSTAIN"
+                ? null
+                : Number(submission.value)
+              : typeof metadata?.targetSeatNumber === "number"
+                ? metadata.targetSeatNumber
+                : null,
+            voterSeatNumber:
+              isWitchKillContext || isWolfPackKillContext
+                ? null
+                : (submission.seat?.seatNumber ?? null),
+          },
+        ];
+      }),
       host: room.host,
       id: room.id,
       isHost,
@@ -211,6 +313,7 @@ export const getWerewolfRoomById = cache(
           displayName: seat.displayName,
           guestName: seat.guestName,
           id: seat.id,
+          isActive: isActiveWerewolfSeatOccupant(seat),
           isClaimed: Boolean(seat.profileId || seat.guestName),
           isDead: deadSeatSet.has(seat.seatNumber),
           isJudgeSeat: isWerewolfJudgeSeat(seat.seatNumber, variant),
@@ -228,7 +331,7 @@ export const getWerewolfRoomById = cache(
         };
       }),
       startedAt: room.startedAt,
-      state,
+      state: viewerState,
       status: room.status,
       title: room.title,
       updatedAt: room.updatedAt,
@@ -281,6 +384,15 @@ export const getWerewolfSeatByToken = cache(
       include: {
         room: {
           include: {
+            events: {
+              orderBy: { createdAt: "desc" },
+              select: {
+                createdAt: true,
+                id: true,
+                payload: true,
+                type: true,
+              },
+            },
             members: {
               where: {
                 leftAt: null,
@@ -297,6 +409,7 @@ export const getWerewolfSeatByToken = cache(
                 displayName: true,
                 guestName: true,
                 id: true,
+                leftAt: true,
                 profileId: true,
                 readyAt: true,
                 roleAlignment: true,
@@ -304,12 +417,28 @@ export const getWerewolfSeatByToken = cache(
                 seatNumber: true,
               },
             },
+            submissions: {
+              orderBy: { submittedAt: "desc" },
+              select: {
+                id: true,
+                kind: true,
+                metadata: true,
+                roundIndex: true,
+                seat: { select: { seatNumber: true } },
+                submittedAt: true,
+                value: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!seat || seat.room.kind !== "WEREWOLF") {
+    if (
+      !seat ||
+      seat.room.kind !== "WEREWOLF" ||
+      !isActiveWerewolfSeatOccupant(seat)
+    ) {
       return null;
     }
 

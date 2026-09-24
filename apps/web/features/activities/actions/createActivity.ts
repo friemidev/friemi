@@ -29,9 +29,8 @@ import { generateActivityShareToken } from "@/features/activities/utils/activity
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
-  isLargeActivityCapacity,
-  isLowTrustScore,
-  largeActivityCapacityThreshold,
+  canCreateActivityWithTrustScore,
+  getActivityCreationTrustRestrictionMessage,
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
@@ -416,11 +415,8 @@ export async function createActivityAction(
     : null;
   const trustScore = await getTrustScore(prisma, profile.id);
 
-  if (
-    isLowTrustScore(trustScore) &&
-    isLargeActivityCapacity(submittedCapacity)
-  ) {
-    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型聚吧。`;
+  if (!canCreateActivityWithTrustScore(trustScore)) {
+    const message = getActivityCreationTrustRestrictionMessage(locale);
 
     recordLatency({
       status: "failed",
@@ -435,9 +431,7 @@ export async function createActivityAction(
       userProfileId: profile.id,
     });
 
-    return buildActivityErrorState(previousState, rawInput, message, {
-      capacity: [message],
-    });
+    return buildActivityErrorState(previousState, rawInput, message);
   }
 
   const lobbyCandidateSourceUrl =

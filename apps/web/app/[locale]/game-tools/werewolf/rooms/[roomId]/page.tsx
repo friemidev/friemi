@@ -105,13 +105,31 @@ export default async function WerewolfRoomPage({
     }
   }
 
+  if (
+    (room.status === "LOBBY" || room.status === "FINISHED") &&
+    !viewerBelongsToCurrentRoom
+  ) {
+    redirect(
+      withLocale(
+        locale,
+        `/game-tools/werewolf/join/${encodeURIComponent(room.code)}`,
+      ),
+    );
+  }
+
   const roomForClient = {
+    atmosphereId: room.atmosphereId,
     code: room.code,
     events: room.events.map((event) => ({
       actorName: event.actor?.nickname ?? null,
       createdAt: event.createdAt.toISOString(),
       id: event.id,
+      payload: event.payload,
       type: event.type,
+    })),
+    flowSubmissions: room.flowSubmissions.map((submission) => ({
+      ...submission,
+      submittedAt: submission.submittedAt.toISOString(),
     })),
     host: {
       nickname: room.host.nickname,
@@ -150,6 +168,7 @@ export default async function WerewolfRoomPage({
       avatarUrl: seat.avatarUrl,
       displayName: seat.displayName,
       id: seat.id,
+      isActive: seat.isActive,
       isClaimed: seat.isClaimed,
       isDead: seat.isDead,
       isJudgeSeat: seat.isJudgeSeat,

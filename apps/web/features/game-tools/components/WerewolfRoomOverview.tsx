@@ -21,7 +21,6 @@ import {
   HeartPulse,
   LogOut,
   Monitor,
-  Palette,
   Plus,
   QrCode,
   RotateCcw,
@@ -32,7 +31,6 @@ import {
 import {
   claimWerewolfSeatAction,
   finishWerewolfRoomAction,
-  joinWerewolfRoomAction,
   leaveWerewolfSeatAction,
   startWerewolfRoomAction,
   updateWerewolfPlayerLifeAction,
@@ -48,6 +46,7 @@ import {
 } from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
+import { WerewolfFlowPanel } from "@/features/game-tools/components/WerewolfFlowPanel";
 import { useWerewolfRoomRealtime } from "@/features/game-tools/hooks/useWerewolfRoomRealtime";
 import {
   countAliveWerewolfPlayers,
@@ -55,18 +54,19 @@ import {
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
 import {
-  defaultWerewolfAtmosphere,
   getWerewolfAtmosphereById,
-  werewolfAtmospheres,
   werewolfUiAssets,
-  type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
+import { getWerewolfUSeatColumns } from "@/features/game-tools/werewolfConfig";
 import {
   getWerewolfAppJoinUrl,
   getWerewolfPrivateSeatHref,
 } from "@/features/game-tools/werewolfRoomLinks";
 import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
-import { didWerewolfRoomStartNextRound } from "@/features/game-tools/werewolfRoomState";
+import {
+  didWerewolfRoomStartNextRound,
+  type WerewolfRoomState,
+} from "@/features/game-tools/werewolfRoomState";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
@@ -76,6 +76,7 @@ type WerewolfRoomOverviewProps = {
   locale: string;
   notice?: string | null;
   room: {
+    atmosphereId: string;
     code: string;
     currentMember: {
       avatarLabel: string;
@@ -94,7 +95,19 @@ type WerewolfRoomOverviewProps = {
       actorName: string | null;
       createdAt: string;
       id: string;
+      payload?: unknown;
       type: string;
+    }>;
+    flowSubmissions: Array<{
+      actionKind: string | null;
+      id: string;
+      kind: string;
+      roundIndex: number;
+      seerResult: string | null;
+      secondaryTargetSeatNumber: number | null;
+      submittedAt: string;
+      targetSeatNumber: number | null;
+      voterSeatNumber: number | null;
     }>;
     host: {
       nickname: string;
@@ -118,6 +131,7 @@ type WerewolfRoomOverviewProps = {
       avatarUrl: string | null;
       displayName: string;
       id: string;
+      isActive: boolean;
       isClaimed: boolean;
       isDead: boolean;
       isJudgeSeat: boolean;
@@ -130,12 +144,7 @@ type WerewolfRoomOverviewProps = {
       roleLabel: string | null;
       seatNumber: number;
     }>;
-    state: {
-      phase: string;
-      roundNumber: number;
-      sheriffSeatNumber?: number | null;
-      winner?: "GOOD" | "WEREWOLF" | null;
-    };
+    state: WerewolfRoomState;
     status: string;
     syncVersion: string;
     title: string;
@@ -153,7 +162,6 @@ type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
 
 const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
 const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
-const WEREWOLF_ATMOSPHERE_STORAGE_KEY = "friemi:werewolf:atmosphere";
 type WerewolfRoomSyncPayload = {
   room?: WerewolfRoomView;
   status?: string;
@@ -165,6 +173,32 @@ type WerewolfRoomBroadcastMessage = {
   sourceId: string;
   type: "werewolf-room-changed";
 };
+
+function mergeWerewolfRoomSync(
+  current: WerewolfRoomView,
+  incoming: WerewolfRoomView,
+): WerewolfRoomView {
+  const incomingEventIds = new Set(incoming.events.map((event) => event.id));
+  const incomingSubmissionIds = new Set(
+    incoming.flowSubmissions.map((submission) => submission.id),
+  );
+
+  return {
+    ...incoming,
+    events: [
+      ...incoming.events,
+      ...current.events.filter((event) => !incomingEventIds.has(event.id)),
+    ].sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
+    flowSubmissions: [
+      ...incoming.flowSubmissions,
+      ...current.flowSubmissions.filter(
+        (submission) => !incomingSubmissionIds.has(submission.id),
+      ),
+    ].sort((first, second) =>
+      second.submittedAt.localeCompare(first.submittedAt),
+    ),
+  };
+}
 
 type NavigatorWithConnection = Navigator & {
   connection?: {
@@ -263,6 +297,7 @@ function getCopy(locale: string) {
         "Choisissez le résultat final. Une partie interrompue ne compte pas dans les statistiques.",
       finishGameTitle: "Terminer la partie ?",
       finishGood: "Victoire du village",
+      finishThirdParty: "Victoire du troisième camp",
       finishWerewolf: "Victoire des loups",
       foundation: "Loups-garous",
       host: "Hôte",
@@ -338,6 +373,7 @@ function getCopy(locale: string) {
       gameTerminated: "Partie interrompue",
       waitingMember: "Entrez un nom, puis choisissez une place.",
       winnerGood: "Village gagnant",
+      winnerThirdParty: "Troisième camp gagnant",
       winnerWerewolf: "Loups gagnants",
     };
   }
@@ -374,6 +410,7 @@ function getCopy(locale: string) {
         "Choose the final result. A terminated game will not count toward player records.",
       finishGameTitle: "End this game?",
       finishGood: "Good team wins",
+      finishThirdParty: "Third party wins",
       finishWerewolf: "Werewolf team wins",
       foundation: "Werewolf",
       host: "Host",
@@ -448,6 +485,7 @@ function getCopy(locale: string) {
       gameTerminated: "Game terminated",
       waitingMember: "Enter a name, then choose a seat.",
       winnerGood: "Good team wins",
+      winnerThirdParty: "Third party wins",
       winnerWerewolf: "Werewolf team wins",
     };
   }
@@ -479,7 +517,8 @@ function getCopy(locale: string) {
     finishGame: "结束游戏",
     finishGameDescription: "请选择本局结果。终止游戏不会计入玩家胜负记录。",
     finishGameTitle: "确认结束本局？",
-    finishGood: "平民胜利",
+    finishGood: "好人阵营胜利",
+    finishThirdParty: "第三方阵营胜利",
     finishWerewolf: "狼人胜利",
     foundation: "狼人杀",
     host: "房主",
@@ -551,6 +590,7 @@ function getCopy(locale: string) {
     gameTerminated: "本局已终止",
     waitingMember: "取个昵称入房。",
     winnerGood: "好人阵营获胜",
+    winnerThirdParty: "第三方阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
   };
 }
@@ -671,7 +711,7 @@ function FinishOutcomeButton({
 }: {
   className: string;
   label: string;
-  value: "GOOD" | "TERMINATED" | "WEREWOLF";
+  value: "GOOD" | "TERMINATED" | "THIRD_PARTY" | "WEREWOLF";
 }) {
   const { pending } = useFormStatus();
 
@@ -685,79 +725,6 @@ function FinishOutcomeButton({
     >
       {label}
     </button>
-  );
-}
-
-function getStoredWerewolfAtmosphereId(): WerewolfAtmosphereId {
-  const fallbackId = defaultWerewolfAtmosphere.id;
-
-  if (typeof window === "undefined") {
-    return fallbackId;
-  }
-
-  try {
-    return getWerewolfAtmosphereById(
-      window.localStorage.getItem(WEREWOLF_ATMOSPHERE_STORAGE_KEY),
-    ).id;
-  } catch {
-    return fallbackId;
-  }
-}
-
-function WerewolfAtmospherePicker({
-  locale,
-  onCycle,
-  selectedId,
-}: {
-  locale: string;
-  onCycle: () => void;
-  selectedId: WerewolfAtmosphereId;
-}) {
-  const [showHint, setShowHint] = useState(false);
-  const hintTimerRef = useRef<number | null>(null);
-  const t = getCopy(locale);
-  const selectedAtmosphere = getWerewolfAtmosphereById(selectedId);
-
-  useEffect(() => {
-    return () => {
-      if (hintTimerRef.current !== null) {
-        window.clearTimeout(hintTimerRef.current);
-      }
-    };
-  }, []);
-
-  const cycleAtmosphere = () => {
-    onCycle();
-    setShowHint(true);
-
-    if (hintTimerRef.current !== null) {
-      window.clearTimeout(hintTimerRef.current);
-    }
-
-    hintTimerRef.current = window.setTimeout(() => {
-      setShowHint(false);
-      hintTimerRef.current = null;
-    }, 1300);
-  };
-
-  return (
-    <div className="relative">
-      <button
-        aria-label={`${t.atmosphere}: ${selectedAtmosphere.name}`}
-        className="relative grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F] active:scale-95"
-        onClick={cycleAtmosphere}
-        title={selectedAtmosphere.name}
-        type="button"
-      >
-        <Palette className="h-4 w-4" />
-      </button>
-
-      {showHint ? (
-        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-semibold text-[#F1F2E3] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
-          <span className="block truncate">{selectedAtmosphere.name}</span>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -866,12 +833,9 @@ export function WerewolfRoomOverview({
   );
   const previousRoomStatusRef = useRef(initialRoom.status);
   const syncProbeInFlightRef = useRef(false);
+  const syncProbeQueuedRef = useRef(false);
   const syncVersionRef = useRef(initialRoom.syncVersion);
   const [localFormError, setLocalFormError] = useState<string | null>(null);
-  const [joinState, joinAction] = useActionState(
-    joinWerewolfRoomAction,
-    initialState,
-  );
   const [seatState, seatAction] = useActionState(
     claimWerewolfSeatAction,
     initialState,
@@ -900,12 +864,9 @@ export function WerewolfRoomOverview({
     finishWerewolfRoomAction,
     initialState,
   );
-  const [selectedAtmosphereId, setSelectedAtmosphereId] =
-    useState<WerewolfAtmosphereId>(defaultWerewolfAtmosphere.id);
-  const [atmospherePreferenceReady, setAtmospherePreferenceReady] =
-    useState(false);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [finishDialogOpen, setFinishDialogOpen] = useState(false);
+  const [showRoundTransition, setShowRoundTransition] = useState(false);
   const [pendingDeathSeatNumber, setPendingDeathSeatNumber] = useState<
     number | null
   >(null);
@@ -917,7 +878,7 @@ export function WerewolfRoomOverview({
   );
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const t = getCopy(locale);
-  const selectedAtmosphere = getWerewolfAtmosphereById(selectedAtmosphereId);
+  const selectedAtmosphere = getWerewolfAtmosphereById(room.atmosphereId);
   const werewolfHomeHref = withLocale(locale, "/game-tools/werewolf");
   const joinUrl = `${baseUrl}${withLocale(
     locale,
@@ -928,6 +889,7 @@ export function WerewolfRoomOverview({
     `/game-tools/werewolf/rooms/${room.id}/screen`,
   );
   const isLobby = room.status === "LOBBY";
+  const isSeatingOpen = isLobby || room.status === "FINISHED";
   const playerSeats = useMemo(
     () => room.seats.filter((seat) => seat.isPlayerSeat),
     [room.seats],
@@ -951,35 +913,17 @@ export function WerewolfRoomOverview({
     currentMemberPrivateToken: room.currentMember?.seatedPrivateToken,
     viewerSeat: room.seats.find((seat) => seat.isViewerSeat),
   });
-  const canChooseSeat = Boolean(room.currentMember) && isLobby;
+  const canChooseSeat = Boolean(room.currentMember) && isSeatingOpen;
   const winnerLabel =
     room.state.winner === "GOOD"
       ? t.winnerGood
-      : room.state.winner === "WEREWOLF"
-        ? t.winnerWerewolf
-        : null;
+      : room.state.winner === "THIRD_PARTY"
+        ? t.winnerThirdParty
+        : room.state.winner === "WEREWOLF"
+          ? t.winnerWerewolf
+          : null;
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
-
-  useEffect(() => {
-    setSelectedAtmosphereId(getStoredWerewolfAtmosphereId());
-    setAtmospherePreferenceReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!atmospherePreferenceReady) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        WEREWOLF_ATMOSPHERE_STORAGE_KEY,
-        selectedAtmosphereId,
-      );
-    } catch {
-      // Local preference storage can be unavailable in private browsing.
-    }
-  }, [atmospherePreferenceReady, selectedAtmosphereId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1128,7 +1072,7 @@ export function WerewolfRoomOverview({
               payload.room.syncVersion ??
               payload.syncVersion ??
               syncVersionRef.current;
-            setRoom(payload.room);
+            setRoom((current) => mergeWerewolfRoomSync(current, payload.room!));
             return;
           }
         }
@@ -1150,6 +1094,7 @@ export function WerewolfRoomOverview({
       }
 
       if (syncProbeInFlightRef.current) {
+        syncProbeQueuedRef.current = true;
         return;
       }
 
@@ -1159,6 +1104,7 @@ export function WerewolfRoomOverview({
         return;
       }
 
+      syncProbeQueuedRef.current = false;
       syncProbeInFlightRef.current = true;
 
       try {
@@ -1192,29 +1138,34 @@ export function WerewolfRoomOverview({
         // Keep sync silent. The next focus or interval will retry.
       } finally {
         syncProbeInFlightRef.current = false;
+
+        if (syncProbeQueuedRef.current) {
+          syncProbeQueuedRef.current = false;
+          void refreshRoom({ force: true });
+        }
       }
     },
     [refreshRoom, room.id],
   );
 
   const realtimeConnected = useWerewolfRoomRealtime({
-    onRoomChanged: () => void pollRoomSync({ force: true }),
+    onRoomChanged: () => void refreshRoom({ force: true }),
     roomId: room.id,
   });
 
   useEffect(() => {
     if (realtimeConnected) {
-      void pollRoomSync({ force: true });
+      void refreshRoom({ force: true });
     }
-  }, [pollRoomSync, realtimeConnected]);
+  }, [realtimeConnected, refreshRoom]);
 
   useEffect(() => {
     const intervalMs =
-      room.status === "FINISHED"
-        ? 8_000 + Math.floor(Math.random() * 1_200)
-        : realtimeConnected
-          ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
-            Math.floor(Math.random() * 3_000)
+      realtimeConnected
+        ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
+          Math.floor(Math.random() * 3_000)
+        : room.status === "FINISHED"
+          ? 8_000 + Math.floor(Math.random() * 1_200)
           : getWerewolfSyncIntervalMs(room.status) +
             Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
@@ -1261,7 +1212,7 @@ export function WerewolfRoomOverview({
         return;
       }
 
-      void pollRoomSync({ force: true });
+      void refreshRoom({ force: true });
     };
 
     return () => {
@@ -1271,7 +1222,7 @@ export function WerewolfRoomOverview({
 
       channel.close();
     };
-  }, [pollRoomSync, room.id]);
+  }, [refreshRoom, room.id]);
 
   useEffect(() => {
     if (
@@ -1369,6 +1320,7 @@ export function WerewolfRoomOverview({
 
   useEffect(() => {
     const previousStatus = previousRoomStatusRef.current;
+    let transitionTimer: number | null = null;
 
     if (previousStatus !== "FINISHED" && room.status === "FINISHED") {
       setFinishDialogOpen(false);
@@ -1380,19 +1332,30 @@ export function WerewolfRoomOverview({
 
     if (didWerewolfRoomStartNextRound(previousStatus, room.status)) {
       setResultDialogOpen(false);
+      setShowRoundTransition(true);
 
-      if (!judgeIsViewer && currentSeatPrivateToken) {
-        router.replace(
-          getWerewolfPrivateSeatHref({
-            locale,
-            privateToken: currentSeatPrivateToken,
-            roundNumber: room.state.roundNumber,
-          }),
-        );
-      }
+      transitionTimer = window.setTimeout(() => {
+        setShowRoundTransition(false);
+
+        if (!judgeIsViewer && currentSeatPrivateToken) {
+          router.replace(
+            getWerewolfPrivateSeatHref({
+              locale,
+              privateToken: currentSeatPrivateToken,
+              roundNumber: room.state.roundNumber,
+            }),
+          );
+        }
+      }, 1800);
     }
 
     previousRoomStatusRef.current = room.status;
+
+    return () => {
+      if (transitionTimer !== null) {
+        window.clearTimeout(transitionTimer);
+      }
+    };
   }, [
     currentSeatPrivateToken,
     judgeIsViewer,
@@ -1407,7 +1370,11 @@ export function WerewolfRoomOverview({
       lastOptimisticMutationAtRef.current = Date.now();
 
       setRoom((previousRoom): WerewolfRoomView => {
-        if (!previousRoom.currentMember || previousRoom.status !== "LOBBY") {
+        if (
+          !previousRoom.currentMember ||
+          (previousRoom.status !== "LOBBY" &&
+            previousRoom.status !== "FINISHED")
+        ) {
           return previousRoom;
         }
 
@@ -1448,6 +1415,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: nextCurrentMember.avatarLabel,
                 avatarUrl: nextCurrentMember.avatarUrl,
                 displayName: nextCurrentMember.displayName,
+                isActive: true,
                 isClaimed: true,
                 isViewerSeat: true,
                 profileId: nextCurrentMember.profileId,
@@ -1461,6 +1429,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: "",
                 avatarUrl: null,
                 displayName: t.empty,
+                isActive: false,
                 isClaimed: false,
                 isViewerSeat: false,
                 profileId: null,
@@ -1485,7 +1454,10 @@ export function WerewolfRoomOverview({
     setRoom((previousRoom): WerewolfRoomView => {
       const currentMember = previousRoom.currentMember;
 
-      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+      if (
+        !currentMember?.seatedSeatId ||
+        (previousRoom.status !== "LOBBY" && previousRoom.status !== "FINISHED")
+      ) {
         return previousRoom;
       }
 
@@ -1561,6 +1533,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: "",
                 avatarUrl: null,
                 displayName: t.empty,
+                isActive: false,
                 isClaimed: false,
                 isViewerSeat: false,
                 profileId: null,
@@ -1596,7 +1569,9 @@ export function WerewolfRoomOverview({
       ? null
       : (playerSeats.find(
           (seat) =>
-            seat.seatNumber === pendingSheriffSeatNumber && seat.isClaimed,
+            seat.seatNumber === pendingSheriffSeatNumber &&
+            seat.isClaimed &&
+            (!seat.isDead || room.state.sheriffSeatNumber === seat.seatNumber),
         ) ?? null);
   const managedSeat =
     managedSeatNumber === null
@@ -1615,14 +1590,13 @@ export function WerewolfRoomOverview({
       : room.status === "IN_PROGRESS"
         ? t.running
         : t.lobby;
-  const centerSubtitle =
-    room.status === "LOBBY"
-      ? `${readySeatCount}/${room.seats.length} ${t.ready}`
-      : room.status === "IN_PROGRESS"
-        ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
-        : room.variant.label;
-  const leftPlayerSeats = playerSeats.filter((_, index) => index % 2 === 0);
-  const rightPlayerSeats = playerSeats.filter((_, index) => index % 2 === 1);
+  const centerSubtitle = isSeatingOpen
+    ? `${readySeatCount}/${room.seats.length} ${t.ready}`
+    : room.status === "IN_PROGRESS"
+      ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
+      : room.variant.label;
+  const { left: leftPlayerSeats, right: rightPlayerSeats } =
+    getWerewolfUSeatColumns(playerSeats);
   const arenaRowCount = Math.max(
     leftPlayerSeats.length,
     rightPlayerSeats.length,
@@ -1718,18 +1692,20 @@ export function WerewolfRoomOverview({
               type="button"
             />
           )}
-          <JudgeSheriffButton
-            isSheriff={isSheriff}
-            label={`${t.judgeControls}: ${seat.displayName} · ${
-              isSheriff ? t.removeSheriff : t.setSheriff
-            }`}
-            onClick={() => setPendingSheriffSeatNumber(seat.seatNumber)}
-            type="button"
-          />
+          {!seat.isDead || isSheriff ? (
+            <JudgeSheriffButton
+              isSheriff={isSheriff}
+              label={`${t.judgeControls}: ${seat.displayName} · ${
+                isSheriff ? t.removeSheriff : t.setSheriff
+              }`}
+              onClick={() => setPendingSheriffSeatNumber(seat.seatNumber)}
+              type="button"
+            />
+          ) : null}
         </div>
       ) : null;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -1840,7 +1816,7 @@ export function WerewolfRoomOverview({
                 {t.dead}
               </span>
             ) : null}
-            {isLobby && seat.isClaimed ? (
+            {isSeatingOpen && seat.isClaimed ? (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   seat.readyAt
@@ -1868,7 +1844,7 @@ export function WerewolfRoomOverview({
       seat.isViewerSeat ||
       room.currentMember?.seatedSeatNumber === seat.seatNumber;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -1945,7 +1921,7 @@ export function WerewolfRoomOverview({
             <span className="rounded-full bg-[#F1F2E3]/14 px-2 py-0.5 text-[10px] font-bold text-[#F1F2E3]">
               {t.judge}
             </span>
-            {isLobby && seat.isClaimed ? (
+            {isSeatingOpen && seat.isClaimed ? (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   seat.readyAt
@@ -1984,6 +1960,13 @@ export function WerewolfRoomOverview({
       !isLobby &&
       seat.isClaimed &&
       (judgeIsViewer || room.status === "FINISHED");
+    const activeVote = room.flowSubmissions.find(
+      (submission) =>
+        submission.roundIndex === room.state.flow.sessionIndex &&
+        submission.voterSeatNumber === seat.seatNumber &&
+        (submission.kind === "WEREWOLF_SHERIFF_VOTE" ||
+          submission.kind === "WEREWOLF_EXILE_VOTE"),
+    );
     const topPercent =
       sideCount <= 1 ? 52 : 22 + (rowIndex / (sideCount - 1)) * 64;
     const sidePositionClass = side === "left" ? "left-[4%]" : "right-[4%]";
@@ -1993,7 +1976,7 @@ export function WerewolfRoomOverview({
       seat.isDead ? "border-white/35 grayscale opacity-60" : "border-[#F1F2E3]"
     }`;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -2090,6 +2073,22 @@ export function WerewolfRoomOverview({
           >
             {seat.seatNumber}
           </span>
+          {activeVote ? (
+            <span
+              className={`absolute top-1/2 z-40 -translate-y-1/2 rounded-full bg-[#F1F2E3] px-2 py-1 text-[10px] font-black text-[#7A1F2B] shadow-lg ring-1 ring-[#7A1F2B]/25 ${
+                side === "left" ? "-right-8" : "-left-8"
+              }`}
+              title={
+                activeVote.targetSeatNumber
+                  ? `${activeVote.targetSeatNumber}`
+                  : locale === "zh-CN"
+                    ? "弃票"
+                    : "Abstain"
+              }
+            >
+              {activeVote.targetSeatNumber ?? "-"}
+            </span>
+          ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <p
@@ -2114,7 +2113,14 @@ export function WerewolfRoomOverview({
                 {t.dead}
               </span>
             ) : null}
-            {isLobby && seat.isClaimed ? (
+            {room.state.flow.idiotRevealedSeatNumbers.includes(
+              seat.seatNumber,
+            ) ? (
+              <span className="rounded-full bg-[#FFF7E5] px-1.5 py-0.5 text-[9px] font-bold text-[#8A5B18]">
+                {locale === "zh-CN" ? "白痴翻牌" : "Idiot revealed"}
+              </span>
+            ) : null}
+            {isSeatingOpen && seat.isClaimed ? (
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                   seat.readyAt
@@ -2136,7 +2142,7 @@ export function WerewolfRoomOverview({
       seat.isViewerSeat ||
       room.currentMember?.seatedSeatNumber === seat.seatNumber;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -2210,7 +2216,7 @@ export function WerewolfRoomOverview({
           <p className="max-w-[6.5rem] truncate text-[11px] font-bold leading-4 text-[#F1F2E3]">
             {seat.isClaimed ? seat.displayName : t.judge}
           </p>
-          {isLobby && seat.isClaimed ? (
+          {isSeatingOpen && seat.isClaimed ? (
             <span
               className={`mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                 seat.readyAt
@@ -2232,6 +2238,34 @@ export function WerewolfRoomOverview({
 
   return (
     <div className="h-full min-h-0 w-full overflow-hidden bg-[#062A24] md:min-h-[32rem]">
+      {showRoundTransition ? (
+        <div className="fixed inset-0 z-[150] grid place-items-center overflow-hidden bg-[#102B25] text-[#F1F2E3]">
+          <style>{`
+            @keyframes werewolf-round-card-left { 0% { transform: translate3d(-72px, 22px, 0) rotate(-18deg); opacity: 0; } 45%, 72% { transform: translate3d(-22px, 0, 0) rotate(-7deg); opacity: 1; } 100% { transform: translate3d(0, -10px, 0) rotate(0); opacity: 0; } }
+            @keyframes werewolf-round-card-right { 0% { transform: translate3d(72px, 22px, 0) rotate(18deg); opacity: 0; } 45%, 72% { transform: translate3d(22px, 0, 0) rotate(7deg); opacity: 1; } 100% { transform: translate3d(0, -10px, 0) rotate(0); opacity: 0; } }
+          `}</style>
+          <div className="text-center">
+            <div className="relative mx-auto h-28 w-36">
+              <span className="absolute left-7 top-3 h-24 w-16 rounded-lg border border-[#D9C7B4] bg-[#7A1F2B] shadow-2xl [animation:werewolf-round-card-left_1.7s_ease-in-out_both]" />
+              <span className="absolute right-7 top-3 h-24 w-16 rounded-lg border border-[#D9C7B4] bg-[#F1F2E3] shadow-2xl [animation:werewolf-round-card-right_1.7s_ease-in-out_both]" />
+            </div>
+            <p className="mt-4 text-2xl font-black">
+              {locale === "zh-CN"
+                ? "新一局开始"
+                : locale === "fr"
+                  ? "Nouvelle manche"
+                  : "New round"}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white/68">
+              {locale === "zh-CN"
+                ? "身份正在重新洗牌"
+                : locale === "fr"
+                  ? "Les rôles sont redistribués"
+                  : "Roles are being reshuffled"}
+            </p>
+          </div>
+        </div>
+      ) : null}
       <section className="h-full min-h-0 md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
         <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
           <div className="relative z-30 grid h-10 shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
@@ -2264,23 +2298,6 @@ export function WerewolfRoomOverview({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5">
-              <WerewolfAtmospherePicker
-                locale={locale}
-                onCycle={() => {
-                  setSelectedAtmosphereId((currentId) => {
-                    const currentIndex = werewolfAtmospheres.findIndex(
-                      (atmosphere) => atmosphere.id === currentId,
-                    );
-                    const nextAtmosphere =
-                      werewolfAtmospheres[
-                        (currentIndex + 1) % werewolfAtmospheres.length
-                      ] ?? defaultWerewolfAtmosphere;
-
-                    return nextAtmosphere.id;
-                  });
-                }}
-                selectedId={selectedAtmosphere.id}
-              />
               <WerewolfRoomQrDialog
                 joinUrl={joinUrl}
                 roomCode={room.code}
@@ -2454,34 +2471,9 @@ export function WerewolfRoomOverview({
           </div>
 
           <div className="relative z-10 mt-2 shrink-0 space-y-2">
-            {!room.currentMember && isLobby ? (
-              <form
-                action={joinAction}
-                className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2"
-              >
-                <input name="locale" type="hidden" value={locale} />
-                <input name="roomId" type="hidden" value={room.id} />
-                <input
-                  className="h-12 min-w-0 rounded-full border border-[#F1F2E3]/45 bg-[#F1F2E3]/95 px-4 text-sm font-semibold text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F1F2E3]"
-                  maxLength={40}
-                  name="displayName"
-                  placeholder={t.joinName}
-                />
-                <SubmitButton
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F1F2E3] px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
-                  label={t.enterMember}
-                />
-                {joinState.formError ? (
-                  <p className="col-span-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                    {joinState.formError}
-                  </p>
-                ) : null}
-              </form>
-            ) : null}
-
             {canExitRoom && currentViewerSeat ? (
               <div className="grid gap-2">
-                {isLobby ? (
+                {isSeatingOpen ? (
                   <div className="grid grid-cols-2 gap-2">
                     <form
                       action={readyAction}
@@ -2568,33 +2560,6 @@ export function WerewolfRoomOverview({
                         <Flag className="h-4 w-4" />
                         {t.finishGame}
                       </button>
-                    ) : judgeIsViewer &&
-                      room.status === "FINISHED" &&
-                      judgeSeat?.privateToken ? (
-                      <form
-                        action={startAction}
-                        onSubmit={(event) => {
-                          if (!canSubmitOnline(event)) {
-                            return;
-                          }
-
-                          if (!window.confirm(t.nextRoundConfirm)) {
-                            event.preventDefault();
-                          }
-                        }}
-                      >
-                        <input name="locale" type="hidden" value={locale} />
-                        <input
-                          name="privateToken"
-                          type="hidden"
-                          value={judgeSeat.privateToken}
-                        />
-                        <NextRoundSubmitButton
-                          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-                          disabled={!allSeatsReady}
-                          label={t.nextRound}
-                        />
-                      </form>
                     ) : !judgeIsViewer ? (
                       <Link
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3]"
@@ -2618,7 +2583,7 @@ export function WerewolfRoomOverview({
                   </div>
                 ) : null}
 
-                {judgeIsViewer && judgeSeat?.privateToken && isLobby ? (
+                {judgeIsViewer && judgeSeat?.privateToken && isSeatingOpen ? (
                   <form
                     action={startAction}
                     className="grid gap-1.5"
@@ -2627,7 +2592,13 @@ export function WerewolfRoomOverview({
                         return;
                       }
 
-                      if (!window.confirm(t.startConfirm)) {
+                      if (
+                        !window.confirm(
+                          room.status === "FINISHED"
+                            ? t.nextRoundConfirm
+                            : t.startConfirm,
+                        )
+                      ) {
                         event.preventDefault();
                       }
                     }}
@@ -2638,11 +2609,19 @@ export function WerewolfRoomOverview({
                       type="hidden"
                       value={judgeSeat.privateToken}
                     />
-                    <SubmitButton
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-45"
-                      disabled={!allSeatsReady}
-                      label={t.start}
-                    />
+                    {room.status === "FINISHED" ? (
+                      <NextRoundSubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={!allSeatsReady}
+                        label={t.nextRound}
+                      />
+                    ) : (
+                      <SubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={!allSeatsReady}
+                        label={t.start}
+                      />
+                    )}
                     {!allSeatsReady ? (
                       <p className="text-center text-[11px] font-bold text-white/58">
                         {t.startWaiting}
@@ -2653,7 +2632,7 @@ export function WerewolfRoomOverview({
               </div>
             ) : null}
 
-            {!canExitRoom && !isLobby ? (
+            {!canExitRoom && !isSeatingOpen ? (
               <p className="rounded-2xl border border-[#F1F2E3]/25 bg-[#F1F2E3]/10 px-3 py-2 text-center text-xs font-bold text-[#F1F2E3]">
                 {t.locked}
               </p>
@@ -2682,6 +2661,29 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
+      {judgeIsViewer && judgePrivateToken && room.status === "IN_PROGRESS" ? (
+        <WerewolfFlowPanel
+          events={room.events}
+          flow={room.state.flow}
+          isJudge
+          locale={locale}
+          privateToken={judgePrivateToken}
+          roleDeck={room.seats.map((seat) => seat.roleKey)}
+          roleKey={null}
+          roomStatus={room.status}
+          seatNumber={judgeSeat?.seatNumber ?? room.variant.totalSeats}
+          seats={room.seats.map((seat) => ({
+            displayName: seat.displayName,
+            isActive: seat.isActive,
+            isDead: seat.isDead,
+            isPlayerSeat: seat.isPlayerSeat,
+            roleKey: seat.roleKey,
+            seatNumber: seat.seatNumber,
+          }))}
+          sheriffSeatNumber={room.state.sheriffSeatNumber ?? null}
+          submissions={room.flowSubmissions}
+        />
+      ) : null}
       {managedSeat && judgePrivateToken && canJudgeControlPlayers ? (
         <div
           className="fixed inset-0 z-[90] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
@@ -2720,23 +2722,28 @@ export function WerewolfRoomOverview({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                className={`inline-flex h-12 items-center justify-center gap-2 rounded-full border text-sm font-bold transition active:scale-[0.98] ${
-                  room.state.sheriffSeatNumber === managedSeat.seatNumber
-                    ? "border-[#D6D5B2] bg-[#F1F2E3] text-[#153B31]"
-                    : "border-[#D6D5B2] bg-white text-[#153B31]"
-                }`}
-                onClick={() => {
-                  setManagedSeatNumber(null);
-                  setPendingSheriffSeatNumber(managedSeat.seatNumber);
-                }}
-                type="button"
-              >
-                <Crown className="h-4 w-4" />
-                {room.state.sheriffSeatNumber === managedSeat.seatNumber
-                  ? t.removeSheriff
-                  : t.setSheriff}
-              </button>
+              {!managedSeat.isDead ||
+              room.state.sheriffSeatNumber === managedSeat.seatNumber ? (
+                <button
+                  className={`inline-flex h-12 items-center justify-center gap-2 rounded-full border text-sm font-bold transition active:scale-[0.98] ${
+                    room.state.sheriffSeatNumber === managedSeat.seatNumber
+                      ? "border-[#D6D5B2] bg-[#F1F2E3] text-[#153B31]"
+                      : "border-[#D6D5B2] bg-white text-[#153B31]"
+                  }`}
+                  onClick={() => {
+                    setManagedSeatNumber(null);
+                    setPendingSheriffSeatNumber(managedSeat.seatNumber);
+                  }}
+                  type="button"
+                >
+                  <Crown className="h-4 w-4" />
+                  {room.state.sheriffSeatNumber === managedSeat.seatNumber
+                    ? t.removeSheriff
+                    : t.setSheriff}
+                </button>
+              ) : (
+                <span />
+              )}
 
               {managedSeat.isDead ? (
                 <form
@@ -2788,6 +2795,30 @@ export function WerewolfRoomOverview({
                   {t.markDead}
                 </button>
               )}
+              {managedSeat.roleKey === "idiot" &&
+              !room.state.flow.idiotRevealedSeatNumbers.includes(
+                managedSeat.seatNumber,
+              ) ? (
+                <form action={lifeAction} className="col-span-2">
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgePrivateToken}
+                  />
+                  <input
+                    name="seatNumber"
+                    type="hidden"
+                    value={managedSeat.seatNumber}
+                  />
+                  <input name="operation" type="hidden" value="reveal_idiot" />
+                  <input name="responseMode" type="hidden" value="inline" />
+                  <SubmitButton
+                    className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#B77A22]/35 bg-[#FFF7E5] px-3 text-sm font-bold text-[#8A5B18] transition active:scale-[0.98] disabled:opacity-55"
+                    label={locale === "zh-CN" ? "白痴翻牌" : "Reveal Idiot"}
+                  />
+                </form>
+              ) : null}
             </div>
           </section>
         </div>
@@ -3084,6 +3115,13 @@ export function WerewolfRoomOverview({
                 label={t.finishWerewolf}
                 value="WEREWOLF"
               />
+              {room.state.flow.thirdPartySeatNumbers.length > 0 ? (
+                <FinishOutcomeButton
+                  className="h-12 rounded-full bg-[#B77A22] px-4 text-sm font-bold text-white transition hover:bg-[#996319] disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.finishThirdParty}
+                  value="THIRD_PARTY"
+                />
+              ) : null}
               <FinishOutcomeButton
                 className="h-11 rounded-full border border-[#C9C9BB] bg-white px-4 text-sm font-bold text-[#59635F] transition hover:bg-[#F4F4EF] disabled:cursor-not-allowed disabled:opacity-55"
                 label={t.terminateGame}
