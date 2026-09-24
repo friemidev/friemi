@@ -93,9 +93,7 @@ function getRedemptionHref(locale: string, rawValue: string) {
   const destination = resolveGlobalQrScanDestination({ locale, rawValue });
 
   return destination?.kind === "internal" &&
-    /\/(?:zh-CN|en|fr)\/coupons\/redeem\/[^/?#]+/.test(
-      destination.href,
-    )
+    /\/(?:zh-CN|en|fr)\/coupons\/redeem\/[^/?#]+/.test(destination.href)
     ? destination.href
     : null;
 }
@@ -160,6 +158,14 @@ function CouponScanner({
         setOpen(false);
 
         if (result.kind === "internal") {
+          if (
+            result.source === "werewolf-room" ||
+            result.source === "avalon-room"
+          ) {
+            window.location.assign(result.href);
+            return;
+          }
+
           router.push(result.href);
           return;
         }

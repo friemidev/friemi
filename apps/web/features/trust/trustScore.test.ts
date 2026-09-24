@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  canCreateActivityWithTrustScore,
   calculateTrustScore,
+  getActivityCreationTrustRestrictionMessage,
   getTrustLevel,
   initialTrustScore,
   isActivityEndedForTrustSettlement,
-  isLargeActivityCapacity,
   isLowTrustScore,
-  largeActivityCapacityThreshold,
   lowTrustScoreThreshold,
 } from "./trustScore";
 import { getTrustScoreEventDelta } from "./trustScoreEvents";
@@ -75,12 +75,16 @@ test("trust levels resolve from product thresholds", () => {
   assert.equal(getTrustLevel(29), "RESTRICTED");
 });
 
-test("low trust and large activity thresholds match policy", () => {
+test("users need a trust score of at least 60 to create an activity", () => {
   assert.equal(isLowTrustScore(lowTrustScoreThreshold - 1), true);
   assert.equal(isLowTrustScore(lowTrustScoreThreshold), false);
-  assert.equal(isLargeActivityCapacity(largeActivityCapacityThreshold), true);
   assert.equal(
-    isLargeActivityCapacity(largeActivityCapacityThreshold - 1),
+    canCreateActivityWithTrustScore(lowTrustScoreThreshold - 1),
     false,
+  );
+  assert.equal(canCreateActivityWithTrustScore(lowTrustScoreThreshold), true);
+  assert.match(
+    getActivityCreationTrustRestrictionMessage("zh-CN"),
+    /低于 60/,
   );
 });

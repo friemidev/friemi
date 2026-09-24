@@ -69,12 +69,18 @@ class AppViewController: CAPBridgeViewController {
             return
         }
 
+        guard webView != nil else {
+            return
+        }
+
+        UserDefaults.standard.removeObject(forKey: friemiPendingOpenURLKey)
         openFriemiURL(url)
     }
 
     @objc private func handleAppDidBecomeActive() {
         dispatchWebLifecycleEvent("friemi:ios-resume")
         dispatchWebLifecycleEvent("friemi:app-foreground")
+        consumePendingFriemiOpenURL()
     }
 
     @objc private func handleAppWillResignActive() {
@@ -90,7 +96,8 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func consumePendingFriemiOpenURL() {
-        guard let rawUrl = UserDefaults.standard.string(forKey: friemiPendingOpenURLKey),
+        guard webView != nil,
+              let rawUrl = UserDefaults.standard.string(forKey: friemiPendingOpenURLKey),
               let url = URL(string: rawUrl)
         else {
             return
@@ -111,6 +118,10 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func buildWebUrlFromFriemiURL(_ url: URL) -> URL? {
+        if (url.scheme == "https" || url.scheme == "http"), shouldKeepInApp(url.host) {
+            return url
+        }
+
         if url.host?.lowercased() == "auth-complete" {
             return buildWebUrlFromAuthCompleteURL(url)
         }

@@ -74,6 +74,41 @@ export function getWerewolfAtmosphereById(
   );
 }
 
+function getStableAtmosphereIndex(roomId: string) {
+  let hash = 0;
+
+  for (const character of roomId) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+
+  return hash % werewolfAtmospheres.length;
+}
+
+export function getWerewolfAtmosphereIdFromRoomConfig(
+  config: unknown,
+  roomId: string,
+) {
+  const atmosphereId =
+    config && typeof config === "object"
+      ? (config as { atmosphereId?: unknown }).atmosphereId
+      : null;
+
+  if (typeof atmosphereId === "string") {
+    const atmosphere = werewolfAtmospheres.find(
+      (candidate) => candidate.id === atmosphereId,
+    );
+
+    if (atmosphere) {
+      return atmosphere.id;
+    }
+  }
+
+  return (
+    werewolfAtmospheres[getStableAtmosphereIndex(roomId)] ??
+    defaultWerewolfAtmosphere
+  ).id;
+}
+
 export const werewolfUiAssets = {
   actionCoverCard: `${WEREWOLF_UI_ASSET_BASE}/action-cover-card.svg`,
   actionRevealCard: `${WEREWOLF_UI_ASSET_BASE}/action-reveal-card.svg`,

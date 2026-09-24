@@ -25,6 +25,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import { WerewolfFlowPanel } from "@/features/game-tools/components/WerewolfFlowPanel";
 import {
   finishWerewolfRoomAction,
   leaveWerewolfSeatAction,
@@ -48,14 +49,33 @@ import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState"
 
 type WerewolfPrivateSeatCardProps = {
   allReady: boolean;
+  flowEvents: Array<{
+    createdAt: string;
+    id: string;
+    payload?: unknown;
+    type: string;
+  }>;
+  flowSubmissions: Array<{
+    actionKind: string | null;
+    id: string;
+    kind: string;
+    roundIndex: number;
+    seerResult: string | null;
+    secondaryTargetSeatNumber: number | null;
+    submittedAt: string;
+    targetSeatNumber: number | null;
+    voterSeatNumber: number | null;
+  }>;
   isDead: boolean;
   isJudgeSeat: boolean;
   isReady: boolean;
   locale: string;
+  memberToken: string | null;
   payload: WerewolfPrivatePayload | null;
   privateToken: string;
   roleKey: WerewolfRoleKey | null;
   roleAlignment: string | null;
+  roleDeck: WerewolfRoleKey[];
   roomHref: string;
   roomId: string;
   roomState: WerewolfRoomState;
@@ -65,6 +85,7 @@ type WerewolfPrivateSeatCardProps = {
   seatNumber: number;
   seats: Array<{
     displayName: string;
+    isActive: boolean;
     isDead: boolean;
     isJudgeSeat: boolean;
     isPlayerSeat: boolean;
@@ -75,6 +96,32 @@ type WerewolfPrivateSeatCardProps = {
   }>;
   variantLabel: string;
 };
+
+function mergePrivateFlowEvents(
+  current: WerewolfPrivateSeatCardProps["flowEvents"],
+  incoming: WerewolfPrivateSeatCardProps["flowEvents"],
+) {
+  const incomingIds = new Set(incoming.map((event) => event.id));
+
+  return [
+    ...incoming,
+    ...current.filter((event) => !incomingIds.has(event.id)),
+  ].sort((first, second) => second.createdAt.localeCompare(first.createdAt));
+}
+
+function mergePrivateFlowSubmissions(
+  current: WerewolfPrivateSeatCardProps["flowSubmissions"],
+  incoming: WerewolfPrivateSeatCardProps["flowSubmissions"],
+) {
+  const incomingIds = new Set(incoming.map((submission) => submission.id));
+
+  return [
+    ...incoming,
+    ...current.filter((submission) => !incomingIds.has(submission.id)),
+  ].sort((first, second) =>
+    second.submittedAt.localeCompare(first.submittedAt),
+  );
+}
 
 type Copy = {
   allReady: string;
@@ -125,6 +172,7 @@ type Copy = {
   visibleFor: string;
   waiting: string;
   winnerGood: string;
+  winnerThirdParty: string;
   winnerWerewolf: string;
 };
 
@@ -187,6 +235,7 @@ const copies: Record<string, Copy> = {
     visibleFor: "剩余",
     waiting: "已准备",
     winnerGood: "好人阵营获胜",
+    winnerThirdParty: "第三方阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
   },
   en: {
@@ -250,6 +299,7 @@ const copies: Record<string, Copy> = {
     visibleFor: "Left",
     waiting: "Ready. Waiting for the table.",
     winnerGood: "Good team wins",
+    winnerThirdParty: "Third party wins",
     winnerWerewolf: "Werewolf team wins",
   },
   fr: {
@@ -313,6 +363,7 @@ const copies: Record<string, Copy> = {
     visibleFor: "Reste",
     waiting: "Prêt. En attente de la table.",
     winnerGood: "Village gagnant",
+    winnerThirdParty: "Troisième camp gagnant",
     winnerWerewolf: "Loups gagnants",
   },
 };
@@ -433,18 +484,22 @@ function SafeWerewolfImage({
 
 export function WerewolfPrivateSeatCard({
   allReady,
+  flowEvents: initialFlowEvents,
+  flowSubmissions: initialFlowSubmissions,
   isDead: initialIsDead,
   isJudgeSeat,
   isReady,
   locale,
+  memberToken,
   payload,
   privateToken,
   roleKey,
   roleAlignment,
+  roleDeck,
   roomHref,
   roomId,
-  roomState,
-  roomStatus,
+  roomState: initialRoomState,
+  roomStatus: initialRoomStatus,
   roomUpdatedAt,
   seatDisplayName,
   seatNumber,
@@ -477,9 +532,27 @@ export function WerewolfPrivateSeatCard({
   const [showRevealConfirm, setShowRevealConfirm] = useState(false);
   const [showDeathIntro, setShowDeathIntro] = useState(false);
   const [showResultIntro, setShowResultIntro] = useState(false);
+  const [flowEvents, setFlowEvents] = useState(initialFlowEvents);
+  const [flowSubmissions, setFlowSubmissions] = useState(
+    initialFlowSubmissions,
+  );
+  const [roomSeats, setRoomSeats] = useState(seats);
+  const [roomState, setRoomState] = useState(initialRoomState);
+  const [roomStatus, setRoomStatus] = useState(initialRoomStatus);
+  const [showRoundTransition, setShowRoundTransition] = useState(() => {
+    const startedAt = roomState.flow.transitionStartedAt;
+
+    return Boolean(
+      roomState.roundNumber > 1 &&
+      startedAt &&
+      Date.now() - new Date(startedAt).getTime() < 10_000,
+    );
+  });
   const [isDead, setIsDead] = useState(initialIsDead);
   const roomSyncVersionRef = useRef<string | null>(null);
   const syncInFlightRef = useRef(false);
+  const syncForceQueuedRef = useRef(false);
+  const syncQueuedRef = useRef(false);
   const realtimeSyncRef = useRef<() => void>(() => undefined);
   const wasDeadRef = useRef(initialIsDead);
   const t = copies[locale] ?? copies.en;
@@ -492,22 +565,33 @@ export function WerewolfPrivateSeatCard({
   const winnerLabel =
     roomState.winner === "GOOD"
       ? t.winnerGood
-      : roomState.winner === "WEREWOLF"
-        ? t.winnerWerewolf
-        : null;
+      : roomState.winner === "THIRD_PARTY"
+        ? t.winnerThirdParty
+        : roomState.winner === "WEREWOLF"
+          ? t.winnerWerewolf
+          : null;
+  const isThirdParty =
+    roomState.flow.thirdPartySeatNumbers.includes(seatNumber);
+  const effectiveAlignment =
+    currentRoleKey === "cupid" && roomState.flow.cupidSharedAlignment
+      ? roomState.flow.cupidSharedAlignment
+      : roleAlignment;
   const resultKind =
     !isJudgeSeat &&
     roomStatus === "FINISHED" &&
     roomState.winner &&
     roleAlignment
-      ? (roomState.winner === "WEREWOLF" && roleAlignment === "werewolf") ||
-        (roomState.winner === "GOOD" && roleAlignment === "good")
+      ? (roomState.winner === "THIRD_PARTY" && isThirdParty) ||
+        (!isThirdParty &&
+          ((roomState.winner === "WEREWOLF" &&
+            effectiveAlignment === "werewolf") ||
+            (roomState.winner === "GOOD" && effectiveAlignment === "good")))
         ? "WIN"
         : "LOSE"
       : null;
   const readySeats = useMemo(
-    () => seats.filter((seat) => Boolean(seat.readyAt)).length,
-    [seats],
+    () => roomSeats.filter((seat) => Boolean(seat.readyAt)).length,
+    [roomSeats],
   );
   const RoleIcon = getPrivateRoleIcon(payload);
   const renderRoleFallback = (size: "compact" | "large") => (
@@ -552,51 +636,72 @@ export function WerewolfPrivateSeatCard({
   }, [initialIsDead, roomUpdatedAt]);
 
   useEffect(() => {
+    setFlowEvents(initialFlowEvents);
+    setFlowSubmissions(initialFlowSubmissions);
+    setRoomSeats(seats);
+    setRoomState(initialRoomState);
+    setRoomStatus(initialRoomStatus);
+  }, [
+    initialFlowEvents,
+    initialFlowSubmissions,
+    initialRoomState,
+    initialRoomStatus,
+    roomUpdatedAt,
+    seats,
+  ]);
+
+  useEffect(() => {
     let disposed = false;
 
-    const syncPrivateSeat = async () => {
-      if (
-        disposed ||
-        syncInFlightRef.current ||
-        document.hidden ||
-        !window.navigator.onLine
-      ) {
+    const syncPrivateSeat = async (options?: { force?: boolean }) => {
+      if (disposed || document.hidden || !window.navigator.onLine) {
         return;
       }
 
+      if (syncInFlightRef.current) {
+        syncQueuedRef.current = true;
+        syncForceQueuedRef.current ||= Boolean(options?.force);
+        return;
+      }
+
+      syncQueuedRef.current = false;
+      syncForceQueuedRef.current = false;
       syncInFlightRef.current = true;
 
       try {
-        const probeResponse = await fetch(
-          `/api/game-tools/werewolf/rooms/${roomId}/sync`,
-          { cache: "no-store" },
-        );
+        let probedSyncVersion: string | undefined;
 
-        if (!probeResponse.ok || disposed) {
-          return;
-        }
+        if (!options?.force) {
+          const probeResponse = await fetch(
+            `/api/game-tools/werewolf/rooms/${roomId}/sync`,
+            { cache: "no-store" },
+          );
 
-        const probe = (await probeResponse.json()) as {
-          status?: string;
-          syncVersion?: string;
-        };
+          if (!probeResponse.ok || disposed) {
+            return;
+          }
 
-        if (probe.status && probe.status !== roomStatus) {
-          router.refresh();
-          return;
-        }
+          const probe = (await probeResponse.json()) as {
+            syncVersion?: string;
+          };
+          probedSyncVersion = probe.syncVersion;
 
-        if (
-          probe.syncVersion &&
-          probe.syncVersion === roomSyncVersionRef.current
-        ) {
-          return;
+          if (
+            probedSyncVersion &&
+            probedSyncVersion === roomSyncVersionRef.current
+          ) {
+            return;
+          }
         }
 
         const params = new URLSearchParams({
           include: "room",
           locale,
         });
+
+        if (memberToken) {
+          params.set("memberToken", memberToken);
+        }
         const roomResponse = await fetch(
           `/api/game-tools/werewolf/rooms/${roomId}/sync?${params.toString()}`,
           { cache: "no-store" },
@@ -608,8 +713,10 @@ export function WerewolfPrivateSeatCard({
 
         const payload = (await roomResponse.json()) as {
           room?: {
-            seats?: Array<{ isDead: boolean; seatNumber: number }>;
-            state?: { roundNumber?: number };
+            events?: WerewolfPrivateSeatCardProps["flowEvents"];
+            flowSubmissions?: WerewolfPrivateSeatCardProps["flowSubmissions"];
+            seats?: WerewolfPrivateSeatCardProps["seats"];
+            state?: WerewolfRoomState;
             status?: string;
             syncVersion?: string;
           };
@@ -629,23 +736,63 @@ export function WerewolfPrivateSeatCard({
           (seat) => seat.seatNumber === seatNumber,
         );
 
+        if (payload.room?.seats) {
+          setRoomSeats(payload.room.seats);
+        }
+
         if (currentSeat) {
           setIsDead(currentSeat.isDead);
         }
 
-        roomSyncVersionRef.current =
+        if (payload.room?.events) {
+          setFlowEvents((current) =>
+            mergePrivateFlowEvents(current, payload.room!.events!),
+          );
+        }
+
+        if (payload.room?.flowSubmissions) {
+          setFlowSubmissions((current) =>
+            mergePrivateFlowSubmissions(
+              current,
+              payload.room!.flowSubmissions!,
+            ),
+          );
+        }
+
+        if (payload.room?.state) {
+          setRoomState(payload.room.state);
+        }
+
+        if (payload.room?.status) {
+          setRoomStatus(payload.room.status);
+        }
+
+        const nextSyncVersion =
           payload.room?.syncVersion ??
           payload.syncVersion ??
-          probe.syncVersion ??
+          probedSyncVersion ??
           roomSyncVersionRef.current;
+        roomSyncVersionRef.current = nextSyncVersion;
       } catch {
         // The next interval, focus, or online event retries silently.
       } finally {
         syncInFlightRef.current = false;
+
+        if (syncQueuedRef.current) {
+          const forceQueuedSync = syncForceQueuedRef.current;
+          syncQueuedRef.current = false;
+          syncForceQueuedRef.current = false;
+
+          if (disposed) {
+            realtimeSyncRef.current();
+          } else {
+            void syncPrivateSeat({ force: forceQueuedSync });
+          }
+        }
       }
     };
 
-    const triggerRealtimeSync = () => void syncPrivateSeat();
+    const triggerRealtimeSync = () => void syncPrivateSeat({ force: true });
     realtimeSyncRef.current = triggerRealtimeSync;
     void syncPrivateSeat();
     const interval = window.setInterval(
@@ -670,6 +817,8 @@ export function WerewolfPrivateSeatCard({
 
     return () => {
       disposed = true;
+      syncForceQueuedRef.current = false;
+      syncQueuedRef.current = false;
       if (realtimeSyncRef.current === triggerRealtimeSync) {
         realtimeSyncRef.current = () => undefined;
       }
@@ -680,6 +829,7 @@ export function WerewolfPrivateSeatCard({
     };
   }, [
     locale,
+    memberToken,
     realtimeConnected,
     roomId,
     roomState.roundNumber,
@@ -687,6 +837,16 @@ export function WerewolfPrivateSeatCard({
     router,
     seatNumber,
   ]);
+
+  useEffect(() => {
+    if (!showRoundTransition) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowRoundTransition(false), 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [showRoundTransition]);
 
   useEffect(() => {
     if (!revealed) {
@@ -927,6 +1087,27 @@ export function WerewolfPrivateSeatCard({
           }
         `}
       </style>
+      {showRoundTransition ? (
+        <div className="fixed inset-0 z-[150] grid place-items-center bg-[#102B25] text-center text-[#F1F2E3]">
+          <div>
+            <Sparkles className="mx-auto h-12 w-12 animate-pulse" />
+            <p className="mt-5 text-2xl font-black">
+              {locale === "zh-CN"
+                ? "新一局开始"
+                : locale === "fr"
+                  ? "Nouvelle manche"
+                  : "New round"}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white/68">
+              {locale === "zh-CN"
+                ? "身份已经重新洗牌"
+                : locale === "fr"
+                  ? "Les rôles ont été redistribués"
+                  : "Roles have been reshuffled"}
+            </p>
+          </div>
+        </div>
+      ) : null}
       {showResultIntro ? (
         <div className="fixed inset-0 z-[120] grid place-items-center bg-[#1E1718]/82 px-6 backdrop-blur-sm">
           <div className="grid w-full max-w-xs place-items-center overflow-hidden rounded-[1.25rem] border border-white/14 bg-[#FFFDF7] text-center shadow-[0_24px_90px_rgba(0,0,0,0.42)]">
@@ -1179,6 +1360,22 @@ export function WerewolfPrivateSeatCard({
           </div>
         </section>
       ) : null}
+      {showInGamePlayerCard ? (
+        <WerewolfFlowPanel
+          events={flowEvents}
+          flow={roomState.flow}
+          isJudge={false}
+          locale={locale}
+          privateToken={privateToken}
+          roleDeck={roleDeck}
+          roleKey={currentRoleKey}
+          roomStatus={roomStatus}
+          seatNumber={seatNumber}
+          seats={roomSeats}
+          sheriffSeatNumber={roomState.sheriffSeatNumber ?? null}
+          submissions={flowSubmissions}
+        />
+      ) : null}
 
       {!showInGamePlayerCard ? (
         <section className="overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-[0_18px_48px_rgba(30,23,24,0.08)]">
@@ -1322,7 +1519,7 @@ export function WerewolfPrivateSeatCard({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-2 text-sm font-bold text-[#1E1718]">
                     <UsersRound className="h-4 w-4 text-[#7A1F2B]" />
-                    {readySeats}/{seats.length}
+                    {readySeats}/{roomSeats.length}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-semibold text-[#7A1F2B]">
                     {isReady ? (
@@ -1584,7 +1781,7 @@ export function WerewolfPrivateSeatCard({
                   ) : null}
 
                   <div className="mt-3 grid gap-2">
-                    {seats
+                    {roomSeats
                       .filter((seat) => seat.isPlayerSeat)
                       .map((seat) => {
                         const roleCard = getWerewolfRoleCardImage(

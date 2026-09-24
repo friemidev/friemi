@@ -23,6 +23,7 @@ export type WerewolfVariantKey =
   | "nine_player_basic"
   | "seven_player_basic"
   | "ten_player_seer_witch_hunter"
+  | "twelve_player_guard_wolf_king"
   | "twelve_player_idiot"
   | "custom";
 
@@ -149,14 +150,14 @@ export const werewolfVariants: WerewolfVariant[] = [
   },
   {
     enabled: true,
-    judgeSeatNumber: 12,
+    judgeSeatNumber: 13,
     key: "twelve_player_idiot",
     labels: {
-      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 11),
-      en: getWerewolfPlayerJudgeLabel("en", 11),
-      fr: getWerewolfPlayerJudgeLabel("fr", 11),
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 12),
+      en: getWerewolfPlayerJudgeLabel("en", 12),
+      fr: getWerewolfPlayerJudgeLabel("fr", 12),
     },
-    playerSeatCount: 11,
+    playerSeatCount: 12,
     roles: [
       "werewolf",
       "werewolf",
@@ -169,18 +170,47 @@ export const werewolfVariants: WerewolfVariant[] = [
       "villager",
       "villager",
       "villager",
+      "villager",
     ],
-    totalSeats: 12,
+    totalSeats: 13,
+  },
+  {
+    enabled: true,
+    judgeSeatNumber: 13,
+    key: "twelve_player_guard_wolf_king",
+    labels: {
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 12),
+      en: getWerewolfPlayerJudgeLabel("en", 12),
+      fr: getWerewolfPlayerJudgeLabel("fr", 12),
+    },
+    playerSeatCount: 12,
+    roles: [
+      "wolf_king",
+      "werewolf",
+      "werewolf",
+      "werewolf",
+      "seer",
+      "witch",
+      "hunter",
+      "guard",
+      "villager",
+      "villager",
+      "villager",
+      "villager",
+    ],
+    totalSeats: 13,
   },
 ];
 
 export const defaultWerewolfVariantKey: WerewolfVariantKey =
-  "ten_player_seer_witch_hunter";
+  "twelve_player_idiot";
 
 export function getWerewolfVariant(key: string | null | undefined) {
   return (
     werewolfVariants.find((variant) => variant.key === key) ??
-    werewolfVariants.find((variant) => variant.key === defaultWerewolfVariantKey) ??
+    werewolfVariants.find(
+      (variant) => variant.key === defaultWerewolfVariantKey,
+    ) ??
     werewolfVariants[0]
   );
 }
@@ -188,10 +218,15 @@ export function getWerewolfVariant(key: string | null | undefined) {
 export function getEnabledWerewolfVariant(key: string | null | undefined) {
   const variant = getWerewolfVariant(key);
 
-  return variant.enabled ? variant : getWerewolfVariant(defaultWerewolfVariantKey);
+  return variant.enabled
+    ? variant
+    : getWerewolfVariant(defaultWerewolfVariantKey);
 }
 
-export function getWerewolfVariantLabel(locale: string, variant: WerewolfVariant) {
+export function getWerewolfVariantLabel(
+  locale: string,
+  variant: WerewolfVariant,
+) {
   return variant.labels[locale] ?? variant.labels.en ?? variant.labels["zh-CN"];
 }
 
@@ -244,9 +279,7 @@ export function normalizeWerewolfRoleDeck(value: unknown) {
   const hasWerewolf = roles.some(
     (role) => werewolfRoleAlignments[role] === "werewolf",
   );
-  const hasGood = roles.some(
-    (role) => werewolfRoleAlignments[role] === "good",
-  );
+  const hasGood = roles.some((role) => werewolfRoleAlignments[role] === "good");
 
   if (!hasWerewolf || !hasGood) {
     return null;
@@ -264,13 +297,16 @@ export function getWerewolfVariantFromRoomConfig(
       ? (config as Record<string, unknown>)
       : null;
   const variantKey = getConfigVariantKey(config);
-  const customRoleDeck =
-    variantKey === "custom" && configObject
-      ? normalizeWerewolfRoleDeck(configObject.roleDeck)
-      : null;
+  const storedRoleDeck = configObject
+    ? normalizeWerewolfRoleDeck(configObject.roleDeck)
+    : null;
 
-  if (customRoleDeck && configObject) {
-    const playerSeatCount = customRoleDeck.length;
+  if (storedRoleDeck && configObject) {
+    const playerSeatCount = getConfigNumber(
+      configObject,
+      "playerSeatCount",
+      storedRoleDeck.length,
+    );
     const totalSeats = getConfigNumber(
       configObject,
       "totalSeats",
@@ -281,23 +317,30 @@ export function getWerewolfVariantFromRoomConfig(
       "judgeSeatNumber",
       totalSeats,
     );
-    const label =
-      typeof configObject.variantName === "string" &&
-      configObject.variantName.trim()
+    const isCustom = variantKey === "custom";
+    const storedKey = werewolfVariants.some(
+      (variant) => variant.key === variantKey,
+    )
+      ? (variantKey as WerewolfVariantKey)
+      : defaultWerewolfVariantKey;
+    const label = isCustom
+      ? typeof configObject.variantName === "string" &&
+        configObject.variantName.trim()
         ? configObject.variantName.trim()
-        : getCustomWerewolfVariantLabel(locale);
+        : getCustomWerewolfVariantLabel(locale)
+      : getWerewolfPlayerJudgeLabel(locale, playerSeatCount);
 
     return {
       enabled: true,
       judgeSeatNumber,
-      key: "custom",
+      key: isCustom ? "custom" : storedKey,
       labels: {
         "zh-CN": label,
         en: label,
         fr: label,
       },
       playerSeatCount,
-      roles: customRoleDeck,
+      roles: storedRoleDeck,
       totalSeats,
     } satisfies WerewolfVariant;
   }
@@ -363,6 +406,60 @@ export function isWerewolfPlayerSeat(
   return seatNumber >= 1 && seatNumber <= variant.playerSeatCount;
 }
 
+export function isActiveWerewolfSeatOccupant(seat: {
+  guestName: string | null;
+  leftAt: Date | null;
+  profileId: string | null;
+}) {
+  return (
+    seat.leftAt === null && Boolean(seat.profileId || seat.guestName?.trim())
+  );
+}
+
+export function isActiveWerewolfJudgeSeat(
+  seat: {
+    guestName: string | null;
+    leftAt: Date | null;
+    profileId: string | null;
+    seatNumber: number;
+  },
+  variant: WerewolfVariant,
+) {
+  return (
+    isWerewolfJudgeSeat(seat.seatNumber, variant) &&
+    isActiveWerewolfSeatOccupant(seat)
+  );
+}
+
+export function isActiveWerewolfPlayerSeat(
+  seat: {
+    guestName: string | null;
+    leftAt: Date | null;
+    profileId: string | null;
+    seatNumber: number;
+  },
+  variant: WerewolfVariant,
+) {
+  return (
+    isWerewolfPlayerSeat(seat.seatNumber, variant) &&
+    isActiveWerewolfSeatOccupant(seat)
+  );
+}
+
+export function getWerewolfUSeatColumns<T extends { seatNumber: number }>(
+  seats: T[],
+) {
+  const sortedSeats = [...seats].sort(
+    (first, second) => first.seatNumber - second.seatNumber,
+  );
+  const leftSeatCount = Math.ceil(sortedSeats.length / 2);
+
+  return {
+    left: sortedSeats.slice(0, leftSeatCount),
+    right: sortedSeats.slice(leftSeatCount).reverse(),
+  };
+}
+
 export const werewolfRoleAlignments: Record<
   WerewolfRoleKey,
   WerewolfAlignment
@@ -424,10 +521,7 @@ export const werewolfRoleLabels = {
     witch: "Sorcière",
     wolf_king: "Roi loup",
   },
-} satisfies Record<
-  WerewolfRoleLocale,
-  Record<WerewolfRoleKey, string>
->;
+} satisfies Record<WerewolfRoleLocale, Record<WerewolfRoleKey, string>>;
 
 const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
   "zh-CN": {
@@ -457,18 +551,28 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       werewolf: "Werewolf team",
     },
     roleDescriptions: {
-      cupid: "You are Cupid. On the first night, link two players as lovers by table rules.",
-      guard: "You are the guard. Protect one player each night, but not the same player twice in a row.",
-      hunter: "You are the hunter. If you go out, take one player with you by table rules.",
+      cupid:
+        "You are Cupid. On the first night, link two players as lovers by table rules.",
+      guard:
+        "You are the guard. Protect one player each night, but not the same player twice in a row.",
+      hunter:
+        "You are the hunter. If you go out, take one player with you by table rules.",
       idiot: "You are the idiot. Reveal on vote-out by table rules.",
-      knight: "You are the knight. Once during the day, challenge a player; if wrong, you are eliminated.",
-      lovers: "You are one of the lovers. If either lover goes out, the other follows by table rules.",
+      knight:
+        "You are the knight. Once during the day, challenge a player; if wrong, you are eliminated.",
+      lovers:
+        "You are one of the lovers. If either lover goes out, the other follows by table rules.",
       seer: "You are the seer. Check one player at night and guard the truth by day.",
-      villager: "You are a villager. You have no night ability; read the table by day.",
-      werewolf: "You are a werewolf. Move with the pack at night and stay clean by day.",
-      white_wolf_king: "You are the White Wolf King. Reveal yourself and take one player with you by table rules.",
-      witch: "You are the witch. Use your potions when the table gives you the moment.",
-      wolf_king: "You are the Wolf King. When eliminated, take one player with you by table rules.",
+      villager:
+        "You are a villager. You have no night ability; read the table by day.",
+      werewolf:
+        "You are a werewolf. Move with the pack at night and stay clean by day.",
+      white_wolf_king:
+        "You are the White Wolf King. Reveal yourself and take one player with you by table rules.",
+      witch:
+        "You are the witch. Use your potions when the table gives you the moment.",
+      wolf_king:
+        "You are the Wolf King. When eliminated, take one player with you by table rules.",
     },
     roleLabels: werewolfRoleLabels.en,
   },
@@ -490,16 +594,14 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
         "Vous êtes chevalier. Une fois le jour, défiez un joueur ; si vous vous trompez, vous êtes éliminé.",
       lovers:
         "Vous êtes amoureux. Si l'un des amoureux sort, l'autre le suit selon les règles de table.",
-      seer:
-        "Vous êtes voyante. Vérifiez quelqu'un la nuit, gardez l'information le jour.",
+      seer: "Vous êtes voyante. Vérifiez quelqu'un la nuit, gardez l'information le jour.",
       villager:
         "Vous êtes villageois. Pas de capacité de nuit, tout se joue à la parole.",
       werewolf:
         "Vous êtes loup-garou. Agissez avec la meute la nuit, restez crédible le jour.",
       white_wolf_king:
         "Vous êtes le roi loup blanc. Révélez-vous et emportez un joueur selon les règles de table.",
-      witch:
-        "Vous êtes sorcière. Utilisez vos potions au bon moment.",
+      witch: "Vous êtes sorcière. Utilisez vos potions au bon moment.",
       wolf_king:
         "Vous êtes le roi loup. Si vous êtes éliminé, emportez un joueur selon les règles de table.",
     },
@@ -511,7 +613,9 @@ export function getWerewolfRoleCopy(locale: string) {
   return roleCopy[locale as WerewolfRoleLocale] ?? roleCopy.en;
 }
 
-export function isWerewolfRoleKey(value: string | null | undefined): value is WerewolfRoleKey {
+export function isWerewolfRoleKey(
+  value: string | null | undefined,
+): value is WerewolfRoleKey {
   return (
     typeof value === "string" &&
     (werewolfRoleKeys as readonly string[]).includes(value)

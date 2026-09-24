@@ -3117,9 +3117,11 @@ function GiftWallRoomGift({
 function GiftWallLeaderboardRow({
   index,
   item,
+  locale,
 }: {
   index: number;
   item: ProfileGiftWallViewModel["topSenders"][number];
+  locale: string;
 }) {
   return (
     <li className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 py-3">
@@ -3127,7 +3129,19 @@ function GiftWallLeaderboardRow({
         {index + 1}
       </span>
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar avatarUrl={item.sender.avatarUrl} name={item.sender.nickname} />
+        <UserProfilePreviewPopover
+          avatarUrl={item.sender.avatarUrl}
+          isAuthenticated
+          locale={locale}
+          nickname={item.sender.nickname}
+          profileId={item.sender.id}
+          triggerClassName="shrink-0 rounded-full"
+        >
+          <Avatar
+            avatarUrl={item.sender.avatarUrl}
+            name={item.sender.nickname}
+          />
+        </UserProfilePreviewPopover>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-[#111210]">
             {item.sender.nickname}
@@ -3320,6 +3334,7 @@ export function ProfileGiftWallPageView({
                 index={index}
                 item={item}
                 key={item.sender.id}
+                locale={locale}
               />
             ))}
           </ol>

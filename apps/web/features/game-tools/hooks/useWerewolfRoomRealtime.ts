@@ -4,12 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 
 import {
+  createWerewolfRealtimeEventScheduler,
   getWerewolfRealtimeBrowserConfig,
   getWerewolfRealtimeTopic,
   WEREWOLF_REALTIME_EVENT,
 } from "@/features/game-tools/werewolfRealtime";
-
-const realtimeEventThrottleMs = 750;
 
 export function useWerewolfRoomRealtime({
   onRoomChanged,
@@ -19,7 +18,6 @@ export function useWerewolfRoomRealtime({
   roomId: string;
 }) {
   const callbackRef = useRef(onRoomChanged);
-  const lastEventAtRef = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -41,23 +39,20 @@ export function useWerewolfRoomRealtime({
         persistSession: false,
       },
     });
+    const eventScheduler = createWerewolfRealtimeEventScheduler(() =>
+      callbackRef.current(),
+    );
     const channel = client
       .channel(getWerewolfRealtimeTopic(roomId))
       .on("broadcast", { event: WEREWOLF_REALTIME_EVENT }, () => {
-        const now = Date.now();
-
-        if (now - lastEventAtRef.current < realtimeEventThrottleMs) {
-          return;
-        }
-
-        lastEventAtRef.current = now;
-        callbackRef.current();
+        eventScheduler.notify();
       })
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
       });
 
     return () => {
+      eventScheduler.dispose();
       setIsConnected(false);
       void client.removeChannel(channel).finally(() => {
         client.realtime.disconnect();

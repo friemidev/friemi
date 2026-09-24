@@ -42,8 +42,8 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     icon: Moon,
     imageSrc: "/game-tools/werewolf/werewolf.png",
     kind: "WEREWOLF",
-    maxPlayers: 10,
-    minPlayers: 10,
+    maxPlayers: 12,
+    minPlayers: 9,
     phase: {
       "zh-CN": "已开放",
       en: "Open",

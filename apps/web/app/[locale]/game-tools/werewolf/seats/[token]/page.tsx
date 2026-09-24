@@ -11,13 +11,18 @@ import {
   getWerewolfVariantFromRoomConfig,
   getWerewolfVariantLabel,
   getWerewolfRoleLabel,
+  isActiveWerewolfSeatOccupant,
   isWerewolfRoleKey,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
   type WerewolfPrivatePayload,
   type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
-import { normalizeWerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
+import {
+  getWerewolfRoomStateForViewer,
+  isWerewolfEventVisibleToViewer,
+  normalizeWerewolfRoomState,
+} from "@/features/game-tools/werewolfRoomState";
 import { getWerewolfSeatByToken } from "@/features/game-tools/queries/getWerewolfRoom";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -117,6 +122,13 @@ export default async function WerewolfSeatPage({
     seat.room.locale,
   );
   const isCurrentSeatJudge = isWerewolfJudgeSeat(seat.seatNumber, variant);
+  const viewerRoomState = getWerewolfRoomStateForViewer({
+    isFinished: seat.room.status === "FINISHED",
+    isJudge: isCurrentSeatJudge,
+    roleKey: seat.roleKey,
+    seatNumber: seat.seatNumber,
+    state: roomState,
+  });
   const deadSeatSet = new Set(roomState.deadSeatNumbers);
   const seatMember = seat.room.members.find(
     (member) => member.seatedSeatId === seat.id,
@@ -160,7 +172,88 @@ export default async function WerewolfSeatPage({
           isJudgeSeat={isCurrentSeatJudge}
           isDead={deadSeatSet.has(seat.seatNumber)}
           isReady={Boolean(seat.readyAt)}
+          flowEvents={seat.room.events
+            .filter((event) =>
+              isWerewolfEventVisibleToViewer({
+                isFinished: seat.room.status === "FINISHED",
+                isJudge: isCurrentSeatJudge,
+                type: event.type,
+              }),
+            )
+            .map((event) => ({
+              createdAt: event.createdAt.toISOString(),
+              id: event.id,
+              payload: event.payload,
+              type: event.type,
+            }))}
+          flowSubmissions={seat.room.submissions.flatMap((submission) => {
+            const isVote =
+              submission.kind === "WEREWOLF_SHERIFF_VOTE" ||
+              submission.kind === "WEREWOLF_EXILE_VOTE";
+            const isOwnNightAction =
+              submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+              submission.seat?.seatNumber === seat.seatNumber;
+            const metadata =
+              submission.metadata && typeof submission.metadata === "object"
+                ? (submission.metadata as Record<string, unknown>)
+                : null;
+            const isWitchKillContext =
+              seat.roleKey === "witch" &&
+              submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+              metadata?.actionKind === "WOLF_KILL";
+            const isWolfPackKillContext =
+              seat.roleAlignment === "werewolf" &&
+              submission.kind === "WEREWOLF_NIGHT_ACTION" &&
+              metadata?.actionKind === "WOLF_KILL";
+            const isCurrentFlowSession =
+              submission.roundIndex === roomState.flow.sessionIndex;
+
+            if (
+              !isVote &&
+              (!isCurrentFlowSession ||
+                (!isOwnNightAction &&
+                  !isWitchKillContext &&
+                  !isWolfPackKillContext))
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                actionKind:
+                  typeof metadata?.actionKind === "string"
+                    ? metadata.actionKind
+                    : null,
+                id: submission.id,
+                kind: submission.kind,
+                roundIndex: submission.roundIndex,
+                secondaryTargetSeatNumber:
+                  typeof metadata?.secondaryTargetSeatNumber === "number"
+                    ? metadata.secondaryTargetSeatNumber
+                    : null,
+                submittedAt: submission.submittedAt.toISOString(),
+                seerResult:
+                  typeof metadata?.seerResult === "string"
+                    ? metadata.seerResult
+                    : null,
+                targetSeatNumber: isVote
+                  ? submission.value === "ABSTAIN"
+                    ? null
+                    : Number(submission.value)
+                  : typeof metadata?.targetSeatNumber === "number"
+                    ? metadata.targetSeatNumber
+                    : null,
+                voterSeatNumber:
+                  isWitchKillContext || isWolfPackKillContext
+                    ? null
+                    : (submission.seat?.seatNumber ?? null),
+              },
+            ];
+          })}
           locale={locale}
+          memberToken={
+            seatMember && !seatMember.profileId ? seatMember.memberToken : null
+          }
           payload={parsePrivatePayload({
             roleKey: seat.roleKey as WerewolfRoleKey | null,
             value: seat.privatePayload,
@@ -168,15 +261,17 @@ export default async function WerewolfSeatPage({
           privateToken={seat.privateToken}
           roleKey={seat.roleKey as WerewolfRoleKey | null}
           roleAlignment={seat.roleAlignment}
+          roleDeck={variant.roles}
           roomUpdatedAt={seat.room.updatedAt.toISOString()}
           roomHref={roomHref}
           roomId={seat.roomId}
-          roomState={roomState}
+          roomState={viewerRoomState}
           roomStatus={seat.room.status}
           seatDisplayName={seat.displayName}
           seatNumber={seat.seatNumber}
           seats={seat.room.seats.map((roomSeat) => ({
             displayName: roomSeat.displayName,
+            isActive: isActiveWerewolfSeatOccupant(roomSeat),
             isDead: deadSeatSet.has(roomSeat.seatNumber),
             isJudgeSeat: isWerewolfJudgeSeat(roomSeat.seatNumber, variant),
             isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),

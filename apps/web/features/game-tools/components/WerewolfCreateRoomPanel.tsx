@@ -11,13 +11,14 @@ import {
   useState,
 } from "react";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import jsQR from "jsqr";
 import {
   ArrowRight,
   ChevronLeft,
   Clock3,
   Hash,
+  LoaderCircle,
   ScanLine,
   Sparkles,
   X,
@@ -28,7 +29,6 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
-  defaultWerewolfVariantKey,
   getWerewolfDefaultRoomTitle,
   getWerewolfPlayerJudgeLabel,
   getWerewolfRoleLabel,
@@ -84,7 +84,6 @@ type Copy = {
   scannerSearching: string;
   scannerTitle: string;
   scannerUnsupported: string;
-  selectMode: string;
   title: string;
   titleLabel: string;
   titlePlaceholder: string;
@@ -123,7 +122,6 @@ const copies: Record<string, Copy> = {
     scannerSearching: "正在识别二维码",
     scannerTitle: "扫码加入房间",
     scannerUnsupported: "当前浏览器不支持相机扫码，请手动输入房号。",
-    selectMode: "选择模式",
     title: "今晚开狼人杀",
     titleLabel: "这局叫什么",
     titlePlaceholder: "今晚的狼人杀",
@@ -163,7 +161,6 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scan room QR",
     scannerUnsupported:
       "This browser cannot scan with the camera. Enter the code instead.",
-    selectMode: "Choose setup",
     title: "Start tonight's Werewolf table",
     titleLabel: "Table name",
     titlePlaceholder: "Tonight's Werewolf",
@@ -204,7 +201,6 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scanner le QR",
     scannerUnsupported:
       "Ce navigateur ne peut pas scanner avec la caméra. Entrez le code.",
-    selectMode: "Choisir le mode",
     title: "Lancez la table Loups-garous de ce soir",
     titleLabel: "Nom de table",
     titlePlaceholder: "Loups-garous de ce soir",
@@ -231,10 +227,30 @@ function getVariantHeroRole(variant: WerewolfVariant): WerewolfRoleKey {
     return "idiot";
   }
 
+  if (variant.key === "twelve_player_guard_wolf_king") {
+    return "guard";
+  }
+
   return "werewolf";
 }
 
 function getVariantCoreRoleLabels(locale: string, variant: WerewolfVariant) {
+  if (variant.key === "twelve_player_idiot") {
+    if (locale === "fr")
+      return "Voyante · Sorcière · Chasseur · Idiot · 4 loups · 4 villageois";
+    if (locale === "en")
+      return "Seer · Witch · Hunter · Idiot · 4 wolves · 4 villagers";
+    return "预女猎白 · 4 狼 · 4 平民";
+  }
+
+  if (variant.key === "twelve_player_guard_wolf_king") {
+    if (locale === "fr")
+      return "Voyante · Sorcière · Chasseur · Garde · Roi loup + 3 loups · 4 villageois";
+    if (locale === "en")
+      return "Seer · Witch · Hunter · Guard · Wolf King + 3 wolves · 4 villagers";
+    return "预女猎守 · 狼王 + 3 狼 · 4 平民";
+  }
+
   const preferredOrder: WerewolfRoleKey[] = [
     "seer",
     "witch",
@@ -293,18 +309,41 @@ function VariantSubmitOverlay({
   const { pending } = useFormStatus();
 
   return (
-    <button
-      aria-label={label}
-      className="absolute inset-0 z-20 grid place-items-center rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 disabled:cursor-wait"
-      disabled={pending}
-      type="submit"
+    <>
+      <button
+        aria-label={label}
+        className="absolute inset-0 z-20 rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 disabled:cursor-wait"
+        disabled={pending}
+        type="submit"
+      />
+      <RoomOpeningOverlay label={pendingLabel} pending={pending} />
+    </>
+  );
+}
+
+function RoomOpeningOverlay({
+  label,
+  pending,
+}: {
+  label: string;
+  pending: boolean;
+}) {
+  if (!pending || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      aria-live="polite"
+      className="fixed inset-0 z-[130] grid place-items-center bg-[#031F1B]/72 px-6 backdrop-blur-[2px]"
+      role="status"
     >
-      {pending ? (
-        <span className="rounded-full bg-[#06231F]/94 px-4 py-2 text-xs font-bold text-[#F1F2E3] shadow-lg">
-          {pendingLabel}
-        </span>
-      ) : null}
-    </button>
+      <div className="flex min-w-[12.5rem] items-center justify-center gap-3 rounded-2xl border border-[#F1F2E3]/35 bg-[#062A24] px-5 py-4 text-sm font-bold text-[#F1F2E3] shadow-[0_22px_70px_rgba(0,0,0,0.42)]">
+        <LoaderCircle className="h-5 w-5 animate-spin" />
+        <span>{label}</span>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -416,20 +455,25 @@ function buildCustomRoleDeck(counts: Record<WerewolfRoleKey, number>) {
 function CustomSubmitButton({
   disabled,
   label,
+  pendingLabel,
 }: {
   disabled: boolean;
   label: string;
+  pendingLabel: string;
 }) {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-semibold text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-      disabled={disabled || pending}
-      type="submit"
-    >
-      {label}
-    </button>
+    <>
+      <button
+        className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-semibold text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled || pending}
+        type="submit"
+      >
+        {label}
+      </button>
+      <RoomOpeningOverlay label={pendingLabel} pending={pending} />
+    </>
   );
 }
 
@@ -585,7 +629,11 @@ function CustomModeCard({
       ) : null}
 
       <div className="relative mt-4 flex justify-end">
-        <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
+        <CustomSubmitButton
+          disabled={!isValid}
+          label={t.customCreate}
+          pendingLabel={t.openingRoom}
+        />
       </div>
     </form>
   );
@@ -610,11 +658,9 @@ export function WerewolfCreateRoomPanel({
   const t = copies[locale] ?? copies.en;
   const normalizedJoinCode = getWerewolfRoomCodeFromScan(joinCode);
   const featuredVariants = [
-    "seven_player_basic",
-    defaultWerewolfVariantKey,
+    "ten_player_seer_witch_hunter",
     "twelve_player_idiot",
-    "nine_player_basic",
-    "eight_player_basic",
+    "twelve_player_guard_wolf_king",
   ]
     .map((key) => werewolfVariants.find((variant) => variant.key === key))
     .filter((variant): variant is WerewolfVariant => Boolean(variant));
@@ -627,14 +673,14 @@ export function WerewolfCreateRoomPanel({
 
   const goToJoinCode = useCallback(
     (code: string) => {
-      router.push(
+      window.location.assign(
         withLocale(
           locale,
           `/game-tools/werewolf/join/${encodeURIComponent(code)}`,
         ),
       );
     },
-    [locale, router],
+    [locale],
   );
 
   useEffect(() => {
@@ -905,21 +951,13 @@ export function WerewolfCreateRoomPanel({
             ) : null}
           </form>
 
-          <div className="mx-auto mt-3 flex max-w-[17rem] items-center gap-2">
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#F1F2E3]/65" />
-            <span className="rounded-full border border-[#F1F2E3]/50 bg-[#F1F2E3] px-8 py-2 text-sm font-bold text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
-              {t.selectMode}
-            </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#F1F2E3]/65" />
-          </div>
-
           {state.formError ? (
             <p className="mt-3 rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
               {state.formError}
             </p>
           ) : null}
 
-          <div className="mt-4 grid gap-3">
+          <div className="mt-3 grid gap-3">
             {featuredVariants.map((variant) => (
               <WerewolfVariantModeCard
                 formAction={formAction}

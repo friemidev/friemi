@@ -49,7 +49,6 @@ function getMobileGameToolsCopy(locale: string) {
       coming: "Bientôt",
       playerRange: "joueurs",
       title: "Jeux",
-      toolList: "Tous les outils",
       intros: {
         AVALON: "Rôles, votes et quêtes.",
         BOTC: "Grimoire et rythme de nuit.",
@@ -66,7 +65,6 @@ function getMobileGameToolsCopy(locale: string) {
       coming: "Soon",
       playerRange: "players",
       title: "Games",
-      toolList: "All tools",
       intros: {
         AVALON: "Roles, votes, and quests.",
         BOTC: "Grimoire and night flow.",
@@ -82,7 +80,6 @@ function getMobileGameToolsCopy(locale: string) {
     coming: "敬请期待",
     playerRange: "人",
     title: "桌游",
-    toolList: "全部工具",
     intros: {
       AVALON: "发身份、投票、记任务。",
       BOTC: "魔典和夜晚流程。",
@@ -130,10 +127,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
           </header>
 
           <section className="mt-7">
-            <h2 className="text-[18px] font-bold leading-none tracking-normal text-[#0D5A3C]">
-              {mobileCopy.toolList}
-            </h2>
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
                 const isAvailable = tool.availability === "available";
