@@ -136,6 +136,16 @@ export async function getAdminCouponTemplates() {
   return bindings.map(serializeBinding);
 }
 
+export async function getAdminCouponTemplatesForMerchant(merchantId: string) {
+  await syncPlatformTemplates();
+  const bindings = await prisma.merchantCouponTemplate.findMany({
+    where: { merchantId },
+    orderBy: [{ createdAt: "asc" }],
+    select: bindingSelect,
+  });
+  return bindings.map(serializeBinding);
+}
+
 export async function createAdminCouponTemplate(
   merchantId: string,
   input: AdminCouponTemplateInput,

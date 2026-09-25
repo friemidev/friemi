@@ -2,16 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
   Building2,
-  ChevronDown,
+  ExternalLink,
   Globe2,
   Loader2,
   Mail,
   MapPin,
-  Palette,
   Plus,
+  Search,
   Store,
   TicketCheck,
   TicketPlus,
@@ -19,15 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Input,
-  Textarea,
-} from "@chill-club/ui";
+import { Button, Input, Textarea } from "@chill-club/ui";
 import { FormField } from "@/components/admin/FormField";
 import type {
   AdminMerchantCandidate,
@@ -36,38 +30,468 @@ import type {
 import type { AdminCouponTemplate } from "@/features/coupons/adminCoupons";
 import { platformCouponTemplates } from "@/features/coupons/platformCouponTemplates";
 import { withLocale } from "@/lib/routes";
-import { cn } from "@/lib/utils";
 
-type MerchantManagementClientProps = {
-  initialCandidates: AdminMerchantCandidate[];
-  initialCoupons: AdminCouponTemplate[];
+type MerchantListProps = {
   initialMerchants: AdminMerchantListItem[];
   locale: string;
 };
 
+export function MerchantManagementClient({
+  initialMerchants,
+  locale,
+}: MerchantListProps) {
+  const [query, setQuery] = useState("");
+  const merchants = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized) return initialMerchants;
+
+    return initialMerchants.filter((merchant) =>
+      [
+        merchant.name,
+        merchant.slug,
+        merchant.city,
+        merchant.address,
+        merchant.owner?.nickname,
+        merchant.owner?.friendCode,
+      ].some((value) => value?.toLocaleLowerCase().includes(normalized)),
+    );
+  }, [initialMerchants, query]);
+
+  return (
+    <section aria-labelledby="merchant-list-title" className="space-y-4">
+      <div className="flex flex-col gap-3 border-y border-black/10 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-ink" id="merchant-list-title">
+            店铺列表
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            共 {initialMerchants.length} 家，点击店铺进入分配管理。
+          </p>
+        </div>
+        <label className="relative block w-full sm:w-80">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+          />
+          <Input
+            aria-label="搜索店铺"
+            className="h-11 pl-9"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜索店名、城市或店家账号"
+            value={query}
+          />
+        </label>
+      </div>
+
+      {merchants.length > 0 ? (
+        <div className="overflow-hidden rounded-md border border-black/10 bg-white">
+          {merchants.map((merchant) => (
+            <article
+              className="grid gap-4 border-b border-black/10 p-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-5"
+              key={merchant.id}
+            >
+              <div className="flex min-w-0 gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[#E7F2EB] text-[#176B49]">
+                  <Building2 aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="truncate text-base font-bold text-ink">
+                      {merchant.name}
+                    </h3>
+                    {merchant.owner ? (
+                      <span className="rounded bg-[#E7F2EB] px-2 py-0.5 text-[11px] font-semibold text-[#176B49]">
+                        已绑定店家
+                      </span>
+                    ) : (
+                      <span className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold text-zinc-500">
+                        未绑定账号
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-sm text-zinc-600">
+                    {merchant.description}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-zinc-500">
+                    <span>{merchant.address || merchant.city}</span>
+                    <span>{merchant.activityCount} 个关联活动</span>
+                    {merchant.owner ? (
+                      <span>
+                        {merchant.owner.nickname}
+                        {merchant.owner.friendCode
+                          ? ` · ${merchant.owner.friendCode}`
+                          : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pl-14 sm:pl-0">
+                <Link
+                  aria-label={`查看 ${merchant.name} 的公开主页`}
+                  className="grid h-10 w-10 place-items-center rounded-md text-zinc-600 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                  href={withLocale(locale, `/merchants/${merchant.slug}`)}
+                  title="查看公开主页"
+                >
+                  <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                </Link>
+                <Link
+                  className="inline-flex h-10 items-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                  href={withLocale(locale, `/admin/merchants/${merchant.id}`)}
+                >
+                  管理分配
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="border-b border-black/10 py-14 text-center">
+          <Building2
+            aria-hidden="true"
+            className="mx-auto h-8 w-8 text-zinc-300"
+          />
+          <p className="mt-3 text-sm font-semibold text-ink">
+            {initialMerchants.length === 0 ? "还没有店铺" : "没有匹配的店铺"}
+          </p>
+          <p className="mt-1 text-sm text-zinc-500">
+            {initialMerchants.length === 0
+              ? "可以添加合作店铺，或将 Friemi 账号升级为店家。"
+              : "请更换店名、城市或店家账号关键词。"}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+type MerchantUpgradeClientProps = {
+  candidates: AdminMerchantCandidate[];
+  locale: string;
+  query: string;
+};
+
+export function MerchantUpgradeClient({
+  candidates,
+  locale,
+  query,
+}: MerchantUpgradeClientProps) {
+  const router = useRouter();
+  const [assigningProfileId, setAssigningProfileId] = useState<string | null>(
+    null,
+  );
+
+  async function assignMerchantAccount(profileId: string) {
+    if (assigningProfileId) return;
+    setAssigningProfileId(profileId);
+
+    try {
+      const response = await fetch("/api/admin/merchants/assign-owner", {
+        body: JSON.stringify({ profileId }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) {
+        toast.error("升级店家失败，请确认账号仍然有效");
+        return;
+      }
+
+      const json = (await response.json()) as {
+        merchant: AdminMerchantListItem;
+      };
+      toast.success("账号已升级为店家");
+      router.push(withLocale(locale, `/admin/merchants/${json.merchant.id}`));
+      router.refresh();
+    } catch {
+      toast.error("升级店家失败，请稍后重试");
+    } finally {
+      setAssigningProfileId(null);
+    }
+  }
+
+  if (!query) {
+    return (
+      <div className="border-y border-black/10 py-14 text-center">
+        <Search aria-hidden="true" className="mx-auto h-8 w-8 text-zinc-300" />
+        <p className="mt-3 text-sm font-semibold text-ink">
+          先查找 Friemi 用户
+        </p>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-zinc-500">
+          可以搜索昵称或邮箱，也可以直接输入用户的 6 位 Friemi 个人号。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Toaster closeButton position="top-center" richColors />
+      <p className="text-sm font-semibold text-zinc-600">
+        找到 {candidates.length} 个可升级账号
+      </p>
+      {candidates.length > 0 ? (
+        <div className="overflow-hidden rounded-md border border-black/10 bg-white">
+          {candidates.map((candidate) => (
+            <div
+              className="flex flex-col gap-3 border-b border-black/10 p-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+              key={candidate.id}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F2EB] text-sm font-bold text-[#176B49]">
+                  {candidate.nickname.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink">
+                    {candidate.nickname}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-zinc-500">
+                    Friemi 个人号：{candidate.friendCode ?? "未生成"}
+                    {candidate.email ? ` · ${candidate.email}` : ""}
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="h-10 shrink-0"
+                disabled={Boolean(assigningProfileId)}
+                onClick={() => void assignMerchantAccount(candidate.id)}
+                type="button"
+              >
+                {assigningProfileId === candidate.id ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
+                ) : (
+                  <Store aria-hidden="true" className="mr-2 h-4 w-4" />
+                )}
+                升级并开通店铺
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="border-y border-black/10 py-12 text-center">
+          <p className="text-sm font-semibold text-ink">没有找到可升级账号</p>
+          <p className="mt-1 text-sm text-zinc-500">
+            请检查昵称、邮箱或 6 位 Friemi 个人号；已有店铺的账号不会重复显示。
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type MerchantFormState = {
-  name: string;
-  slug: string;
-  description: string;
-  city: string;
   address: string;
+  city: string;
+  contactEmail: string;
+  description: string;
   latitude: string;
   longitude: string;
+  name: string;
+  slug: string;
   websiteUrl: string;
-  contactEmail: string;
 };
 
 const emptyMerchantForm = (): MerchantFormState => ({
-  name: "",
-  slug: "",
-  description: "",
-  city: "Paris",
   address: "",
+  city: "Paris",
+  contactEmail: "",
+  description: "",
   latitude: "",
   longitude: "",
+  name: "",
+  slug: "",
   websiteUrl: "",
-  contactEmail: "",
 });
+
+export function MerchantCreateClient({ locale }: { locale: string }) {
+  const router = useRouter();
+  const [form, setForm] = useState<MerchantFormState>(emptyMerchantForm);
+  const [isSaving, setIsSaving] = useState(false);
+  const canSave =
+    form.name.trim().length > 0 &&
+    form.description.trim().length > 0 &&
+    !isSaving;
+
+  async function submitMerchant(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSave) return;
+    setIsSaving(true);
+
+    try {
+      const response = await fetch("/api/admin/merchants", {
+        body: JSON.stringify({
+          ...form,
+          address: form.address || null,
+          contactEmail: form.contactEmail || null,
+          latitude: form.latitude || null,
+          longitude: form.longitude || null,
+          slug: form.slug || null,
+          websiteUrl: form.websiteUrl || null,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+
+      if (response.status === 409) {
+        toast.error("商家 URL 标识已存在，请更换一个标识");
+        return;
+      }
+      if (!response.ok) {
+        toast.error("店铺创建失败，请检查必填信息");
+        return;
+      }
+
+      const json = (await response.json()) as {
+        merchant: AdminMerchantListItem;
+      };
+      toast.success("合作店铺已创建");
+      router.push(withLocale(locale, `/admin/merchants/${json.merchant.id}`));
+      router.refresh();
+    } catch {
+      toast.error("店铺创建失败，请稍后重试");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <form className="space-y-7" onSubmit={submitMerchant}>
+      <Toaster closeButton position="top-center" richColors />
+      <FormSection description="用于店铺列表和公开主页展示。" title="基本信息">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="店铺名称 *">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
+              value={form.name}
+            />
+          </FormField>
+          <FormField hint="留空时会根据店铺名称自动生成。" label="URL 标识">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, slug: event.target.value })
+              }
+              placeholder="paris-community-cafe"
+              value={form.slug}
+            />
+          </FormField>
+        </div>
+        <FormField label="店铺简介 *">
+          <Textarea
+            className="min-h-28"
+            onChange={(event) =>
+              setForm({ ...form, description: event.target.value })
+            }
+            placeholder="说明店铺类型、特色或适合关联的活动。"
+            value={form.description}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection
+        description="地址将显示在店铺资料和活动关联中。"
+        title="地址信息"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="城市">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, city: event.target.value })
+              }
+              value={form.city}
+            />
+          </FormField>
+          <FormField label="详细地址">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, address: event.target.value })
+              }
+              value={form.address}
+            />
+          </FormField>
+          <FormField label="纬度">
+            <Input
+              className="h-11"
+              inputMode="decimal"
+              onChange={(event) =>
+                setForm({ ...form, latitude: event.target.value })
+              }
+              placeholder="48.8566"
+              value={form.latitude}
+            />
+          </FormField>
+          <FormField label="经度">
+            <Input
+              className="h-11"
+              inputMode="decimal"
+              onChange={(event) =>
+                setForm({ ...form, longitude: event.target.value })
+              }
+              placeholder="2.3522"
+              value={form.longitude}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      <FormSection
+        description="方便用户或运营人员进一步联系。"
+        title="联系信息"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="官网">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, websiteUrl: event.target.value })
+              }
+              placeholder="https://"
+              value={form.websiteUrl}
+            />
+          </FormField>
+          <FormField label="联系邮箱">
+            <Input
+              className="h-11"
+              onChange={(event) =>
+                setForm({ ...form, contactEmail: event.target.value })
+              }
+              type="email"
+              value={form.contactEmail}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      <div className="flex flex-wrap gap-3 border-t border-black/10 pt-5">
+        <Button className="h-11 min-w-36" disabled={!canSave} type="submit">
+          {isSaving ? (
+            <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+          )}
+          创建店铺
+        </Button>
+        <Button
+          className="h-11"
+          disabled={isSaving}
+          onClick={() => setForm(emptyMerchantForm())}
+          type="button"
+          variant="secondary"
+        >
+          清空
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 type CouponFormState = {
   accentColor: string;
@@ -89,875 +513,387 @@ const emptyCouponForm = (): CouponFormState => ({
   title: "",
 });
 
-export function MerchantManagementClient({
-  initialCandidates,
+export function MerchantCouponManagementClient({
   initialCoupons,
-  initialMerchants,
-  locale,
-}: MerchantManagementClientProps) {
-  const [merchants, setMerchants] = useState(initialMerchants);
+  merchant,
+}: {
+  initialCoupons: AdminCouponTemplate[];
+  merchant: AdminMerchantListItem;
+}) {
   const [coupons, setCoupons] = useState(initialCoupons);
-  const [candidates, setCandidates] = useState(initialCandidates);
-  const [selectedProfileId, setSelectedProfileId] = useState("");
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [merchantForm, setMerchantForm] =
-    useState<MerchantFormState>(emptyMerchantForm);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>(
+    platformCouponTemplates[0]?.key ?? "",
+  );
+  const [bindingTemplate, setBindingTemplate] = useState(false);
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [form, setForm] = useState<CouponFormState>(emptyCouponForm);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [couponEditorMerchantId, setCouponEditorMerchantId] = useState<
-    string | null
-  >(null);
-  const [couponForm, setCouponForm] =
-    useState<CouponFormState>(emptyCouponForm);
-  const [isCouponSaving, setIsCouponSaving] = useState(false);
-  const [couponTemplateSelections, setCouponTemplateSelections] = useState<
-    Record<string, string>
-  >({});
-  const [bindingTemplateMerchantId, setBindingTemplateMerchantId] = useState<
-    string | null
-  >(null);
-  const canCreateMerchant =
-    merchantForm.name.trim().length > 0 &&
-    merchantForm.description.trim().length > 0 &&
-    !isSaving;
+  const selectedTemplate = platformCouponTemplates.find(
+    (template) => template.key === selectedTemplateKey,
+  );
 
-  async function assignMerchantAccount(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    if (!selectedProfileId || isAssigning) return;
-    setIsAssigning(true);
-
-    try {
-      const response = await fetch("/api/admin/merchants/assign-owner", {
-        body: JSON.stringify({ profileId: selectedProfileId }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      if (!response.ok) {
-        toast.error("升级店家失败，请确认账号仍然有效");
-        return;
-      }
-
-      const json = (await response.json()) as {
-        merchant: AdminMerchantListItem;
-      };
-      setMerchants((current) =>
-        [
-          ...current.filter((item) => item.id !== json.merchant.id),
-          json.merchant,
-        ].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setCandidates((current) =>
-        current.filter((item) => item.id !== selectedProfileId),
-      );
-      setSelectedProfileId("");
-      toast.success("账号已升级为店家，默认优惠券样式已分配");
-    } catch {
-      toast.error("升级店家失败，请稍后重试");
-    } finally {
-      setIsAssigning(false);
-    }
-  }
-
-  async function submitMerchantForm(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSaving(true);
-
-    try {
-      const response = await fetch("/api/admin/merchants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: merchantForm.name,
-          slug: merchantForm.slug || null,
-          description: merchantForm.description,
-          city: merchantForm.city,
-          address: merchantForm.address || null,
-          latitude: merchantForm.latitude || null,
-          longitude: merchantForm.longitude || null,
-          websiteUrl: merchantForm.websiteUrl || null,
-          contactEmail: merchantForm.contactEmail || null,
-        }),
-      });
-
-      if (response.status === 409) {
-        toast.error("商家 URL 标识已存在，请换一个 slug");
-        return;
-      }
-
-      if (!response.ok) {
-        toast.error("商家创建失败，请检查必填信息");
-        return;
-      }
-
-      const json = await response.json();
-      const merchant = json.merchant as AdminMerchantListItem;
-      setMerchants((current) =>
-        [...current, merchant].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setMerchantForm(emptyMerchantForm());
-      setIsCreateOpen(false);
-      toast.success("合作商家已创建，可在活动表单中关联");
-    } catch {
-      toast.error("商家创建失败，请稍后重试");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function submitCouponForm(
-    event: React.FormEvent<HTMLFormElement>,
-    merchantId: string,
-  ) {
-    event.preventDefault();
-    if (!couponForm.title.trim() || !couponForm.description.trim()) return;
-    setIsCouponSaving(true);
-
+  async function bindPlatformCoupon() {
+    if (!selectedTemplateKey || bindingTemplate) return;
+    setBindingTemplate(true);
     try {
       const response = await fetch(
-        `/api/admin/merchants/${merchantId}/coupons`,
+        `/api/admin/merchants/${merchant.id}/coupons`,
+        {
+          body: JSON.stringify({ platformTemplateKey: selectedTemplateKey }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      if (!response.ok) {
+        toast.error("优惠券样式分配失败，请稍后重试");
+        return;
+      }
+      const json = (await response.json()) as { coupon: AdminCouponTemplate };
+      setCoupons((current) => [
+        ...current.filter((item) => item.id !== json.coupon.id),
+        json.coupon,
+      ]);
+      toast.success("优惠券样式已分配给此店铺");
+    } catch {
+      toast.error("优惠券样式分配失败，请稍后重试");
+    } finally {
+      setBindingTemplate(false);
+    }
+  }
+
+  async function createCustomCoupon(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form.title.trim() || !form.description.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        `/api/admin/merchants/${merchant.id}/coupons`,
         {
           body: JSON.stringify({
-            ...couponForm,
-            expiresAt: couponForm.expiresAt
-              ? new Date(couponForm.expiresAt).toISOString()
+            ...form,
+            expiresAt: form.expiresAt
+              ? new Date(form.expiresAt).toISOString()
               : null,
-            terms: couponForm.terms || null,
+            terms: form.terms || null,
           }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         },
       );
-
       if (!response.ok) {
-        toast.error("优惠券创建失败，请检查内容和样式");
+        toast.error("自定义优惠券创建失败，请检查内容");
         return;
       }
-
-      const json = (await response.json()) as {
-        coupon: AdminCouponTemplate;
-      };
+      const json = (await response.json()) as { coupon: AdminCouponTemplate };
       setCoupons((current) => [...current, json.coupon]);
-      setCouponForm(emptyCouponForm());
-      setCouponEditorMerchantId(null);
-      toast.success("优惠券样式已添加，店家现在可以用它发布优惠券");
+      setForm(emptyCouponForm());
+      setIsCustomOpen(false);
+      toast.success("自定义优惠券已添加");
     } catch {
-      toast.error("优惠券创建失败，请稍后重试");
+      toast.error("自定义优惠券创建失败，请稍后重试");
     } finally {
-      setIsCouponSaving(false);
-    }
-  }
-
-  async function bindPlatformCoupon(merchantId: string) {
-    if (bindingTemplateMerchantId) return;
-    const platformTemplateKey =
-      couponTemplateSelections[merchantId] ??
-      platformCouponTemplates[0]?.key ??
-      "";
-    if (!platformTemplateKey) return;
-
-    setBindingTemplateMerchantId(merchantId);
-    try {
-      const response = await fetch(
-        `/api/admin/merchants/${merchantId}/coupons`,
-        {
-          body: JSON.stringify({ platformTemplateKey }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        },
-      );
-
-      if (!response.ok) {
-        toast.error("平台优惠券绑定失败，请稍后重试");
-        return;
-      }
-
-      const json = (await response.json()) as {
-        coupon: AdminCouponTemplate;
-      };
-      setCoupons((current) => [
-        ...current.filter((coupon) => coupon.id !== json.coupon.id),
-        json.coupon,
-      ]);
-      toast.success("平台优惠券样式已绑定，店家现在可以选择发布");
-    } catch {
-      toast.error("平台优惠券绑定失败，请稍后重试");
-    } finally {
-      setBindingTemplateMerchantId(null);
+      setIsSaving(false);
     }
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <Toaster position="top-center" richColors closeButton />
+    <div className="space-y-8">
+      <Toaster closeButton position="top-center" richColors />
 
-      <Card className="shadow-sm">
-        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-md bg-emerald-50 text-emerald-700">
-              <UserRoundCheck className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <CardTitle>升级账号为店家</CardTitle>
-              <p className="mt-1 text-sm text-zinc-500">
-                店家身份独立于管理员权限，管理员账号也可以拥有门店。
+      <section className="space-y-4" aria-labelledby="assigned-coupons-title">
+        <div className="flex items-end justify-between gap-3 border-b border-black/10 pb-3">
+          <div>
+            <h2
+              className="text-lg font-bold text-ink"
+              id="assigned-coupons-title"
+            >
+              已分配样式
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              店家发布优惠券时可以从这些样式中选择。
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-zinc-500">
+            {coupons.length} 种
+          </span>
+        </div>
+        {coupons.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {coupons.map((coupon) => (
+              <div
+                className="flex min-w-0 items-center gap-3 border-b border-black/10 pb-3"
+                key={coupon.id}
+              >
+                {coupon.imageUrl ? (
+                  <Image
+                    alt=""
+                    className="h-14 w-20 shrink-0 rounded-md object-cover"
+                    height={56}
+                    src={coupon.imageUrl}
+                    width={80}
+                  />
+                ) : (
+                  <span
+                    className="grid h-14 w-20 shrink-0 place-items-center rounded-md text-xs font-bold"
+                    style={{
+                      backgroundColor: coupon.backgroundColor,
+                      color: coupon.foregroundColor,
+                    }}
+                  >
+                    Coupon
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink">
+                    {coupon.title}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">
+                    {coupon.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="py-5 text-sm text-zinc-500">暂未分配优惠券样式。</p>
+        )}
+      </section>
+
+      <section aria-labelledby="platform-template-title" className="space-y-4">
+        <div className="border-b border-black/10 pb-3">
+          <h2
+            className="text-lg font-bold text-ink"
+            id="platform-template-title"
+          >
+            分配平台样式
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            选择 Friemi 已设计的优惠券样式并绑定到此店铺。
+          </p>
+        </div>
+        {selectedTemplate ? (
+          <div className="grid gap-5 md:grid-cols-[15rem_minmax(0,1fr)] md:items-start">
+            <Image
+              alt={selectedTemplate.title}
+              className="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-black/10"
+              height={1086}
+              sizes="(min-width: 768px) 240px, 100vw"
+              src={selectedTemplate.imageUrl}
+              width={1448}
+            />
+            <div className="space-y-3">
+              <FormField label="平台优惠券样式">
+                <select
+                  className="h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-emerald-600"
+                  onChange={(event) =>
+                    setSelectedTemplateKey(event.target.value)
+                  }
+                  value={selectedTemplateKey}
+                >
+                  {platformCouponTemplates.map((template) => (
+                    <option key={template.key} value={template.key}>
+                      {template.title}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <p className="text-sm leading-6 text-zinc-600">
+                {selectedTemplate.description}
               </p>
+              <Button
+                className="h-11"
+                disabled={bindingTemplate}
+                onClick={() => void bindPlatformCoupon()}
+                type="button"
+              >
+                {bindingTemplate ? (
+                  <Loader2
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
+                ) : (
+                  <TicketCheck aria-hidden="true" className="mr-2 h-4 w-4" />
+                )}
+                分配给此店铺
+              </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="p-4 pt-2 sm:p-5 sm:pt-2">
-          <form
-            className="flex flex-col gap-3 sm:flex-row"
-            onSubmit={assignMerchantAccount}
+        ) : null}
+      </section>
+
+      <section aria-labelledby="custom-coupon-title" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-black/10 pb-3">
+          <div>
+            <h2 className="text-lg font-bold text-ink" id="custom-coupon-title">
+              自定义样式
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              平台样式不适用时，再为该店铺建立专属样式。
+            </p>
+          </div>
+          <Button
+            className="h-10"
+            onClick={() => setIsCustomOpen((current) => !current)}
+            type="button"
+            variant="secondary"
           >
-            <select
-              className="h-11 min-w-0 flex-1 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none focus:border-emerald-600"
-              onChange={(event) => setSelectedProfileId(event.target.value)}
-              value={selectedProfileId}
+            <TicketPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+            {isCustomOpen ? "收起" : "添加自定义样式"}
+          </Button>
+        </div>
+
+        {isCustomOpen ? (
+          <form className="space-y-4" onSubmit={createCustomCoupon}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="优惠券名称 *">
+                <Input
+                  className="h-11"
+                  maxLength={120}
+                  onChange={(event) =>
+                    setForm({ ...form, title: event.target.value })
+                  }
+                  value={form.title}
+                />
+              </FormField>
+              <FormField label="有效期">
+                <Input
+                  className="h-11"
+                  onChange={(event) =>
+                    setForm({ ...form, expiresAt: event.target.value })
+                  }
+                  type="date"
+                  value={form.expiresAt}
+                />
+              </FormField>
+            </div>
+            <FormField label="优惠内容 *">
+              <Textarea
+                className="min-h-24"
+                maxLength={1200}
+                onChange={(event) =>
+                  setForm({ ...form, description: event.target.value })
+                }
+                value={form.description}
+              />
+            </FormField>
+            <FormField label="使用规则">
+              <Textarea
+                className="min-h-20"
+                maxLength={1200}
+                onChange={(event) =>
+                  setForm({ ...form, terms: event.target.value })
+                }
+                value={form.terms}
+              />
+            </FormField>
+            <div className="grid grid-cols-3 gap-3">
+              <ColorField
+                label="底色"
+                onChange={(backgroundColor) =>
+                  setForm({ ...form, backgroundColor })
+                }
+                value={form.backgroundColor}
+              />
+              <ColorField
+                label="文字"
+                onChange={(foregroundColor) =>
+                  setForm({ ...form, foregroundColor })
+                }
+                value={form.foregroundColor}
+              />
+              <ColorField
+                label="强调"
+                onChange={(accentColor) => setForm({ ...form, accentColor })}
+                value={form.accentColor}
+              />
+            </div>
+            <div
+              className="rounded-md px-4 py-4"
+              style={{
+                backgroundColor: form.backgroundColor,
+                color: form.foregroundColor,
+              }}
             >
-              <option value="">选择普通账号</option>
-              {candidates.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.nickname} ·{" "}
-                  {candidate.friendCode ?? candidate.email ?? candidate.id}
-                </option>
-              ))}
-            </select>
+              <p className="text-xs font-semibold opacity-75">Friemi Coupon</p>
+              <p className="mt-1 text-lg font-bold">
+                {form.title || "优惠券预览"}
+              </p>
+              <span
+                className="mt-3 block h-1 w-12 rounded-full"
+                style={{ backgroundColor: form.accentColor }}
+              />
+            </div>
             <Button
-              className="h-11 whitespace-nowrap"
-              disabled={!selectedProfileId || isAssigning}
+              className="h-11 min-w-36"
+              disabled={
+                isSaving || !form.title.trim() || !form.description.trim()
+              }
               type="submit"
             >
-              {isAssigning ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              {isSaving ? (
+                <Loader2
+                  aria-hidden="true"
+                  className="mr-2 h-4 w-4 animate-spin"
+                />
               ) : (
-                <Store className="mr-2 h-4 w-4" aria-hidden />
+                <TicketPlus aria-hidden="true" className="mr-2 h-4 w-4" />
               )}
-              升级并开通门店
+              保存优惠券
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <Card
-          className={cn(
-            "order-1 shadow-sm",
-            isCreateOpen
-              ? "lg:fixed lg:inset-0 lg:z-50 lg:flex lg:items-center lg:justify-center lg:rounded-none lg:border-0 lg:bg-black/40 lg:p-6 lg:shadow-none"
-              : "lg:hidden",
-          )}
-        >
-          <div
-            className={cn(
-              isCreateOpen &&
-                "lg:max-h-[90vh] lg:w-full lg:max-w-3xl lg:overflow-y-auto lg:rounded-lg lg:border lg:border-zinc-200 lg:bg-white lg:shadow-xl",
-            )}
-          >
-            <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle>新增合作商家</CardTitle>
-                <button
-                  type="button"
-                  aria-expanded={isCreateOpen}
-                  onClick={() => setIsCreateOpen((current) => !current)}
-                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-zinc-950 px-3 text-sm font-medium text-white transition hover:bg-zinc-800"
-                >
-                  <span className="lg:hidden">
-                    {isCreateOpen ? "收起" : "展开"}
-                  </span>
-                  <span className="hidden lg:inline">关闭</span>
-                  <ChevronDown
-                    className={
-                      isCreateOpen
-                        ? "h-4 w-4 rotate-180 transition"
-                        : "h-4 w-4 transition"
-                    }
-                    aria-hidden
-                  />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={
-                isCreateOpen
-                  ? "space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
-                  : "hidden space-y-4 p-4 pt-0 sm:p-5 sm:pt-0"
-              }
-            >
-              <p className="text-sm leading-6 text-zinc-600">
-                合作商家可以是咖啡馆、展馆、餐厅或活动机构。先维护基础资料，再在活动运营页关联到具体活动。
-              </p>
-              <form
-                className="grid gap-3 sm:gap-4"
-                onSubmit={submitMerchantForm}
-              >
-                <div className="space-y-3">
-                  <FormSectionTitle title="基本信息" />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormField label="商家名称 *">
-                      <Input
-                        className="h-9"
-                        value={merchantForm.name}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            name: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField
-                      label="URL 标识（可选）"
-                      hint="留空时会根据名称自动生成。"
-                    >
-                      <Input
-                        className="h-9"
-                        placeholder="paris-community-cafe"
-                        value={merchantForm.slug}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            slug: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                  </div>
-                  <FormField label="商家简介 *">
-                    <Textarea
-                      className="min-h-20"
-                      placeholder="一句话说明商家的类型、特色或适合关联的活动。"
-                      value={merchantForm.description}
-                      onChange={(e) =>
-                        setMerchantForm({
-                          ...merchantForm,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </FormField>
-                </div>
-
-                <div className="space-y-3 border-t border-black/5 pt-4">
-                  <FormSectionTitle title="地址信息" />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormField label="城市">
-                      <Input
-                        className="h-9"
-                        value={merchantForm.city}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            city: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField label="地址（可选）">
-                      <Input
-                        className="h-9"
-                        value={merchantForm.address}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            address: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormField label="纬度（可选）">
-                      <Input
-                        className="h-9"
-                        inputMode="decimal"
-                        placeholder="48.8566"
-                        value={merchantForm.latitude}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            latitude: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField label="经度（可选）">
-                      <Input
-                        className="h-9"
-                        inputMode="decimal"
-                        placeholder="2.3522"
-                        value={merchantForm.longitude}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            longitude: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                  </div>
-                </div>
-
-                <div className="space-y-3 border-t border-black/5 pt-4">
-                  <FormSectionTitle title="联系信息" />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormField label="官网（可选）">
-                      <Input
-                        className="h-9"
-                        placeholder="https://"
-                        value={merchantForm.websiteUrl}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            websiteUrl: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField label="联系邮箱（可选）">
-                      <Input
-                        className="h-9"
-                        type="email"
-                        value={merchantForm.contactEmail}
-                        onChange={(e) =>
-                          setMerchantForm({
-                            ...merchantForm,
-                            contactEmail: e.target.value,
-                          })
-                        }
-                      />
-                    </FormField>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="submit"
-                    disabled={!canCreateMerchant}
-                    className="min-w-32 whitespace-nowrap"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2
-                          className="mr-2 h-4 w-4 animate-spin"
-                          aria-hidden
-                        />
-                        创建中
-                      </>
-                    ) : (
-                      "创建合作商家"
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={isSaving}
-                    className="whitespace-nowrap"
-                    onClick={() => setMerchantForm(emptyMerchantForm())}
-                  >
-                    清空
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </div>
-        </Card>
-
-        <Card className="order-2 shadow-sm lg:order-1 lg:min-h-[24rem] lg:flex-1">
-          <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>商家列表</CardTitle>
-              <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-                {merchants.length} 个
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-            {merchants.length === 0 ? (
-              <div className="rounded-md border border-dashed border-black/15 bg-paper/70 px-4 py-10 text-center sm:py-12 lg:flex lg:min-h-56 lg:flex-col lg:items-center lg:justify-center">
-                <p className="text-sm font-medium text-ink">暂无商家</p>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
-                  先维护一个合作商家，之后创建或导入活动时可以直接关联到它的主页。
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsCreateOpen(true)}
-                  className="mt-5 inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  新增合作商家
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-3 lg:max-h-[calc(100vh-14rem)] lg:overflow-auto lg:pr-1">
-                {merchants.map((merchant) => (
-                  <article
-                    key={merchant.id}
-                    className="rounded-md border border-black/10 bg-white p-4 shadow-sm"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white">
-                            <Building2 className="h-4 w-4" aria-hidden />
-                          </span>
-                          <div className="min-w-0">
-                            <h2 className="truncate text-base font-semibold text-ink">
-                              {merchant.name}
-                            </h2>
-                            <p className="truncate text-xs text-zinc-500">
-                              /merchants/{merchant.slug}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="line-clamp-2 text-sm leading-6 text-zinc-600">
-                          {merchant.description}
-                        </p>
-                      </div>
-                      <Link
-                        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                        href={withLocale(locale, `/merchants/${merchant.slug}`)}
-                      >
-                        查看主页
-                      </Link>
-                    </div>
-
-                    <div className="mt-4 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
-                      <InfoLine
-                        icon={MapPin}
-                        text={merchant.address || merchant.city}
-                      />
-                      {merchant.websiteUrl ? (
-                        <InfoLine icon={Globe2} text={merchant.websiteUrl} />
-                      ) : null}
-                      {merchant.contactEmail ? (
-                        <InfoLine icon={Mail} text={merchant.contactEmail} />
-                      ) : null}
-                      <div className="text-sm font-medium text-zinc-700">
-                        关联活动：{merchant.activityCount}
-                      </div>
-                      {merchant.owner ? (
-                        <div className="text-sm font-medium text-emerald-700">
-                          店家账号：{merchant.owner.nickname}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 border-t border-black/5 pt-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Palette className="h-4 w-4 shrink-0 text-emerald-700" />
-                          <p className="text-sm font-semibold text-zinc-800">
-                            优惠券样式
-                          </p>
-                          <span className="text-xs text-zinc-500">
-                            {
-                              coupons.filter(
-                                (coupon) => coupon.merchantId === merchant.id,
-                              ).length
-                            }{" "}
-                            种
-                          </span>
-                        </div>
-                        <button
-                          className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800"
-                          onClick={() => {
-                            setCouponEditorMerchantId((current) =>
-                              current === merchant.id ? null : merchant.id,
-                            );
-                            setCouponForm(emptyCouponForm());
-                          }}
-                          type="button"
-                        >
-                          <TicketPlus className="h-4 w-4" />
-                          添加优惠券
-                        </button>
-                      </div>
-
-                      {platformCouponTemplates.length > 0 ? (
-                        <div className="mt-3 grid gap-3 rounded-md bg-emerald-50/60 p-3 ring-1 ring-emerald-100 sm:grid-cols-[9rem_minmax(0,1fr)]">
-                          {(() => {
-                            const selectedTemplate =
-                              platformCouponTemplates.find(
-                                (template) =>
-                                  template.key ===
-                                  (couponTemplateSelections[merchant.id] ??
-                                    platformCouponTemplates[0]?.key),
-                              ) ?? platformCouponTemplates[0];
-
-                            return selectedTemplate ? (
-                              <>
-                                <div className="overflow-hidden rounded-md bg-white ring-1 ring-black/10">
-                                  <Image
-                                    alt={selectedTemplate.title}
-                                    className="aspect-[4/3] h-full w-full object-cover"
-                                    height={1086}
-                                    sizes="144px"
-                                    src={selectedTemplate.imageUrl}
-                                    width={1448}
-                                  />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-emerald-800">
-                                    平台设计优惠券
-                                  </p>
-                                  <select
-                                    className="mt-2 h-10 w-full rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-zinc-900 outline-none focus:border-emerald-600"
-                                    onChange={(event) =>
-                                      setCouponTemplateSelections(
-                                        (current) => ({
-                                          ...current,
-                                          [merchant.id]: event.target.value,
-                                        }),
-                                      )
-                                    }
-                                    value={selectedTemplate.key}
-                                  >
-                                    {platformCouponTemplates.map((template) => (
-                                      <option
-                                        key={template.key}
-                                        value={template.key}
-                                      >
-                                        {template.title}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    className="mt-2 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-55"
-                                    disabled={
-                                      bindingTemplateMerchantId === merchant.id
-                                    }
-                                    onClick={() =>
-                                      void bindPlatformCoupon(merchant.id)
-                                    }
-                                    type="button"
-                                  >
-                                    {bindingTemplateMerchantId ===
-                                    merchant.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <TicketCheck className="h-4 w-4" />
-                                    )}
-                                    绑定到此门店
-                                  </button>
-                                </div>
-                              </>
-                            ) : null;
-                          })()}
-                        </div>
-                      ) : null}
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {coupons
-                          .filter((coupon) => coupon.merchantId === merchant.id)
-                          .map((coupon) => (
-                            <span
-                              className="inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs font-semibold ring-1 ring-black/10"
-                              key={coupon.id}
-                              style={{
-                                backgroundColor: coupon.backgroundColor,
-                                color: coupon.foregroundColor,
-                              }}
-                            >
-                              {coupon.imageUrl ? (
-                                <Image
-                                  alt=""
-                                  className="h-5 w-7 rounded-sm object-cover"
-                                  height={21}
-                                  src={coupon.imageUrl}
-                                  width={28}
-                                />
-                              ) : (
-                                <span
-                                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
-                                  style={{
-                                    backgroundColor: coupon.accentColor,
-                                  }}
-                                />
-                              )}
-                              {coupon.title}
-                            </span>
-                          ))}
-                      </div>
-
-                      {couponEditorMerchantId === merchant.id ? (
-                        <form
-                          className="mt-4 grid gap-3 border-t border-dashed border-black/10 pt-4"
-                          onSubmit={(event) =>
-                            submitCouponForm(event, merchant.id)
-                          }
-                        >
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <FormField label="优惠券名称 *">
-                              <Input
-                                className="h-10"
-                                maxLength={120}
-                                onChange={(event) =>
-                                  setCouponForm({
-                                    ...couponForm,
-                                    title: event.target.value,
-                                  })
-                                }
-                                value={couponForm.title}
-                              />
-                            </FormField>
-                            <FormField label="有效期（可选）">
-                              <Input
-                                className="h-10"
-                                onChange={(event) =>
-                                  setCouponForm({
-                                    ...couponForm,
-                                    expiresAt: event.target.value,
-                                  })
-                                }
-                                type="date"
-                                value={couponForm.expiresAt}
-                              />
-                            </FormField>
-                          </div>
-                          <FormField label="优惠内容 *">
-                            <Textarea
-                              className="min-h-20"
-                              maxLength={1200}
-                              onChange={(event) =>
-                                setCouponForm({
-                                  ...couponForm,
-                                  description: event.target.value,
-                                })
-                              }
-                              value={couponForm.description}
-                            />
-                          </FormField>
-                          <FormField label="使用规则（可选）">
-                            <Textarea
-                              className="min-h-16"
-                              maxLength={1200}
-                              onChange={(event) =>
-                                setCouponForm({
-                                  ...couponForm,
-                                  terms: event.target.value,
-                                })
-                              }
-                              value={couponForm.terms}
-                            />
-                          </FormField>
-                          <div className="grid grid-cols-3 gap-3">
-                            <ColorField
-                              label="底色"
-                              onChange={(backgroundColor) =>
-                                setCouponForm({
-                                  ...couponForm,
-                                  backgroundColor,
-                                })
-                              }
-                              value={couponForm.backgroundColor}
-                            />
-                            <ColorField
-                              label="文字"
-                              onChange={(foregroundColor) =>
-                                setCouponForm({
-                                  ...couponForm,
-                                  foregroundColor,
-                                })
-                              }
-                              value={couponForm.foregroundColor}
-                            />
-                            <ColorField
-                              label="强调"
-                              onChange={(accentColor) =>
-                                setCouponForm({
-                                  ...couponForm,
-                                  accentColor,
-                                })
-                              }
-                              value={couponForm.accentColor}
-                            />
-                          </div>
-                          <div
-                            className="rounded-md px-4 py-4 shadow-sm"
-                            style={{
-                              backgroundColor: couponForm.backgroundColor,
-                              color: couponForm.foregroundColor,
-                            }}
-                          >
-                            <p className="text-xs font-semibold opacity-75">
-                              Friemi Coupon
-                            </p>
-                            <p className="mt-1 text-lg font-bold">
-                              {couponForm.title || "优惠券预览"}
-                            </p>
-                            <span
-                              className="mt-3 block h-1 w-12 rounded-full"
-                              style={{
-                                backgroundColor: couponForm.accentColor,
-                              }}
-                            />
-                          </div>
-                          <Button
-                            className="h-10 w-fit min-w-32"
-                            disabled={
-                              isCouponSaving ||
-                              !couponForm.title.trim() ||
-                              !couponForm.description.trim()
-                            }
-                            type="submit"
-                          >
-                            {isCouponSaving ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <TicketPlus className="mr-2 h-4 w-4" />
-                            )}
-                            保存优惠券
-                          </Button>
-                        </form>
-                      ) : null}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <aside className="order-3 hidden lg:sticky lg:top-24 lg:order-2 lg:block lg:w-72 lg:shrink-0">
-          <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-ink">商家维护</p>
-              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-                {merchants.length} 个
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
-              商家资料只维护一次，后续在活动运营页选择关联，避免每次重复填写地点和联系方式。
-            </p>
-            <div className="mt-5 space-y-3 border-t border-black/5 pt-5">
-              <OperationStep number="1" text="新增合作商家的基础资料" />
-              <OperationStep number="2" text="在活动运营页关联到活动" />
-              <OperationStep number="3" text="前台商家主页自动展示相关活动" />
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white shadow-lg shadow-black/10 transition hover:bg-zinc-800"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              新增合作商家
-            </button>
-          </div>
-        </aside>
-      </div>
+        ) : null}
+      </section>
     </div>
   );
 }
 
-function OperationStep({ number, text }: { number: string; text: string }) {
+function FormSection({
+  children,
+  description,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  title: string;
+}) {
   return (
-    <div className="flex gap-3 text-sm text-zinc-600">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700">
-        {number}
-      </span>
-      <span className="leading-6">{text}</span>
+    <section className="space-y-4 border-b border-black/10 pb-7">
+      <div>
+        <h2 className="text-base font-bold text-ink">{title}</h2>
+        <p className="mt-1 text-sm text-zinc-500">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function MerchantSummary({
+  merchant,
+}: {
+  merchant: AdminMerchantListItem;
+}) {
+  return (
+    <div className="grid gap-3 border-y border-black/10 py-4 text-sm text-zinc-600 sm:grid-cols-2 lg:grid-cols-4">
+      <InfoLine icon={MapPin} text={merchant.address || merchant.city} />
+      <InfoLine
+        icon={UserRoundCheck}
+        text={
+          merchant.owner
+            ? `${merchant.owner.nickname}${merchant.owner.friendCode ? ` · ${merchant.owner.friendCode}` : ""}`
+            : "未绑定店家账号"
+        }
+      />
+      <InfoLine
+        icon={Building2}
+        text={`${merchant.activityCount} 个关联活动`}
+      />
+      {merchant.websiteUrl ? (
+        <InfoLine icon={Globe2} text={merchant.websiteUrl} />
+      ) : merchant.contactEmail ? (
+        <InfoLine icon={Mail} text={merchant.contactEmail} />
+      ) : (
+        <InfoLine icon={Mail} text="未填写联系方式" />
+      )}
     </div>
   );
 }
@@ -965,17 +901,9 @@ function OperationStep({ number, text }: { number: string; text: string }) {
 function InfoLine({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Icon className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+      <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" />
       <span className="truncate">{text}</span>
     </div>
-  );
-}
-
-function FormSectionTitle({ title }: { title: string }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
-      {title}
-    </p>
   );
 }
 
@@ -991,10 +919,10 @@ function ColorField({
   return (
     <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-zinc-600">
       {label}
-      <span className="flex h-10 min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-white px-2">
+      <span className="flex h-11 min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-white px-2">
         <input
           aria-label={label}
-          className="h-6 w-7 shrink-0 cursor-pointer border-0 bg-transparent p-0"
+          className="h-7 w-8 shrink-0 cursor-pointer border-0 bg-transparent p-0"
           onChange={(event) => onChange(event.target.value.toUpperCase())}
           type="color"
           value={value}
