@@ -83,6 +83,211 @@ export type WerewolfVoteResult = {
   totals: Record<number, number>;
 };
 
+export type WerewolfFlowRecordEvent = {
+  payload?: unknown;
+  type: string;
+};
+
+export function localizeWerewolfFlowText(
+  locale: string,
+  translations: { en: string; fr: string; "zh-CN": string },
+) {
+  if (locale === "zh-CN") {
+    return translations["zh-CN"];
+  }
+
+  return locale === "fr" ? translations.fr : translations.en;
+}
+
+export function formatWerewolfSeatLabel(seatNumber: number, locale: string) {
+  return localizeWerewolfFlowText(locale, {
+    "zh-CN": `${seatNumber}号`,
+    en: `seat ${seatNumber}`,
+    fr: `siège ${seatNumber}`,
+  });
+}
+
+export function getWerewolfNightActionLabel(
+  actionKind: string | null,
+  locale: string,
+) {
+  const labels: Record<string, { en: string; fr: string; "zh-CN": string }> = {
+    CUPID: {
+      "zh-CN": "丘比特连情侣",
+      en: "Cupid linked lovers",
+      fr: "Cupidon a lié les amoureux",
+    },
+    GUARD: {
+      "zh-CN": "守卫守护",
+      en: "Guard protected",
+      fr: "Le garde a protégé",
+    },
+    LOVERS: {
+      "zh-CN": "情侣确认",
+      en: "Lovers confirmed",
+      fr: "Amoureux confirmés",
+    },
+    SEER: {
+      "zh-CN": "预言家查验",
+      en: "Seer inspected",
+      fr: "La voyante a vérifié",
+    },
+    WITCH_ANTIDOTE: {
+      "zh-CN": "女巫使用解药",
+      en: "Witch used antidote",
+      fr: "La sorcière a utilisé l'antidote",
+    },
+    WITCH_PASS: {
+      "zh-CN": "女巫未用药",
+      en: "Witch passed",
+      fr: "La sorcière n'a rien utilisé",
+    },
+    WITCH_POISON: {
+      "zh-CN": "女巫使用毒药",
+      en: "Witch used poison",
+      fr: "La sorcière a utilisé le poison",
+    },
+    WOLF_KILL: {
+      "zh-CN": "狼人确认击杀",
+      en: "Pack confirmed kill",
+      fr: "Les loups ont confirmé leur cible",
+    },
+  };
+  const label = actionKind ? labels[actionKind] : null;
+
+  return label ? localizeWerewolfFlowText(locale, label) : (actionKind ?? "-");
+}
+
+export function getWerewolfFlowRecordLabel(
+  event: WerewolfFlowRecordEvent,
+  locale: string,
+) {
+  const payload =
+    event.payload && typeof event.payload === "object"
+      ? (event.payload as Record<string, unknown>)
+      : {};
+  const seatNumber = Number(payload.seatNumber);
+  const voterSeatNumber = Number(payload.voterSeatNumber);
+  const targetSeatNumber = Number(payload.targetSeatNumber);
+  const voterLabel = localizeWerewolfFlowText(locale, {
+    "zh-CN": formatWerewolfSeatLabel(voterSeatNumber, locale),
+    en: `Seat ${voterSeatNumber}`,
+    fr: `Le siège ${voterSeatNumber}`,
+  });
+  const targetLabel =
+    Number.isInteger(targetSeatNumber) && targetSeatNumber > 0
+      ? formatWerewolfSeatLabel(targetSeatNumber, locale)
+      : localizeWerewolfFlowText(locale, {
+          "zh-CN": "弃票",
+          en: "abstained",
+          fr: "s'est abstenu",
+        });
+  const seatLabel = localizeWerewolfFlowText(locale, {
+    "zh-CN": formatWerewolfSeatLabel(seatNumber, locale),
+    en: `Seat ${seatNumber}`,
+    fr: `Le siège ${seatNumber}`,
+  });
+
+  if (
+    event.type.endsWith("vote_submitted") &&
+    Number.isInteger(voterSeatNumber)
+  ) {
+    if (!(Number.isInteger(targetSeatNumber) && targetSeatNumber > 0)) {
+      return localizeWerewolfFlowText(locale, {
+        "zh-CN": `${voterLabel} 弃票`,
+        en: `${voterLabel} abstained`,
+        fr: `${voterLabel} s'est abstenu`,
+      });
+    }
+
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${voterLabel} 投给 ${targetLabel}`,
+      en: `${voterLabel} voted for ${targetLabel}`,
+      fr: `${voterLabel} a voté pour le ${targetLabel}`,
+    });
+  }
+
+  if (event.type === "werewolf_sheriff_candidate_joined") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 上警`,
+      en: `${seatLabel} entered the sheriff race`,
+      fr: `${seatLabel} se présente comme capitaine`,
+    });
+  }
+
+  if (event.type === "werewolf_sheriff_candidate_withdrew") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 退水`,
+      en: `${seatLabel} withdrew`,
+      fr: `${seatLabel} retire sa candidature`,
+    });
+  }
+
+  if (event.type === "werewolf_player_marked_dead") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 被标记死亡`,
+      en: `${seatLabel} was marked dead`,
+      fr: `${seatLabel} a été déclaré mort`,
+    });
+  }
+
+  if (event.type === "werewolf_player_revived") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 恢复存活`,
+      en: `${seatLabel} was revived`,
+      fr: `${seatLabel} revient en jeu`,
+    });
+  }
+
+  if (event.type === "werewolf_sheriff_assigned") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 获得警徽`,
+      en: `${seatLabel} became sheriff`,
+      fr: `${seatLabel} reçoit l'insigne de capitaine`,
+    });
+  }
+
+  if (event.type === "werewolf_sheriff_cleared") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": "警徽已移除",
+      en: "Sheriff badge removed",
+      fr: "L'insigne de capitaine a été retiré",
+    });
+  }
+
+  if (event.type === "werewolf_idiot_revealed") {
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": `${seatLabel} 白痴翻牌`,
+      en: `${seatLabel} revealed as the Idiot`,
+      fr: `${seatLabel} révèle son rôle d'Idiot`,
+    });
+  }
+
+  if (event.type.endsWith("vote_resolved")) {
+    const leaders = Array.isArray(payload.leaders)
+      ? payload.leaders
+          .map(Number)
+          .filter(Number.isInteger)
+          .map((leader) => formatWerewolfSeatLabel(leader, locale))
+          .join(locale === "zh-CN" ? "、" : ", ")
+      : "";
+
+    return leaders
+      ? localizeWerewolfFlowText(locale, {
+          "zh-CN": `投票结算：${leaders}`,
+          en: `Vote resolved: ${leaders}`,
+          fr: `Vote dépouillé : ${leaders}`,
+        })
+      : localizeWerewolfFlowText(locale, {
+          "zh-CN": "投票结算：无人当选或出局",
+          en: "Vote resolved: no one was selected",
+          fr: "Vote dépouillé : personne n'est élu ou éliminé",
+        });
+  }
+
+  return null;
+}
+
 export function getWerewolfNightActionSubmissionKey(actionKind: string) {
   return actionKind.startsWith("WITCH_") ? "WITCH" : actionKind;
 }
@@ -242,8 +447,6 @@ export function getWerewolfNightCues(
   locale: string,
 ): WerewolfNightCue[] {
   const roles = new Set(roleKeys.filter(isWerewolfRoleKey));
-  const isZh = locale === "zh-CN";
-  const isFr = locale === "fr";
   const cue = (
     key: string,
     title: string,
@@ -252,7 +455,7 @@ export function getWerewolfNightCues(
     roleKey: WerewolfRoleKey | null = null,
   ): WerewolfNightCue => ({ actionKind, key, lines, roleKey, title });
   const localized = (zh: string, en: string, fr: string) =>
-    isZh ? zh : isFr ? fr : en;
+    localizeWerewolfFlowText(locale, { "zh-CN": zh, en, fr });
   const cues: WerewolfNightCue[] = [
     cue("night_close", localized("入夜", "Night falls", "La nuit tombe"), [
       localized(

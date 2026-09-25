@@ -23,7 +23,11 @@ import {
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
   canUseWerewolfAntidote,
+  formatWerewolfSeatLabel,
+  getWerewolfFlowRecordLabel,
   getWerewolfNightCues,
+  getWerewolfNightActionLabel,
+  localizeWerewolfFlowText,
   shouldShowWerewolfSuggestedSeat,
   type WerewolfFlowState,
 } from "@/features/game-tools/werewolfFlow";
@@ -54,18 +58,20 @@ function getSeerResultNotice({
 }) {
   const resultLabel =
     result === "WEREWOLF"
-      ? locale === "zh-CN"
-        ? "狼人阵营"
-        : "Werewolf"
+      ? localizeWerewolfFlowText(locale, {
+          "zh-CN": "狼人阵营",
+          en: "Werewolf faction",
+          fr: "Camp des loups",
+        })
       : result === "THIRD_PARTY"
         ? thirdPartyLabel
-        : locale === "zh-CN"
-          ? "好人阵营"
-          : "Good";
+        : localizeWerewolfFlowText(locale, {
+            "zh-CN": "好人阵营",
+            en: "Good faction",
+            fr: "Camp des villageois",
+          });
 
-  return locale === "zh-CN"
-    ? `${targetSeatNumber}号：${resultLabel}`
-    : `Seat ${targetSeatNumber}: ${resultLabel}`;
+  return `${formatWerewolfSeatLabel(targetSeatNumber, locale)}: ${resultLabel}`;
 }
 
 type FlowEvent = {
@@ -141,7 +147,7 @@ function getCopy(locale: string) {
       poison: "Utiliser le poison",
       previous: "Retour",
       records: "Historique",
-      playerRecords: "Votes",
+      playerRecords: "Historique des votes",
       resolveVote: "Clore et compter",
       selectTarget: "Choisir un joueur",
       stages: {
@@ -265,127 +271,6 @@ function getCopy(locale: string) {
   };
 }
 
-function getActionLabel(actionKind: string | null, locale: string) {
-  const labels: Record<string, Record<string, string>> = {
-    CUPID: {
-      "zh-CN": "丘比特连情侣",
-      en: "Cupid linked lovers",
-      fr: "Cupidon a lié les amoureux",
-    },
-    GUARD: {
-      "zh-CN": "守卫守护",
-      en: "Guard protected",
-      fr: "Le garde a protégé",
-    },
-    LOVERS: {
-      "zh-CN": "情侣确认",
-      en: "Lovers confirmed",
-      fr: "Amoureux confirmés",
-    },
-    SEER: {
-      "zh-CN": "预言家查验",
-      en: "Seer inspected",
-      fr: "La voyante a vérifié",
-    },
-    WITCH_ANTIDOTE: {
-      "zh-CN": "女巫使用解药",
-      en: "Witch used antidote",
-      fr: "La sorcière a utilisé l'antidote",
-    },
-    WITCH_PASS: {
-      "zh-CN": "女巫未用药",
-      en: "Witch passed",
-      fr: "La sorcière n'a rien utilisé",
-    },
-    WITCH_POISON: {
-      "zh-CN": "女巫使用毒药",
-      en: "Witch used poison",
-      fr: "La sorcière a utilisé le poison",
-    },
-    WOLF_KILL: {
-      "zh-CN": "狼人确认击杀",
-      en: "Pack confirmed kill",
-      fr: "Les loups ont confirmé leur cible",
-    },
-  };
-
-  return actionKind
-    ? (labels[actionKind]?.[locale] ?? labels[actionKind]?.en ?? actionKind)
-    : "-";
-}
-
-function getRecordLabel(event: FlowEvent, locale: string) {
-  const payload =
-    event.payload && typeof event.payload === "object"
-      ? (event.payload as Record<string, unknown>)
-      : {};
-  const voter = Number(payload.voterSeatNumber);
-  const target = Number(payload.targetSeatNumber);
-  const targetLabel =
-    Number.isInteger(target) && target > 0
-      ? `${target}`
-      : locale === "zh-CN"
-        ? "弃票"
-        : "abstain";
-
-  if (event.type.endsWith("vote_submitted") && Number.isInteger(voter)) {
-    return locale === "zh-CN"
-      ? `${voter}号 投给 ${targetLabel}`
-      : `Seat ${voter} voted ${targetLabel}`;
-  }
-
-  if (event.type === "werewolf_sheriff_candidate_joined") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 上警`
-      : `Seat ${payload.seatNumber} entered the sheriff race`;
-  }
-
-  if (event.type === "werewolf_sheriff_candidate_withdrew") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 退水`
-      : `Seat ${payload.seatNumber} withdrew`;
-  }
-
-  if (event.type === "werewolf_player_marked_dead") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 被标记死亡`
-      : `Seat ${payload.seatNumber} was marked dead`;
-  }
-
-  if (event.type === "werewolf_player_revived") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 恢复存活`
-      : `Seat ${payload.seatNumber} was revived`;
-  }
-
-  if (event.type === "werewolf_sheriff_assigned") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 获得警徽`
-      : `Seat ${payload.seatNumber} became sheriff`;
-  }
-
-  if (event.type === "werewolf_sheriff_cleared") {
-    return locale === "zh-CN" ? "警徽已移除" : "Sheriff badge removed";
-  }
-
-  if (event.type === "werewolf_idiot_revealed") {
-    return locale === "zh-CN"
-      ? `${payload.seatNumber}号 白痴翻牌`
-      : `Seat ${payload.seatNumber} revealed as the Idiot`;
-  }
-
-  if (event.type.endsWith("vote_resolved")) {
-    const leaders = Array.isArray(payload.leaders)
-      ? payload.leaders.join("、")
-      : "";
-    return locale === "zh-CN"
-      ? `投票结算${leaders ? `：${leaders}号` : "：无人当选/出局"}`
-      : `Vote resolved${leaders ? `: ${leaders}` : ""}`;
-  }
-
-  return null;
-}
-
 export function WerewolfFlowPanel({
   events,
   flow,
@@ -499,16 +384,22 @@ export function WerewolfFlowPanel({
   )?.targetSeatNumber;
   const nightResolution = wolfAttackSeatNumber
     ? guardTargetSeatNumber === wolfAttackSeatNumber && witchUsedAntidote
-      ? locale === "zh-CN"
-        ? `夜间建议：${wolfAttackSeatNumber}号同守同救，仍然死亡。`
-        : `Night result: seat ${wolfAttackSeatNumber} was both guarded and saved, so still dies.`
+      ? localizeWerewolfFlowText(locale, {
+          "zh-CN": `夜间建议：${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)}同守同救，仍然死亡。`,
+          en: `Night result: ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} was both guarded and saved, so still dies.`,
+          fr: `Résultat de la nuit : le ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} a été protégé et sauvé, il meurt donc quand même.`,
+        })
       : guardTargetSeatNumber === wolfAttackSeatNumber || witchUsedAntidote
-        ? locale === "zh-CN"
-          ? `夜间建议：${wolfAttackSeatNumber}号获救。`
-          : `Night result: seat ${wolfAttackSeatNumber} survives.`
-        : locale === "zh-CN"
-          ? `夜间建议：${wolfAttackSeatNumber}号死亡。`
-          : `Night result: seat ${wolfAttackSeatNumber} dies.`
+        ? localizeWerewolfFlowText(locale, {
+            "zh-CN": `夜间建议：${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)}获救。`,
+            en: `Night result: ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} survives.`,
+            fr: `Résultat de la nuit : le ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} survit.`,
+          })
+        : localizeWerewolfFlowText(locale, {
+            "zh-CN": `夜间建议：${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)}死亡。`,
+            en: `Night result: ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} dies.`,
+            fr: `Résultat de la nuit : le ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} meurt.`,
+          })
     : null;
   const isWolfRole = ["werewolf", "wolf_king", "white_wolf_king"].includes(
     roleKey ?? "",
@@ -557,7 +448,10 @@ export function WerewolfFlowPanel({
     !ownSubmission &&
     (!isSheriffVote || !flow.candidateSeatNumbers.includes(seatNumber));
   const records = events
-    .map((event) => ({ event, label: getRecordLabel(event, locale) }))
+    .map((event) => ({
+      event,
+      label: getWerewolfFlowRecordLabel(event, locale),
+    }))
     .filter((entry): entry is { event: FlowEvent; label: string } =>
       Boolean(entry.label),
     );
@@ -742,9 +636,12 @@ export function WerewolfFlowPanel({
               {t.factionAlerts[visibleFactionAlert.kind]}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#66706C]">
-              {locale === "zh-CN"
-                ? "系统只做提醒，不会自动结束游戏。请法官确认现场情况后选择胜利阵营。"
-                : "This is an alert only. The judge still confirms the winning faction."}
+              {localizeWerewolfFlowText(locale, {
+                "zh-CN":
+                  "系统只做提醒，不会自动结束游戏。请法官确认现场情况后选择胜利阵营。",
+                en: "This is an alert only. The judge still confirms the winning faction.",
+                fr: "Ceci est uniquement une alerte. Le maître confirme toujours le camp vainqueur.",
+              })}
             </p>
             <SubmitButton className="mt-5 h-11 w-full rounded-full bg-[#18362D] text-sm font-bold text-white">
               {t.close}
@@ -777,9 +674,11 @@ export function WerewolfFlowPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold">{stageLabel}</p>
                 <p className="text-[11px] font-semibold text-[#7B8581]">
-                  {locale === "zh-CN"
-                    ? `第 ${flow.dayNumber} 天`
-                    : `Day ${flow.dayNumber}`}
+                  {localizeWerewolfFlowText(locale, {
+                    "zh-CN": `第 ${flow.dayNumber} 天`,
+                    en: `Day ${flow.dayNumber}`,
+                    fr: `Jour ${flow.dayNumber}`,
+                  })}
                 </p>
               </div>
               <button
@@ -818,9 +717,11 @@ export function WerewolfFlowPanel({
                   ) ? (
                     <div className="mb-4 border-b border-[#E5E2D3] pb-4">
                       <p className="mb-2 text-xs font-bold text-[#1F6E4C]">
-                        {locale === "zh-CN"
-                          ? "法官可见 · 夜间记录"
-                          : "Judge only · Night history"}
+                        {localizeWerewolfFlowText(locale, {
+                          "zh-CN": "法官可见 · 夜间记录",
+                          en: "Judge only · Night history",
+                          fr: "Maître uniquement · Historique de nuit",
+                        })}
                       </p>
                       <div className="divide-y divide-[#E5E2D3]">
                         {submissions
@@ -834,12 +735,23 @@ export function WerewolfFlowPanel({
                               key={`${submission.roundIndex}-${submission.voterSeatNumber}-${index}`}
                             >
                               <span className="font-semibold">
-                                {getActionLabel(submission.actionKind, locale)}
+                                {getWerewolfNightActionLabel(
+                                  submission.actionKind,
+                                  locale,
+                                )}
                               </span>
                               <span className="font-bold text-[#1F6E4C]">
-                                {submission.targetSeatNumber ?? "-"}
+                                {submission.targetSeatNumber
+                                  ? formatWerewolfSeatLabel(
+                                      submission.targetSeatNumber,
+                                      locale,
+                                    )
+                                  : "-"}
                                 {submission.secondaryTargetSeatNumber
-                                  ? ` + ${submission.secondaryTargetSeatNumber}`
+                                  ? ` + ${formatWerewolfSeatLabel(
+                                      submission.secondaryTargetSeatNumber,
+                                      locale,
+                                    )}`
                                   : ""}
                               </span>
                             </div>
@@ -904,15 +816,19 @@ export function WerewolfFlowPanel({
                         {suggestedSeat &&
                         shouldShowWerewolfSuggestedSeat(flow.stage) ? (
                           <p className="mt-2 text-sm font-semibold text-[#9B2433]">
-                            {locale === "zh-CN"
-                              ? `结果：${suggestedSeat.seatNumber}号 ${suggestedSeat.displayName}`
-                              : `Result: seat ${suggestedSeat.seatNumber}`}
+                            {localizeWerewolfFlowText(locale, {
+                              "zh-CN": `结果：${formatWerewolfSeatLabel(suggestedSeat.seatNumber, locale)} ${suggestedSeat.displayName}`,
+                              en: `Result: ${formatWerewolfSeatLabel(suggestedSeat.seatNumber, locale)} ${suggestedSeat.displayName}`,
+                              fr: `Résultat : ${formatWerewolfSeatLabel(suggestedSeat.seatNumber, locale)} ${suggestedSeat.displayName}`,
+                            })}
                           </p>
                         ) : flow.stage.endsWith("RESULT") ? (
                           <p className="mt-2 text-sm font-semibold text-[#66706C]">
-                            {locale === "zh-CN"
-                              ? "第二轮仍平票，无人当选或出局。"
-                              : "The second vote tied. No one is selected."}
+                            {localizeWerewolfFlowText(locale, {
+                              "zh-CN": "第二轮仍平票，无人当选或出局。",
+                              en: "The second vote tied. No one is selected.",
+                              fr: "Le second vote est à égalité. Personne n'est élu ou éliminé.",
+                            })}
                           </p>
                         ) : null}
                       </div>
@@ -930,18 +846,29 @@ export function WerewolfFlowPanel({
                             >
                               <span className="font-semibold">
                                 {submission.kind === "WEREWOLF_NIGHT_ACTION"
-                                  ? getActionLabel(
+                                  ? getWerewolfNightActionLabel(
                                       submission.actionKind,
                                       locale,
                                     )
-                                  : `${submission.voterSeatNumber}${locale === "zh-CN" ? "号" : ""}`}
+                                  : submission.voterSeatNumber
+                                    ? formatWerewolfSeatLabel(
+                                        submission.voterSeatNumber,
+                                        locale,
+                                      )
+                                    : "-"}
                               </span>
                               <span className="font-bold text-[#1F6E4C]">
                                 {submission.targetSeatNumber
-                                  ? `${submission.targetSeatNumber}${locale === "zh-CN" ? "号" : ""}`
+                                  ? formatWerewolfSeatLabel(
+                                      submission.targetSeatNumber,
+                                      locale,
+                                    )
                                   : t.abstain}
                                 {submission.secondaryTargetSeatNumber
-                                  ? ` + ${submission.secondaryTargetSeatNumber}${locale === "zh-CN" ? "号" : ""}`
+                                  ? ` + ${formatWerewolfSeatLabel(
+                                      submission.secondaryTargetSeatNumber,
+                                      locale,
+                                    )}`
                                   : ""}
                               </span>
                             </div>
@@ -954,9 +881,11 @@ export function WerewolfFlowPanel({
                           {nightResolution ? <p>{nightResolution}</p> : null}
                           {witchPoisonTargetSeatNumber ? (
                             <p>
-                              {locale === "zh-CN"
-                                ? `毒药目标：${witchPoisonTargetSeatNumber}号。`
-                                : `Poison target: seat ${witchPoisonTargetSeatNumber}.`}
+                              {localizeWerewolfFlowText(locale, {
+                                "zh-CN": `毒药目标：${formatWerewolfSeatLabel(witchPoisonTargetSeatNumber, locale)}。`,
+                                en: `Poison target: ${formatWerewolfSeatLabel(witchPoisonTargetSeatNumber, locale)}.`,
+                                fr: `Cible du poison : ${formatWerewolfSeatLabel(witchPoisonTargetSeatNumber, locale)}.`,
+                              })}
                             </p>
                           ) : null}
                         </div>
@@ -1179,14 +1108,16 @@ function PlayerFlowAction({
   }
 
   if (!canActAtNight || !currentCue) {
-    const candidates = activeCandidates.length
-      ? ` ${activeCandidates.join("、")}`
-      : "";
+    const candidates = activeCandidates
+      .map((seatNumber) => formatWerewolfSeatLabel(seatNumber, locale))
+      .join(locale === "zh-CN" ? "、" : ", ");
     return candidates ? (
       <p className="text-center text-sm font-semibold text-[#66706C]">
-        {locale === "zh-CN"
-          ? `候选人：${candidates}`
-          : `Candidates:${candidates}`}
+        {localizeWerewolfFlowText(locale, {
+          "zh-CN": `候选人：${candidates}`,
+          en: `Candidates: ${candidates}`,
+          fr: `Candidats : ${candidates}`,
+        })}
       </p>
     ) : null;
   }
@@ -1205,12 +1136,16 @@ function PlayerFlowAction({
       <div className="space-y-3">
         <p className="text-center text-sm font-bold text-[#9B2433]">
           {wolfAttackSeatNumber
-            ? locale === "zh-CN"
-              ? `今晚 ${wolfAttackSeatNumber} 号被袭击`
-              : `Seat ${wolfAttackSeatNumber} was attacked`
-            : locale === "zh-CN"
-              ? "今晚狼人未确认击杀目标"
-              : "No confirmed attack target"}
+            ? localizeWerewolfFlowText(locale, {
+                "zh-CN": `今晚 ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)}被袭击`,
+                en: `${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} was attacked tonight`,
+                fr: `Le ${formatWerewolfSeatLabel(wolfAttackSeatNumber, locale)} a été attaqué cette nuit`,
+              })
+            : localizeWerewolfFlowText(locale, {
+                "zh-CN": "今晚狼人未确认击杀目标",
+                en: "No confirmed attack target tonight",
+                fr: "Aucune cible d'attaque confirmée cette nuit",
+              })}
         </p>
         {canUseWerewolfAntidote({
           hasWolfKill: Boolean(wolfAttackSeatNumber),
