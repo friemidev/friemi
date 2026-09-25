@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ExternalLink,
   MapPin,
+  Orbit,
   PencilLine,
   Repeat2,
   ShieldAlert,
@@ -1902,6 +1903,27 @@ export async function ActivityDetailPageContent({
         <h1 className="text-[1.65rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
+        {activity.linkedPlanets.length > 0 ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 pt-1 text-xs font-semibold text-[#156240]">
+            <span className="inline-flex shrink-0 items-center gap-1 text-[#6C746A]">
+              <Orbit className="h-3.5 w-3.5" />
+              {locale === "fr"
+                ? "Planète"
+                : locale === "en"
+                  ? "Planet"
+                  : "所属星球"}
+            </span>
+            {activity.linkedPlanets.map((planet) => (
+              <Link
+                className="max-w-full truncate font-bold underline decoration-[#9FC8AA] underline-offset-4 transition hover:text-[#0D4B31]"
+                href={withLocale(locale, `/planets/${planet.slug}`)}
+                key={planet.id}
+              >
+                {planet.name}
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="relative aspect-[1.75/1] overflow-hidden rounded-[1.45rem] bg-moss shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:aspect-[16/9] md:aspect-[2.35/1]">
         <ActivityCoverImage

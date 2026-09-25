@@ -24,6 +24,7 @@ import { formatActivityDate } from "@chill-club/shared";
 import {
   BadgeCheck,
   BellOff,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -88,6 +89,7 @@ import {
   type CreateMomentState,
 } from "@/features/moments/actions/momentActions";
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
+import type { MomentLinkableActivityViewModel } from "@/features/moments/queries/getMomentFeed";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
@@ -128,6 +130,7 @@ type FootprintsMobilePageProps = {
   momentFeedLoaded: boolean;
   momentFeedNextCursor: string | null;
   moments: MomentFeedItemViewModel[];
+  linkableActivities: MomentLinkableActivityViewModel[];
   canCreatePlanet: boolean;
   planetChats: PlanetChatRosterItemViewModel[];
   planets: PlanetSquare;
@@ -297,6 +300,9 @@ const copyByLocale = {
     visibilityFriends: "互关可见",
     visibilityLabel: "发布范围",
     visibilityPublic: "公开",
+    linkedActivityLabel: "关联聚吧",
+    linkedActivityNone: "不关联聚吧",
+    linkedActivityPrefix: "来自聚吧",
     like: "点赞",
     comment: "评论",
     gift: "送礼",
@@ -400,6 +406,9 @@ const copyByLocale = {
     visibilityFriends: "Mutual",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
+    linkedActivityLabel: "Link a meetup",
+    linkedActivityNone: "No linked meetup",
+    linkedActivityPrefix: "From meetup",
     like: "Like",
     comment: "Comment",
     gift: "Gift",
@@ -509,6 +518,9 @@ const copyByLocale = {
     visibilityFriends: "Mutuels",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
+    linkedActivityLabel: "Associer une rencontre",
+    linkedActivityNone: "Aucune rencontre liée",
+    linkedActivityPrefix: "Rencontre",
     like: "J'aime",
     comment: "Commenter",
     gift: "Cadeau",
@@ -912,6 +924,19 @@ export function FeedCard({
               showDetailAction
             />
           </div>
+
+          {moment.activity ? (
+            <Link
+              className="ml-[3.25rem] mt-1 inline-flex max-w-[calc(100%-3.25rem)] items-center gap-1.5 text-xs font-bold text-[#156240] transition hover:text-[#0D4B31]"
+              href={withLocale(locale, `/lobby/${moment.activity.id}`)}
+            >
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              <span className="shrink-0 text-[#6C746A]">
+                {copy.linkedActivityPrefix}
+              </span>
+              <span className="truncate">{moment.activity.title}</span>
+            </Link>
+          ) : null}
 
           {moment.resharedMoment ? (
             <SharedMomentPreview
@@ -1931,6 +1956,7 @@ function MomentCommentForm({
 
 const createMomentInitialState: CreateMomentState = {
   values: {
+    activityId: "",
     content: "",
     imageUrls: [],
     visibility: "PUBLIC",
@@ -2423,10 +2449,12 @@ function MomentVisibilitySelector({
 
 function MomentComposer({
   copy,
+  linkableActivities,
   locale,
   profile,
 }: {
   copy: ReturnType<typeof getFootprintsCopy>;
+  linkableActivities: MomentLinkableActivityViewModel[];
   locale: string;
   profile: FootprintsViewerProfile | null;
 }) {
@@ -2525,6 +2553,26 @@ function MomentComposer({
         className="mt-3 min-h-[6.4rem] w-full resize-none border-0 border-b border-[#E3DCC5] bg-transparent px-0 py-2 text-sm font-semibold leading-6 outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758]"
         defaultValue={state.ok ? "" : state.values?.content}
       />
+
+      {linkableActivities.length > 0 ? (
+        <label className="mt-3 flex min-w-0 items-center gap-2 text-xs font-bold text-[#156240]">
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          <span className="shrink-0">{copy.linkedActivityLabel}</span>
+          <select
+            key={state.ok ? "moment-activity-empty" : "moment-activity-active"}
+            className="min-w-0 flex-1 appearance-none truncate border-0 bg-transparent py-2 pr-1 text-right text-xs font-semibold text-[#1D1D1B] outline-none"
+            defaultValue={state.ok ? "" : (state.values?.activityId ?? "")}
+            name="activityId"
+          >
+            <option value="">{copy.linkedActivityNone}</option>
+            {linkableActivities.map((activity) => (
+              <option key={activity.id} value={activity.id}>
+                {activity.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <MomentImageUploadGrid
@@ -3647,6 +3695,7 @@ export function FootprintsMobilePage({
   momentFeedLoaded,
   momentFeedNextCursor,
   moments: initialMoments,
+  linkableActivities,
   canCreatePlanet: initialCanCreatePlanet,
   planetChats: initialPlanetChats,
   planets: initialPlanets,
@@ -4310,7 +4359,12 @@ export function FootprintsMobilePage({
           {activeTab === "moment" ? (
             <section className="mt-5 space-y-5 md:mt-8 lg:grid lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
               <div className="space-y-4 lg:sticky lg:top-24">
-                <MomentComposer copy={copy} locale={locale} profile={profile} />
+                <MomentComposer
+                  copy={copy}
+                  linkableActivities={linkableActivities}
+                  locale={locale}
+                  profile={profile}
+                />
 
                 <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] lg:grid lg:w-full lg:grid-cols-2 lg:gap-2 lg:overflow-visible lg:rounded-none lg:p-0 lg:ring-0 [&::-webkit-scrollbar]:hidden">
                   {feedScopeTabs.map((tab) => (

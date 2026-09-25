@@ -596,6 +596,17 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     );
   }
 
+  .planet-detail-page {
+    padding-bottom: calc(
+      var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)
+    );
+  }
+
+  html[data-friemi-android-app="true"]
+    .app-layout-shell:has(.planet-detail-page) {
+    padding-bottom: 0;
+  }
+
   /*
    * Opt-in safe-area helpers for PageContainer (see its `mobileSafeTop` /
    * `mobileSafeBottom` props): pages whose mobile header/nav is hidden

@@ -17,6 +17,7 @@ type PlanetMomentCarouselProps = {
   content: string;
   createdAtLabel: string;
   imageUrls: string[];
+  videoUrls: string[];
   isLiked: boolean;
   likeCount: number;
   locale: string;
@@ -32,6 +33,7 @@ export function PlanetMomentCarousel({
   content,
   createdAtLabel,
   imageUrls,
+  videoUrls,
   isLiked,
   likeCount,
   locale,
@@ -44,44 +46,51 @@ export function PlanetMomentCarousel({
       ? {
           fallback: "Moment marquant",
           imageAlt: "Moment marquant de la planète",
+          video: "Vidéo de la planète",
           like: "J'aime",
         }
       : locale === "en"
         ? {
             fallback: "Planet moment",
             imageAlt: "Planet moment",
+            video: "Planet video",
             like: "Like",
           }
         : {
             fallback: "精彩瞬间",
             imageAlt: "星球精彩瞬间",
+            video: "星球视频",
             like: "点赞",
           };
   const touchStartXRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const visibleComments = comments.slice(0, 6);
-  const hasMultipleImages = imageUrls.length > 1;
+  const mediaItems = [
+    ...imageUrls.map((url) => ({ kind: "image" as const, url })),
+    ...videoUrls.map((url) => ({ kind: "video" as const, url })),
+  ];
+  const hasMultipleMedia = mediaItems.length > 1;
 
   useEffect(() => {
-    if (!hasMultipleImages || hasUserInteracted) return;
+    if (!hasMultipleMedia || hasUserInteracted) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % imageUrls.length);
+      setActiveIndex((current) => (current + 1) % mediaItems.length);
     }, 3600);
 
     return () => window.clearInterval(timer);
-  }, [hasMultipleImages, hasUserInteracted, imageUrls.length]);
+  }, [hasMultipleMedia, hasUserInteracted, mediaItems.length]);
 
   function stopAutoSlide() {
     setHasUserInteracted(true);
   }
 
-  function goToImage(nextIndex: number) {
-    if (!hasMultipleImages) return;
+  function goToMedia(nextIndex: number) {
+    if (!hasMultipleMedia) return;
     stopAutoSlide();
-    setActiveIndex((nextIndex + imageUrls.length) % imageUrls.length);
+    setActiveIndex((nextIndex + mediaItems.length) % mediaItems.length);
   }
 
   function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
@@ -91,18 +100,18 @@ export function PlanetMomentCarousel({
 
     const deltaX = event.changedTouches[0].clientX - startX;
     if (Math.abs(deltaX) < 32) return;
-    goToImage(activeIndex + (deltaX < 0 ? 1 : -1));
+    goToMedia(activeIndex + (deltaX < 0 ? 1 : -1));
   }
 
   return (
     <div className="w-full">
       <div className="relative overflow-hidden rounded-[1.35rem] bg-[#f6f1ea]">
-        {imageUrls.length ? (
+        {mediaItems.length ? (
           <div
             className="flex transition-transform duration-500 ease-out"
             onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") goToImage(activeIndex - 1);
-              if (event.key === "ArrowRight") goToImage(activeIndex + 1);
+              if (event.key === "ArrowLeft") goToMedia(activeIndex - 1);
+              if (event.key === "ArrowRight") goToMedia(activeIndex + 1);
             }}
             onTouchEnd={handleTouchEnd}
             onTouchStart={(event) => {
@@ -111,16 +120,27 @@ export function PlanetMomentCarousel({
             tabIndex={0}
             style={{ transform: `translateX(-${activeIndex * 100}%)` }}
           >
-            {imageUrls.map((imageUrl, index) => (
+            {mediaItems.map((media, index) => (
               <div
                 className="relative flex aspect-[4/5] w-full shrink-0 items-center justify-center bg-[#f6f1ea]"
-                key={`${imageUrl}-${index}`}
+                key={`${media.url}-${index}`}
               >
-                <img
-                  alt={copy.imageAlt}
-                  className="max-h-full max-w-full object-contain"
-                  src={imageUrl}
-                />
+                {media.kind === "image" ? (
+                  <img
+                    alt={copy.imageAlt}
+                    className="max-h-full max-w-full object-contain"
+                    src={media.url}
+                  />
+                ) : (
+                  <video
+                    aria-label={copy.video}
+                    className="h-full w-full object-contain"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src={media.url}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -130,18 +150,18 @@ export function PlanetMomentCarousel({
           </div>
         )}
 
-        {hasMultipleImages ? (
+        {hasMultipleMedia ? (
           <div className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-[#245f43] shadow-sm backdrop-blur-sm">
-            {activeIndex + 1}/{imageUrls.length}
+            {activeIndex + 1}/{mediaItems.length}
           </div>
         ) : null}
 
-        {hasMultipleImages ? (
+        {hasMultipleMedia ? (
           <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-            {imageUrls.map((imageUrl, index) => (
+            {mediaItems.map((media, index) => (
               <span
                 className={`h-1.5 rounded-full shadow-sm transition-all ${activeIndex === index ? "w-5 bg-[#1f6a4a]" : "w-1.5 bg-white/80"}`}
-                key={`${imageUrl}-dot-${index}`}
+                key={`${media.url}-dot-${index}`}
               />
             ))}
           </div>

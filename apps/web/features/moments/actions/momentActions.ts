@@ -16,6 +16,7 @@ const momentCommentMaxLength = 500;
 
 const createMomentSchema = z
   .object({
+    activityId: z.string().trim().max(100).optional(),
     content: z.string().trim().max(momentContentMaxLength).optional(),
     imageUrls: z.array(z.string().trim().url()).max(6).default([]),
     locale: z.string().min(1).default("zh-CN"),
@@ -59,6 +60,7 @@ export type CreateMomentState = {
   formError?: string;
   ok?: boolean;
   values?: {
+    activityId?: string;
     content?: string;
     imageUrls?: string[];
     visibility?: "FRIENDS" | "PUBLIC";
@@ -95,6 +97,8 @@ function getMomentActionCopy(locale: string) {
       createFailed: "Post failed. Please try again later.",
       invalidComment: "Write a comment first.",
       invalidMoment: "Write something or add a photo first.",
+      linkedActivityUnavailable:
+        "This meetup is unavailable or is not one of your meetups.",
       momentUnavailable: "This moment is unavailable.",
       repostFailed: "Repost failed. Please try again later.",
     };
@@ -106,6 +110,8 @@ function getMomentActionCopy(locale: string) {
       createFailed: "La publication a échoué. Réessayez plus tard.",
       invalidComment: "Écrivez d'abord un commentaire.",
       invalidMoment: "Ajoutez un texte ou une photo.",
+      linkedActivityUnavailable:
+        "Cette rencontre n'est pas disponible ou ne fait pas partie des vôtres.",
       momentUnavailable: "Ce moment n'est pas disponible.",
       repostFailed: "Le partage a échoué. Réessayez plus tard.",
     };
@@ -116,6 +122,7 @@ function getMomentActionCopy(locale: string) {
     createFailed: "发布失败，请稍后重试。",
     invalidComment: "先写点评论内容。",
     invalidMoment: "写点内容或添加一张图片。",
+    linkedActivityUnavailable: "这个聚吧不可用，或不在你参与和管理的聚吧中。",
     momentUnavailable: "这条足迹暂不可操作。",
     repostFailed: "转发失败，请稍后再试。",
   };
@@ -142,6 +149,7 @@ export async function createMomentAction(
   formData: FormData,
 ): Promise<CreateMomentState> {
   const rawInput = {
+    activityId: getString(formData, "activityId"),
     content: getString(formData, "content"),
     imageUrls: [
       ...getStringList(formData, "imageUrls"),
@@ -158,6 +166,7 @@ export async function createMomentAction(
       formError: copy.invalidMoment,
       fieldErrors: result.error.flatten().fieldErrors,
       values: {
+        activityId: rawInput.activityId,
         content: rawInput.content,
         imageUrls: rawInput.imageUrls,
         visibility:
@@ -168,13 +177,62 @@ export async function createMomentAction(
     };
   }
 
+  let linkedPlanetSlugs: string[] = [];
+
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
       "/footprints",
     );
+    const linkedActivity = result.data.activityId
+      ? await prisma.activity.findFirst({
+          where: {
+            id: result.data.activityId,
+            visibility: "PUBLIC",
+            status: { notIn: ["DRAFT", "CANCELLED"] },
+            OR: [
+              { organizerId: profile.id },
+              {
+                coManagers: {
+                  some: { managerProfileId: profile.id },
+                },
+              },
+              {
+                participants: {
+                  some: {
+                    userProfileId: profile.id,
+                    status: { in: ["JOINED", "APPROVED"] },
+                  },
+                },
+              },
+            ],
+          },
+          select: {
+            id: true,
+            planetLinks: {
+              select: { planet: { select: { slug: true } } },
+            },
+          },
+        })
+      : null;
+
+    if (result.data.activityId && !linkedActivity) {
+      return {
+        formError: copy.linkedActivityUnavailable,
+        values: {
+          activityId: result.data.activityId,
+          content: result.data.content,
+          imageUrls: result.data.imageUrls,
+          visibility: result.data.visibility,
+        },
+      };
+    }
+
+    linkedPlanetSlugs =
+      linkedActivity?.planetLinks.map((link) => link.planet.slug) ?? [];
     const moment = await prisma.moment.create({
       data: {
+        activityId: linkedActivity?.id ?? null,
         authorId: profile.id,
         content: result.data.content?.trim() || null,
         visibility: result.data.visibility,
@@ -201,6 +259,7 @@ export async function createMomentAction(
         entityType: "moment",
         sourceSurface: "footprints",
         properties: {
+          activity_id: linkedActivity?.id ?? null,
           image_count: result.data.imageUrls.length,
           visibility: result.data.visibility,
         },
@@ -221,6 +280,9 @@ export async function createMomentAction(
     return {
       formError: copy.createFailed,
       values: {
+        activityId: result.success
+          ? result.data.activityId
+          : rawInput.activityId,
         content: result.success ? result.data.content : rawInput.content,
         imageUrls: result.success ? result.data.imageUrls : rawInput.imageUrls,
         visibility: result.success
@@ -233,10 +295,19 @@ export async function createMomentAction(
   }
 
   revalidateMomentSurfaces(result.data.locale);
+  if (result.data.activityId) {
+    revalidatePath(
+      withLocale(result.data.locale, `/lobby/${result.data.activityId}`),
+    );
+  }
+  linkedPlanetSlugs.forEach((slug) => {
+    revalidatePath(withLocale(result.data.locale, `/planets/${slug}`));
+  });
 
   return {
     ok: true,
     values: {
+      activityId: "",
       content: "",
       imageUrls: [],
       visibility: "PUBLIC",
@@ -268,6 +339,14 @@ export async function deleteMomentAction(formData: FormData) {
       id: result.data.momentId,
     },
     select: {
+      activityId: true,
+      activity: {
+        select: {
+          planetLinks: {
+            select: { planet: { select: { slug: true } } },
+          },
+        },
+      },
       id: true,
       resharedMomentId: true,
     },
@@ -329,6 +408,16 @@ export async function deleteMomentAction(formData: FormData) {
     revalidatePath(
       withLocale(result.data.locale, `/footprints/${moment.resharedMomentId}`),
     );
+  }
+  if (moment.activityId) {
+    revalidatePath(
+      withLocale(result.data.locale, `/lobby/${moment.activityId}`),
+    );
+    moment.activity?.planetLinks.forEach((link) => {
+      revalidatePath(
+        withLocale(result.data.locale, `/planets/${link.planet.slug}`),
+      );
+    });
   }
 
   if (result.data.redirectPath?.startsWith("/")) {

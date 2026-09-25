@@ -8,7 +8,10 @@ export function canInteractWithPlanetMoment(membership: PlanetMembershipState) {
 }
 
 export function canPublishPlanetMoment(membership: PlanetMembershipState) {
-  return membership?.status === "APPROVED" && membership.role === "OWNER";
+  return (
+    membership?.status === "APPROVED" &&
+    (membership.role === "OWNER" || membership.role === "ADMIN")
+  );
 }
 
 export function buildPlanetMomentTargetWhere(

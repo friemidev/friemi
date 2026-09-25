@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, Plus, X } from "lucide-react";
+import { ImagePlus, Plus, Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { createPlanetMomentAction } from "@/features/planets/actions/planetActions";
 import {
@@ -8,6 +8,10 @@ import {
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
 import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
+import {
+  acceptedPlanetVideoInputTypes,
+  getPlanetVideoUploadValidationError,
+} from "@/lib/video-upload-policy";
 
 const maxMomentImageCount = 12;
 
@@ -22,6 +26,8 @@ const copy = {
     invalidFile: "请选择支持的图片，所有图片最大 10MB。",
     partialUploadFailed: "有图片上传失败，请稍后重试。",
     uploadFailed: "图片上传失败，请稍后重试。",
+    videoInvalid: "请选择 MP4、WebM 或 MOV 视频，最大 50MB。",
+    videoUploadFailed: "视频上传失败，请稍后重试。",
     createMoment: "发布精彩瞬间",
     closeComposer: "关闭发布精彩瞬间",
     close: "关闭",
@@ -30,34 +36,47 @@ const copy = {
     momentPlaceholder: "记录这个星球的精彩时刻，也可以只发图片。",
     uploading: "上传中...",
     addImage: "添加图片",
+    addVideo: "添加视频",
+    removeVideo: "移除视频",
     submit: "发布",
   },
   en: {
     invalidFile: "Choose supported images. All images max 10 MB.",
     partialUploadFailed: "Some images failed to upload. Please try again.",
     uploadFailed: "Image upload failed. Please try again.",
+    videoInvalid: "Choose an MP4, WebM, or MOV video up to 50 MB.",
+    videoUploadFailed: "Video upload failed. Please try again.",
     createMoment: "Create a moment",
     closeComposer: "Close moment composer",
     close: "Close",
     previewAlt: "Image to publish",
     removeImage: "Remove image",
-    momentPlaceholder: "Capture a moment from this planet, or post images only.",
+    momentPlaceholder:
+      "Capture a moment from this planet, or post images only.",
     uploading: "Uploading...",
     addImage: "Add images",
+    addVideo: "Add video",
+    removeVideo: "Remove video",
     submit: "Post",
   },
   fr: {
     invalidFile: "Choisissez des images prises en charge. 10 Mo maximum.",
-    partialUploadFailed: "Certaines images n'ont pas pu être envoyées. Réessayez plus tard.",
+    partialUploadFailed:
+      "Certaines images n'ont pas pu être envoyées. Réessayez plus tard.",
     uploadFailed: "Échec de l'envoi de l'image. Réessayez plus tard.",
+    videoInvalid: "Choisissez une vidéo MP4, WebM ou MOV de 50 Mo maximum.",
+    videoUploadFailed: "Échec de l'envoi de la vidéo. Réessayez plus tard.",
     createMoment: "Publier un moment",
     closeComposer: "Fermer la publication du moment",
     close: "Fermer",
     previewAlt: "Image à publier",
     removeImage: "Retirer l'image",
-    momentPlaceholder: "Notez un moment de cette planète, ou publiez seulement des images.",
+    momentPlaceholder:
+      "Notez un moment de cette planète, ou publiez seulement des images.",
     uploading: "Envoi...",
     addImage: "Ajouter des images",
+    addVideo: "Ajouter une vidéo",
+    removeVideo: "Retirer la vidéo",
     submit: "Publier",
   },
 } as const;
@@ -68,7 +87,9 @@ export function PlanetMomentComposer({
   planetSlug,
 }: PlanetMomentComposerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -118,15 +139,41 @@ export function PlanetMomentComposer({
     }
   }
 
+  async function uploadVideo(file: File) {
+    if (getPlanetVideoUploadValidationError(file)) {
+      setUploadError(t.videoInvalid);
+      return;
+    }
+    setIsUploading(true);
+    setUploadError("");
+    try {
+      const result = await uploadImageWithSignedUrl(
+        "/api/uploads/planet-video",
+        file,
+      );
+      if ("error" in result) {
+        setUploadError(t.videoUploadFailed);
+      } else {
+        setVideoUrls([result.url]);
+      }
+    } catch {
+      setUploadError(t.videoUploadFailed);
+    } finally {
+      setIsUploading(false);
+      if (videoInputRef.current) videoInputRef.current.value = "";
+    }
+  }
+
   return (
     <>
       <button
         aria-label={t.createMoment}
-        className="fixed bottom-[calc(6.2rem+env(safe-area-inset-bottom))] right-[max(1rem,calc((100vw-28rem)/2+1rem))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_14px_30px_rgba(21,98,64,0.28)] transition active:scale-95"
+        className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-sm transition active:scale-95"
         onClick={() => setIsOpen(true)}
         type="button"
       >
-        <Plus className="h-7 w-7" />
+        <Plus className="h-4 w-4" />
+        <span>{t.createMoment}</span>
       </button>
 
       {isOpen ? (
@@ -148,6 +195,11 @@ export function PlanetMomentComposer({
               name="imageUrls"
               type="hidden"
               value={JSON.stringify(imageUrls)}
+            />
+            <input
+              name="videoUrls"
+              type="hidden"
+              value={JSON.stringify(videoUrls)}
             />
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-[#156240]">
@@ -190,13 +242,33 @@ export function PlanetMomentComposer({
               </div>
             ) : null}
 
+            {videoUrls[0] ? (
+              <div className="relative mt-3 overflow-hidden rounded-xl bg-black">
+                <video
+                  className="max-h-56 w-full object-contain"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  src={videoUrls[0]}
+                />
+                <button
+                  aria-label={t.removeVideo}
+                  className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"
+                  onClick={() => setVideoUrls([])}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : null}
+
             <textarea
               className="mt-3 min-h-20 w-full resize-none rounded-xl border border-[#E7E2D6] bg-white px-3 py-2.5 text-sm outline-none placeholder:text-[#A5A29A]"
               maxLength={2000}
               name="content"
               placeholder={t.momentPlaceholder}
             />
-            <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-4">
               <input
                 ref={inputRef}
                 accept={acceptedImageInputTypes}
@@ -210,7 +282,9 @@ export function PlanetMomentComposer({
               />
               <button
                 className="inline-flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#47715B] disabled:opacity-50"
-                disabled={isUploading || imageUrls.length >= maxMomentImageCount}
+                disabled={
+                  isUploading || imageUrls.length >= maxMomentImageCount
+                }
                 onClick={() => inputRef.current?.click()}
                 type="button"
               >
@@ -221,8 +295,27 @@ export function PlanetMomentComposer({
                     : `${t.addImage}${imageUrls.length ? ` (${imageUrls.length}/${maxMomentImageCount})` : ""}`}
                 </span>
               </button>
+              <input
+                ref={videoInputRef}
+                accept={acceptedPlanetVideoInputTypes}
+                className="hidden"
+                type="file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadVideo(file);
+                }}
+              />
               <button
-                className="shrink-0 rounded-full bg-[#156240] px-5 py-2 text-xs font-bold text-white disabled:opacity-50"
+                className="inline-flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#47715B] disabled:opacity-50"
+                disabled={isUploading || videoUrls.length > 0}
+                onClick={() => videoInputRef.current?.click()}
+                type="button"
+              >
+                <Video className="h-4 w-4 shrink-0" />
+                <span>{t.addVideo}</span>
+              </button>
+              <button
+                className="ml-auto shrink-0 rounded-full bg-[#156240] px-5 py-2 text-xs font-bold text-white disabled:opacity-50"
                 disabled={isUploading}
                 type="submit"
               >

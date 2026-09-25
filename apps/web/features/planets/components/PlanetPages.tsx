@@ -1,5 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, Orbit, Plus, Send, Sparkles, Trash2, UsersRound } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Megaphone,
+  MessageCircle,
+  Orbit,
+  Plus,
+  Send,
+  Sparkles,
+  Trash2,
+  UsersRound,
+  Video,
+} from "lucide-react";
 import {
   createPlanetAction,
   createPlanetMomentCommentAction,
@@ -8,15 +21,21 @@ import {
   deletePlanetMomentAction,
 } from "@/features/planets/actions/planetActions";
 import { withLocale } from "@/lib/routes";
-import { buildCanonicalSiteUrl } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 import { PlanetMomentComposer } from "./PlanetMomentComposer";
-import { PlanetRoomFloatingActions } from "./PlanetRoomFloatingActions";
 import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
-import type { getPlanetMoment, getPlanetRoom, getPlanetSquare } from "../queries/planetQueries";
+import type {
+  getPlanetMoment,
+  getPlanetRoom,
+  getPlanetSquare,
+} from "../queries/planetQueries";
 import { canInteractWithPlanetMoment } from "../utils/planetMomentPolicy";
+import {
+  getPlanetCategoryLabel,
+  planetCategoryValues,
+} from "../utils/planetCategories";
 
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 type PlanetRoom = NonNullable<Awaited<ReturnType<typeof getPlanetRoom>>>;
@@ -46,25 +65,33 @@ const planetCopy = {
     title: "\u661f\u9645\u4e4b\u95f4",
     apply: "\u7533\u8bf7\u52a0\u5165",
     cancelRequest: "\u53d6\u6d88\u7533\u8bf7",
-    pendingNotice: "\u4f60\u7684\u7533\u8bf7\u5df2\u63d0\u4ea4\uff0c\u521b\u5efa\u4eba\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u5e76\u53c2\u4e0e\u4e92\u52a8\u3002",
+    pendingNotice:
+      "\u4f60\u7684\u7533\u8bf7\u5df2\u63d0\u4ea4\uff0c\u521b\u5efa\u4eba\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u5e76\u53c2\u4e0e\u4e92\u52a8\u3002",
     createLocked: "符合资格的主理人最多可以创建并管理 3 个星球。",
-    firstMoment: "\u8fd8\u6ca1\u6709\u8f68\u8ff9\uff0c\u53d1\u5e03\u7b2c\u4e00\u6761\u7cbe\u5f69\u77ac\u95f4\u5427\u3002",
+    firstMoment:
+      "\u8fd8\u6ca1\u6709\u8f68\u8ff9\uff0c\u53d1\u5e03\u7b2c\u4e00\u6761\u7cbe\u5f69\u77ac\u95f4\u5427\u3002",
     backToSquare: "\u8fd4\u56de\u661f\u7403\u5e7f\u573a",
     backToPlanet: "\u8fd4\u56de\u661f\u7403",
     createTitle: "\u521b\u5efa\u4f60\u7684\u661f\u7403",
     createSubtitle: "每位主理人最多创建 3 个星球。",
     nameLabel: "\u661f\u7403\u540d\u79f0",
     namePlaceholder: "\u4f8b\u5982\uff1a\u5468\u672b\u684c\u6e38\u661f\u7403",
-    descriptionLabel: "\u661f\u7403\u4ecb\u7ecd",
-    descriptionPlaceholder: "\u544a\u8bc9\u5927\u5bb6\u8fd9\u4e2a\u661f\u7403\u4f1a\u53d1\u751f\u4ec0\u4e48\u3002",
-    tagsLabel: "\u6807\u7b7e",
-    tagsPlaceholder: "\u684c\u6e38\uff0c\u5468\u672b\uff0c\u65b0\u624b\u53cb\u597d",
+    descriptionLabel: "星球简介",
+    descriptionPlaceholder:
+      "\u544a\u8bc9\u5927\u5bb6\u8fd9\u4e2a\u661f\u7403\u4f1a\u53d1\u751f\u4ec0\u4e48\u3002",
+    tagsLabel: "星球分类",
+    tagsPlaceholder: "选择一个最符合星球内容的分类",
+    announcement: "群公告",
+    introduction: "星球简介",
+    linkedActivities: "星球聚吧",
+    linkedMoments: "相关晒晒",
     createButton: "\u521b\u5efa\u5e76\u8fdb\u5165\u661f\u7403",
     danmaku: "\u5f39\u5e55",
     danmakuPlaceholder: "\u53d1\u5e03\u5f39\u5e55...",
     delete: "\u5220\u9664",
     empty: "还没有星球，成为第一个创建它的人吧。",
-    momentUnavailable: "\u8be5\u6761\u8f68\u8ff9\u5df2\u5220\u9664\u6216\u6682\u65f6\u4e0d\u53ef\u89c1\uff0c\u5df2\u4e3a\u4f60\u663e\u793a\u6700\u65b0\u5185\u5bb9\u3002",
+    momentUnavailable:
+      "\u8be5\u6761\u8f68\u8ff9\u5df2\u5220\u9664\u6216\u6682\u65f6\u4e0d\u53ef\u89c1\uff0c\u5df2\u4e3a\u4f60\u663e\u793a\u6700\u65b0\u5185\u5bb9\u3002",
   },
   en: {
     openChat: "Open group chat",
@@ -80,7 +107,8 @@ const planetCopy = {
     title: "Between Planets",
     apply: "Request to join",
     cancelRequest: "Cancel request",
-    pendingNotice: "Your request is pending. You can view the chat after the creator approves it.",
+    pendingNotice:
+      "Your request is pending. You can view the chat after the creator approves it.",
     createLocked: "Eligible hosts can create and manage up to 3 planets.",
     firstMoment: "No orbit yet. Share the first moment.",
     backToSquare: "Back to planets",
@@ -92,13 +120,18 @@ const planetCopy = {
     descriptionLabel: "Planet description",
     descriptionPlaceholder: "Tell people what this planet is about.",
     tagsLabel: "Tags",
-    tagsPlaceholder: "board games, weekend, beginner-friendly",
+    tagsPlaceholder: "Choose the category that best fits this planet",
+    announcement: "Group announcement",
+    introduction: "Planet intro",
+    linkedActivities: "Planet meetups",
+    linkedMoments: "Related moments",
     createButton: "Create planet",
     danmaku: "Comments",
     danmakuPlaceholder: "Write a comment...",
     delete: "Delete",
     empty: "No planets yet. Be the first to create one.",
-    momentUnavailable: "That moment was removed or is unavailable. The latest content is shown instead.",
+    momentUnavailable:
+      "That moment was removed or is unavailable. The latest content is shown instead.",
   },
   fr: {
     openChat: "Ouvrir la discussion",
@@ -114,7 +147,8 @@ const planetCopy = {
     title: "Entre planètes",
     apply: "Demander à rejoindre",
     cancelRequest: "Annuler la demande",
-    pendingNotice: "Votre demande est en attente. Le chat sera visible après validation du créateur.",
+    pendingNotice:
+      "Votre demande est en attente. Le chat sera visible après validation du créateur.",
     createLocked: "Les hôtes éligibles peuvent gérer jusqu'à 3 planètes.",
     firstMoment: "Pas encore de trajectoire. Partagez le premier moment.",
     backToSquare: "Retour aux planètes",
@@ -126,31 +160,60 @@ const planetCopy = {
     descriptionLabel: "Description",
     descriptionPlaceholder: "Expliquez ce que l'on trouve sur cette planète.",
     tagsLabel: "Tags",
-    tagsPlaceholder: "jeux, week-end, débutants",
+    tagsPlaceholder: "Choisissez la catégorie de cette planète",
+    announcement: "Annonce du groupe",
+    introduction: "Présentation",
+    linkedActivities: "Rencontres de la planète",
+    linkedMoments: "Moments associés",
     createButton: "Créer la planète",
     danmaku: "Commentaires",
     danmakuPlaceholder: "Écrire un commentaire...",
     delete: "Supprimer",
     empty: "Aucune planète pour le moment. Créez la première.",
-    momentUnavailable: "Ce moment a été supprimé ou n'est plus disponible. Le contenu le plus récent est affiché.",
+    momentUnavailable:
+      "Ce moment a été supprimé ou n'est plus disponible. Le contenu le plus récent est affiché.",
   },
 } as const;
 
 function getPlanetCopy(locale: string) {
-  return locale === "en" || locale === "fr" ? planetCopy[locale] : planetCopy["zh-CN"];
+  return locale === "en" || locale === "fr"
+    ? planetCopy[locale]
+    : planetCopy["zh-CN"];
 }
 
-function getPlanetName(planet: { name: string; nameTranslations?: unknown }, locale: string) {
+function getPlanetName(
+  planet: { name: string; nameTranslations?: unknown },
+  locale: string,
+) {
   if (locale !== "en" && locale !== "fr") return planet.name;
-  if (typeof planet.nameTranslations !== "object" || !planet.nameTranslations) return planet.name;
-  const translated = (planet.nameTranslations as Record<string, unknown>)[locale];
-  return typeof translated === "string" && translated.trim() ? translated : planet.name;
+  if (typeof planet.nameTranslations !== "object" || !planet.nameTranslations)
+    return planet.name;
+  const translated = (planet.nameTranslations as Record<string, unknown>)[
+    locale
+  ];
+  return typeof translated === "string" && translated.trim()
+    ? translated
+    : planet.name;
 }
 
-function PlanetCover({ coverImageUrl, index }: { coverImageUrl: string | null; index: number }) {
+function PlanetCover({
+  coverImageUrl,
+  index,
+}: {
+  coverImageUrl: string | null;
+  index: number;
+}) {
   return (
-    <div className={`relative h-24 overflow-hidden rounded-2xl bg-gradient-to-br md:h-32 lg:h-36 ${colorPairs[index % colorPairs.length]}`}>
-      {coverImageUrl ? <img alt="" className="absolute inset-0 h-full w-full object-cover" src={coverImageUrl} /> : null}
+    <div
+      className={`relative h-24 overflow-hidden rounded-2xl bg-gradient-to-br md:h-32 lg:h-36 ${colorPairs[index % colorPairs.length]}`}
+    >
+      {coverImageUrl ? (
+        <img
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          src={coverImageUrl}
+        />
+      ) : null}
       {!coverImageUrl ? (
         <>
           <span className="absolute left-4 top-4 h-1.5 w-1.5 rounded-full bg-white/80" />
@@ -208,7 +271,9 @@ export function PlanetSquarePage({
         <Sparkles className="h-5 w-5 text-[#1f6a4a]" />
         <div>
           <h1 className="text-xl font-bold">{copy.title}</h1>
-          <p className="text-xs font-semibold text-[#718075]">{copy.subtitle}</p>
+          <p className="text-xs font-semibold text-[#718075]">
+            {copy.subtitle}
+          </p>
         </div>
       </div>
       {planets.length ? (
@@ -219,7 +284,11 @@ export function PlanetSquarePage({
           )}
         >
           {planets.map((planet, index) => (
-            <Link className="group min-w-0" href={withLocale(locale, `/planets/${planet.slug}`)} key={planet.id}>
+            <Link
+              className="group min-w-0"
+              href={withLocale(locale, `/planets/${planet.slug}`)}
+              key={planet.id}
+            >
               <PlanetCover coverImageUrl={planet.coverImageUrl} index={index} />
               <h2 className="mt-2 truncate text-sm font-bold group-hover:text-[#1f6a4a]">
                 {getPlanetName(planet, locale)}
@@ -257,7 +326,13 @@ export function PlanetSquarePage({
   return embedded ? content : <PageShell>{content}</PageShell>;
 }
 
-function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRoom }) {
+function MembershipButton({
+  locale,
+  planet,
+}: {
+  locale: string;
+  planet: PlanetRoom;
+}) {
   const copy = getPlanetCopy(locale);
   const membership = planet.viewerMembership;
 
@@ -266,7 +341,13 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
   }
 
   if (membership?.status === "APPROVED") {
-    return <PlanetLeaveButton locale={locale} planetId={planet.id} planetSlug={planet.slug} />;
+    return (
+      <PlanetLeaveButton
+        locale={locale}
+        planetId={planet.id}
+        planetSlug={planet.slug}
+      />
+    );
   }
 
   if (membership?.status === "PENDING") {
@@ -275,7 +356,10 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
         <input name="locale" type="hidden" value={locale} />
         <input name="planetId" type="hidden" value={planet.id} />
         <input name="planetSlug" type="hidden" value={planet.slug} />
-        <button className="rounded-full border border-[#e7c58d] bg-[#fff9ef] px-3 py-1.5 text-xs font-bold text-[#9a6a21]" type="submit">
+        <button
+          className="rounded-full border border-[#e7c58d] bg-[#fff9ef] px-3 py-1.5 text-xs font-bold text-[#9a6a21]"
+          type="submit"
+        >
           {copy.cancelRequest}
         </button>
       </form>
@@ -287,7 +371,10 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
       <input name="locale" type="hidden" value={locale} />
       <input name="planetId" type="hidden" value={planet.id} />
       <input name="planetSlug" type="hidden" value={planet.slug} />
-      <button className="rounded-full bg-[#246c4b] px-3 py-1.5 text-xs font-bold text-white" type="submit">
+      <button
+        className="rounded-full bg-[#246c4b] px-3 py-1.5 text-xs font-bold text-white"
+        type="submit"
+      >
         {copy.apply}
       </button>
     </form>
@@ -326,12 +413,22 @@ function MomentOrbitCard({
         className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-br ${orbitColors[index % orbitColors.length]} p-1 shadow-sm transition group-active:scale-95 ${active ? "border-[#1f6a4a] ring-2 ring-[#b7d7c1] ring-offset-2" : "border-[#d9e3d5]"}`}
       >
         {moment.imageUrls[0] ? (
-          <img alt="" className="h-full w-full rounded-full object-cover" src={moment.imageUrls[0]} />
+          <img
+            alt=""
+            className="h-full w-full rounded-full object-cover"
+            src={moment.imageUrls[0]}
+          />
+        ) : moment.videoUrls[0] ? (
+          <span className="flex h-full w-full items-center justify-center rounded-full bg-[#254c43] text-white">
+            <Video className="h-5 w-5" />
+          </span>
         ) : (
           <span className="h-full w-full rounded-full border border-white/50 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,.7),transparent_28%),linear-gradient(145deg,transparent_45%,rgba(20,55,42,.2)_46%_56%,transparent_57%)]" />
         )}
       </span>
-      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">{moment.content.slice(0, 4) || "\u661F\u7403"}</span>
+      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">
+        {moment.content.slice(0, 4) || "\u661F\u7403"}
+      </span>
     </Link>
   );
 }
@@ -362,7 +459,10 @@ function PlanetChatEntry({
       {copy.openChat}
       {planet.chatUnreadCount > 0 ? (
         planet.isChatMuted ? (
-          <span aria-label={`${planet.chatUnreadCount}`} className="h-2 w-2 rounded-full bg-[#FF496F]" />
+          <span
+            aria-label={`${planet.chatUnreadCount}`}
+            className="h-2 w-2 rounded-full bg-[#FF496F]"
+          />
         ) : (
           <span className="flex min-w-5 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#155F40]">
             {planet.chatUnreadCount > 99 ? "99+" : planet.chatUnreadCount}
@@ -373,7 +473,101 @@ function PlanetChatEntry({
   );
 }
 
-function PlanetMomentPanel({ locale, moment }: { locale: string; moment: PlanetMoment }) {
+function PlanetActivityCard({
+  activityLink,
+  locale,
+}: {
+  activityLink: PlanetRoom["activityLinks"][number];
+  locale: string;
+}) {
+  const { activity } = activityLink;
+  const copy = getPlanetCopy(locale);
+
+  return (
+    <div className="border-b border-[#ECE8DC] py-3 last:border-b-0">
+      <Link
+        className="group grid min-w-0 grid-cols-[5.25rem_minmax(0,1fr)_2rem] items-center gap-3"
+        href={withLocale(locale, `/lobby/${activity.id}`)}
+      >
+        <span className="relative h-16 overflow-hidden rounded-lg bg-[#EDF2EC]">
+          {activity.coverImageUrl ? (
+            <img
+              alt=""
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+              src={activity.coverImageUrl}
+            />
+          ) : (
+            <span className="flex h-full items-center justify-center text-[#156240]">
+              <UsersRound className="h-6 w-6" />
+            </span>
+          )}
+        </span>
+        <span className="min-w-0">
+          <strong className="line-clamp-2 text-sm leading-5 text-[#1F211E]">
+            {activity.title}
+          </strong>
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-[#727A72]">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {activity.startAt.toLocaleDateString(locale)} · {activity.city}
+            </span>
+          </span>
+          <span className="mt-1 block text-[11px] font-bold text-[#156240]">
+            {getPlanetCategoryLabel(activity.category, locale)}
+          </span>
+        </span>
+        <ChevronRight className="h-5 w-5 text-[#A2A99F] transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
+      </Link>
+
+      {activity.moments.length > 0 ? (
+        <div className="ml-[6.25rem] mt-3 border-l-2 border-[#DCE9DF] pl-3">
+          <p className="mb-1.5 text-[10px] font-bold uppercase text-[#788078]">
+            {copy.linkedMoments}
+          </p>
+          <div className="space-y-1">
+            {activity.moments.map((moment) => (
+              <Link
+                className="group/moment flex min-w-0 items-center gap-2 py-1.5"
+                href={withLocale(locale, `/footprints/${moment.id}`)}
+                key={moment.id}
+              >
+                {moment.images[0] ? (
+                  <img
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-md object-cover"
+                    src={moment.images[0].url}
+                  />
+                ) : (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#EDF5EF] text-xs font-bold text-[#156240]">
+                    {moment.author.nickname.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-bold text-[#334039] group-hover/moment:text-[#156240]">
+                    {moment.content || moment.author.nickname}
+                  </span>
+                  <span className="block truncate text-[10px] font-semibold text-[#838B84]">
+                    {moment.author.nickname} ·{" "}
+                    {moment.createdAt.toLocaleDateString(locale)}
+                  </span>
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#A2A99F]" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PlanetMomentPanel({
+  locale,
+  moment,
+}: {
+  locale: string;
+  moment: PlanetMoment;
+}) {
   const copy = getPlanetCopy(locale);
   const canInteract = canInteractWithPlanetMoment(moment.viewerMembership);
 
@@ -386,6 +580,7 @@ function PlanetMomentPanel({ locale, moment }: { locale: string; moment: PlanetM
         content={moment.content}
         createdAtLabel={moment.createdAt.toLocaleDateString(locale)}
         imageUrls={moment.imageUrls.slice(0, 12)}
+        videoUrls={moment.videoUrls.slice(0, 1)}
         isLiked={Boolean(moment.likes?.length)}
         likeCount={moment._count?.likes ?? 0}
         locale={locale}
@@ -399,7 +594,10 @@ function PlanetMomentPanel({ locale, moment }: { locale: string; moment: PlanetM
           <input name="planetId" type="hidden" value={moment.planet.id} />
           <input name="planetSlug" type="hidden" value={moment.planet.slug} />
           <input name="momentId" type="hidden" value={moment.id} />
-          <button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit">
+          <button
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]"
+            type="submit"
+          >
             <Trash2 className="h-3.5 w-3.5" />
             {copy.delete}
           </button>
@@ -407,7 +605,10 @@ function PlanetMomentPanel({ locale, moment }: { locale: string; moment: PlanetM
       ) : null}
 
       {canInteract ? (
-        <form action={createPlanetMomentCommentAction} className="mt-5 flex gap-2 border-t border-[#ece8dc] pt-4">
+        <form
+          action={createPlanetMomentCommentAction}
+          className="mt-5 flex gap-2 border-t border-[#ece8dc] pt-4"
+        >
           <input name="locale" type="hidden" value={locale} />
           <input name="planetId" type="hidden" value={moment.planet.id} />
           <input name="planetSlug" type="hidden" value={moment.planet.slug} />
@@ -447,14 +648,9 @@ export function PlanetRoomPage({
   const planetSquareHref = withLocale(locale, "/footprints?tab=planet");
   const membership = planet.viewerMembership;
   const isPending = membership?.status === "PENDING";
-  const inviteUrl = buildCanonicalSiteUrl(withLocale(locale, `/planets/invite/${planet.inviteCode}`));
-  const reviewerRole = membership?.role === "OWNER" || membership?.role === "ADMIN" ? membership.role : null;
-  const pendingMembers = planet.pendingMembers.map((member) => ({
-    avatarUrl: member.profile.avatarUrl,
-    joinedAtLabel: member.joinedAt.toLocaleDateString(),
-    nickname: member.profile.nickname,
-    profileId: member.profileId,
-  }));
+  const canPublish =
+    membership?.status === "APPROVED" &&
+    (membership.role === "OWNER" || membership.role === "ADMIN");
 
   return (
     <PageShell detail>
@@ -487,12 +683,50 @@ export function PlanetRoomPage({
               {getPlanetName(planet, locale)}
             </h1>
             <p className="mt-2 text-xs font-semibold text-[#6C746A] sm:text-sm">
-              {planet._count.members} {copy.memberUnit} · {copy.hostedBy} {planet.owner.nickname}
+              {planet._count.members} {copy.memberUnit} · {copy.hostedBy}{" "}
+              {planet.owner.nickname}
             </p>
           </div>
           <div className="shrink-0 pt-0.5">
             <MembershipButton locale={locale} planet={planet} />
           </div>
+        </div>
+
+        <div className="mt-4 space-y-3 border-y border-[#ECE8DC] py-4">
+          {planet.description ? (
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 text-sm">
+              <p className="font-bold text-[#156240]">{copy.introduction}</p>
+              <p className="whitespace-pre-wrap leading-6 text-[#4F5750]">
+                {planet.description}
+              </p>
+            </div>
+          ) : null}
+          {planet.tags.length > 0 ? (
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 text-sm">
+              <p className="font-bold text-[#156240]">{copy.tagsLabel}</p>
+              <div className="flex flex-wrap gap-2">
+                {planet.tags.map((tag) => (
+                  <span
+                    className="rounded-full bg-[#EDF5EF] px-2.5 py-1 text-xs font-bold text-[#156240]"
+                    key={tag}
+                  >
+                    {getPlanetCategoryLabel(tag, locale)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {planet.announcement ? (
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 text-sm">
+              <p className="flex items-center gap-1 font-bold text-[#8A641F]">
+                <Megaphone className="h-3.5 w-3.5" />
+                {copy.announcement}
+              </p>
+              <p className="whitespace-pre-wrap leading-6 text-[#5C574E]">
+                {planet.announcement}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="relative mt-5 aspect-[1.72/1] overflow-hidden rounded-[1.35rem] bg-[#156240] sm:aspect-[16/8] md:aspect-[2.35/1]">
@@ -512,14 +746,8 @@ export function PlanetRoomPage({
 
         <div className="mt-5 grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-8">
           <div className="min-w-0">
-            {planet.description ? (
-              <p className="whitespace-pre-wrap text-sm font-semibold leading-7 text-[#4F5750]">
-                {planet.description}
-              </p>
-            ) : null}
-
             {planet.members.length > 0 ? (
-              <div className={cn("flex items-center", planet.description ? "mt-4" : null)}>
+              <div className="flex items-center">
                 <div className="flex -space-x-2">
                   {planet.members.map((member) => (
                     <Link
@@ -547,16 +775,6 @@ export function PlanetRoomPage({
                 </span>
               </div>
             ) : null}
-
-            {planet.tags.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
-                {planet.tags.map((tag) => (
-                  <span className="text-xs font-bold text-[#156240]" key={tag}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <PlanetChatEntry
@@ -573,9 +791,36 @@ export function PlanetRoomPage({
         ) : null}
 
         <div className="mx-auto mt-8 max-w-2xl border-t border-[#E9E9E4] pt-6 md:mt-10 md:pt-8">
+          <div className="flex min-h-9 items-center justify-between gap-3">
+            <p className="text-sm font-bold text-[#17583d]">{copy.orbit}</p>
+            {canPublish ? (
+              <PlanetMomentComposer
+                locale={locale}
+                planetId={planet.id}
+                planetSlug={planet.slug}
+              />
+            ) : null}
+          </div>
+
+          {planet.activityLinks.length ? (
+            <section className="mt-5">
+              <h2 className="text-xs font-bold uppercase text-[#788078]">
+                {copy.linkedActivities}
+              </h2>
+              <div className="mt-1">
+                {planet.activityLinks.map((activityLink) => (
+                  <PlanetActivityCard
+                    activityLink={activityLink}
+                    key={activityLink.activity.id}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {planet.moments.length ? (
-            <section>
-              <p className="text-sm font-bold text-[#17583d]">{copy.orbit}</p>
+            <section className="mt-6">
               <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {planet.moments.map((moment, index) => (
                   <MomentOrbitCard
@@ -599,29 +844,12 @@ export function PlanetRoomPage({
 
           {selectedMoment ? (
             <PlanetMomentPanel locale={locale} moment={selectedMoment} />
-          ) : (
-            <p className="py-10 text-center text-sm font-semibold text-[#889188]">{copy.firstMoment}</p>
-          )}
+          ) : planet.activityLinks.length === 0 ? (
+            <p className="py-10 text-center text-sm font-semibold text-[#889188]">
+              {copy.firstMoment}
+            </p>
+          ) : null}
         </div>
-
-        {membership?.role === "OWNER" && membership.status === "APPROVED" ? (
-          <PlanetMomentComposer
-            locale={locale}
-            planetId={planet.id}
-            planetSlug={planet.slug}
-          />
-        ) : null}
-
-        {reviewerRole ? (
-          <PlanetRoomFloatingActions
-            inviteUrl={inviteUrl}
-            locale={locale}
-            pendingMembers={pendingMembers}
-            planetId={planet.id}
-            planetSlug={planet.slug}
-            viewerRole={reviewerRole}
-          />
-        ) : null}
       </section>
     </PageShell>
   );
@@ -633,7 +861,10 @@ export function PlanetCreatePage({ locale }: { locale: string }) {
   return (
     <PageShell>
       <section className="mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl">
-        <Link className="inline-flex items-center gap-2 text-sm font-bold" href={withLocale(locale, "/planets")}>
+        <Link
+          className="inline-flex items-center gap-2 text-sm font-bold"
+          href={withLocale(locale, "/planets")}
+        >
           <ArrowLeft className="h-5 w-5" />
           {copy.backToPlanet}
         </Link>
@@ -646,16 +877,46 @@ export function PlanetCreatePage({ locale }: { locale: string }) {
           <input name="locale" type="hidden" value={locale} />
           <label className="block text-sm font-bold">
             {copy.nameLabel}
-            <input className="mt-2 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none" maxLength={60} minLength={2} name="name" placeholder={copy.namePlaceholder} required />
+            <input
+              className="mt-2 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none"
+              maxLength={60}
+              minLength={2}
+              name="name"
+              placeholder={copy.namePlaceholder}
+              required
+            />
           </label>
           <label className="block text-sm font-bold">
             {copy.descriptionLabel}
-            <textarea className="mt-2 min-h-24 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none" maxLength={500} name="description" placeholder={copy.descriptionPlaceholder} />
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none"
+              maxLength={500}
+              name="description"
+              placeholder={copy.descriptionPlaceholder}
+            />
           </label>
-          <label className="block text-sm font-bold">
-            {copy.tagsLabel}
-            <input className="mt-2 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none" maxLength={160} name="tags" placeholder={copy.tagsPlaceholder} />
-          </label>
+          <fieldset>
+            <legend className="text-sm font-bold">{copy.tagsLabel}</legend>
+            <p className="mt-1 text-xs text-[#7B817A]">
+              {copy.tagsPlaceholder}
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {planetCategoryValues.map((category, index) => (
+                <label className="relative" key={category}>
+                  <input
+                    className="peer sr-only"
+                    defaultChecked={index === 0}
+                    name="tags"
+                    type="radio"
+                    value={category}
+                  />
+                  <span className="flex min-h-11 items-center justify-center rounded-lg border border-[#DFDBCF] bg-white px-2 text-center text-xs font-bold text-[#4F5750] transition peer-checked:border-[#246C4B] peer-checked:bg-[#EAF4ED] peer-checked:text-[#155F40] peer-focus-visible:ring-2 peer-focus-visible:ring-[#82B596]">
+                    {getPlanetCategoryLabel(category, locale)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <PlanetCoverUpload locale={locale} name="coverImageUrl" />
           <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#246c4b] py-3 font-bold text-white">
             <UsersRound className="h-4 w-4" />

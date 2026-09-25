@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getPlanetChatUnreadState } from "@/features/planets/services/planetChat";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 
 const approvedMemberFilter = { status: "APPROVED" as const };
 
@@ -61,6 +62,22 @@ export async function getPlanetRoom(
   planetSlug: string,
   viewerProfileId: string | null,
 ) {
+  const viewerFriendIds = viewerProfileId
+    ? await getViewerFriendIds(viewerProfileId)
+    : [];
+  const visibleLinkedMomentWhere = {
+    deletedAt: null,
+    OR: viewerProfileId
+      ? [
+          { visibility: "PUBLIC" as const },
+          { authorId: viewerProfileId },
+          {
+            visibility: "FRIENDS" as const,
+            authorId: { in: viewerFriendIds },
+          },
+        ]
+      : [{ visibility: "PUBLIC" as const }],
+  };
   const planet = await prisma.planet.findFirst({
     where: {
       slug: planetSlug,
@@ -81,6 +98,7 @@ export async function getPlanetRoom(
       name: true,
       nameTranslations: true,
       description: true,
+      announcement: true,
       tags: true,
       visibility: true,
       owner: { select: { nickname: true } },
@@ -102,9 +120,46 @@ export async function getPlanetRoom(
           id: true,
           content: true,
           imageUrls: true,
+          videoUrls: true,
           createdAt: true,
           author: { select: { nickname: true, avatarUrl: true } },
           _count: { select: { comments: true } },
+        },
+      },
+      activityLinks: {
+        take: 12,
+        orderBy: { addedAt: "desc" },
+        select: {
+          addedAt: true,
+          activity: {
+            select: {
+              id: true,
+              title: true,
+              category: true,
+              city: true,
+              coverImageUrl: true,
+              startAt: true,
+              status: true,
+              moments: {
+                where: visibleLinkedMomentWhere,
+                take: 3,
+                orderBy: { createdAt: "desc" },
+                select: {
+                  id: true,
+                  content: true,
+                  createdAt: true,
+                  author: {
+                    select: { nickname: true, avatarUrl: true },
+                  },
+                  images: {
+                    take: 1,
+                    orderBy: { sortOrder: "asc" },
+                    select: { url: true },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -119,29 +174,17 @@ export async function getPlanetRoom(
       })
     : null;
 
-  const [pendingMembers, chatState] = await Promise.all([
-    viewerMembership?.role === "OWNER" || viewerMembership?.role === "ADMIN"
-      ? prisma.planetMember.findMany({
-          where: { planetId: planet.id, status: "PENDING" },
-          orderBy: { joinedAt: "asc" },
-          select: {
-            profileId: true,
-            joinedAt: true,
-            profile: { select: { nickname: true, avatarUrl: true } },
-          },
-        })
-      : Promise.resolve([]),
-    viewerProfileId && viewerMembership?.status === "APPROVED"
-      ? getPlanetChatUnreadState({
-          planetId: planet.id,
-          profileId: viewerProfileId,
-        })
-      : Promise.resolve({
-          isMuted: false,
-          isPinned: false,
-          unreadCount: 0,
-        }),
-  ]);
+  const chatState = await (viewerProfileId &&
+  viewerMembership?.status === "APPROVED"
+    ? getPlanetChatUnreadState({
+        planetId: planet.id,
+        profileId: viewerProfileId,
+      })
+    : Promise.resolve({
+        isMuted: false,
+        isPinned: false,
+        unreadCount: 0,
+      }));
 
   return {
     ...planet,
@@ -150,7 +193,6 @@ export async function getPlanetRoom(
     chatUnreadCount: chatState.unreadCount,
     isChatMuted: chatState.isMuted,
     isChatPinned: chatState.isPinned,
-    pendingMembers,
   };
 }
 
@@ -176,6 +218,21 @@ export async function getPlanetChatPageData(
       coverImageUrl: true,
       name: true,
       nameTranslations: true,
+      announcement: true,
+      inviteCode: true,
+      activityLinks: {
+        orderBy: { addedAt: "desc" },
+        select: {
+          activityId: true,
+          activity: {
+            select: {
+              id: true,
+              title: true,
+              startAt: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -188,6 +245,9 @@ export async function getPlanetChatPageData(
       })
     : null;
   const canViewChat = viewerMembership?.status === "APPROVED";
+  const canManage =
+    canViewChat &&
+    (viewerMembership?.role === "OWNER" || viewerMembership?.role === "ADMIN");
   const [messages, readState] = canViewChat
     ? await Promise.all([
         prisma.planetMessage.findMany({
@@ -225,10 +285,51 @@ export async function getPlanetChatPageData(
       ])
     : [[], null];
 
+  const [pendingMembers, approvedMembers, availableActivities] =
+    canManage && viewerProfileId
+      ? await Promise.all([
+          prisma.planetMember.findMany({
+            where: { planetId: planet.id, status: "PENDING" },
+            orderBy: { joinedAt: "asc" },
+            select: {
+              profileId: true,
+              joinedAt: true,
+              profile: { select: { nickname: true, avatarUrl: true } },
+            },
+          }),
+          prisma.planetMember.findMany({
+            where: { planetId: planet.id, status: "APPROVED" },
+            orderBy: { joinedAt: "asc" },
+            select: {
+              profileId: true,
+              role: true,
+              profile: { select: { nickname: true, avatarUrl: true } },
+            },
+          }),
+          prisma.activity.findMany({
+            where: {
+              visibility: "PUBLIC",
+              status: { notIn: ["DRAFT", "CANCELLED"] },
+              OR: [
+                { organizerId: viewerProfileId },
+                { coManagers: { some: { managerProfileId: viewerProfileId } } },
+              ],
+            },
+            orderBy: [{ startAt: "desc" }, { id: "desc" }],
+            take: 30,
+            select: { id: true, title: true, startAt: true },
+          }),
+        ])
+      : [[], [], []];
+
   return {
     ...planet,
     viewerMembership,
     canViewChat,
+    canManage,
+    pendingMembers,
+    approvedMembers,
+    availableActivities,
     isMuted: Boolean(readState?.mutedAt),
     isPinned: Boolean(readState?.pinnedAt),
     messages: [...messages].reverse(),
@@ -286,6 +387,7 @@ export async function getPlanetMoment(
       authorId: true,
       content: true,
       imageUrls: true,
+      videoUrls: true,
       createdAt: true,
       author: { select: { nickname: true, avatarUrl: true } },
       _count: { select: { likes: true } },

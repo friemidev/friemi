@@ -110,6 +110,12 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   viewerCanManage?: boolean;
   organizer: ActivityOrganizerViewModel;
   announcements: ActivityAnnouncementViewModel[];
+  linkedPlanets: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    coverImageUrl: string | null;
+  }>;
   publicEvent: {
     id: string;
     title: string;

@@ -26,7 +26,7 @@ test("only an approved owner can publish a planet moment", () => {
   );
   assert.equal(
     canPublishPlanetMoment({ role: "ADMIN", status: "APPROVED" }),
-    false,
+    true,
   );
   assert.equal(
     canPublishPlanetMoment({ role: "OWNER", status: "PENDING" }),

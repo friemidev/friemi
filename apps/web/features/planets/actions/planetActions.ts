@@ -25,6 +25,8 @@ import {
   buildPlanetMomentTargetWhere,
   canPublishPlanetMoment,
 } from "@/features/planets/utils/planetMomentPolicy";
+import { planetCategoryValues } from "@/features/planets/utils/planetCategories";
+import { isAllowedPlanetVideoUrl } from "@/lib/planet-video-storage";
 import { withLocale } from "@/lib/routes";
 
 export type PlanetChatActionState = {
@@ -37,7 +39,7 @@ const planetSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   name: z.string().trim().min(2).max(60),
   description: z.string().trim().max(500).optional(),
-  tags: z.string().trim().max(160).optional(),
+  tags: z.array(z.enum(planetCategoryValues)).length(1),
   coverImageUrl: z.string().url().optional().or(z.literal("")),
 });
 
@@ -78,6 +80,7 @@ const hidePlanetChatSchema = planetIdSchema;
 const momentSchema = planetIdSchema.extend({
   content: z.string().trim().max(2000),
   imageUrls: z.string().optional(),
+  videoUrls: z.string().optional(),
 });
 
 const commentSchema = planetIdSchema.extend({
@@ -88,6 +91,19 @@ const commentSchema = planetIdSchema.extend({
 const reviewPlanetMemberSchema = planetIdSchema.extend({
   memberProfileId: z.string().min(1),
   decision: z.enum(["approve", "reject"]),
+});
+
+const removePlanetMemberSchema = planetIdSchema.extend({
+  memberProfileId: z.string().min(1),
+});
+
+const planetAnnouncementSchema = planetIdSchema.extend({
+  announcement: z.string().trim().max(1000),
+});
+
+const planetActivitySchema = planetIdSchema.extend({
+  activityId: z.string().min(1),
+  decision: z.enum(["add", "remove"]),
 });
 
 function readString(formData: FormData, key: string) {
@@ -110,6 +126,22 @@ function parseImageUrls(value: string | undefined) {
       .max(12)
       .safeParse(JSON.parse(value));
     return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseVideoUrls(value: string | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = z
+      .array(z.string().url())
+      .max(1)
+      .safeParse(JSON.parse(value));
+    if (!parsed.success || !parsed.data.every(isAllowedPlanetVideoUrl)) {
+      return [];
+    }
+    return parsed.data;
   } catch {
     return [];
   }
@@ -225,7 +257,7 @@ export async function createPlanetAction(formData: FormData) {
     locale: readString(formData, "locale") || "zh-CN",
     name: readString(formData, "name"),
     description: readString(formData, "description"),
-    tags: readString(formData, "tags"),
+    tags: readStringList(formData, "tags"),
     coverImageUrl: readString(formData, "coverImageUrl"),
   });
 
@@ -242,11 +274,7 @@ export async function createPlanetAction(formData: FormData) {
   }
   const slug = await createUniqueSlug(result.data.name);
   const inviteCode = await createUniqueInviteCode();
-  const tags = (result.data.tags ?? "")
-    .split(/[,，、/]/)
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 5);
+  const tags = result.data.tags;
 
   const planet = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`planet-owner:${profile.id}`}))`;
@@ -465,6 +493,139 @@ export async function reviewPlanetMemberAction(formData: FormData) {
   revalidatePlanet(result.data.locale, result.data.planetSlug);
 }
 
+export async function removePlanetMemberAction(formData: FormData) {
+  const result = removePlanetMemberSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+    memberProfileId: readString(formData, "memberProfileId"),
+  });
+  if (!result.success) return;
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const actor = await requirePlanetMembership(
+    result.data.planetId,
+    profile.id,
+    { approvedOnly: true },
+  );
+  if (actor.role !== "OWNER" && actor.role !== "ADMIN") return;
+
+  const target = await prisma.planetMember.findUnique({
+    where: {
+      planetId_profileId: {
+        planetId: result.data.planetId,
+        profileId: result.data.memberProfileId,
+      },
+    },
+    select: { role: true, status: true },
+  });
+  if (!target || target.status !== "APPROVED" || target.role === "OWNER") {
+    return;
+  }
+  if (actor.role === "ADMIN" && target.role !== "MEMBER") return;
+
+  await prisma.$transaction([
+    prisma.planetChatReadState.deleteMany({
+      where: {
+        planetId: result.data.planetId,
+        profileId: result.data.memberProfileId,
+      },
+    }),
+    prisma.planetMember.delete({
+      where: {
+        planetId_profileId: {
+          planetId: result.data.planetId,
+          profileId: result.data.memberProfileId,
+        },
+      },
+    }),
+  ]);
+  revalidatePlanet(result.data.locale, result.data.planetSlug);
+}
+
+export async function updatePlanetAnnouncementAction(formData: FormData) {
+  const result = planetAnnouncementSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+    announcement: readString(formData, "announcement"),
+  });
+  if (!result.success) return;
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const membership = await requirePlanetMembership(
+    result.data.planetId,
+    profile.id,
+    { approvedOnly: true },
+  );
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
+
+  await prisma.planet.update({
+    where: { id: result.data.planetId },
+    data: { announcement: result.data.announcement || null },
+  });
+  revalidatePlanet(result.data.locale, result.data.planetSlug);
+}
+
+export async function updatePlanetActivityLinkAction(formData: FormData) {
+  const result = planetActivitySchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+    activityId: readString(formData, "activityId"),
+    decision: readString(formData, "decision"),
+  });
+  if (!result.success) return;
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const membership = await requirePlanetMembership(
+    result.data.planetId,
+    profile.id,
+    { approvedOnly: true },
+  );
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
+
+  if (result.data.decision === "add") {
+    const activity = await prisma.activity.findFirst({
+      where: {
+        id: result.data.activityId,
+        visibility: "PUBLIC",
+        status: { notIn: ["DRAFT", "CANCELLED"] },
+        OR: [
+          { organizerId: profile.id },
+          { coManagers: { some: { managerProfileId: profile.id } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!activity) return;
+    await prisma.planetActivity.upsert({
+      where: {
+        planetId_activityId: {
+          planetId: result.data.planetId,
+          activityId: activity.id,
+        },
+      },
+      create: {
+        planetId: result.data.planetId,
+        activityId: activity.id,
+      },
+      update: {},
+    });
+  } else {
+    await prisma.planetActivity.deleteMany({
+      where: {
+        planetId: result.data.planetId,
+        activityId: result.data.activityId,
+      },
+    });
+  }
+  revalidatePlanet(result.data.locale, result.data.planetSlug);
+  revalidatePath(
+    withLocale(result.data.locale, `/lobby/${result.data.activityId}`),
+  );
+}
+
 export async function sendPlanetMessageAction(
   _previousState: PlanetChatActionState,
   formData: FormData,
@@ -602,11 +763,19 @@ export async function createPlanetMomentAction(formData: FormData) {
     planetSlug: readString(formData, "planetSlug"),
     content: readString(formData, "content"),
     imageUrls: readString(formData, "imageUrls"),
+    videoUrls: readString(formData, "videoUrls"),
   });
   if (!result.success) return;
 
   const imageUrls = parseImageUrls(result.data.imageUrls);
-  if (!result.data.content && imageUrls.length === 0) return;
+  const videoUrls = parseVideoUrls(result.data.videoUrls);
+  if (
+    !result.data.content &&
+    imageUrls.length === 0 &&
+    videoUrls.length === 0
+  ) {
+    return;
+  }
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
   const membership = await requirePlanetMembership(
@@ -624,6 +793,7 @@ export async function createPlanetMomentAction(formData: FormData) {
       authorId: profile.id,
       content: result.data.content,
       imageUrls,
+      videoUrls,
     },
     select: { id: true },
   });

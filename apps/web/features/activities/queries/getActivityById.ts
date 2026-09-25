@@ -83,6 +83,22 @@ const activityDetailSelect = {
       },
     },
   },
+  planetLinks: {
+    where: {
+      planet: { visibility: "PUBLIC" },
+    },
+    orderBy: { addedAt: "desc" },
+    select: {
+      planet: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          coverImageUrl: true,
+        },
+      },
+    },
+  },
   participants: {
     where: {
       status: {
@@ -447,6 +463,7 @@ function getActivityDetailViewModel(
         toIsoString(announcement.createdAt) ?? new Date().toISOString(),
       isByOrganizer: announcement.authorId === activity.organizerId,
     })),
+    linkedPlanets: activity.planetLinks.map((link) => link.planet),
     publicEvent: activity.publicEvent
       ? {
           id: activity.publicEvent.id,

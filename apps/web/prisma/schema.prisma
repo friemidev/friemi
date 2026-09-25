@@ -524,6 +524,7 @@ model Planet {
   name             String
   nameTranslations Json?
   description      String?               @db.Text
+  announcement     String?               @db.Text
   coverImageUrl    String?
   tags             String[]              @default([])
   visibility       PlanetVisibility      @default(PUBLIC)
@@ -533,6 +534,7 @@ model Planet {
   messages         PlanetMessage[]
   chatReadStates   PlanetChatReadState[]
   moments          PlanetMoment[]
+  activityLinks    PlanetActivity[]
   notifications    Notification[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
@@ -608,6 +610,7 @@ model PlanetMoment {
   authorId  String
   content   String                @db.Text
   imageUrls String[]              @default([])
+  videoUrls String[]              @default([])
   planet    Planet                @relation(fields: [planetId], references: [id], onDelete: Cascade)
   author    UserProfile           @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   comments  PlanetMomentComment[]
@@ -617,6 +620,18 @@ model PlanetMoment {
 
   @@index([planetId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PlanetActivity {
+  planetId   String
+  activityId String
+  planet     Planet   @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  addedAt    DateTime @default(now())
+
+  @@id([planetId, activityId])
+  @@index([activityId, addedAt])
+  @@index([planetId, addedAt])
 }
 
 model PlanetMomentComment {
@@ -732,6 +747,8 @@ model Activity {
   trustScoreEvents  TrustScoreEvent[]
   aaLedger          AaLedger?
   polls             ActivityPoll[]
+  planetLinks       PlanetActivity[]
+  moments           Moment[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -1397,6 +1414,7 @@ model Comment {
 model Moment {
   id               String           @id @default(cuid())
   authorId         String
+  activityId       String?
   content          String?          @db.Text
   visibility       MomentVisibility @default(FRIENDS)
   likeCount        Int              @default(0)
@@ -1405,6 +1423,7 @@ model Moment {
   resharedMomentId String?
   deletedAt        DateTime?
   author           UserProfile      @relation("MomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  activity         Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
   resharedMoment   Moment?          @relation("MomentReshares", fields: [resharedMomentId], references: [id], onDelete: SetNull)
   reshares         Moment[]         @relation("MomentReshares")
   images           MomentImage[]
@@ -1415,6 +1434,7 @@ model Moment {
   updatedAt        DateTime         @updatedAt
 
   @@index([authorId, createdAt])
+  @@index([activityId, createdAt])
   @@index([visibility, createdAt])
   @@index([deletedAt, createdAt])
   @@index([resharedMomentId, createdAt])
