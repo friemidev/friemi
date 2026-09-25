@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canUseWerewolfAntidote,
+  formatWerewolfSeatLabel,
   getWerewolfFactionAlert,
+  getWerewolfFlowRecordLabel,
+  getWerewolfNightActionLabel,
   getWerewolfNightActionSubmissionKey,
   getWerewolfNightCues,
   getWerewolfSeerResult,
@@ -59,6 +62,66 @@ test("uses the requested first-night role order", () => {
   assert.deepEqual(
     cues.map((cue) => cue.actionKind),
     ["NONE", "CUPID", "LOVERS", "GUARD", "WOLF_KILL", "SEER", "WITCH", "NONE"],
+  );
+});
+
+test("localizes judge cues from the current route locale", () => {
+  const roles = ["guard", "werewolf", "seer", "witch"];
+
+  assert.equal(
+    getWerewolfNightCues(roles, 1, "zh-CN")[0]?.lines[0],
+    "天黑请闭眼。",
+  );
+  assert.equal(
+    getWerewolfNightCues(roles, 1, "en")[0]?.lines[0],
+    "Everyone, close your eyes.",
+  );
+  assert.equal(
+    getWerewolfNightCues(roles, 1, "fr")[0]?.lines[0],
+    "Tout le monde ferme les yeux.",
+  );
+});
+
+test("localizes vote records and seat labels", () => {
+  const voteEvent = {
+    payload: { targetSeatNumber: 5, voterSeatNumber: 2 },
+    type: "werewolf_exile_vote_submitted",
+  };
+  const abstainEvent = {
+    payload: { targetSeatNumber: 0, voterSeatNumber: 2 },
+    type: "werewolf_exile_vote_submitted",
+  };
+
+  assert.equal(formatWerewolfSeatLabel(3, "zh-CN"), "3号");
+  assert.equal(formatWerewolfSeatLabel(3, "en"), "seat 3");
+  assert.equal(formatWerewolfSeatLabel(3, "fr"), "siège 3");
+  assert.equal(getWerewolfFlowRecordLabel(voteEvent, "zh-CN"), "2号 投给 5号");
+  assert.equal(
+    getWerewolfFlowRecordLabel(voteEvent, "en"),
+    "Seat 2 voted for seat 5",
+  );
+  assert.equal(
+    getWerewolfFlowRecordLabel(voteEvent, "fr"),
+    "Le siège 2 a voté pour le siège 5",
+  );
+  assert.equal(
+    getWerewolfFlowRecordLabel(abstainEvent, "fr"),
+    "Le siège 2 s'est abstenu",
+  );
+});
+
+test("localizes night action records", () => {
+  assert.equal(
+    getWerewolfNightActionLabel("WOLF_KILL", "zh-CN"),
+    "狼人确认击杀",
+  );
+  assert.equal(
+    getWerewolfNightActionLabel("WOLF_KILL", "en"),
+    "Pack confirmed kill",
+  );
+  assert.equal(
+    getWerewolfNightActionLabel("WOLF_KILL", "fr"),
+    "Les loups ont confirmé leur cible",
   );
 });
 
