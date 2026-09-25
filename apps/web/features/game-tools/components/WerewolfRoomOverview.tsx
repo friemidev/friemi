@@ -1321,6 +1321,12 @@ export function WerewolfRoomOverview({
   useEffect(() => {
     const previousStatus = previousRoomStatusRef.current;
     let transitionTimer: number | null = null;
+    const didStartFirstRound =
+      previousStatus === "LOBBY" && room.status === "IN_PROGRESS";
+    const didStartNextRound = didWerewolfRoomStartNextRound(
+      previousStatus,
+      room.status,
+    );
 
     if (previousStatus !== "FINISHED" && room.status === "FINISHED") {
       setFinishDialogOpen(false);
@@ -1330,12 +1336,16 @@ export function WerewolfRoomOverview({
       setResultDialogOpen(true);
     }
 
-    if (didWerewolfRoomStartNextRound(previousStatus, room.status)) {
-      setResultDialogOpen(false);
-      setShowRoundTransition(true);
+    if (didStartFirstRound || didStartNextRound) {
+      if (didStartNextRound) {
+        setResultDialogOpen(false);
+        setShowRoundTransition(true);
+      }
 
       transitionTimer = window.setTimeout(() => {
-        setShowRoundTransition(false);
+        if (didStartNextRound) {
+          setShowRoundTransition(false);
+        }
 
         if (!judgeIsViewer && currentSeatPrivateToken) {
           router.replace(
@@ -1346,7 +1356,7 @@ export function WerewolfRoomOverview({
             }),
           );
         }
-      }, 1800);
+      }, didStartNextRound ? 1800 : 0);
     }
 
     previousRoomStatusRef.current = room.status;

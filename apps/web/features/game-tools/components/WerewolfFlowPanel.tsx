@@ -316,6 +316,7 @@ export function WerewolfFlowPanel({
   const factionAlertDragStartYRef = useRef<number | null>(null);
   const factionAlertDragYRef = useRef(0);
   const factionAlertFormRef = useRef<HTMLFormElement>(null);
+  const autoOpenedPlayerActionScopeRef = useRef<string | null>(null);
   const factionAlertDismissStateRef = useRef<WerewolfRoomActionState | null>(
     null,
   );
@@ -447,6 +448,16 @@ export function WerewolfFlowPanel({
     isVoteStage &&
     !ownSubmission &&
     (!isSheriffVote || !flow.candidateSeatNumbers.includes(seatNumber));
+  const viewerIsCandidate = flow.candidateSeatNumbers.includes(seatNumber);
+  const viewerIsWithdrawn = flow.withdrawnSeatNumbers.includes(seatNumber);
+  const shouldAutoOpenPlayerAction =
+    !isJudge &&
+    viewerCanAct &&
+    ((flow.stage === "SHERIFF_SIGNUP" && !viewerIsCandidate) ||
+      (flow.stage === "SHERIFF_WITHDRAW" &&
+        viewerIsCandidate &&
+        !viewerIsWithdrawn) ||
+      canVote);
   const records = events
     .map((event) => ({
       event,
@@ -510,6 +521,20 @@ export function WerewolfFlowPanel({
   useEffect(() => {
     setSeerNotice(null);
   }, [flow.cueIndex, flow.sessionIndex]);
+
+  useEffect(() => {
+    if (
+      roomStatus !== "IN_PROGRESS" ||
+      !shouldAutoOpenPlayerAction ||
+      autoOpenedPlayerActionScopeRef.current === currentActionScope
+    ) {
+      return;
+    }
+
+    autoOpenedPlayerActionScopeRef.current = currentActionScope;
+    setTab("flow");
+    setOpen(true);
+  }, [currentActionScope, roomStatus, shouldAutoOpenPlayerAction]);
 
   useEffect(() => {
     const submittedState = factionAlertDismissStateRef.current;
