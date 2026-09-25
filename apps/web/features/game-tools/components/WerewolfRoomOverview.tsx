@@ -57,7 +57,10 @@ import {
   getWerewolfAtmosphereById,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
-import { getWerewolfUSeatColumns } from "@/features/game-tools/werewolfConfig";
+import {
+  getWerewolfUSeatColumns,
+  type WerewolfRoleKey,
+} from "@/features/game-tools/werewolfConfig";
 import {
   getWerewolfAppJoinUrl,
   getWerewolfPrivateSeatHref,
@@ -151,6 +154,7 @@ type WerewolfRoomOverviewProps = {
     variant: {
       label: string;
       playerSeatCount: number;
+      roles: WerewolfRoleKey[];
       totalSeats: number;
     };
   };
@@ -2671,17 +2675,23 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
-      {judgeIsViewer && judgePrivateToken && room.status === "IN_PROGRESS" ? (
+      {currentViewerSeat &&
+      currentSeatPrivateToken &&
+      room.status === "IN_PROGRESS" ? (
         <WerewolfFlowPanel
           events={room.events}
           flow={room.state.flow}
-          isJudge
+          isJudge={judgeIsViewer}
           locale={locale}
-          privateToken={judgePrivateToken}
-          roleDeck={room.seats.map((seat) => seat.roleKey)}
-          roleKey={null}
+          privateToken={currentSeatPrivateToken}
+          roleDeck={room.variant.roles}
+          roleKey={
+            judgeIsViewer
+              ? null
+              : (currentViewerSeat.roleKey as WerewolfRoleKey | null)
+          }
           roomStatus={room.status}
-          seatNumber={judgeSeat?.seatNumber ?? room.variant.totalSeats}
+          seatNumber={currentViewerSeat.seatNumber}
           seats={room.seats.map((seat) => ({
             displayName: seat.displayName,
             isActive: seat.isActive,
