@@ -178,6 +178,7 @@ const werewolfTestBotOperationSchema = z.object({
     "fill",
     "ready",
     "fill_ready_start",
+    "advance_flow",
     "random_death",
     "random_revive",
     "finish_good",
@@ -2829,6 +2830,84 @@ function getNextWerewolfFlowAfterVote({
   };
 }
 
+function getNextWerewolfFlowStep({
+  flow,
+  locale,
+  roles,
+}: {
+  flow: WerewolfFlowState;
+  locale: string;
+  roles: Array<string | null>;
+}) {
+  if (flow.stage === "NIGHT") {
+    const cues = getWerewolfNightCues(roles, flow.dayNumber, locale);
+
+    return flow.cueIndex < cues.length - 1
+      ? { ...flow, cueIndex: flow.cueIndex + 1 }
+      : {
+          ...flow,
+          cueIndex: 0,
+          sessionIndex: flow.sessionIndex + 1,
+          stage:
+            flow.dayNumber === 1 && !flow.sheriffElectionCompleted
+              ? ("SHERIFF_SIGNUP" as const)
+              : ("DAY_ANNOUNCEMENT" as const),
+        };
+  }
+
+  switch (flow.stage) {
+    case "SHERIFF_SIGNUP":
+      return { ...flow, stage: "SHERIFF_SPEECH" as const };
+    case "SHERIFF_SPEECH":
+      return { ...flow, stage: "SHERIFF_WITHDRAW" as const };
+    case "SHERIFF_WITHDRAW":
+      return {
+        ...flow,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "SHERIFF_VOTE" as const,
+        voteRound: 1 as const,
+      };
+    case "SHERIFF_RUNOFF_SPEECH":
+      return {
+        ...flow,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "SHERIFF_RUNOFF_VOTE" as const,
+      };
+    case "SHERIFF_RESULT":
+      return {
+        ...flow,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "DAY_ANNOUNCEMENT" as const,
+      };
+    case "DAY_ANNOUNCEMENT":
+      return { ...flow, stage: "DAY_SPEECH" as const };
+    case "DAY_SPEECH":
+      return {
+        ...flow,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "EXILE_VOTE" as const,
+        voteRound: 1 as const,
+      };
+    case "EXILE_RUNOFF_SPEECH":
+      return {
+        ...flow,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "EXILE_RUNOFF_VOTE" as const,
+      };
+    case "EXILE_RESULT":
+      return {
+        ...flow,
+        cueIndex: 0,
+        dayNumber: flow.dayNumber + 1,
+        sessionIndex: flow.sessionIndex + 1,
+        stage: "NIGHT" as const,
+        suggestedSeatNumber: null,
+      };
+    default:
+      return null;
+  }
+}
+
 export async function updateWerewolfFlowAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
@@ -2957,87 +3036,17 @@ export async function updateWerewolfFlowAction(
         : "werewolf_exile_vote_resolved";
     } else {
       const roles = room.seats.map((seat) => seat.roleKey);
-      const cues = getWerewolfNightCues(
+      const advancedFlow = getNextWerewolfFlowStep({
+        flow: currentFlow,
+        locale: room.locale,
         roles,
-        currentFlow.dayNumber,
-        room.locale,
-      );
+      });
 
-      switch (currentFlow.stage) {
-        case "NIGHT":
-          nextFlow =
-            currentFlow.cueIndex < cues.length - 1
-              ? { ...currentFlow, cueIndex: currentFlow.cueIndex + 1 }
-              : {
-                  ...currentFlow,
-                  cueIndex: 0,
-                  sessionIndex: currentFlow.sessionIndex + 1,
-                  stage:
-                    currentFlow.dayNumber === 1 &&
-                    !currentFlow.sheriffElectionCompleted
-                      ? "SHERIFF_SIGNUP"
-                      : "DAY_ANNOUNCEMENT",
-                };
-          break;
-        case "SHERIFF_SIGNUP":
-          nextFlow = { ...currentFlow, stage: "SHERIFF_SPEECH" };
-          break;
-        case "SHERIFF_SPEECH":
-          nextFlow = { ...currentFlow, stage: "SHERIFF_WITHDRAW" };
-          break;
-        case "SHERIFF_WITHDRAW":
-          nextFlow = {
-            ...currentFlow,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "SHERIFF_VOTE",
-            voteRound: 1,
-          };
-          break;
-        case "SHERIFF_RUNOFF_SPEECH":
-          nextFlow = {
-            ...currentFlow,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "SHERIFF_RUNOFF_VOTE",
-          };
-          break;
-        case "SHERIFF_RESULT":
-          nextFlow = {
-            ...currentFlow,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "DAY_ANNOUNCEMENT",
-          };
-          break;
-        case "DAY_ANNOUNCEMENT":
-          nextFlow = { ...currentFlow, stage: "DAY_SPEECH" };
-          break;
-        case "DAY_SPEECH":
-          nextFlow = {
-            ...currentFlow,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "EXILE_VOTE",
-            voteRound: 1,
-          };
-          break;
-        case "EXILE_RUNOFF_SPEECH":
-          nextFlow = {
-            ...currentFlow,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "EXILE_RUNOFF_VOTE",
-          };
-          break;
-        case "EXILE_RESULT":
-          nextFlow = {
-            ...currentFlow,
-            cueIndex: 0,
-            dayNumber: currentFlow.dayNumber + 1,
-            sessionIndex: currentFlow.sessionIndex + 1,
-            stage: "NIGHT",
-            suggestedSeatNumber: null,
-          };
-          break;
-        default:
-          return { formError: t.invalidAction };
+      if (!advancedFlow) {
+        return { formError: t.invalidAction };
       }
+
+      nextFlow = advancedFlow;
     }
 
     const didUpdate = await prisma.$transaction(async (tx) => {
@@ -4180,6 +4189,7 @@ export async function runWerewolfTestBotAction(
           prisma.gameToolRoom.update({
             where: { id: room.id },
             data: {
+              revision: { increment: 1 },
               startedAt: now,
               state: {
                 ...normalizeWerewolfRoomState(room.state),
@@ -4214,6 +4224,160 @@ export async function runWerewolfTestBotAction(
       );
 
       await prisma.$transaction(updates);
+    } else if (result.data.operation === "advance_flow") {
+      if (room.status !== "IN_PROGRESS") {
+        return { formError: t.notRunning };
+      }
+
+      const currentState = normalizeWerewolfRoomState(room.state);
+      const currentFlow = currentState.flow;
+      let flowForStep = currentFlow;
+      let eventPayload: Prisma.InputJsonValue = {
+        operation: "test_next",
+        stage: currentFlow.stage,
+        testOnly: true,
+      };
+      let eventType = "werewolf_flow_advanced";
+
+      if (currentFlow.stage === "SHERIFF_SIGNUP") {
+        const deadSeatNumbers = new Set(currentState.deadSeatNumbers);
+        const botCandidate = playerSeats.find((seat) => {
+          const expectedName = getWerewolfTestBotDisplayName({
+            isJudgeSeat: false,
+            locale: room.locale,
+            seatNumber: seat.seatNumber,
+          });
+
+          return (
+            !deadSeatNumbers.has(seat.seatNumber) &&
+            seat.profileId === null &&
+            seat.guestName === expectedName
+          );
+        });
+
+        if (
+          botCandidate &&
+          !currentFlow.candidateSeatNumbers.includes(botCandidate.seatNumber)
+        ) {
+          flowForStep = {
+            ...currentFlow,
+            candidateSeatNumbers: [
+              ...currentFlow.candidateSeatNumbers,
+              botCandidate.seatNumber,
+            ].sort((first, second) => first - second),
+          };
+        }
+      }
+
+      const isSheriffVote =
+        currentFlow.stage === "SHERIFF_VOTE" ||
+        currentFlow.stage === "SHERIFF_RUNOFF_VOTE";
+      const isExileVote =
+        currentFlow.stage === "EXILE_VOTE" ||
+        currentFlow.stage === "EXILE_RUNOFF_VOTE";
+      let nextFlow: WerewolfFlowState;
+
+      if (isSheriffVote || isExileVote) {
+        const kind = isSheriffVote
+          ? "WEREWOLF_SHERIFF_VOTE"
+          : "WEREWOLF_EXILE_VOTE";
+        const submissions = await prisma.gameToolSubmission.findMany({
+          where: {
+            kind,
+            roomId: room.id,
+            roundIndex: currentFlow.sessionIndex,
+          },
+          select: { seat: { select: { seatNumber: true } }, value: true },
+        });
+        const votes = submissions.flatMap((submission) => {
+          const voterSeatNumber = submission.seat?.seatNumber;
+          const value = Number(submission.value);
+
+          return voterSeatNumber
+            ? [
+                {
+                  targetSeatNumber:
+                    Number.isInteger(value) && value > 0 ? value : null,
+                  voterSeatNumber,
+                },
+              ]
+            : [];
+        });
+        const voteResult = tallyWerewolfVotes({
+          sheriffSeatNumber: isSheriffVote
+            ? null
+            : (currentState.sheriffSeatNumber ?? null),
+          votes,
+        });
+
+        nextFlow = getNextWerewolfFlowAfterVote({
+          flow: currentFlow,
+          leaders: voteResult.leaders,
+        });
+        eventPayload = {
+          leaders: voteResult.leaders,
+          stage: currentFlow.stage,
+          testOnly: true,
+          totals: voteResult.totals,
+          voteRound: currentFlow.voteRound,
+        };
+        eventType = isSheriffVote
+          ? "werewolf_sheriff_vote_resolved"
+          : "werewolf_exile_vote_resolved";
+      } else {
+        const advancedFlow = getNextWerewolfFlowStep({
+          flow: flowForStep,
+          locale: room.locale,
+          roles: room.seats.map((seat) => seat.roleKey),
+        });
+
+        if (!advancedFlow) {
+          return { formError: t.operationFailed };
+        }
+
+        nextFlow = advancedFlow;
+      }
+
+      const nextState: WerewolfRoomState = {
+        ...currentState,
+        flow: nextFlow,
+        sheriffSeatNumber:
+          currentFlow.stage === "SHERIFF_RESULT"
+            ? currentFlow.suggestedSeatNumber
+            : currentState.sheriffSeatNumber,
+      };
+      const didAdvance = await prisma.$transaction(async (tx) => {
+        const updatedRoom = await tx.gameToolRoom.updateMany({
+          where: {
+            id: room.id,
+            revision: room.revision,
+            status: "IN_PROGRESS",
+          },
+          data: {
+            revision: { increment: 1 },
+            state: nextState,
+          },
+        });
+
+        if (updatedRoom.count !== 1) {
+          return false;
+        }
+
+        await tx.gameToolEvent.create({
+          data: {
+            actorId: profile.id,
+            payload: eventPayload,
+            roomId: room.id,
+            type: eventType,
+          },
+        });
+
+        return true;
+      });
+
+      if (!didAdvance) {
+        return { formError: t.operationFailed };
+      }
     } else if (
       result.data.operation === "random_death" ||
       result.data.operation === "random_revive"

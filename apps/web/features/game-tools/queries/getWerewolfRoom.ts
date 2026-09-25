@@ -340,6 +340,7 @@ export const getWerewolfRoomById = cache(
         key: variant.key,
         label: getWerewolfVariantLabel(locale, variant),
         playerSeatCount: variant.playerSeatCount,
+        roles: variant.roles,
         totalSeats: variant.totalSeats,
       },
       viewerSeatId: viewerSeat?.id ?? null,

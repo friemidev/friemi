@@ -326,6 +326,34 @@ export async function getAdminMerchants() {
   return merchants.map(serializeAdminMerchantListItem);
 }
 
+export async function getAdminMerchant(merchantId: string) {
+  const merchant = await prisma.merchant.findFirst({
+    where: { id: merchantId, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      city: true,
+      description: true,
+      address: true,
+      websiteUrl: true,
+      contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
+      updatedAt: true,
+      _count: { select: { activities: true } },
+    },
+  });
+
+  return merchant ? serializeAdminMerchantListItem(merchant) : null;
+}
+
 export async function getAdminMerchantCandidates() {
   return prisma.userProfile.findMany({
     where: {
@@ -334,6 +362,44 @@ export async function getAdminMerchantCandidates() {
     },
     orderBy: [{ nickname: "asc" }],
     take: 300,
+    select: {
+      email: true,
+      friendCode: true,
+      id: true,
+      nickname: true,
+    },
+  });
+}
+
+function normalizeAdminMerchantCandidateSearch(value: string) {
+  return value
+    .replace(/[０-９]/g, (char) =>
+      String.fromCharCode(char.charCodeAt(0) - 0xfee0),
+    )
+    .trim();
+}
+
+export async function searchAdminMerchantCandidates(rawQuery: string) {
+  const query = normalizeAdminMerchantCandidateSearch(rawQuery);
+  if (!query) return [];
+
+  const compactFriendCode = query.replace(/[\s-]/g, "");
+  const friendCode = /^\d{6}$/.test(compactFriendCode)
+    ? compactFriendCode
+    : null;
+
+  return prisma.userProfile.findMany({
+    where: {
+      ownedMerchant: null,
+      status: "ACTIVE",
+      OR: [
+        ...(friendCode ? [{ friendCode }] : []),
+        { nickname: { contains: query, mode: "insensitive" } },
+        { email: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    orderBy: [{ nickname: "asc" }],
+    take: 30,
     select: {
       email: true,
       friendCode: true,

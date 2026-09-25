@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ClipboardList,
   Crown,
   Moon,
@@ -95,6 +96,7 @@ type WerewolfFlowPanelProps = {
   events: FlowEvent[];
   flow: WerewolfFlowState;
   isJudge: boolean;
+  inlineTrigger?: boolean;
   locale: string;
   privateToken: string;
   roleDeck: Array<string | null>;
@@ -275,6 +277,7 @@ export function WerewolfFlowPanel({
   events,
   flow,
   isJudge,
+  inlineTrigger = false,
   locale,
   privateToken,
   roleDeck,
@@ -316,6 +319,7 @@ export function WerewolfFlowPanel({
   const factionAlertDragStartYRef = useRef<number | null>(null);
   const factionAlertDragYRef = useRef(0);
   const factionAlertFormRef = useRef<HTMLFormElement>(null);
+  const autoOpenedPlayerActionScopeRef = useRef<string | null>(null);
   const factionAlertDismissStateRef = useRef<WerewolfRoomActionState | null>(
     null,
   );
@@ -447,6 +451,16 @@ export function WerewolfFlowPanel({
     isVoteStage &&
     !ownSubmission &&
     (!isSheriffVote || !flow.candidateSeatNumbers.includes(seatNumber));
+  const viewerIsCandidate = flow.candidateSeatNumbers.includes(seatNumber);
+  const viewerIsWithdrawn = flow.withdrawnSeatNumbers.includes(seatNumber);
+  const shouldAutoOpenPlayerAction =
+    !isJudge &&
+    viewerCanAct &&
+    ((flow.stage === "SHERIFF_SIGNUP" && !viewerIsCandidate) ||
+      (flow.stage === "SHERIFF_WITHDRAW" &&
+        viewerIsCandidate &&
+        !viewerIsWithdrawn) ||
+      canVote);
   const records = events
     .map((event) => ({
       event,
@@ -512,6 +526,20 @@ export function WerewolfFlowPanel({
   }, [flow.cueIndex, flow.sessionIndex]);
 
   useEffect(() => {
+    if (
+      roomStatus !== "IN_PROGRESS" ||
+      !shouldAutoOpenPlayerAction ||
+      autoOpenedPlayerActionScopeRef.current === currentActionScope
+    ) {
+      return;
+    }
+
+    autoOpenedPlayerActionScopeRef.current = currentActionScope;
+    setTab("flow");
+    setOpen(true);
+  }, [currentActionScope, roomStatus, shouldAutoOpenPlayerAction]);
+
+  useEffect(() => {
     const submittedState = factionAlertDismissStateRef.current;
 
     if (!submittedState || submittedState === flowState) {
@@ -561,12 +589,27 @@ export function WerewolfFlowPanel({
   return (
     <>
       <button
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-3 z-[96] inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-[#15241F]/94 px-4 text-xs font-bold text-white shadow-[0_12px_38px_rgba(0,0,0,0.34)] backdrop-blur-md transition active:scale-95 md:bottom-5 md:right-5"
+        aria-label={`${isJudge ? t.flow : t.currentFlow}: ${stageLabel}`}
+        className={`z-[96] grid h-14 grid-cols-[2.25rem_minmax(0,1fr)_1.5rem] items-center gap-3 rounded-2xl border border-white/80 bg-[#F1F2E3] px-3 text-[#153B31] shadow-[0_16px_44px_rgba(0,0,0,0.46)] transition hover:bg-white active:scale-[0.98] ${
+          inlineTrigger
+            ? "relative w-full"
+            : "fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 w-[min(calc(100vw-1.5rem),22rem)] -translate-x-1/2 md:bottom-5 md:left-auto md:right-5 md:w-[16rem] md:translate-x-0"
+        }`}
         onClick={() => setOpen(true)}
         type="button"
       >
-        <ClipboardList className="h-4 w-4" />
-        {isJudge ? t.flow : stageLabel}
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#153B31] text-[#F1F2E3] shadow-[0_5px_14px_rgba(21,59,49,0.28)]">
+          <ClipboardList className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 text-left leading-none">
+          <span className="block text-[10px] font-bold text-[#607069]">
+            {isJudge ? t.flow : t.currentFlow}
+          </span>
+          <span className="mt-1 block truncate text-sm font-bold">
+            {stageLabel}
+          </span>
+        </span>
+        <ChevronUp className="h-5 w-5" />
       </button>
 
       {visibleFactionAlert && isJudge ? (

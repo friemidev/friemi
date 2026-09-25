@@ -57,7 +57,10 @@ import {
   getWerewolfAtmosphereById,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
-import { getWerewolfUSeatColumns } from "@/features/game-tools/werewolfConfig";
+import {
+  getWerewolfUSeatColumns,
+  type WerewolfRoleKey,
+} from "@/features/game-tools/werewolfConfig";
 import {
   getWerewolfAppJoinUrl,
   getWerewolfPrivateSeatHref,
@@ -151,6 +154,7 @@ type WerewolfRoomOverviewProps = {
     variant: {
       label: string;
       playerSeatCount: number;
+      roles: WerewolfRoleKey[];
       totalSeats: number;
     };
   };
@@ -1321,6 +1325,12 @@ export function WerewolfRoomOverview({
   useEffect(() => {
     const previousStatus = previousRoomStatusRef.current;
     let transitionTimer: number | null = null;
+    const didStartFirstRound =
+      previousStatus === "LOBBY" && room.status === "IN_PROGRESS";
+    const didStartNextRound = didWerewolfRoomStartNextRound(
+      previousStatus,
+      room.status,
+    );
 
     if (previousStatus !== "FINISHED" && room.status === "FINISHED") {
       setFinishDialogOpen(false);
@@ -1330,12 +1340,16 @@ export function WerewolfRoomOverview({
       setResultDialogOpen(true);
     }
 
-    if (didWerewolfRoomStartNextRound(previousStatus, room.status)) {
-      setResultDialogOpen(false);
-      setShowRoundTransition(true);
+    if (didStartFirstRound || didStartNextRound) {
+      if (didStartNextRound) {
+        setResultDialogOpen(false);
+        setShowRoundTransition(true);
+      }
 
       transitionTimer = window.setTimeout(() => {
-        setShowRoundTransition(false);
+        if (didStartNextRound) {
+          setShowRoundTransition(false);
+        }
 
         if (!judgeIsViewer && currentSeatPrivateToken) {
           router.replace(
@@ -1346,7 +1360,7 @@ export function WerewolfRoomOverview({
             }),
           );
         }
-      }, 1800);
+      }, didStartNextRound ? 1800 : 0);
     }
 
     previousRoomStatusRef.current = room.status;
@@ -2471,6 +2485,36 @@ export function WerewolfRoomOverview({
           </div>
 
           <div className="relative z-10 mt-2 shrink-0 space-y-2">
+            {currentViewerSeat &&
+            currentSeatPrivateToken &&
+            room.status === "IN_PROGRESS" ? (
+              <WerewolfFlowPanel
+                events={room.events}
+                flow={room.state.flow}
+                inlineTrigger
+                isJudge={judgeIsViewer}
+                locale={locale}
+                privateToken={currentSeatPrivateToken}
+                roleDeck={room.variant.roles}
+                roleKey={
+                  judgeIsViewer
+                    ? null
+                    : (currentViewerSeat.roleKey as WerewolfRoleKey | null)
+                }
+                roomStatus={room.status}
+                seatNumber={currentViewerSeat.seatNumber}
+                seats={room.seats.map((seat) => ({
+                  displayName: seat.displayName,
+                  isActive: seat.isActive,
+                  isDead: seat.isDead,
+                  isPlayerSeat: seat.isPlayerSeat,
+                  roleKey: seat.roleKey,
+                  seatNumber: seat.seatNumber,
+                }))}
+                sheriffSeatNumber={room.state.sheriffSeatNumber ?? null}
+                submissions={room.flowSubmissions}
+              />
+            ) : null}
             {canExitRoom && currentViewerSeat ? (
               <div className="grid gap-2">
                 {isSeatingOpen ? (
@@ -2661,29 +2705,6 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
-      {judgeIsViewer && judgePrivateToken && room.status === "IN_PROGRESS" ? (
-        <WerewolfFlowPanel
-          events={room.events}
-          flow={room.state.flow}
-          isJudge
-          locale={locale}
-          privateToken={judgePrivateToken}
-          roleDeck={room.seats.map((seat) => seat.roleKey)}
-          roleKey={null}
-          roomStatus={room.status}
-          seatNumber={judgeSeat?.seatNumber ?? room.variant.totalSeats}
-          seats={room.seats.map((seat) => ({
-            displayName: seat.displayName,
-            isActive: seat.isActive,
-            isDead: seat.isDead,
-            isPlayerSeat: seat.isPlayerSeat,
-            roleKey: seat.roleKey,
-            seatNumber: seat.seatNumber,
-          }))}
-          sheriffSeatNumber={room.state.sheriffSeatNumber ?? null}
-          submissions={room.flowSubmissions}
-        />
-      ) : null}
       {managedSeat && judgePrivateToken && canJudgeControlPlayers ? (
         <div
           className="fixed inset-0 z-[90] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
