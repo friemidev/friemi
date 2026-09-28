@@ -80,7 +80,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const [syncStatus, setSyncStatus] = useState<"CONNECTED" | "RECONNECTING" | "POLLING">("POLLING");
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [draftFailed, setDraftFailed] = useState(false);
-  const refreshRunning = useRef(false);
+  const refreshRunning = useRef<Promise<void> | null>(null);
   const mutationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const previousTask = useRef("");
   const latestRoom = useRef(room);
@@ -113,26 +113,32 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => () => { if (inkTimer.current !== null) window.clearTimeout(inkTimer.current); }, []);
 
-  const refresh = useCallback(async () => {
-    if (refreshRunning.current) return;
-    refreshRunning.current = true;
-    try {
-      const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, {
-        cache: "no-store",
-        headers: { "if-none-match": `W/"draw-guess-${latestRoom.current.revision}"` },
-      });
-      if (response.status === 304) {
-        setRefreshFailed(false);
-      } else if (response.ok) {
-        const result = await response.json() as { room: DrawGuessRoomView };
-        if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
-        setRefreshFailed(false);
-      } else {
-        setRefreshFailed(true);
-        if (response.status === 401) setError(statusCopy.signIn);
-      }
-    } catch { setRefreshFailed(true); }
-    finally { refreshRunning.current = false; }
+  const refresh = useCallback(async (afterMutation = false) => {
+    if (refreshRunning.current) {
+      await refreshRunning.current;
+      if (!afterMutation) return;
+    }
+    const running = (async () => {
+      try {
+        const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, {
+          cache: "no-store",
+          headers: { "if-none-match": `W/"draw-guess-${latestRoom.current.revision}"` },
+        });
+        if (response.status === 304) {
+          setRefreshFailed(false);
+        } else if (response.ok) {
+          const result = await response.json() as { room: DrawGuessRoomView };
+          if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
+          setRefreshFailed(false);
+        } else {
+          setRefreshFailed(true);
+          if (response.status === 401) setError(statusCopy.signIn);
+        }
+      } catch { setRefreshFailed(true); }
+    })();
+    refreshRunning.current = running;
+    try { await running; }
+    finally { if (refreshRunning.current === running) refreshRunning.current = null; }
   }, [initialRoom.id, statusCopy.signIn]);
 
   useEffect(() => {
@@ -170,9 +176,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => {
     if (room.mode !== "CLASSIC" || room.view.phase !== "DRAW_GUESS" || room.view.turnIndex !== room.viewerSeat) return;
-    if (currentStroke.current || draftFailed) return;
-    setStrokes((current) => (room.view.drawing?.length ?? 0) >= current.length ? room.view.drawing ?? [] : current);
-  }, [draftFailed, room.mode, room.revision, room.view.drawing, room.view.phase, room.view.turnIndex, room.viewerSeat]);
+    if (currentStroke.current || draftFailed || strokeSaving) return;
+    setStrokes(room.view.drawing ?? []);
+  }, [draftFailed, room.mode, room.revision, room.view.drawing, room.view.phase, room.view.turnIndex, room.viewerSeat, strokeSaving]);
 
   useEffect(() => {
     const href = withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}`);
@@ -200,13 +206,13 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
         if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(false);
-        await refresh();
+        await refresh(true);
         return result as { correct?: boolean; points?: number };
       } catch (cause) {
         const code = cause instanceof Error ? cause.message : "UNKNOWN";
         if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(true);
         setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "PHASE_ENDED" || code === "STALE_PHASE" || code === "STALE_GAME" ? statusCopy.phase : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT" ? statusCopy.draftFailed : t.error);
-        await refresh();
+        await refresh(true);
         return null;
       }
       finally { setBusy(false); }
