@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { createClerkClient } from "@clerk/backend";
+import { Prisma } from "@prisma/client";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Bounded Preview-only benchmark. This never targets Production or sends more than
@@ -14,6 +15,12 @@ assert.ok(process.env.DATABASE_URL?.includes(previewRef));
 assert.ok(process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(previewRef));
 assert.ok(process.env.CLERK_SECRET_KEY?.startsWith("sk_test_"));
 assert.equal(process.env.DRAW_GUESS_PREVIEW_URL, previewOrigin);
+const scenarioFilter = process.env.P3_SCENARIO;
+assert.ok(!scenarioFilter || ["one-room-five", "one-room-ten", "two-rooms-ten-shared-identities"].includes(scenarioFilter));
+const dualDurationSeconds = Number(process.env.P3_DUAL_DURATION_SECONDS ?? 10);
+assert.ok(Number.isInteger(dualDurationSeconds) && dualDurationSeconds >= 10 && dualDurationSeconds <= 30);
+const singleDurationSeconds = Number(process.env.P3_SINGLE_DURATION_SECONDS ?? 6);
+assert.ok(Number.isInteger(singleDurationSeconds) && singleDurationSeconds >= 6 && singleDurationSeconds <= 30);
 
 const databaseUrl = new URL(process.env.DATABASE_URL!);
 databaseUrl.searchParams.set("connection_limit", "20");
@@ -37,6 +44,7 @@ type Listener = {
   duplicateDeliveries: number;
   unexpectedPayloads: number;
   wrongRoom: number;
+  statuses: string[];
 };
 type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number; tokens: string[]; revision: number };
 type Sample = { batch: number; roomId: string; sentAt: number; httpMs: number; httpStatus: number; error?: string; region?: string; seq?: number; serverTiming?: Record<string, number> };
@@ -53,7 +61,7 @@ function readServerTiming(header: string | null) {
 }
 
 async function subscribe(client: SupabaseClient, topic: string, roomId: string): Promise<Listener> {
-  const listener: Listener = { client, channel: null!, received: new Map(), duplicateDeliveries: 0, unexpectedPayloads: 0, wrongRoom: 0 };
+  const listener: Listener = { client, channel: null!, received: new Map(), duplicateDeliveries: 0, unexpectedPayloads: 0, wrongRoom: 0, statuses: [] };
   listener.channel = client.channel(topic, { config: { private: true } })
     .on("broadcast", { event: DRAW_GUESS_INK_EVENT }, (message) => {
       const payload = message.payload as { roomId?: string; stroke?: { points?: number[][] } };
@@ -68,6 +76,7 @@ async function subscribe(client: SupabaseClient, topic: string, roomId: string):
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Private channel join timed out: ${roomId}`)), 15_000);
     listener.channel.subscribe((status, error) => {
+      listener.statuses.push(error?.message ? `${status}: ${error.message}` : status);
       if (status === "SUBSCRIBED") { clearTimeout(timer); resolve(); }
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") { clearTimeout(timer); reject(error ?? new Error(status)); }
     });
@@ -172,9 +181,15 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const failedPoll = settledPolls.find((item): item is PromiseRejectedResult => item.status === "rejected");
   if (failedPoll) throw failedPoll.reason;
   const delivered = () => rooms.every((room) => room.listeners.every((listener) => listener.received.size >= batchesPerRoom));
-  const deadline = performance.now() + 8_000;
+  const deadline = performance.now() + 15_000;
   while (!delivered() && performance.now() < deadline) await pause(50);
   const finishedAt = performance.now();
+  const topics = rooms.map((room) => getDrawGuessInkTopic(room.id, 1, 0));
+  const broadcastRows = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT count(*)::bigint AS count FROM realtime.messages
+    WHERE topic IN (${Prisma.join(topics)}) AND event = ${DRAW_GUESS_INK_EVENT}
+  `;
+  const databaseBroadcastWrites = Number(broadcastRows[0]?.count ?? 0);
   const latencies: number[] = [];
   const viewerLatencies: number[] = [];
   let missing = 0;
@@ -199,13 +214,19 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
     }
   }
   const httpErrors = samples.filter((sample) => sample.httpStatus !== 200);
+  const listenerHealth = rooms.map((room) => ({
+    roomId: room.id,
+    listeners: room.listeners.map((listener, index) => ({ index, received: listener.received.size, statuses: listener.statuses })),
+  }));
   const result = {
     name, rooms: rooms.length, playersPerRoom: rooms.map((room) => room.memberCount),
     realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
     sentBatches: samples.length, expectedDeliveries: samples.reduce((sum, sample) => sum + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
     estimatedRealtimeMessages: samples.reduce((sum, sample) => sum + 1 + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
+    databaseBroadcastWrites,
     receivedDeliveries: latencies.length, missing, duplicateDeliveries, unexpectedPayloads, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus, error }) => ({ batch, roomId, httpStatus, error })),
-    elapsedMs: round(finishedAt - launchedAt), effectiveBatchesPerSecond: round(samples.length / ((finishedAt - launchedAt) / 1000)),
+    listenerHealth,
+    elapsedMs: round(finishedAt - launchedAt), scheduledBatchesPerSecond: round(samples.length / (durationMs / 1000)),
     httpMs: { p50: round(percentile(samples.map((sample) => sample.httpMs), 50) ?? 0), p95: round(percentile(samples.map((sample) => sample.httpMs), 95) ?? 0) },
     snapshotPolls: { requests: snapshotSamples.length, errors: snapshotSamples.filter((sample) => sample.status !== 200 && sample.status !== 304).length, p95Ms: round(percentile(snapshotSamples.map((sample) => sample.httpMs), 95) ?? 0) },
     serverTimingP95Ms: Object.fromEntries(["auth", "room", "redis", "broadcast"].map((stage) => [stage, round(percentile(samples.map((sample) => sample.serverTiming?.[stage]).filter((value): value is number => typeof value === "number"), 95) ?? 0)])),
@@ -219,7 +240,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
 
 const report: { at: string; previewOrigin: string; scenarios: unknown[]; notes: string[] } = {
   at: new Date().toISOString(), previewOrigin, scenarios: [],
-  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
+  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", `Scenario filter: ${scenarioFilter ?? "all"}; single-room duration: ${singleDurationSeconds} seconds; dual-room duration: ${dualDurationSeconds} seconds.`, "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
 };
 let failure: unknown;
 try {
@@ -235,11 +256,12 @@ try {
     users.push({ userId: user.id, profileId: profile.id, sessionId: session.id });
   }
   const scenarios = [
-    { name: "one-room-five", groups: [users.slice(0, 5)], batches: 25, intervalMs: 250 },
-    { name: "one-room-ten", groups: [users.slice(0, 10)], batches: 25, intervalMs: 250 },
-    { name: "two-rooms-ten-shared-identities", groups: [users.slice(0, 10), users.slice(0, 10)], batches: 30, intervalMs: 333 },
+    { name: "one-room-five", groups: [users.slice(0, 5)], batches: singleDurationSeconds * 4, intervalMs: 250 },
+    { name: "one-room-ten", groups: [users.slice(0, 10)], batches: singleDurationSeconds * 4, intervalMs: 250 },
+    { name: "two-rooms-ten-shared-identities", groups: [users.slice(0, 10), users.slice(0, 10)], batches: dualDurationSeconds * 3, intervalMs: 333 },
   ];
   for (const scenario of scenarios) {
+    if (scenarioFilter && scenario.name !== scenarioFilter) continue;
     const rooms: ActiveRoom[] = [];
     try {
       for (const group of scenario.groups) rooms.push(await openRoom(group));
@@ -249,6 +271,7 @@ try {
       assert.equal(result.httpErrors.length, 0, `${scenario.name}: ink HTTP errors`);
       assert.equal(result.snapshotPolls.errors, 0, `${scenario.name}: snapshot polling HTTP errors`);
       assert.equal(result.serverTimingSamples, result.sentBatches, "Preview has not deployed the P3 Server-Timing instrumentation yet.");
+      assert.equal(result.databaseBroadcastWrites, result.sentBatches - result.httpErrors.length, `${scenario.name}: database broadcast writes`);
       assert.equal(result.missing, 0, `${scenario.name}: missing private ink deliveries`);
       assert.equal(result.duplicateDeliveries, 0, `${scenario.name}: duplicate private ink deliveries`);
       assert.equal(result.unexpectedPayloads, 0, `${scenario.name}: unexpected or answer-bearing ink payload`);
