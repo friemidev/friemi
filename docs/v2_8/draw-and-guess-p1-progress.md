@@ -16,7 +16,7 @@
 - P1 集成脚本验证：房间快照无笔画/命令累积、草稿恢复、PNG 签名与大小、未揭晓拒读、成员授权读取、旧局作品恢复、旧格式房间再来一局时的作品迁移、举报去重/权限/并发配额、审核、暂停开局、保留期清理与未结举报保护。
 - 本地 Next 页面验证：维护任务无凭证返回 401、携带本地密钥返回 200；手机 390 px 和桌面 1280 px 的房间及历史页无横向溢出、图片无破损、举报表单成功提交，控制台无错误或警告。截图保存在本地 `output/playwright/draw-guess-p1-*.png`。
 - 复核时补充：房间轮询以修订号返回 304，只有变化或截止时间到期才从作品表恢复笔画；恢复查询不会读取 PNG 二进制。隔离数据库验证已归档局草稿的 7 天清理与当前局草稿保留。本机现有 Supabase 测试配置可订阅随机临时频道，服务端广播返回 202 且订阅者确实收到事件；此结果不是 Preview 真实房间验收。
-- 画猜分支已生成独立 Ready Preview；对比 Vercel Preview 与 Production 的数据库项目标识后，向隔离的 Preview 库应用 3 个画猜迁移，状态为 72 个迁移全部最新。仅对画猜分支的 Preview 设置 `DRAW_GUESS_CHAIN_ENABLED=true`，新部署已生效。Preview Supabase Cron 的 5 秒任务连续成功，Vault 鉴权请求收到 200；5 人临时房间在全员离线时自动跨阶段，Preview 服务的 Supabase Broadcast 到达订阅者，测试数据已清除。
+- 画猜分支已生成独立 Ready Preview；对比 Vercel Preview 与 Production 的数据库项目标识后，向隔离的 Preview 库应用 3 个画猜迁移，状态为 72 个迁移全部最新。仅对画猜分支的 Preview 设置 `DRAW_GUESS_CHAIN_ENABLED=true`，新部署已生效。Preview Supabase Cron 的 5 秒任务连续成功，Vault 鉴权请求收到 200；5 人临时房间在全员离线时自动跨阶段，Preview 服务的 Supabase Broadcast 到达订阅者，测试数据已清除。每日维护任务也在 Preview 数据库中激活，手动调用 Preview 维护 API 返回 200。Vercel 自带 Cron [只运行于 Production](https://vercel.com/docs/cron-jobs/quickstart)，因此 Preview 维护由 Supabase Cron 调用。
 
 在 `apps/web` 目录复现集成脚本（仅接受本机 PostgreSQL）：
 

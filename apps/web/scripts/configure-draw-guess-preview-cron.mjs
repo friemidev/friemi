@@ -33,6 +33,7 @@ const names = {
   secret: "draw_guess_preview_cron_secret",
 };
 const jobName = "draw_guess_preview_deadlines";
+const maintenanceJobName = "draw_guess_preview_maintenance";
 const cleanupJobName = "draw_guess_preview_cron_history_cleanup";
 const command = `
   SELECT net.http_get(
@@ -47,9 +48,20 @@ const command = `
       AND "drawGuessDeadlineAt" <= (now() AT TIME ZONE 'UTC')
   )
 `;
+const maintenanceCommand = `
+  SELECT net.http_get(
+    url := regexp_replace(
+      (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = '${names.endpoint}'),
+      'draw-guess-deadlines$', 'draw-guess-maintenance'
+    ),
+    headers := jsonb_build_object('Authorization', 'Bearer ' ||
+      (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = '${names.secret}')),
+    timeout_milliseconds := 15000
+  )
+`;
 const cleanupCommand = `
   DELETE FROM cron.job_run_details
-  WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = '${jobName}')
+  WHERE jobid IN (SELECT jobid FROM cron.job WHERE jobname LIKE 'draw_guess_preview%')
     AND end_time < now() - interval '7 days'
 `;
 
@@ -68,12 +80,13 @@ try {
   await upsertVaultSecret(names.endpoint, endpoint);
   await upsertVaultSecret(names.secret, secret);
   const scheduled = await prisma.$queryRaw`SELECT cron.schedule(${jobName}, '5 seconds', ${command}) AS jobid`;
+  await prisma.$queryRaw`SELECT cron.schedule(${maintenanceJobName}, '15 5 * * *', ${maintenanceCommand}) AS jobid`;
   await prisma.$queryRaw`SELECT cron.schedule(${cleanupJobName}, '0 1 * * *', ${cleanupCommand}) AS jobid`;
   const jobs = await prisma.$queryRaw`
     SELECT jobname, schedule, active FROM cron.job
-    WHERE jobname IN (${jobName}, ${cleanupJobName}) ORDER BY jobname
+    WHERE jobname IN (${jobName}, ${maintenanceJobName}, ${cleanupJobName}) ORDER BY jobname
   `;
-  if (jobs.length !== 2 || jobs.some((job) => !job.active)) throw new Error("Cron jobs were not activated.");
+  if (jobs.length !== 3 || jobs.some((job) => !job.active)) throw new Error("Cron jobs were not activated.");
   console.log("Preview deadline cron configured", { jobId: String(scheduled[0].jobid), jobs });
 } finally {
   await prisma.$disconnect();
