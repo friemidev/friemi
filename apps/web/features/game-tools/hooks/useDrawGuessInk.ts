@@ -68,37 +68,44 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
       accessToken: async () => sessionRef.current?.getToken() ?? null,
       auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
     });
-    const channel = client.channel(topicKey, { config: { private: true } })
-      .on("broadcast", { event: DRAW_GUESS_INK_EVENT }, (message) => {
-        const event = message.payload;
-        const current = roomRef.current;
-        if (!isInkEvent(event) || event.roomId !== current.id || event.gameNumber !== current.view.gameNumber ||
-            event.turnIndex !== current.view.turnIndex || current.view.phase !== "DRAW_GUESS") return;
-        if (eventsRef.current.some((item) => item.seq === event.seq)) return;
-        eventsRef.current.push(event);
-        eventsRef.current.sort((a, b) => a.seq - b.seq);
-        if (eventsRef.current.length > 128) eventsRef.current = eventsRef.current.slice(-128);
-        if (ready) rebuild();
-      })
-      .subscribe(async (status) => {
-        if (disposed) return;
-        if (status !== "SUBSCRIBED") { ready = false; setConnected(false); return; }
-        try {
-          const response = await fetch(`/api/game-tools/draw-guess/rooms/${roomRef.current.id}`, { cache: "no-store" });
-          if (!response.ok) throw new Error("SNAPSHOT_UNAVAILABLE");
-          const result = await response.json() as { room?: DrawGuessRoomView };
-          if (!result.room || disposed || result.room.view.phase !== "DRAW_GUESS" ||
-              getDrawGuessInkTopic(result.room.id, result.room.view.gameNumber, result.room.view.turnIndex) !== topicKey) return;
-          baseRef.current = result.room.view.drawing ?? [];
-          baseSeqRef.current = result.room.view.inkSeq ?? 0;
-          eventsRef.current = eventsRef.current.filter((event) => event.seq > baseSeqRef.current);
-          onSnapshotRef.current(result.room);
-          ready = true;
-          rebuild();
-          setConnected(true);
-        } catch { setConnected(false); }
-      });
-    return () => { disposed = true; setConnected(false); void client.removeChannel(channel).finally(() => client.realtime.disconnect()); };
+    let channel: ReturnType<typeof client.channel> | null = null;
+    void (async () => {
+      const token = await sessionRef.current?.getToken();
+      if (!token || disposed) return;
+      await client.realtime.setAuth(token);
+      if (disposed) return;
+      channel = client.channel(topicKey, { config: { private: true } })
+        .on("broadcast", { event: DRAW_GUESS_INK_EVENT }, (message) => {
+          const event = message.payload;
+          const current = roomRef.current;
+          if (!isInkEvent(event) || event.roomId !== current.id || event.gameNumber !== current.view.gameNumber ||
+              event.turnIndex !== current.view.turnIndex || current.view.phase !== "DRAW_GUESS") return;
+          if (eventsRef.current.some((item) => item.seq === event.seq)) return;
+          eventsRef.current.push(event);
+          eventsRef.current.sort((a, b) => a.seq - b.seq);
+          if (eventsRef.current.length > 128) eventsRef.current = eventsRef.current.slice(-128);
+          if (ready) rebuild();
+        })
+        .subscribe(async (status) => {
+          if (disposed) return;
+          if (status !== "SUBSCRIBED") { ready = false; setConnected(false); return; }
+          try {
+            const response = await fetch(`/api/game-tools/draw-guess/rooms/${roomRef.current.id}`, { cache: "no-store" });
+            if (!response.ok) throw new Error("SNAPSHOT_UNAVAILABLE");
+            const result = await response.json() as { room?: DrawGuessRoomView };
+            if (!result.room || disposed || result.room.view.phase !== "DRAW_GUESS" ||
+                getDrawGuessInkTopic(result.room.id, result.room.view.gameNumber, result.room.view.turnIndex) !== topicKey) return;
+            baseRef.current = result.room.view.drawing ?? [];
+            baseSeqRef.current = result.room.view.inkSeq ?? 0;
+            eventsRef.current = eventsRef.current.filter((event) => event.seq > baseSeqRef.current);
+            onSnapshotRef.current(result.room);
+            ready = true;
+            rebuild();
+            setConnected(true);
+          } catch { setConnected(false); }
+        });
+    })().catch(() => { if (!disposed) setConnected(false); });
+    return () => { disposed = true; setConnected(false); if (channel) void client.removeChannel(channel).finally(() => client.realtime.disconnect()); else client.realtime.disconnect(); };
   }, [rebuild, session?.id, topicKey]);
 
   const publishStroke = useCallback(async (stroke: DrawStroke, strokeIndex: number) => {
