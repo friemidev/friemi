@@ -2,6 +2,8 @@
 
 > 基线：`codex/draw-and-guess` 已有两种模式的页面、房间命令和规则状态机。普通模式仍是画完一笔后保存、房间变更通知加 2 秒轮询的体验版。本地环境缺少浏览器连接 Supabase Realtime 的公开密钥。P0 的隔离数据库迁移和 5–8 人服务端模拟对局已通过；真实 Clerk 多账号跨设备联调尚未执行。详细规则见 [双模式设计](./draw-and-guess-two-mode-design.md)和 [P0 验证记录](./draw-and-guess-p0-validation.md)。
 
+P1 的本地实现与剩余发布条件见 [P1 实施与验收记录](./draw-and-guess-p1-progress.md)。P0、P1 均未完成真实 Preview 环境验收。
+
 ## 优先级与发布边界
 
 | 优先级 | 目标 | 完成后可以说什么 | 发布边界 |

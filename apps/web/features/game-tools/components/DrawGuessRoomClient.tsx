@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link";
 import { ArrowLeft, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, UsersRound } from "lucide-react";
 import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
+import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessMode, type DrawGuessPhase, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
@@ -47,6 +48,12 @@ const TRANSLATIONS = {
   fr: { title: "Dessine et devine", back: "Jeux de table", room: "Salle", copy: "Copier le lien", copied: "Copié", players: "Joueurs", waiting: "En attente des joueurs", start: "Commencer", ready: "Tout le monde est là", host: "Hôte", you: "Vous", seat: "place", minute: "s", modeClassic: "Deviner vite", modeChain: "Chaîne de dessins", select: "Choisissez un mot", choose: "Choisir", draw: "À vous de dessiner", guessing: "Qu'est-ce que c'est ?", submitGuess: "Envoyer", answer: "Réponse", guessed: "Trouvé", wrong: "Pas encore. Réessayez", tooFast: "Attendez une seconde avant de réessayer", wait: "En attente des autres", word: "Écrivez un mot de départ", nextDraw: "Dessinez le mot reçu", nextGuess: "Devinez ce dessin", previousWord: "Mot précédent", submit: "Transmettre", drawing: "Dessin", stage: "Étape", vote: "La fin correspond-elle ?", yes: "Oui", no: "Non", result: "Votes", pick: "Choisissez le meilleur dessin", picked: "Choisi", finish: "Classement", rematch: "Rejouer", history: "Parties précédentes", chain: "L'histoire", system: "Automatique", match: "Correspond", mismatch: "Différent", error: "Action non terminée. Réessayez.", saved: "Enregistré", invalidWord: "Saisissez 2 à 12 caractères.", noArtwork: "Aucun dessin éligible", invitation: "Partagez le code ou le lien", loading: "Chargement", next: "Prochain tour", submitted: "Envoyé", score: "pts", draft: "Brouillon enregistré automatiquement", classicHint: "Choisissez un mot, dessinez et faites deviner les autres.", chainHint: "Chacun part d'un mot et transmet dessins et réponses." },
 };
 
+const STATUS_COPY = {
+  "zh-CN": { syncing: "正在重连；房间进度仍会定期刷新", polling: "房间进度定期刷新，画笔不会实时传输", expired: "时间已到，正在更新下一阶段", draftFailed: "草稿保存失败，请检查网络后重试", signIn: "登录已失效，请重新登录后返回房间", missing: "人数还没到齐，暂时无法开局", closed: "新对局暂时暂停", phase: "这一阶段已结束，房间正在更新", invalid: "请输入可见文字，勿包含链接或个人信息", rate: "提交太频繁，请稍后再试" },
+  en: { syncing: "Reconnecting; room progress still refreshes", polling: "Room progress refreshes regularly; ink is not live", expired: "Time is up; moving to the next stage", draftFailed: "Draft was not saved. Check your connection and try again.", signIn: "Your sign-in expired. Sign in again and return to the room.", missing: "Wait for everyone before starting", closed: "New games are temporarily paused", phase: "This stage ended; refreshing the room", invalid: "Use visible words without links or personal details", rate: "Too many submissions. Try again shortly." },
+  fr: { syncing: "Reconnexion en cours ; la salle se rafraîchit", polling: "La salle se rafraîchit ; les traits ne sont pas en direct", expired: "Temps écoulé ; passage à l’étape suivante", draftFailed: "Brouillon non enregistré. Vérifiez votre connexion.", signIn: "Connexion expirée. Reconnectez-vous puis revenez.", missing: "Attendez tous les joueurs avant de commencer", closed: "Nouvelles parties temporairement suspendues", phase: "Cette étape est terminée ; actualisation en cours", invalid: "Utilisez des mots visibles sans lien ni données privées", rate: "Trop d'envois. Réessayez dans un instant." },
+};
+
 function formatTimer(deadlineAt: string | null, now: number) {
   if (!deadlineAt) return "";
   const seconds = Math.max(0, Math.ceil((Date.parse(deadlineAt) - now) / 1000));
@@ -59,6 +66,7 @@ function ActionButton({ children, disabled, onClick, tone = "green" }: { childre
 
 export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: DrawGuessRoomView; locale: string }) {
   const t = TRANSLATIONS[locale as keyof typeof TRANSLATIONS] ?? TRANSLATIONS.en;
+  const statusCopy = STATUS_COPY[locale as keyof typeof STATUS_COPY] ?? STATUS_COPY.en;
   const [room, setRoom] = useState(initialRoom);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
@@ -67,6 +75,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const [guessFeedback, setGuessFeedback] = useState("");
   const [copied, setCopied] = useState(false);
   const [strokes, setStrokes] = useState<DrawStroke[]>(initialRoom.view.drawing ?? []);
+  const [syncStatus, setSyncStatus] = useState<"CONNECTED" | "RECONNECTING" | "POLLING">("POLLING");
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const [draftFailed, setDraftFailed] = useState(false);
   const refreshRunning = useRef(false);
   const mutationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const previousTask = useRef("");
@@ -81,10 +92,14 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       if (response.ok) {
         const result = await response.json() as { room: DrawGuessRoomView };
         if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
+        setRefreshFailed(false);
+      } else {
+        setRefreshFailed(true);
+        if (response.status === 401) setError(statusCopy.signIn);
       }
-    } catch { /* The next poll retries after a temporary connection failure. */ }
+    } catch { setRefreshFailed(true); }
     finally { refreshRunning.current = false; }
-  }, [initialRoom.id]);
+  }, [initialRoom.id, statusCopy.signIn]);
 
   useEffect(() => {
     const id = window.setInterval(() => { setNow(Date.now()); if (!document.hidden) void refresh(); }, 2_000);
@@ -95,14 +110,18 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => {
     const config = getDrawGuessRealtimeBrowserConfig();
-    if (!config) return;
+    if (!config) { setSyncStatus("POLLING"); return; }
+    setSyncStatus("RECONNECTING");
     const client = createClient(config.url, config.publishableKey, { auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false } });
-    const channel = client.channel(getDrawGuessRoomTopic(initialRoom.id)).on("broadcast", { event: DRAW_GUESS_ROOM_EVENT }, () => { void refresh(); }).subscribe();
+    const channel = client.channel(getDrawGuessRoomTopic(initialRoom.id)).on("broadcast", { event: DRAW_GUESS_ROOM_EVENT }, () => { void refresh(); }).subscribe((status) => {
+      setSyncStatus(status === "SUBSCRIBED" ? "CONNECTED" : "RECONNECTING");
+      if (status === "SUBSCRIBED") void refresh();
+    });
     return () => { void client.removeChannel(channel).finally(() => client.realtime.disconnect()); };
   }, [initialRoom.id, refresh]);
 
   useEffect(() => {
-    const taskKey = `${room.view.phase}:${room.view.turnIndex}:${room.view.chainStage}`;
+    const taskKey = `${room.view.gameNumber}:${room.view.phase}:${room.view.turnIndex}:${room.view.chainStage}`;
     if (taskKey === previousTask.current) return;
     previousTask.current = taskKey;
     setInput("");
@@ -140,15 +159,22 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
+        if (action.type === "SAVE_DRAFT") setDraftFailed(false);
         await refresh();
         return result as { correct?: boolean; points?: number };
-      } catch (cause) { setError(cause instanceof Error && cause.message === "TOO_FAST" ? t.tooFast : t.error); await refresh(); return null; }
+      } catch (cause) {
+        const code = cause instanceof Error ? cause.message : "UNKNOWN";
+        if (action.type === "SAVE_DRAFT") setDraftFailed(true);
+        setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "PHASE_ENDED" || code === "STALE_PHASE" || code === "STALE_GAME" ? statusCopy.phase : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_DRAFT" ? statusCopy.draftFailed : t.error);
+        await refresh();
+        return null;
+      }
       finally { setBusy(false); }
     };
     const queued = mutationQueue.current.then(run, run);
     mutationQueue.current = queued.then(() => undefined, () => undefined);
     return queued;
-  }, [refresh, room.id, room.view.chainStage, room.view.gameNumber, room.view.phase, room.view.turnIndex, t.error, t.tooFast]);
+  }, [refresh, room.id, room.view.chainStage, room.view.gameNumber, room.view.phase, room.view.turnIndex, statusCopy, t.error, t.tooFast]);
 
   useEffect(() => {
     if (room.view.phase !== "CHAIN_STEP" || room.view.task?.kind !== "DRAWING" || room.view.task.submitted || !strokes.length) return;
@@ -157,6 +183,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }, [room.view.phase, room.view.chainStage, room.view.task?.kind, room.view.task?.submitted, strokes, send]);
 
   const timer = formatTimer(room.view.deadlineAt, now);
+  const deadlinePassed = Boolean(room.view.deadlineAt && now >= Date.parse(room.view.deadlineAt));
   const currentArtist = room.seats.find((seat) => seat.number === room.view.turnIndex + 1);
   const amArtist = room.viewerSeat === room.view.turnIndex;
   const guessed = Boolean(room.view.guesses?.[String(room.viewerSeat)]);
@@ -195,6 +222,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       <div className="relative mt-5 flex flex-wrap items-center gap-3"><ActionButton tone="peach" onClick={copyInvite}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? t.copied : t.copy}</ActionButton><span className="text-sm text-[#62756A]">{t.invitation}</span>{room.view.gameNumber > 1 || room.view.phase === "FINISHED" ? <Link className="text-sm font-bold text-[#156240] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null}{timer ? <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-mono text-lg font-bold tabular-nums"><Clock3 className="h-4 w-4 text-[#D07153]" />{timer}</span> : null}</div>
     </header>
 
+    {syncStatus !== "CONNECTED" || refreshFailed ? <p role="status" className="mt-4 rounded-xl border border-[#E8D6C8] bg-[#FFF9F5] px-4 py-3 text-sm font-semibold text-[#73584A]">{refreshFailed || syncStatus === "RECONNECTING" ? statusCopy.syncing : statusCopy.polling}</p> : null}
+    {deadlinePassed ? <p role="status" className="mt-3 rounded-xl bg-[#EAF3E9] px-4 py-3 text-sm font-semibold text-[#156240]">{statusCopy.expired}</p> : null}
+
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
       <section className="min-w-0 space-y-5">
         {room.view.phase === "LOBBY" ? <div className="rounded-[1.6rem] border border-[#DCE6D7] bg-white p-6"><div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EAF3E9]"><UsersRound className="h-6 w-6" /></span><div><h2 className="text-xl font-bold">{room.seats.length === room.playerCount ? t.ready : t.waiting}</h2><p className="text-sm text-[#607268]">{room.seats.length} / {room.playerCount} {t.players}</p></div></div>{room.isHost ? <div className="mt-5"><ActionButton disabled={busy || room.seats.length !== room.playerCount} onClick={() => void send({ type: "START" })}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{t.start}</ActionButton></div> : null}</div> : null}
@@ -212,10 +242,10 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         {room.mode === "CHAIN" && room.view.phase === "CHAIN_STEP" ? <div className="rounded-[1.6rem] bg-[#FFFDF9] p-4 sm:p-6"><p className="text-xs font-bold uppercase tracking-widest text-[#A75B48]">{t.stage} {room.view.chainStage}</p><h2 className="mt-1 text-xl font-bold">{room.view.task?.kind === "DRAWING" ? t.nextDraw : t.nextGuess}</h2>
           {room.view.task?.previous?.kind === "WORD" ? <div className="my-5 rounded-2xl bg-[#F2EDE1] px-5 py-6 text-center text-2xl font-bold">{room.view.task.previous.value}</div> : null}
           {room.view.task?.previous?.kind === "DRAWING" ? <div className="my-5 aspect-[10/7] overflow-hidden rounded-2xl border border-[#DCE6D7]"><DrawGuessArtwork strokes={room.view.task.previous.value} /></div> : null}
-          {room.view.task?.submitted ? <p className="rounded-xl bg-[#EAF3E9] p-4 font-bold text-[#156240]"><Check className="mr-2 inline h-5 w-5" />{t.submitted} · {t.wait}</p> : room.view.task?.kind === "DRAWING" ? <div className="mt-4 space-y-3"><DrawGuessCanvas strokes={strokes} onStroke={addStroke} onUndo={() => setStrokes((current) => current.slice(0, -1))} /><p className="text-xs text-[#738477]">{t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{t.submit}</ActionButton></div> : <div className="mt-5">{inputForm(t.nextGuess, t.submit)}</div>}
+          {room.view.task?.submitted ? <p className="rounded-xl bg-[#EAF3E9] p-4 font-bold text-[#156240]"><Check className="mr-2 inline h-5 w-5" />{t.submitted} · {t.wait}</p> : room.view.task?.kind === "DRAWING" ? <div className="mt-4 space-y-3"><DrawGuessCanvas strokes={strokes} onStroke={addStroke} onUndo={() => setStrokes((current) => current.slice(0, -1))} /><p className={`text-xs ${draftFailed ? "font-semibold text-[#9E4B3C]" : "text-[#738477]"}`}>{draftFailed ? statusCopy.draftFailed : t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{t.submit}</ActionButton></div> : <div className="mt-5">{inputForm(t.nextGuess, t.submit)}</div>}
         </div> : null}
 
-        {room.mode === "CHAIN" && ["REVEAL_VOTE", "AUTHOR_PICK", "FINISHED"].includes(room.view.phase) ? <div className="space-y-5">{room.view.chains?.map((chain, owner) => <article key={owner} className="rounded-[1.6rem] border border-[#DFE7D9] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{room.seats[owner]?.name ?? `#${owner + 1}`} · {t.chain}</h2>{room.view.matchResults ? <span className={`rounded-full px-3 py-1 text-xs font-bold ${room.view.matchResults[String(owner)] ? "bg-[#EAF3E9] text-[#156240]" : "bg-[#FBECE5] text-[#B05D49]"}`}>{room.view.matchResults[String(owner)] ? t.match : t.mismatch}</span> : null}</div><div className="mt-4 space-y-3">{chain.map((step, index) => <div key={index} className="rounded-2xl bg-[#F7F6F0] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#6A7D70]"><span className="rounded-full bg-white px-2 py-1">{index + 1}</span>{room.seats[step.seat]?.name}{step.system ? ` · ${t.system}` : ""}{room.view.picks?.[String(owner)] === index ? <span className="ml-auto text-[#C4734F]">★ {t.picked}</span> : null}</div>{step.kind === "WORD" ? <p className="py-2 text-center text-xl font-bold">{step.value}</p> : <div className="aspect-[10/7] max-w-xl overflow-hidden rounded-xl border border-[#E3E6DE]"><DrawGuessArtwork strokes={step.value} /></div>}{room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && step.kind === "DRAWING" && !step.system ? <button type="button" disabled={busy || room.view.picks?.[String(owner)] !== undefined} onClick={() => void send({ type: "PICK", owner, step: index })} className="mt-2 rounded-lg bg-[#E8A184] px-3 py-2 text-xs font-bold text-[#472A21] disabled:opacity-50">★ {t.pick}</button> : null}</div>)}</div>
+        {room.mode === "CHAIN" && ["REVEAL_VOTE", "AUTHOR_PICK", "FINISHED"].includes(room.view.phase) ? <div className="space-y-5">{room.view.chains?.map((chain, owner) => <article key={owner} className="rounded-[1.6rem] border border-[#DFE7D9] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{room.seats[owner]?.name ?? `#${owner + 1}`} · {t.chain}</h2>{room.view.matchResults ? <span className={`rounded-full px-3 py-1 text-xs font-bold ${room.view.matchResults[String(owner)] ? "bg-[#EAF3E9] text-[#156240]" : "bg-[#FBECE5] text-[#B05D49]"}`}>{room.view.matchResults[String(owner)] ? t.match : t.mismatch}</span> : null}</div><div className="mt-4 space-y-3">{chain.map((step, index) => <div key={index} className="rounded-2xl bg-[#F7F6F0] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#6A7D70]"><span className="rounded-full bg-white px-2 py-1">{index + 1}</span>{room.seats[step.seat]?.name}{step.system ? ` · ${t.system}` : ""}{room.view.picks?.[String(owner)] === index ? <span className="ml-auto text-[#C4734F]">★ {t.picked}</span> : null}</div>{step.kind === "WORD" ? <p className="py-2 text-center text-xl font-bold">{step.value}</p> : <div className="aspect-[10/7] max-w-xl overflow-hidden rounded-xl border border-[#E3E6DE]"><DrawGuessArtwork strokes={step.value} /></div>}{room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && step.kind === "DRAWING" && !step.system ? <button type="button" disabled={busy || room.view.picks?.[String(owner)] !== undefined} onClick={() => void send({ type: "PICK", owner, step: index })} className="mt-2 rounded-lg bg-[#E8A184] px-3 py-2 text-xs font-bold text-[#472A21] disabled:opacity-50">★ {t.pick}</button> : null}{!step.system ? <DrawGuessReportButton kind={step.kind} locale={locale} ownerSeat={owner} roomId={room.id} roundNumber={room.view.gameNumber} stage={index} /> : null}</div>)}</div>
           {room.view.phase === "REVEAL_VOTE" ? <div className="mt-4 border-t border-[#E6EBE1] pt-4"><p className="mb-3 text-sm font-bold">{t.vote}</p><div className="flex flex-wrap gap-2"><ActionButton disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: true })}>{t.yes}</ActionButton><ActionButton tone="peach" disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: false })}>{t.no}</ActionButton>{room.view.votedOwners?.includes(owner) ? <span className="self-center text-xs text-[#5B7E62]">✓ {t.saved}</span> : null}</div></div> : null}
           {room.view.voteCounts?.[owner] ? <p className="mt-4 text-xs text-[#607268]">{t.result}: {t.yes} {room.view.voteCounts[owner].yes} · {t.no} {room.view.voteCounts[owner].no} · — {room.view.voteCounts[owner].abstain}</p> : null}
           {room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && !chain.some((step) => step.kind === "DRAWING" && !step.system) ? <p className="mt-4 text-sm text-[#607268]">{t.noArtwork}</p> : null}

@@ -2218,6 +2218,9 @@ model GameToolRoom {
   submissions         GameToolSubmission[]
   playerRecords       GameToolPlayerRecord[]
   drawGuessRounds     DrawGuessRound[]
+  drawGuessArtworks   DrawGuessArtwork[]
+  drawGuessCommands   DrawGuessCommand[]
+  drawGuessReports    DrawGuessReport[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
@@ -2239,6 +2242,61 @@ model DrawGuessRound {
 
   @@unique([roomId, roundNumber])
   @@index([roomId, finishedAt])
+}
+
+model DrawGuessArtwork {
+  id            String       @id @default(cuid())
+  roomId        String
+  room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber   Int
+  ownerSeat     Int
+  stage         Int
+  artistSeat    Int
+  strokes       Json
+  previewPng    Bytes?       @db.ByteA
+  previewBytes  Int          @default(0)
+  submittedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([roomId, roundNumber, ownerSeat, stage])
+  @@index([roomId, roundNumber, submittedAt])
+}
+
+model DrawGuessCommand {
+  id             String       @id @default(cuid())
+  roomId         String
+  room           GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber    Int
+  commandId      String
+  actorProfileId String?
+  result         Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([roomId, roundNumber, commandId])
+  @@index([roomId, roundNumber, createdAt])
+}
+
+model DrawGuessReport {
+  id                String       @id @default(cuid())
+  roomId            String
+  room              GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber       Int
+  reporterProfileId String
+  targetKind        String
+  ownerSeat         Int
+  stage             Int
+  reason            String
+  status            String       @default("OPEN")
+  snapshot          Json
+  reviewedAt        DateTime?
+  reviewerProfileId String?
+  reviewNote        String?
+  createdAt         DateTime     @default(now())
+
+  @@unique([roomId, roundNumber, reporterProfileId, targetKind, ownerSeat, stage])
+  @@index([status, createdAt])
+  @@index([roomId, roundNumber])
 }
 
 model GameToolRoomMember {

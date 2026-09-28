@@ -16,8 +16,10 @@ export async function broadcastDrawGuessRoomChange(roomId: string) {
       method: "POST",
       signal: AbortSignal.timeout(1_000),
     });
+    if (!response.ok) console.warn("[draw-guess] room broadcast failed", { roomId, status: response.status });
     return response.ok;
   } catch {
+    console.warn("[draw-guess] room broadcast unavailable", { roomId });
     return false;
   }
 }

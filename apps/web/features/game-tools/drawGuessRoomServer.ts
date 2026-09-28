@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Prisma } from "@prisma/client";
+import { changedDrawGuessArtworks, compactDrawGuessState, hydrateDrawGuessState, prepareArtworkChanges } from "@/features/game-tools/drawGuessArtworkPersistence";
 import {
   advanceDrawGuessGame,
   applyDrawGuessAction,
@@ -13,7 +14,7 @@ import {
   type DrawGuessState,
 } from "@/features/game-tools/drawGuessEngine";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
-import { isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { prisma } from "@/lib/prisma";
 
@@ -41,7 +42,21 @@ function toJson(state: DrawGuessState) {
   return state as unknown as Prisma.InputJsonValue;
 }
 
-async function updateState(room: RoomWithSeats, state: DrawGuessState, eventType?: string, actorId?: string) {
+async function updateState(
+  room: RoomWithSeats,
+  previousState: DrawGuessState,
+  state: DrawGuessState,
+  eventType?: string,
+  actorId?: string,
+  command?: { id: string; result: { correct?: boolean; points?: number } },
+) {
+  const crossingRounds = previousState.gameNumber !== state.gameNumber;
+  const artworkRoundNumber = crossingRounds ? previousState.gameNumber : state.gameNumber;
+  const artworkSource = crossingRounds ? previousState : state;
+  const artworkChanges = await prepareArtworkChanges(changedDrawGuessArtworks(previousState, artworkSource, room.playerCount)).catch((error) => {
+    console.error("[draw-guess] artwork preview preparation failed", { roomId: room.id, errorName: error instanceof Error ? error.name : "UnknownError" });
+    throw error;
+  });
   const updated = await prisma.$transaction(async (tx) => {
     const finishedAt = state.phase === "FINISHED" ? new Date() : null;
     const updated = await tx.gameToolRoom.updateMany({
@@ -51,11 +66,47 @@ async function updateState(room: RoomWithSeats, state: DrawGuessState, eventType
         finishedAt,
         startedAt: (room.status === "LOBBY" || room.status === "FINISHED") && state.phase !== "LOBBY" ? new Date() : undefined,
         revision: { increment: 1 },
-        state: toJson(state),
+        state: compactDrawGuessState(state),
         status: state.phase === "FINISHED" ? "FINISHED" : state.phase === "LOBBY" ? "LOBBY" : "IN_PROGRESS",
       },
     });
     if (!updated.count) return false;
+    if (previousState.storageVersion !== 1) {
+      const legacyCommands = Object.entries(previousState.commandResults);
+      if (legacyCommands.length) {
+        await tx.drawGuessCommand.createMany({
+          data: legacyCommands.map(([commandId, result]) => ({ commandId, result, roomId: room.id, roundNumber: previousState.gameNumber })),
+          skipDuplicates: true,
+        });
+      }
+    }
+    for (const artwork of artworkChanges) {
+      await tx.drawGuessArtwork.upsert({
+        where: { roomId_roundNumber_ownerSeat_stage: { roomId: room.id, roundNumber: artworkRoundNumber, ownerSeat: artwork.ownerSeat, stage: artwork.stage } },
+        create: {
+          artistSeat: artwork.artistSeat,
+          ownerSeat: artwork.ownerSeat,
+          previewBytes: artwork.png.byteLength,
+          previewPng: Uint8Array.from(artwork.png),
+          roomId: room.id,
+          roundNumber: artworkRoundNumber,
+          stage: artwork.stage,
+          strokes: artwork.strokes as unknown as Prisma.InputJsonValue,
+          submittedAt: artwork.submitted ? new Date() : null,
+        },
+        update: {
+          previewBytes: artwork.png.byteLength,
+          previewPng: Uint8Array.from(artwork.png),
+          strokes: artwork.strokes as unknown as Prisma.InputJsonValue,
+          submittedAt: artwork.submitted ? new Date() : null,
+        },
+      });
+    }
+    if (command) {
+      await tx.drawGuessCommand.create({
+        data: { actorProfileId: actorId, commandId: command.id, result: command.result, roomId: room.id, roundNumber: state.gameNumber },
+      });
+    }
     if (state.phase === "FINISHED" && room.status !== "FINISHED") {
       await tx.drawGuessRound.create({
         data: {
@@ -63,7 +114,7 @@ async function updateState(room: RoomWithSeats, state: DrawGuessState, eventType
           mode: state.mode,
           roomId: room.id,
           roundNumber: state.gameNumber,
-          state: toJson(state),
+          state: compactDrawGuessState(state),
         },
       });
     }
@@ -73,8 +124,14 @@ async function updateState(room: RoomWithSeats, state: DrawGuessState, eventType
       });
     }
     return true;
+  }).catch((error) => {
+    console.error("[draw-guess] state persistence failed", { roomId: room.id, errorName: error instanceof Error ? error.name : "UnknownError" });
+    throw error;
   });
-  if (updated) await broadcastDrawGuessRoomChange(room.id);
+  if (updated) {
+    if (previousState.phase !== state.phase) console.info("[draw-guess] phase changed", { roomId: room.id, roundNumber: state.gameNumber, from: previousState.phase, to: state.phase, automatic: eventType === "DRAW_GUESS_PHASE_ADVANCED" });
+    await broadcastDrawGuessRoomChange(room.id);
+  }
   return updated;
 }
 
@@ -89,6 +146,7 @@ export async function createDrawGuessRoom(input: {
     return { error: "INVALID_PLAYER_COUNT" } as const;
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;
+  if (input.mode === "CHAIN" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
   const state = createDrawGuessState(input.mode, input.playerCount);
   const room = await prisma.$transaction(async (tx) => {
     const created = await tx.gameToolRoom.create({
@@ -218,9 +276,10 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string) {
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    await hydrateDrawGuessState(room.id, state);
     const next = advanceDrawGuessGame(state, room.playerCount, Date.now(), room.locale);
     if (JSON.stringify(next) !== JSON.stringify(state)) {
-      if (!(await updateState(room, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
+      if (!(await updateState(room, state, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
       continue;
     }
     return {
@@ -248,12 +307,14 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     if (await transferHostIfNeeded(room, Date.now())) continue;
     if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
+    if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
     if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    await hydrateDrawGuessState(room.id, state);
     const started = startDrawGuessGame(state, Date.now(), room.locale);
     if ("error" in started) return { error: started.error } as const;
-    if (!(await updateState(room, started.state, "DRAW_GUESS_STARTED", profileId))) continue;
+    if (!(await updateState(room, state, started.state, "DRAW_GUESS_STARTED", profileId))) continue;
     return { ok: true } as const;
   }
   return { error: "TRY_AGAIN" } as const;
@@ -266,15 +327,17 @@ export async function rematchDrawGuessRoom(roomId: string, profileId: string) {
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     if (await transferHostIfNeeded(room, Date.now())) continue;
     if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
+    if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    await hydrateDrawGuessState(room.id, state);
     if (state.phase !== "FINISHED" || room.status !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
     if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
     const fresh = createDrawGuessState(state.mode, room.playerCount);
     fresh.gameNumber = state.gameNumber + 1;
     const started = startDrawGuessGame(fresh, Date.now(), room.locale);
     if (!started.state) return { error: "TRY_AGAIN" } as const;
-    if (!(await updateState(room, started.state, "DRAW_GUESS_REMATCH_STARTED", profileId))) continue;
+    if (!(await updateState(room, state, started.state, "DRAW_GUESS_REMATCH_STARTED", profileId))) continue;
     return { ok: true, gameNumber: fresh.gameNumber } as const;
   }
   return { error: "TRY_AGAIN" } as const;
@@ -289,34 +352,45 @@ export async function getDrawGuessHistory(roomId: string, profileId: string) {
     orderBy: { roundNumber: "desc" },
     take: 20,
   });
+  const history = await Promise.all(rounds.map(async (round) => {
+    const state = asState(round.state);
+    if (!state) return null;
+    await hydrateDrawGuessState(room.id, state);
+    const artworks = await prisma.drawGuessArtwork.findMany({
+      where: { roomId, roundNumber: round.roundNumber, submittedAt: { not: null } },
+      select: { id: true, ownerSeat: true, stage: true },
+    });
+    const artworkUrls = Object.fromEntries(artworks.map((artwork) => [
+      `${artwork.ownerSeat}:${artwork.stage}`,
+      `/api/game-tools/draw-guess/rooms/${roomId}/artworks/${artwork.id}`,
+    ]));
+    return {
+      artworkUrls,
+      chains: state.mode === "CHAIN" ? state.chains : null,
+      classicTurns: state.mode === "CLASSIC" ? state.drawings.map((drawing, index) => ({
+        answer: state.classicAnswers[index] ?? "",
+        drawing,
+        guesses: state.guesses[String(index)] ?? {},
+      })) : null,
+      finishedAt: round.finishedAt.toISOString(),
+      matchResults: state.mode === "CHAIN" ? state.matchResults : null,
+      mode: state.mode,
+      picks: state.mode === "CHAIN" ? state.picks : null,
+      roundNumber: round.roundNumber,
+      scores: state.scores,
+      voteCounts: state.mode === "CHAIN" ? state.chains.map((_, owner) => {
+        const votes = Object.values(state.votes[String(owner)] ?? {});
+        return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: room.playerCount - votes.length };
+      }) : null,
+    };
+  }));
   return {
     room: {
       code: room.code,
       id: room.id,
       seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber })),
     },
-    rounds: rounds.flatMap((round) => {
-      const state = asState(round.state);
-      if (!state) return [];
-      return [{
-        chains: state.mode === "CHAIN" ? state.chains : null,
-        classicTurns: state.mode === "CLASSIC" ? state.drawings.map((drawing, index) => ({
-          answer: state.classicAnswers[index] ?? "",
-          drawing,
-          guesses: state.guesses[String(index)] ?? {},
-        })) : null,
-        finishedAt: round.finishedAt.toISOString(),
-        matchResults: state.mode === "CHAIN" ? state.matchResults : null,
-        mode: state.mode,
-        picks: state.mode === "CHAIN" ? state.picks : null,
-        roundNumber: round.roundNumber,
-        scores: state.scores,
-        voteCounts: state.mode === "CHAIN" ? state.chains.map((_, owner) => {
-          const votes = Object.values(state.votes[String(owner)] ?? {});
-          return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: room.playerCount - votes.length };
-        }) : null,
-      }];
-    }),
+    rounds: history.filter((round): round is NonNullable<typeof round> => round !== null),
   } as const;
 }
 
@@ -327,9 +401,10 @@ export async function advanceDrawGuessRoom(roomId: string, now = Date.now()) {
     if (room.status !== "IN_PROGRESS") return { advanced: false } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    await hydrateDrawGuessState(room.id, state);
     const next = advanceDrawGuessGame(state, room.playerCount, now, room.locale);
     if (JSON.stringify(next) === JSON.stringify(state)) return { advanced: false } as const;
-    if (!(await updateState(room, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
+    if (!(await updateState(room, state, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
     return { advanced: true, phase: next.phase } as const;
   }
   return { error: "TRY_AGAIN" } as const;
@@ -376,31 +451,43 @@ export async function commandDrawGuessRoom(input: {
     if (!viewer) return { error: "NOT_A_PLAYER" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
-    const previous = state.commandResults[input.commandId];
-    if (previous) return { ok: true, ...previous } as const;
+    const previous = await prisma.drawGuessCommand.findUnique({
+      where: { roomId_roundNumber_commandId: { roomId: room.id, roundNumber: input.gameNumber, commandId: input.commandId } },
+    });
+    if (previous) {
+      if (previous.actorProfileId && previous.actorProfileId !== input.profileId) return { error: "COMMAND_ID_USED" } as const;
+      console.info("[draw-guess] duplicate command", { roomId: room.id, roundNumber: input.gameNumber });
+      return { ok: true, ...previous.result as { correct?: boolean; points?: number } } as const;
+    }
+    if (state.commandResults[input.commandId] && state.gameNumber === input.gameNumber) return { ok: true, ...state.commandResults[input.commandId] } as const;
     if (state.gameNumber !== input.gameNumber) return { error: "STALE_GAME" } as const;
     if (state.phase !== input.expectedPhase || state.chainStage !== input.expectedChainStage || state.turnIndex !== input.expectedTurnIndex) {
       return { error: "STALE_PHASE" } as const;
     }
+    if (input.action.type === "SAVE_DRAFT" || input.action.type === "SUBMIT_STEP") {
+      const recent = await prisma.drawGuessCommand.count({
+        where: { actorProfileId: input.profileId, createdAt: { gte: new Date(receivedAt - 60_000) } },
+      });
+      if (recent >= 40) return { error: "RATE_LIMITED" } as const;
+    }
+    await hydrateDrawGuessState(room.id, state);
     const result = applyDrawGuessAction(state, input.action, viewer.seatNumber - 1, room.playerCount, receivedAt, room.locale);
     const next = result.state;
     if ("error" in result) {
       if (JSON.stringify(next) !== JSON.stringify(state)) {
-        if (!(await updateState(room, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
+        if (!(await updateState(room, state, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
       }
       return { error: result.error } as const;
     }
-    next.commandResults[input.commandId] = {
+    const commandResult = {
       ...("correct" in result ? { correct: result.correct } : {}),
       ...("points" in result ? { points: result.points } : {}),
     };
-    const ids = Object.keys(next.commandResults);
-    if (ids.length > 1_000) delete next.commandResults[ids[0]];
-    if (!(await updateState(room, next, input.action.type, input.profileId))) {
+    if (!(await updateState(room, state, next, input.action.type, input.profileId, { id: input.commandId, result: commandResult }))) {
       await new Promise((resolve) => setTimeout(resolve, Math.min(30, 3 * (attempt + 1))));
       continue;
     }
-    return { ok: true, ...next.commandResults[input.commandId] } as const;
+    return { ok: true, ...commandResult } as const;
   }
   return { error: "TRY_AGAIN" } as const;
 }

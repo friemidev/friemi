@@ -8,7 +8,17 @@ import {
   getChainStageCount,
   getDrawGuessViewerState,
   startDrawGuessGame,
+  validateDrawGuessWord,
 } from "./drawGuessEngine";
+
+test("manual words reject hidden characters, links, contact data, and blocked phrases", () => {
+  assert.equal(validateDrawGuessWord("  热气球  ", 12, 2), "热气球");
+  assert.equal(validateDrawGuessWord("café au lait", 40), "café au lait");
+  assert.equal(validateDrawGuessWord("a\u200bb", 12, 2), null);
+  assert.equal(validateDrawGuessWord("www.example", 40), null);
+  assert.equal(validateDrawGuessWord("12345678", 40), null);
+  assert.equal(validateDrawGuessWord("去死", 12, 2), null);
+});
 
 test("each relay ends with another player's guess for 5–8 seats", () => {
   for (let count = 5; count <= 8; count += 1) {

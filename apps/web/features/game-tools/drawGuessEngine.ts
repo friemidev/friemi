@@ -38,6 +38,7 @@ export type DrawGuessState = {
   phase: DrawGuessPhase;
   picks: Record<string, number>;
   scores: number[];
+  storageVersion?: number;
   turnIndex: number;
   votes: Record<string, Record<string, boolean>>;
 };
@@ -77,6 +78,19 @@ function optionsFor(locale: string, turnIndex: number) {
 
 function normalized(value: string) {
   return value.normalize("NFKC").trim().toLocaleLowerCase().replace(/[\s\p{P}]+/gu, "");
+}
+
+const blockedWordFragments = ["傻逼", "操你妈", "去死", "fuck", "nazi", "pute", "connard"];
+
+export function validateDrawGuessWord(value: string, maxLength: number, minLength = 1) {
+  const word = value.normalize("NFKC").trim().replace(/\s+/gu, " ");
+  const length = Array.from(word).length;
+  if (length < minLength || length > maxLength) return null;
+  if (!/^[\p{L}\p{N}][\p{L}\p{N} '\-’]*$/u.test(word)) return null;
+  if (/https?:|www\.|@|\b\d{6,}\b/iu.test(word)) return null;
+  const comparable = word.toLocaleLowerCase().replace(/[\s'’\-]+/gu, "");
+  if (blockedWordFragments.some((fragment) => comparable.includes(fragment))) return null;
+  return word;
 }
 
 export function isValidStroke(stroke: unknown): stroke is DrawStroke {
@@ -122,6 +136,7 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number): 
     phase: "LOBBY",
     picks: {},
     scores: Array(playerCount).fill(0),
+    storageVersion: 1,
     turnIndex: 0,
     votes: {},
   };
@@ -293,8 +308,8 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
     } else drawing.pop();
   } else if (action.type === "SAVE_DRAFT" || action.type === "SUBMIT_STEP") {
     if (next.phase === "CHAIN_WORD" && action.type === "SUBMIT_STEP") {
-      const word = action.value?.trim() ?? "";
-      if (Array.from(word).length < 2 || Array.from(word).length > 12 || /[\u0000-\u001f\u007f]/u.test(word) || next.chains[seat][0]) return invalid("INVALID_WORD");
+      const word = validateDrawGuessWord(action.value ?? "", 12, 2);
+      if (!word || next.chains[seat][0]) return invalid("INVALID_WORD");
       next.chains[seat][0] = { kind: "WORD", seat, system: false, value: word };
     } else if (next.phase === "CHAIN_STEP") {
       const owner = Array.from({ length: count }, (_, index) => index).find((index) => getChainActor(index, next.chainStage, count) === seat);
@@ -304,8 +319,9 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
         if (action.type === "SAVE_DRAFT") next.drafts[`${owner}:${next.chainStage}`] = action.strokes;
         else next.chains[owner][next.chainStage] = { kind: "DRAWING", seat, system: false, value: action.strokes! };
       } else {
-        if (action.type !== "SUBMIT_STEP" || !action.value?.trim() || action.value.length > 40) return invalid("INVALID_WORD");
-        next.chains[owner][next.chainStage] = { kind: "WORD", seat, system: false, value: action.value.trim() };
+        const word = action.type === "SUBMIT_STEP" ? validateDrawGuessWord(action.value ?? "", 40) : null;
+        if (!word) return invalid("INVALID_WORD");
+        next.chains[owner][next.chainStage] = { kind: "WORD", seat, system: false, value: word };
       }
     } else return invalid("NOT_ALLOWED");
   } else if (action.type === "VOTE") {
