@@ -90,7 +90,12 @@ function artworkSvg(strokes: DrawStroke[]) {
 export async function prepareArtworkChanges(changes: ArtworkChange[]) {
   return Promise.all(changes.map(async (change) => {
     if (!isValidDrawing(change.strokes)) throw new Error("INVALID_DRAWING_PERSISTENCE");
-    const png = await sharp(Buffer.from(artworkSvg(change.strokes))).png({ compressionLevel: 9 }).toBuffer();
+    const png = await sharp(Buffer.from(artworkSvg(change.strokes))).png({
+      compressionLevel: 9,
+      effort: 7,
+      palette: true,
+      colours: 128,
+    }).toBuffer();
     if (png.byteLength > 512_000) throw new Error("DRAW_GUESS_PREVIEW_TOO_LARGE");
     return { ...change, png };
   }));

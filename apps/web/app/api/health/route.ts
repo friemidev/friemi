@@ -11,10 +11,17 @@ type DrawGuessCronJob = {
   status: string | null;
 };
 
+const DEFAULT_ARTWORK_WARN_BYTES = 256 * 1024 * 1024;
+
+function artworkWarnBytes() {
+  const configured = Number(process.env.DRAW_GUESS_ARTWORK_WARN_BYTES);
+  return Number.isSafeInteger(configured) && configured > 0 ? configured : DEFAULT_ARTWORK_WARN_BYTES;
+}
+
 export async function GET() {
   if (isDrawGuessChainEnabled()) {
     try {
-      const [overdueRooms, openReports, jobs] = await Promise.all([
+      const [overdueRooms, openReports, jobs, artworkSize] = await Promise.all([
         prisma.gameToolRoom.count({
           where: {
             kind: "DRAW_GUESS",
@@ -35,6 +42,9 @@ export async function GET() {
           ) d ON true
           WHERE j.jobname IN ('draw_guess_preview_deadlines', 'draw_guess_preview_maintenance')
         `,
+        prisma.$queryRaw<{ bytes: bigint }[]>`
+          SELECT pg_total_relation_size('"DrawGuessArtwork"')::bigint AS bytes
+        `,
       ]);
       const deadlineJob = jobs.find((job) => job.jobname === "draw_guess_preview_deadlines");
       const maintenanceJob = jobs.find((job) => job.jobname === "draw_guess_preview_maintenance");
@@ -42,9 +52,14 @@ export async function GET() {
         deadlineJob?.active && deadlineJob.status === "succeeded" && deadlineJob.end_time &&
         Date.now() - deadlineJob.end_time.getTime() < 30_000,
       );
-      const healthy = overdueRooms === 0 && openReports < 10 && deadlineHealthy && Boolean(maintenanceJob?.active);
+      const artworkBytes = artworkSize[0]?.bytes ?? 0n;
+      const artworkStorageHealthy = artworkBytes < BigInt(artworkWarnBytes());
+      const healthy = overdueRooms === 0 && openReports < 10 && deadlineHealthy &&
+        Boolean(maintenanceJob?.active) && artworkStorageHealthy;
       if (!healthy) {
         console.warn("[draw-guess] health degraded", {
+          artworkBytes: artworkBytes.toString(),
+          artworkStorageHealthy,
           deadlineHealthy,
           maintenanceActive: Boolean(maintenanceJob?.active),
           openReports,
