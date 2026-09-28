@@ -142,11 +142,17 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }, [initialRoom.id, statusCopy.signIn]);
 
   useEffect(() => {
-    const id = window.setInterval(() => { setNow(Date.now()); if (!document.hidden) void refresh(); }, 2_000);
+    const id = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const intervalMs = syncStatus === "CONNECTED" ? 10_000 : 2_000;
+    const id = window.setInterval(() => { if (!document.hidden) void refresh(); }, intervalMs);
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
     return () => { window.clearInterval(id); window.removeEventListener("focus", onFocus); };
-  }, [refresh]);
+  }, [refresh, syncStatus]);
 
   useEffect(() => {
     const config = getDrawGuessRealtimeBrowserConfig();

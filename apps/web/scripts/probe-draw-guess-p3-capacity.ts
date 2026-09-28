@@ -9,6 +9,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // six ink batches per second across the two-room scenario.
 const previewRef = "dryhbxognbrljslzciuh";
 const previewOrigin = "https://friemi-git-codex-draw-and-guess-friemi.vercel.app";
+const connectedSnapshotIntervalMs = 10_000;
 assert.ok(process.env.DATABASE_URL?.includes(previewRef));
 assert.ok(process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(previewRef));
 assert.ok(process.env.CLERK_SECRET_KEY?.startsWith("sk_test_"));
@@ -130,9 +131,9 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const durationMs = batchesPerRoom * intervalMs;
   for (const room of rooms) {
     for (const token of room.tokens) {
-      for (let tick = 0; tick < Math.ceil(durationMs / 2_000); tick += 1) {
+      for (let tick = 0; tick < Math.ceil(durationMs / connectedSnapshotIntervalMs); tick += 1) {
         polls.push((async () => {
-          await pause(tick * 2_000);
+          await pause(tick * connectedSnapshotIntervalMs);
           const started = performance.now();
           const response = await fetch(`${previewOrigin}/api/game-tools/draw-guess/rooms/${room.id}`, {
             headers: { authorization: `Bearer ${token}`, "if-none-match": `W/"draw-guess-${room.revision}"` },
@@ -223,7 +224,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
 
 const report: { at: string; previewOrigin: string; scenarios: unknown[]; notes: string[] } = {
   at: new Date().toISOString(), previewOrigin, scenarios: [],
-  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
+  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
 };
 let failure: unknown;
 try {
