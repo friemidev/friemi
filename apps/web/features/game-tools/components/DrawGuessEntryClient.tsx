@@ -10,17 +10,17 @@ import { withLocale } from "@/lib/routes";
 function copyFor(locale: string) {
   if (locale === "en") return {
     back: "Table tools", chain: "Picture chain", chainBody: "Everyone starts with a word. Pass drawings and guesses around, then vote on the ending.",
-    classic: "Speed guessing · Preview", classicBody: "Take turns drawing. Strokes appear as they finish; latency testing is still in progress.", classicClosed: "Invite-only preview",
+    classic: "Speed guessing · Preview", classicBody: "Take turns drawing while friends watch each stroke unfold live. Latency testing is still in progress.", classicClosed: "Invite-only preview",
     code: "Room code", create: "Create room", error: "Could not open the room. Please try again.", full: "This room is full.", started: "This game has already started.", unavailable: "New picture-chain rooms are temporarily paused.", join: "Join a room", joinAction: "Join", players: "Players", subtitle: "One canvas, two ways to laugh together.", title: "Draw & Guess", signedOut: "Sign in to create or join a room.",
   };
   if (locale === "fr") return {
     back: "Jeux de table", chain: "Chaîne de dessins", chainBody: "Chacun commence par un mot. Faites circuler dessins et réponses, puis votez sur la fin.",
-    classic: "Deviner vite · Essai", classicBody: "Dessinez à tour de rôle. Les traits apparaissent une fois terminés ; les tests de latence continuent.", classicClosed: "Essai sur invitation",
+    classic: "Deviner vite · Essai", classicBody: "Dessinez à tour de rôle : vos amis voient les traits se former en direct. Les tests de latence continuent.", classicClosed: "Essai sur invitation",
     code: "Code de salle", create: "Créer une salle", error: "Impossible d'ouvrir la salle. Réessayez.", full: "Cette salle est complète.", started: "La partie a déjà commencé.", unavailable: "La création de salles est temporairement suspendue.", join: "Rejoindre une salle", joinAction: "Entrer", players: "Joueurs", subtitle: "Une toile, deux façons de rire ensemble.", title: "Dessine et devine", signedOut: "Connectez-vous pour créer ou rejoindre une salle.",
   };
   return {
     back: "桌游工具", chain: "画画接龙", chainBody: "每人出一个词，画和猜轮流传下去。最后揭晓全链、投票并选最佳作品。",
-    classic: "抢猜模式 · 体验版", classicBody: "轮流作画、边看边猜。笔画完成后同步；正式实时版仍待延迟压测。", classicClosed: "仅限内测",
+    classic: "抢猜模式 · 体验版", classicBody: "轮流作画、边看边猜，朋友能实时看到笔画形成。延迟压测仍在进行。", classicClosed: "仅限内测",
     code: "房间号", create: "创建房间", error: "房间暂时无法打开，请重试。", full: "房间已满。", started: "这局已经开始，暂时不能加入。", unavailable: "接龙新房间暂时暂停创建。", join: "加入朋友的房间", joinAction: "加入房间", players: "人数", subtitle: "一张画布，两种热闹。", title: "你画我猜", signedOut: "请先登录 Friemi，再创建或加入房间。",
   };
 }

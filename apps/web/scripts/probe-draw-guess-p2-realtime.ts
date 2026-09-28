@@ -43,6 +43,7 @@ function channelStatus(client: SupabaseClient, topic: string) {
   });
 }
 
+let failure: unknown;
 try {
   for (let index = 0; index < 6; index += 1) {
     const user = await clerk.users.createUser({
@@ -137,11 +138,50 @@ try {
     assert.equal(payload.seq, reserved.seq);
     assert.deepEqual(payload.stroke, stroke);
   }
+  const previewOrigin = process.env.DRAW_GUESS_PREVIEW_URL;
+  if (previewOrigin) {
+    assert.equal(previewOrigin, "https://friemi-git-codex-draw-and-guess-friemi.vercel.app");
+    const path = `/api/game-tools/draw-guess/rooms/${roomId}`;
+    const requestAs = (index: number, suffix: string, method = "GET", body?: unknown) => fetch(`${previewOrigin}${path}${suffix}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${users[index].token}`,
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const inkBody = { gameNumber: 1, turnIndex: 0, strokeIndex: 0, stroke };
+    const artistInk = await requestAs(0, "/ink", "POST", inkBody);
+    assert.equal(artistInk.status, 200, `Artist ink POST: ${artistInk.status}`);
+    const viewerInk = await requestAs(1, "/ink", "POST", inkBody);
+    assert.equal(viewerInk.status, 403);
+    const outsiderInk = await requestAs(5, "/ink", "POST", inkBody);
+    assert.equal(outsiderInk.status, 403);
+    const draft = await requestAs(0, "/actions", "POST", {
+      action: { type: "SAVE_CLASSIC_DRAFT", strokes: [stroke] }, commandId: randomUUID(),
+      expectedChainStage: 0, expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1,
+    });
+    assert.equal(draft.status, 200, `Artist draft POST: ${draft.status}`);
+    const snapshot = await requestAs(1, "");
+    assert.equal(snapshot.status, 200);
+    const snapshotBody = await snapshot.json() as { room?: { view?: { answer?: string | null; drawing?: unknown; inkSeq?: number } } };
+    assert.equal(snapshotBody.room?.view?.answer, null);
+    assert.deepEqual(snapshotBody.room?.view?.drawing, [stroke]);
+    assert.ok((snapshotBody.room?.view?.inkSeq ?? 0) >= reserved.seq);
+    console.log("P2 Preview HTTP probe passed: artist ink/draft accepted, viewer and outsider publish denied, snapshot hides answer.");
+  }
   console.log("P2 live Preview probe passed: five Clerk JWTs subscribed, outsider/old turn denied, private ink delivered to all five.");
+} catch (error) {
+  failure = error;
 } finally {
-  for (const client of clients) await client.removeAllChannels().catch(() => undefined);
+  await Promise.race([
+    Promise.allSettled(clients.map((client) => client.realtime.disconnect())),
+    new Promise((resolve) => setTimeout(resolve, 3_000)),
+  ]);
   if (roomId) await prisma.gameToolRoom.delete({ where: { id: roomId } }).catch(() => undefined);
   for (const profileId of createdProfileIds) await prisma.userProfile.delete({ where: { id: profileId } }).catch(() => undefined);
   for (const userId of createdClerkUserIds) await clerk.users.deleteUser(userId).catch(() => undefined);
   await prisma.$disconnect();
 }
+if (failure) console.error(failure);
+process.exit(failure ? 1 : 0);
