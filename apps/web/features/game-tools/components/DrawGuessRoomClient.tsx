@@ -88,8 +88,13 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     if (refreshRunning.current) return;
     refreshRunning.current = true;
     try {
-      const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, { cache: "no-store" });
-      if (response.ok) {
+      const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, {
+        cache: "no-store",
+        headers: { "if-none-match": `W/"draw-guess-${latestRoom.current.revision}"` },
+      });
+      if (response.status === 304) {
+        setRefreshFailed(false);
+      } else if (response.ok) {
         const result = await response.json() as { room: DrawGuessRoomView };
         if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
         setRefreshFailed(false);

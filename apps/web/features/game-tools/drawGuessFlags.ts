@@ -5,5 +5,5 @@ export function isDrawGuessClassicEnabled() {
 }
 
 export function isDrawGuessChainEnabled() {
-  return process.env.DRAW_GUESS_CHAIN_ENABLED !== "false";
+  return process.env.DRAW_GUESS_CHAIN_ENABLED === "true";
 }

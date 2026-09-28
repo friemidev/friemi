@@ -11,15 +11,21 @@ export async function maintainDrawGuessData(now = Date.now()) {
   });
   if (commands.length) await prisma.drawGuessCommand.deleteMany({ where: { id: { in: commands.map((command) => command.id) } } });
 
-  const drafts = await prisma.drawGuessArtwork.findMany({
-    where: {
-      submittedAt: null,
-      createdAt: { lt: new Date(now - 7 * DAY) },
-      room: { status: "FINISHED" },
-    },
-    orderBy: { createdAt: "asc" }, select: { id: true }, take: 1000,
-  });
-  if (drafts.length) await prisma.drawGuessArtwork.deleteMany({ where: { id: { in: drafts.map((draft) => draft.id) } } });
+  const draftsDeleted = await prisma.$executeRaw`
+    DELETE FROM "public"."DrawGuessArtwork"
+    WHERE "id" IN (
+      SELECT artwork."id" FROM "public"."DrawGuessArtwork" AS artwork
+      WHERE artwork."submittedAt" IS NULL
+        AND artwork."createdAt" < ${new Date(now - 7 * DAY)}
+        AND EXISTS (
+          SELECT 1 FROM "public"."DrawGuessRound" AS round
+          WHERE round."roomId" = artwork."roomId"
+            AND round."roundNumber" = artwork."roundNumber"
+        )
+      ORDER BY artwork."createdAt" ASC
+      LIMIT 1000
+    )
+  `;
 
   const oldRooms = await prisma.gameToolRoom.findMany({
     where: {
@@ -31,5 +37,5 @@ export async function maintainDrawGuessData(now = Date.now()) {
     orderBy: { finishedAt: "asc" }, select: { id: true }, take: 50,
   });
   if (oldRooms.length) await prisma.gameToolRoom.deleteMany({ where: { id: { in: oldRooms.map((room) => room.id) } } });
-  return { commandsDeleted: commands.length, draftsDeleted: drafts.length, roomsDeleted: oldRooms.length };
+  return { commandsDeleted: commands.length, draftsDeleted, roomsDeleted: oldRooms.length };
 }

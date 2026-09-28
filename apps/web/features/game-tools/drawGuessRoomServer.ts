@@ -266,7 +266,7 @@ async function transferHostIfNeeded(room: RoomWithSeats, now: number) {
   return changed;
 }
 
-export async function getDrawGuessRoomView(roomId: string, profileId: string) {
+export async function getDrawGuessRoomView(roomId: string, profileId: string, knownRevision?: number) {
   await touchPresence(roomId, profileId);
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const room = await readRoom(roomId);
@@ -276,6 +276,11 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string) {
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    // Lobby seats can change without a room revision; active rooms always revise on state changes.
+    if (room.status !== "LOBBY" && knownRevision === room.revision &&
+      (!room.drawGuessDeadlineAt || room.drawGuessDeadlineAt.getTime() > Date.now())) {
+      return { notModified: true } as const;
+    }
     await hydrateDrawGuessState(room.id, state);
     const next = advanceDrawGuessGame(state, room.playerCount, Date.now(), room.locale);
     if (JSON.stringify(next) !== JSON.stringify(state)) {

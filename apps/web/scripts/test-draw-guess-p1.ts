@@ -10,6 +10,7 @@ if (parsedUrl.protocol !== "postgresql:" || !["127.0.0.1", "localhost"].includes
 }
 process.env.DATABASE_URL = testUrl;
 process.env.DIRECT_URL = testUrl;
+process.env.DRAW_GUESS_CHAIN_ENABLED = "true";
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const { prisma } = await import("../lib/prisma");
@@ -48,7 +49,12 @@ async function run() {
     const joined = await server.joinDrawGuessRoom({ code: created.room.code, profileId: player.id, displayName: player.nickname });
     assert.ok("roomId" in joined);
   }
+  const lobby = await view(roomId, players[0].id);
+  const unchangedLobby = await server.getDrawGuessRoomView(roomId, players[0].id, lobby.revision);
+  assert.ok("room" in unchangedLobby && unchangedLobby.room?.seats.length === 5);
   assert.deepEqual(await server.startDrawGuessRoom(roomId, players[0].id), { ok: true });
+  const active = await view(roomId, players[0].id);
+  assert.deepEqual(await server.getDrawGuessRoomView(roomId, players[0].id, active.revision), { notModified: true });
   for (let index = 0; index < 5; index += 1) await command(roomId, players[index].id, { type: "SUBMIT_STEP", value: `词语${index}` });
   assert.deepEqual(await reports.reportDrawGuessContent({ ownerSeat: 0, profileId: players[2].id, reason: "OTHER", roomId, roundNumber: 1, stage: 0, targetKind: "WORD" }), { error: "NOT_REVEALED" });
 
@@ -76,7 +82,9 @@ async function run() {
   const expired = new Date(Date.now() - 86_400_000).toISOString();
   compactState.deadlineAt = expired;
   await prisma.gameToolRoom.update({ where: { id: roomId }, data: { state: compactState as never, drawGuessDeadlineAt: new Date(expired) } });
-  assert.deepEqual(await server.advanceDrawGuessRoom(roomId), { advanced: true, phase: "FINISHED" });
+  const expiredView = await server.getDrawGuessRoomView(roomId, players[0].id, compact.revision);
+  assert.ok("room" in expiredView && expiredView.room?.view.phase === "FINISHED", "An unchanged revision must still advance an overdue room.");
+  assert.deepEqual(await server.advanceDrawGuessRoom(roomId), { advanced: false });
   const history = await server.getDrawGuessHistory(roomId, players[0].id);
   if (!("rounds" in history) || !history.rounds) throw new Error(JSON.stringify(history));
   assert.deepEqual(history.rounds[0].chains?.[0][1], { kind: "DRAWING", seat: 1, system: false, value: [stroke] });
@@ -139,6 +147,7 @@ async function run() {
   legacyState.phase = "FINISHED";
   legacyState.deadlineAt = null;
   legacyState.chains[0][1].value = [stroke];
+  legacyState.drafts["1:1"] = [stroke];
   const legacyCommandId = randomUUID();
   legacyState.commandResults = { [legacyCommandId]: {} };
   await prisma.$transaction(async (tx) => {
@@ -153,8 +162,21 @@ async function run() {
   assert.deepEqual(migrated.strokes, [stroke]);
   assert.ok(migrated.previewPng);
   assert.ok(await prisma.drawGuessCommand.findUnique({ where: { roomId_roundNumber_commandId: { roomId: legacyRoomId, roundNumber: 1, commandId: legacyCommandId } } }));
+  const oldDraft = await prisma.drawGuessArtwork.findUniqueOrThrow({
+    where: { roomId_roundNumber_ownerSeat_stage: { roomId: legacyRoomId, roundNumber: 1, ownerSeat: 1, stage: 1 } },
+  });
+  const oldCreatedAt = new Date(Date.now() - 8 * 86_400_000);
+  await prisma.drawGuessArtwork.update({ where: { id: oldDraft.id }, data: { createdAt: oldCreatedAt } });
+  const currentDraft = await prisma.drawGuessArtwork.create({ data: {
+    roomId: legacyRoomId, roundNumber: 2, ownerSeat: 2, stage: 1, artistSeat: 3,
+    strokes: [stroke], createdAt: oldCreatedAt,
+  } });
+  const draftCleanup = await maintainDrawGuessData(Date.now());
+  assert.equal(draftCleanup.draftsDeleted, 1, "Archived-round drafts expire even while the next round is active.");
+  assert.equal(await prisma.drawGuessArtwork.findUnique({ where: { id: oldDraft.id } }), null);
+  assert.ok(await prisma.drawGuessArtwork.findUnique({ where: { id: currentDraft.id } }), "The active round's draft is retained.");
   await prisma.gameToolRoom.delete({ where: { id: legacyRoomId } });
-  console.log("P1 isolated checks passed: compact state, private preview bytes, recovery, reports, review, rollback, cleanup, legacy rematch migration.");
+  console.log("P1 isolated checks passed: compact state, private preview bytes, recovery, reports, review, rollback, archived draft cleanup, legacy rematch migration.");
 }
 
 try { await run(); }

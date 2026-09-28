@@ -28,7 +28,10 @@ export function compactDrawGuessState(state: DrawGuessState): Prisma.InputJsonVa
 }
 
 export async function hydrateDrawGuessState(roomId: string, state: DrawGuessState) {
-  const artworks = await prisma.drawGuessArtwork.findMany({ where: { roomId, roundNumber: state.gameNumber } });
+  const artworks = await prisma.drawGuessArtwork.findMany({
+    where: { roomId, roundNumber: state.gameNumber },
+    select: { ownerSeat: true, stage: true, strokes: true, submittedAt: true },
+  });
   for (const artwork of artworks) {
     if (!isValidDrawing(artwork.strokes)) continue;
     const strokes = artwork.strokes;

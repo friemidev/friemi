@@ -12,6 +12,7 @@ if (parsedUrl.protocol !== "postgresql:" || !["127.0.0.1", "localhost"].includes
 process.env.DATABASE_URL = testUrl;
 process.env.DIRECT_URL = testUrl;
 process.env.DRAW_GUESS_CLASSIC_ENABLED = "false";
+process.env.DRAW_GUESS_CHAIN_ENABLED = "true";
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const { prisma } = await import("../lib/prisma");
