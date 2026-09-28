@@ -33,6 +33,8 @@ type Listener = {
   client: SupabaseClient;
   channel: ReturnType<SupabaseClient["channel"]>;
   received: Map<number, number>;
+  duplicateDeliveries: number;
+  unexpectedPayloads: number;
   wrongRoom: number;
 };
 type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number; tokens: string[]; revision: number };
@@ -50,13 +52,17 @@ function readServerTiming(header: string | null) {
 }
 
 async function subscribe(client: SupabaseClient, topic: string, roomId: string): Promise<Listener> {
-  const listener: Listener = { client, channel: null!, received: new Map(), wrongRoom: 0 };
+  const listener: Listener = { client, channel: null!, received: new Map(), duplicateDeliveries: 0, unexpectedPayloads: 0, wrongRoom: 0 };
   listener.channel = client.channel(topic, { config: { private: true } })
     .on("broadcast", { event: DRAW_GUESS_INK_EVENT }, (message) => {
       const payload = message.payload as { roomId?: string; stroke?: { points?: number[][] } };
       if (payload.roomId !== roomId) { listener.wrongRoom += 1; return; }
+      if (Object.keys(payload).some((key) => !["gameNumber", "id", "roomId", "seq", "stroke", "strokeIndex", "turnIndex"].includes(key))) listener.unexpectedPayloads += 1;
       const marker = payload.stroke?.points?.[0]?.[0];
-      if (typeof marker === "number") listener.received.set(marker, performance.now());
+      if (typeof marker === "number") {
+        if (listener.received.has(marker)) listener.duplicateDeliveries += 1;
+        else listener.received.set(marker, performance.now());
+      }
     });
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Private channel join timed out: ${roomId}`)), 15_000);
@@ -169,17 +175,25 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   while (!delivered() && performance.now() < deadline) await pause(50);
   const finishedAt = performance.now();
   const latencies: number[] = [];
+  const viewerLatencies: number[] = [];
   let missing = 0;
   let wrongRoom = 0;
+  let duplicateDeliveries = 0;
+  let unexpectedPayloads = 0;
   for (const room of rooms) {
     const roomSamples = samples.filter((sample) => sample.roomId === room.id);
-    for (const listener of room.listeners) {
+    for (const [listenerIndex, listener] of room.listeners.entries()) {
       wrongRoom += listener.wrongRoom;
+      duplicateDeliveries += listener.duplicateDeliveries;
+      unexpectedPayloads += listener.unexpectedPayloads;
       for (const sample of roomSamples) {
         const marker = (sample.batch + 1) / 1000 + (rooms.indexOf(room) + 1) / 10;
         const receivedAt = listener.received.get(marker);
         if (receivedAt === undefined) missing += 1;
-        else latencies.push(receivedAt - sample.sentAt);
+        else {
+          latencies.push(receivedAt - sample.sentAt);
+          if (listenerIndex > 0) viewerLatencies.push(receivedAt - sample.sentAt);
+        }
       }
     }
   }
@@ -189,18 +203,20 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
     realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
     sentBatches: samples.length, expectedDeliveries: samples.reduce((sum, sample) => sum + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
     estimatedRealtimeMessages: samples.reduce((sum, sample) => sum + 1 + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
-    receivedDeliveries: latencies.length, missing, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus }) => ({ batch, roomId, httpStatus })),
+    receivedDeliveries: latencies.length, missing, duplicateDeliveries, unexpectedPayloads, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus }) => ({ batch, roomId, httpStatus })),
     elapsedMs: round(finishedAt - launchedAt), effectiveBatchesPerSecond: round(samples.length / ((finishedAt - launchedAt) / 1000)),
     httpMs: { p50: round(percentile(samples.map((sample) => sample.httpMs), 50) ?? 0), p95: round(percentile(samples.map((sample) => sample.httpMs), 95) ?? 0) },
     snapshotPolls: { requests: snapshotSamples.length, errors: snapshotSamples.filter((sample) => sample.status !== 200 && sample.status !== 304).length, p95Ms: round(percentile(snapshotSamples.map((sample) => sample.httpMs), 95) ?? 0) },
     serverTimingP95Ms: Object.fromEntries(["auth", "room", "redis", "broadcast"].map((stage) => [stage, round(percentile(samples.map((sample) => sample.serverTiming?.[stage]).filter((value): value is number => typeof value === "number"), 95) ?? 0)])),
-    inkVisibleMs: { p50: round(percentile(latencies, 50) ?? 0), p95: round(percentile(latencies, 95) ?? 0), max: round(percentile(latencies, 100) ?? 0) },
-    latencyGatePassed: (percentile(latencies, 95) ?? Infinity) <= 300,
+    inkVisibleMs: { p50: round(percentile(viewerLatencies, 50) ?? 0), p95: round(percentile(viewerLatencies, 95) ?? 0), max: round(percentile(viewerLatencies, 100) ?? 0) },
+    latencyGatePassed: (percentile(viewerLatencies, 95) ?? Infinity) <= 300,
   };
   assert.equal(httpErrors.length, 0, `${name}: ink HTTP errors`);
   assert.equal(result.snapshotPolls.errors, 0, `${name}: snapshot polling HTTP errors`);
   assert.ok(samples.every((sample) => Number.isFinite(sample.serverTiming?.auth)), "Preview has not deployed the P3 Server-Timing instrumentation yet.");
   assert.equal(missing, 0, `${name}: missing private ink deliveries`);
+  assert.equal(duplicateDeliveries, 0, `${name}: duplicate private ink deliveries`);
+  assert.equal(unexpectedPayloads, 0, `${name}: unexpected or answer-bearing ink payload`);
   assert.equal(wrongRoom, 0, `${name}: cross-room ink leakage`);
   return result;
 }
