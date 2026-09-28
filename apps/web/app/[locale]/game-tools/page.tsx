@@ -6,6 +6,7 @@ import { ArrowRight, ChevronRight, Layers3, LockKeyhole } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import {
   gameToolDefinitions,
   getGameToolHubCopy,
@@ -114,6 +115,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const { locale } = await params;
   const copy = getGameToolHubCopy(locale);
   const mobileCopy = getMobileGameToolsCopy(locale);
+  const drawGuessAvailable = isDrawGuessChainEnabled() || isDrawGuessClassicEnabled();
 
   return (
     <>
@@ -133,7 +135,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
             <div className="space-y-3">
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
-                const isAvailable = tool.availability === "available";
+                const isAvailable = tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
                 const cardClassName =
                   "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
                 const cardContent = (
@@ -244,7 +246,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
-                const isAvailable = tool.availability === "available";
+                const isAvailable = tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
                 const cardClassName =
                   "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300";
                 const cardContent = (
@@ -258,7 +260,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                       <div className="flex items-start justify-between gap-3">
                         <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/45 bg-[#FEFFF9]/90 px-2.5 text-xs font-bold text-[#156240]">
                           <Icon className="h-3.5 w-3.5" />
-                          {getGameToolLabel(tool.phase, locale)}
+                          {tool.kind === "DRAW_GUESS" && !drawGuessAvailable ? mobileCopy.coming : getGameToolLabel(tool.phase, locale)}
                         </span>
                         <span className="rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[11px] font-bold text-white">
                           {tool.minPlayers === tool.maxPlayers
