@@ -303,6 +303,7 @@ enum PlanetMembershipStatus {
 
 enum GameToolKind {
   AVALON
+  DRAW_GUESS
   STORYTELLER
   WEREWOLF
 }

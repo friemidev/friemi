@@ -52,6 +52,7 @@ function getMobileGameToolsCopy(locale: string) {
       intros: {
         AVALON: "Rôles, votes et quêtes.",
         BOTC: "Grimoire et rythme de nuit.",
+        DRAW_GUESS: "Dessiner, deviner, transmettre.",
         OTHER: "Plus d'outils à venir.",
         STORYTELLER: "Grimoire et rythme de nuit.",
         WEREWOLF: "Rôles, morts et résultat.",
@@ -68,6 +69,7 @@ function getMobileGameToolsCopy(locale: string) {
       intros: {
         AVALON: "Roles, votes, and quests.",
         BOTC: "Grimoire and night flow.",
+        DRAW_GUESS: "Draw, guess, pass it on.",
         OTHER: "More tools later.",
         STORYTELLER: "Grimoire and night flow.",
         WEREWOLF: "Roles, deaths, and result.",
@@ -83,6 +85,7 @@ function getMobileGameToolsCopy(locale: string) {
     intros: {
       AVALON: "发身份、投票、记任务。",
       BOTC: "魔典和夜晚流程。",
+      DRAW_GUESS: "抢猜或接龙，画出意想不到。",
       OTHER: "更多工具会继续接入。",
       STORYTELLER: "魔典和夜晚流程。",
       WEREWOLF: "发身份、记生死、看结算。",

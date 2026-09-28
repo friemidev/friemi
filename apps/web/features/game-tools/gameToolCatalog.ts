@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpenCheck,
+  Brush,
   Crown,
   Dice5,
   Moon,
@@ -11,6 +12,7 @@ import {
 export type GameToolKind =
   | "AVALON"
   | "BOTC"
+  | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
   | "WEREWOLF";
@@ -30,6 +32,31 @@ export type GameToolDefinition = {
 };
 
 export const gameToolDefinitions: GameToolDefinition[] = [
+  {
+    accent: "#E68A67",
+    availability: "available",
+    description: {
+      "zh-CN": "轮流画、抢着猜，或者把词和画传下去，看结尾变成什么。",
+      en: "Draw and race to guess, or pass pictures and words along a playful chain.",
+      fr: "Dessinez et devinez vite, ou faites voyager mots et images en chaîne.",
+    },
+    href: "/game-tools/draw-guess",
+    icon: Brush,
+    imageSrc: "/illustrations/png/board-games.png",
+    kind: "DRAW_GUESS",
+    maxPlayers: 10,
+    minPlayers: 3,
+    phase: {
+      "zh-CN": "已开放",
+      en: "Open",
+      fr: "Ouvert",
+    },
+    title: {
+      "zh-CN": "你画我猜",
+      en: "Draw & Guess",
+      fr: "Dessine et devine",
+    },
+  },
   {
     accent: "#7A1F2B",
     availability: "available",
