@@ -4,7 +4,7 @@
 
 P1 的 Preview 证据与剩余发布条件见 [P1 实施与验收记录](./draw-and-guess-p1-progress.md)。真实浏览器会话、故障邮件、管理员审核、保留期清理和压缩后的作品读取均已验证；真机弱网和正式环境资源预算仍按发布条件确认。
 
-P2 已开始实施：私有画笔传输、Clerk 与 Supabase Preview 身份配置，以及五个独立身份的 Realtime 联调通过；页面端和五台实际设备验收尚未完成。见 [P2 实施与验收记录](./draw-and-guess-p2-progress.md)。
+P2 的私有画笔传输、Clerk 与 Supabase Preview 身份配置，以及五个独立登录浏览器会话的完整页面对局、断线恢复、超时与再来一局均已通过。原计划的五台实体设备验收仍待完成或确认等价验收口径。见 [P2 实施与验收记录](./draw-and-guess-p2-progress.md)。
 
 ## 优先级与发布边界
 
