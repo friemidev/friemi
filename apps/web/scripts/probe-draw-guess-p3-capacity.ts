@@ -23,6 +23,8 @@ const singleDurationSeconds = Number(process.env.P3_SINGLE_DURATION_SECONDS ?? 6
 assert.ok(Number.isInteger(singleDurationSeconds) && singleDurationSeconds >= 6 && singleDurationSeconds <= 30);
 const pollMode = process.env.P3_POLL_MODE ?? "clustered";
 assert.ok(["clustered", "staggered"].includes(pollMode));
+const prewarmInk = process.env.P3_PREWARM_INK === "true";
+assert.ok(!process.env.P3_PREWARM_INK || ["true", "false"].includes(process.env.P3_PREWARM_INK));
 
 const databaseUrl = new URL(process.env.DATABASE_URL!);
 databaseUrl.searchParams.set("connection_limit", "20");
@@ -133,7 +135,7 @@ async function closeRoom(room: ActiveRoom) {
   await Promise.allSettled(room.listeners.map((listener) => listener.client.realtime.disconnect()));
 }
 
-async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: number, intervalMs: number) {
+async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: number, intervalMs: number, prewarmMs: number[]) {
   const samples: Sample[] = [];
   const snapshotSamples: SnapshotSample[] = [];
   const launchedAt = performance.now();
@@ -259,6 +261,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   });
   const result = {
     name, rooms: rooms.length, playersPerRoom: rooms.map((room) => room.memberCount),
+    prewarmMs: prewarmMs.map(round),
     realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
     sentBatches: samples.length, expectedDeliveries: samples.reduce((sum, sample) => sum + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
     estimatedRealtimeMessages: samples.reduce((sum, sample) => sum + 1 + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
@@ -281,7 +284,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
 
 const report: { at: string; previewOrigin: string; scenarios: unknown[]; notes: string[] } = {
   at: new Date().toISOString(), previewOrigin, scenarios: [],
-  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", `Scenario filter: ${scenarioFilter ?? "all"}; single-room duration: ${singleDurationSeconds} seconds; dual-room duration: ${dualDurationSeconds} seconds; snapshot poll mode: ${pollMode}.`, "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
+  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", `Scenario filter: ${scenarioFilter ?? "all"}; single-room duration: ${singleDurationSeconds} seconds; dual-room duration: ${dualDurationSeconds} seconds; snapshot poll mode: ${pollMode}; artist ink prewarm: ${prewarmInk}.`, "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
 };
 let failure: unknown;
 try {
@@ -306,7 +309,17 @@ try {
     const rooms: ActiveRoom[] = [];
     try {
       for (const group of scenario.groups) rooms.push(await openRoom(group));
-      const result = await runScenario(scenario.name, rooms, scenario.batches, scenario.intervalMs);
+      const prewarmMs = prewarmInk ? await Promise.all(rooms.map(async (room) => {
+        const started = performance.now();
+        const response = await fetch(`${previewOrigin}/api/game-tools/draw-guess/rooms/${room.id}/ink`, {
+          method: "HEAD",
+          headers: { authorization: `Bearer ${room.artistToken}` },
+          signal: AbortSignal.timeout(8_000),
+        });
+        assert.equal(response.status, 204, `${scenario.name}: artist ink prewarm failed`);
+        return performance.now() - started;
+      })) : [];
+      const result = await runScenario(scenario.name, rooms, scenario.batches, scenario.intervalMs, prewarmMs);
       report.scenarios.push(result);
       console.log("P3 capacity scenario:", JSON.stringify(result));
       assert.equal(result.httpErrors.length, 0, `${scenario.name}: ink HTTP errors`);

@@ -12,6 +12,14 @@ const batchSchema = z.object({
   turnIndex: z.number().int().min(0).max(9),
 });
 
+export async function HEAD() {
+  const userId = hasClerkKeys() ? (await auth()).userId : "local-dev-user";
+  return new Response(null, {
+    status: userId ? 204 : 401,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
 export async function POST(request: Request, context: { params: Promise<{ roomId: string }> }) {
   const startedAt = performance.now();
   const userId = hasClerkKeys() ? (await auth()).userId : "local-dev-user";

@@ -83,6 +83,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const refreshRunning = useRef<Promise<void> | null>(null);
   const mutationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const previousTask = useRef("");
+  const warmedInkTurn = useRef("");
   const latestRoom = useRef(room);
   latestRoom.current = room;
   const ink = useDrawGuessInk(room, (snapshot) => {
@@ -145,6 +146,17 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const id = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (room.mode !== "CLASSIC" || room.view.phase !== "WORD_SELECT" || room.viewerSeat !== room.view.turnIndex) return;
+    const turnKey = `${room.id}:${room.view.gameNumber}:${room.view.turnIndex}`;
+    if (warmedInkTurn.current === turnKey) return;
+    warmedInkTurn.current = turnKey;
+    void fetch(`/api/game-tools/draw-guess/rooms/${room.id}/ink`, {
+      method: "HEAD",
+      cache: "no-store",
+    }).catch(() => {});
+  }, [room.id, room.mode, room.viewerSeat, room.view.gameNumber, room.view.phase, room.view.turnIndex]);
 
   useEffect(() => {
     const intervalMs = syncStatus === "CONNECTED" ? 10_000 : 2_000;
