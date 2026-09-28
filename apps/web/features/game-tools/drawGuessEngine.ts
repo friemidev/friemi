@@ -32,6 +32,7 @@ export type DrawGuessState = {
   gameNumber: number;
   guessAttempts: Record<string, Record<string, number>>;
   guesses: Record<string, Record<string, { at: string; points: number }>>;
+  inkSeq: number;
   matchResults: Record<string, boolean>;
   mode: DrawGuessMode;
   options: string[];
@@ -48,6 +49,8 @@ export type DrawGuessAction =
   | { type: "GUESS"; value: string }
   | { type: "ADD_STROKE"; stroke: DrawStroke }
   | { type: "UNDO_STROKE" }
+  | { type: "CLEAR_STROKES" }
+  | { type: "SAVE_CLASSIC_DRAFT"; strokes: DrawStroke[] }
   | { type: "SAVE_DRAFT"; strokes: DrawStroke[] }
   | { type: "SUBMIT_STEP"; value?: string; strokes?: DrawStroke[] }
   | { type: "VOTE"; owner: number; value: boolean }
@@ -130,6 +133,7 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number): 
     gameNumber: 1,
     guessAttempts: {},
     guesses: {},
+    inkSeq: 0,
     matchResults: {},
     mode,
     options: [],
@@ -234,6 +238,7 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
     } else if (next.phase === "TURN_REVEAL") {
       next.classicAnswers[next.turnIndex] = next.answer;
       next.turnIndex += 1;
+      next.inkSeq = 0;
       next.answer = "";
       if (next.turnIndex >= count) {
         next.phase = "FINISHED";
@@ -299,13 +304,17 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
     results[String(seat)] = { at: new Date(now).toISOString(), points };
     next.scores[seat] += points;
     return { state: advanceDrawGuessGame(next, count, now, locale), correct: true, points };
-  } else if (action.type === "ADD_STROKE" || action.type === "UNDO_STROKE") {
+  } else if (action.type === "ADD_STROKE" || action.type === "UNDO_STROKE" || action.type === "CLEAR_STROKES" || action.type === "SAVE_CLASSIC_DRAFT") {
     if (next.phase !== "DRAW_GUESS" || seat !== next.turnIndex) return invalid("NOT_ALLOWED");
     const drawing = next.drawings[next.turnIndex];
-    if (action.type === "ADD_STROKE") {
+    if (action.type === "SAVE_CLASSIC_DRAFT") {
+      if (!isValidDrawing(action.strokes)) return invalid("INVALID_DRAWING");
+      next.drawings[next.turnIndex] = action.strokes;
+    } else if (action.type === "ADD_STROKE") {
       if (!isValidStroke(action.stroke) || drawing.length >= 120) return invalid("INVALID_DRAWING");
       drawing.push(action.stroke);
-    } else drawing.pop();
+    } else if (action.type === "UNDO_STROKE") drawing.pop();
+    else drawing.length = 0;
   } else if (action.type === "SAVE_DRAFT" || action.type === "SUBMIT_STEP") {
     if (next.phase === "CHAIN_WORD" && action.type === "SUBMIT_STEP") {
       const word = validateDrawGuessWord(action.value ?? "", 12, 2);
@@ -351,6 +360,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       ...shared,
       answer: seat === state.turnIndex || state.phase === "TURN_REVEAL" || state.phase === "FINISHED" ? state.answer : null,
       drawing: state.drawings[state.turnIndex] ?? [],
+      inkSeq: state.inkSeq ?? 0,
       guesses: state.guesses[String(state.turnIndex)] ?? {},
       options: seat === state.turnIndex && state.phase === "WORD_SELECT" ? state.options : [],
     };

@@ -4,8 +4,10 @@ export function getDrawGuessRoomTopic(roomId: string) {
   return `friemi:draw-guess:${roomId}`;
 }
 
-export function getDrawGuessInkTopic(roomId: string, turnIndex: number) {
-  return `friemi:draw-guess:${roomId}:ink:${turnIndex}`;
+export const DRAW_GUESS_INK_EVENT = "ink-batch";
+
+export function getDrawGuessInkTopic(roomId: string, gameNumber: number, turnIndex: number) {
+  return `friemi:draw-guess:${roomId}:ink:${gameNumber}:${turnIndex}`;
 }
 
 export function getDrawGuessRealtimeBrowserConfig() {

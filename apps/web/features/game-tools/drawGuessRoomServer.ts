@@ -16,6 +16,7 @@ import {
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
+import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { prisma } from "@/lib/prisma";
 
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
@@ -24,7 +25,7 @@ function asState(value: Prisma.JsonValue | null): DrawGuessState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as DrawGuessState;
   return state.phase && state.mode && Array.isArray(state.scores)
-    ? { ...state, classicAnswers: state.classicAnswers ?? [], gameNumber: state.gameNumber ?? 1 }
+    ? { ...state, classicAnswers: state.classicAnswers ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0 }
     : null;
 }
 
@@ -469,11 +470,11 @@ export async function commandDrawGuessRoom(input: {
     if (state.phase !== input.expectedPhase || state.chainStage !== input.expectedChainStage || state.turnIndex !== input.expectedTurnIndex) {
       return { error: "STALE_PHASE" } as const;
     }
-    if (input.action.type === "SAVE_DRAFT" || input.action.type === "SUBMIT_STEP") {
+    if (input.action.type === "SAVE_DRAFT" || input.action.type === "SAVE_CLASSIC_DRAFT" || input.action.type === "SUBMIT_STEP") {
       const recent = await prisma.drawGuessCommand.count({
         where: { actorProfileId: input.profileId, createdAt: { gte: new Date(receivedAt - 60_000) } },
       });
-      if (recent >= 40) return { error: "RATE_LIMITED" } as const;
+      if (recent >= (input.action.type === "SAVE_CLASSIC_DRAFT" ? 150 : 40)) return { error: "RATE_LIMITED" } as const;
     }
     await hydrateDrawGuessState(room.id, state);
     const result = applyDrawGuessAction(state, input.action, viewer.seatNumber - 1, room.playerCount, receivedAt, room.locale);
@@ -483,6 +484,9 @@ export async function commandDrawGuessRoom(input: {
         if (!(await updateState(room, state, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
       }
       return { error: result.error } as const;
+    }
+    if (state.mode === "CLASSIC" && ["ADD_STROKE", "UNDO_STROKE", "CLEAR_STROKES", "SAVE_CLASSIC_DRAFT"].includes(input.action.type)) {
+      next.inkSeq = Math.max(next.inkSeq ?? 0, await getDrawGuessInkSequence(room.id, state.gameNumber, state.turnIndex));
     }
     const commandResult = {
       ...("correct" in result ? { correct: result.correct } : {}),

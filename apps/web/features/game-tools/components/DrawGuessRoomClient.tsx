@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, UsersRound } from "lucide-react";
 import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
+import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
 import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessMode, type DrawGuessPhase, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
@@ -29,6 +30,7 @@ export type DrawGuessRoomView = {
     gameNumber: number;
     drawing?: DrawStroke[];
     guesses?: Record<string, { at: string; points: number }>;
+    inkSeq?: number;
     matchResults?: Record<string, boolean> | null;
     mode: DrawGuessMode;
     options?: string[];
@@ -49,9 +51,9 @@ const TRANSLATIONS = {
 };
 
 const STATUS_COPY = {
-  "zh-CN": { syncing: "正在重连；房间进度仍会定期刷新", polling: "房间进度定期刷新，画笔不会实时传输", expired: "时间已到，正在更新下一阶段", draftFailed: "草稿保存失败，请检查网络后重试", signIn: "登录已失效，请重新登录后返回房间", missing: "人数还没到齐，暂时无法开局", closed: "新对局暂时暂停", phase: "这一阶段已结束，房间正在更新", invalid: "请输入可见文字，勿包含链接或个人信息", rate: "提交太频繁，请稍后再试" },
-  en: { syncing: "Reconnecting; room progress still refreshes", polling: "Room progress refreshes regularly; ink is not live", expired: "Time is up; moving to the next stage", draftFailed: "Draft was not saved. Check your connection and try again.", signIn: "Your sign-in expired. Sign in again and return to the room.", missing: "Wait for everyone before starting", closed: "New games are temporarily paused", phase: "This stage ended; refreshing the room", invalid: "Use visible words without links or personal details", rate: "Too many submissions. Try again shortly." },
-  fr: { syncing: "Reconnexion en cours ; la salle se rafraîchit", polling: "La salle se rafraîchit ; les traits ne sont pas en direct", expired: "Temps écoulé ; passage à l’étape suivante", draftFailed: "Brouillon non enregistré. Vérifiez votre connexion.", signIn: "Connexion expirée. Reconnectez-vous puis revenez.", missing: "Attendez tous les joueurs avant de commencer", closed: "Nouvelles parties temporairement suspendues", phase: "Cette étape est terminée ; actualisation en cours", invalid: "Utilisez des mots visibles sans lien ni données privées", rate: "Trop d'envois. Réessayez dans un instant." },
+  "zh-CN": { syncing: "正在重连；房间进度仍会定期刷新", polling: "房间进度定期刷新", inkSyncing: "画笔正在重连；已完成笔画仍会同步", inkLive: "实时画笔已连接", expired: "时间已到，正在更新下一阶段", draftFailed: "草稿保存失败，请检查网络后重试", signIn: "登录已失效，请重新登录后返回房间", missing: "人数还没到齐，暂时无法开局", closed: "新对局暂时暂停", phase: "这一阶段已结束，房间正在更新", invalid: "请输入可见文字，勿包含链接或个人信息", rate: "提交太频繁，请稍后再试" },
+  en: { syncing: "Reconnecting; room progress still refreshes", polling: "Room progress refreshes regularly", inkSyncing: "Ink is reconnecting; completed strokes still sync", inkLive: "Live ink connected", expired: "Time is up; moving to the next stage", draftFailed: "Draft was not saved. Check your connection and try again.", signIn: "Your sign-in expired. Sign in again and return to the room.", missing: "Wait for everyone before starting", closed: "New games are temporarily paused", phase: "This stage ended; refreshing the room", invalid: "Use visible words without links or personal details", rate: "Too many submissions. Try again shortly." },
+  fr: { syncing: "Reconnexion en cours ; la salle se rafraîchit", polling: "La salle se rafraîchit régulièrement", inkSyncing: "Les traits se reconnectent ; les traits terminés restent synchronisés", inkLive: "Dessin en direct connecté", expired: "Temps écoulé ; passage à l’étape suivante", draftFailed: "Brouillon non enregistré. Vérifiez votre connexion.", signIn: "Connexion expirée. Reconnectez-vous puis revenez.", missing: "Attendez tous les joueurs avant de commencer", closed: "Nouvelles parties temporairement suspendues", phase: "Cette étape est terminée ; actualisation en cours", invalid: "Utilisez des mots visibles sans lien ni données privées", rate: "Trop d'envois. Réessayez dans un instant." },
 };
 
 function formatTimer(deadlineAt: string | null, now: number) {
@@ -83,6 +85,31 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const previousTask = useRef("");
   const latestRoom = useRef(room);
   latestRoom.current = room;
+  const ink = useDrawGuessInk(room, (snapshot) => {
+    if (snapshot.revision >= latestRoom.current.revision) setRoom(snapshot);
+  });
+  const pendingInk = useRef<{ stroke: DrawStroke; strokeIndex: number } | null>(null);
+  const inkTimer = useRef<number | null>(null);
+  const inkDrain = useRef<Promise<void> | null>(null);
+  const currentStroke = useRef<DrawStroke | null>(null);
+  const strokesRef = useRef(strokes);
+  strokesRef.current = strokes;
+  const [strokeSaving, setStrokeSaving] = useState(false);
+
+  const drainInk = useCallback(() => {
+    if (inkDrain.current) return inkDrain.current;
+    const running = (async () => {
+      while (pendingInk.current) {
+        const batch = pendingInk.current;
+        pendingInk.current = null;
+        await ink.publishStroke(batch.stroke, batch.strokeIndex);
+      }
+    })();
+    inkDrain.current = running.finally(() => { inkDrain.current = null; });
+    return inkDrain.current;
+  }, [ink.publishStroke]);
+
+  useEffect(() => () => { if (inkTimer.current !== null) window.clearTimeout(inkTimer.current); }, []);
 
   const refresh = useCallback(async () => {
     if (refreshRunning.current) return;
@@ -129,6 +156,10 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const taskKey = `${room.view.gameNumber}:${room.view.phase}:${room.view.turnIndex}:${room.view.chainStage}`;
     if (taskKey === previousTask.current) return;
     previousTask.current = taskKey;
+    currentStroke.current = null;
+    pendingInk.current = null;
+    if (inkTimer.current !== null) window.clearTimeout(inkTimer.current);
+    inkTimer.current = null;
     setInput("");
     setGuessFeedback("");
     setStrokes(room.view.phase === "CHAIN_STEP" ? room.view.task?.draft ?? [] : room.view.drawing ?? []);
@@ -136,8 +167,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => {
     if (room.mode !== "CLASSIC" || room.view.phase !== "DRAW_GUESS" || room.view.turnIndex !== room.viewerSeat) return;
+    if (currentStroke.current || draftFailed) return;
     setStrokes((current) => (room.view.drawing?.length ?? 0) >= current.length ? room.view.drawing ?? [] : current);
-  }, [room.mode, room.revision, room.view.drawing, room.view.phase, room.view.turnIndex, room.viewerSeat]);
+  }, [draftFailed, room.mode, room.revision, room.view.drawing, room.view.phase, room.view.turnIndex, room.viewerSeat]);
 
   useEffect(() => {
     const href = withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}`);
@@ -164,13 +196,13 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
-        if (action.type === "SAVE_DRAFT") setDraftFailed(false);
+        if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(false);
         await refresh();
         return result as { correct?: boolean; points?: number };
       } catch (cause) {
         const code = cause instanceof Error ? cause.message : "UNKNOWN";
-        if (action.type === "SAVE_DRAFT") setDraftFailed(true);
-        setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "PHASE_ENDED" || code === "STALE_PHASE" || code === "STALE_GAME" ? statusCopy.phase : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_DRAFT" ? statusCopy.draftFailed : t.error);
+        if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(true);
+        setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "PHASE_ENDED" || code === "STALE_PHASE" || code === "STALE_GAME" ? statusCopy.phase : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT" ? statusCopy.draftFailed : t.error);
         await refresh();
         return null;
       }
@@ -180,6 +212,27 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     mutationQueue.current = queued.then(() => undefined, () => undefined);
     return queued;
   }, [refresh, room.id, room.view.chainStage, room.view.gameNumber, room.view.phase, room.view.turnIndex, statusCopy, t.error, t.tooFast]);
+
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const current = latestRoom.current;
+      const partial = currentStroke.current;
+      if (!partial || current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return;
+      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokesRef.current, partial] });
+    }, 2_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!draftFailed || room.mode !== "CLASSIC" || room.view.phase !== "DRAW_GUESS" || room.viewerSeat !== room.view.turnIndex) return;
+    const id = window.setTimeout(() => {
+      const partial = currentStroke.current;
+      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: partial ? [...strokesRef.current, partial] : strokesRef.current });
+    }, 3_000);
+    return () => window.clearTimeout(id);
+  }, [draftFailed, room.mode, room.view.phase, room.view.turnIndex, room.viewerSeat]);
 
   useEffect(() => {
     if (room.view.phase !== "CHAIN_STEP" || room.view.task?.kind !== "DRAWING" || room.view.task.submitted || !strokes.length) return;
@@ -213,8 +266,31 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   function addStroke(stroke: DrawStroke) {
     if (strokes.length >= 120) return;
+    currentStroke.current = null;
     setStrokes((current) => [...current, stroke]);
-    if (room.mode === "CLASSIC") void send({ type: "ADD_STROKE", stroke });
+    if (room.mode === "CLASSIC") {
+      setStrokeSaving(true);
+      if (inkTimer.current !== null) window.clearTimeout(inkTimer.current);
+      inkTimer.current = null;
+      pendingInk.current = { stroke, strokeIndex: strokes.length };
+      void (async () => {
+        try {
+          do { await drainInk(); } while (inkDrain.current || pendingInk.current);
+          await send({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokes, stroke] });
+        } finally { setStrokeSaving(false); }
+      })();
+    }
+  }
+
+  function progressStroke(stroke: DrawStroke) {
+    if (room.mode !== "CLASSIC" || strokes.length >= 120) return;
+    currentStroke.current = stroke;
+    pendingInk.current = { stroke, strokeIndex: strokes.length };
+    if (inkTimer.current !== null) return;
+    inkTimer.current = window.setTimeout(() => {
+      inkTimer.current = null;
+      void drainInk();
+    }, 150);
   }
 
   const inputForm = (placeholder: string, action: string, disabled = false) => <form onSubmit={submitText} className="flex gap-2"><input aria-label={placeholder} maxLength={room.view.phase === "CHAIN_WORD" ? 12 : room.view.phase === "DRAW_GUESS" ? 20 : 40} value={input} onChange={(event) => setInput(event.target.value)} placeholder={placeholder} disabled={disabled} className="min-h-12 min-w-0 flex-1 rounded-xl border border-[#C9D9C9] bg-white px-4 text-base outline-none focus:border-[#156240] disabled:opacity-50" /><button type="submit" disabled={disabled || busy || !input.trim()} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#156240] px-4 font-bold text-white disabled:opacity-45"><Send className="h-4 w-4" />{action}</button></form>;
@@ -237,7 +313,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         {room.mode === "CLASSIC" && room.view.phase === "WORD_SELECT" ? <div className="rounded-[1.6rem] bg-white p-6"><h2 className="text-xl font-bold">{amArtist ? t.select : `${currentArtist?.name ?? ""} · ${t.select}`}</h2>{amArtist ? <div className="mt-5 flex flex-wrap gap-3">{room.view.options?.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "CHOOSE_WORD", value: word })}>{word}</ActionButton>)}</div> : <p className="mt-4 text-[#607268]">{t.wait}</p>}</div> : null}
 
         {room.mode === "CLASSIC" && (room.view.phase === "DRAW_GUESS" || room.view.phase === "TURN_REVEAL") ? <div className="rounded-[1.6rem] bg-[#FFFDF9] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#A75B48]">{room.view.turnIndex + 1} / {room.playerCount}</p><h2 className="mt-1 text-xl font-bold">{amArtist ? t.draw : `${currentArtist?.name ?? ""} · ${t.guessing}`}</h2></div>{room.view.answer ? <span className="rounded-xl bg-[#EAF3E9] px-4 py-2 font-bold">{t.answer}: {room.view.answer}</span> : null}</div>
-          {amArtist && room.view.phase === "DRAW_GUESS" ? <DrawGuessCanvas strokes={strokes} onStroke={addStroke} onUndo={() => { setStrokes((current) => current.slice(0, -1)); void send({ type: "UNDO_STROKE" }); }} /> : <div className="aspect-[10/7] overflow-hidden rounded-2xl border border-[#DCE6D7]"><DrawGuessArtwork strokes={room.view.drawing ?? []} /></div>}
+          {room.view.phase === "DRAW_GUESS" ? <p role="status" className={`mb-3 text-xs font-semibold ${ink.connected ? "text-[#156240]" : "text-[#9E634B]"}`}>{ink.connected ? statusCopy.inkLive : statusCopy.inkSyncing}</p> : null}
+          {amArtist && room.view.phase === "DRAW_GUESS" ? <DrawGuessCanvas disabled={strokeSaving} strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => { const next = strokes.slice(0, -1); setStrokes(next); void send({ type: "SAVE_CLASSIC_DRAFT", strokes: next }); }} onClear={() => { setStrokes([]); void send({ type: "SAVE_CLASSIC_DRAFT", strokes: [] }); }} /> : <div className="aspect-[10/7] overflow-hidden rounded-2xl border border-[#DCE6D7]"><DrawGuessArtwork strokes={room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /></div>}
+          {amArtist && draftFailed ? <p role="alert" className="mt-2 text-xs font-semibold text-[#9E4B3C]">{statusCopy.draftFailed}</p> : null}
           {!amArtist && room.view.phase === "DRAW_GUESS" ? <div className="mt-5">{guessed ? <p className="rounded-xl bg-[#EAF3E9] p-4 font-bold text-[#156240]"><Check className="mr-2 inline h-5 w-5" />{t.guessed} · +{room.view.guesses?.[String(room.viewerSeat)]?.points}</p> : <>{inputForm(t.guessing, t.submitGuess)}{guessFeedback ? <p role="status" className="mt-2 text-sm font-semibold text-[#B05D49]">{guessFeedback}</p> : null}</>}</div> : null}
           {room.view.phase === "TURN_REVEAL" ? <p className="mt-4 text-sm text-[#607268]">{t.next}</p> : null}
         </div> : null}

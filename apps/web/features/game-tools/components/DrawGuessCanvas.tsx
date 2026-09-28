@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type PointerEvent } from "react";
-import { Eraser, RotateCcw } from "lucide-react";
+import { Eraser, RotateCcw, Trash2 } from "lucide-react";
 import type { DrawStroke } from "@/features/game-tools/drawGuessEngine";
 
 const COLORS = ["#173D32", "#E46D53", "#E9AA41", "#448EA4", "#8D70B1", "#56A776"];
@@ -20,8 +20,10 @@ export function DrawGuessArtwork({ strokes, className = "" }: { strokes: DrawStr
   </svg>;
 }
 
-export function DrawGuessCanvas({ disabled = false, onStroke, onUndo, strokes }: {
+export function DrawGuessCanvas({ disabled = false, onClear, onProgress, onStroke, onUndo, strokes }: {
   disabled?: boolean;
+  onClear?: () => void;
+  onProgress?: (stroke: DrawStroke) => void;
   onStroke: (stroke: DrawStroke) => void;
   onUndo?: () => void;
   strokes: DrawStroke[];
@@ -50,8 +52,8 @@ export function DrawGuessCanvas({ disabled = false, onStroke, onUndo, strokes }:
   return <div className="space-y-3">
     <div className="overflow-hidden rounded-2xl border-2 border-[#C8D8CA] bg-white shadow-[0_16px_38px_rgba(31,66,47,0.09)]">
       <svg ref={surfaceRef} aria-label="Drawing canvas" className="aspect-[10/7] w-full touch-none select-none bg-white" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"
-        onPointerDown={(event) => { if (disabled) return; event.currentTarget.setPointerCapture(event.pointerId); const stroke = { color, width, points: [point(event)] } satisfies DrawStroke; currentRef.current = stroke; setCurrent(stroke); }}
-        onPointerMove={(event) => { if (!currentRef.current || disabled) return; const nextPoint = point(event); const points = currentRef.current.points; const last = points.at(-1)!; if (points.length >= 512 || Math.hypot((nextPoint[0] - last[0]) * 1000, (nextPoint[1] - last[1]) * 700) < 2) return; const next = { ...currentRef.current, points: [...points, nextPoint] }; currentRef.current = next; setCurrent(next); }}
+        onPointerDown={(event) => { if (disabled) return; event.currentTarget.setPointerCapture(event.pointerId); const stroke = { color, width, points: [point(event)] } satisfies DrawStroke; currentRef.current = stroke; setCurrent(stroke); onProgress?.(stroke); }}
+        onPointerMove={(event) => { if (!currentRef.current || disabled) return; const nextPoint = point(event); const points = currentRef.current.points; const last = points.at(-1)!; if (points.length >= 512 || Math.hypot((nextPoint[0] - last[0]) * 1000, (nextPoint[1] - last[1]) * 700) < 2) return; const next = { ...currentRef.current, points: [...points, nextPoint] }; currentRef.current = next; setCurrent(next); onProgress?.(next); }}
         onPointerUp={finish} onPointerCancel={finish}>
         {[...strokes, ...(current ? [current] : [])].map((stroke, index) => stroke.points.length === 1
           ? <circle key={index} cx={stroke.points[0][0] * 1000} cy={stroke.points[0][1] * 700} r={stroke.width / 2} fill={stroke.color} />
@@ -63,6 +65,7 @@ export function DrawGuessCanvas({ disabled = false, onStroke, onUndo, strokes }:
       <button type="button" aria-label="Eraser" aria-pressed={color === "#FFFFFF"} onClick={() => setColor("#FFFFFF")} className="grid h-8 w-8 place-items-center rounded-full border border-[#D5D9CA] bg-white"><Eraser className="h-4 w-4" /></button>
       <label className="ml-auto flex items-center gap-2 text-xs font-bold text-[#51695A]">{width}<input aria-label="Brush width" className="w-20 accent-[#156240]" type="range" min="2" max="18" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label>
       {onUndo ? <button type="button" disabled={!strokes.length} onClick={onUndo} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#51695A] disabled:opacity-40" aria-label="Undo last stroke"><RotateCcw className="h-4 w-4" /></button> : null}
+      {onClear ? <button type="button" disabled={!strokes.length} onClick={onClear} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#9E4B3C] disabled:opacity-40" aria-label="Clear drawing"><Trash2 className="h-4 w-4" /></button> : null}
     </div> : null}
   </div>;
 }

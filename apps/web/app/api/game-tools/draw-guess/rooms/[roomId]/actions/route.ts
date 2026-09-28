@@ -13,6 +13,8 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("GUESS"), value: z.string().min(1).max(20) }),
   z.object({ type: z.literal("ADD_STROKE"), stroke }),
   z.object({ type: z.literal("UNDO_STROKE") }),
+  z.object({ type: z.literal("CLEAR_STROKES") }),
+  z.object({ type: z.literal("SAVE_CLASSIC_DRAFT"), strokes: z.array(stroke).max(120) }),
   z.object({ type: z.literal("SAVE_DRAFT"), strokes: z.array(stroke).max(120) }),
   z.object({ type: z.literal("SUBMIT_STEP"), value: z.string().max(40).optional(), strokes: z.array(stroke).max(120).optional() }),
   z.object({ type: z.literal("VOTE"), owner: z.number().int().min(0).max(9), value: z.boolean() }),

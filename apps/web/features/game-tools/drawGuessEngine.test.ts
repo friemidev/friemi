@@ -75,6 +75,35 @@ test("a player cannot flood guesses in one second", () => {
   assert.ok(!("error" in later) && later.correct);
 });
 
+test("classic live ink keeps a recoverable draft without exposing the answer", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.answer = "giraffe";
+  state.deadlineAt = new Date(60_000).toISOString();
+  const partial = { color: "#123456", width: 4, points: [[0.1, 0.2], [0.3, 0.4]] as [number, number][] };
+  const saved = applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: [partial] }, 0, 3, 1_000, "en");
+  assert.ok(!("error" in saved));
+  assert.deepEqual(saved.state.drawings[0], [partial]);
+  assert.equal("error" in applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: [partial] }, 1, 3, 1_000, "en"), true);
+  const viewer = getDrawGuessViewerState(saved.state, 1, 3);
+  assert.ok("drawing" in viewer && "answer" in viewer);
+  assert.deepEqual(viewer.drawing, [partial]);
+  assert.equal(viewer.answer, null);
+  const cleared = applyDrawGuessAction(saved.state, { type: "SAVE_CLASSIC_DRAFT", strokes: [] }, 0, 3, 2_000, "en");
+  assert.ok(!("error" in cleared));
+  assert.deepEqual(cleared.state.drawings[0], []);
+});
+
+test("a new classic turn resets the ink sequence", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "TURN_REVEAL";
+  state.deadlineAt = new Date(5_000).toISOString();
+  state.inkSeq = 17;
+  const next = advanceDrawGuessGame(state, 3, 5_000, "en");
+  assert.equal(next.turnIndex, 1);
+  assert.equal(next.inkSeq, 0);
+});
+
 test("a late relay command cannot be applied to the next phase", () => {
   const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5), 0, "zh-CN");
   if (!started.state) throw new Error("Game did not start");
