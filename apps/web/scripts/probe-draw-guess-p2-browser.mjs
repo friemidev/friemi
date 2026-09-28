@@ -194,6 +194,7 @@ try {
   }, 10_000);
   assert.equal(snapshotBody.room.view.answer, null);
   assert.equal(snapshotBody.room.view.drawing.length, 1);
+  await host.getByText("Live ink connected").waitFor({ state: "visible", timeout: 10_000 });
   await sessions[1].context.setOffline(true);
   await viewer.waitForTimeout(700);
   await sessions[1].context.setOffline(false);
