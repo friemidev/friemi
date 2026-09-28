@@ -50,7 +50,7 @@ export type DrawGuessAction =
   | { type: "ADD_STROKE"; stroke: DrawStroke }
   | { type: "UNDO_STROKE" }
   | { type: "CLEAR_STROKES" }
-  | { type: "SAVE_CLASSIC_DRAFT"; strokes: DrawStroke[] }
+  | { type: "SAVE_CLASSIC_DRAFT"; strokes: DrawStroke[]; inkSeq?: number }
   | { type: "SAVE_DRAFT"; strokes: DrawStroke[] }
   | { type: "SUBMIT_STEP"; value?: string; strokes?: DrawStroke[] }
   | { type: "VOTE"; owner: number; value: boolean }

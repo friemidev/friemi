@@ -5,6 +5,9 @@ const previewRef = "dryhbxognbrljslzciuh";
 if (!process.env.DATABASE_URL?.includes(previewRef) || !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(previewRef)) {
   throw new Error("P2 probe only runs against the isolated draw-and-guess Preview project.");
 }
+const databaseUrl = new URL(process.env.DATABASE_URL);
+databaseUrl.searchParams.set("connection_limit", "10");
+process.env.DATABASE_URL = databaseUrl.toString();
 process.env.DRAW_GUESS_CLASSIC_ENABLED = "true";
 
 const { prisma } = await import("../lib/prisma");
@@ -64,16 +67,30 @@ try {
   const stroke = { color: "#123456", width: 4, points: [[0.1, 0.2], [0.3, 0.4]] as [number, number][] };
   assert.equal(await broadcastDrawGuessInk({ gameNumber: 1, roomId, seq: second.seq, stroke, strokeIndex: 0, turnIndex: 0 }), true);
   const saved = await server.commandDrawGuessRoom({
-    action: { type: "SAVE_CLASSIC_DRAFT", strokes: [stroke] }, commandId: randomUUID(), expectedChainStage: 0,
+    action: { type: "SAVE_CLASSIC_DRAFT", strokes: [stroke], inkSeq: first.seq }, commandId: randomUUID(), expectedChainStage: 0,
     expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1, profileId: players[0].id, roomId,
   });
   assert.ok("ok" in saved);
   const guestView = await server.getDrawGuessRoomView(roomId, players[1].id);
   assert.ok("room" in guestView && guestView.room);
   assert.ok("inkSeq" in guestView.room.view);
-  assert.equal(guestView.room.view.inkSeq, second.seq);
+  assert.equal(guestView.room.view.inkSeq, first.seq);
   assert.deepEqual(guestView.room.view.drawing, [stroke]);
   assert.equal(guestView.room.view.answer, null);
+  const stale = await server.commandDrawGuessRoom({
+    action: { type: "SAVE_CLASSIC_DRAFT", strokes: [], inkSeq: first.seq - 1 }, commandId: randomUUID(), expectedChainStage: 0,
+    expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1, profileId: players[0].id, roomId,
+  });
+  assert.deepEqual(stale, { error: "STALE_INK_DRAFT" });
+  const future = await server.commandDrawGuessRoom({
+    action: { type: "SAVE_CLASSIC_DRAFT", strokes: [], inkSeq: second.seq + 1 }, commandId: randomUUID(), expectedChainStage: 0,
+    expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1, profileId: players[0].id, roomId,
+  });
+  assert.deepEqual(future, { error: "STALE_INK_DRAFT" });
+  const afterRejected = await server.getDrawGuessRoomView(roomId, players[1].id);
+  assert.ok("room" in afterRejected && afterRejected.room);
+  assert.equal(afterRejected.room.view.inkSeq, first.seq);
+  assert.deepEqual(afterRejected.room.view.drawing, [stroke]);
   const artwork = await prisma.drawGuessArtwork.findUnique({
     where: { roomId_roundNumber_ownerSeat_stage: { roomId, roundNumber: 1, ownerSeat: 0, stage: 0 } },
   });

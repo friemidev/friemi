@@ -64,8 +64,8 @@ export function DrawGuessCanvas({ disabled = false, onClear, onProgress, onStrok
       {COLORS.map((value) => <button key={value} type="button" aria-label={`Color ${value}`} aria-pressed={color === value} onClick={() => setColor(value)} className={`h-8 w-8 rounded-full border-2 border-white shadow-sm ${color === value ? "ring-2 ring-[#173D32] ring-offset-2" : ""}`} style={{ backgroundColor: value }} />)}
       <button type="button" aria-label="Eraser" aria-pressed={color === "#FFFFFF"} onClick={() => setColor("#FFFFFF")} className="grid h-8 w-8 place-items-center rounded-full border border-[#D5D9CA] bg-white"><Eraser className="h-4 w-4" /></button>
       <label className="ml-auto flex items-center gap-2 text-xs font-bold text-[#51695A]">{width}<input aria-label="Brush width" className="w-20 accent-[#156240]" type="range" min="2" max="18" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label>
-      {onUndo ? <button type="button" disabled={!strokes.length} onClick={onUndo} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#51695A] disabled:opacity-40" aria-label="Undo last stroke"><RotateCcw className="h-4 w-4" /></button> : null}
-      {onClear ? <button type="button" disabled={!strokes.length} onClick={onClear} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#9E4B3C] disabled:opacity-40" aria-label="Clear drawing"><Trash2 className="h-4 w-4" /></button> : null}
+      {onUndo ? <button type="button" disabled={!strokes.length || Boolean(current)} onClick={onUndo} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#51695A] disabled:opacity-40" aria-label="Undo last stroke"><RotateCcw className="h-4 w-4" /></button> : null}
+      {onClear ? <button type="button" disabled={!strokes.length || Boolean(current)} onClick={onClear} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#9E4B3C] disabled:opacity-40" aria-label="Clear drawing"><Trash2 className="h-4 w-4" /></button> : null}
     </div> : null}
   </div>;
 }

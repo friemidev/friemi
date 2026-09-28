@@ -110,15 +110,16 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
 
   const publishStroke = useCallback(async (stroke: DrawStroke, strokeIndex: number) => {
     const current = roomRef.current;
-    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return false;
+    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return null;
     try {
       const response = await fetch(`/api/game-tools/draw-guess/rooms/${current.id}/ink`, {
         body: JSON.stringify({ gameNumber: current.view.gameNumber, stroke, strokeIndex, turnIndex: current.view.turnIndex }),
         headers: { "content-type": "application/json" }, method: "POST",
       });
-      if (!response.ok) setConnected(false);
-      return response.ok;
-    } catch { setConnected(false); return false; }
+      if (!response.ok) { setConnected(false); return null; }
+      const result = await response.json() as { seq?: number };
+      return Number.isSafeInteger(result.seq) && (result.seq ?? 0) > 0 ? result.seq! : null;
+    } catch { setConnected(false); return null; }
   }, []);
 
   return { connected, drawing, publishStroke };

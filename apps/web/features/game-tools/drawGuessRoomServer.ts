@@ -485,7 +485,14 @@ export async function commandDrawGuessRoom(input: {
       }
       return { error: result.error } as const;
     }
-    if (state.mode === "CLASSIC" && ["ADD_STROKE", "UNDO_STROKE", "CLEAR_STROKES", "SAVE_CLASSIC_DRAFT"].includes(input.action.type)) {
+    if (state.mode === "CLASSIC" && input.action.type === "SAVE_CLASSIC_DRAFT") {
+      const availableSeq = await getDrawGuessInkSequence(room.id, state.gameNumber, state.turnIndex);
+      const draftSeq = input.action.inkSeq ?? 0;
+      if (!Number.isSafeInteger(draftSeq) || draftSeq < (state.inkSeq ?? 0) || draftSeq > availableSeq) {
+        return { error: "STALE_INK_DRAFT" } as const;
+      }
+      next.inkSeq = draftSeq;
+    } else if (state.mode === "CLASSIC" && ["ADD_STROKE", "UNDO_STROKE", "CLEAR_STROKES"].includes(input.action.type)) {
       next.inkSeq = Math.max(next.inkSeq ?? 0, await getDrawGuessInkSequence(room.id, state.gameNumber, state.turnIndex));
     }
     const commandResult = {

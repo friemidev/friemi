@@ -94,6 +94,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const currentStroke = useRef<DrawStroke | null>(null);
   const strokesRef = useRef(strokes);
   strokesRef.current = strokes;
+  const lastInkSeq = useRef(initialRoom.view.inkSeq ?? 0);
   const [strokeSaving, setStrokeSaving] = useState(false);
 
   const drainInk = useCallback(() => {
@@ -102,7 +103,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       while (pendingInk.current) {
         const batch = pendingInk.current;
         pendingInk.current = null;
-        await ink.publishStroke(batch.stroke, batch.strokeIndex);
+        const seq = await ink.publishStroke(batch.stroke, batch.strokeIndex);
+        if (seq !== null) lastInkSeq.current = Math.max(lastInkSeq.current, seq);
       }
     })();
     inkDrain.current = running.finally(() => { inkDrain.current = null; });
@@ -156,6 +158,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const taskKey = `${room.view.gameNumber}:${room.view.phase}:${room.view.turnIndex}:${room.view.chainStage}`;
     if (taskKey === previousTask.current) return;
     previousTask.current = taskKey;
+    lastInkSeq.current = room.view.inkSeq ?? 0;
     currentStroke.current = null;
     pendingInk.current = null;
     if (inkTimer.current !== null) window.clearTimeout(inkTimer.current);
@@ -220,7 +223,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       const current = latestRoom.current;
       const partial = currentStroke.current;
       if (!partial || current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return;
-      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokesRef.current, partial] });
+      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokesRef.current, partial], inkSeq: lastInkSeq.current });
     }, 2_000);
     return () => window.clearInterval(id);
   }, []);
@@ -229,7 +232,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     if (!draftFailed || room.mode !== "CLASSIC" || room.view.phase !== "DRAW_GUESS" || room.viewerSeat !== room.view.turnIndex) return;
     const id = window.setTimeout(() => {
       const partial = currentStroke.current;
-      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: partial ? [...strokesRef.current, partial] : strokesRef.current });
+      void sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: partial ? [...strokesRef.current, partial] : strokesRef.current, inkSeq: lastInkSeq.current });
     }, 3_000);
     return () => window.clearTimeout(id);
   }, [draftFailed, room.mode, room.view.phase, room.view.turnIndex, room.viewerSeat]);
@@ -276,7 +279,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       void (async () => {
         try {
           do { await drainInk(); } while (inkDrain.current || pendingInk.current);
-          await send({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokes, stroke] });
+          await send({ type: "SAVE_CLASSIC_DRAFT", strokes: [...strokes, stroke], inkSeq: lastInkSeq.current });
         } finally { setStrokeSaving(false); }
       })();
     }
@@ -291,6 +294,20 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       inkTimer.current = null;
       void drainInk();
     }, 150);
+  }
+
+  function replaceClassicDrawing(next: DrawStroke[]) {
+    pendingInk.current = null;
+    if (inkTimer.current !== null) window.clearTimeout(inkTimer.current);
+    inkTimer.current = null;
+    setStrokes(next);
+    setStrokeSaving(true);
+    void (async () => {
+      try {
+        await inkDrain.current;
+        await sendRef.current({ type: "SAVE_CLASSIC_DRAFT", strokes: next, inkSeq: lastInkSeq.current });
+      } finally { setStrokeSaving(false); }
+    })();
   }
 
   const inputForm = (placeholder: string, action: string, disabled = false) => <form onSubmit={submitText} className="flex gap-2"><input aria-label={placeholder} maxLength={room.view.phase === "CHAIN_WORD" ? 12 : room.view.phase === "DRAW_GUESS" ? 20 : 40} value={input} onChange={(event) => setInput(event.target.value)} placeholder={placeholder} disabled={disabled} className="min-h-12 min-w-0 flex-1 rounded-xl border border-[#C9D9C9] bg-white px-4 text-base outline-none focus:border-[#156240] disabled:opacity-50" /><button type="submit" disabled={disabled || busy || !input.trim()} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#156240] px-4 font-bold text-white disabled:opacity-45"><Send className="h-4 w-4" />{action}</button></form>;
@@ -314,7 +331,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
         {room.mode === "CLASSIC" && (room.view.phase === "DRAW_GUESS" || room.view.phase === "TURN_REVEAL") ? <div className="rounded-[1.6rem] bg-[#FFFDF9] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#A75B48]">{room.view.turnIndex + 1} / {room.playerCount}</p><h2 className="mt-1 text-xl font-bold">{amArtist ? t.draw : `${currentArtist?.name ?? ""} · ${t.guessing}`}</h2></div>{room.view.answer ? <span className="rounded-xl bg-[#EAF3E9] px-4 py-2 font-bold">{t.answer}: {room.view.answer}</span> : null}</div>
           {room.view.phase === "DRAW_GUESS" ? <p role="status" className={`mb-3 text-xs font-semibold ${ink.connected ? "text-[#156240]" : "text-[#9E634B]"}`}>{ink.connected ? statusCopy.inkLive : statusCopy.inkSyncing}</p> : null}
-          {amArtist && room.view.phase === "DRAW_GUESS" ? <DrawGuessCanvas disabled={strokeSaving} strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => { const next = strokes.slice(0, -1); setStrokes(next); void send({ type: "SAVE_CLASSIC_DRAFT", strokes: next }); }} onClear={() => { setStrokes([]); void send({ type: "SAVE_CLASSIC_DRAFT", strokes: [] }); }} /> : <div className="aspect-[10/7] overflow-hidden rounded-2xl border border-[#DCE6D7]"><DrawGuessArtwork strokes={room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /></div>}
+          {amArtist && room.view.phase === "DRAW_GUESS" ? <DrawGuessCanvas disabled={strokeSaving} strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => replaceClassicDrawing(strokes.slice(0, -1))} onClear={() => replaceClassicDrawing([])} /> : <div className="aspect-[10/7] overflow-hidden rounded-2xl border border-[#DCE6D7]"><DrawGuessArtwork strokes={room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /></div>}
           {amArtist && draftFailed ? <p role="alert" className="mt-2 text-xs font-semibold text-[#9E4B3C]">{statusCopy.draftFailed}</p> : null}
           {!amArtist && room.view.phase === "DRAW_GUESS" ? <div className="mt-5">{guessed ? <p className="rounded-xl bg-[#EAF3E9] p-4 font-bold text-[#156240]"><Check className="mr-2 inline h-5 w-5" />{t.guessed} · +{room.view.guesses?.[String(room.viewerSeat)]?.points}</p> : <>{inputForm(t.guessing, t.submitGuess)}{guessFeedback ? <p role="status" className="mt-2 text-sm font-semibold text-[#B05D49]">{guessFeedback}</p> : null}</>}</div> : null}
           {room.view.phase === "TURN_REVEAL" ? <p className="mt-4 text-sm text-[#607268]">{t.next}</p> : null}

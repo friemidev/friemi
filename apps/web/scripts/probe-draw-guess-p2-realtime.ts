@@ -153,21 +153,29 @@ try {
     const inkBody = { gameNumber: 1, turnIndex: 0, strokeIndex: 0, stroke };
     const artistInk = await requestAs(0, "/ink", "POST", inkBody);
     assert.equal(artistInk.status, 200, `Artist ink POST: ${artistInk.status}`);
+    const artistInkBody = await artistInk.json() as { seq?: number };
+    assert.ok(Number.isSafeInteger(artistInkBody.seq));
     const viewerInk = await requestAs(1, "/ink", "POST", inkBody);
     assert.equal(viewerInk.status, 403);
     const outsiderInk = await requestAs(5, "/ink", "POST", inkBody);
     assert.equal(outsiderInk.status, 403);
     const draft = await requestAs(0, "/actions", "POST", {
-      action: { type: "SAVE_CLASSIC_DRAFT", strokes: [stroke] }, commandId: randomUUID(),
+      action: { type: "SAVE_CLASSIC_DRAFT", strokes: [stroke], inkSeq: artistInkBody.seq }, commandId: randomUUID(),
       expectedChainStage: 0, expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1,
     });
     assert.equal(draft.status, 200, `Artist draft POST: ${draft.status}`);
+    const staleDraft = await requestAs(0, "/actions", "POST", {
+      action: { type: "SAVE_CLASSIC_DRAFT", strokes: [], inkSeq: artistInkBody.seq! - 1 }, commandId: randomUUID(),
+      expectedChainStage: 0, expectedPhase: "DRAW_GUESS", expectedTurnIndex: 0, gameNumber: 1,
+    });
+    assert.equal(staleDraft.status, 409);
+    assert.equal((await staleDraft.json() as { error?: string }).error, "STALE_INK_DRAFT");
     const snapshot = await requestAs(1, "");
     assert.equal(snapshot.status, 200);
     const snapshotBody = await snapshot.json() as { room?: { view?: { answer?: string | null; drawing?: unknown; inkSeq?: number } } };
     assert.equal(snapshotBody.room?.view?.answer, null);
     assert.deepEqual(snapshotBody.room?.view?.drawing, [stroke]);
-    assert.ok((snapshotBody.room?.view?.inkSeq ?? 0) >= reserved.seq);
+    assert.equal(snapshotBody.room?.view?.inkSeq, artistInkBody.seq);
     console.log("P2 Preview HTTP probe passed: artist ink/draft accepted, viewer and outsider publish denied, snapshot hides answer.");
   }
   console.log("P2 live Preview probe passed: five Clerk JWTs subscribed, outsider/old turn denied, private ink delivered to all five.");
