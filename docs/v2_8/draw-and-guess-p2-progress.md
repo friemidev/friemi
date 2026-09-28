@@ -4,7 +4,7 @@
 
 ## 已实现
 
-- 每局每回合使用独立私有 topic。Clerk Development 会话令牌带 `role: authenticated`；Supabase Preview 的 Third-Party Auth 只信任该 Development 实例。加入频道时，RLS 验证 JWT 的 Clerk 用户 ID 是否属于当前房间、当前回合和有效截止时间。浏览器没有画笔 INSERT 权限。
+- 每局每回合使用独立私有 topic。Clerk Development 会话令牌带 `role: authenticated`；Supabase Preview 的 Third-Party Auth 只信任该 Development 实例。加入频道时，RLS 验证 JWT 的 Clerk 用户 ID 是否属于当前房间、当前回合和有效截止时间。客户端定期刷新 Clerk JWT 供长连接续订。浏览器没有画笔 INSERT 权限。
 - 画者按约 150 毫秒合批发送当前笔画；服务端每批重新检查登录、房间成员、座位、画者、回合与截止时间，再以 Redis 原子序号和每秒 10 批限流。私有画笔使用 `realtime.send(..., true)` 从服务端广播。猜词、答案、分数继续走房间命令。
 - 每笔结束保存完整草稿；长笔画每 2 秒保存一次。草稿只确认画者已收到服务端确认的画笔序号，服务端拒绝序号倒退或超前。撤销和清空先等正在发送的批次完成，再保存草稿。重连时先订阅并缓冲批次，再读服务端画作快照及序号，按序号合并后继续接收。旧房间、旧局、旧回合及重复批次被丢弃。
 - Preview 保留 2 秒房间进度轮询。私有画笔未连接时页面提示正在重连，草稿保存失败时提示并重试。普通模式仅在画猜分支的 Vercel Preview 设置 `DRAW_GUESS_CLASSIC_ENABLED=true`；Production 没有此设置。

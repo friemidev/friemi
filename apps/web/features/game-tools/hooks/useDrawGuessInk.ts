@@ -69,6 +69,13 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
       auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
     });
     let channel: ReturnType<typeof client.channel> | null = null;
+    const authTimer = window.setInterval(() => {
+      const currentSession = sessionRef.current;
+      if (!currentSession) return;
+      void currentSession.getToken().then((token) => {
+        if (token && !disposed) return client.realtime.setAuth(token);
+      }).catch(() => { if (!disposed) setConnected(false); });
+    }, 30_000);
     void (async () => {
       const token = await sessionRef.current?.getToken();
       if (!token || disposed) return;
@@ -105,7 +112,7 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
           } catch { setConnected(false); }
         });
     })().catch(() => { if (!disposed) setConnected(false); });
-    return () => { disposed = true; setConnected(false); if (channel) void client.removeChannel(channel).finally(() => client.realtime.disconnect()); else client.realtime.disconnect(); };
+    return () => { disposed = true; window.clearInterval(authTimer); setConnected(false); if (channel) void client.removeChannel(channel).finally(() => client.realtime.disconnect()); else client.realtime.disconnect(); };
   }, [rebuild, session?.id, topicKey]);
 
   const publishStroke = useCallback(async (stroke: DrawStroke, strokeIndex: number) => {

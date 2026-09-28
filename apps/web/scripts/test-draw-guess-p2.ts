@@ -89,6 +89,7 @@ try {
   assert.deepEqual(future, { error: "STALE_INK_DRAFT" });
   const afterRejected = await server.getDrawGuessRoomView(roomId, players[1].id);
   assert.ok("room" in afterRejected && afterRejected.room);
+  assert.ok("inkSeq" in afterRejected.room.view);
   assert.equal(afterRejected.room.view.inkSeq, first.seq);
   assert.deepEqual(afterRejected.room.view.drawing, [stroke]);
   const artwork = await prisma.drawGuessArtwork.findUnique({
