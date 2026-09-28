@@ -24,10 +24,12 @@ export type DrawGuessState = {
   answer: string;
   chainStage: number;
   chains: ChainStep[][];
+  classicAnswers: string[];
   commandResults: Record<string, { correct?: boolean; points?: number }>;
   deadlineAt: string | null;
   drawings: DrawStroke[][];
   drafts: Record<string, DrawStroke[]>;
+  gameNumber: number;
   guessAttempts: Record<string, Record<string, number>>;
   guesses: Record<string, Record<string, { at: string; points: number }>>;
   matchResults: Record<string, boolean>;
@@ -106,10 +108,12 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number): 
     answer: "",
     chainStage: 0,
     chains: Array.from({ length: playerCount }, () => []),
+    classicAnswers: [],
     commandResults: {},
     deadlineAt: null,
     drawings: Array.from({ length: playerCount }, () => []),
     drafts: {},
+    gameNumber: 1,
     guessAttempts: {},
     guesses: {},
     matchResults: {},
@@ -129,6 +133,16 @@ export function getChainStageCount(playerCount: number) {
 
 export function getChainActor(owner: number, stage: number, playerCount: number) {
   return (owner + stage) % playerCount;
+}
+
+export function getDrawGuessRankings(scores: number[]) {
+  const sorted = scores.map((score, seat) => ({ score, seat })).sort((a, b) => b.score - a.score || a.seat - b.seat);
+  return sorted.map((entry, index) => ({
+    ...entry,
+    rank: index > 0 && sorted[index - 1].score === entry.score
+      ? sorted.findIndex((item) => item.score === entry.score) + 1
+      : index + 1,
+  }));
 }
 
 function setDeadline(state: DrawGuessState, phase: DrawGuessPhase, base: number, duration: number) {
@@ -182,7 +196,7 @@ function settleChainScores(state: DrawGuessState, count: number) {
 
 export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: number, locale: string) {
   const next = structuredClone(state);
-  for (let safety = 0; safety < 24; safety += 1) {
+  for (let safety = 0; safety < count * 3 + 8; safety += 1) {
     if (!next.deadlineAt || next.phase === "LOBBY" || next.phase === "FINISHED") break;
     const deadline = Date.parse(next.deadlineAt);
     const timedOut = now >= deadline;
@@ -203,6 +217,7 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       next.scores[next.turnIndex] += Math.floor(100 * solved / (count - 1));
       setDeadline(next, "TURN_REVEAL", base, DURATION.TURN_REVEAL);
     } else if (next.phase === "TURN_REVEAL") {
+      next.classicAnswers[next.turnIndex] = next.answer;
       next.turnIndex += 1;
       next.answer = "";
       if (next.turnIndex >= count) {
@@ -250,7 +265,8 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
   const next = advanceDrawGuessGame(state, count, now, locale);
   const invalid = (error: string) => ({ error, state: next });
   if (seat < 0 || seat >= count) return invalid("NOT_A_PLAYER");
-  if (next.deadlineAt && now >= Date.parse(next.deadlineAt)) return invalid("PHASE_ENDED");
+  if (state.deadlineAt && now >= Date.parse(state.deadlineAt)) return invalid("PHASE_ENDED");
+  if (next.phase !== state.phase || next.chainStage !== state.chainStage || next.turnIndex !== state.turnIndex) return invalid("PHASE_ENDED");
 
   if (action.type === "CHOOSE_WORD") {
     if (next.phase !== "WORD_SELECT" || seat !== next.turnIndex || !next.options.includes(action.value)) return invalid("NOT_ALLOWED");
@@ -308,6 +324,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
   const shared = {
     chainStage: state.chainStage,
     deadlineAt: state.deadlineAt,
+    gameNumber: state.gameNumber,
     mode: state.mode,
     phase: state.phase,
     scores: state.scores,

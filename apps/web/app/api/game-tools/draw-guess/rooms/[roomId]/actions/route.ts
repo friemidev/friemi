@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { commandDrawGuessRoom, startDrawGuessRoom } from "@/features/game-tools/drawGuessRoomServer";
+import { commandDrawGuessRoom, rematchDrawGuessRoom, startDrawGuessRoom } from "@/features/game-tools/drawGuessRoomServer";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 
 const stroke = z.object({
@@ -18,7 +18,14 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("VOTE"), owner: z.number().int().min(0).max(9), value: z.boolean() }),
   z.object({ type: z.literal("PICK"), owner: z.number().int().min(0).max(9), step: z.number().int().min(0).max(9) }),
 ]);
-const command = z.object({ commandId: z.string().min(8).max(64), action });
+const command = z.object({
+  commandId: z.string().min(8).max(64),
+  expectedChainStage: z.number().int().min(0).max(10),
+  expectedPhase: z.enum(["WORD_SELECT", "DRAW_GUESS", "TURN_REVEAL", "CHAIN_WORD", "CHAIN_STEP", "REVEAL_VOTE", "AUTHOR_PICK"]),
+  expectedTurnIndex: z.number().int().min(0).max(10),
+  gameNumber: z.number().int().min(1),
+  action,
+});
 
 export async function POST(request: Request, context: { params: Promise<{ roomId: string }> }) {
   const profile = await getOptionalCurrentUserProfile();
@@ -27,6 +34,10 @@ export async function POST(request: Request, context: { params: Promise<{ roomId
   const body = await request.json().catch(() => null);
   if (body?.action?.type === "START") {
     const result = await startDrawGuessRoom(roomId, profile.id);
+    return NextResponse.json(result, { status: "error" in result ? 409 : 200 });
+  }
+  if (body?.action?.type === "REMATCH") {
+    const result = await rematchDrawGuessRoom(roomId, profile.id);
     return NextResponse.json(result, { status: "error" in result ? 409 : 200 });
   }
   const parsed = command.safeParse(body);

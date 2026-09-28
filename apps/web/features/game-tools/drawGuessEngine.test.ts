@@ -65,6 +65,16 @@ test("a player cannot flood guesses in one second", () => {
   assert.ok(!("error" in later) && later.correct);
 });
 
+test("a late relay command cannot be applied to the next phase", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5), 0, "zh-CN");
+  if (!started.state) throw new Error("Game did not start");
+  const late = applyDrawGuessAction(started.state, { type: "SUBMIT_STEP", value: "过期的词", strokes: [{ color: "#123456", width: 4, points: [[0.2, 0.3]] }] }, 0, 5, 21_000, "zh-CN");
+  assert.equal("error" in late ? late.error : null, "PHASE_ENDED");
+  assert.equal(late.state.phase, "CHAIN_STEP");
+  assert.deepEqual(late.state.chains[0][0], { kind: "WORD", seat: 0, system: true, value: "长颈鹿" });
+  assert.equal(late.state.chains[4][1], undefined);
+});
+
 test("relay task reveals only the prior step and votes remain private until close", () => {
   const state = createDrawGuessState("CHAIN", 5);
   state.phase = "CHAIN_STEP";

@@ -10,22 +10,22 @@ import { withLocale } from "@/lib/routes";
 function copyFor(locale: string) {
   if (locale === "en") return {
     back: "Table tools", chain: "Picture chain", chainBody: "Everyone starts with a word. Pass drawings and guesses around, then vote on the ending.",
-    classic: "Speed guessing · Preview", classicBody: "Take turns drawing. Strokes appear as they finish; latency testing is still in progress.",
+    classic: "Speed guessing · Preview", classicBody: "Take turns drawing. Strokes appear as they finish; latency testing is still in progress.", classicClosed: "Invite-only preview",
     code: "Room code", create: "Create room", error: "Could not open the room. Please try again.", join: "Join a room", joinAction: "Join", players: "Players", subtitle: "One canvas, two ways to laugh together.", title: "Draw & Guess", signedOut: "Sign in to create or join a room.",
   };
   if (locale === "fr") return {
     back: "Jeux de table", chain: "Chaîne de dessins", chainBody: "Chacun commence par un mot. Faites circuler dessins et réponses, puis votez sur la fin.",
-    classic: "Deviner vite · Essai", classicBody: "Dessinez à tour de rôle. Les traits apparaissent une fois terminés ; les tests de latence continuent.",
+    classic: "Deviner vite · Essai", classicBody: "Dessinez à tour de rôle. Les traits apparaissent une fois terminés ; les tests de latence continuent.", classicClosed: "Essai sur invitation",
     code: "Code de salle", create: "Créer une salle", error: "Impossible d'ouvrir la salle. Réessayez.", join: "Rejoindre une salle", joinAction: "Entrer", players: "Joueurs", subtitle: "Une toile, deux façons de rire ensemble.", title: "Dessine et devine", signedOut: "Connectez-vous pour créer ou rejoindre une salle.",
   };
   return {
     back: "桌游工具", chain: "画画接龙", chainBody: "每人出一个词，画和猜轮流传下去。最后揭晓全链、投票并选最佳作品。",
-    classic: "抢猜模式 · 体验版", classicBody: "轮流作画、边看边猜。笔画完成后同步；正式实时版仍待延迟压测。",
+    classic: "抢猜模式 · 体验版", classicBody: "轮流作画、边看边猜。笔画完成后同步；正式实时版仍待延迟压测。", classicClosed: "仅限内测",
     code: "房间号", create: "创建房间", error: "房间暂时无法打开，请重试。", join: "加入朋友的房间", joinAction: "加入房间", players: "人数", subtitle: "一张画布，两种热闹。", title: "你画我猜", signedOut: "请先登录 Friemi，再创建或加入房间。",
   };
 }
 
-export function DrawGuessEntryClient({ locale }: { locale: string }) {
+export function DrawGuessEntryClient({ classicEnabled, locale }: { classicEnabled: boolean; locale: string }) {
   const router = useRouter();
   const copy = copyFor(locale);
   const [mode, setMode] = useState<DrawGuessMode>("CHAIN");
@@ -82,11 +82,12 @@ export function DrawGuessEntryClient({ locale }: { locale: string }) {
         {(["CHAIN", "CLASSIC"] as const).map((value) => {
           const selected = mode === value;
           const isChain = value === "CHAIN";
-          return <button key={value} type="button" onClick={() => { setMode(value); setPlayerCount(isChain ? 5 : 3); }} aria-pressed={selected}
-            className={`rounded-[1.6rem] border p-5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240] ${selected ? "border-[#156240] bg-[#EAF3E9] shadow-[0_12px_28px_rgba(21,98,64,0.12)]" : "border-[#D9DDCE] bg-white hover:border-[#8AB68E]"}`}>
+          return <button key={value} type="button" disabled={!isChain && !classicEnabled} onClick={() => { setMode(value); setPlayerCount(isChain ? 5 : 3); }} aria-pressed={selected}
+            className={`rounded-[1.6rem] border p-5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240] ${selected ? "border-[#156240] bg-[#EAF3E9] shadow-[0_12px_28px_rgba(21,98,64,0.12)]" : "border-[#D9DDCE] bg-white hover:border-[#8AB68E]"} ${!isChain && !classicEnabled ? "cursor-not-allowed opacity-65" : ""}`}>
             <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${selected ? "bg-[#156240] text-white" : "bg-[#F4E9D9] text-[#A85E48]"}`}>{isChain ? <Sparkles className="h-5 w-5" /> : <Brush className="h-5 w-5" />}</span>
             <strong className="mt-4 block text-lg">{isChain ? copy.chain : copy.classic}</strong>
             <span className="mt-2 block text-sm leading-6 text-[#5D7369]">{isChain ? copy.chainBody : copy.classicBody}</span>
+            {!isChain && !classicEnabled ? <span className="mt-3 inline-flex rounded-full bg-[#F4E9D9] px-2.5 py-1 text-xs font-bold text-[#9A5A43]">{copy.classicClosed}</span> : null}
           </button>;
         })}
       </section>

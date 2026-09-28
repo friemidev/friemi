@@ -2195,33 +2195,50 @@ model AnalyticsEvent {
 }
 
 model GameToolRoom {
-  id            String                 @id @default(cuid())
-  kind          GameToolKind           @default(AVALON)
-  status        GameToolRoomStatus     @default(LOBBY)
-  code          String                 @unique @db.VarChar(8)
-  locale        String                 @default("zh-CN")
-  title         String
-  mode          String                 @default("identity")
-  playerCount   Int                    @default(7)
-  hostId        String
-  host          UserProfile            @relation("GameToolRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
-  config        Json?
-  state         Json?
-  startedAt     DateTime?
-  finishedAt    DateTime?
-  cancelledAt   DateTime?
-  revision      Int                    @default(0)
-  seats         GameToolSeat[]
-  members       GameToolRoomMember[]
-  events        GameToolEvent[]
-  submissions   GameToolSubmission[]
-  playerRecords GameToolPlayerRecord[]
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  id                  String                 @id @default(cuid())
+  kind                GameToolKind           @default(AVALON)
+  status              GameToolRoomStatus     @default(LOBBY)
+  code                String                 @unique @db.VarChar(8)
+  locale              String                 @default("zh-CN")
+  title               String
+  mode                String                 @default("identity")
+  playerCount         Int                    @default(7)
+  hostId              String
+  host                UserProfile            @relation("GameToolRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  config              Json?
+  state               Json?
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  cancelledAt         DateTime?
+  drawGuessDeadlineAt DateTime?
+  revision            Int                    @default(0)
+  seats               GameToolSeat[]
+  members             GameToolRoomMember[]
+  events              GameToolEvent[]
+  submissions         GameToolSubmission[]
+  playerRecords       GameToolPlayerRecord[]
+  drawGuessRounds     DrawGuessRound[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
+  @@index([kind, status, drawGuessDeadlineAt])
   @@index([code])
+}
+
+model DrawGuessRound {
+  id          String       @id @default(cuid())
+  roomId      String
+  room        GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber Int
+  mode        String
+  state       Json
+  finishedAt  DateTime
+  createdAt   DateTime     @default(now())
+
+  @@unique([roomId, roundNumber])
+  @@index([roomId, finishedAt])
 }
 
 model GameToolRoomMember {
