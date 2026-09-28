@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Lock, MessageCircle } from "lucide-react";
+import { Lock, Megaphone, MessageCircle } from "lucide-react";
 import { RetainedImage } from "@/components/media/RetainedImage";
 import { withLocale } from "@/lib/routes";
+import { buildCanonicalSiteUrl } from "@/lib/site-url";
 import type { getPlanetChatPageData } from "../queries/planetQueries";
 import { PlanetChatBackButton } from "./PlanetChatBackButton";
 import { PlanetChatComposer } from "./PlanetChatComposer";
@@ -69,6 +70,14 @@ export function PlanetChatPage({
   const name = getPlanetName(planet, locale);
   const lockedMessage =
     planet.viewerMembership?.status === "PENDING" ? copy.pending : copy.locked;
+  const managementActivities = [
+    ...planet.activityLinks.map(({ activity }) => activity),
+    ...planet.availableActivities,
+  ].filter(
+    (activity, index, activities) =>
+      activities.findIndex((candidate) => candidate.id === activity.id) ===
+      index,
+  );
   const messages = planet.messages.map((message) => ({
     id: message.id,
     author: message.author,
@@ -110,12 +119,37 @@ export function PlanetChatPage({
           </div>
           {planet.canViewChat ? (
             <PlanetChatSettingsMenu
+              announcement={planet.announcement}
+              approvedMembers={planet.approvedMembers.map((member) => ({
+                avatarUrl: member.profile.avatarUrl,
+                nickname: member.profile.nickname,
+                profileId: member.profileId,
+                role: member.role,
+              }))}
+              availableActivities={managementActivities.map((activity) => ({
+                id: activity.id,
+                startAtLabel: activity.startAt.toLocaleDateString(locale),
+                title: activity.title,
+              }))}
+              inviteUrl={buildCanonicalSiteUrl(
+                withLocale(locale, `/planets/invite/${planet.inviteCode}`),
+              )}
               isMuted={planet.isMuted}
               isPinned={planet.isPinned}
+              linkedActivityIds={planet.activityLinks.map(
+                (activityLink) => activityLink.activityId,
+              )}
               locale={locale}
+              pendingMembers={planet.pendingMembers.map((member) => ({
+                avatarUrl: member.profile.avatarUrl,
+                joinedAtLabel: member.joinedAt.toLocaleDateString(locale),
+                nickname: member.profile.nickname,
+                profileId: member.profileId,
+              }))}
               planetHref={planetHref}
               planetId={planet.id}
               planetSlug={planet.slug}
+              viewerRole={planet.viewerMembership?.role ?? null}
             />
           ) : (
             <span aria-hidden="true" />
@@ -139,6 +173,14 @@ export function PlanetChatPage({
           </div>
         ) : (
           <>
+            {planet.announcement ? (
+              <div className="flex shrink-0 items-start gap-2 border-b border-[#E8E5DA] bg-[#FFF9ED] px-4 py-2.5 text-xs leading-5 text-[#725522]">
+                <Megaphone className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p className="line-clamp-2 whitespace-pre-wrap">
+                  {planet.announcement}
+                </p>
+              </div>
+            ) : null}
             <PlanetChatThread
               locale={locale}
               messages={messages}

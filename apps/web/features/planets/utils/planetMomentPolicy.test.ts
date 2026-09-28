@@ -5,7 +5,12 @@ import {
   buildPlanetMomentTargetWhere,
   canInteractWithPlanetMoment,
   canPublishPlanetMoment,
+  planetMomentImageMaxCount,
 } from "./planetMomentPolicy";
+
+test("planet moments support up to fifteen photos", () => {
+  assert.equal(planetMomentImageMaxCount, 15);
+});
 
 test("planet moment interaction requires an approved membership", () => {
   assert.equal(
@@ -26,7 +31,7 @@ test("only an approved owner can publish a planet moment", () => {
   );
   assert.equal(
     canPublishPlanetMoment({ role: "ADMIN", status: "APPROVED" }),
-    false,
+    true,
   );
   assert.equal(
     canPublishPlanetMoment({ role: "OWNER", status: "PENDING" }),

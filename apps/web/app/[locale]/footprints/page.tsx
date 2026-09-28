@@ -4,6 +4,7 @@ import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMo
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import {
+  getMomentLinkableActivities,
   getMomentFeedPage,
   momentFeedPageSize,
 } from "@/features/moments/queries/getMomentFeed";
@@ -83,6 +84,7 @@ export default async function FootprintsPage({
   const viewerProfileId = profile?.id ?? null;
   const [
     momentsResult,
+    linkableActivitiesResult,
     messageFriendsResult,
     officialMessagesResult,
     officialFeedbackResult,
@@ -111,6 +113,17 @@ export default async function FootprintsPage({
           page: { hasMore: false, items: [], nextCursor: null },
           error: null,
         }),
+    profile
+      ? perf
+          .measure("moments.linkableActivities", () =>
+            getMomentLinkableActivities(profile.id),
+          )
+          .then((activities) => ({ activities, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load linkable activities", error);
+            return { activities: [], error };
+          })
+      : Promise.resolve({ activities: [], error: null }),
     profile && initialTab === "message"
       ? perf
           .measure("messages.friendRoster", () =>
@@ -231,6 +244,7 @@ export default async function FootprintsPage({
         initialTab === "message" && !officialFeedbackResult.error,
       planetChatCount: planetChatsResult.planetChats.length,
       momentCount: momentsResult.page.items.length,
+      linkableActivityCount: linkableActivitiesResult.activities.length,
       planetCount: planetsResult.page.items.length,
       planetCreationEligibilityLoaded:
         initialTab === "planet" && !canCreateResult.error,
@@ -260,6 +274,7 @@ export default async function FootprintsPage({
         initialMomentScope={requestedMomentScope}
         initialTab={initialTab}
         moments={momentsResult.page.items}
+        linkableActivities={linkableActivitiesResult.activities}
         momentFeedHasMore={momentsResult.page.hasMore}
         momentFeedNextCursor={momentsResult.page.nextCursor}
         momentFeedLoaded={initialTab === "moment"}

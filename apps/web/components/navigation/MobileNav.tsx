@@ -23,10 +23,12 @@ type MobileNavProps = {
 
 function shouldHideMobileNav(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
+  const localizedPlanetsPath = withLocale(locale, "/planets");
 
   return (
     pathname === localizedPollPath ||
     pathname.startsWith(`${localizedPollPath}/`) ||
+    pathname.startsWith(`${localizedPlanetsPath}/`) ||
     pathname === withLocale(locale, "/game-tools") ||
     pathname.startsWith(`${withLocale(locale, "/game-tools")}/`) ||
     pathname.startsWith(`${withLocale(locale, "/messages")}/`) ||
