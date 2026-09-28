@@ -153,6 +153,7 @@ try {
     const inkBody = { gameNumber: 1, turnIndex: 0, strokeIndex: 0, stroke };
     const artistInk = await requestAs(0, "/ink", "POST", inkBody);
     assert.equal(artistInk.status, 200, `Artist ink POST: ${artistInk.status}`);
+    console.log("P2 ink function region:", artistInk.headers.get("x-draw-guess-region") ?? "unknown");
     const artistInkBody = await artistInk.json() as { seq?: number };
     assert.ok(Number.isSafeInteger(artistInkBody.seq));
     const viewerInk = await requestAs(1, "/ink", "POST", inkBody);
