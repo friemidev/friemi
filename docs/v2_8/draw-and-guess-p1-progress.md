@@ -31,8 +31,8 @@ DRAW_GUESS_TEST_DATABASE_URL='postgresql://本机测试账号:密码@127.0.0.1:�
 
 ## 部署前仍需完成
 
-1. 结合真实玩家画作分布、365 天保留期和实际 Supabase 套餐容量确定灰度房间数与留存方案。当前 Preview 数据库约 54.5 MB；若使用 Supabase Free 套餐，其[数据库达到 500 MB 会进入只读模式](https://supabase.com/docs/guides/platform/database-size)。以本次压缩后高细节样本估算，8 人一局 24 张画作的 PNG 加 JSON 约 1.73 MB（不含行与索引开销），10 局/天连续 365 天约 6.3 GB；因此长期保留需要更高容量或缩短留存，不能以本次 Preview 成功代替正式预算。
-2. 先前浏览器工具输出曾显示现用的 `CRON_SECRET`，且 Preview 与 Production 使用同一密钥。灰度前需由项目所有者同步轮换 Vercel 环境变量与 Preview Supabase Vault 中的值，再复测两个定时入口的鉴权和 5 秒扫描。文档不保存任何密钥值。
+1. 结合真实玩家画作分布、365 天保留期和实际数据库磁盘余量确定灰度房间数与留存方案。2026-09-28 已核实 Supabase 组织为 Pro，Preview 为 nano、Production 为 micro，两个数据库均位于 `eu-west-1`；先前基于 Free 500 MB 的预算假设不适用。以本次压缩后高细节样本估算，8 人一局 24 张画作的 PNG 加 JSON 约 1.73 MB（不含行与索引开销），10 局/天连续 365 天约 6.3 GB；需以正式项目的实际磁盘额度和其他业务增长核定留存，不能以 Preview 成功代替正式预算。
+2. 先前浏览器工具输出曾显示现用的 `CRON_SECRET`；Vercel 项目设置已确认它是作用于 Production 与 Preview 的同一配置变量，且界面标为 `Needs Attention`。灰度前需在已确认维护窗口和接收方后同步轮换 Vercel 密钥与 Preview Supabase Vault 中的值，再复测两个定时入口的鉴权和 5 秒扫描。文档不保存任何密钥值；未取得这项变更的确认前不触碰正式环境。
 3. 真机弱网和后台切换体验，以及发布开关回滚演练可在灰度前补齐。当前的 5–8 人对局使用独立浏览器会话和同机浏览器测试，并非 8 台物理设备。正式数据库迁移与监控目标切换仍属于发布流程。
 
 P1 达标后才可把接龙模式小范围灰度；普通抢猜的画笔实时性仍按 P2、P3 验收。

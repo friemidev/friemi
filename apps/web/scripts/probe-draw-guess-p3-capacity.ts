@@ -48,7 +48,7 @@ type Listener = {
 };
 type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number; tokens: string[]; revision: number };
 type Sample = { batch: number; roomId: string; sentAt: number; httpMs: number; httpStatus: number; error?: string; region?: string; seq?: number; serverTiming?: Record<string, number> };
-type SnapshotSample = { httpMs: number; status: number };
+type SnapshotSample = { startedAt: number; httpMs: number; status: number };
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const round = (value: number) => Math.round(value * 10) / 10;
@@ -149,7 +149,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
             signal: AbortSignal.timeout(8_000),
           });
           await response.arrayBuffer();
-          snapshotSamples.push({ httpMs: performance.now() - started, status: response.status });
+          snapshotSamples.push({ startedAt: started, httpMs: performance.now() - started, status: response.status });
         })());
       }
     }
@@ -192,6 +192,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const databaseBroadcastWrites = Number(broadcastRows[0]?.count ?? 0);
   const latencies: number[] = [];
   const viewerLatencies: number[] = [];
+  const batchViewerLatencies = new Map<string, number[]>();
   let missing = 0;
   let wrongRoom = 0;
   let duplicateDeliveries = 0;
@@ -208,7 +209,12 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
         if (receivedAt === undefined) missing += 1;
         else {
           latencies.push(receivedAt - sample.sentAt);
-          if (listenerIndex > 0) viewerLatencies.push(receivedAt - sample.sentAt);
+          if (listenerIndex > 0) {
+            const latency = receivedAt - sample.sentAt;
+            viewerLatencies.push(latency);
+            const key = `${sample.roomId}:${sample.batch}`;
+            batchViewerLatencies.set(key, [...(batchViewerLatencies.get(key) ?? []), latency]);
+          }
         }
       }
     }
@@ -216,8 +222,31 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const httpErrors = samples.filter((sample) => sample.httpStatus !== 200);
   const listenerHealth = rooms.map((room) => ({
     roomId: room.id,
-    listeners: room.listeners.map((listener, index) => ({ index, received: listener.received.size, statuses: listener.statuses })),
+    listeners: room.listeners.map((listener, index) => ({ index, received: listener.received.size, statuses: [...listener.statuses] })),
   }));
+  const slowestBatches = samples.map((sample) => {
+    const viewerMs = batchViewerLatencies.get(`${sample.roomId}:${sample.batch}`) ?? [];
+    return {
+      roomIndex: rooms.findIndex((room) => room.id === sample.roomId),
+      batch: sample.batch,
+      startedAfterMs: round(sample.sentAt - launchedAt),
+      httpMs: round(sample.httpMs),
+      viewerP95Ms: round(percentile(viewerMs, 95) ?? 0),
+      serverTiming: sample.serverTiming,
+    };
+  }).sort((left, right) => right.viewerP95Ms - left.viewerP95Ms).slice(0, 12);
+  const latencyByTenSeconds = Array.from({ length: Math.ceil(durationMs / 10_000) }, (_, windowIndex) => {
+    const windowSamples = samples.filter((sample) => Math.floor((sample.sentAt - launchedAt) / 10_000) === windowIndex);
+    const windowViewerMs = windowSamples.flatMap((sample) => batchViewerLatencies.get(`${sample.roomId}:${sample.batch}`) ?? []);
+    const windowPolls = snapshotSamples.filter((sample) => Math.floor((sample.startedAt - launchedAt) / 10_000) === windowIndex);
+    return {
+      windowIndex,
+      batches: windowSamples.length,
+      viewerP95Ms: round(percentile(windowViewerMs, 95) ?? 0),
+      httpP95Ms: round(percentile(windowSamples.map((sample) => sample.httpMs), 95) ?? 0),
+      snapshotP95Ms: round(percentile(windowPolls.map((sample) => sample.httpMs), 95) ?? 0),
+    };
+  });
   const result = {
     name, rooms: rooms.length, playersPerRoom: rooms.map((room) => room.memberCount),
     realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
@@ -226,6 +255,8 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
     databaseBroadcastWrites,
     receivedDeliveries: latencies.length, missing, duplicateDeliveries, unexpectedPayloads, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus, error }) => ({ batch, roomId, httpStatus, error })),
     listenerHealth,
+    slowestBatches,
+    latencyByTenSeconds,
     elapsedMs: round(finishedAt - launchedAt), scheduledBatchesPerSecond: round(samples.length / (durationMs / 1000)),
     httpMs: { p50: round(percentile(samples.map((sample) => sample.httpMs), 50) ?? 0), p95: round(percentile(samples.map((sample) => sample.httpMs), 95) ?? 0) },
     snapshotPolls: { requests: snapshotSamples.length, errors: snapshotSamples.filter((sample) => sample.status !== 200 && sample.status !== 304).length, p95Ms: round(percentile(snapshotSamples.map((sample) => sample.httpMs), 95) ?? 0) },
