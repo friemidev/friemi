@@ -1,5 +1,10 @@
 {
   "regions": ["cdg1"],
+  "functions": {
+    "app/api/game-tools/draw-guess/rooms/[roomId]/ink/route.ts": {
+      "regions": ["dub1"]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/import-public-activities",
