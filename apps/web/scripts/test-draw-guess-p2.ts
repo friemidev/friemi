@@ -42,6 +42,11 @@ try {
     const joined = await server.joinDrawGuessRoom({ code: created.room.code, profileId: player.id, displayName: player.nickname });
     assert.ok("roomId" in joined);
   }
+  const lobby = await server.getDrawGuessRoomView(roomId, players[0].id, 0);
+  assert.ok("room" in lobby && lobby.room);
+  assert.equal(lobby.room.revision, 2);
+  assert.equal(lobby.room.seats.length, 3);
+  assert.deepEqual(await server.getDrawGuessRoomView(roomId, players[0].id, lobby.room.revision), { notModified: true });
   assert.deepEqual(await server.startDrawGuessRoom(roomId, players[0].id), { ok: true });
   const wordView = await server.getDrawGuessRoomView(roomId, players[0].id);
   assert.ok("room" in wordView && wordView.room);

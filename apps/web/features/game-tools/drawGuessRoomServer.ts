@@ -219,7 +219,9 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
             seatedSeatId: seat.id,
           },
         });
+        await tx.gameToolRoom.update({ where: { id: room.id }, data: { revision: { increment: 1 } } });
       });
+      await broadcastDrawGuessRoomChange(room.id);
       return { roomId: room.id } as const;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
@@ -277,8 +279,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
-    // Lobby seats can change without a room revision; active rooms always revise on state changes.
-    if (room.status !== "LOBBY" && knownRevision === room.revision &&
+    if (knownRevision === room.revision &&
       (!room.drawGuessDeadlineAt || room.drawGuessDeadlineAt.getTime() > Date.now())) {
       return { notModified: true } as const;
     }
