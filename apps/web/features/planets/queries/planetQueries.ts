@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { getPlanetChatUnreadState } from "@/features/planets/services/planetChat";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 
 const approvedMemberFilter = { status: "APPROVED" as const };
 
@@ -62,22 +61,6 @@ export async function getPlanetRoom(
   planetSlug: string,
   viewerProfileId: string | null,
 ) {
-  const viewerFriendIds = viewerProfileId
-    ? await getViewerFriendIds(viewerProfileId)
-    : [];
-  const visibleLinkedMomentWhere = {
-    deletedAt: null,
-    OR: viewerProfileId
-      ? [
-          { visibility: "PUBLIC" as const },
-          { authorId: viewerProfileId },
-          {
-            visibility: "FRIENDS" as const,
-            authorId: { in: viewerFriendIds },
-          },
-        ]
-      : [{ visibility: "PUBLIC" as const }],
-  };
   const planet = await prisma.planet.findFirst({
     where: {
       slug: planetSlug,
@@ -124,42 +107,6 @@ export async function getPlanetRoom(
           createdAt: true,
           author: { select: { nickname: true, avatarUrl: true } },
           _count: { select: { comments: true } },
-        },
-      },
-      activityLinks: {
-        take: 12,
-        orderBy: { addedAt: "desc" },
-        select: {
-          addedAt: true,
-          activity: {
-            select: {
-              id: true,
-              title: true,
-              category: true,
-              city: true,
-              coverImageUrl: true,
-              startAt: true,
-              status: true,
-              moments: {
-                where: visibleLinkedMomentWhere,
-                take: 3,
-                orderBy: { createdAt: "desc" },
-                select: {
-                  id: true,
-                  content: true,
-                  createdAt: true,
-                  author: {
-                    select: { nickname: true, avatarUrl: true },
-                  },
-                  images: {
-                    take: 1,
-                    orderBy: { sortOrder: "asc" },
-                    select: { url: true },
-                  },
-                },
-              },
-            },
-          },
         },
       },
     },

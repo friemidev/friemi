@@ -5,7 +5,12 @@ import {
   buildPlanetMomentTargetWhere,
   canInteractWithPlanetMoment,
   canPublishPlanetMoment,
+  planetMomentImageMaxCount,
 } from "./planetMomentPolicy";
+
+test("planet moments support up to fifteen photos", () => {
+  assert.equal(planetMomentImageMaxCount, 15);
+});
 
 test("planet moment interaction requires an approved membership", () => {
   assert.equal(

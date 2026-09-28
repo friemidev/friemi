@@ -3,6 +3,7 @@
 import { ImagePlus, Plus, Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { createPlanetMomentAction } from "@/features/planets/actions/planetActions";
+import { planetMomentImageMaxCount } from "@/features/planets/utils/planetMomentPolicy";
 import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
@@ -12,8 +13,6 @@ import {
   acceptedPlanetVideoInputTypes,
   getPlanetVideoUploadValidationError,
 } from "@/lib/video-upload-policy";
-
-const maxMomentImageCount = 12;
 
 type PlanetMomentComposerProps = {
   locale: string;
@@ -96,7 +95,7 @@ export function PlanetMomentComposer({
   const t = locale === "en" || locale === "fr" ? copy[locale] : copy["zh-CN"];
 
   async function uploadImages(files: FileList) {
-    const availableSlots = maxMomentImageCount - imageUrls.length;
+    const availableSlots = planetMomentImageMaxCount - imageUrls.length;
     const selectedFiles = Array.from(files).slice(0, availableSlots);
     const invalidFile = selectedFiles.find((file) =>
       getImageUploadClientValidationError(file),
@@ -129,7 +128,7 @@ export function PlanetMomentComposer({
       }
 
       setImageUrls((current) =>
-        [...current, ...uploadedUrls].slice(0, maxMomentImageCount),
+        [...current, ...uploadedUrls].slice(0, planetMomentImageMaxCount),
       );
     } catch {
       setUploadError(t.uploadFailed);
@@ -283,7 +282,7 @@ export function PlanetMomentComposer({
               <button
                 className="inline-flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#47715B] disabled:opacity-50"
                 disabled={
-                  isUploading || imageUrls.length >= maxMomentImageCount
+                  isUploading || imageUrls.length >= planetMomentImageMaxCount
                 }
                 onClick={() => inputRef.current?.click()}
                 type="button"
@@ -292,7 +291,7 @@ export function PlanetMomentComposer({
                 <span className="truncate">
                   {isUploading
                     ? t.uploading
-                    : `${t.addImage}${imageUrls.length ? ` (${imageUrls.length}/${maxMomentImageCount})` : ""}`}
+                    : `${t.addImage}${imageUrls.length ? ` (${imageUrls.length}/${planetMomentImageMaxCount})` : ""}`}
                 </span>
               </button>
               <input

@@ -1084,6 +1084,19 @@ export function MomentDetailContent({
           />
         </header>
 
+        {moment.activity ? (
+          <Link
+            className="mt-3 inline-flex max-w-full items-center gap-1.5 text-xs font-bold text-[#156240] transition hover:text-[#0D4B31]"
+            href={withLocale(locale, `/lobby/${moment.activity.id}`)}
+          >
+            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            <span className="shrink-0 text-[#6C746A]">
+              {copy.linkedActivityPrefix}
+            </span>
+            <span className="truncate">{moment.activity.title}</span>
+          </Link>
+        ) : null}
+
         {moment.content ? (
           <p className="mt-4 whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-[#111210]">
             {moment.content}

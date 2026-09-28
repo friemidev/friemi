@@ -1,8 +1,6 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  CalendarDays,
-  ChevronRight,
   Megaphone,
   MessageCircle,
   Orbit,
@@ -31,7 +29,10 @@ import type {
   getPlanetRoom,
   getPlanetSquare,
 } from "../queries/planetQueries";
-import { canInteractWithPlanetMoment } from "../utils/planetMomentPolicy";
+import {
+  canInteractWithPlanetMoment,
+  planetMomentImageMaxCount,
+} from "../utils/planetMomentPolicy";
 import {
   getPlanetCategoryLabel,
   planetCategoryValues,
@@ -83,8 +84,6 @@ const planetCopy = {
     tagsPlaceholder: "选择一个最符合星球内容的分类",
     announcement: "群公告",
     introduction: "星球简介",
-    linkedActivities: "星球聚吧",
-    linkedMoments: "相关晒晒",
     createButton: "\u521b\u5efa\u5e76\u8fdb\u5165\u661f\u7403",
     danmaku: "\u5f39\u5e55",
     danmakuPlaceholder: "\u53d1\u5e03\u5f39\u5e55...",
@@ -123,8 +122,6 @@ const planetCopy = {
     tagsPlaceholder: "Choose the category that best fits this planet",
     announcement: "Group announcement",
     introduction: "Planet intro",
-    linkedActivities: "Planet meetups",
-    linkedMoments: "Related moments",
     createButton: "Create planet",
     danmaku: "Comments",
     danmakuPlaceholder: "Write a comment...",
@@ -163,8 +160,6 @@ const planetCopy = {
     tagsPlaceholder: "Choisissez la catégorie de cette planète",
     announcement: "Annonce du groupe",
     introduction: "Présentation",
-    linkedActivities: "Rencontres de la planète",
-    linkedMoments: "Moments associés",
     createButton: "Créer la planète",
     danmaku: "Commentaires",
     danmakuPlaceholder: "Écrire un commentaire...",
@@ -473,94 +468,6 @@ function PlanetChatEntry({
   );
 }
 
-function PlanetActivityCard({
-  activityLink,
-  locale,
-}: {
-  activityLink: PlanetRoom["activityLinks"][number];
-  locale: string;
-}) {
-  const { activity } = activityLink;
-  const copy = getPlanetCopy(locale);
-
-  return (
-    <div className="border-b border-[#ECE8DC] py-3 last:border-b-0">
-      <Link
-        className="group grid min-w-0 grid-cols-[5.25rem_minmax(0,1fr)_2rem] items-center gap-3"
-        href={withLocale(locale, `/lobby/${activity.id}`)}
-      >
-        <span className="relative h-16 overflow-hidden rounded-lg bg-[#EDF2EC]">
-          {activity.coverImageUrl ? (
-            <img
-              alt=""
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-              src={activity.coverImageUrl}
-            />
-          ) : (
-            <span className="flex h-full items-center justify-center text-[#156240]">
-              <UsersRound className="h-6 w-6" />
-            </span>
-          )}
-        </span>
-        <span className="min-w-0">
-          <strong className="line-clamp-2 text-sm leading-5 text-[#1F211E]">
-            {activity.title}
-          </strong>
-          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-[#727A72]">
-            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {activity.startAt.toLocaleDateString(locale)} · {activity.city}
-            </span>
-          </span>
-          <span className="mt-1 block text-[11px] font-bold text-[#156240]">
-            {getPlanetCategoryLabel(activity.category, locale)}
-          </span>
-        </span>
-        <ChevronRight className="h-5 w-5 text-[#A2A99F] transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
-      </Link>
-
-      {activity.moments.length > 0 ? (
-        <div className="ml-[6.25rem] mt-3 border-l-2 border-[#DCE9DF] pl-3">
-          <p className="mb-1.5 text-[10px] font-bold uppercase text-[#788078]">
-            {copy.linkedMoments}
-          </p>
-          <div className="space-y-1">
-            {activity.moments.map((moment) => (
-              <Link
-                className="group/moment flex min-w-0 items-center gap-2 py-1.5"
-                href={withLocale(locale, `/footprints/${moment.id}`)}
-                key={moment.id}
-              >
-                {moment.images[0] ? (
-                  <img
-                    alt=""
-                    className="h-9 w-9 shrink-0 rounded-md object-cover"
-                    src={moment.images[0].url}
-                  />
-                ) : (
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#EDF5EF] text-xs font-bold text-[#156240]">
-                    {moment.author.nickname.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold text-[#334039] group-hover/moment:text-[#156240]">
-                    {moment.content || moment.author.nickname}
-                  </span>
-                  <span className="block truncate text-[10px] font-semibold text-[#838B84]">
-                    {moment.author.nickname} ·{" "}
-                    {moment.createdAt.toLocaleDateString(locale)}
-                  </span>
-                </span>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#A2A99F]" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function PlanetMomentPanel({
   locale,
   moment,
@@ -579,7 +486,7 @@ function PlanetMomentPanel({
         comments={moment.comments}
         content={moment.content}
         createdAtLabel={moment.createdAt.toLocaleDateString(locale)}
-        imageUrls={moment.imageUrls.slice(0, 12)}
+        imageUrls={moment.imageUrls.slice(0, planetMomentImageMaxCount)}
         videoUrls={moment.videoUrls.slice(0, 1)}
         isLiked={Boolean(moment.likes?.length)}
         likeCount={moment._count?.likes ?? 0}
@@ -802,23 +709,6 @@ export function PlanetRoomPage({
             ) : null}
           </div>
 
-          {planet.activityLinks.length ? (
-            <section className="mt-5">
-              <h2 className="text-xs font-bold uppercase text-[#788078]">
-                {copy.linkedActivities}
-              </h2>
-              <div className="mt-1">
-                {planet.activityLinks.map((activityLink) => (
-                  <PlanetActivityCard
-                    activityLink={activityLink}
-                    key={activityLink.activity.id}
-                    locale={locale}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
           {planet.moments.length ? (
             <section className="mt-6">
               <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -844,11 +734,11 @@ export function PlanetRoomPage({
 
           {selectedMoment ? (
             <PlanetMomentPanel locale={locale} moment={selectedMoment} />
-          ) : planet.activityLinks.length === 0 ? (
+          ) : (
             <p className="py-10 text-center text-sm font-semibold text-[#889188]">
               {copy.firstMoment}
             </p>
-          ) : null}
+          )}
         </div>
       </section>
     </PageShell>

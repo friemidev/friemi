@@ -24,6 +24,7 @@ import {
   buildPlanetMomentCommentTargetWhere,
   buildPlanetMomentTargetWhere,
   canPublishPlanetMoment,
+  planetMomentImageMaxCount,
 } from "@/features/planets/utils/planetMomentPolicy";
 import { planetCategoryValues } from "@/features/planets/utils/planetCategories";
 import { isAllowedPlanetVideoUrl } from "@/lib/planet-video-storage";
@@ -123,7 +124,7 @@ function parseImageUrls(value: string | undefined) {
   try {
     const parsed = z
       .array(z.string().url())
-      .max(12)
+      .max(planetMomentImageMaxCount)
       .safeParse(JSON.parse(value));
     return parsed.success ? parsed.data : [];
   } catch {

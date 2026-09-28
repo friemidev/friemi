@@ -3,6 +3,8 @@ type PlanetMembershipState = {
   status?: string | null;
 } | null;
 
+export const planetMomentImageMaxCount = 15;
+
 export function canInteractWithPlanetMoment(membership: PlanetMembershipState) {
   return membership?.status === "APPROVED";
 }
