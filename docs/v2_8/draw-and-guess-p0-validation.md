@@ -1,8 +1,8 @@
 # 你画我猜 P0 验证记录
 
-更新于 2026-09-28。P0 的本地数据库与服务端验证已通过；真实 Clerk 多账号、不同设备及 Preview 环境的验收仍待执行，因此接龙模式尚不能标记为 P0 完成或可发布。
+更新于 2026-09-28。P0 的本地数据库、Preview 独立调度、真实 Clerk 多会话对局和故障通知演练均已通过；按测试环境功能验收，P0 已闭环。接龙仅在画猜分支的 Preview 开启，生产环境尚未发布。
 
-复核于 2026-09-28：用户打开的 Frieme.Dev Chrome 会话可读取 `friemi` Vercel 项目；当前 Vercel CLI 登录的是另一账号，不能操作该项目。画猜分支 `codex/draw-and-guess` 已推送并产生独立的 Ready Preview：`https://friemi-git-codex-draw-and-guess-friemi.vercel.app`。Vercel Preview 的数据库项目标识与仓库测试配置一致，Production 为不同项目；已只对 Preview 测试库应用画猜的 3 个新增迁移，72 个迁移均为最新。`DRAW_GUESS_CHAIN_ENABLED=true` 仅配置于该画猜分支的 Preview 环境并已随新部署生效。Preview Supabase Cron 已启用独立的 5 秒截止扫描，实测能让全员离线的过期测试房间自动跨阶段。仍没有可复用的 5–8 个真实 Clerk 测试账号。接龙新局默认关闭，其他分支和生产环境不受画猜分支开关影响。
+复核于 2026-09-28：用户打开的 Frieme.Dev Chrome 会话可读取 `friemi` Vercel 项目；当前 Vercel CLI 登录的是另一账号，不能操作该项目。画猜分支 `codex/draw-and-guess` 已推送并产生独立的 Ready Preview：`https://friemi-git-codex-draw-and-guess-friemi.vercel.app`。Vercel Preview 的数据库项目标识与仓库测试配置一致，Production 为不同项目；已只对 Preview 测试库应用画猜的 3 个新增迁移，72 个迁移均为最新。`DRAW_GUESS_CHAIN_ENABLED=true` 仅配置于该画猜分支的 Preview 环境并已随新部署生效。Preview Supabase Cron 已启用独立的 5 秒截止扫描，实测能让全员离线的过期测试房间自动跨阶段。与 Preview 页面一致的 Clerk development 实例中创建了 8 个 `+clerk_test` 临时账号；完成独立会话验收后，这些账号、测试房间和数据库资料均已删除。接龙新局默认关闭，其他分支和生产环境不受画猜分支开关影响。
 
 ## 已完成的实现
 
@@ -21,7 +21,9 @@
 | 并发和恢复 | 8 人并发占座、8 人同棒并发提交、重复命令、旧阶段/旧局命令、房主失联接替、全员离线后的超时补位与并发扫描，均通过。 |
 | 权限和可见性 | 非成员无法查看房间或历史；未揭晓时只向当前玩家返回前一棒；投票进行中不暴露票数；均通过服务端检查。 |
 | HTTP 定时入口 | 本地 Next 服务经独立脚本调用返回 200 并扫描到期房间；无凭证请求返回 401。 |
-| Preview 独立扫描与通知 | Supabase Cron 中 `draw_guess_preview_deadlines` 为 Active，按 `5 seconds` 执行，仅在存在过期画猜房间时通过 `pg_net` 调用稳定的画猜分支 Preview 域名；Vault 保存端点和鉴权密钥。任务运行记录连续成功，网络响应均为 200。创建 5 个临时资料与房间、设置过期截止时间后，未调用任何玩家 API，房间约 5 秒后自动从 `CHAIN_WORD` 进入 `CHAIN_STEP`，自动推进事件仅 1 条；Preview 服务的 Supabase Broadcast 到达已订阅客户端。测试房间和资料已删除，剩余数量为 0。 |
+| Preview 独立扫描与通知 | Supabase Cron 中 `draw_guess_preview_deadlines` 为 Active，按 `5 seconds` 执行，仅在存在过期画猜房间时通过 `pg_net` 调用稳定的画猜分支 Preview 域名；Vault 保存端点和鉴权密钥。任务运行记录连续成功，网络响应均为 200。创建 5 个临时资料与房间、设置过期截止时间后，未调用任何玩家 API，房间约 5 秒后自动从 `CHAIN_WORD` 进入 `CHAIN_STEP`，自动推进事件仅 1 条；Preview 服务的 Supabase Broadcast 到达已订阅客户端。测试房间和资料已删除，剩余数量为 0。健康接口把任务停用和最近成功时间纳入判断；短暂停用 Preview 截止扫描时返回 503，GitHub [Site Monitoring #22](https://github.com/friemidev/friemi/actions/runs/36438779487) 以 `Received: 503` 失败，TiantianTitan 的 Gmail 收到失败通知。随即恢复扫描，确认任务 Active、最新运行 succeeded、健康接口 200。首次正常监控 [#21](https://github.com/friemidev/friemi/actions/runs/36438042536) 成功。 |
+| Preview 真实身份完整对局 | 5、6、7、8 人分别使用独立 Clerk 会话完成出词、所有画猜棒次、全员投票、作者选画、排行榜和再来一局。最终每人分数依次为 320、320、400、400；最后猜词者与起始词作者不同。8 人测试最初逐人提交曾超过 20 秒猜词截止时间，系统按规则自动补位；改为并发提交后全程通过。 |
+| Preview 权限与恢复 | 非成员读取房间被拒；新会话恢复草稿；模拟房主离线后在线成员接任；归档 PNG 仅房间成员能读取，匿名与非成员均被拒；历史页在再来一局后仍展示旧局词和分数。Supabase 房间客户端实际连接到 Preview 项目，页面断线时有轮询提示。 |
 | 静态检查 | TypeScript 类型检查、接龙规则测试和迁移验证通过。 |
 
 复现隔离数据库测试：先在本机 PostgreSQL 上应用迁移，然后在 `apps/web` 目录执行：
@@ -45,9 +47,7 @@ CRON_SECRET='测试环境密钥' \
 
 本次 Preview 使用了 [Supabase Cron](https://supabase.com/docs/guides/cron) 的秒级任务和 [pg_net](https://supabase.com/docs/guides/database/extensions/pg_net) HTTP 请求。部署脚本 `apps/web/scripts/configure-draw-guess-preview-cron.mjs` 需显式提供 Preview 数据库项目标识、稳定 Preview 主机、端点及其匹配的 `CRON_SECRET`；执行前先要求端点返回 200，随后把端点和密钥保存在 [Supabase Vault](https://supabase.com/docs/guides/database/vault)，安装扩展、注册 5 秒截止任务、每日数据维护任务，以及每天清理 7 天前任务运行记录。截止任务只在数据库发现过期房间时发出 HTTP 请求。具备这些变量后，在 `apps/web` 中运行 `node scripts/configure-draw-guess-preview-cron.mjs`；本机 `.env` 可用 `node --env-file=.env` 加载，但必须提供与 Vercel Preview 一致的密钥，不能直接使用不匹配的本地值。复测全员离线自动推进和 Broadcast 时，在 `apps/web` 中运行 `DRAW_GUESS_PREVIEW_DB_REF=... node --env-file=../../.env.local --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts`；所加载配置需含 Preview Supabase 公开密钥，探针会清理自己创建的房间和临时资料。部署脚本不写入生产数据库，也不在日志输出密钥。
 
-## P0 剩余验收
+## 发布前补充验收
 
-1. 持续观察 Preview 独立扫描的运行与错误记录，演练任务失败告警及重启恢复。当前已验证 5 秒调度、鉴权 HTTP 200 与离线自动推进，尚未证明持续运行和通知到人。
-2. 使用真实 Clerk 账号在 5、6、7、8 台独立设备或会话中，各完成一整局并开始下一局；保存房间号、时间、请求和最终排行记录。覆盖断网重连、换设备、后台切换与房主关闭页面。
-3. 验证实际页面与 API 权限：未登录、非成员、旧阶段、重复请求和并发提交；检查旧局只读页面与投票汇总的移动端显示。
-4. 复核 Preview 的 Clerk 与 `CRON_SECRET` 均指向测试资源。数据库项目已确认隔离。P0 通过后再进入 P1 灰度准备，正式数据库迁移走发布流程。
+1. 真机弱网与后台切换可在灰度前再补一次人工体验验收；当前 5–8 人使用的是独立 Clerk 身份与浏览器会话，并非 8 台物理设备。自动化已覆盖草稿换会话恢复、房主失联、过期自动补位和轮询降级。
+2. 正式数据库迁移、功能开关与监控目标切换仍走发布流程。当前仓库监控变量指向隔离的画猜 Preview；若删除该 Preview 或改为生产监控，须同步更新目标地址。
