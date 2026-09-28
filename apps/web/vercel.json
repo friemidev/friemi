@@ -1,7 +1,7 @@
 {
   "regions": ["cdg1"],
   "functions": {
-    "app/api/game-tools/draw-guess/rooms/[roomId]/ink/route.ts": {
+    "app/api/game-tools/draw-guess/rooms/*/ink/route.ts": {
       "regions": ["dub1"]
     }
   },
