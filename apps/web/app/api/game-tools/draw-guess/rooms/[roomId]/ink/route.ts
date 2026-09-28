@@ -12,6 +12,8 @@ const batchSchema = z.object({
   turnIndex: z.number().int().min(0).max(9),
 });
 
+export const preferredRegion = "dub1";
+
 export async function POST(request: Request, context: { params: Promise<{ roomId: string }> }) {
   const startedAt = performance.now();
   const userId = hasClerkKeys() ? (await auth()).userId : "local-dev-user";
@@ -50,6 +52,9 @@ export async function POST(request: Request, context: { params: Promise<{ roomId
   const broadcastMs = performance.now() - startedAt - authMs - roomMs - redisMs;
   return NextResponse.json(ok ? { ok: true, seq: reserved.seq } : { error: "INK_UNAVAILABLE" }, {
     status: ok ? 200 : 503,
-    headers: { "Server-Timing": `auth;dur=${authMs.toFixed(1)}, room;dur=${roomMs.toFixed(1)}, redis;dur=${redisMs.toFixed(1)}, broadcast;dur=${broadcastMs.toFixed(1)}` },
+    headers: {
+      "Server-Timing": `auth;dur=${authMs.toFixed(1)}, room;dur=${roomMs.toFixed(1)}, redis;dur=${redisMs.toFixed(1)}, broadcast;dur=${broadcastMs.toFixed(1)}`,
+      ...(process.env.VERCEL_REGION ? { "X-Draw-Guess-Region": process.env.VERCEL_REGION } : {}),
+    },
   });
 }

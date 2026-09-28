@@ -39,7 +39,7 @@ type Listener = {
   wrongRoom: number;
 };
 type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number; tokens: string[]; revision: number };
-type Sample = { batch: number; roomId: string; sentAt: number; httpMs: number; httpStatus: number; seq?: number; serverTiming?: Record<string, number> };
+type Sample = { batch: number; roomId: string; sentAt: number; httpMs: number; httpStatus: number; error?: string; region?: string; seq?: number; serverTiming?: Record<string, number> };
 type SnapshotSample = { httpMs: number; status: number };
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -159,9 +159,9 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
           body: JSON.stringify({ gameNumber: 1, turnIndex: 0, strokeIndex: 0, stroke }),
           signal: AbortSignal.timeout(8_000),
         });
-        const body = await response.json() as { seq?: number };
+        const body = await response.json() as { error?: string; seq?: number };
         const serverTiming = readServerTiming(response.headers.get("server-timing"));
-        samples.push({ batch, roomId: room.id, sentAt, httpMs: performance.now() - sentAt, httpStatus: response.status, seq: body.seq, serverTiming });
+        samples.push({ batch, roomId: room.id, sentAt, httpMs: performance.now() - sentAt, httpStatus: response.status, error: body.error, region: response.headers.get("x-draw-guess-region") ?? undefined, seq: body.seq, serverTiming });
       })());
     }
   }
@@ -204,21 +204,16 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
     realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
     sentBatches: samples.length, expectedDeliveries: samples.reduce((sum, sample) => sum + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
     estimatedRealtimeMessages: samples.reduce((sum, sample) => sum + 1 + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
-    receivedDeliveries: latencies.length, missing, duplicateDeliveries, unexpectedPayloads, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus }) => ({ batch, roomId, httpStatus })),
+    receivedDeliveries: latencies.length, missing, duplicateDeliveries, unexpectedPayloads, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus, error }) => ({ batch, roomId, httpStatus, error })),
     elapsedMs: round(finishedAt - launchedAt), effectiveBatchesPerSecond: round(samples.length / ((finishedAt - launchedAt) / 1000)),
     httpMs: { p50: round(percentile(samples.map((sample) => sample.httpMs), 50) ?? 0), p95: round(percentile(samples.map((sample) => sample.httpMs), 95) ?? 0) },
     snapshotPolls: { requests: snapshotSamples.length, errors: snapshotSamples.filter((sample) => sample.status !== 200 && sample.status !== 304).length, p95Ms: round(percentile(snapshotSamples.map((sample) => sample.httpMs), 95) ?? 0) },
     serverTimingP95Ms: Object.fromEntries(["auth", "room", "redis", "broadcast"].map((stage) => [stage, round(percentile(samples.map((sample) => sample.serverTiming?.[stage]).filter((value): value is number => typeof value === "number"), 95) ?? 0)])),
+    serverTimingSamples: samples.filter((sample) => Number.isFinite(sample.serverTiming?.auth)).length,
+    functionRegions: [...new Set(samples.map((sample) => sample.region ?? "unknown"))],
     inkVisibleMs: { p50: round(percentile(viewerLatencies, 50) ?? 0), p95: round(percentile(viewerLatencies, 95) ?? 0), max: round(percentile(viewerLatencies, 100) ?? 0) },
     latencyGatePassed: (percentile(viewerLatencies, 95) ?? Infinity) <= 300,
   };
-  assert.equal(httpErrors.length, 0, `${name}: ink HTTP errors`);
-  assert.equal(result.snapshotPolls.errors, 0, `${name}: snapshot polling HTTP errors`);
-  assert.ok(samples.every((sample) => Number.isFinite(sample.serverTiming?.auth)), "Preview has not deployed the P3 Server-Timing instrumentation yet.");
-  assert.equal(missing, 0, `${name}: missing private ink deliveries`);
-  assert.equal(duplicateDeliveries, 0, `${name}: duplicate private ink deliveries`);
-  assert.equal(unexpectedPayloads, 0, `${name}: unexpected or answer-bearing ink payload`);
-  assert.equal(wrongRoom, 0, `${name}: cross-room ink leakage`);
   return result;
 }
 
@@ -251,6 +246,13 @@ try {
       const result = await runScenario(scenario.name, rooms, scenario.batches, scenario.intervalMs);
       report.scenarios.push(result);
       console.log("P3 capacity scenario:", JSON.stringify(result));
+      assert.equal(result.httpErrors.length, 0, `${scenario.name}: ink HTTP errors`);
+      assert.equal(result.snapshotPolls.errors, 0, `${scenario.name}: snapshot polling HTTP errors`);
+      assert.equal(result.serverTimingSamples, result.sentBatches, "Preview has not deployed the P3 Server-Timing instrumentation yet.");
+      assert.equal(result.missing, 0, `${scenario.name}: missing private ink deliveries`);
+      assert.equal(result.duplicateDeliveries, 0, `${scenario.name}: duplicate private ink deliveries`);
+      assert.equal(result.unexpectedPayloads, 0, `${scenario.name}: unexpected or answer-bearing ink payload`);
+      assert.equal(result.wrongRoom, 0, `${scenario.name}: cross-room ink leakage`);
     } finally {
       await Promise.allSettled(rooms.map(closeRoom));
     }
