@@ -148,10 +148,20 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => {
     const intervalMs = syncStatus === "CONNECTED" ? 10_000 : 2_000;
-    const id = window.setInterval(() => { if (!document.hidden) void refresh(); }, intervalMs);
+    // Spread safety polls across clients that subscribe to the same room at once.
+    const poll = () => { if (!document.hidden) void refresh(); };
+    let intervalId: number | null = null;
+    const firstPollId = window.setTimeout(() => {
+      poll();
+      intervalId = window.setInterval(poll, intervalMs);
+    }, 250 + Math.random() * (intervalMs - 250));
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
-    return () => { window.clearInterval(id); window.removeEventListener("focus", onFocus); };
+    return () => {
+      window.clearTimeout(firstPollId);
+      if (intervalId !== null) window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [refresh, syncStatus]);
 
   useEffect(() => {

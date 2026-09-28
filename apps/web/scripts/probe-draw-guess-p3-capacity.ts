@@ -21,6 +21,8 @@ const dualDurationSeconds = Number(process.env.P3_DUAL_DURATION_SECONDS ?? 10);
 assert.ok(Number.isInteger(dualDurationSeconds) && dualDurationSeconds >= 10 && dualDurationSeconds <= 30);
 const singleDurationSeconds = Number(process.env.P3_SINGLE_DURATION_SECONDS ?? 6);
 assert.ok(Number.isInteger(singleDurationSeconds) && singleDurationSeconds >= 6 && singleDurationSeconds <= 30);
+const pollMode = process.env.P3_POLL_MODE ?? "clustered";
+assert.ok(["clustered", "staggered"].includes(pollMode));
 
 const databaseUrl = new URL(process.env.DATABASE_URL!);
 databaseUrl.searchParams.set("connection_limit", "20");
@@ -138,11 +140,19 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const sends: Promise<void>[] = [];
   const polls: Promise<void>[] = [];
   const durationMs = batchesPerRoom * intervalMs;
+  const listenerCount = rooms.reduce((count, room) => count + room.tokens.length, 0);
+  let listenerIndex = 0;
   for (const room of rooms) {
     for (const token of room.tokens) {
+      const firstPollOffsetMs = pollMode === "staggered"
+        ? 250 + ((listenerIndex + 0.5) / listenerCount) * (connectedSnapshotIntervalMs - 250)
+        : 0;
+      listenerIndex += 1;
       for (let tick = 0; tick < Math.ceil(durationMs / connectedSnapshotIntervalMs); tick += 1) {
+        const dueMs = firstPollOffsetMs + tick * connectedSnapshotIntervalMs;
+        if (dueMs >= durationMs) continue;
         polls.push((async () => {
-          await pause(tick * connectedSnapshotIntervalMs);
+          await pause(dueMs);
           const started = performance.now();
           const response = await fetch(`${previewOrigin}/api/game-tools/draw-guess/rooms/${room.id}`, {
             headers: { authorization: `Bearer ${token}`, "if-none-match": `W/"draw-guess-${room.revision}"` },
@@ -271,7 +281,7 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
 
 const report: { at: string; previewOrigin: string; scenarios: unknown[]; notes: string[] } = {
   at: new Date().toISOString(), previewOrigin, scenarios: [],
-  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", `Scenario filter: ${scenarioFilter ?? "all"}; single-room duration: ${singleDurationSeconds} seconds; dual-room duration: ${dualDurationSeconds} seconds.`, "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
+  notes: ["Sender HTTP request start to private Realtime callback; browser rendering and mobile network are excluded.", "Each scenario has a fixed upper bound on batch rate and runs only in isolated Preview.", `Scenario filter: ${scenarioFilter ?? "all"}; single-room duration: ${singleDurationSeconds} seconds; dual-room duration: ${dualDurationSeconds} seconds; snapshot poll mode: ${pollMode}.`, "Room snapshot polls match the 10-second connected-channel safety interval; disconnected fallback remains 2 seconds.", "The two-room scenario uses the same 10 Clerk identities in both rooms because the Development instance has a 100-user quota; it measures 20 connections, not 20 distinct users."],
 };
 let failure: unknown;
 try {
