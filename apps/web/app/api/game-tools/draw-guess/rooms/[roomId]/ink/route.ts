@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
-import { isValidStroke, type DrawGuessState } from "@/features/game-tools/drawGuessEngine";
-import { broadcastDrawGuessInk, reserveDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
+import { isValidStroke } from "@/features/game-tools/drawGuessEngine";
+import { broadcastDrawGuessInk, getAuthorizedDrawGuessInkArtist, reserveDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { hasClerkKeys } from "@/lib/clerk";
-import { prisma } from "@/lib/prisma";
 
 const batchSchema = z.object({
   gameNumber: z.number().int().min(1),
@@ -27,34 +26,26 @@ export async function POST(request: Request, context: { params: Promise<{ roomId
   }
   const stroke = parsed.data.stroke;
   if (!isValidStroke(stroke)) return NextResponse.json({ error: "INVALID_INK_BATCH" }, { status: 400 });
-  const room = await prisma.gameToolRoom.findUnique({
-    where: { id: roomId },
-    select: {
-      drawGuessDeadlineAt: true, kind: true,
-      members: { where: { leftAt: null, profile: { is: { clerkUserId: userId, status: "ACTIVE" } } }, select: { id: true, profileId: true } },
-      seats: { where: { leftAt: null, profile: { is: { clerkUserId: userId, status: "ACTIVE" } } }, select: { seatNumber: true } },
-      state: true, status: true,
-    },
+  const profileId = await getAuthorizedDrawGuessInkArtist({
+    clerkUserId: userId,
+    gameNumber: parsed.data.gameNumber,
+    roomId,
+    turnIndex: parsed.data.turnIndex,
   });
   const roomMs = performance.now() - startedAt - authMs;
-  const state = room?.state as DrawGuessState | null;
-  if (!room || room.kind !== "DRAW_GUESS" || room.status !== "IN_PROGRESS" || room.members.length !== 1 || room.seats.length !== 1 ||
-      !state || state.mode !== "CLASSIC" || state.phase !== "DRAW_GUESS" ||
-      state.gameNumber !== parsed.data.gameNumber || state.turnIndex !== parsed.data.turnIndex ||
-      room.seats[0].seatNumber !== state.turnIndex + 1 ||
-      !room.drawGuessDeadlineAt || room.drawGuessDeadlineAt.getTime() <= Date.now()) {
+  if (!profileId) {
     return NextResponse.json({ error: "INK_NOT_ALLOWED" }, { status: 403 });
   }
-  const reserved = await reserveDrawGuessInkSequence(roomId, state.gameNumber, state.turnIndex, room.members[0].profileId!);
+  const reserved = await reserveDrawGuessInkSequence(roomId, parsed.data.gameNumber, parsed.data.turnIndex, profileId);
   if ("error" in reserved) return NextResponse.json(reserved, { status: reserved.error === "INK_RATE_LIMITED" ? 429 : 503 });
   const redisMs = performance.now() - startedAt - authMs - roomMs;
   const ok = await broadcastDrawGuessInk({
-    gameNumber: state.gameNumber,
+    gameNumber: parsed.data.gameNumber,
     roomId,
     seq: reserved.seq,
     stroke,
     strokeIndex: parsed.data.strokeIndex,
-    turnIndex: state.turnIndex,
+    turnIndex: parsed.data.turnIndex,
   });
   const broadcastMs = performance.now() - startedAt - authMs - roomMs - redisMs;
   return NextResponse.json(ok ? { ok: true, seq: reserved.seq } : { error: "INK_UNAVAILABLE" }, {

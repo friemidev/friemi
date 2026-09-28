@@ -15,6 +15,34 @@ export type DrawGuessInkBatch = {
   turnIndex: number;
 };
 
+export async function getAuthorizedDrawGuessInkArtist(input: {
+  clerkUserId: string;
+  gameNumber: number;
+  roomId: string;
+  turnIndex: number;
+}) {
+  const rows = await prisma.$queryRaw<{ profileId: string }[]>`
+    SELECT member."profileId" AS "profileId"
+    FROM "GameToolRoom" AS room
+    JOIN "GameToolRoomMember" AS member ON member."roomId" = room.id AND member."leftAt" IS NULL
+    JOIN "GameToolSeat" AS seat ON seat."roomId" = room.id AND seat."profileId" = member."profileId" AND seat."leftAt" IS NULL
+    JOIN "UserProfile" AS profile ON profile.id = member."profileId"
+    WHERE room.id = ${input.roomId}
+      AND room.kind = 'DRAW_GUESS'
+      AND room.status = 'IN_PROGRESS'
+      AND room."drawGuessDeadlineAt" > NOW()
+      AND room.state->>'mode' = 'CLASSIC'
+      AND room.state->>'phase' = 'DRAW_GUESS'
+      AND (room.state->>'gameNumber')::int = ${input.gameNumber}
+      AND (room.state->>'turnIndex')::int = ${input.turnIndex}
+      AND seat."seatNumber" = ${input.turnIndex + 1}
+      AND profile."clerkUserId" = ${input.clerkUserId}
+      AND profile.status = 'ACTIVE'
+    LIMIT 1
+  `;
+  return rows[0]?.profileId ?? null;
+}
+
 function sequenceKey(roomId: string, gameNumber: number, turnIndex: number) {
   return `${getRedisRuntimeConfig().keyPrefix}:draw-guess:ink:${roomId}:${gameNumber}:${turnIndex}:seq`;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { commandDrawGuessRoom, rematchDrawGuessRoom, startDrawGuessRoom } from "@/features/game-tools/drawGuessRoomServer";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getExistingDrawGuessProfileId } from "@/features/game-tools/drawGuessAuth";
 
 const stroke = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
@@ -30,21 +30,21 @@ const command = z.object({
 });
 
 export async function POST(request: Request, context: { params: Promise<{ roomId: string }> }) {
-  const profile = await getOptionalCurrentUserProfile();
-  if (!profile) return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  const profileId = await getExistingDrawGuessProfileId();
+  if (!profileId) return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
   const { roomId } = await context.params;
   const body = await request.json().catch(() => null);
   if (body?.action?.type === "START") {
-    const result = await startDrawGuessRoom(roomId, profile.id);
+    const result = await startDrawGuessRoom(roomId, profileId);
     return NextResponse.json(result, { status: "error" in result ? 409 : 200 });
   }
   if (body?.action?.type === "REMATCH") {
-    const result = await rematchDrawGuessRoom(roomId, profile.id);
+    const result = await rematchDrawGuessRoom(roomId, profileId);
     return NextResponse.json(result, { status: "error" in result ? 409 : 200 });
   }
   const parsed = command.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   if (JSON.stringify(parsed.data.action).length > 100_000) return NextResponse.json({ error: "PAYLOAD_TOO_LARGE" }, { status: 413 });
-  const result = await commandDrawGuessRoom({ ...parsed.data, profileId: profile.id, roomId });
+  const result = await commandDrawGuessRoom({ ...parsed.data, profileId, roomId });
   return NextResponse.json(result, { status: "error" in result ? 409 : 200 });
 }

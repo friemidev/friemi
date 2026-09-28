@@ -35,8 +35,9 @@ type Listener = {
   received: Map<number, number>;
   wrongRoom: number;
 };
-type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number };
+type ActiveRoom = { id: string; artistToken: string; listeners: Listener[]; memberCount: number; tokens: string[]; revision: number };
 type Sample = { batch: number; roomId: string; sentAt: number; httpMs: number; httpStatus: number; seq?: number; serverTiming?: Record<string, number> };
+type SnapshotSample = { httpMs: number; status: number };
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const round = (value: number) => Math.round(value * 10) / 10;
@@ -89,9 +90,11 @@ async function openRoom(members: typeof users): Promise<ActiveRoom> {
   assert.ok("ok" in chosen);
   const topic = getDrawGuessInkTopic(roomId, 1, 0);
   const listeners: Listener[] = [];
+  const tokens: string[] = [];
   try {
     for (const member of members) {
       const token = (await clerk.sessions.getToken(member.sessionId)).jwt;
+      tokens.push(token);
       const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
         accessToken: async () => token,
         auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
@@ -99,8 +102,9 @@ async function openRoom(members: typeof users): Promise<ActiveRoom> {
       await client.realtime.setAuth(token);
       listeners.push(await subscribe(client, topic, roomId));
     }
-    const artistToken = (await clerk.sessions.getToken(members[0].sessionId)).jwt;
-    return { id: roomId, artistToken, listeners, memberCount: members.length };
+    const runningView = await roomServer.getDrawGuessRoomView(roomId, members[0].profileId);
+    assert.ok("room" in runningView && runningView.room);
+    return { id: roomId, artistToken: tokens[0], listeners, memberCount: members.length, tokens, revision: runningView.room.revision };
   } catch (error) {
     await Promise.allSettled(listeners.map((listener) => listener.client.realtime.disconnect()));
     throw error;
@@ -113,8 +117,27 @@ async function closeRoom(room: ActiveRoom) {
 
 async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: number, intervalMs: number) {
   const samples: Sample[] = [];
+  const snapshotSamples: SnapshotSample[] = [];
   const launchedAt = performance.now();
   const sends: Promise<void>[] = [];
+  const polls: Promise<void>[] = [];
+  const durationMs = batchesPerRoom * intervalMs;
+  for (const room of rooms) {
+    for (const token of room.tokens) {
+      for (let tick = 0; tick < Math.ceil(durationMs / 2_000); tick += 1) {
+        polls.push((async () => {
+          await pause(tick * 2_000);
+          const started = performance.now();
+          const response = await fetch(`${previewOrigin}/api/game-tools/draw-guess/rooms/${room.id}`, {
+            headers: { authorization: `Bearer ${token}`, "if-none-match": `W/"draw-guess-${room.revision}"` },
+            signal: AbortSignal.timeout(8_000),
+          });
+          await response.arrayBuffer();
+          snapshotSamples.push({ httpMs: performance.now() - started, status: response.status });
+        })());
+      }
+    }
+  }
   for (const room of rooms) {
     for (let batch = 0; batch < batchesPerRoom; batch += 1) {
       sends.push((async () => {
@@ -130,11 +153,17 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
           signal: AbortSignal.timeout(8_000),
         });
         const body = await response.json() as { seq?: number };
-        samples.push({ batch, roomId: room.id, sentAt, httpMs: performance.now() - sentAt, httpStatus: response.status, seq: body.seq, serverTiming: readServerTiming(response.headers.get("server-timing")) });
+        const serverTiming = readServerTiming(response.headers.get("server-timing"));
+        samples.push({ batch, roomId: room.id, sentAt, httpMs: performance.now() - sentAt, httpStatus: response.status, seq: body.seq, serverTiming });
       })());
     }
   }
-  await Promise.all(sends);
+  const settled = await Promise.allSettled(sends);
+  const settledPolls = await Promise.allSettled(polls);
+  const failedSend = settled.find((item): item is PromiseRejectedResult => item.status === "rejected");
+  if (failedSend) throw failedSend.reason;
+  const failedPoll = settledPolls.find((item): item is PromiseRejectedResult => item.status === "rejected");
+  if (failedPoll) throw failedPoll.reason;
   const delivered = () => rooms.every((room) => room.listeners.every((listener) => listener.received.size >= batchesPerRoom));
   const deadline = performance.now() + 8_000;
   while (!delivered() && performance.now() < deadline) await pause(50);
@@ -157,14 +186,20 @@ async function runScenario(name: string, rooms: ActiveRoom[], batchesPerRoom: nu
   const httpErrors = samples.filter((sample) => sample.httpStatus !== 200);
   const result = {
     name, rooms: rooms.length, playersPerRoom: rooms.map((room) => room.memberCount),
+    realtimeConnections: rooms.reduce((sum, room) => sum + room.listeners.length, 0),
     sentBatches: samples.length, expectedDeliveries: samples.reduce((sum, sample) => sum + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
+    estimatedRealtimeMessages: samples.reduce((sum, sample) => sum + 1 + rooms.find((room) => room.id === sample.roomId)!.memberCount, 0),
     receivedDeliveries: latencies.length, missing, wrongRoom, httpErrors: httpErrors.map(({ batch, roomId, httpStatus }) => ({ batch, roomId, httpStatus })),
     elapsedMs: round(finishedAt - launchedAt), effectiveBatchesPerSecond: round(samples.length / ((finishedAt - launchedAt) / 1000)),
     httpMs: { p50: round(percentile(samples.map((sample) => sample.httpMs), 50) ?? 0), p95: round(percentile(samples.map((sample) => sample.httpMs), 95) ?? 0) },
+    snapshotPolls: { requests: snapshotSamples.length, errors: snapshotSamples.filter((sample) => sample.status !== 200 && sample.status !== 304).length, p95Ms: round(percentile(snapshotSamples.map((sample) => sample.httpMs), 95) ?? 0) },
     serverTimingP95Ms: Object.fromEntries(["auth", "room", "redis", "broadcast"].map((stage) => [stage, round(percentile(samples.map((sample) => sample.serverTiming?.[stage]).filter((value): value is number => typeof value === "number"), 95) ?? 0)])),
     inkVisibleMs: { p50: round(percentile(latencies, 50) ?? 0), p95: round(percentile(latencies, 95) ?? 0), max: round(percentile(latencies, 100) ?? 0) },
+    latencyGatePassed: (percentile(latencies, 95) ?? Infinity) <= 300,
   };
   assert.equal(httpErrors.length, 0, `${name}: ink HTTP errors`);
+  assert.equal(result.snapshotPolls.errors, 0, `${name}: snapshot polling HTTP errors`);
+  assert.ok(samples.every((sample) => Number.isFinite(sample.serverTiming?.auth)), "Preview has not deployed the P3 Server-Timing instrumentation yet.");
   assert.equal(missing, 0, `${name}: missing private ink deliveries`);
   assert.equal(wrongRoom, 0, `${name}: cross-room ink leakage`);
   return result;
@@ -203,6 +238,9 @@ try {
       await Promise.allSettled(rooms.map(closeRoom));
     }
   }
+  if (report.scenarios.some((scenario) => !(scenario as { latencyGatePassed: boolean }).latencyGatePassed)) {
+    throw new Error("P3_LATENCY_GATE_FAILED: HTTP-to-Realtime p95 exceeded 300 ms in at least one Preview scenario.");
+  }
 } catch (error) {
   failure = error;
   console.error("P3 capacity probe failed:", error);
@@ -211,10 +249,15 @@ try {
   const path = `../../output/p3/draw-guess-capacity-${stamp}.json`;
   await writeFile(path, JSON.stringify({ ...report, failure: failure instanceof Error ? failure.message : failure }, null, 2));
   console.log("P3 capacity report:", path);
-  if (createdRoomIds.length) await prisma.gameToolRoom.deleteMany({ where: { id: { in: createdRoomIds } } }).catch((error) => console.error("P3 room cleanup failed:", error));
-  if (createdProfileIds.length) await prisma.userProfile.deleteMany({ where: { id: { in: createdProfileIds } } }).catch((error) => console.error("P3 profile cleanup failed:", error));
-  for (const userId of createdUserIds) await clerk.users.deleteUser(userId).catch((error) => console.error("P3 Clerk cleanup failed:", error));
+  let cleanupFailed = false;
+  if (createdRoomIds.length) await prisma.gameToolRoom.deleteMany({ where: { id: { in: createdRoomIds } } }).catch((error) => { cleanupFailed = true; console.error("P3 room cleanup failed:", error); });
+  if (createdProfileIds.length) await prisma.userProfile.deleteMany({ where: { id: { in: createdProfileIds } } }).catch((error) => { cleanupFailed = true; console.error("P3 profile cleanup failed:", error); });
+  for (const userId of createdUserIds) await clerk.users.deleteUser(userId).catch((error) => { cleanupFailed = true; console.error("P3 Clerk cleanup failed:", error); });
+  const remainingRooms = await prisma.gameToolRoom.count({ where: { id: { in: createdRoomIds } } });
+  const remainingProfiles = await prisma.userProfile.count({ where: { id: { in: createdProfileIds } } });
+  if (remainingRooms || remainingProfiles) cleanupFailed = true;
   await prisma.$disconnect();
-  console.log(`P3 cleanup attempted: ${createdRoomIds.length} rooms, ${createdProfileIds.length} profiles, ${createdUserIds.length} Clerk users`);
+  console.log(`P3 cleanup: ${createdRoomIds.length} rooms, ${createdProfileIds.length} profiles, ${createdUserIds.length} Clerk users; remaining rooms ${remainingRooms}, profiles ${remainingProfiles}`);
+  if (cleanupFailed) failure ??= new Error("P3 probe cleanup did not finish.");
 }
 if (failure) process.exitCode = 1;
