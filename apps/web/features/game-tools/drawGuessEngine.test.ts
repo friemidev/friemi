@@ -196,3 +196,60 @@ test("five-player relay completes, votes, awards drawings, and freezes scores", 
   assert.equal(state.phase, "FINISHED");
   assert.deepEqual(state.scores, [320, 320, 320, 320, 320]);
 });
+
+test("Preview two-person relay uses a third system seat without self-guessing", () => {
+  const count = 3;
+  const botSeat = 2;
+  for (let owner = 0; owner < count; owner += 1) {
+    assert.notEqual(getChainActor(owner, getChainStageCount(count), count), owner);
+  }
+  const initial = createDrawGuessState("CHAIN", count);
+  initial.practiceBotSeat = botSeat;
+  const started = startDrawGuessGame(initial, 0, "zh-CN");
+  if (!started.state) throw new Error("Game did not start");
+  let state = advanceDrawGuessGame(started.state, count, 1, "zh-CN");
+  assert.equal(state.chains[botSeat][0].system, true);
+  assert.equal(state.phase, "CHAIN_WORD");
+  for (let seat = 0; seat < 2; seat += 1) {
+    const submitted = applyDrawGuessAction(state, { type: "SUBMIT_STEP", value: `词语${seat}` }, seat, count, 100 + seat, "zh-CN");
+    assert.ok(!("error" in submitted));
+    state = submitted.state;
+  }
+  assert.equal(state.phase, "CHAIN_STEP");
+  assert.equal(state.chainStage, 1);
+  assert.equal(state.chains[1][1].system, true);
+  const stroke = { color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] as [number, number][] };
+  for (let seat = 0; seat < 2; seat += 1) {
+    const task = getDrawGuessViewerState(state, seat, count);
+    assert.ok("task" in task && task.task?.kind === "DRAWING");
+    const submitted = applyDrawGuessAction(state, { type: "SUBMIT_STEP", strokes: [stroke] }, seat, count, 200 + seat, "zh-CN");
+    assert.ok(!("error" in submitted));
+    state = submitted.state;
+  }
+  assert.equal(state.chainStage, 2);
+  assert.equal(state.chains[0][2].system, true);
+  for (let seat = 0; seat < 2; seat += 1) {
+    const task = getDrawGuessViewerState(state, seat, count);
+    assert.ok("task" in task && task.task?.kind === "WORD");
+    assert.notEqual(task.task.owner, seat);
+    const submitted = applyDrawGuessAction(state, { type: "SUBMIT_STEP", value: `猜词${seat}` }, seat, count, 300 + seat, "zh-CN");
+    assert.ok(!("error" in submitted));
+    state = submitted.state;
+  }
+  assert.equal(state.phase, "REVEAL_VOTE");
+  for (let owner = 0; owner < count; owner += 1) {
+    for (let seat = 0; seat < 2; seat += 1) {
+      const voted = applyDrawGuessAction(state, { type: "VOTE", owner, value: true }, seat, count, 400 + owner * 2 + seat, "zh-CN");
+      assert.ok(!("error" in voted));
+      state = voted.state;
+    }
+  }
+  assert.equal(state.phase, "AUTHOR_PICK");
+  assert.ok(Object.values(state.matchResults).every(Boolean));
+  const picked = applyDrawGuessAction(state, { type: "PICK", owner: 0, step: 1 }, 0, count, 500, "zh-CN");
+  assert.ok(!("error" in picked));
+  state = picked.state;
+  assert.equal(state.phase, "FINISHED");
+  assert.equal(state.scores[botSeat], 0);
+  assert.equal(state.picks[String(botSeat)], undefined);
+});

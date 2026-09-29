@@ -38,6 +38,7 @@ export type DrawGuessState = {
   options: string[];
   phase: DrawGuessPhase;
   picks: Record<string, number>;
+  practiceBotSeat?: number;
   scores: number[];
   storageVersion?: number;
   turnIndex: number;
@@ -186,14 +187,32 @@ function allChainStepsDone(state: DrawGuessState) {
 }
 
 function allVotesDone(state: DrawGuessState, count: number) {
-  return state.chains.every((_, owner) => Object.keys(state.votes[String(owner)] ?? {}).length === count);
+  const voters = count - (state.practiceBotSeat === undefined ? 0 : 1);
+  return state.chains.every((_, owner) => Object.keys(state.votes[String(owner)] ?? {}).length === voters);
 }
 
 function allPicksDone(state: DrawGuessState) {
   return state.chains.every((chain, owner) => {
+    if (owner === state.practiceBotSeat) return true;
     const hasArtwork = chain.some((step) => step.kind === "DRAWING" && !step.system);
     return !hasArtwork || state.picks[String(owner)] !== undefined;
   });
+}
+
+function fillPracticeBotStep(state: DrawGuessState, count: number, locale: string) {
+  const seat = state.practiceBotSeat;
+  if (state.mode !== "CHAIN" || count !== 3 || seat === undefined || seat < 0 || seat >= count) return;
+  if (state.phase === "CHAIN_WORD") {
+    state.chains[seat][0] ??= { kind: "WORD", seat, system: true, value: optionsFor(locale, seat)[0] };
+  } else if (state.phase === "CHAIN_STEP") {
+    const owner = (seat - state.chainStage + count) % count;
+    state.chains[owner][state.chainStage] ??= state.chainStage % 2
+      ? { kind: "DRAWING", seat, system: true, value: [
+        { color: "#156240", width: 8, points: [[0.36, 0.38], [0.42, 0.3], [0.54, 0.3], [0.62, 0.38], [0.62, 0.46], [0.5, 0.56], [0.5, 0.64]] },
+        { color: "#156240", width: 9, points: [[0.5, 0.76]] },
+      ] }
+      : { kind: "WORD", seat, system: true, value: locale === "en" ? "no guess" : locale === "fr" ? "sans réponse" : "未猜出" };
+  }
 }
 
 function settleChainScores(state: DrawGuessState, count: number) {
@@ -217,6 +236,7 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
   const next = structuredClone(state);
   for (let safety = 0; safety < count * 3 + 8; safety += 1) {
     if (!next.deadlineAt || next.phase === "LOBBY" || next.phase === "FINISHED") break;
+    fillPracticeBotStep(next, count, locale);
     const deadline = Date.parse(next.deadlineAt);
     const timedOut = now >= deadline;
     const allDone = next.phase === "WORD_SELECT" ? Boolean(next.answer)
@@ -285,6 +305,7 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
   const next = advanceDrawGuessGame(state, count, now, locale);
   const invalid = (error: string) => ({ error, state: next });
   if (seat < 0 || seat >= count) return invalid("NOT_A_PLAYER");
+  if (seat === next.practiceBotSeat) return invalid("NOT_A_PLAYER");
   if (state.deadlineAt && now >= Date.parse(state.deadlineAt)) return invalid("PHASE_ENDED");
   if (next.phase !== state.phase || next.chainStage !== state.chainStage || next.turnIndex !== state.turnIndex) return invalid("PHASE_ENDED");
 

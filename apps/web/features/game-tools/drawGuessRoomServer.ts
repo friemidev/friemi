@@ -14,7 +14,7 @@ import {
   type DrawGuessState,
 } from "@/features/game-tools/drawGuessEngine";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
-import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled } from "@/features/game-tools/drawGuessFlags";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { prisma } from "@/lib/prisma";
@@ -143,32 +143,36 @@ export async function createDrawGuessRoom(input: {
   mode: DrawGuessMode;
   playerCount: number;
 }) {
+  const practiceRelay = input.mode === "CHAIN" && input.playerCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
   if (input.mode === "CLASSIC"
     ? input.playerCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || input.playerCount > 10
-    : input.playerCount < 5 || input.playerCount > 8) {
+    : !practiceRelay && (input.playerCount < 5 || input.playerCount > 8)) {
     return { error: "INVALID_PLAYER_COUNT" } as const;
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;
   if (input.mode === "CHAIN" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
-  const state = createDrawGuessState(input.mode, input.playerCount);
+  const seatCount = practiceRelay ? 3 : input.playerCount;
+  const state = createDrawGuessState(input.mode, seatCount);
+  if (practiceRelay) state.practiceBotSeat = 2;
+  const code = await createUniqueGameToolRoomCode();
   const room = await prisma.$transaction(async (tx) => {
     const created = await tx.gameToolRoom.create({
       data: {
-        code: await createUniqueGameToolRoomCode(),
+        code,
         hostId: input.hostId,
         kind: "DRAW_GUESS",
         locale: input.locale,
         mode: input.mode.toLowerCase(),
-        playerCount: input.playerCount,
+        playerCount: seatCount,
         state: toJson(state),
         title: input.locale === "en" ? "Draw & Guess" : input.locale === "fr" ? "Dessine et devine" : "你画我猜",
         seats: {
-          create: {
+          create: [{
             displayName: input.hostName.slice(0, 40),
             privateToken: createGameToolPrivateToken(),
             profileId: input.hostId,
             seatNumber: 1,
-          },
+          }, ...(practiceRelay ? [{ displayName: input.locale === "en" ? "Practice helper" : input.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), seatNumber: 3 }] : [])],
         },
       },
       include: { seats: true },
@@ -178,11 +182,11 @@ export async function createDrawGuessRoom(input: {
         memberToken: createGameToolPrivateToken(),
         profileId: input.hostId,
         roomId: created.id,
-        seatedSeatId: created.seats[0].id,
+        seatedSeatId: created.seats.find((seat) => seat.seatNumber === 1)!.id,
       },
     });
     return { code: created.code, id: created.id };
-  });
+  }, { maxWait: 15_000, timeout: 15_000 });
   return { room } as const;
 }
 
@@ -298,8 +302,9 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         isHost: room.hostId === profileId,
         mode: state.mode,
         playerCount: room.playerCount,
+        practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, isHost: seat.profileId === room.hostId })),
+        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
         status: room.status,
         viewerSeat: viewer.seatNumber - 1,
         view: getDrawGuessViewerState(state, viewer.seatNumber - 1, room.playerCount),
@@ -343,6 +348,7 @@ export async function rematchDrawGuessRoom(roomId: string, profileId: string) {
     if (state.phase !== "FINISHED" || room.status !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
     if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
     const fresh = createDrawGuessState(state.mode, room.playerCount);
+    fresh.practiceBotSeat = state.practiceBotSeat;
     fresh.gameNumber = state.gameNumber + 1;
     const started = startDrawGuessGame(fresh, Date.now(), room.locale);
     if (!started.state) return { error: "TRY_AGAIN" } as const;
@@ -397,6 +403,7 @@ export async function getDrawGuessHistory(roomId: string, profileId: string) {
     room: {
       code: room.code,
       id: room.id,
+      practiceBotSeat: asState(room.state)?.practiceBotSeat,
       seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber })),
     },
     rounds: history.filter((round): round is NonNullable<typeof round> => round !== null),

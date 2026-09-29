@@ -13,6 +13,7 @@ process.env.DATABASE_URL = testUrl;
 process.env.DIRECT_URL = testUrl;
 process.env.DRAW_GUESS_CLASSIC_ENABLED = "false";
 process.env.DRAW_GUESS_CHAIN_ENABLED = "true";
+process.env.VERCEL_ENV = "preview";
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const { prisma } = await import("../lib/prisma");
@@ -202,11 +203,61 @@ async function deadlineAndHostRecovery() {
   console.log("PASS host failover, fully offline deadline progression, concurrent sweep idempotency");
 }
 
+async function previewDuoRelay() {
+  const players = await profiles(2);
+  const invalid = await server.createDrawGuessRoom({ hostId: players[0].id, hostName: players[0].nickname, locale: "zh-CN", mode: "CHAIN", playerCount: 3 });
+  assert.deepEqual(invalid, { error: "INVALID_PLAYER_COUNT" });
+  const created = await server.createDrawGuessRoom({ hostId: players[0].id, hostName: players[0].nickname, locale: "zh-CN", mode: "CHAIN", playerCount: 2 });
+  if (!("room" in created) || !created.room) throw new Error(JSON.stringify(created));
+  const id = created.room.id;
+  let current = await view(id, players[0].id);
+  assert.equal(current.playerCount, 3);
+  assert.equal(current.practiceBotSeat, 2);
+  assert.deepEqual(current.seats.map((seat) => seat.number), [1, 3]);
+  assert.equal(current.seats[1].isSystem, true);
+  assert.deepEqual(await server.startDrawGuessRoom(id, players[0].id), { error: "WAIT_FOR_PLAYERS" });
+  assert.ok("roomId" in await server.joinDrawGuessRoom({ code: created.room.code, profileId: players[1].id, displayName: players[1].nickname }));
+  current = await view(id, players[0].id);
+  assert.deepEqual(current.seats.map((seat) => seat.number), [1, 2, 3]);
+  assert.deepEqual(await server.startDrawGuessRoom(id, players[0].id), { ok: true });
+  for (let seat = 0; seat < 2; seat += 1) await command(id, players[seat].id, { type: "SUBMIT_STEP", value: `起始词${seat}` });
+  current = await view(id, players[0].id);
+  assert.equal(current.view.phase, "CHAIN_STEP");
+  assert.equal(current.view.chainStage, 1);
+  for (let seat = 0; seat < 2; seat += 1) await command(id, players[seat].id, { type: "SUBMIT_STEP", strokes: [stroke] });
+  current = await view(id, players[0].id);
+  assert.equal(current.view.chainStage, 2);
+  for (let seat = 0; seat < 2; seat += 1) await command(id, players[seat].id, { type: "SUBMIT_STEP", value: `猜词${seat}` });
+  current = await view(id, players[0].id);
+  assert.equal(current.view.phase, "REVEAL_VOTE");
+  for (let owner = 0; owner < 3; owner += 1) {
+    for (let seat = 0; seat < 2; seat += 1) await command(id, players[seat].id, { type: "VOTE", owner, value: true });
+  }
+  current = await view(id, players[0].id);
+  assert.equal(current.view.phase, "AUTHOR_PICK");
+  assert.deepEqual(current.view.voteCounts, Array.from({ length: 3 }, () => ({ yes: 2, no: 0, abstain: 1 })));
+  await command(id, players[0].id, { type: "PICK", owner: 0, step: 1 });
+  current = await view(id, players[0].id);
+  assert.equal(current.view.phase, "FINISHED");
+  assert.equal(current.view.scores[2], 0);
+  assert.equal(await prisma.drawGuessRound.count({ where: { roomId: id } }), 1);
+  assert.deepEqual(await server.rematchDrawGuessRoom(id, players[0].id), { ok: true, gameNumber: 2 });
+  current = await view(id, players[0].id);
+  assert.equal(current.practiceBotSeat, 2);
+  assert.equal(current.view.phase, "CHAIN_WORD");
+  process.env.VERCEL_ENV = "production";
+  try {
+    assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: players[0].nickname, locale: "zh-CN", mode: "CHAIN", playerCount: 2 }), { error: "INVALID_PLAYER_COUNT" });
+  } finally { process.env.VERCEL_ENV = "preview"; }
+  console.log("PASS Preview two-person relay: system seat, full game, human voting, rematch, production guard");
+}
+
 try {
   const closed = await server.createDrawGuessRoom({ hostId: "irrelevant", hostName: "X", locale: "zh-CN", mode: "CLASSIC", playerCount: 5 });
   assert.deepEqual(closed, { error: "CLASSIC_NOT_ENABLED" });
   for (const count of [5, 6, 7, 8]) await fullChain(count);
   await deadlineAndHostRecovery();
+  await previewDuoRelay();
   console.log("P0 isolated database integration checks passed.");
 } finally {
   await prisma.$disconnect();
