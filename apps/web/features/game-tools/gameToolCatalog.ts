@@ -42,7 +42,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     },
     href: "/game-tools/draw-guess",
     icon: Brush,
-    imageSrc: "/illustrations/png/board-games.png",
+    imageSrc: "/game-tools/draw-guess/logo.svg",
     kind: "DRAW_GUESS",
     maxPlayers: 10,
     minPlayers: 3,

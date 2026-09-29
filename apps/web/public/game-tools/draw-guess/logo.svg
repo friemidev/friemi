@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Draw and Guess</title>
+  <rect width="128" height="128" rx="30" fill="#156240"/>
+  <path d="M14 28c5-1 8-4 9-9 1 5 4 8 9 9-5 1-8 4-9 9-1-5-4-8-9-9Z" fill="#F7D7A8"/>
+  <circle cx="106" cy="27" r="4" fill="#F7D7A8"/>
+  <rect x="24" y="22" width="76" height="84" rx="13" transform="rotate(-8 24 22)" fill="#8FC7A2" stroke="#103F31" stroke-width="3"/>
+  <rect x="30" y="16" width="78" height="88" rx="13" transform="rotate(7 30 16)" fill="#FFF9EC" stroke="#103F31" stroke-width="3"/>
+  <path d="M50 49c1-9 10-16 20-15 11 0 19 7 19 16 0 8-5 12-14 17-7 4-9 7-9 12" stroke="#E88363" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="66" cy="88" r="5" fill="#E88363"/>
+  <path d="m82 104 25-25 8 8-25 25-11 3 3-11Z" fill="#F4C66B" stroke="#103F31" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m101 85 8 8M82 104l8 8" stroke="#103F31" stroke-width="3" stroke-linecap="round"/>
+  <path d="m79 115 4-11 7 8-11 3Z" fill="#E88363" stroke="#103F31" stroke-width="3" stroke-linejoin="round"/>
+</svg>

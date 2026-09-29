@@ -6,7 +6,7 @@ import { ArrowRight, ChevronRight, Layers3, LockKeyhole } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
-import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import {
   gameToolDefinitions,
   getGameToolHubCopy,
@@ -116,6 +116,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const copy = getGameToolHubCopy(locale);
   const mobileCopy = getMobileGameToolsCopy(locale);
   const drawGuessAvailable = isDrawGuessChainEnabled() || isDrawGuessClassicEnabled();
+  const drawGuessPreviewDuo = isDrawGuessPreviewDuoEnabled() || isDrawGuessPreviewRelayDuoEnabled();
 
   return (
     <>
@@ -136,6 +137,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
                 const isAvailable = tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
                 const cardContent = (
@@ -167,9 +169,9 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                         {mobileCopy.intros[tool.kind]}
                       </p>
                       <span className="mt-2 inline-flex rounded-full border border-[#D6D5B2]/70 bg-[#FEFFF9] px-2 py-0.5 text-[11px] font-bold text-[#0D5A3C]">
-                        {tool.minPlayers === tool.maxPlayers
-                          ? tool.minPlayers
-                          : `${tool.minPlayers}-${tool.maxPlayers}`}{" "}
+                        {minPlayers === tool.maxPlayers
+                          ? minPlayers
+                          : `${minPlayers}-${tool.maxPlayers}`}{" "}
                         {mobileCopy.playerRange}
                       </span>
                     </div>
@@ -247,6 +249,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
                 const isAvailable = tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300";
                 const cardContent = (
@@ -263,9 +266,9 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                           {tool.kind === "DRAW_GUESS" && !drawGuessAvailable ? mobileCopy.coming : getGameToolLabel(tool.phase, locale)}
                         </span>
                         <span className="rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[11px] font-bold text-white">
-                          {tool.minPlayers === tool.maxPlayers
-                            ? tool.minPlayers
-                            : `${tool.minPlayers}-${tool.maxPlayers}`}{" "}
+                          {minPlayers === tool.maxPlayers
+                            ? minPlayers
+                            : `${minPlayers}-${tool.maxPlayers}`}{" "}
                           {copy.range}
                         </span>
                       </div>

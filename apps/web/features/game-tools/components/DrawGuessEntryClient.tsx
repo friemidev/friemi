@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -80,7 +81,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, classicMinP
         <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-[#F2AA89]/50 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
           <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#A75B48]">Friemi · Table Games</p><h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">{copy.title}</h1><p className="mt-3 text-base text-[#45675B]">{copy.subtitle}</p></div>
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.4rem] bg-[#E8A184] text-white shadow-[0_12px_25px_rgba(210,117,84,0.24)]"><Brush className="h-8 w-8" /></span>
+          <Image alt="" className="h-16 w-16 shrink-0 rounded-[1rem] shadow-[0_12px_25px_rgba(21,98,64,0.24)]" height={64} src="/game-tools/draw-guess/logo.svg" width={64} />
         </div>
       </section>
 
