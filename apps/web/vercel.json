@@ -1,5 +1,10 @@
 {
   "regions": ["cdg1"],
+  "functions": {
+    "app/api/game-tools/draw-guess/rooms/*/ink/route.ts": {
+      "regions": ["dub1"]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/import-public-activities",
@@ -16,6 +21,10 @@
     {
       "path": "/api/cron/sync-trust-score",
       "schedule": "45 4 * * *"
+    },
+    {
+      "path": "/api/cron/draw-guess-maintenance",
+      "schedule": "15 5 * * *"
     }
   ]
 }

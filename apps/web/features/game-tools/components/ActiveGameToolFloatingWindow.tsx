@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Moon, UsersRound } from "lucide-react";
+import { Brush, Moon, UsersRound } from "lucide-react";
 import {
   ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
   ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
@@ -18,7 +18,7 @@ type ActiveGameToolFloatingWindowProps = {
     code: string;
     href: string;
     id: string;
-    kind: "AVALON" | "STORYTELLER" | "WEREWOLF";
+    kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
     title: string;
@@ -31,6 +31,7 @@ function getCopy(locale: string) {
     return {
       action: "Revenir",
       avalon: "Avalon en cours",
+      drawGuess: "Dessine et devine en cours",
       seat: "Place",
       storyteller: "Table en cours",
       werewolf: "Loups-garous en cours",
@@ -41,6 +42,7 @@ function getCopy(locale: string) {
     return {
       action: "Return",
       avalon: "Avalon running",
+      drawGuess: "Draw & Guess running",
       seat: "Seat",
       storyteller: "Game running",
       werewolf: "Werewolf running",
@@ -50,6 +52,7 @@ function getCopy(locale: string) {
   return {
     action: "回到本局",
     avalon: "阿瓦隆进行中",
+    drawGuess: "你画我猜进行中",
     seat: "座位",
     storyteller: "桌游进行中",
     werewolf: "狼人杀进行中",
@@ -66,6 +69,10 @@ function getKindLabel(
 
   if (kind === "WEREWOLF") {
     return copy.werewolf;
+  }
+
+  if (kind === "DRAW_GUESS") {
+    return copy.drawGuess;
   }
 
   return copy.storyteller;
@@ -204,7 +211,7 @@ export function ActiveGameToolFloatingWindow({
 
   const copy = getCopy(locale);
   const kindLabel = getKindLabel(currentRoom.kind, copy);
-  const Icon = currentRoom.kind === "WEREWOLF" ? Moon : UsersRound;
+  const Icon = currentRoom.kind === "WEREWOLF" ? Moon : currentRoom.kind === "DRAW_GUESS" ? Brush : UsersRound;
   const targetHref =
     currentRoom.kind === "WEREWOLF"
       ? currentRoom.href

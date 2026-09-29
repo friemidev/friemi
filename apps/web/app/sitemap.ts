@@ -16,6 +16,7 @@ const staticLocalePaths = [
   "/planets",
   "/co-creators",
   "/game-tools",
+  "/game-tools/draw-guess",
   "/game-tools/werewolf",
   "/game-tools/avalon",
   "/privacy",
