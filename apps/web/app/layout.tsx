@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { MobileViewportProfile } from "@/features/mobile/components/MobileViewportProfile";
 import { brand } from "@/lib/brand";
 import { getCanonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
@@ -26,8 +27,23 @@ export const metadata: Metadata = {
   },
   openGraph: {
     description: brand.description,
-    images: [brand.shareImagePath],
+    images: [
+      {
+        alt: brand.name,
+        height: 630,
+        type: "image/png",
+        url: brand.shareImagePath,
+        width: 1200,
+      },
+    ],
     siteName: brand.name,
+    title: brand.name,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    description: brand.description,
+    images: [brand.shareImagePath],
     title: brand.name,
   },
 };
@@ -41,7 +57,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <MobileViewportProfile />
+        {children}
+      </body>
     </html>
   );
 }

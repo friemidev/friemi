@@ -8,6 +8,7 @@ import type {
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -61,6 +62,7 @@ const sendActivityRoomMessageSchema = z
       .max(chatMentionMaxProfileCount)
       .default([]),
     mentionsEveryone: z.enum(["0", "1", "false", "true"]).default("0"),
+    replyToMessageId: z.string().trim().max(80).optional(),
     locale: z.string().min(1).max(16).default("zh-CN"),
   })
   .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
@@ -237,6 +239,8 @@ export async function sendActivityRoomMessageAction(
     imageUrls: getStringList(formData, "imageUrls"),
     mentionedProfileIds: getStringList(formData, "mentionedProfileIds"),
     mentionsEveryone: getString(formData, "mentionsEveryone") || "0",
+    replyToMessageId:
+      getString(formData, "replyToMessageId").trim() || undefined,
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = sendActivityRoomMessageSchema.safeParse(rawInput);
@@ -258,7 +262,7 @@ export async function sendActivityRoomMessageAction(
       result.data.locale,
       `/lobby/${result.data.activityId}/room`,
     );
-    const message = await sendActivityRoomMessage({
+    const { message, participantProfileIds } = await sendActivityRoomMessage({
       activityId: result.data.activityId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
@@ -266,10 +270,16 @@ export async function sendActivityRoomMessageAction(
       mentionsEveryone:
         result.data.mentionsEveryone === "1" ||
         result.data.mentionsEveryone === "true",
+      replyToMessageId: result.data.replyToMessageId,
       senderId: profile.id,
     });
 
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      profileIds: participantProfileIds,
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,
@@ -319,6 +329,10 @@ export async function deleteActivityRoomMessageAction(
       messageId: result.data.messageId,
     });
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,
@@ -370,6 +384,10 @@ export async function deleteActivityRoomMessagesAction(
       messageIds,
     });
     revalidateActivityRoom(result.data.locale, result.data.activityId);
+    scheduleChatRealtimeChange({
+      scope: "activity",
+      subjectKey: result.data.activityId,
+    });
 
     return {
       ok: true,

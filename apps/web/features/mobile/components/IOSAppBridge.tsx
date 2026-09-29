@@ -24,9 +24,7 @@ function getIOSDeviceContext() {
   };
 }
 
-function resolvePushPath(
-  notification: PushNotificationSchema,
-) {
+function resolvePushPath(notification: PushNotificationSchema) {
   const path = notification.data?.path ?? notification.data?.url;
 
   return typeof path === "string" && path.startsWith("/") ? path : null;
@@ -104,6 +102,7 @@ export function IOSAppBridge() {
       "pushNotificationReceived",
       (notification) => {
         console.info("iOS push received", notification);
+        window.dispatchEvent(new Event("friemi:notifications-refresh"));
       },
     );
 

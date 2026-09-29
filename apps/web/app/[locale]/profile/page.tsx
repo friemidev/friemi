@@ -15,6 +15,7 @@ import { getUserPresenceState } from "@/features/profile/presence";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { withLocale } from "@/lib/routes";
 import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
+import { prisma } from "@/lib/prisma";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -129,7 +130,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const profile = await getOptionalCurrentUserProfileSnapshot();
   const isMobileRequest = isMobileViewportRequest(await headers());
-  const [dashboardResult, publicAchievements] = profile
+  const [dashboardResult, publicAchievements, ownedMerchant] = profile
     ? await Promise.all([
         getProfileDashboard(profile.id, {
           loadActivityPreview: !isMobileRequest,
@@ -149,6 +150,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
           return [];
         }),
+        prisma.merchant.findFirst({
+          where: {
+            isActive: true,
+            ownerProfileId: profile.id,
+          },
+          select: { id: true },
+        }),
       ])
     : [
         {
@@ -156,6 +164,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           error: null,
         },
         [],
+        null,
       ];
   const isAuthenticated = Boolean(profile);
   const profilePresence = profile
@@ -192,6 +201,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isGuestPlaceholder={!isAuthenticated}
         isSelf={isAuthenticated}
         locale={locale}
+        merchantHref={
+          ownedMerchant ? withLocale(locale, "/profile/store") : null
+        }
         profile={profileViewModel}
         achievementPreviewItems={[]}
         publicAchievements={publicAchievements}

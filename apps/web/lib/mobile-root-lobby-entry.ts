@@ -71,6 +71,14 @@ export function isMobileUserAgent(userAgent: string | null | undefined) {
   );
 }
 
+export function isFriemiNativeAppUserAgent(
+  userAgent: string | null | undefined,
+) {
+  return Boolean(
+    userAgent?.trim() && friemiNativeAppUserAgentPattern.test(userAgent),
+  );
+}
+
 export function isMobileViewportRequest(requestHeaders: Pick<Headers, "get">) {
   const userAgent = requestHeaders.get("user-agent");
 

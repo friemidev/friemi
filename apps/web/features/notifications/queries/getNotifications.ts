@@ -63,6 +63,21 @@ const notificationSelect = {
       totalCharmDelta: true,
     },
   },
+  couponWalletItem: {
+    select: {
+      id: true,
+      coupon: {
+        select: {
+          title: true,
+          merchant: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  },
   moment: {
     select: {
       id: true,
@@ -120,6 +135,15 @@ export type NotificationViewModel = {
     quantity: number;
     totalCharmDelta: number;
   } | null;
+  couponWalletItem: {
+    id: string;
+    coupon: {
+      merchant: {
+        name: string;
+      };
+      title: string;
+    };
+  } | null;
   moment: {
     id: string;
     content: string | null;
@@ -167,6 +191,7 @@ function mapNotification(
         }
       : null,
     charmGiftEvent: notification.charmGiftEvent,
+    couponWalletItem: notification.couponWalletItem,
     moment: notification.moment
       ? {
           id: notification.moment.id,

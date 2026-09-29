@@ -114,6 +114,7 @@ export type MobileActivityLobbyPage = {
   hasMore: boolean;
   page: number;
   pageSize: number;
+  status: Exclude<ActivityLobbyFeedStatus, "all">;
   tab: MobileActivityLobbyTabId;
 };
 
@@ -1539,25 +1540,48 @@ function paginateMobileLobbyActivities(
 
 export async function getMobileActivityLobbyPage({
   page = 1,
+  status = "ongoing",
   tab,
   viewerProfileId,
 }: {
   page?: number;
+  status?: Exclude<ActivityLobbyFeedStatus, "all">;
   tab: MobileActivityLobbyTabId;
   viewerProfileId: string | null;
 }): Promise<MobileActivityLobbyPage> {
   const normalizedPage = Math.max(1, Math.floor(page));
 
-  if (tab === "nearby" && viewerProfileId) {
+  if (
+    viewerProfileId &&
+    (tab === "nearby" ||
+      (status === "ended" && (tab === "today" || tab === "popular")))
+  ) {
     const feed = await getActivityLobbyFeedPage(viewerProfileId, {
       page: normalizedPage,
+      status,
     });
+    let activities = feed.activities;
+
+    if (tab === "today") {
+      const today = getMobileLobbyDateKey(new Date());
+      activities = activities.filter(
+        (activity) => getMobileLobbyDateKey(activity.startAt) === today,
+      );
+    } else if (tab === "popular") {
+      activities = sortMobileLobbyPageActivities(
+        activities,
+        viewerProfileId,
+        (left, right) =>
+          getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
+      );
+    }
 
     return {
-      activities: feed.activities,
+      activities,
       hasMore: feed.page < feed.totalPages,
       page: feed.page,
       pageSize: mobileActivityLobbyPageSize,
+      status,
       tab,
     };
   }
@@ -1588,6 +1612,11 @@ export async function getMobileActivityLobbyPage({
     activities = await getActivityLobbySection(viewerProfileId, "open");
   }
 
+  activities = activities.filter(
+    (activity) =>
+      (getActivityTimeState(activity) === "ENDED") === (status === "ended"),
+  );
+
   if (tab === "today") {
     const today = getMobileLobbyDateKey(new Date());
     activities = activities.filter(
@@ -1609,6 +1638,7 @@ export async function getMobileActivityLobbyPage({
   return {
     ...result,
     pageSize: mobileActivityLobbyPageSize,
+    status,
     tab,
   };
 }

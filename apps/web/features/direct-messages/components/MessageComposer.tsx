@@ -5,10 +5,9 @@ import {
   ImagePlus,
   LoaderCircle,
   SendHorizontal,
-  Smile,
   X,
 } from "lucide-react";
-import { Button, Textarea } from "@chill-club/ui";
+import { Button } from "@chill-club/ui";
 import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
@@ -16,6 +15,10 @@ import {
 import { uploadImageWithSignedUrl } from "@/lib/signed-image-upload-client";
 import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
+import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
+import { ChatReplyComposerPreview } from "@/features/chat/components/ChatReplyPreview";
+import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import type { ChatReplyTarget } from "@/features/chat/types";
 import {
   sendDirectMessageAction,
   type DirectMessageActionState,
@@ -26,6 +29,7 @@ export type OptimisticMessagePayload = {
   body: string;
   createdAt: string;
   imageUrls: string[];
+  replyTo: ChatReplyTarget | null;
 };
 
 type MessageComposerProps = {
@@ -41,6 +45,8 @@ type MessageComposerProps = {
   }) => void;
   onOptimisticFailure?: (clientMessageId: string) => void;
   onOptimisticSend?: (payload: OptimisticMessagePayload) => string;
+  onCancelReply: () => void;
+  replyTo: ChatReplyTarget | null;
 };
 
 const defaultInitialState: DirectMessageActionState = {
@@ -49,40 +55,6 @@ const defaultInitialState: DirectMessageActionState = {
     imageUrls: [],
   },
 };
-const emojiOptions = [
-  "😂",
-  "😊",
-  "😍",
-  "🥳",
-  "😭",
-  "👍",
-  "🙌",
-  "👌",
-  "🙏",
-  "😎",
-  "😴",
-  "😋",
-  "😅",
-  "😮",
-  "🤔",
-  "😇",
-  "🥰",
-  "😆",
-  "🎉",
-  "🌹",
-  "❤️",
-  "🔥",
-  "✨",
-  "🍻",
-  "☕",
-  "🎬",
-  "🎲",
-  "🏀",
-  "🚇",
-  "📍",
-  "✅",
-  "🕒",
-];
 const messageCounterThreshold = 900;
 const messageMaxLength = 1000;
 const messageImageMaxCount = 4;
@@ -102,7 +74,7 @@ function SubmitButton({
     <Button
       type="submit"
       disabled={disabled}
-      className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5.25rem] sm:px-4"
+      className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] max-[360px]:h-10 max-[360px]:min-w-10 sm:min-w-[5.25rem] sm:px-4"
       aria-busy={isSending}
     >
       {isSending ? (
@@ -129,13 +101,13 @@ export function MessageComposer({
   onOptimisticCommit,
   onOptimisticFailure,
   onOptimisticSend,
+  onCancelReply,
+  replyTo,
 }: MessageComposerProps) {
   const formRef = useRef<HTMLFormElement>(null);
-  const emojiRootRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [bodyLength, setBodyLength] = useState(initialBody?.length ?? 0);
-  const [emojiPanelOpen, setEmojiPanelOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUploadError, setImageUploadError] = useState("");
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -146,32 +118,6 @@ export function MessageComposer({
   useEffect(() => {
     setBodyLength(initialBody?.length ?? 0);
   }, [initialBody]);
-
-  useEffect(() => {
-    if (!emojiPanelOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!emojiRootRef.current?.contains(event.target as Node)) {
-        setEmojiPanelOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setEmojiPanelOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [emojiPanelOpen]);
 
   function insertEmoji(emoji: string) {
     const textarea = textareaRef.current;
@@ -195,37 +141,51 @@ export function MessageComposer({
 
   const showCounter = bodyLength >= messageCounterThreshold;
 
-  async function uploadImage(file: File) {
-    if (getImageUploadClientValidationError(file)) {
-      setImageUploadError(t.imageUploadFailed);
+  async function uploadImages(files: File[]) {
+    const availableCount = messageImageMaxCount - imageUrls.length;
+
+    if (availableCount <= 0 || files.length > availableCount) {
+      setImageUploadError(t.errors.TOO_MANY_IMAGES);
       return;
     }
 
-    if (imageUrls.length >= messageImageMaxCount) {
-      setImageUploadError(t.errors.TOO_MANY_IMAGES);
+    const validFiles = files.filter(
+      (file) => !getImageUploadClientValidationError(file),
+    );
+    let hadUploadFailure = validFiles.length !== files.length;
+
+    if (validFiles.length === 0) {
+      setImageUploadError(t.imageUploadFailed);
       return;
     }
 
     setImageUploadError("");
     setIsImageUploading(true);
-
     try {
-      const result = await uploadImageWithSignedUrl(
-        "/api/uploads/direct-message-image",
-        file,
-      );
+      for (const file of validFiles) {
+        try {
+          const result = await uploadImageWithSignedUrl(
+            "/api/uploads/direct-message-image",
+            file,
+          );
 
-      if ("error" in result) {
-        setImageUploadError(t.imageUploadFailed);
-        return;
+          if ("error" in result) {
+            hadUploadFailure = true;
+            continue;
+          }
+
+          setImageUrls((current) =>
+            [...new Set([...current, result.url])].slice(
+              0,
+              messageImageMaxCount,
+            ),
+          );
+        } catch {
+          hadUploadFailure = true;
+        }
       }
-
-      setImageUrls((current) =>
-        [...current, result.url].slice(0, messageImageMaxCount),
-      );
-    } catch {
-      setImageUploadError(t.imageUploadFailed);
     } finally {
+      setImageUploadError(hadUploadFailure ? t.imageUploadFailed : "");
       setIsImageUploading(false);
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
@@ -242,14 +202,9 @@ export function MessageComposer({
     }
 
     const body = textarea?.value ?? "";
-    const trimmedBody = body.trim();
-    const submittedImageUrls = [...imageUrls];
+    const submissions = splitChatMessageSubmissions(body, imageUrls);
 
-    if (
-      textarea &&
-      trimmedBody.length === 0 &&
-      submittedImageUrls.length === 0
-    ) {
+    if (textarea && submissions.length === 0) {
       textarea.value = "";
       setBodyLength(0);
       textarea.focus();
@@ -258,24 +213,15 @@ export function MessageComposer({
       return;
     }
 
-    const submitFormData = new FormData();
-    submitFormData.set("locale", locale);
-    submitFormData.set("conversationId", conversationId);
-    submitFormData.set("body", body);
-
-    if (activityId) {
-      submitFormData.set("activityId", activityId);
-    }
-
-    for (const imageUrl of submittedImageUrls) {
-      submitFormData.append("imageUrls", imageUrl);
-    }
-
-    const clientMessageId = onOptimisticSend?.({
-      body: trimmedBody,
-      createdAt: new Date().toISOString(),
-      imageUrls: submittedImageUrls,
-    });
+    const pendingSubmissions = submissions.map((submission, index) => ({
+      ...submission,
+      clientMessageId: onOptimisticSend?.({
+        body: submission.body,
+        createdAt: new Date(Date.now() + index).toISOString(),
+        imageUrls: submission.imageUrls,
+        replyTo: index === 0 ? replyTo : null,
+      }),
+    }));
 
     formRef.current?.reset();
     if (textarea) {
@@ -283,46 +229,67 @@ export function MessageComposer({
       textarea.focus();
     }
     setBodyLength(0);
-    setEmojiPanelOpen(false);
     setImageUrls([]);
     setImageUploadError("");
     setFormError("");
+    onCancelReply();
 
-    setPendingSubmissionCount((count) => count + 1);
-    void sendDirectMessageAction(defaultInitialState, submitFormData)
-      .then((result: DirectMessageActionState) => {
-        if (result.ok && result.messageId) {
-          if (clientMessageId) {
-            onOptimisticCommit?.({
-              clientMessageId,
-              createdAt: result.createdAt,
-              messageId: result.messageId,
-            });
+    setPendingSubmissionCount((count) => count + pendingSubmissions.length);
+    void (async () => {
+      for (const submission of pendingSubmissions) {
+        const submitFormData = new FormData();
+        submitFormData.set("locale", locale);
+        submitFormData.set("conversationId", conversationId);
+        submitFormData.set("body", submission.body);
+        if (submission === pendingSubmissions[0] && replyTo) {
+          submitFormData.set("replyToMessageId", replyTo.messageId);
+        }
+        submission.imageUrls.forEach((imageUrl) =>
+          submitFormData.append("imageUrls", imageUrl),
+        );
+
+        if (activityId) {
+          submitFormData.set("activityId", activityId);
+        }
+
+        try {
+          const result: DirectMessageActionState =
+            await sendDirectMessageAction(defaultInitialState, submitFormData);
+
+          if (result.ok && result.messageId) {
+            if (submission.clientMessageId) {
+              onOptimisticCommit?.({
+                clientMessageId: submission.clientMessageId,
+                createdAt: result.createdAt,
+                messageId: result.messageId,
+              });
+            }
+
+            continue;
           }
 
-          return;
+          if (submission.clientMessageId) {
+            onOptimisticFailure?.(submission.clientMessageId);
+          }
+          setFormError(result.formError ?? t.failed);
+        } catch {
+          if (submission.clientMessageId) {
+            onOptimisticFailure?.(submission.clientMessageId);
+          }
+          setFormError(t.failed);
         }
-
-        if (clientMessageId) {
-          onOptimisticFailure?.(clientMessageId);
-        }
-        setFormError(result.formError ?? t.failed);
-      })
-      .catch(() => {
-        if (clientMessageId) {
-          onOptimisticFailure?.(clientMessageId);
-        }
-        setFormError(t.failed);
-      })
-      .finally(() => {
-        setPendingSubmissionCount((count) => Math.max(0, count - 1));
-      });
+      }
+    })().finally(() => {
+      setPendingSubmissionCount((count) =>
+        Math.max(0, count - pendingSubmissions.length),
+      );
+    });
   }
 
   return (
     <form
       ref={formRef}
-      className="relative z-20 shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
+      className="relative z-20 w-full max-w-full shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
       data-message-composer
       noValidate
       onFocusCapture={keepMobileChatPageAnchored}
@@ -337,12 +304,13 @@ export function MessageComposer({
         ref={imageInputRef}
         accept={acceptedImageInputTypes}
         className="hidden"
+        multiple
         type="file"
         onChange={(event) => {
-          const file = event.target.files?.[0];
+          const files = Array.from(event.target.files ?? []);
 
-          if (file) {
-            void uploadImage(file);
+          if (files.length > 0) {
+            void uploadImages(files);
           }
         }}
       />
@@ -353,6 +321,13 @@ export function MessageComposer({
         <div className="mb-2 rounded-[0.9rem] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {formError}
         </div>
+      ) : null}
+      {replyTo ? (
+        <ChatReplyComposerPreview
+          locale={locale}
+          onCancel={onCancelReply}
+          replyTo={replyTo}
+        />
       ) : null}
       {imageUrls.length > 0 ? (
         <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
@@ -385,41 +360,12 @@ export function MessageComposer({
           ))}
         </div>
       ) : null}
-      <div className="flex min-w-0 items-end gap-2">
-        <div ref={emojiRootRef} className="relative shrink-0">
-          <button
-            type="button"
-            aria-expanded={emojiPanelOpen}
-            aria-label={t.addEmoji}
-            title={t.addEmoji}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
-            disabled={disabled}
-            onClick={() => setEmojiPanelOpen((current) => !current)}
-          >
-            <Smile className="h-5 w-5" />
-          </button>
-          {emojiPanelOpen && !disabled ? (
-            <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[1.1rem] border border-sand bg-white p-3 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
-              <p className="px-1 text-xs font-medium text-[#156240]">
-                {t.addEmoji}
-              </p>
-              <div className="mt-2 grid grid-cols-7 gap-1.5 sm:grid-cols-8">
-                {emojiOptions.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-                    aria-label={`${t.addEmoji} ${emoji}`}
-                    title={`${t.addEmoji} ${emoji}`}
-                    onClick={() => insertEmoji(emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
+      <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
+        <ChatEmojiPicker
+          disabled={disabled}
+          label={t.addEmoji}
+          onSelect={insertEmoji}
+        />
         <button
           type="button"
           aria-label={isImageUploading ? t.imageUploading : t.attachImage}
@@ -429,7 +375,7 @@ export function MessageComposer({
             isImageUploading ||
             imageUrls.length >= messageImageMaxCount
           }
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F3F6F2] text-moss ring-1 ring-[#E1E3DA] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55 max-[360px]:h-10 max-[360px]:w-10"
           onClick={() => imageInputRef.current?.click()}
         >
           {isImageUploading ? (
@@ -440,14 +386,15 @@ export function MessageComposer({
         </button>
         <label className="min-w-0 flex-1">
           <span className="sr-only">{t.messagePlaceholder}</span>
-          <Textarea
+          <textarea
             ref={textareaRef}
             name="body"
             maxLength={messageMaxLength}
+            rows={1}
             defaultValue={initialBody}
             disabled={disabled}
             placeholder={t.messagePlaceholder}
-            className="max-h-28 min-h-11 min-w-0 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] shadow-none outline-none placeholder:text-[#9BA08E] focus-visible:border-[#8AB68E] focus-visible:ring-2 focus-visible:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC]"
+            className="max-h-28 min-h-11 w-full min-w-0 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] shadow-none outline-none placeholder:text-[#9BA08E] focus-visible:border-[#8AB68E] focus-visible:ring-2 focus-visible:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC] max-[360px]:min-h-10 max-[360px]:px-3 max-[360px]:py-2.5"
             onChange={(event) =>
               setBodyLength(event.currentTarget.value.length)
             }

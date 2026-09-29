@@ -13,7 +13,6 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
-  Newspaper,
   Settings,
   ShieldCheck,
   ShieldAlert,
@@ -153,7 +152,6 @@ export function AccountMenu({
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
-  const topNewsOpsHref = withLocale(locale, "/admin/top-news");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
   const networkActive = pathname === networkHref;
@@ -377,13 +375,6 @@ export function AccountMenu({
                   icon={Building2}
                   label={t.merchantOps}
                   active={pathname.startsWith(merchantOpsHref)}
-                  onClick={closeMenu}
-                />
-                <MenuLink
-                  href={topNewsOpsHref}
-                  icon={Newspaper}
-                  label={t.topNewsOps}
-                  active={pathname.startsWith(topNewsOpsHref)}
                   onClick={closeMenu}
                 />
                 <MenuLink

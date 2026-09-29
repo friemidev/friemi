@@ -11,13 +11,14 @@ import {
   useState,
 } from "react";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import jsQR from "jsqr";
 import {
   ArrowRight,
   ChevronLeft,
   Clock3,
   Hash,
+  LoaderCircle,
   ScanLine,
   Sparkles,
   X,
@@ -28,10 +29,11 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
-  defaultWerewolfVariantKey,
+  getWerewolfDefaultRoomTitle,
+  getWerewolfPlayerJudgeLabel,
   getWerewolfRoleLabel,
   getWerewolfVariantLabel,
-  getWerewolfDefaultRoomTitle,
+  werewolfRoleAlignments,
   werewolfVariants,
   type WerewolfRoleKey,
   type WerewolfVariant,
@@ -45,7 +47,6 @@ import {
   getWerewolfRoomCodeFromScan,
   parseAndroidQrScanPayload,
 } from "@/features/scan/globalQrScanner";
-import { getWerewolfAllRolesShopPath } from "@/features/charm/profileShopProducts";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
@@ -73,7 +74,6 @@ type Copy = {
   joinCodeTitle: string;
   judge: string;
   openingRoom: string;
-  unlockAllRoles: string;
   players: string;
   preview: string;
   roleCount: string;
@@ -84,7 +84,6 @@ type Copy = {
   scannerSearching: string;
   scannerTitle: string;
   scannerUnsupported: string;
-  selectMode: string;
   title: string;
   titleLabel: string;
   titlePlaceholder: string;
@@ -99,7 +98,7 @@ const copies: Record<string, Copy> = {
     customCreate: "创建自定义",
     customInvalid: "至少 5 名玩家，且需要狼人和好人。",
     customSubtitle: "按你们桌上的规则配置",
-    customTitle: "自定义板子",
+    customTitle: "自定义（抢先体验）",
     decrease: "减少",
     duration: "30-40分钟",
     eyebrow: "狼人杀",
@@ -113,7 +112,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "加入已有房间",
     judge: "含 1 位法官",
     openingRoom: "正在进入房间...",
-    unlockAllRoles: "解锁全部角色",
     players: "席",
     preview: "卡牌预览",
     roleCount: "角色",
@@ -124,7 +122,6 @@ const copies: Record<string, Copy> = {
     scannerSearching: "正在识别二维码",
     scannerTitle: "扫码加入房间",
     scannerUnsupported: "当前浏览器不支持相机扫码，请手动输入房号。",
-    selectMode: "选择模式",
     title: "今晚开狼人杀",
     titleLabel: "这局叫什么",
     titlePlaceholder: "今晚的狼人杀",
@@ -138,7 +135,7 @@ const copies: Record<string, Copy> = {
     customCreate: "Create custom",
     customInvalid: "Use at least 5 players, with werewolves and good roles.",
     customSubtitle: "Build your table rules",
-    customTitle: "Custom setup",
+    customTitle: "Custom (Early access)",
     decrease: "Decrease",
     duration: "30-40 min",
     eyebrow: "Werewolf",
@@ -152,7 +149,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "Join a room",
     judge: "includes 1 judge",
     openingRoom: "Opening room...",
-    unlockAllRoles: "Unlock all roles",
     players: "Seats",
     preview: "Card preview",
     roleCount: "Roles",
@@ -165,7 +161,6 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scan room QR",
     scannerUnsupported:
       "This browser cannot scan with the camera. Enter the code instead.",
-    selectMode: "Choose setup",
     title: "Start tonight's Werewolf table",
     titleLabel: "Table name",
     titlePlaceholder: "Tonight's Werewolf",
@@ -180,7 +175,7 @@ const copies: Record<string, Copy> = {
     customInvalid:
       "Ajoutez au moins 5 joueurs, avec des loups et des villageois.",
     customSubtitle: "Configurez les règles de table",
-    customTitle: "Configuration libre",
+    customTitle: "Configuration libre (Accès anticipé)",
     decrease: "Retirer",
     duration: "30-40 min",
     eyebrow: "Loups-garous",
@@ -194,7 +189,6 @@ const copies: Record<string, Copy> = {
     joinCodeTitle: "Entrer dans une table",
     judge: "inclut 1 maître",
     openingRoom: "Ouverture...",
-    unlockAllRoles: "Débloquer tous les rôles",
     players: "Places",
     preview: "Aperçu cartes",
     roleCount: "Rôles",
@@ -207,7 +201,6 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scanner le QR",
     scannerUnsupported:
       "Ce navigateur ne peut pas scanner avec la caméra. Entrez le code.",
-    selectMode: "Choisir le mode",
     title: "Lancez la table Loups-garous de ce soir",
     titleLabel: "Nom de table",
     titlePlaceholder: "Loups-garous de ce soir",
@@ -234,16 +227,42 @@ function getVariantHeroRole(variant: WerewolfVariant): WerewolfRoleKey {
     return "idiot";
   }
 
+  if (variant.key === "twelve_player_guard_wolf_king") {
+    return "guard";
+  }
+
   return "werewolf";
 }
 
 function getVariantCoreRoleLabels(locale: string, variant: WerewolfVariant) {
+  if (variant.key === "twelve_player_idiot") {
+    if (locale === "fr")
+      return "Voyante · Sorcière · Chasseur · Idiot · 4 loups · 4 villageois";
+    if (locale === "en")
+      return "Seer · Witch · Hunter · Idiot · 4 wolves · 4 villagers";
+    return "预女猎白 · 4 狼 · 4 平民";
+  }
+
+  if (variant.key === "twelve_player_guard_wolf_king") {
+    if (locale === "fr")
+      return "Voyante · Sorcière · Chasseur · Garde · Roi loup + 3 loups · 4 villageois";
+    if (locale === "en")
+      return "Seer · Witch · Hunter · Guard · Wolf King + 3 wolves · 4 villagers";
+    return "预女猎守 · 狼王 + 3 狼 · 4 平民";
+  }
+
   const preferredOrder: WerewolfRoleKey[] = [
     "seer",
     "witch",
+    "guard",
     "hunter",
+    "knight",
     "idiot",
+    "cupid",
+    "lovers",
     "werewolf",
+    "wolf_king",
+    "white_wolf_king",
     "villager",
   ];
   const roles = new Set(variant.roles);
@@ -262,7 +281,7 @@ function RoleSeatDots({ roles }: { roles: WerewolfRoleKey[] }) {
       {roles.map((role, index) => (
         <span
           className={`h-1.5 w-3 rounded-full ${
-            role === "werewolf"
+            werewolfRoleAlignments[role] === "werewolf"
               ? "bg-[#7D2B24]"
               : role === "villager"
                 ? "bg-[#F1F2E3]/55"
@@ -290,18 +309,41 @@ function VariantSubmitOverlay({
   const { pending } = useFormStatus();
 
   return (
-    <button
-      aria-label={label}
-      className="absolute inset-0 z-20 grid place-items-center rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 disabled:cursor-wait"
-      disabled={pending}
-      type="submit"
+    <>
+      <button
+        aria-label={label}
+        className="absolute inset-0 z-20 rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F1F2E3]/70 disabled:cursor-wait"
+        disabled={pending}
+        type="submit"
+      />
+      <RoomOpeningOverlay label={pendingLabel} pending={pending} />
+    </>
+  );
+}
+
+function RoomOpeningOverlay({
+  label,
+  pending,
+}: {
+  label: string;
+  pending: boolean;
+}) {
+  if (!pending || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      aria-live="polite"
+      className="fixed inset-0 z-[130] grid place-items-center bg-[#031F1B]/72 px-6 backdrop-blur-[2px]"
+      role="status"
     >
-      {pending ? (
-        <span className="rounded-full bg-[#06231F]/94 px-4 py-2 text-xs font-bold text-[#F1F2E3] shadow-lg">
-          {pendingLabel}
-        </span>
-      ) : null}
-    </button>
+      <div className="flex min-w-[12.5rem] items-center justify-center gap-3 rounded-2xl border border-[#F1F2E3]/35 bg-[#062A24] px-5 py-4 text-sm font-bold text-[#F1F2E3] shadow-[0_22px_70px_rgba(0,0,0,0.42)]">
+        <LoaderCircle className="h-5 w-5 animate-spin" />
+        <span>{label}</span>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -362,8 +404,7 @@ function WerewolfVariantModeCard({
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
           <span className="inline-flex items-center gap-1">
             <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
-            {variant.totalSeats}
-            {locale === "zh-CN" ? "人" : ""}
+            {getWerewolfPlayerJudgeLabel(locale, variant.playerSeatCount)}
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
@@ -377,20 +418,32 @@ function WerewolfVariantModeCard({
 
 const customRoleOptions: WerewolfRoleKey[] = [
   "werewolf",
+  "wolf_king",
+  "white_wolf_king",
   "seer",
   "witch",
+  "guard",
   "hunter",
+  "knight",
   "idiot",
+  "cupid",
+  "lovers",
   "villager",
 ];
 
 const defaultCustomRoleCounts: Record<WerewolfRoleKey, number> = {
+  cupid: 0,
+  guard: 0,
   hunter: 1,
   idiot: 0,
+  knight: 0,
+  lovers: 0,
   seer: 1,
   villager: 3,
   werewolf: 3,
+  white_wolf_king: 0,
   witch: 1,
+  wolf_king: 0,
 };
 
 function buildCustomRoleDeck(counts: Record<WerewolfRoleKey, number>) {
@@ -402,20 +455,25 @@ function buildCustomRoleDeck(counts: Record<WerewolfRoleKey, number>) {
 function CustomSubmitButton({
   disabled,
   label,
+  pendingLabel,
 }: {
   disabled: boolean;
   label: string;
+  pendingLabel: string;
 }) {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-semibold text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-      disabled={disabled || pending}
-      type="submit"
-    >
-      {label}
-    </button>
+    <>
+      <button
+        className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-semibold text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled || pending}
+        type="submit"
+      >
+        {label}
+      </button>
+      <RoomOpeningOverlay label={pendingLabel} pending={pending} />
+    </>
   );
 }
 
@@ -431,8 +489,12 @@ function CustomModeCard({
   const [open, setOpen] = useState(false);
   const [roleCounts, setRoleCounts] = useState(defaultCustomRoleCounts);
   const roleDeck = buildCustomRoleDeck(roleCounts);
-  const hasWerewolf = roleCounts.werewolf > 0;
-  const hasGood = roleDeck.some((role) => role !== "werewolf");
+  const hasWerewolf = roleDeck.some(
+    (role) => werewolfRoleAlignments[role] === "werewolf",
+  );
+  const hasGood = roleDeck.some(
+    (role) => werewolfRoleAlignments[role] === "good",
+  );
   const isValid =
     roleDeck.length >= 5 && roleDeck.length <= 15 && hasWerewolf && hasGood;
 
@@ -473,8 +535,7 @@ function CustomModeCard({
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F1F2E3]/76">
             <span className="inline-flex items-center gap-1">
               <UsersRound className="h-3 w-3 text-[#F1F2E3]" />
-              {roleDeck.length}
-              {locale === "zh-CN" ? "人" : ""}
+              {getWerewolfPlayerJudgeLabel(locale, roleDeck.length)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Clock3 className="h-3 w-3 text-[#F1F2E3]" />
@@ -512,8 +573,7 @@ function CustomModeCard({
         <div>
           <h3 className="text-lg font-bold text-[#F1F2E3]">{t.customTitle}</h3>
           <p className="text-xs font-bold text-[#F1F2E3]/68">
-            {roleDeck.length}
-            {locale === "zh-CN" ? "人" : ` ${t.roleCount}`}
+            {getWerewolfPlayerJudgeLabel(locale, roleDeck.length)}
           </p>
         </div>
         <button
@@ -569,15 +629,11 @@ function CustomModeCard({
       ) : null}
 
       <div className="relative mt-4 flex justify-end">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Link
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#F1F2E3]/55 bg-[#08231F] px-4 text-sm font-semibold text-[#F1F2E3] transition hover:bg-[#0A3A32]"
-            href={withLocale(locale, getWerewolfAllRolesShopPath())}
-          >
-            {t.unlockAllRoles}
-          </Link>
-          <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
-        </div>
+        <CustomSubmitButton
+          disabled={!isValid}
+          label={t.customCreate}
+          pendingLabel={t.openingRoom}
+        />
       </div>
     </form>
   );
@@ -602,11 +658,9 @@ export function WerewolfCreateRoomPanel({
   const t = copies[locale] ?? copies.en;
   const normalizedJoinCode = getWerewolfRoomCodeFromScan(joinCode);
   const featuredVariants = [
-    "seven_player_basic",
-    defaultWerewolfVariantKey,
+    "ten_player_seer_witch_hunter",
     "twelve_player_idiot",
-    "nine_player_basic",
-    "eight_player_basic",
+    "twelve_player_guard_wolf_king",
   ]
     .map((key) => werewolfVariants.find((variant) => variant.key === key))
     .filter((variant): variant is WerewolfVariant => Boolean(variant));
@@ -619,14 +673,14 @@ export function WerewolfCreateRoomPanel({
 
   const goToJoinCode = useCallback(
     (code: string) => {
-      router.push(
+      window.location.assign(
         withLocale(
           locale,
           `/game-tools/werewolf/join/${encodeURIComponent(code)}`,
         ),
       );
     },
-    [locale, router],
+    [locale],
   );
 
   useEffect(() => {
@@ -897,21 +951,13 @@ export function WerewolfCreateRoomPanel({
             ) : null}
           </form>
 
-          <div className="mx-auto mt-3 flex max-w-[17rem] items-center gap-2">
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#F1F2E3]/65" />
-            <span className="rounded-full border border-[#F1F2E3]/50 bg-[#F1F2E3] px-8 py-2 text-sm font-bold text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
-              {t.selectMode}
-            </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#F1F2E3]/65" />
-          </div>
-
           {state.formError ? (
             <p className="mt-3 rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
               {state.formError}
             </p>
           ) : null}
 
-          <div className="mt-4 grid gap-3">
+          <div className="mt-3 grid gap-3">
             {featuredVariants.map((variant) => (
               <WerewolfVariantModeCard
                 formAction={formAction}

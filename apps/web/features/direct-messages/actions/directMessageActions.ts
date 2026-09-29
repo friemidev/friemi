@@ -5,6 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
   ensureCurrentUserProfile,
@@ -21,6 +22,7 @@ import {
   getOrCreateActivityParticipantConversation,
   getOrCreateActivityOrganizerConversation,
   getOrCreateOpenDirectConversation,
+  recallDirectMessage,
   sendDirectMessage,
   sendDirectMessageToFriend,
 } from "../services/directMessages";
@@ -29,6 +31,7 @@ export type DirectMessageActionState = {
   ok?: boolean;
   conversationId?: string;
   createdAt?: string;
+  recalledAt?: string;
   messageId?: string;
   messageIds?: string[];
   formError?: string;
@@ -68,6 +71,7 @@ const sendDirectMessageSchema = z
     conversationId: z.string().min(1),
     activityId: z.string().trim().optional(),
     body: z.string().trim().max(directMessageBodyMaxLength).default(""),
+    replyToMessageId: z.string().trim().max(80).optional(),
     imageUrls: z
       .array(z.string().trim().url())
       .max(directMessageImageMaxCount)
@@ -112,6 +116,12 @@ const deleteDirectMessagesSchema = z.object({
   conversationId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
   messageIds: z.array(z.string().min(1).max(80)).min(1).max(50),
+});
+
+const recallDirectMessageSchema = z.object({
+  conversationId: z.string().min(1),
+  locale: z.string().min(1).default("zh-CN"),
+  messageId: z.string().min(1).max(80),
 });
 
 const directMessageTimingEnabled =
@@ -451,6 +461,11 @@ export async function deleteDirectMessagesAction(
     });
 
     refreshDirectMessageSurfaces(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [profile.id],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
 
     return {
       ok: true,
@@ -460,6 +475,52 @@ export async function deleteDirectMessagesAction(
     console.error("Failed to delete direct messages", error);
 
     return { formError: t.deleteFailed };
+  }
+}
+
+export async function recallDirectMessageAction(
+  _previousState: DirectMessageActionState,
+  formData: FormData,
+): Promise<DirectMessageActionState> {
+  const rawInput = {
+    conversationId: getString(formData, "conversationId"),
+    locale: getString(formData, "locale") || "zh-CN",
+    messageId: getString(formData, "messageId"),
+  };
+  const result = recallDirectMessageSchema.safeParse(rawInput);
+  const t = getDirectMessagesCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  try {
+    const profile = await getCurrentUserProfileForMutation(
+      result.data.locale,
+      `/messages/${result.data.conversationId}`,
+    );
+    const { message, participantProfileIds } = await recallDirectMessage({
+      conversationId: result.data.conversationId,
+      currentUserProfileId: profile.id,
+      messageId: result.data.messageId,
+    });
+
+    refreshDirectMessageSurfaces(result.data.locale, message.conversationId);
+    scheduleChatRealtimeChange({
+      profileIds: participantProfileIds,
+      scope: "direct",
+      subjectKey: message.conversationId,
+    });
+
+    return {
+      messageId: message.id,
+      ok: true,
+      recalledAt: message.recalledAt?.toISOString(),
+    };
+  } catch (error) {
+    console.error("Failed to recall direct message", error);
+
+    return { formError: t.recallFailed };
   }
 }
 
@@ -810,6 +871,8 @@ export async function sendDirectMessageAction(
     conversationId: getString(formData, "conversationId"),
     activityId: getString(formData, "activityId").trim() || undefined,
     body: getString(formData, "body"),
+    replyToMessageId:
+      getString(formData, "replyToMessageId").trim() || undefined,
     imageUrls: [
       ...getStringList(formData, "imageUrls"),
       ...getStringList(formData, "imageUrl"),
@@ -854,6 +917,7 @@ export async function sendDirectMessageAction(
       conversationId: result.data.conversationId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
+      replyToMessageId: result.data.replyToMessageId,
     });
     const sendMs = Date.now() - sendStartedAt;
     const postWriteStartedAt = Date.now();
@@ -876,6 +940,11 @@ export async function sendDirectMessageAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [conversation.userAId, conversation.userBId],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
     const postWriteMs = Date.now() - postWriteStartedAt;
 
     logDirectMessageTiming("sendDirectMessageAction", {
@@ -985,6 +1054,11 @@ export async function sendDirectMessageToFriendAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    scheduleChatRealtimeChange({
+      profileIds: [conversation.userAId, conversation.userBId],
+      scope: "direct",
+      subjectKey: conversation.id,
+    });
     const postWriteMs = Date.now() - postWriteStartedAt;
 
     logDirectMessageTiming("sendDirectMessageToFriendAction", {

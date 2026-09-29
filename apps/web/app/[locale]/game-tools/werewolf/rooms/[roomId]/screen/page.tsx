@@ -87,8 +87,8 @@ export default async function WerewolfPublicScreenPage({
       mobileSafeTop
     >
       <AvalonLiveRefresh
-        enabled={room.status !== "FINISHED"}
-        intervalMs={3500}
+        enabled
+        intervalMs={room.status === "FINISHED" ? 8000 : 3500}
         locale={locale}
       />
       <WerewolfPublicScreen

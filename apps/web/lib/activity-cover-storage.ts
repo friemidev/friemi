@@ -410,15 +410,6 @@ export async function createSignedProfileAvatarUpload(
   });
 }
 
-export async function createSignedTopNewsImageUpload(
-  userId: string,
-  file: { name: string; size: number; type?: string | null },
-): Promise<ActivityCoverSignedUploadResult> {
-  return createSignedPublicImageUpload(userId, file, {
-    pathPrefix: "top-news",
-  });
-}
-
 async function finalizeSignedPublicImageUpload(
   userId: string,
   path: string,
@@ -527,15 +518,6 @@ export async function finalizeSignedProfileAvatarUpload(
   });
 }
 
-export async function finalizeSignedTopNewsImageUpload(
-  userId: string,
-  path: string,
-): Promise<ActivityCoverUploadResult> {
-  return finalizeSignedPublicImageUpload(userId, path, {
-    pathPrefix: "top-news",
-  });
-}
-
 export async function uploadActivityCoverBuffer(
   userId: string,
   fileBuffer: Buffer,
@@ -571,16 +553,6 @@ export async function uploadChatImageBuffer(
 ): Promise<ActivityCoverUploadResult> {
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "chat-images",
-  });
-}
-
-export async function uploadTopNewsImageBuffer(
-  userId: string,
-  fileBuffer: Buffer,
-  detectedMimeType: AllowedCoverMimeType,
-): Promise<ActivityCoverUploadResult> {
-  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
-    pathPrefix: "top-news",
   });
 }
 

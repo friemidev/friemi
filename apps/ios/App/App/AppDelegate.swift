@@ -63,17 +63,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the app was launched with an activity, including Universal Links.
         // Feel free to add additional processing here, but if you want the App API to support
         // tracking app url opens, make sure to keep this call
+        if let url = userActivity.webpageURL, handleFriemiURL(url) {
+            return true
+        }
+
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
     private func handleFriemiURL(_ url: URL) -> Bool {
-        guard url.scheme?.lowercased() == "friemi" else {
+        let scheme = url.scheme?.lowercased()
+        let host = url.host?.lowercased()
+        let isCustomScheme = scheme == "friemi"
+        let isTrustedWebLink = scheme == "https" && isFriemiWebHost(host)
+
+        guard isCustomScheme || isTrustedWebLink else {
             return false
         }
 
         UserDefaults.standard.set(url.absoluteString, forKey: friemiPendingOpenURLKey)
         NotificationCenter.default.post(name: .friemiOpenURL, object: url)
         return true
+    }
+
+    private func isFriemiWebHost(_ host: String?) -> Bool {
+        guard let host else {
+            return false
+        }
+
+        return host == "friemi.com" ||
+            host == "www.friemi.com" ||
+            host.hasSuffix(".friemi.com") ||
+            host.hasSuffix(".vercel.app")
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

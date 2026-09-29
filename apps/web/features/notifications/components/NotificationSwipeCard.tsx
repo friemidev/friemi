@@ -89,7 +89,7 @@ export function NotificationSwipeCard({
   const actionOffset = Math.max(0, swipeActionWidth + translateX);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[1.2rem]">
+    <div className="relative w-full overflow-hidden rounded-lg">
       <div
         className={cn(
           "absolute inset-y-0 right-0 z-0 flex w-[104px] items-stretch justify-end transition-transform duration-200 ease-out sm:hidden",
@@ -99,7 +99,7 @@ export function NotificationSwipeCard({
           transform: `translateX(${actionOffset}px)`,
         }}
       >
-        <div className="flex w-full items-center justify-center rounded-[1.2rem] bg-rose/70 px-3 shadow-[inset_0_0_0_1px_rgba(181,48,31,0.16)]">
+        <div className="flex w-full items-center justify-center rounded-lg bg-rose/70 px-3 shadow-[inset_0_0_0_1px_rgba(181,48,31,0.16)]">
           {mobileDeleteAction}
         </div>
       </div>

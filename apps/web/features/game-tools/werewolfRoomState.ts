@@ -1,3 +1,9 @@
+import {
+  createInitialWerewolfFlowState,
+  normalizeWerewolfFlowState,
+  type WerewolfFlowState,
+} from "@/features/game-tools/werewolfFlow";
+
 export type WerewolfRoomPhase =
   | "DEALING"
   | "FINISHED"
@@ -5,7 +11,7 @@ export type WerewolfRoomPhase =
   | "LOBBY"
   | "READY";
 
-export type WerewolfWinner = "GOOD" | "WEREWOLF" | null;
+export type WerewolfWinner = "GOOD" | "THIRD_PARTY" | "WEREWOLF" | null;
 
 export type WerewolfFinishSelection =
   | Exclude<WerewolfWinner, null>
@@ -14,9 +20,11 @@ export type WerewolfFinishSelection =
 export type WerewolfRoomState = {
   deadSeatNumbers: number[];
   finishedAt?: string | null;
+  flow: WerewolfFlowState;
   lockedAt?: string | null;
   phase: WerewolfRoomPhase;
   resultRecordedAt?: string | null;
+  roundNumber: number;
   sheriffSeatNumber?: number | null;
   startedAt?: string | null;
   winner?: WerewolfWinner;
@@ -26,9 +34,11 @@ export function createInitialWerewolfRoomState(): WerewolfRoomState {
   return {
     deadSeatNumbers: [],
     finishedAt: null,
+    flow: createInitialWerewolfFlowState(),
     lockedAt: null,
     phase: "LOBBY",
     resultRecordedAt: null,
+    roundNumber: 1,
     sheriffSeatNumber: null,
     startedAt: null,
     winner: null,
@@ -39,6 +49,13 @@ export function getWerewolfWinnerFromFinishSelection(
   selection: WerewolfFinishSelection,
 ): WerewolfWinner {
   return selection === "TERMINATED" ? null : selection;
+}
+
+export function didWerewolfRoomStartNextRound(
+  previousStatus: string,
+  currentStatus: string,
+) {
+  return previousStatus === "FINISHED" && currentStatus === "IN_PROGRESS";
 }
 
 function getPhase(value: unknown): WerewolfRoomPhase {
@@ -55,7 +72,11 @@ function getPhase(value: unknown): WerewolfRoomPhase {
 }
 
 function getWinner(value: unknown): WerewolfWinner {
-  if (value === "GOOD" || value === "WEREWOLF") {
+  if (
+    value === "GOOD" ||
+    value === "THIRD_PARTY" ||
+    value === "WEREWOLF"
+  ) {
     return value;
   }
 
@@ -72,6 +93,12 @@ function getOptionalSeatNumber(value: unknown) {
   return Number.isInteger(seatNumber) && seatNumber > 0 && seatNumber <= 20
     ? seatNumber
     : null;
+}
+
+function getRoundNumber(value: unknown) {
+  const roundNumber = typeof value === "number" ? value : Number(value);
+
+  return Number.isInteger(roundNumber) && roundNumber > 0 ? roundNumber : 1;
 }
 
 function getDeadSeatNumbers(value: unknown) {
@@ -95,12 +122,16 @@ export function normalizeWerewolfRoomState(value: unknown): WerewolfRoomState {
 
   const state = value as Partial<WerewolfRoomState>;
 
+  const roundNumber = getRoundNumber(state.roundNumber);
+
   return {
     deadSeatNumbers: getDeadSeatNumbers(state.deadSeatNumbers),
     finishedAt: getOptionalString(state.finishedAt),
+    flow: normalizeWerewolfFlowState(state.flow, roundNumber),
     lockedAt: getOptionalString(state.lockedAt),
     phase: getPhase(state.phase),
     resultRecordedAt: getOptionalString(state.resultRecordedAt),
+    roundNumber,
     sheriffSeatNumber: getOptionalSeatNumber(state.sheriffSeatNumber),
     startedAt: getOptionalString(state.startedAt),
     winner: getWinner(state.winner),
@@ -113,4 +144,69 @@ export function isWerewolfRoomLocked(state: WerewolfRoomState) {
     state.phase === "IN_PROGRESS" ||
     state.phase === "FINISHED"
   );
+}
+
+export function isWerewolfEventVisibleToViewer({
+  isFinished,
+  isJudge,
+  type,
+}: {
+  isFinished: boolean;
+  isJudge: boolean;
+  type: string;
+}) {
+  return (
+    isJudge ||
+    isFinished ||
+    type !== "werewolf_night_action_submitted"
+  );
+}
+
+export function getWerewolfRoomStateForViewer({
+  isFinished,
+  isJudge,
+  roleKey,
+  seatNumber,
+  state,
+}: {
+  isFinished: boolean;
+  isJudge: boolean;
+  roleKey: string | null | undefined;
+  seatNumber: number | null | undefined;
+  state: WerewolfRoomState;
+}): WerewolfRoomState {
+  if (isJudge || isFinished) {
+    return state;
+  }
+
+  const isCupid = roleKey === "cupid";
+  const isGuard = roleKey === "guard";
+  const isWitch = roleKey === "witch";
+  const isLover = Boolean(
+    seatNumber && state.flow.loverSeatNumbers.includes(seatNumber),
+  );
+  const isThirdParty = Boolean(
+    seatNumber && state.flow.thirdPartySeatNumbers.includes(seatNumber),
+  );
+
+  return {
+    ...state,
+    flow: {
+      ...state.flow,
+      cupidSeatNumber: isCupid ? state.flow.cupidSeatNumber : null,
+      cupidSharedAlignment: isCupid
+        ? state.flow.cupidSharedAlignment
+        : null,
+      factionAlert: null,
+      lastGuardedSeatNumber: isGuard
+        ? state.flow.lastGuardedSeatNumber
+        : null,
+      loverSeatNumbers:
+        isCupid || isLover ? state.flow.loverSeatNumbers : [],
+      thirdPartySeatNumbers:
+        isCupid || isThirdParty ? state.flow.thirdPartySeatNumbers : [],
+      witchAntidoteUsed: isWitch ? state.flow.witchAntidoteUsed : false,
+      witchPoisonUsed: isWitch ? state.flow.witchPoisonUsed : false,
+    },
+  };
 }

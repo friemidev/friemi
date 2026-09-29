@@ -3,12 +3,17 @@ type PlanetMembershipState = {
   status?: string | null;
 } | null;
 
+export const planetMomentImageMaxCount = 15;
+
 export function canInteractWithPlanetMoment(membership: PlanetMembershipState) {
   return membership?.status === "APPROVED";
 }
 
 export function canPublishPlanetMoment(membership: PlanetMembershipState) {
-  return membership?.status === "APPROVED" && membership.role === "OWNER";
+  return (
+    membership?.status === "APPROVED" &&
+    (membership.role === "OWNER" || membership.role === "ADMIN")
+  );
 }
 
 export function buildPlanetMomentTargetWhere(

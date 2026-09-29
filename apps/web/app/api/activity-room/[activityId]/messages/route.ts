@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActivityRoomMessageChanges } from "@/features/activity-room-chat/services/activityRoomChat";
+import {
+  getActivityRoomMessageChanges,
+  getOlderActivityRoomMessages,
+  markActivityRoomChatRead,
+} from "@/features/activity-room-chat/services/activityRoomChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +28,30 @@ export async function GET(
   const serverTime = new Date();
 
   try {
+    const beforeCreatedAt = parseDate(
+      request.nextUrl.searchParams.get("beforeCreatedAt"),
+    );
+    const beforeId = request.nextUrl.searchParams.get("beforeId");
+
+    if (beforeCreatedAt && beforeId) {
+      const requestedLimit = Number.parseInt(
+        request.nextUrl.searchParams.get("limit") ?? "50",
+        10,
+      );
+      const history = await getOlderActivityRoomMessages({
+        activityId,
+        beforeCreatedAt,
+        beforeId,
+        limit: Number.isFinite(requestedLimit) ? requestedLimit : 50,
+        viewerProfileId: profile.id,
+      });
+
+      return NextResponse.json(
+        { ...history, serverTime: serverTime.toISOString() },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+
     const messages = await getActivityRoomMessageChanges({
       activityId,
       afterCreatedAt: parseDate(
@@ -34,6 +62,14 @@ export async function GET(
         parseDate(request.nextUrl.searchParams.get("since")) ?? serverTime,
       viewerProfileId: profile.id,
     });
+
+    if (messages.length > 0) {
+      await markActivityRoomChatRead({
+        activityId,
+        profileId: profile.id,
+        readAt: serverTime,
+      });
+    }
 
     return NextResponse.json(
       { messages, serverTime: serverTime.toISOString() },

@@ -21,9 +21,9 @@ import {
   HeartPulse,
   LogOut,
   Monitor,
-  Palette,
   Plus,
   QrCode,
+  RotateCcw,
   Skull,
   Ticket,
   X,
@@ -31,7 +31,6 @@ import {
 import {
   claimWerewolfSeatAction,
   finishWerewolfRoomAction,
-  joinWerewolfRoomAction,
   leaveWerewolfSeatAction,
   startWerewolfRoomAction,
   updateWerewolfPlayerLifeAction,
@@ -47,21 +46,30 @@ import {
 } from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
+import { WerewolfFlowPanel } from "@/features/game-tools/components/WerewolfFlowPanel";
+import { useWerewolfRoomRealtime } from "@/features/game-tools/hooks/useWerewolfRoomRealtime";
 import {
   countAliveWerewolfPlayers,
   getWerewolfViewerPrivateToken,
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
 import {
-  defaultWerewolfAtmosphere,
   getWerewolfAtmosphereById,
-  getWerewolfRoleCardImage,
-  getWerewolfSeatBackImage,
-  werewolfAtmospheres,
   werewolfUiAssets,
-  type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
-import { getWerewolfAppJoinUrl } from "@/features/game-tools/werewolfRoomLinks";
+import {
+  getWerewolfUSeatColumns,
+  type WerewolfRoleKey,
+} from "@/features/game-tools/werewolfConfig";
+import {
+  getWerewolfAppJoinUrl,
+  getWerewolfPrivateSeatHref,
+} from "@/features/game-tools/werewolfRoomLinks";
+import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
+import {
+  didWerewolfRoomStartNextRound,
+  type WerewolfRoomState,
+} from "@/features/game-tools/werewolfRoomState";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
@@ -71,6 +79,7 @@ type WerewolfRoomOverviewProps = {
   locale: string;
   notice?: string | null;
   room: {
+    atmosphereId: string;
     code: string;
     currentMember: {
       avatarLabel: string;
@@ -89,7 +98,19 @@ type WerewolfRoomOverviewProps = {
       actorName: string | null;
       createdAt: string;
       id: string;
+      payload?: unknown;
       type: string;
+    }>;
+    flowSubmissions: Array<{
+      actionKind: string | null;
+      id: string;
+      kind: string;
+      roundIndex: number;
+      seerResult: string | null;
+      secondaryTargetSeatNumber: number | null;
+      submittedAt: string;
+      targetSeatNumber: number | null;
+      voterSeatNumber: number | null;
     }>;
     host: {
       nickname: string;
@@ -113,6 +134,7 @@ type WerewolfRoomOverviewProps = {
       avatarUrl: string | null;
       displayName: string;
       id: string;
+      isActive: boolean;
       isClaimed: boolean;
       isDead: boolean;
       isJudgeSeat: boolean;
@@ -125,17 +147,14 @@ type WerewolfRoomOverviewProps = {
       roleLabel: string | null;
       seatNumber: number;
     }>;
-    state: {
-      phase: string;
-      sheriffSeatNumber?: number | null;
-      winner?: "GOOD" | "WEREWOLF" | null;
-    };
+    state: WerewolfRoomState;
     status: string;
     syncVersion: string;
     title: string;
     variant: {
       label: string;
       playerSeatCount: number;
+      roles: WerewolfRoleKey[];
       totalSeats: number;
     };
   };
@@ -147,16 +166,6 @@ type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
 
 const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
 const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
-const WEREWOLF_ATMOSPHERE_STORAGE_KEY = "friemi:werewolf:atmosphere";
-const coreWerewolfRoleKeys = [
-  "hunter",
-  "idiot",
-  "seer",
-  "villager",
-  "werewolf",
-  "witch",
-] as const;
-
 type WerewolfRoomSyncPayload = {
   room?: WerewolfRoomView;
   status?: string;
@@ -168,6 +177,32 @@ type WerewolfRoomBroadcastMessage = {
   sourceId: string;
   type: "werewolf-room-changed";
 };
+
+function mergeWerewolfRoomSync(
+  current: WerewolfRoomView,
+  incoming: WerewolfRoomView,
+): WerewolfRoomView {
+  const incomingEventIds = new Set(incoming.events.map((event) => event.id));
+  const incomingSubmissionIds = new Set(
+    incoming.flowSubmissions.map((submission) => submission.id),
+  );
+
+  return {
+    ...incoming,
+    events: [
+      ...incoming.events,
+      ...current.events.filter((event) => !incomingEventIds.has(event.id)),
+    ].sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
+    flowSubmissions: [
+      ...incoming.flowSubmissions,
+      ...current.flowSubmissions.filter(
+        (submission) => !incomingSubmissionIds.has(submission.id),
+      ),
+    ].sort((first, second) =>
+      second.submittedAt.localeCompare(first.submittedAt),
+    ),
+  };
+}
 
 type NavigatorWithConnection = Navigator & {
   connection?: {
@@ -203,27 +238,6 @@ function getWerewolfSyncIntervalMs(status: string) {
   }
 
   return baseIntervalMs;
-}
-
-function getWerewolfRoomPreloadAssets({
-  atmosphereSrc,
-  locale,
-}: {
-  atmosphereSrc: string;
-  locale: string;
-}) {
-  return Array.from(
-    new Set([
-      atmosphereSrc,
-      "/game-tools/werewolf/werewolf.png",
-      ...Array.from({ length: 12 }, (_, index) =>
-        getWerewolfSeatBackImage(index + 1),
-      ),
-      ...coreWerewolfRoleKeys
-        .map((roleKey) => getWerewolfRoleCardImage(roleKey, locale))
-        .filter((asset): asset is string => Boolean(asset)),
-    ]),
-  );
 }
 
 function WerewolfAvatar({
@@ -287,6 +301,7 @@ function getCopy(locale: string) {
         "Choisissez le résultat final. Une partie interrompue ne compte pas dans les statistiques.",
       finishGameTitle: "Terminer la partie ?",
       finishGood: "Victoire du village",
+      finishThirdParty: "Victoire du troisième camp",
       finishWerewolf: "Victoire des loups",
       foundation: "Loups-garous",
       host: "Hôte",
@@ -308,6 +323,10 @@ function getCopy(locale: string) {
       locked: "La partie a commencé.",
       members: "À placer",
       noMembers: "Personne en attente.",
+      nextRound: "Rejouer",
+      nextRoundConfirm:
+        "Redistribuer les rôles et commencer la manche suivante avec les mêmes places ?",
+      stayInRoom: "Rester dans la salle",
       noticeJoined: "Vous êtes dans la table.",
       noticeLeft: "Place quittée.",
       noticeReady: "Vous êtes prêt.",
@@ -358,6 +377,7 @@ function getCopy(locale: string) {
       gameTerminated: "Partie interrompue",
       waitingMember: "Entrez un nom, puis choisissez une place.",
       winnerGood: "Village gagnant",
+      winnerThirdParty: "Troisième camp gagnant",
       winnerWerewolf: "Loups gagnants",
     };
   }
@@ -394,6 +414,7 @@ function getCopy(locale: string) {
         "Choose the final result. A terminated game will not count toward player records.",
       finishGameTitle: "End this game?",
       finishGood: "Good team wins",
+      finishThirdParty: "Third party wins",
       finishWerewolf: "Werewolf team wins",
       foundation: "Werewolf",
       host: "Host",
@@ -415,6 +436,10 @@ function getCopy(locale: string) {
       locked: "The game has started.",
       members: "Waiting to sit",
       noMembers: "No one is waiting.",
+      nextRound: "Next game",
+      nextRoundConfirm:
+        "Redeal roles and start the next game with the same seats?",
+      stayInRoom: "Stay in room",
       noticeJoined: "You are in the table.",
       noticeLeft: "Seat left.",
       noticeReady: "You are ready.",
@@ -464,6 +489,7 @@ function getCopy(locale: string) {
       gameTerminated: "Game terminated",
       waitingMember: "Enter a name, then choose a seat.",
       winnerGood: "Good team wins",
+      winnerThirdParty: "Third party wins",
       winnerWerewolf: "Werewolf team wins",
     };
   }
@@ -495,7 +521,8 @@ function getCopy(locale: string) {
     finishGame: "结束游戏",
     finishGameDescription: "请选择本局结果。终止游戏不会计入玩家胜负记录。",
     finishGameTitle: "确认结束本局？",
-    finishGood: "平民胜利",
+    finishGood: "好人阵营胜利",
+    finishThirdParty: "第三方阵营胜利",
     finishWerewolf: "狼人胜利",
     foundation: "狼人杀",
     host: "房主",
@@ -517,6 +544,9 @@ function getCopy(locale: string) {
     locked: "本局已经开始。",
     members: "待入座",
     noMembers: "没人等座。",
+    nextRound: "重新发牌开下一局",
+    nextRoundConfirm: "保留当前房间和座位，重新发身份并开始下一局？",
+    stayInRoom: "留在房间",
     noticeJoined: "已进入房间。",
     noticeLeft: "已离座。",
     noticeReady: "已准备。",
@@ -564,6 +594,7 @@ function getCopy(locale: string) {
     gameTerminated: "本局已终止",
     waitingMember: "取个昵称入房。",
     winnerGood: "好人阵营获胜",
+    winnerThirdParty: "第三方阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
   };
 }
@@ -590,6 +621,25 @@ function SubmitButton({
       disabled={pending || disabled}
       type="submit"
     >
+      {label}
+    </button>
+  );
+}
+
+function NextRoundSubmitButton({
+  className,
+  disabled = false,
+  label,
+}: {
+  className: string;
+  disabled?: boolean;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button className={className} disabled={pending || disabled} type="submit">
+      <RotateCcw className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} />
       {label}
     </button>
   );
@@ -665,7 +715,7 @@ function FinishOutcomeButton({
 }: {
   className: string;
   label: string;
-  value: "GOOD" | "TERMINATED" | "WEREWOLF";
+  value: "GOOD" | "TERMINATED" | "THIRD_PARTY" | "WEREWOLF";
 }) {
   const { pending } = useFormStatus();
 
@@ -679,79 +729,6 @@ function FinishOutcomeButton({
     >
       {label}
     </button>
-  );
-}
-
-function getStoredWerewolfAtmosphereId(): WerewolfAtmosphereId {
-  const fallbackId = defaultWerewolfAtmosphere.id;
-
-  if (typeof window === "undefined") {
-    return fallbackId;
-  }
-
-  try {
-    return getWerewolfAtmosphereById(
-      window.localStorage.getItem(WEREWOLF_ATMOSPHERE_STORAGE_KEY),
-    ).id;
-  } catch {
-    return fallbackId;
-  }
-}
-
-function WerewolfAtmospherePicker({
-  locale,
-  onCycle,
-  selectedId,
-}: {
-  locale: string;
-  onCycle: () => void;
-  selectedId: WerewolfAtmosphereId;
-}) {
-  const [showHint, setShowHint] = useState(false);
-  const hintTimerRef = useRef<number | null>(null);
-  const t = getCopy(locale);
-  const selectedAtmosphere = getWerewolfAtmosphereById(selectedId);
-
-  useEffect(() => {
-    return () => {
-      if (hintTimerRef.current !== null) {
-        window.clearTimeout(hintTimerRef.current);
-      }
-    };
-  }, []);
-
-  const cycleAtmosphere = () => {
-    onCycle();
-    setShowHint(true);
-
-    if (hintTimerRef.current !== null) {
-      window.clearTimeout(hintTimerRef.current);
-    }
-
-    hintTimerRef.current = window.setTimeout(() => {
-      setShowHint(false);
-      hintTimerRef.current = null;
-    }, 1300);
-  };
-
-  return (
-    <div className="relative">
-      <button
-        aria-label={`${t.atmosphere}: ${selectedAtmosphere.name}`}
-        className="relative grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F] active:scale-95"
-        onClick={cycleAtmosphere}
-        title={selectedAtmosphere.name}
-        type="button"
-      >
-        <Palette className="h-4 w-4" />
-      </button>
-
-      {showHint ? (
-        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-semibold text-[#F1F2E3] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
-          <span className="block truncate">{selectedAtmosphere.name}</span>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -860,12 +837,9 @@ export function WerewolfRoomOverview({
   );
   const previousRoomStatusRef = useRef(initialRoom.status);
   const syncProbeInFlightRef = useRef(false);
+  const syncProbeQueuedRef = useRef(false);
   const syncVersionRef = useRef(initialRoom.syncVersion);
   const [localFormError, setLocalFormError] = useState<string | null>(null);
-  const [joinState, joinAction] = useActionState(
-    joinWerewolfRoomAction,
-    initialState,
-  );
   const [seatState, seatAction] = useActionState(
     claimWerewolfSeatAction,
     initialState,
@@ -894,21 +868,21 @@ export function WerewolfRoomOverview({
     finishWerewolfRoomAction,
     initialState,
   );
-  const [selectedAtmosphereId, setSelectedAtmosphereId] =
-    useState<WerewolfAtmosphereId>(defaultWerewolfAtmosphere.id);
-  const [atmospherePreferenceReady, setAtmospherePreferenceReady] =
-    useState(false);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [finishDialogOpen, setFinishDialogOpen] = useState(false);
+  const [showRoundTransition, setShowRoundTransition] = useState(false);
   const [pendingDeathSeatNumber, setPendingDeathSeatNumber] = useState<
     number | null
   >(null);
   const [pendingSheriffSeatNumber, setPendingSheriffSeatNumber] = useState<
     number | null
   >(null);
+  const [managedSeatNumber, setManagedSeatNumber] = useState<number | null>(
+    null,
+  );
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const t = getCopy(locale);
-  const selectedAtmosphere = getWerewolfAtmosphereById(selectedAtmosphereId);
+  const selectedAtmosphere = getWerewolfAtmosphereById(room.atmosphereId);
   const werewolfHomeHref = withLocale(locale, "/game-tools/werewolf");
   const joinUrl = `${baseUrl}${withLocale(
     locale,
@@ -919,11 +893,22 @@ export function WerewolfRoomOverview({
     `/game-tools/werewolf/rooms/${room.id}/screen`,
   );
   const isLobby = room.status === "LOBBY";
+  const isSeatingOpen = isLobby || room.status === "FINISHED";
   const playerSeats = useMemo(
     () => room.seats.filter((seat) => seat.isPlayerSeat),
     [room.seats],
   );
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
+  const currentViewerSeat =
+    room.seats.find(
+      (seat) =>
+        seat.isViewerSeat ||
+        room.currentMember?.seatedSeatNumber === seat.seatNumber,
+    ) ?? null;
+  const judgeIsViewer = isWerewolfJudgeViewer({
+    currentMemberSeatNumber: room.currentMember?.seatedSeatNumber,
+    judgeSeat,
+  });
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -932,59 +917,17 @@ export function WerewolfRoomOverview({
     currentMemberPrivateToken: room.currentMember?.seatedPrivateToken,
     viewerSeat: room.seats.find((seat) => seat.isViewerSeat),
   });
-  const canChooseSeat = Boolean(room.currentMember) && isLobby;
+  const canChooseSeat = Boolean(room.currentMember) && isSeatingOpen;
   const winnerLabel =
     room.state.winner === "GOOD"
       ? t.winnerGood
-      : room.state.winner === "WEREWOLF"
-        ? t.winnerWerewolf
-        : null;
+      : room.state.winner === "THIRD_PARTY"
+        ? t.winnerThirdParty
+        : room.state.winner === "WEREWOLF"
+          ? t.winnerWerewolf
+          : null;
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
-
-  useEffect(() => {
-    setSelectedAtmosphereId(getStoredWerewolfAtmosphereId());
-    setAtmospherePreferenceReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!atmospherePreferenceReady) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        WEREWOLF_ATMOSPHERE_STORAGE_KEY,
-        selectedAtmosphereId,
-      );
-    } catch {
-      // Local preference storage can be unavailable in private browsing.
-    }
-  }, [atmospherePreferenceReady, selectedAtmosphereId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const preloadedImages = getWerewolfRoomPreloadAssets({
-      atmosphereSrc: selectedAtmosphere.src,
-      locale,
-    }).map((assetSrc) => {
-      const image = new window.Image();
-      image.decoding = "async";
-      image.src = assetSrc;
-
-      return image;
-    });
-
-    return () => {
-      preloadedImages.forEach((image) => {
-        image.onload = null;
-        image.onerror = null;
-      });
-    };
-  }, [locale, selectedAtmosphere.src]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1001,7 +944,10 @@ export function WerewolfRoomOverview({
       ? `?${roomHrefParams.toString()}`
       : "";
 
-    if (room.status === "IN_PROGRESS" && room.currentMember) {
+    if (
+      (room.status === "IN_PROGRESS" || room.status === "FINISHED") &&
+      room.currentMember
+    ) {
       try {
         window.sessionStorage.removeItem(
           DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
@@ -1030,28 +976,6 @@ export function WerewolfRoomOverview({
       }
 
       return;
-    }
-
-    if (room.status === "FINISHED") {
-      try {
-        const storedValue = window.localStorage.getItem(
-          ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
-        );
-        const storedRoom = storedValue
-          ? (JSON.parse(storedValue) as Partial<StoredActiveGameToolRoom>)
-          : null;
-
-        if (storedRoom?.id === room.id) {
-          window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
-          window.sessionStorage.setItem(
-            DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
-            room.id,
-          );
-          window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
-        }
-      } catch {
-        // Ignore local shortcut cleanup failures.
-      }
     }
   }, [
     currentMemberToken,
@@ -1152,7 +1076,7 @@ export function WerewolfRoomOverview({
               payload.room.syncVersion ??
               payload.syncVersion ??
               syncVersionRef.current;
-            setRoom(payload.room);
+            setRoom((current) => mergeWerewolfRoomSync(current, payload.room!));
             return;
           }
         }
@@ -1174,6 +1098,7 @@ export function WerewolfRoomOverview({
       }
 
       if (syncProbeInFlightRef.current) {
+        syncProbeQueuedRef.current = true;
         return;
       }
 
@@ -1183,6 +1108,7 @@ export function WerewolfRoomOverview({
         return;
       }
 
+      syncProbeQueuedRef.current = false;
       syncProbeInFlightRef.current = true;
 
       try {
@@ -1216,18 +1142,36 @@ export function WerewolfRoomOverview({
         // Keep sync silent. The next focus or interval will retry.
       } finally {
         syncProbeInFlightRef.current = false;
+
+        if (syncProbeQueuedRef.current) {
+          syncProbeQueuedRef.current = false;
+          void refreshRoom({ force: true });
+        }
       }
     },
     [refreshRoom, room.id],
   );
 
-  useEffect(() => {
-    if (room.status === "FINISHED") {
-      return;
-    }
+  const realtimeConnected = useWerewolfRoomRealtime({
+    onRoomChanged: () => void refreshRoom({ force: true }),
+    roomId: room.id,
+  });
 
+  useEffect(() => {
+    if (realtimeConnected) {
+      void refreshRoom({ force: true });
+    }
+  }, [realtimeConnected, refreshRoom]);
+
+  useEffect(() => {
     const intervalMs =
-      getWerewolfSyncIntervalMs(room.status) + Math.floor(Math.random() * 900);
+      realtimeConnected
+        ? WEREWOLF_REALTIME_INTEGRITY_POLL_MS +
+          Math.floor(Math.random() * 3_000)
+        : room.status === "FINISHED"
+          ? 8_000 + Math.floor(Math.random() * 1_200)
+          : getWerewolfSyncIntervalMs(room.status) +
+            Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
       if (!document.hidden) {
         void pollRoomSync();
@@ -1251,7 +1195,7 @@ export function WerewolfRoomOverview({
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [pollRoomSync, room.status]);
+  }, [pollRoomSync, realtimeConnected, room.status]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") {
@@ -1272,7 +1216,7 @@ export function WerewolfRoomOverview({
         return;
       }
 
-      void pollRoomSync({ force: true });
+      void refreshRoom({ force: true });
     };
 
     return () => {
@@ -1282,7 +1226,7 @@ export function WerewolfRoomOverview({
 
       channel.close();
     };
-  }, [pollRoomSync, room.id]);
+  }, [refreshRoom, room.id]);
 
   useEffect(() => {
     if (
@@ -1380,23 +1324,71 @@ export function WerewolfRoomOverview({
 
   useEffect(() => {
     const previousStatus = previousRoomStatusRef.current;
+    let transitionTimer: number | null = null;
+    const didStartFirstRound =
+      previousStatus === "LOBBY" && room.status === "IN_PROGRESS";
+    const didStartNextRound = didWerewolfRoomStartNextRound(
+      previousStatus,
+      room.status,
+    );
 
     if (previousStatus !== "FINISHED" && room.status === "FINISHED") {
       setFinishDialogOpen(false);
+      setManagedSeatNumber(null);
       setPendingDeathSeatNumber(null);
       setPendingSheriffSeatNumber(null);
       setResultDialogOpen(true);
     }
 
+    if (didStartFirstRound || didStartNextRound) {
+      if (didStartNextRound) {
+        setResultDialogOpen(false);
+        setShowRoundTransition(true);
+      }
+
+      transitionTimer = window.setTimeout(() => {
+        if (didStartNextRound) {
+          setShowRoundTransition(false);
+        }
+
+        if (!judgeIsViewer && currentSeatPrivateToken) {
+          router.replace(
+            getWerewolfPrivateSeatHref({
+              locale,
+              privateToken: currentSeatPrivateToken,
+              roundNumber: room.state.roundNumber,
+            }),
+          );
+        }
+      }, didStartNextRound ? 1800 : 0);
+    }
+
     previousRoomStatusRef.current = room.status;
-  }, [room.status]);
+
+    return () => {
+      if (transitionTimer !== null) {
+        window.clearTimeout(transitionTimer);
+      }
+    };
+  }, [
+    currentSeatPrivateToken,
+    judgeIsViewer,
+    locale,
+    room.state.roundNumber,
+    room.status,
+    router,
+  ]);
 
   const applyOptimisticSeatClaim = useCallback(
     (seatNumber: number) => {
       lastOptimisticMutationAtRef.current = Date.now();
 
       setRoom((previousRoom): WerewolfRoomView => {
-        if (!previousRoom.currentMember || previousRoom.status !== "LOBBY") {
+        if (
+          !previousRoom.currentMember ||
+          (previousRoom.status !== "LOBBY" &&
+            previousRoom.status !== "FINISHED")
+        ) {
           return previousRoom;
         }
 
@@ -1437,6 +1429,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: nextCurrentMember.avatarLabel,
                 avatarUrl: nextCurrentMember.avatarUrl,
                 displayName: nextCurrentMember.displayName,
+                isActive: true,
                 isClaimed: true,
                 isViewerSeat: true,
                 profileId: nextCurrentMember.profileId,
@@ -1450,6 +1443,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: "",
                 avatarUrl: null,
                 displayName: t.empty,
+                isActive: false,
                 isClaimed: false,
                 isViewerSeat: false,
                 profileId: null,
@@ -1474,7 +1468,10 @@ export function WerewolfRoomOverview({
     setRoom((previousRoom): WerewolfRoomView => {
       const currentMember = previousRoom.currentMember;
 
-      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+      if (
+        !currentMember?.seatedSeatId ||
+        (previousRoom.status !== "LOBBY" && previousRoom.status !== "FINISHED")
+      ) {
         return previousRoom;
       }
 
@@ -1550,6 +1547,7 @@ export function WerewolfRoomOverview({
                 avatarLabel: "",
                 avatarUrl: null,
                 displayName: t.empty,
+                isActive: false,
                 isClaimed: false,
                 isViewerSeat: false,
                 profileId: null,
@@ -1561,16 +1559,6 @@ export function WerewolfRoomOverview({
     });
   }, [t.empty]);
 
-  const currentViewerSeat =
-    room.seats.find(
-      (seat) =>
-        seat.isViewerSeat ||
-        room.currentMember?.seatedSeatNumber === seat.seatNumber,
-    ) ?? null;
-  const judgeIsViewer = isWerewolfJudgeViewer({
-    currentMemberSeatNumber: room.currentMember?.seatedSeatNumber,
-    judgeSeat,
-  });
   const readySeatCount = room.seats.filter(
     (seat) => seat.isClaimed && seat.readyAt,
   ).length;
@@ -1595,7 +1583,15 @@ export function WerewolfRoomOverview({
       ? null
       : (playerSeats.find(
           (seat) =>
-            seat.seatNumber === pendingSheriffSeatNumber && seat.isClaimed,
+            seat.seatNumber === pendingSheriffSeatNumber &&
+            seat.isClaimed &&
+            (!seat.isDead || room.state.sheriffSeatNumber === seat.seatNumber),
+        ) ?? null);
+  const managedSeat =
+    managedSeatNumber === null
+      ? null
+      : (playerSeats.find(
+          (seat) => seat.seatNumber === managedSeatNumber && seat.isClaimed,
         ) ?? null);
   const pendingSheriffIsCurrent = Boolean(
     pendingSheriffSeat &&
@@ -1608,12 +1604,18 @@ export function WerewolfRoomOverview({
       : room.status === "IN_PROGRESS"
         ? t.running
         : t.lobby;
-  const centerSubtitle =
-    room.status === "LOBBY"
-      ? `${readySeatCount}/${room.seats.length} ${t.ready}`
-      : room.status === "IN_PROGRESS"
-        ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
-        : room.variant.label;
+  const centerSubtitle = isSeatingOpen
+    ? `${readySeatCount}/${room.seats.length} ${t.ready}`
+    : room.status === "IN_PROGRESS"
+      ? `${alivePlayerCount}/${playerSeats.length} ${t.alive}`
+      : room.variant.label;
+  const { left: leftPlayerSeats, right: rightPlayerSeats } =
+    getWerewolfUSeatColumns(playerSeats);
+  const arenaRowCount = Math.max(
+    leftPlayerSeats.length,
+    rightPlayerSeats.length,
+  );
+  const arenaMinHeightRem = Math.max(34, 12 + arenaRowCount * 6.25);
 
   const renderClaimedSeatAvatar = (seat: WerewolfSeat, className: string) => {
     const avatar = (
@@ -1704,18 +1706,20 @@ export function WerewolfRoomOverview({
               type="button"
             />
           )}
-          <JudgeSheriffButton
-            isSheriff={isSheriff}
-            label={`${t.judgeControls}: ${seat.displayName} · ${
-              isSheriff ? t.removeSheriff : t.setSheriff
-            }`}
-            onClick={() => setPendingSheriffSeatNumber(seat.seatNumber)}
-            type="button"
-          />
+          {!seat.isDead || isSheriff ? (
+            <JudgeSheriffButton
+              isSheriff={isSheriff}
+              label={`${t.judgeControls}: ${seat.displayName} · ${
+                isSheriff ? t.removeSheriff : t.setSheriff
+              }`}
+              onClick={() => setPendingSheriffSeatNumber(seat.seatNumber)}
+              type="button"
+            />
+          ) : null}
         </div>
       ) : null;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -1826,7 +1830,7 @@ export function WerewolfRoomOverview({
                 {t.dead}
               </span>
             ) : null}
-            {isLobby && seat.isClaimed ? (
+            {isSeatingOpen && seat.isClaimed ? (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   seat.readyAt
@@ -1854,7 +1858,7 @@ export function WerewolfRoomOverview({
       seat.isViewerSeat ||
       room.currentMember?.seatedSeatNumber === seat.seatNumber;
 
-    if (!seat.isClaimed && isLobby && canChooseSeat) {
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
       return (
         <form
           action={seatAction}
@@ -1931,7 +1935,7 @@ export function WerewolfRoomOverview({
             <span className="rounded-full bg-[#F1F2E3]/14 px-2 py-0.5 text-[10px] font-bold text-[#F1F2E3]">
               {t.judge}
             </span>
-            {isLobby && seat.isClaimed ? (
+            {isSeatingOpen && seat.isClaimed ? (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   seat.readyAt
@@ -1953,25 +1957,332 @@ export function WerewolfRoomOverview({
     );
   };
 
+  const renderArenaSeatNode = (
+    seat: WerewolfSeat,
+    side: "left" | "right",
+    rowIndex: number,
+    sideCount: number,
+  ) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+    const isSheriff = room.state.sheriffSeatNumber === seat.seatNumber;
+    const emptySeatActionLabel = room.currentMember?.seatedSeatNumber
+      ? t.changeSeat
+      : t.selectSeat;
+    const showRoleIdentity =
+      !isLobby &&
+      seat.isClaimed &&
+      (judgeIsViewer || room.status === "FINISHED");
+    const activeVote = room.flowSubmissions.find(
+      (submission) =>
+        submission.roundIndex === room.state.flow.sessionIndex &&
+        submission.voterSeatNumber === seat.seatNumber &&
+        (submission.kind === "WEREWOLF_SHERIFF_VOTE" ||
+          submission.kind === "WEREWOLF_EXILE_VOTE"),
+    );
+    const topPercent =
+      sideCount <= 1 ? 52 : 22 + (rowIndex / (sideCount - 1)) * 64;
+    const sidePositionClass = side === "left" ? "left-[4%]" : "right-[4%]";
+    const directionClass =
+      side === "left" ? "flex-row-reverse text-right" : "flex-row text-left";
+    const avatarClassName = `h-14 w-14 border-2 text-sm shadow-[0_8px_20px_rgba(0,0,0,0.34)] ${
+      seat.isDead ? "border-white/35 grayscale opacity-60" : "border-[#F1F2E3]"
+    }`;
+
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          className={`absolute z-20 w-[31%] max-w-[7.5rem] -translate-y-1/2 ${sidePositionClass}`}
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+          style={{ top: `${topPercent}%` }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            aria-label={`${emptySeatActionLabel} ${seat.seatNumber}`}
+            className={`group flex w-full items-center gap-1.5 text-white transition active:scale-95 ${directionClass}`}
+            type="submit"
+          >
+            <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-dashed border-[#F1F2E3] bg-[#082E28]/88 text-sm font-bold text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.34)] friemi-tabular">
+              {seat.seatNumber}
+              <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-md">
+                <Plus className="h-3 w-3 transition group-hover:scale-110" />
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[11px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                {t.empty}
+              </span>
+              <span className="mt-0.5 block text-[9px] font-semibold text-white/70">
+                {emptySeatActionLabel}
+              </span>
+            </span>
+          </button>
+        </form>
+      );
+    }
+
+    const avatar = seat.isClaimed ? (
+      canJudgeControlPlayers ? (
+        <button
+          aria-label={`${t.judgeControls}: ${seat.displayName}`}
+          className="relative shrink-0 rounded-full transition active:scale-95"
+          onClick={() => setManagedSeatNumber(seat.seatNumber)}
+          type="button"
+        >
+          <WerewolfAvatar
+            avatarLabel={seat.avatarLabel}
+            avatarUrl={seat.avatarUrl}
+            className={avatarClassName}
+          />
+        </button>
+      ) : (
+        renderClaimedSeatAvatar(seat, avatarClassName)
+      )
+    ) : (
+      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 border-dashed border-[#F1F2E3] bg-[#082E28]/86 text-sm font-bold text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.34)] friemi-tabular">
+        {seat.seatNumber}
+      </span>
+    );
+
+    return (
+      <div
+        className={`absolute z-20 flex w-[31%] max-w-[7.5rem] -translate-y-1/2 items-center gap-1.5 ${directionClass} ${sidePositionClass}`}
+        key={seat.id}
+        style={{ top: `${topPercent}%` }}
+      >
+        <div
+          className={`relative shrink-0 rounded-full bg-[#F1F2E3]/14 p-0.5 shadow-[0_7px_20px_rgba(0,0,0,0.32)] ring-2 ${
+            isCurrentSeat
+              ? "ring-[#76D6A3] ring-offset-2 ring-offset-[#082E28]"
+              : "ring-[#F1F2E3]/80"
+          }`}
+        >
+          {avatar}
+          {isSheriff ? (
+            <span
+              aria-label={t.setSheriff}
+              className="absolute -right-1 -top-1 z-30 grid h-5 w-5 place-items-center rounded-full bg-[#F1F2E3] text-[#153B31] shadow-md ring-1 ring-white/75"
+              title={t.setSheriff}
+            >
+              <Crown className="h-3 w-3" />
+            </span>
+          ) : null}
+          <span
+            className={`absolute -bottom-1 z-30 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-bold text-[#153B31] shadow-md friemi-tabular ${
+              side === "left" ? "-left-1" : "-right-1"
+            }`}
+          >
+            {seat.seatNumber}
+          </span>
+          {activeVote ? (
+            <span
+              className={`absolute top-1/2 z-40 -translate-y-1/2 rounded-full bg-[#F1F2E3] px-2 py-1 text-[10px] font-black text-[#7A1F2B] shadow-lg ring-1 ring-[#7A1F2B]/25 ${
+                side === "left" ? "-right-8" : "-left-8"
+              }`}
+              title={
+                activeVote.targetSeatNumber
+                  ? `${activeVote.targetSeatNumber}`
+                  : locale === "zh-CN"
+                    ? "弃票"
+                    : "Abstain"
+              }
+            >
+              {activeVote.targetSeatNumber ?? "-"}
+            </span>
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`truncate text-[11px] font-bold leading-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] ${
+              seat.isDead ? "text-white/48" : "text-white"
+            }`}
+          >
+            {seat.isClaimed ? seat.displayName : t.empty}
+          </p>
+          <div
+            className={`mt-0.5 flex min-w-0 flex-wrap items-center gap-1 ${
+              side === "left" ? "justify-end" : ""
+            }`}
+          >
+            {showRoleIdentity ? (
+              <span className="max-w-full truncate rounded-full bg-[#F1F2E3] px-1.5 py-0.5 text-[9px] font-bold text-[#153B31]">
+                {seat.roleLabel ?? t.roleUnknown}
+              </span>
+            ) : null}
+            {seat.isDead ? (
+              <span className="rounded-full bg-[#7A1F2B] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                {t.dead}
+              </span>
+            ) : null}
+            {room.state.flow.idiotRevealedSeatNumbers.includes(
+              seat.seatNumber,
+            ) ? (
+              <span className="rounded-full bg-[#FFF7E5] px-1.5 py-0.5 text-[9px] font-bold text-[#8A5B18]">
+                {locale === "zh-CN" ? "白痴翻牌" : "Idiot revealed"}
+              </span>
+            ) : null}
+            {isSeatingOpen && seat.isClaimed ? (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                  seat.readyAt
+                    ? "bg-[#38A96D] text-white"
+                    : "bg-[#082E28]/88 text-white/70"
+                }`}
+              >
+                {seat.readyAt ? t.ready : t.unready}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderArenaJudgeSeatNode = (seat: WerewolfSeat) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+
+    if (!seat.isClaimed && isSeatingOpen && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          className="absolute left-1/2 top-4 z-30 -translate-x-1/2"
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            aria-label={`${t.selectSeat}: ${t.judge}`}
+            className="group flex flex-col items-center gap-1.5 text-center transition active:scale-95"
+            type="submit"
+          >
+            <span className="relative flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-full border-[3px] border-[#AAB48E] bg-[#F1F2E3] text-[#153B31] shadow-[0_10px_26px_rgba(0,0,0,0.38)] ring-2 ring-[#F1F2E3]/45 ring-offset-2 ring-offset-[#082E28]/80">
+              <Crown className="h-6 w-6" />
+              <span className="text-[9px] font-bold leading-3">{t.judge}</span>
+              <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-[#176E4B] text-white shadow-md ring-2 ring-[#F1F2E3]">
+                <Plus className="h-3.5 w-3.5 transition group-hover:scale-110" />
+              </span>
+            </span>
+            <span className="rounded-full bg-[#031F1B]/88 px-3 py-1 shadow-md ring-1 ring-[#F1F2E3]/65">
+              <span className="block text-[11px] font-bold leading-4 text-[#F1F2E3]">
+                {t.judge}
+              </span>
+              <span className="block text-[9px] font-semibold leading-3 text-white/72">
+                {t.selectSeat}
+              </span>
+            </span>
+          </button>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 flex-col items-center gap-1 text-center"
+        key={seat.id}
+      >
+        <div
+          className={`relative shrink-0 rounded-full bg-[#F1F2E3] p-1 shadow-[0_10px_26px_rgba(0,0,0,0.38)] ring-[3px] ${
+            isCurrentSeat
+              ? "ring-[#76D6A3] ring-offset-2 ring-offset-[#082E28]"
+              : "ring-[#AAB48E]"
+          }`}
+        >
+          {seat.isClaimed ? (
+            renderClaimedSeatAvatar(
+              seat,
+              "h-14 w-14 border-2 border-[#153B31]/25 text-sm",
+            )
+          ) : (
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E4E8CF] text-[#153B31]">
+              <Crown className="h-6 w-6" />
+            </span>
+          )}
+          <span className="absolute -left-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-[#153B31] text-[#F1F2E3] shadow-md ring-2 ring-[#F1F2E3]">
+            <Crown className="h-3.5 w-3.5" />
+          </span>
+        </div>
+        <div className="min-w-0 rounded-full bg-[#031F1B]/88 px-3 py-1 shadow-md ring-1 ring-[#F1F2E3]/65">
+          <p className="max-w-[6.5rem] truncate text-[11px] font-bold leading-4 text-[#F1F2E3]">
+            {seat.isClaimed ? seat.displayName : t.judge}
+          </p>
+          {isSeatingOpen && seat.isClaimed ? (
+            <span
+              className={`mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                seat.readyAt
+                  ? "bg-[#38A96D] text-white"
+                  : "bg-[#082E28]/88 text-white/70"
+              }`}
+            >
+              {seat.readyAt ? t.ready : t.unready}
+            </span>
+          ) : !seat.isClaimed ? (
+            <span className="block text-[9px] font-semibold leading-3 text-white/72">
+              {t.empty}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full min-h-0 w-full overflow-hidden bg-[#062A24] md:min-h-[32rem]">
+      {showRoundTransition ? (
+        <div className="fixed inset-0 z-[150] grid place-items-center overflow-hidden bg-[#102B25] text-[#F1F2E3]">
+          <style>{`
+            @keyframes werewolf-round-card-left { 0% { transform: translate3d(-72px, 22px, 0) rotate(-18deg); opacity: 0; } 45%, 72% { transform: translate3d(-22px, 0, 0) rotate(-7deg); opacity: 1; } 100% { transform: translate3d(0, -10px, 0) rotate(0); opacity: 0; } }
+            @keyframes werewolf-round-card-right { 0% { transform: translate3d(72px, 22px, 0) rotate(18deg); opacity: 0; } 45%, 72% { transform: translate3d(22px, 0, 0) rotate(7deg); opacity: 1; } 100% { transform: translate3d(0, -10px, 0) rotate(0); opacity: 0; } }
+          `}</style>
+          <div className="text-center">
+            <div className="relative mx-auto h-28 w-36">
+              <span className="absolute left-7 top-3 h-24 w-16 rounded-lg border border-[#D9C7B4] bg-[#7A1F2B] shadow-2xl [animation:werewolf-round-card-left_1.7s_ease-in-out_both]" />
+              <span className="absolute right-7 top-3 h-24 w-16 rounded-lg border border-[#D9C7B4] bg-[#F1F2E3] shadow-2xl [animation:werewolf-round-card-right_1.7s_ease-in-out_both]" />
+            </div>
+            <p className="mt-4 text-2xl font-black">
+              {locale === "zh-CN"
+                ? "新一局开始"
+                : locale === "fr"
+                  ? "Nouvelle manche"
+                  : "New round"}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white/68">
+              {locale === "zh-CN"
+                ? "身份正在重新洗牌"
+                : locale === "fr"
+                  ? "Les rôles sont redistribués"
+                  : "Roles are being reshuffled"}
+            </p>
+          </div>
+        </div>
+      ) : null}
       <section className="h-full min-h-0 md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
         <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
-          <img
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_62%] brightness-[0.72] contrast-[1.05] saturate-[0.9]"
-            draggable={false}
-            key={selectedAtmosphere.id}
-            src={selectedAtmosphere.src}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/56 via-black/18 to-black/42" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[calc(var(--app-top-safe-area)+4.35rem)] bg-[#052A24]" />
-          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.35rem)] z-10 h-px bg-[#F1F2E3]/24" />
-          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.38rem)] z-10 h-8 bg-gradient-to-b from-[#052A24]/58 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-[var(--app-bottom-safe-area)] h-28 bg-gradient-to-t from-[#031F1B]/46 to-transparent" />
-
-          <div className="relative z-20 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
+          <div className="relative z-30 grid h-10 shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
             <button
               aria-label={t.back}
               className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#F1F2E3] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F1F2E3]/36 transition hover:bg-[#0D493F]"
@@ -2001,23 +2312,6 @@ export function WerewolfRoomOverview({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5">
-              <WerewolfAtmospherePicker
-                locale={locale}
-                onCycle={() => {
-                  setSelectedAtmosphereId((currentId) => {
-                    const currentIndex = werewolfAtmospheres.findIndex(
-                      (atmosphere) => atmosphere.id === currentId,
-                    );
-                    const nextAtmosphere =
-                      werewolfAtmospheres[
-                        (currentIndex + 1) % werewolfAtmospheres.length
-                      ] ?? defaultWerewolfAtmosphere;
-
-                    return nextAtmosphere.id;
-                  });
-                }}
-                selectedId={selectedAtmosphere.id}
-              />
               <WerewolfRoomQrDialog
                 joinUrl={joinUrl}
                 roomCode={room.code}
@@ -2132,34 +2426,54 @@ export function WerewolfRoomOverview({
           ) : null}
 
           <div className="relative z-10 mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="relative px-2 py-2">
-              <div className="flex items-center gap-3 rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#062A24] ring-1 ring-white/20">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-full w-full object-cover opacity-75"
-                    draggable={false}
-                    src="/game-tools/werewolf/werewolf.png"
-                  />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold text-[#F1F2E3]">
-                    {centerTitle}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-white/68">
-                    {centerSubtitle}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white/78 friemi-tabular">
-                  {playerSeats.filter((seat) => seat.isClaimed).length}/
-                  {playerSeats.length}
-                </span>
-              </div>
+            <div
+              className="relative isolate mx-auto w-full overflow-hidden rounded-b-[1.25rem] border-x border-b border-[#F1F2E3]/18 bg-[#092E28]"
+              style={{
+                minHeight: `max(calc(100% - 0.25rem), ${arenaMinHeightRem}rem)`,
+              }}
+            >
+              <img
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-[center_58%] brightness-[0.62] contrast-[1.08] saturate-[0.88]"
+                draggable={false}
+                key={selectedAtmosphere.id}
+                src={selectedAtmosphere.src}
+              />
+              <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#031F1B]/28 via-black/10 to-[#031F1B]/48" />
+              <img
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-[3%] h-[94%] w-[40%] max-w-[10.5rem] -translate-x-1/2 object-fill drop-shadow-[0_16px_22px_rgba(0,0,0,0.42)]"
+                draggable={false}
+                src="/game-tools/werewolf/table/friemi-stone-table-logo-420x1650.png"
+              />
 
-              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-2xl border border-[#F1F2E3]/22 bg-[#031F1B]/68 shadow-[0_16px_38px_rgba(0,0,0,0.2)] backdrop-blur-sm">
-                {judgeSeat ? renderJudgeSeatNode(judgeSeat) : null}
-                {playerSeats.map((seat) => renderSeatNode(seat))}
+              {judgeSeat ? renderArenaJudgeSeatNode(judgeSeat) : null}
+              {leftPlayerSeats.map((seat, index) =>
+                renderArenaSeatNode(
+                  seat,
+                  "left",
+                  index,
+                  leftPlayerSeats.length,
+                ),
+              )}
+              {rightPlayerSeats.map((seat, index) =>
+                renderArenaSeatNode(
+                  seat,
+                  "right",
+                  index,
+                  rightPlayerSeats.length,
+                ),
+              )}
+
+              <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/20 bg-[#031F1B]/78 px-3 py-1.5 text-center shadow-lg">
+                <p className="whitespace-nowrap text-[11px] font-bold text-[#F1F2E3]">
+                  {centerTitle}
+                </p>
+                <p className="mt-0.5 whitespace-nowrap text-[9px] font-semibold text-white/68">
+                  {centerSubtitle}
+                </p>
               </div>
             </div>
 
@@ -2171,34 +2485,39 @@ export function WerewolfRoomOverview({
           </div>
 
           <div className="relative z-10 mt-2 shrink-0 space-y-2">
-            {!room.currentMember && isLobby ? (
-              <form
-                action={joinAction}
-                className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2"
-              >
-                <input name="locale" type="hidden" value={locale} />
-                <input name="roomId" type="hidden" value={room.id} />
-                <input
-                  className="h-12 min-w-0 rounded-full border border-[#F1F2E3]/45 bg-[#F1F2E3]/95 px-4 text-sm font-semibold text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F1F2E3]"
-                  maxLength={40}
-                  name="displayName"
-                  placeholder={t.joinName}
-                />
-                <SubmitButton
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F1F2E3] px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
-                  label={t.enterMember}
-                />
-                {joinState.formError ? (
-                  <p className="col-span-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                    {joinState.formError}
-                  </p>
-                ) : null}
-              </form>
+            {currentViewerSeat &&
+            currentSeatPrivateToken &&
+            room.status === "IN_PROGRESS" ? (
+              <WerewolfFlowPanel
+                events={room.events}
+                flow={room.state.flow}
+                inlineTrigger
+                isJudge={judgeIsViewer}
+                locale={locale}
+                privateToken={currentSeatPrivateToken}
+                roleDeck={room.variant.roles}
+                roleKey={
+                  judgeIsViewer
+                    ? null
+                    : (currentViewerSeat.roleKey as WerewolfRoleKey | null)
+                }
+                roomStatus={room.status}
+                seatNumber={currentViewerSeat.seatNumber}
+                seats={room.seats.map((seat) => ({
+                  displayName: seat.displayName,
+                  isActive: seat.isActive,
+                  isDead: seat.isDead,
+                  isPlayerSeat: seat.isPlayerSeat,
+                  roleKey: seat.roleKey,
+                  seatNumber: seat.seatNumber,
+                }))}
+                sheriffSeatNumber={room.state.sheriffSeatNumber ?? null}
+                submissions={room.flowSubmissions}
+              />
             ) : null}
-
             {canExitRoom && currentViewerSeat ? (
               <div className="grid gap-2">
-                {isLobby ? (
+                {isSeatingOpen ? (
                   <div className="grid grid-cols-2 gap-2">
                     <form
                       action={readyAction}
@@ -2275,13 +2594,7 @@ export function WerewolfRoomOverview({
                     </form>
                   </div>
                 ) : currentViewerSeat.privateToken ? (
-                  <div
-                    className={`grid gap-2 ${
-                      judgeIsViewer && room.status === "FINISHED"
-                        ? "grid-cols-1"
-                        : "grid-cols-2"
-                    }`}
-                  >
+                  <div className="grid grid-cols-2 gap-2">
                     {judgeIsViewer && room.status === "IN_PROGRESS" ? (
                       <button
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] active:scale-[0.98]"
@@ -2294,10 +2607,11 @@ export function WerewolfRoomOverview({
                     ) : !judgeIsViewer ? (
                       <Link
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3]"
-                        href={withLocale(
+                        href={getWerewolfPrivateSeatHref({
                           locale,
-                          `/game-tools/werewolf/seats/${currentViewerSeat.privateToken}`,
-                        )}
+                          privateToken: currentViewerSeat.privateToken,
+                          roundNumber: room.state.roundNumber,
+                        })}
                       >
                         <Ticket className="h-4 w-4" />
                         {t.openSeat}
@@ -2313,7 +2627,7 @@ export function WerewolfRoomOverview({
                   </div>
                 ) : null}
 
-                {judgeIsViewer && judgeSeat?.privateToken && isLobby ? (
+                {judgeIsViewer && judgeSeat?.privateToken && isSeatingOpen ? (
                   <form
                     action={startAction}
                     className="grid gap-1.5"
@@ -2322,7 +2636,13 @@ export function WerewolfRoomOverview({
                         return;
                       }
 
-                      if (!window.confirm(t.startConfirm)) {
+                      if (
+                        !window.confirm(
+                          room.status === "FINISHED"
+                            ? t.nextRoundConfirm
+                            : t.startConfirm,
+                        )
+                      ) {
                         event.preventDefault();
                       }
                     }}
@@ -2333,11 +2653,19 @@ export function WerewolfRoomOverview({
                       type="hidden"
                       value={judgeSeat.privateToken}
                     />
-                    <SubmitButton
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-45"
-                      disabled={!allSeatsReady}
-                      label={t.start}
-                    />
+                    {room.status === "FINISHED" ? (
+                      <NextRoundSubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={!allSeatsReady}
+                        label={t.nextRound}
+                      />
+                    ) : (
+                      <SubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={!allSeatsReady}
+                        label={t.start}
+                      />
+                    )}
                     {!allSeatsReady ? (
                       <p className="text-center text-[11px] font-bold text-white/58">
                         {t.startWaiting}
@@ -2348,7 +2676,7 @@ export function WerewolfRoomOverview({
               </div>
             ) : null}
 
-            {!canExitRoom && !isLobby ? (
+            {!canExitRoom && !isSeatingOpen ? (
               <p className="rounded-2xl border border-[#F1F2E3]/25 bg-[#F1F2E3]/10 px-3 py-2 text-center text-xs font-bold text-[#F1F2E3]">
                 {t.locked}
               </p>
@@ -2377,6 +2705,145 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
+      {managedSeat && judgePrivateToken && canJudgeControlPlayers ? (
+        <div
+          className="fixed inset-0 z-[90] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
+          onMouseDown={() => setManagedSeatNumber(null)}
+          role="presentation"
+        >
+          <section
+            aria-label={`${t.judgeControls}: ${managedSeat.displayName}`}
+            aria-modal="true"
+            className="w-full max-w-[21rem] rounded-[1.2rem] bg-[#FFFDF7] p-4 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.36)]"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-center gap-3 border-b border-[#E7E4D8] pb-3">
+              <WerewolfAvatar
+                avatarLabel={managedSeat.avatarLabel}
+                avatarUrl={managedSeat.avatarUrl}
+                className="h-12 w-12 shrink-0 text-sm"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold">
+                  {managedSeat.seatNumber}. {managedSeat.displayName}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-[#66706C]">
+                  {managedSeat.roleLabel ?? t.roleUnknown}
+                </p>
+              </div>
+              <button
+                aria-label={t.deathConfirmCancel}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D6D5B2] text-[#59635F] transition active:scale-95"
+                onClick={() => setManagedSeatNumber(null)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {!managedSeat.isDead ||
+              room.state.sheriffSeatNumber === managedSeat.seatNumber ? (
+                <button
+                  className={`inline-flex h-12 items-center justify-center gap-2 rounded-full border text-sm font-bold transition active:scale-[0.98] ${
+                    room.state.sheriffSeatNumber === managedSeat.seatNumber
+                      ? "border-[#D6D5B2] bg-[#F1F2E3] text-[#153B31]"
+                      : "border-[#D6D5B2] bg-white text-[#153B31]"
+                  }`}
+                  onClick={() => {
+                    setManagedSeatNumber(null);
+                    setPendingSheriffSeatNumber(managedSeat.seatNumber);
+                  }}
+                  type="button"
+                >
+                  <Crown className="h-4 w-4" />
+                  {room.state.sheriffSeatNumber === managedSeat.seatNumber
+                    ? t.removeSheriff
+                    : t.setSheriff}
+                </button>
+              ) : (
+                <span />
+              )}
+
+              {managedSeat.isDead ? (
+                <form
+                  action={lifeAction}
+                  onSubmit={(event) => {
+                    if (!canSubmitOnline(event)) {
+                      return;
+                    }
+
+                    applyOptimisticPlayerLife(managedSeat.seatNumber, false);
+                    setManagedSeatNumber(null);
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  {currentMemberToken ? (
+                    <input
+                      name="memberToken"
+                      type="hidden"
+                      value={currentMemberToken}
+                    />
+                  ) : null}
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgePrivateToken}
+                  />
+                  <input
+                    name="seatNumber"
+                    type="hidden"
+                    value={managedSeat.seatNumber}
+                  />
+                  <input name="operation" type="hidden" value="revive" />
+                  <input name="responseMode" type="hidden" value="inline" />
+                  <SubmitButton
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#D8F0DF] px-3 text-sm font-bold text-[#176B45] transition active:scale-[0.98] disabled:opacity-55"
+                    label={t.revive}
+                  />
+                </form>
+              ) : (
+                <button
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#9B2433] px-3 text-sm font-bold text-white transition active:scale-[0.98]"
+                  onClick={() => {
+                    setManagedSeatNumber(null);
+                    setPendingDeathSeatNumber(managedSeat.seatNumber);
+                  }}
+                  type="button"
+                >
+                  <Skull className="h-4 w-4" />
+                  {t.markDead}
+                </button>
+              )}
+              {managedSeat.roleKey === "idiot" &&
+              !room.state.flow.idiotRevealedSeatNumbers.includes(
+                managedSeat.seatNumber,
+              ) ? (
+                <form action={lifeAction} className="col-span-2">
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgePrivateToken}
+                  />
+                  <input
+                    name="seatNumber"
+                    type="hidden"
+                    value={managedSeat.seatNumber}
+                  />
+                  <input name="operation" type="hidden" value="reveal_idiot" />
+                  <input name="responseMode" type="hidden" value="inline" />
+                  <SubmitButton
+                    className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#B77A22]/35 bg-[#FFF7E5] px-3 text-sm font-bold text-[#8A5B18] transition active:scale-[0.98] disabled:opacity-55"
+                    label={locale === "zh-CN" ? "白痴翻牌" : "Reveal Idiot"}
+                  />
+                </form>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
       {pendingDeathSeat && judgePrivateToken && canJudgeControlPlayers ? (
         <div
           className="fixed inset-0 z-[90] grid place-items-center bg-black/55 px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] backdrop-blur-sm"
@@ -2669,6 +3136,13 @@ export function WerewolfRoomOverview({
                 label={t.finishWerewolf}
                 value="WEREWOLF"
               />
+              {room.state.flow.thirdPartySeatNumbers.length > 0 ? (
+                <FinishOutcomeButton
+                  className="h-12 rounded-full bg-[#B77A22] px-4 text-sm font-bold text-white transition hover:bg-[#996319] disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.finishThirdParty}
+                  value="THIRD_PARTY"
+                />
+              ) : null}
               <FinishOutcomeButton
                 className="h-11 rounded-full border border-[#C9C9BB] bg-white px-4 text-sm font-bold text-[#59635F] transition hover:bg-[#F4F4EF] disabled:cursor-not-allowed disabled:opacity-55"
                 label={t.terminateGame}
@@ -2753,20 +3227,45 @@ export function WerewolfRoomOverview({
               </div>
             </div>
 
-            <div className="border-t border-[#E3DFCE] p-4">
+            <div
+              className={`grid gap-2 border-t border-[#E3DFCE] p-4 ${
+                judgeIsViewer && judgeSeat?.privateToken
+                  ? "grid-cols-2"
+                  : "grid-cols-1"
+              }`}
+            >
+              {judgeIsViewer && judgeSeat?.privateToken ? (
+                <form
+                  action={startAction}
+                  onSubmit={(event) => {
+                    if (!canSubmitOnline(event)) {
+                      return;
+                    }
+
+                    if (!window.confirm(t.nextRoundConfirm)) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={judgeSeat.privateToken}
+                  />
+                  <NextRoundSubmitButton
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#176B45] px-3 text-sm font-bold text-white transition hover:bg-[#125739] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={!allSeatsReady}
+                    label={t.nextRound}
+                  />
+                </form>
+              ) : null}
               <button
-                className="h-11 w-full rounded-full bg-[#176B45] text-sm font-bold text-white transition hover:bg-[#125739]"
-                onClick={() => {
-                  setResultDialogOpen(false);
-                  if (canExitRoom) {
-                    setExitDialogOpen(true);
-                  } else {
-                    router.push(werewolfHomeHref);
-                  }
-                }}
+                className="h-11 w-full rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-bold text-[#153B31] transition hover:bg-[#F7FAF4]"
+                onClick={() => setResultDialogOpen(false)}
                 type="button"
               >
-                {canExitRoom ? t.exitGame : t.resultDialogClose}
+                {t.stayInRoom}
               </button>
             </div>
           </section>

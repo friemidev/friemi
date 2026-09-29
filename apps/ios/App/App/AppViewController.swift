@@ -4,6 +4,7 @@ import WebKit
 
 class AppViewController: CAPBridgeViewController {
     private var capacitorUIDelegate: WKUIDelegate?
+    private var edgeBackGestures: [UIScreenEdgePanGestureRecognizer] = []
     private let fallbackBaseUrl = "https://www.friemi.com"
     private let fallbackLocale = "zh-CN"
     private let supportedLocales = ["zh-CN", "en", "fr"]
@@ -13,12 +14,25 @@ class AppViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(FriemiNavigationPlugin())
         capacitorUIDelegate = webView?.uiDelegate
         webView?.uiDelegate = self
-        webView?.allowsBackForwardNavigationGestures = true
-        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+        webView?.allowsBackForwardNavigationGestures = false
+        installEdgeBackGestures()
+        disableContainerExitGesture()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleFriemiOpenURLNotification(_:)),
             name: .friemiOpenURL,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppWillResignActive),
+            name: UIApplication.willResignActiveNotification,
             object: nil
         )
         CAPLog.print("Friemi iOS navigation plugin registered v2")
@@ -29,10 +43,20 @@ class AppViewController: CAPBridgeViewController {
         super.viewDidLoad()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        disableContainerExitGesture()
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+        disableContainerExitGesture()
         consumePendingFriemiOpenURL()
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        disableContainerExitGesture()
     }
 
     deinit {
@@ -45,11 +69,35 @@ class AppViewController: CAPBridgeViewController {
             return
         }
 
+        guard webView != nil else {
+            return
+        }
+
+        UserDefaults.standard.removeObject(forKey: friemiPendingOpenURLKey)
         openFriemiURL(url)
     }
 
+    @objc private func handleAppDidBecomeActive() {
+        dispatchWebLifecycleEvent("friemi:ios-resume")
+        dispatchWebLifecycleEvent("friemi:app-foreground")
+        consumePendingFriemiOpenURL()
+    }
+
+    @objc private func handleAppWillResignActive() {
+        dispatchWebLifecycleEvent("friemi:app-background")
+    }
+
+    private func dispatchWebLifecycleEvent(_ eventName: String) {
+        let script = "window.dispatchEvent(new CustomEvent('\(eventName)'))"
+
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.evaluateJavaScript(script, completionHandler: nil)
+        }
+    }
+
     private func consumePendingFriemiOpenURL() {
-        guard let rawUrl = UserDefaults.standard.string(forKey: friemiPendingOpenURLKey),
+        guard webView != nil,
+              let rawUrl = UserDefaults.standard.string(forKey: friemiPendingOpenURLKey),
               let url = URL(string: rawUrl)
         else {
             return
@@ -70,6 +118,10 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func buildWebUrlFromFriemiURL(_ url: URL) -> URL? {
+        if (url.scheme == "https" || url.scheme == "http"), shouldKeepInApp(url.host) {
+            return url
+        }
+
         if url.host?.lowercased() == "auth-complete" {
             return buildWebUrlFromAuthCompleteURL(url)
         }
@@ -200,6 +252,86 @@ class AppViewController: CAPBridgeViewController {
         components.port = url.port
 
         return components.url?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) ?? fallbackBaseUrl
+    }
+
+    private func installEdgeBackGestures() {
+        guard edgeBackGestures.isEmpty else {
+            return
+        }
+
+        let leftEdgeGesture = makeEdgeBackGesture(edges: .left)
+        let rightEdgeGesture = makeEdgeBackGesture(edges: .right)
+        edgeBackGestures = [leftEdgeGesture, rightEdgeGesture]
+
+        view.addGestureRecognizer(leftEdgeGesture)
+        view.addGestureRecognizer(rightEdgeGesture)
+    }
+
+    private func makeEdgeBackGesture(edges: UIRectEdge) -> UIScreenEdgePanGestureRecognizer {
+        let gesture = UIScreenEdgePanGestureRecognizer(
+            target: self,
+            action: #selector(handleEdgeBackGesture(_:))
+        )
+        gesture.edges = edges
+        gesture.maximumNumberOfTouches = 1
+        gesture.cancelsTouchesInView = true
+        gesture.delegate = self
+        return gesture
+    }
+
+    private func disableContainerExitGesture() {
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+    }
+
+    @objc private func handleEdgeBackGesture(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        guard gesture.state == .ended else {
+            return
+        }
+
+        let translation = gesture.translation(in: view)
+        let velocity = gesture.velocity(in: view)
+        let expectedDirection = gesture.edges.contains(.left)
+            ? translation.x > 0
+            : translation.x < 0
+        let minimumDistance = min(max(view.bounds.width * 0.16, 48), 72)
+        let completedSwipe = abs(translation.x) >= minimumDistance || abs(velocity.x) >= 500
+
+        guard expectedDirection, completedSwipe,
+              let webView,
+              let destination = previousFriemiHistoryItem(in: webView)
+        else {
+            return
+        }
+
+        webView.go(to: destination)
+    }
+
+    private func previousFriemiHistoryItem(in webView: WKWebView) -> WKBackForwardListItem? {
+        guard let currentHost = webView.url?.host?.lowercased() else {
+            return nil
+        }
+
+        return webView.backForwardList.backList.reversed().first { item in
+            guard let candidateHost = item.url.host?.lowercased(),
+                  item.url.scheme == "https" || item.url.scheme == "http"
+            else {
+                return false
+            }
+
+            return isSameFriemiAppOrigin(candidateHost, currentHost)
+        }
+    }
+
+    private func isSameFriemiAppOrigin(_ candidateHost: String, _ currentHost: String) -> Bool {
+        if candidateHost == currentHost {
+            return true
+        }
+
+        return isFriemiProductionHost(candidateHost) && isFriemiProductionHost(currentHost)
+    }
+
+    private func isFriemiProductionHost(_ host: String) -> Bool {
+        host == "friemi.com" || host == "www.friemi.com" || host.hasSuffix(".friemi.com")
     }
 
     private func installFriemiNavigationGuard() {
@@ -346,6 +478,25 @@ class AppViewController: CAPBridgeViewController {
         return first == 10 ||
             (first == 172 && (16...31).contains(second)) ||
             (first == 192 && second == 168)
+    }
+}
+
+extension AppViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let edgeGesture = gestureRecognizer as? UIScreenEdgePanGestureRecognizer,
+              edgeBackGestures.contains(where: { $0 === edgeGesture }),
+              let webView,
+              previousFriemiHistoryItem(in: webView) != nil
+        else {
+            return false
+        }
+
+        let velocity = edgeGesture.velocity(in: view)
+        guard abs(velocity.x) > abs(velocity.y) else {
+            return false
+        }
+
+        return edgeGesture.edges.contains(.left) ? velocity.x > 0 : velocity.x < 0
     }
 }
 

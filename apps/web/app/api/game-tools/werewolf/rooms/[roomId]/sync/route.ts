@@ -29,6 +29,7 @@ async function getWerewolfRoomSync(
     if (includeRoom) {
       const viewerProfileId = await getOptionalAuthenticatedProfileId();
       const room = await getWerewolfRoomById({
+        historyMode: "sync",
         locale,
         memberToken,
         roomId,
@@ -81,6 +82,7 @@ async function getWerewolfRoomSync(
           status: room.status,
           syncVersion,
           room: {
+            atmosphereId: room.atmosphereId,
             code: room.code,
             currentMember: room.currentMember
               ? {
@@ -101,7 +103,12 @@ async function getWerewolfRoomSync(
               actorName: event.actor?.nickname ?? null,
               createdAt: event.createdAt.toISOString(),
               id: event.id,
+              payload: event.payload,
               type: event.type,
+            })),
+            flowSubmissions: room.flowSubmissions.map((submission) => ({
+              ...submission,
+              submittedAt: submission.submittedAt.toISOString(),
             })),
             host: {
               nickname: room.host.nickname,
@@ -125,6 +132,7 @@ async function getWerewolfRoomSync(
               avatarUrl: seat.avatarUrl,
               displayName: seat.displayName,
               id: seat.id,
+              isActive: seat.isActive,
               isClaimed: seat.isClaimed,
               isDead: seat.isDead,
               isJudgeSeat: seat.isJudgeSeat,

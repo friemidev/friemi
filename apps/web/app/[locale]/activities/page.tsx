@@ -439,7 +439,7 @@ export default async function ActivitiesPage({
         locale={locale}
         resultCount={activitiesResult.list?.totalCount ?? 0}
       />
-      <div className="hidden md:block">
+      <div className="friemi-native-app-desktop-only hidden md:block">
         <ActivityFilters
           cities={filterOptions.cities}
           filters={filters}
@@ -449,7 +449,7 @@ export default async function ActivitiesPage({
         />
       </div>
 
-      <div className="hidden flex-col items-center gap-2 px-1 text-center sm:gap-3 md:flex">
+      <div className="friemi-native-app-desktop-only hidden flex-col items-center gap-2 px-1 text-center sm:gap-3 md:flex">
         <p className="max-w-[42rem] text-base font-medium leading-7 text-ink [text-wrap:balance] sm:text-[1.05rem] sm:leading-8">
           {t.activities.description}
         </p>

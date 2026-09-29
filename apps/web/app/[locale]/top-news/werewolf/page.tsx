@@ -14,7 +14,7 @@ type WerewolfTopNewsPageProps = {
   }>;
 };
 
-const werewolfTopNewsImage = "/game-tools/werewolf/home/topnew.png";
+const werewolfTopNewsImage = "/top_news/werewolf-guide.png";
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -72,11 +72,11 @@ export default async function WerewolfTopNewsPage({
         <Image
           alt={copy.title}
           className="block h-auto w-full"
-          height={1882}
+          height={8244}
           priority
           sizes="(max-width: 836px) 100vw, 836px"
           src={werewolfTopNewsImage}
-          width={836}
+          width={1206}
         />
       </div>
     </main>

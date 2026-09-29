@@ -24,6 +24,17 @@ export function getNotificationPath(input: {
   planetSlug?: string | null;
   type: NotificationType;
 }) {
+  if (input.type === "COUPON_RECEIVED" || input.type === "COUPON_REDEEMED") {
+    return "/profile/bag";
+  }
+
+  if (
+    input.type === "COUPON_CLAIMED" ||
+    input.type === "COUPON_REDEMPTION_COMPLETED"
+  ) {
+    return "/profile/store";
+  }
+
   if (input.type.startsWith("AA_") && input.activityId) {
     return input.aaTransactionId
       ? `/lobby/${input.activityId}/aa/transactions/${input.aaTransactionId}`
@@ -42,13 +53,8 @@ export function getNotificationPath(input: {
     return input.activityId ? `/lobby/${input.activityId}/room` : "/lobby";
   }
 
-  if (
-    input.type === "PLANET_MESSAGE" ||
-    input.type === "PLANET_JOIN_REQUEST"
-  ) {
-    return input.planetSlug
-      ? `/planets/${input.planetSlug}/chat`
-      : "/planets";
+  if (input.type === "PLANET_MESSAGE" || input.type === "PLANET_JOIN_REQUEST") {
+    return input.planetSlug ? `/planets/${input.planetSlug}/chat` : "/planets";
   }
 
   if (input.activityId) {
@@ -90,9 +96,11 @@ export function getNotificationCopy(input: {
   activityTitle: string | null;
   actorActivityRole?: "ORGANIZER" | "CO_MANAGER" | null;
   actorName: string | null;
+  couponTitle?: string | null;
   giftText?: string | null;
   locale: PushCopyLocale;
   messageBody?: string | null;
+  merchantName?: string | null;
   planetName?: string | null;
   type: NotificationType;
 }) {
@@ -122,6 +130,8 @@ export function getNotificationCopy(input: {
     input.type === "ACTIVITY_CHECK_IN" &&
     hasActorName &&
     input.actorActivityRole === null;
+  const couponTitle = input.couponTitle || "Friemi Coupon";
+  const merchantName = input.merchantName || actorName;
 
   const copy: Record<
     PushCopyLocale,
@@ -139,6 +149,10 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
       FRIEND_REQUEST: `${actorName} 关注了你`,
       CHARM_GIFT_RECEIVED: `${actorName} 给你送了礼物`,
+      COUPON_RECEIVED: `${merchantName}的优惠券已放入背包`,
+      COUPON_CLAIMED: `${actorName}领取了${couponTitle}`,
+      COUPON_REDEEMED: `${couponTitle}核销成功`,
+      COUPON_REDEMPTION_COMPLETED: `${actorName}使用了${couponTitle}`,
       MOMENT_COMMENTED: `${actorName} 评论了你的足迹`,
       MOMENT_COMMENT_REPLY: `${actorName} 回复了你的评论`,
       MOMENT_LIKED: `${actorName} 点赞了你的足迹`,
@@ -172,6 +186,10 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} sent you a message`,
       FRIEND_REQUEST: `${actorName} started following you`,
       CHARM_GIFT_RECEIVED: `${actorName} sent you a gift`,
+      COUPON_RECEIVED: `${merchantName}'s coupon was added to your bag`,
+      COUPON_CLAIMED: `${actorName} claimed ${couponTitle}`,
+      COUPON_REDEEMED: `${couponTitle} was redeemed`,
+      COUPON_REDEMPTION_COMPLETED: `${actorName} redeemed ${couponTitle}`,
       MOMENT_COMMENTED: `${actorName} commented on your moment`,
       MOMENT_COMMENT_REPLY: `${actorName} replied to your comment`,
       MOMENT_LIKED: `${actorName} liked your moment`,
@@ -205,6 +223,10 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
       FRIEND_REQUEST: `${actorName} vous suit`,
       CHARM_GIFT_RECEIVED: `${actorName} vous a envoyé un cadeau`,
+      COUPON_RECEIVED: `Le coupon de ${merchantName} est dans votre sac`,
+      COUPON_CLAIMED: `${actorName} a reçu ${couponTitle}`,
+      COUPON_REDEEMED: `${couponTitle} a été utilisé`,
+      COUPON_REDEMPTION_COMPLETED: `${actorName} a utilisé ${couponTitle}`,
       MOMENT_COMMENTED: `${actorName} a commenté votre moment`,
       MOMENT_COMMENT_REPLY: `${actorName} a répondu à votre commentaire`,
       MOMENT_LIKED: `${actorName} a aimé votre moment`,

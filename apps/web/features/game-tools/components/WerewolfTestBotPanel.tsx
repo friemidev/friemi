@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   FastForward,
   HeartPulse,
+  Skull,
   Trophy,
   UsersRound,
 } from "lucide-react";
@@ -37,6 +38,7 @@ type TestBotOperation =
   | "fill"
   | "ready"
   | "fill_ready_start"
+  | "advance_flow"
   | "random_death"
   | "random_revive"
   | "finish_good"
@@ -57,9 +59,10 @@ function getCopy(locale: string) {
       finishWerewolfConfirm:
         "Terminer cette partie de test avec les loups gagnants ?",
       help: "Outil visible seulement en test.",
-      out: "Avancer",
+      next: "Étape suivante",
+      out: "Sortie aléatoire",
       ready: "Prêts",
-      revive: "Retour",
+      revive: "Retour aléatoire",
       start: "Remplir et lancer",
       title: "Assistant test",
     };
@@ -76,9 +79,10 @@ function getCopy(locale: string) {
       finishWerewolfConfirm:
         "Finish this test game with the werewolf team winning?",
       help: "Only visible while testing.",
-      out: "Advance",
+      next: "Next step",
+      out: "Random out",
       ready: "Ready all",
-      revive: "Bring back",
+      revive: "Random return",
       start: "Fill and start",
       title: "Test assistant",
     };
@@ -93,7 +97,8 @@ function getCopy(locale: string) {
     finishWerewolf: "狼人胜",
     finishWerewolfConfirm: "将这局测试结算为狼人阵营获胜？",
     help: "只在测试环境显示。",
-    out: "按规则推进",
+    next: "下一步流程",
+    out: "随机出局",
     ready: "全员准备",
     revive: "随机复活",
     start: "补满并开局",
@@ -246,9 +251,16 @@ export function WerewolfTestBotPanel({
         </div>
       ) : room.status === "IN_PROGRESS" ? (
         <div className="mt-4 grid gap-2">
+          <TestBotButton
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-4 text-sm font-bold text-[#1E1718] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+            operation="advance_flow"
+          >
+            <FastForward className="h-4 w-4" />
+            {t.next}
+          </TestBotButton>
           <div className="grid grid-cols-2 gap-2">
             <TestBotButton operation="random_death">
-              <FastForward className="h-3.5 w-3.5" />
+              <Skull className="h-3.5 w-3.5" />
               {t.out}
             </TestBotButton>
             <TestBotButton operation="random_revive">

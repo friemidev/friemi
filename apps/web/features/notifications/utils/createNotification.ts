@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { NotificationType, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { sendMobilePushForNotification } from "@/features/mobile/push/sendMobilePush";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import {
   getPerformanceRolloutMode,
   logPerformanceShadow,
@@ -9,13 +10,14 @@ import {
 
 type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
 
-type CreateNotificationInput = {
+export type CreateNotificationInput = {
   actorDisplayName?: string | null;
   actorId?: string | null;
   aaTransactionId?: string | null;
   activityId?: string | null;
   activityAnnouncementId?: string | null;
   charmGiftEventId?: string | null;
+  couponWalletItemId?: string | null;
   dedupe?: boolean;
   dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
@@ -44,6 +46,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.activityId ?? "",
         input.activityAnnouncementId ?? "",
         input.charmGiftEventId ?? "",
+        input.couponWalletItemId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
         input.planetId ?? "",
@@ -60,6 +63,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     activityId: input.activityId ?? null,
     activityAnnouncementId: input.activityAnnouncementId ?? null,
     charmGiftEventId: input.charmGiftEventId ?? null,
+    couponWalletItemId: input.couponWalletItemId ?? null,
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,
@@ -96,11 +100,14 @@ export async function createNotification(
     data: identity,
   });
 
-  after(() =>
-    sendMobilePushForNotification(notification.id).catch((error) => {
-      console.error("Failed to dispatch mobile push notification", error);
-    }),
-  );
+  after(async () => {
+    await Promise.all([
+      sendMobilePushForNotification(notification.id).catch((error) => {
+        console.error("Failed to dispatch mobile push notification", error);
+      }),
+      invalidateUnreadBadgeCache([notification.recipientId]),
+    ]);
+  });
 
   return notification;
 }
@@ -175,12 +182,17 @@ export async function createNotifications(
       skipDuplicates: true,
     });
 
-    pendingIdentities.forEach((identity) => {
-      after(() =>
-        sendMobilePushForNotification(identity.id).catch((error) => {
-          console.error("Failed to dispatch batched mobile push", error);
-        }),
-      );
+    after(async () => {
+      await Promise.all([
+        ...pendingIdentities.map((identity) =>
+          sendMobilePushForNotification(identity.id).catch((error) => {
+            console.error("Failed to dispatch batched mobile push", error);
+          }),
+        ),
+        invalidateUnreadBadgeCache(
+          pendingIdentities.map((identity) => identity.recipientId),
+        ),
+      ]);
     });
 
     logPerformanceShadow("b2_notification_batch", {

@@ -12,7 +12,7 @@ const bottomNavigationTargets = [
   "/mobile-home",
   "/lobby",
   "/activities/new",
-  "/footprints?tab=moment",
+  "/footprints?tab=message",
   "/profile",
 ] as const;
 
@@ -67,11 +67,11 @@ function getActiveBottomNavigationTarget(routePath: string) {
 function getFootprintsTab(search: string): FootprintsTab {
   const tab = new URLSearchParams(search).get("tab");
 
-  if (tab === "message" || tab === "planet") {
+  if (tab === "moment" || tab === "planet") {
     return tab;
   }
 
-  return "moment";
+  return "message";
 }
 
 function getFootprintsTargets(search: string) {

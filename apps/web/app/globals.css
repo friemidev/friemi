@@ -10,11 +10,7 @@
   font-weight: 200 800;
   font-display: swap;
   unicode-range:
-    U+0000-00FF,
-    U+0100-024F,
-    U+1E00-1EFF,
-    U+2000-206F,
-    U+20A0-20CF;
+    U+0000-00FF, U+0100-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF;
 }
 
 @font-face {
@@ -25,17 +21,8 @@
   font-weight: 400;
   font-display: swap;
   unicode-range:
-    U+2E80-2EFF,
-    U+2F00-2FDF,
-    U+3000-303F,
-    U+3040-30FF,
-    U+3100-312F,
-    U+31A0-31BF,
-    U+31F0-31FF,
-    U+3400-4DBF,
-    U+4E00-9FFF,
-    U+F900-FAFF,
-    U+FF00-FFEF;
+    U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-30FF, U+3100-312F,
+    U+31A0-31BF, U+31F0-31FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
 
 @font-face {
@@ -46,17 +33,8 @@
   font-weight: 500;
   font-display: swap;
   unicode-range:
-    U+2E80-2EFF,
-    U+2F00-2FDF,
-    U+3000-303F,
-    U+3040-30FF,
-    U+3100-312F,
-    U+31A0-31BF,
-    U+31F0-31FF,
-    U+3400-4DBF,
-    U+4E00-9FFF,
-    U+F900-FAFF,
-    U+FF00-FFEF;
+    U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-30FF, U+3100-312F,
+    U+31A0-31BF, U+31F0-31FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
 
 @font-face {
@@ -67,17 +45,8 @@
   font-weight: 600;
   font-display: swap;
   unicode-range:
-    U+2E80-2EFF,
-    U+2F00-2FDF,
-    U+3000-303F,
-    U+3040-30FF,
-    U+3100-312F,
-    U+31A0-31BF,
-    U+31F0-31FF,
-    U+3400-4DBF,
-    U+4E00-9FFF,
-    U+F900-FAFF,
-    U+FF00-FFEF;
+    U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-30FF, U+3100-312F,
+    U+31A0-31BF, U+31F0-31FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
 
 @font-face {
@@ -88,17 +57,8 @@
   font-weight: 700;
   font-display: swap;
   unicode-range:
-    U+2E80-2EFF,
-    U+2F00-2FDF,
-    U+3000-303F,
-    U+3040-30FF,
-    U+3100-312F,
-    U+31A0-31BF,
-    U+31F0-31FF,
-    U+3400-4DBF,
-    U+4E00-9FFF,
-    U+F900-FAFF,
-    U+FF00-FFEF;
+    U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-30FF, U+3100-312F,
+    U+31A0-31BF, U+31F0-31FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
 }
 
 :root {
@@ -175,6 +135,21 @@
   --app-right-safe-area: env(safe-area-inset-right);
   --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
   --app-mobile-nav-height: 3.75rem;
+  --app-mobile-page-top-gap: 1rem;
+  --app-mobile-page-bottom-gap: 1rem;
+  --friemi-modal-viewport-height: 100vh;
+  --friemi-modal-viewport-offset-top: 0px;
+  --friemi-stable-viewport-height: 100vh;
+  --friemi-visual-viewport-height: 100vh;
+  --friemi-visual-viewport-width: 100vw;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --friemi-modal-viewport-height: 100dvh;
+    --friemi-stable-viewport-height: 100dvh;
+    --friemi-visual-viewport-height: 100dvh;
+  }
 }
 
 * {
@@ -195,6 +170,78 @@ body {
   font-family: var(--font-sans);
   font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
+}
+
+[data-friemi-dialog-obscured="true"] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+@media (max-width: 767px) {
+  [data-friemi-modal-overlay-active="true"] {
+    bottom: auto !important;
+    height: var(--friemi-modal-viewport-height, 100vh) !important;
+    max-height: var(--friemi-modal-viewport-height, 100vh) !important;
+    top: var(--friemi-modal-viewport-offset-top, 0px) !important;
+  }
+
+  [data-friemi-dialog-active="true"] {
+    max-inline-size: calc(
+      100vw - var(--app-left-safe-area) - var(--app-right-safe-area)
+    );
+    overscroll-behavior: contain;
+  }
+}
+
+/* Native tablets keep the app navigation and purpose-built mobile screens.
+ * Browser tablets continue to use the regular responsive desktop layout. */
+@media (min-width: 768px) {
+  .friemi-native-app-shell {
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area)
+    ) !important;
+  }
+
+  .friemi-native-app-shell > .app-header {
+    display: none !important;
+  }
+
+  .friemi-native-app-shell > .app-mobile-nav,
+  .friemi-native-app-shell .friemi-native-app-mobile-only {
+    display: block !important;
+  }
+
+  .friemi-native-app-shell .friemi-native-app-mobile-only {
+    margin-inline: auto;
+    max-width: 430px;
+    width: 100%;
+  }
+
+  .friemi-native-app-shell .friemi-native-app-desktop-only {
+    display: none !important;
+  }
+
+  .friemi-native-app-shell .app-mobile-page-shell {
+    min-height: calc(100vh - var(--app-bottom-safe-area));
+    min-height: calc(100svh - var(--app-bottom-safe-area));
+    min-height: calc(100dvh - var(--app-bottom-safe-area));
+    min-height: calc(
+      var(--friemi-stable-viewport-height, 100vh) -
+        var(--app-bottom-safe-area)
+    );
+    padding-top: calc(
+      var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)
+    );
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area) +
+        var(--app-mobile-page-bottom-gap, 1rem)
+    );
+  }
+
+  .friemi-native-app-shell:has(.mobile-v23-home) {
+    padding-bottom: 0 !important;
+  }
 }
 
 .friemi-display-1 {
@@ -332,6 +379,28 @@ html[data-friemi-ios-app="true"] .app-layout-shell::before {
   pointer-events: none;
 }
 
+/* The bottom-sheet shell already clears the native status bar. Its same-origin
+ * detail iframe must not apply the native top/side insets a second time. */
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet),
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet) {
+  --app-top-safe-area: 0px;
+  --app-left-safe-area: 0px;
+  --app-right-safe-area: 0px;
+}
+
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet) body,
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet) body {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+html[data-friemi-android-app="true"]:has(.mobile-v23-lobby-detail-sheet)
+  .app-layout-shell::before,
+html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet)
+  .app-layout-shell::before {
+  display: none;
+}
+
 .app-layout-shell:has(.auth-page-shell) {
   padding-bottom: 0;
   background: var(--friemi-palette-paper);
@@ -351,7 +420,9 @@ html[data-friemi-auth-page="true"] .app-layout-shell {
 
 html[data-friemi-auth-page="true"] .app-layout-shell > .app-header,
 html[data-friemi-auth-page="true"] .app-layout-shell > .app-mobile-nav,
-html[data-friemi-auth-page="true"] .app-layout-shell [data-mobile-scroll-progress],
+html[data-friemi-auth-page="true"]
+  .app-layout-shell
+  [data-mobile-scroll-progress],
 html[data-friemi-auth-page="true"] .app-layout-shell [data-route-progress] {
   display: none !important;
 }
@@ -442,16 +513,98 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   right: var(--app-right-safe-area);
 }
 
+.app-layout-shell:has(.shared-poll-page) {
+  padding-bottom: 0 !important;
+}
+
+.app-layout-shell:has(.shared-poll-page) > .app-mobile-nav {
+  display: none !important;
+}
+
+.app-layout-shell:has(.shared-poll-page) [data-mobile-scroll-progress] {
+  display: none !important;
+}
+
 @media (max-width: 767px) {
+  html[data-friemi-viewport-height="short"] {
+    --app-mobile-header-height: calc(3.25rem + var(--app-top-safe-area));
+    --app-mobile-nav-height: 3.5rem;
+    --app-mobile-page-top-gap: 0.625rem;
+    --app-mobile-page-bottom-gap: 0.625rem;
+  }
+
+  html[data-friemi-viewport-height="compact"] {
+    --app-mobile-page-top-gap: 0.75rem;
+    --app-mobile-page-bottom-gap: 0.75rem;
+  }
+
+  html[data-friemi-viewport-width="compact"] .app-mobile-nav > div {
+    gap: 0;
+    padding-inline: 0.375rem;
+  }
+
+  html[data-friemi-viewport-width="compact"] .app-mobile-page-shell {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  html[data-friemi-viewport-width="compact"]
+    .mobile-home-activity-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  html[data-friemi-viewport-width="compact"]
+    .mobile-home-activity-filters > a {
+    min-width: 0;
+    padding-inline: 0.375rem;
+    width: 100%;
+  }
+
+  html[data-friemi-viewport-height="short"]
+    [data-friemi-dialog-active="true"] {
+    max-height: calc(
+      var(--friemi-visual-viewport-height, 100vh) -
+        var(--app-top-safe-area) - var(--app-bottom-safe-area) - 0.5rem
+    );
+    overflow-y: auto;
+  }
+
   html[data-friemi-android-app="true"] .app-layout-shell {
-    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area));
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area)
+    );
   }
 
   .app-mobile-page-shell {
+    min-height: calc(100vh - var(--app-bottom-safe-area));
     min-height: calc(100svh - var(--app-bottom-safe-area));
     min-height: calc(100dvh - var(--app-bottom-safe-area));
-    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem));
-    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem));
+    min-height: calc(
+      var(--friemi-stable-viewport-height, 100vh) -
+        var(--app-bottom-safe-area)
+    );
+    padding-top: calc(
+      var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)
+    );
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area) +
+        var(--app-mobile-page-bottom-gap, 1rem)
+    );
+  }
+
+  .planet-detail-page {
+    padding-bottom: calc(
+      var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)
+    );
+  }
+
+  html[data-friemi-android-app="true"]
+    .app-layout-shell:has(.planet-detail-page) {
+    padding-bottom: 0;
   }
 
   /*
@@ -465,16 +618,26 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
    * double the padding on those.
    */
   .app-page-mobile-safe-top {
-    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)) !important;
+    padding-top: calc(
+      var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)
+    ) !important;
   }
 
   .app-page-mobile-safe-bottom {
-    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)) !important;
+    padding-bottom: calc(
+      var(--app-mobile-nav-height) + var(--app-bottom-safe-area) +
+        var(--app-mobile-page-bottom-gap, 1rem)
+    ) !important;
   }
 
   .mobile-chat-viewport {
+    position: fixed !important;
+    inset-inline: 0 !important;
+    top: var(--friemi-chat-visual-offset-top, 0px) !important;
+    bottom: auto !important;
     height: var(--friemi-chat-visual-height, 100dvh) !important;
     max-height: var(--friemi-chat-visual-height, 100dvh) !important;
+    width: 100% !important;
     overflow: hidden;
     overscroll-behavior: contain;
   }
@@ -483,6 +646,17 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   body:has(.mobile-chat-viewport) {
     overflow: hidden;
     overscroll-behavior: contain;
+  }
+
+  html[data-friemi-chat-keyboard-open="true"] [data-message-composer],
+  html[data-friemi-chat-keyboard-open="true"] [data-activity-room-composer],
+  html[data-friemi-chat-keyboard-open="true"] [data-planet-chat-composer] {
+    padding-bottom: 0.25rem !important;
+  }
+
+  html[data-friemi-chat-keyboard-open="true"]
+    footer:has([data-planet-chat-composer]) {
+    padding-bottom: 0.25rem !important;
   }
 
   .app-layout-shell:has(.mobile-v23-home) {
@@ -514,6 +688,16 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.official-message-page) {
+    padding-bottom: 0;
+  }
+
+  html:has(.official-message-page),
+  body:has(.official-message-page) {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) > .app-header,
   .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-home) [data-route-progress],
@@ -528,13 +712,15 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.planet-detail-page) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) > .app-mobile-nav,
   .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
-  .app-layout-shell:has(.mobile-v23-admin-priority) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-admin-priority)
+    [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-admin-priority) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-create) > .app-header,
   .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-create) [data-route-progress],
   .app-layout-shell:has(.werewolf-room-fullscreen) > .app-header,
-  .app-layout-shell:has(.werewolf-room-fullscreen) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.werewolf-room-fullscreen)
+    [data-mobile-scroll-progress],
   .app-layout-shell:has(.werewolf-room-fullscreen) [data-route-progress],
   .app-layout-shell:has(.top-news-story-page) > .app-header,
   .app-layout-shell:has(.top-news-story-page) > .app-mobile-nav,
@@ -544,7 +730,8 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   }
 
   html[data-friemi-activity-priority-editor-open="true"] .app-mobile-nav,
-  html[data-friemi-activity-priority-editor-open="true"] [data-mobile-scroll-progress],
+  html[data-friemi-activity-priority-editor-open="true"]
+    [data-mobile-scroll-progress],
   html[data-friemi-activity-priority-editor-open="true"] [data-route-progress] {
     display: none !important;
   }
@@ -1543,15 +1730,11 @@ html[data-home-motion-ready="true"]
   --tw-shadow-colored: 0 0 #0000 !important;
   filter: none !important;
   box-shadow:
-    var(--tw-ring-offset-shadow, 0 0 #0000),
-    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
     var(--tw-shadow) !important;
 }
 
-:where(
-  .friemi-shimmer,
-  .co-creator-benefit-row:hover
-) {
+:where(.friemi-shimmer, .co-creator-benefit-row:hover) {
   box-shadow: none !important;
 }
 
@@ -1567,11 +1750,7 @@ html[data-home-motion-ready="true"]
       rgba(29, 29, 27, 0.38) 45%,
       rgba(29, 29, 27, 0.12)
     ),
-    linear-gradient(
-      180deg,
-      rgba(29, 29, 27, 0.2),
-      rgba(29, 29, 27, 0.72)
-    ) !important;
+    linear-gradient(180deg, rgba(29, 29, 27, 0.2), rgba(29, 29, 27, 0.72)) !important;
 }
 
 .home-hero-bottom-scrim {
@@ -1613,8 +1792,8 @@ html[data-home-motion-ready="true"]
   padding: 1.15rem 1.25rem 1.2rem;
   color: #111210;
   text-align: center;
-  animation: gift-notification-burst-card 1450ms
-    cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation: gift-notification-burst-card 1450ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
 }
 
 .gift-notification-burst__emoji {
@@ -1627,8 +1806,8 @@ html[data-home-motion-ready="true"]
   color: var(--gift-accent);
   font-size: 2.8rem;
   line-height: 1;
-  animation: gift-notification-burst-emoji 1450ms
-    cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation: gift-notification-burst-emoji 1450ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
 }
 
 .gift-notification-burst__title {
@@ -1730,8 +1909,7 @@ html[data-home-motion-ready="true"]
         calc(-50% + var(--particle-x)),
         calc(-50% + var(--particle-y))
       )
-      scale(1.04)
-      rotate(12deg);
+      scale(1.04) rotate(12deg);
   }
   100% {
     opacity: 0;
@@ -1739,8 +1917,7 @@ html[data-home-motion-ready="true"]
         calc(-50% + var(--particle-x)),
         calc(-50% + var(--particle-y))
       )
-      scale(0.55)
-      rotate(18deg);
+      scale(0.55) rotate(18deg);
   }
 }
 

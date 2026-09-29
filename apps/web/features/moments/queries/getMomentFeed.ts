@@ -59,6 +59,15 @@ function getMomentFeedSelect(
     commentCount: true,
     repostCount: true,
     createdAt: true,
+    activity: {
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        coverImageUrl: true,
+        startAt: true,
+      },
+    },
     author: {
       select: momentAuthorSelect,
     },
@@ -130,6 +139,7 @@ export type MomentSharedPreviewViewModel = {
 
 export type MomentFeedItemViewModel = {
   id: string;
+  activity: MomentLinkedActivityViewModel | null;
   author: MomentFeedAuthorViewModel;
   content: string | null;
   visibility: MomentVisibility;
@@ -146,6 +156,16 @@ export type MomentFeedItemViewModel = {
   recentComments: MomentFeedCommentViewModel[];
   resharedMoment: MomentSharedPreviewViewModel | null;
 };
+
+export type MomentLinkedActivityViewModel = {
+  id: string;
+  title: string;
+  city: string;
+  coverImageUrl: string | null;
+  startAt: string;
+};
+
+export type MomentLinkableActivityViewModel = MomentLinkedActivityViewModel;
 
 export type MomentFeedPageViewModel = {
   hasMore: boolean;
@@ -176,6 +196,15 @@ function mapMoment(
 
   return {
     id: moment.id,
+    activity: moment.activity
+      ? {
+          id: moment.activity.id,
+          title: moment.activity.title,
+          city: moment.activity.city,
+          coverImageUrl: moment.activity.coverImageUrl,
+          startAt: moment.activity.startAt.toISOString(),
+        }
+      : null,
     author: mapAuthor(moment.author),
     content: moment.content,
     visibility: moment.visibility,
@@ -223,6 +252,49 @@ function mapMoment(
           }
         : null,
   };
+}
+
+export async function getMomentLinkableActivities(
+  profileId: string,
+): Promise<MomentLinkableActivityViewModel[]> {
+  const activities = await prisma.activity.findMany({
+    where: {
+      visibility: "PUBLIC",
+      status: {
+        notIn: ["DRAFT", "CANCELLED"],
+      },
+      OR: [
+        { organizerId: profileId },
+        {
+          coManagers: {
+            some: { managerProfileId: profileId },
+          },
+        },
+        {
+          participants: {
+            some: {
+              userProfileId: profileId,
+              status: { in: ["JOINED", "APPROVED"] },
+            },
+          },
+        },
+      ],
+    },
+    orderBy: [{ startAt: "desc" }, { id: "desc" }],
+    take: 40,
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      coverImageUrl: true,
+      startAt: true,
+    },
+  });
+
+  return activities.map((activity) => ({
+    ...activity,
+    startAt: activity.startAt.toISOString(),
+  }));
 }
 
 async function getMomentGiftCountMap(momentIds: string[]) {

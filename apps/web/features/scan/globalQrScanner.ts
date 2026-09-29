@@ -20,6 +20,14 @@ export type GlobalQrScanDestination =
       source: "external-link";
     };
 
+export type GlobalQrScanResult =
+  | GlobalQrScanDestination
+  | {
+      kind: "text";
+      source: "plain-text";
+      value: string;
+    };
+
 export function isFriemiAndroidApp() {
   return (
     typeof window !== "undefined" &&
@@ -157,6 +165,28 @@ export function resolveGlobalQrScanDestination({
   return null;
 }
 
+export function resolveGlobalQrScanResult({
+  locale,
+  rawValue,
+}: {
+  locale: string;
+  rawValue: string;
+}): GlobalQrScanResult | null {
+  const value = rawValue.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  return (
+    resolveGlobalQrScanDestination({ locale, rawValue: value }) ?? {
+      kind: "text",
+      source: "plain-text",
+      value,
+    }
+  );
+}
+
 function getRoomCodeFromScanValue(value: string, tool: "avalon" | "werewolf") {
   const scanValue = value.trim();
 
@@ -226,7 +256,20 @@ function getInternalHrefFromScan(value: string) {
 function getExternalHrefFromScan(value: string) {
   const url = getUrlFromScan(value);
 
-  return url?.protocol === "https:" ? url.toString() : null;
+  if (!url) {
+    return null;
+  }
+
+  const supportedProtocols = new Set([
+    "geo:",
+    "http:",
+    "https:",
+    "mailto:",
+    "sms:",
+    "tel:",
+  ]);
+
+  return supportedProtocols.has(url.protocol) ? url.toString() : null;
 }
 
 function isTrustedInternalScanValue(value: string) {
@@ -243,7 +286,7 @@ function isTrustedInternalScanValue(value: string) {
   }
 
   if (url.protocol === "friemi:") {
-    return url.hostname.toLowerCase() === "game-tools";
+    return Boolean(url.hostname);
   }
 
   return isCurrentBrowserOrigin(url) || isTrustedFriemiHost(url.hostname);

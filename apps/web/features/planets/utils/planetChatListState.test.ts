@@ -33,6 +33,26 @@ const entries: TestEntry[] = [
   },
   {
     hasContent: true,
+    id: "feedback",
+    isFollowing: false,
+    isMutual: false,
+    isOfficial: true,
+    isPinned: false,
+    kind: "feedback",
+    searchText: "Friemi user feedback",
+  },
+  {
+    hasContent: true,
+    id: "direct-stranger",
+    isFollowing: false,
+    isMutual: false,
+    isOfficial: false,
+    isPinned: false,
+    kind: "direct",
+    searchText: "Unknown hello",
+  },
+  {
+    hasContent: true,
     id: "room",
     isFollowing: false,
     isMutual: false,
@@ -77,6 +97,14 @@ test("planet chat list state rejects unsupported URL filters", () => {
     filter: "all",
     query: "",
   });
+  assert.deepEqual(getPlanetChatListState("?chatFilter=following"), {
+    filter: "all",
+    query: "",
+  });
+  assert.deepEqual(getPlanetChatListState("?chatFilter=mutual"), {
+    filter: "all",
+    query: "",
+  });
 });
 
 test("planet chat list state builds a minimal localized return URL", () => {
@@ -111,7 +139,14 @@ test("planet chat scroll state is isolated by complete return URL", () => {
 test("unified chat all filter keeps conversations with content or pinning", () => {
   assert.deepEqual(
     filterUnifiedChatRosterEntries(entries, "all", "").map((entry) => entry.id),
-    ["direct-mutual", "official", "room", "planet-pinned"],
+    [
+      "direct-mutual",
+      "official",
+      "feedback",
+      "direct-stranger",
+      "room",
+      "planet-pinned",
+    ],
   );
 });
 
@@ -139,17 +174,17 @@ test("unified chat search matches planet name tags messages and sender text", ()
   );
 });
 
-test("unified chat relationship and official filters use distinct entry kinds", () => {
+test("unified chat stranger and official filters use distinct entry kinds", () => {
   assert.deepEqual(
-    filterUnifiedChatRosterEntries(entries, "mutual", "").map(
+    filterUnifiedChatRosterEntries(entries, "strangers", "").map(
       (entry) => entry.id,
     ),
-    ["direct-mutual"],
+    ["direct-stranger"],
   );
   assert.deepEqual(
     filterUnifiedChatRosterEntries(entries, "official", "").map(
       (entry) => entry.id,
     ),
-    ["official"],
+    ["official", "feedback"],
   );
 });

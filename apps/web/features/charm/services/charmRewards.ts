@@ -191,7 +191,6 @@ export async function recordReceivedCharmGift({
 
   if (
     !giftDelta.gift.launchEnabled ||
-    giftDelta.gift.charmValue <= 0 ||
     (!allowSeasonalGifts && giftDelta.gift.availability !== "standard")
   ) {
     throw new CharmGiftUnavailableError(giftId);

@@ -38,6 +38,42 @@ test("weighted split uses largest remainder", () => {
   );
 });
 
+test("weighted split treats a zero weight as excluded", () => {
+  const result = allocateByWeights(100n, [
+    { participantId: "a", weight: 1n },
+    { participantId: "b", weight: 0n },
+    { participantId: "c", weight: 3n },
+  ]);
+
+  assert.deepEqual(result, [
+    { participantId: "a", amountMinor: 25n },
+    { participantId: "c", amountMinor: 75n },
+  ]);
+  assert.equal(
+    result.reduce((sum, item) => sum + item.amountMinor, 0n),
+    100n,
+  );
+});
+
+test("weighted split requires a positive total and rejects negative weights", () => {
+  assert.throws(
+    () =>
+      allocateByWeights(100n, [
+        { participantId: "a", weight: 0n },
+        { participantId: "b", weight: 0n },
+      ]),
+    /EMPTY_TOTAL_WEIGHT/,
+  );
+  assert.throws(
+    () =>
+      allocateByWeights(100n, [
+        { participantId: "a", weight: 1n },
+        { participantId: "b", weight: -1n },
+      ]),
+    /INVALID_WEIGHT/,
+  );
+});
+
 test("money and exchange-rate parsing avoid floating point", () => {
   assert.equal(parseMoneyToMinor("12.30"), 1230n);
   assert.equal(convertToBaseMinor(1000n, "1.0755"), 1076n);

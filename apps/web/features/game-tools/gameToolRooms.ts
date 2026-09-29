@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { GameToolKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
+import { broadcastWerewolfRoomChange } from "@/features/game-tools/werewolfRealtimeServer";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -161,4 +162,17 @@ export function revalidateGameToolRoom({
   revalidatePath(
     withLocale(locale, `${toolPath}/rooms/${roomId}/recap/poster`),
   );
+}
+
+export async function revalidateWerewolfRoom({
+  locale,
+  roomId,
+  toolPath,
+}: {
+  locale: string;
+  roomId: string;
+  toolPath: string;
+}) {
+  revalidateGameToolRoom({ locale, roomId, toolPath });
+  await broadcastWerewolfRoomChange(roomId);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, LoaderCircle, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
@@ -80,8 +80,13 @@ export function ChatImageAttachmentPicker({
   uploadingLabel,
 }: ChatImageAttachmentPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const imageUrlsRef = useRef(imageUrls);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    imageUrlsRef.current = imageUrls;
+  }, [imageUrls]);
 
   async function uploadFiles(files: File[]) {
     const availableCount = chatImageMaxCount - imageUrls.length;
@@ -91,7 +96,12 @@ export function ChatImageAttachmentPicker({
       return;
     }
 
-    if (files.some((file) => getImageUploadClientValidationError(file))) {
+    const validFiles = files.filter(
+      (file) => !getImageUploadClientValidationError(file),
+    );
+    let hadUploadFailure = validFiles.length !== files.length;
+
+    if (validFiles.length === 0) {
       setError(uploadFailedLabel);
       return;
     }
@@ -100,35 +110,30 @@ export function ChatImageAttachmentPicker({
     setUploading(true);
     onUploadingChange?.(true);
 
-    const uploadedUrls: string[] = [];
     try {
-      for (const file of files) {
-        const result = await uploadImageWithSignedUrl(
-          "/api/uploads/chat-image",
-          file,
-        );
+      for (const file of validFiles) {
+        try {
+          const result = await uploadImageWithSignedUrl(
+            "/api/uploads/chat-image",
+            file,
+          );
 
-        if ("error" in result) throw new Error("CHAT_IMAGE_UPLOAD_FAILED");
-        uploadedUrls.push(result.url);
-      }
+          if ("error" in result) {
+            hadUploadFailure = true;
+            continue;
+          }
 
-      onChange(
-        [...new Set([...imageUrls, ...uploadedUrls])].slice(
-          0,
-          chatImageMaxCount,
-        ),
-      );
-    } catch {
-      if (uploadedUrls.length) {
-        onChange(
-          [...new Set([...imageUrls, ...uploadedUrls])].slice(
-            0,
-            chatImageMaxCount,
-          ),
-        );
+          const nextImageUrls = [
+            ...new Set([...imageUrlsRef.current, result.url]),
+          ].slice(0, chatImageMaxCount);
+          imageUrlsRef.current = nextImageUrls;
+          onChange(nextImageUrls);
+        } catch {
+          hadUploadFailure = true;
+        }
       }
-      setError(uploadFailedLabel);
     } finally {
+      setError(hadUploadFailure ? uploadFailedLabel : "");
       setUploading(false);
       onUploadingChange?.(false);
       if (inputRef.current) inputRef.current.value = "";

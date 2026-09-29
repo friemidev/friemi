@@ -175,7 +175,11 @@ export default async function NewPublicEventTeamPage({
   }`;
 
   return (
-    <PageContainer className="max-w-6xl overflow-x-clip space-y-5 py-0 sm:space-y-6 sm:py-8">
+    <PageContainer
+      className="max-w-6xl space-y-5 overflow-x-clip py-0 sm:space-y-6 sm:py-8"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <div className="grid h-16 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center border-b border-[#E7E1C9] sm:hidden">
         <Link
           className="text-sm font-semibold text-ink/80 transition hover:text-moss"

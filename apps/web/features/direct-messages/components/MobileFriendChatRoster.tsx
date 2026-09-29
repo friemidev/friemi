@@ -124,7 +124,9 @@ function MobileFriendChatRow({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
+    ? lastMessage.isRecalled
+      ? t.recalledMessagePreview
+      : `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;

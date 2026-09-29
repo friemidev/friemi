@@ -35,13 +35,13 @@ test("profile shop localizes gift labels", () => {
   );
 });
 
-test("profile shop exposes negative gifts as disabled display items", () => {
+test("profile shop exposes negative gifts as available display items", () => {
   const gifts = getProfileShopNegativeGiftCatalog("zh-CN");
 
   assert.deepEqual(
     gifts.map((gift) => gift.id),
     ["egg", "bomb", "police_car"],
   );
-  assert.ok(gifts.every((gift) => gift.availability === "disabled"));
+  assert.ok(gifts.every((gift) => gift.availability === "available"));
   assert.equal(gifts.find((gift) => gift.id === "bomb")?.coinCost, 20);
 });

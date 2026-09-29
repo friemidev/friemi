@@ -20,12 +20,16 @@ export type AdminAnalyticsWindowDays =
 
 const defaultDashboardWindowDays = 30 satisfies AdminAnalyticsWindowDays;
 
+export const growthReportingStartedAt = new Date("2026-09-08T00:00:00.000Z");
+
 export function getAdminAnalyticsWindowDays(
   value: unknown,
 ): AdminAnalyticsWindowDays {
   const parsed = typeof value === "string" ? Number(value) : value;
 
-  return adminAnalyticsWindowOptions.includes(parsed as AdminAnalyticsWindowDays)
+  return adminAnalyticsWindowOptions.includes(
+    parsed as AdminAnalyticsWindowDays,
+  )
     ? (parsed as AdminAnalyticsWindowDays)
     : defaultDashboardWindowDays;
 }
@@ -125,6 +129,24 @@ export type AdminAnalyticsDashboard = {
     activeIntentUsers: number;
     intentActionCount: number;
   };
+  growth: {
+    activeRegisteredUsers: number;
+    activeUsers: number;
+    averageDailyActiveUsers: number;
+    newUsers: number;
+    returningUsers: number;
+    sessions: number;
+    startedAt: string;
+    totalUsers: number;
+    trend: Array<{
+      activeUsers: number;
+      cumulativeUsers: number;
+      dateKey: string;
+      label: string;
+      newUsers: number;
+      sessions: number;
+    }>;
+  };
   discovery: {
     listViews: number;
     cardClicks: number;
@@ -210,6 +232,124 @@ function getDateKey(date: Date) {
 
 function getDateLabel(date: Date) {
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
+type GrowthEvent = {
+  anonymousId: string | null;
+  createdAt: Date;
+  id: string;
+  sessionId: string | null;
+  userProfileId: string | null;
+};
+
+function buildGrowthSummary({
+  baselineUsers,
+  events,
+  registeredUsers,
+  totalUsers,
+}: {
+  baselineUsers: number;
+  events: GrowthEvent[];
+  registeredUsers: Array<{ createdAt: Date }>;
+  totalUsers: number;
+}): AdminAnalyticsDashboard["growth"] {
+  const today = new Date();
+  const endDate = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
+  const buckets = new Map<
+    string,
+    {
+      activeKeys: Set<string>;
+      cumulativeUsers: number;
+      dateKey: string;
+      label: string;
+      newUsers: number;
+      sessionKeys: Set<string>;
+    }
+  >();
+
+  for (
+    let date = new Date(growthReportingStartedAt);
+    date <= endDate;
+    date.setUTCDate(date.getUTCDate() + 1)
+  ) {
+    const dateKey = getDateKey(date);
+    buckets.set(dateKey, {
+      activeKeys: new Set(),
+      cumulativeUsers: baselineUsers,
+      dateKey,
+      label: getDateLabel(date),
+      newUsers: 0,
+      sessionKeys: new Set(),
+    });
+  }
+
+  for (const profile of registeredUsers) {
+    const bucket = buckets.get(getDateKey(profile.createdAt));
+    if (bucket) bucket.newUsers += 1;
+  }
+
+  const activeUserKeys = new Set<string>();
+  const activeRegisteredUserIds = new Set<string>();
+  const sessionKeys = new Set<string>();
+  const activeDatesByUserKey = new Map<string, Set<string>>();
+
+  for (const event of events) {
+    const bucket = buckets.get(getDateKey(event.createdAt));
+    if (!bucket) continue;
+
+    const userKey = getViewerKey(event);
+    activeUserKeys.add(userKey);
+    bucket.activeKeys.add(userKey);
+
+    if (event.userProfileId) {
+      activeRegisteredUserIds.add(event.userProfileId);
+    }
+
+    if (event.sessionId) {
+      sessionKeys.add(event.sessionId);
+      bucket.sessionKeys.add(event.sessionId);
+    }
+
+    const activeDates = activeDatesByUserKey.get(userKey) ?? new Set<string>();
+    activeDates.add(bucket.dateKey);
+    activeDatesByUserKey.set(userKey, activeDates);
+  }
+
+  let cumulativeUsers = baselineUsers;
+  const trend = [...buckets.values()].map((bucket) => {
+    cumulativeUsers += bucket.newUsers;
+    return {
+      activeUsers: bucket.activeKeys.size,
+      cumulativeUsers,
+      dateKey: bucket.dateKey,
+      label: bucket.label,
+      newUsers: bucket.newUsers,
+      sessions: bucket.sessionKeys.size,
+    };
+  });
+  const dailyActiveTotal = trend.reduce(
+    (total, bucket) => total + bucket.activeUsers,
+    0,
+  );
+
+  return {
+    activeRegisteredUsers: activeRegisteredUserIds.size,
+    activeUsers: activeUserKeys.size,
+    averageDailyActiveUsers:
+      trend.length > 0
+        ? Math.round((dailyActiveTotal / trend.length) * 10) / 10
+        : 0,
+    newUsers: registeredUsers.length,
+    returningUsers: [...activeDatesByUserKey.values()].filter(
+      (dates) => dates.size > 1,
+    ).length,
+    sessions: sessionKeys.size,
+    startedAt: growthReportingStartedAt.toISOString(),
+    totalUsers,
+    trend,
+  };
 }
 
 function createTrendBuckets(windowDays: number) {
@@ -310,14 +450,12 @@ function createPopularRows(events: ChartAnalyticsEvent[]) {
     if (!isView && !isAction) continue;
 
     const key = `${normalizedType}:${event.entityId}`;
-    const row =
-      rows.get(key) ??
-      {
-        actionCount: 0,
-        id: event.entityId,
-        type: normalizedType,
-        viewCount: 0,
-      };
+    const row = rows.get(key) ?? {
+      actionCount: 0,
+      id: event.entityId,
+      type: normalizedType,
+      viewCount: 0,
+    };
 
     if (isView) {
       row.viewCount += 1;
@@ -346,6 +484,12 @@ function createEmptyDashboard(
       activeIntentUsers: 0,
       intentActionCount: 0,
     },
+    growth: buildGrowthSummary({
+      baselineUsers: 0,
+      events: [],
+      registeredUsers: [],
+      totalUsers: 0,
+    }),
     discovery: {
       cardClicks: 0,
       clickRate: 0,
@@ -416,6 +560,10 @@ export async function getAdminAnalyticsDashboard(
       sourceSurfaceGroups,
       recentPublicEvents,
       sourceValueEvents,
+      totalUsers,
+      baselineUsers,
+      registeredUsers,
+      growthEvents,
     ] = await Promise.all([
       prisma.analyticsEvent.groupBy({
         by: ["name"],
@@ -520,7 +668,10 @@ export async function getAdminAnalyticsDashboard(
           entityType: "public_event",
           environment,
           name: {
-            in: ["public_event_source_clicked", "public_event_converted_to_team"],
+            in: [
+              "public_event_source_clicked",
+              "public_event_converted_to_team",
+            ],
           },
         },
         select: {
@@ -528,6 +679,38 @@ export async function getAdminAnalyticsDashboard(
           name: true,
         },
         take: 10000,
+      }),
+      prisma.userProfile.count({
+        where: { status: { not: "DELETED" } },
+      }),
+      prisma.userProfile.count({
+        where: {
+          createdAt: { lt: growthReportingStartedAt },
+          status: { not: "DELETED" },
+        },
+      }),
+      prisma.userProfile.findMany({
+        where: {
+          createdAt: { gte: growthReportingStartedAt },
+          status: { not: "DELETED" },
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.analyticsEvent.findMany({
+        where: {
+          createdAt: { gte: growthReportingStartedAt },
+          environment,
+        },
+        select: {
+          anonymousId: true,
+          createdAt: true,
+          id: true,
+          sessionId: true,
+          userProfileId: true,
+        },
+        orderBy: { createdAt: "asc" },
+        take: 100000,
       }),
     ]);
     const eventCounts = new Map<EventCountName, number>();
@@ -661,14 +844,12 @@ export async function getAdminAnalyticsDashboard(
 
     for (const event of recentPublicEvents) {
       const source = getPublicEventSourceLabel(event);
-      const row =
-        sourceRows.get(source) ??
-        {
-          convertedToTeamCount: 0,
-          importedCount: 0,
-          source,
-          sourceClickCount: 0,
-        };
+      const row = sourceRows.get(source) ?? {
+        convertedToTeamCount: 0,
+        importedCount: 0,
+        source,
+        sourceClickCount: 0,
+      };
 
       row.importedCount += 1;
       sourceRows.set(source, row);
@@ -678,14 +859,12 @@ export async function getAdminAnalyticsDashboard(
       if (!event.entityId) continue;
 
       const source = publicEventSourceById.get(event.entityId) ?? "unknown";
-      const row =
-        sourceRows.get(source) ??
-        {
-          convertedToTeamCount: 0,
-          importedCount: 0,
-          source,
-          sourceClickCount: 0,
-        };
+      const row = sourceRows.get(source) ?? {
+        convertedToTeamCount: 0,
+        importedCount: 0,
+        source,
+        sourceClickCount: 0,
+      };
 
       if (event.name === "public_event_source_clicked") {
         row.sourceClickCount += 1;
@@ -706,6 +885,12 @@ export async function getAdminAnalyticsDashboard(
         activeIntentUsers: new Set(intentEvents.map(getViewerKey)).size,
         intentActionCount: intentEvents.length,
       },
+      growth: buildGrowthSummary({
+        baselineUsers,
+        events: growthEvents,
+        registeredUsers,
+        totalUsers,
+      }),
       discovery: {
         cardClicks: activityCardClicks,
         clickRate: getRate(activityCardClicks, activityListViews),

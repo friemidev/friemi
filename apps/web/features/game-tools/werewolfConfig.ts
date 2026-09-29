@@ -1,10 +1,16 @@
 export const werewolfRoleKeys = [
+  "cupid",
+  "guard",
   "hunter",
   "idiot",
+  "knight",
+  "lovers",
   "seer",
   "villager",
   "werewolf",
+  "white_wolf_king",
   "witch",
+  "wolf_king",
 ] as const;
 
 export type WerewolfRoleKey = (typeof werewolfRoleKeys)[number];
@@ -17,6 +23,7 @@ export type WerewolfVariantKey =
   | "nine_player_basic"
   | "seven_player_basic"
   | "ten_player_seer_witch_hunter"
+  | "twelve_player_guard_wolf_king"
   | "twelve_player_idiot"
   | "custom";
 
@@ -46,15 +53,30 @@ type WerewolfRoleCopy = {
 
 export const werewolfToolPath = "/game-tools/werewolf";
 
+export function getWerewolfPlayerJudgeLabel(
+  locale: string,
+  playerSeatCount: number,
+) {
+  if (locale === "fr") {
+    return `${playerSeatCount} joueurs + maître`;
+  }
+
+  if (locale === "en") {
+    return `${playerSeatCount} players + judge`;
+  }
+
+  return `${playerSeatCount}人+法官`;
+}
+
 export const werewolfVariants: WerewolfVariant[] = [
   {
     enabled: true,
     judgeSeatNumber: 7,
     key: "seven_player_basic",
     labels: {
-      "zh-CN": "7 人局",
-      en: "7-player table",
-      fr: "Table à 7",
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 6),
+      en: getWerewolfPlayerJudgeLabel("en", 6),
+      fr: getWerewolfPlayerJudgeLabel("fr", 6),
     },
     playerSeatCount: 6,
     roles: ["werewolf", "werewolf", "seer", "witch", "villager", "villager"],
@@ -65,9 +87,9 @@ export const werewolfVariants: WerewolfVariant[] = [
     judgeSeatNumber: 8,
     key: "eight_player_basic",
     labels: {
-      "zh-CN": "8 人局",
-      en: "8-player table",
-      fr: "Table à 8",
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 7),
+      en: getWerewolfPlayerJudgeLabel("en", 7),
+      fr: getWerewolfPlayerJudgeLabel("fr", 7),
     },
     playerSeatCount: 7,
     roles: [
@@ -86,9 +108,9 @@ export const werewolfVariants: WerewolfVariant[] = [
     judgeSeatNumber: 9,
     key: "nine_player_basic",
     labels: {
-      "zh-CN": "9 人局",
-      en: "9-player table",
-      fr: "Table à 9",
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 8),
+      en: getWerewolfPlayerJudgeLabel("en", 8),
+      fr: getWerewolfPlayerJudgeLabel("fr", 8),
     },
     playerSeatCount: 8,
     roles: [
@@ -108,9 +130,9 @@ export const werewolfVariants: WerewolfVariant[] = [
     judgeSeatNumber: 10,
     key: "ten_player_seer_witch_hunter",
     labels: {
-      "zh-CN": "10 人预女猎局",
-      en: "10-player seer / witch / hunter",
-      fr: "10 joueurs voyante / sorcière / chasseur",
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 9),
+      en: getWerewolfPlayerJudgeLabel("en", 9),
+      fr: getWerewolfPlayerJudgeLabel("fr", 9),
     },
     playerSeatCount: 9,
     roles: [
@@ -128,14 +150,14 @@ export const werewolfVariants: WerewolfVariant[] = [
   },
   {
     enabled: true,
-    judgeSeatNumber: 12,
+    judgeSeatNumber: 13,
     key: "twelve_player_idiot",
     labels: {
-      "zh-CN": "12 人预女猎白痴局",
-      en: "12-player table with idiot",
-      fr: "Table à 12 avec idiot",
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 12),
+      en: getWerewolfPlayerJudgeLabel("en", 12),
+      fr: getWerewolfPlayerJudgeLabel("fr", 12),
     },
-    playerSeatCount: 11,
+    playerSeatCount: 12,
     roles: [
       "werewolf",
       "werewolf",
@@ -148,18 +170,47 @@ export const werewolfVariants: WerewolfVariant[] = [
       "villager",
       "villager",
       "villager",
+      "villager",
     ],
-    totalSeats: 12,
+    totalSeats: 13,
+  },
+  {
+    enabled: true,
+    judgeSeatNumber: 13,
+    key: "twelve_player_guard_wolf_king",
+    labels: {
+      "zh-CN": getWerewolfPlayerJudgeLabel("zh-CN", 12),
+      en: getWerewolfPlayerJudgeLabel("en", 12),
+      fr: getWerewolfPlayerJudgeLabel("fr", 12),
+    },
+    playerSeatCount: 12,
+    roles: [
+      "wolf_king",
+      "werewolf",
+      "werewolf",
+      "werewolf",
+      "seer",
+      "witch",
+      "hunter",
+      "guard",
+      "villager",
+      "villager",
+      "villager",
+      "villager",
+    ],
+    totalSeats: 13,
   },
 ];
 
 export const defaultWerewolfVariantKey: WerewolfVariantKey =
-  "ten_player_seer_witch_hunter";
+  "twelve_player_idiot";
 
 export function getWerewolfVariant(key: string | null | undefined) {
   return (
     werewolfVariants.find((variant) => variant.key === key) ??
-    werewolfVariants.find((variant) => variant.key === defaultWerewolfVariantKey) ??
+    werewolfVariants.find(
+      (variant) => variant.key === defaultWerewolfVariantKey,
+    ) ??
     werewolfVariants[0]
   );
 }
@@ -167,10 +218,15 @@ export function getWerewolfVariant(key: string | null | undefined) {
 export function getEnabledWerewolfVariant(key: string | null | undefined) {
   const variant = getWerewolfVariant(key);
 
-  return variant.enabled ? variant : getWerewolfVariant(defaultWerewolfVariantKey);
+  return variant.enabled
+    ? variant
+    : getWerewolfVariant(defaultWerewolfVariantKey);
 }
 
-export function getWerewolfVariantLabel(locale: string, variant: WerewolfVariant) {
+export function getWerewolfVariantLabel(
+  locale: string,
+  variant: WerewolfVariant,
+) {
   return variant.labels[locale] ?? variant.labels.en ?? variant.labels["zh-CN"];
 }
 
@@ -183,7 +239,7 @@ function getCustomWerewolfVariantLabel(locale: string) {
     return "Custom setup";
   }
 
-  return "自定义板子";
+  return "自定义（抢先体验）";
 }
 
 function getConfigNumber(
@@ -220,8 +276,10 @@ export function normalizeWerewolfRoleDeck(value: unknown) {
     return null;
   }
 
-  const hasWerewolf = roles.some((role) => role === "werewolf");
-  const hasGood = roles.some((role) => role !== "werewolf");
+  const hasWerewolf = roles.some(
+    (role) => werewolfRoleAlignments[role] === "werewolf",
+  );
+  const hasGood = roles.some((role) => werewolfRoleAlignments[role] === "good");
 
   if (!hasWerewolf || !hasGood) {
     return null;
@@ -239,13 +297,16 @@ export function getWerewolfVariantFromRoomConfig(
       ? (config as Record<string, unknown>)
       : null;
   const variantKey = getConfigVariantKey(config);
-  const customRoleDeck =
-    variantKey === "custom" && configObject
-      ? normalizeWerewolfRoleDeck(configObject.roleDeck)
-      : null;
+  const storedRoleDeck = configObject
+    ? normalizeWerewolfRoleDeck(configObject.roleDeck)
+    : null;
 
-  if (customRoleDeck && configObject) {
-    const playerSeatCount = customRoleDeck.length;
+  if (storedRoleDeck && configObject) {
+    const playerSeatCount = getConfigNumber(
+      configObject,
+      "playerSeatCount",
+      storedRoleDeck.length,
+    );
     const totalSeats = getConfigNumber(
       configObject,
       "totalSeats",
@@ -256,23 +317,30 @@ export function getWerewolfVariantFromRoomConfig(
       "judgeSeatNumber",
       totalSeats,
     );
-    const label =
-      typeof configObject.variantName === "string" &&
-      configObject.variantName.trim()
+    const isCustom = variantKey === "custom";
+    const storedKey = werewolfVariants.some(
+      (variant) => variant.key === variantKey,
+    )
+      ? (variantKey as WerewolfVariantKey)
+      : defaultWerewolfVariantKey;
+    const label = isCustom
+      ? typeof configObject.variantName === "string" &&
+        configObject.variantName.trim()
         ? configObject.variantName.trim()
-        : getCustomWerewolfVariantLabel(locale);
+        : getCustomWerewolfVariantLabel(locale)
+      : getWerewolfPlayerJudgeLabel(locale, playerSeatCount);
 
     return {
       enabled: true,
       judgeSeatNumber,
-      key: "custom",
+      key: isCustom ? "custom" : storedKey,
       labels: {
         "zh-CN": label,
         en: label,
         fr: label,
       },
       playerSeatCount,
-      roles: customRoleDeck,
+      roles: storedRoleDeck,
       totalSeats,
     } satisfies WerewolfVariant;
   }
@@ -338,47 +406,122 @@ export function isWerewolfPlayerSeat(
   return seatNumber >= 1 && seatNumber <= variant.playerSeatCount;
 }
 
+export function isActiveWerewolfSeatOccupant(seat: {
+  guestName: string | null;
+  leftAt: Date | null;
+  profileId: string | null;
+}) {
+  return (
+    seat.leftAt === null && Boolean(seat.profileId || seat.guestName?.trim())
+  );
+}
+
+export function isActiveWerewolfJudgeSeat(
+  seat: {
+    guestName: string | null;
+    leftAt: Date | null;
+    profileId: string | null;
+    seatNumber: number;
+  },
+  variant: WerewolfVariant,
+) {
+  return (
+    isWerewolfJudgeSeat(seat.seatNumber, variant) &&
+    isActiveWerewolfSeatOccupant(seat)
+  );
+}
+
+export function isActiveWerewolfPlayerSeat(
+  seat: {
+    guestName: string | null;
+    leftAt: Date | null;
+    profileId: string | null;
+    seatNumber: number;
+  },
+  variant: WerewolfVariant,
+) {
+  return (
+    isWerewolfPlayerSeat(seat.seatNumber, variant) &&
+    isActiveWerewolfSeatOccupant(seat)
+  );
+}
+
+export function getWerewolfUSeatColumns<T extends { seatNumber: number }>(
+  seats: T[],
+) {
+  const sortedSeats = [...seats].sort(
+    (first, second) => first.seatNumber - second.seatNumber,
+  );
+  const leftSeatCount = Math.ceil(sortedSeats.length / 2);
+
+  return {
+    left: sortedSeats.slice(0, leftSeatCount),
+    right: sortedSeats.slice(leftSeatCount).reverse(),
+  };
+}
+
 export const werewolfRoleAlignments: Record<
   WerewolfRoleKey,
   WerewolfAlignment
 > = {
+  cupid: "good",
+  guard: "good",
   hunter: "good",
   idiot: "good",
+  knight: "good",
+  lovers: "good",
   seer: "good",
   villager: "good",
   werewolf: "werewolf",
+  white_wolf_king: "werewolf",
   witch: "good",
+  wolf_king: "werewolf",
 };
 
 export const werewolfRoleLabels = {
   "zh-CN": {
+    cupid: "丘比特",
+    guard: "守卫",
     hunter: "猎人",
     idiot: "白痴",
+    knight: "骑士",
+    lovers: "情侣",
     seer: "预言家",
     villager: "平民",
     werewolf: "狼人",
+    white_wolf_king: "白狼王",
     witch: "女巫",
+    wolf_king: "狼王",
   },
   en: {
+    cupid: "Cupid",
+    guard: "Guard",
     hunter: "Hunter",
     idiot: "Idiot",
+    knight: "Knight",
+    lovers: "Lovers",
     seer: "Seer",
     villager: "Villager",
     werewolf: "Werewolf",
+    white_wolf_king: "White Wolf King",
     witch: "Witch",
+    wolf_king: "Wolf King",
   },
   fr: {
+    cupid: "Cupidon",
+    guard: "Garde",
     hunter: "Chasseur",
     idiot: "Idiot",
+    knight: "Chevalier",
+    lovers: "Amoureux",
     seer: "Voyante",
     villager: "Villageois",
     werewolf: "Loup-garou",
+    white_wolf_king: "Roi loup blanc",
     witch: "Sorcière",
+    wolf_king: "Roi loup",
   },
-} satisfies Record<
-  WerewolfRoleLocale,
-  Record<WerewolfRoleKey, string>
->;
+} satisfies Record<WerewolfRoleLocale, Record<WerewolfRoleKey, string>>;
 
 const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
   "zh-CN": {
@@ -387,12 +530,18 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       werewolf: "狼人阵营",
     },
     roleDescriptions: {
+      cupid: "你是丘比特。首夜按现场规则指定两名玩家成为情侣。",
+      guard: "你是守卫。每晚守护一名玩家，不能连续两晚守护同一人。",
       hunter: "你是猎人。出局时按现场规则带走一人。",
       idiot: "你是白痴。被票出时按现场规则翻牌。",
+      knight: "你是骑士。白天可按现场规则决斗一名玩家，判断错误则自己出局。",
+      lovers: "你是情侣。任一情侣出局时，另一人按现场规则一同出局。",
       seer: "你是预言家。夜晚验人，白天把信息藏好。",
       villager: "你是平民。没有夜晚技能，白天通过发言和投票找出狼人。",
       werewolf: "你是狼人。夜晚和同伴行动，白天别露馅。",
+      white_wolf_king: "你是白狼王。按现场规则自爆后带走一名玩家。",
       witch: "你是女巫。夜晚用药，什么时候出手看你判断。",
+      wolf_king: "你是狼王。出局时按现场规则带走一名玩家。",
     },
     roleLabels: werewolfRoleLabels["zh-CN"],
   },
@@ -402,12 +551,28 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       werewolf: "Werewolf team",
     },
     roleDescriptions: {
-      hunter: "You are the hunter. If you go out, take one player with you by table rules.",
+      cupid:
+        "You are Cupid. On the first night, link two players as lovers by table rules.",
+      guard:
+        "You are the guard. Protect one player each night, but not the same player twice in a row.",
+      hunter:
+        "You are the hunter. If you go out, take one player with you by table rules.",
       idiot: "You are the idiot. Reveal on vote-out by table rules.",
+      knight:
+        "You are the knight. Once during the day, challenge a player; if wrong, you are eliminated.",
+      lovers:
+        "You are one of the lovers. If either lover goes out, the other follows by table rules.",
       seer: "You are the seer. Check one player at night and guard the truth by day.",
-      villager: "You are a villager. You have no night ability; read the table by day.",
-      werewolf: "You are a werewolf. Move with the pack at night and stay clean by day.",
-      witch: "You are the witch. Use your potions when the table gives you the moment.",
+      villager:
+        "You are a villager. You have no night ability; read the table by day.",
+      werewolf:
+        "You are a werewolf. Move with the pack at night and stay clean by day.",
+      white_wolf_king:
+        "You are the White Wolf King. Reveal yourself and take one player with you by table rules.",
+      witch:
+        "You are the witch. Use your potions when the table gives you the moment.",
+      wolf_king:
+        "You are the Wolf King. When eliminated, take one player with you by table rules.",
     },
     roleLabels: werewolfRoleLabels.en,
   },
@@ -417,18 +582,28 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       werewolf: "Camp des loups",
     },
     roleDescriptions: {
+      cupid:
+        "Vous êtes Cupidon. La première nuit, liez deux joueurs comme amoureux selon les règles de table.",
+      guard:
+        "Vous êtes garde. Protégez un joueur chaque nuit, sans choisir deux fois de suite la même personne.",
       hunter:
         "Vous êtes chasseur. Si vous sortez, emportez quelqu'un selon les règles de table.",
       idiot:
         "Vous êtes l'idiot. Révélez-vous au vote selon les règles de table.",
-      seer:
-        "Vous êtes voyante. Vérifiez quelqu'un la nuit, gardez l'information le jour.",
+      knight:
+        "Vous êtes chevalier. Une fois le jour, défiez un joueur ; si vous vous trompez, vous êtes éliminé.",
+      lovers:
+        "Vous êtes amoureux. Si l'un des amoureux sort, l'autre le suit selon les règles de table.",
+      seer: "Vous êtes voyante. Vérifiez quelqu'un la nuit, gardez l'information le jour.",
       villager:
         "Vous êtes villageois. Pas de capacité de nuit, tout se joue à la parole.",
       werewolf:
         "Vous êtes loup-garou. Agissez avec la meute la nuit, restez crédible le jour.",
-      witch:
-        "Vous êtes sorcière. Utilisez vos potions au bon moment.",
+      white_wolf_king:
+        "Vous êtes le roi loup blanc. Révélez-vous et emportez un joueur selon les règles de table.",
+      witch: "Vous êtes sorcière. Utilisez vos potions au bon moment.",
+      wolf_king:
+        "Vous êtes le roi loup. Si vous êtes éliminé, emportez un joueur selon les règles de table.",
     },
     roleLabels: werewolfRoleLabels.fr,
   },
@@ -438,7 +613,9 @@ export function getWerewolfRoleCopy(locale: string) {
   return roleCopy[locale as WerewolfRoleLocale] ?? roleCopy.en;
 }
 
-export function isWerewolfRoleKey(value: string | null | undefined): value is WerewolfRoleKey {
+export function isWerewolfRoleKey(
+  value: string | null | undefined,
+): value is WerewolfRoleKey {
   return (
     typeof value === "string" &&
     (werewolfRoleKeys as readonly string[]).includes(value)

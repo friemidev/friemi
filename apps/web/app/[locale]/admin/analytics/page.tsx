@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Activity,
   AlertCircle,
   ArrowRight,
   BarChart3,
@@ -15,6 +16,7 @@ import {
   TrendingUp,
   TimerReset,
   UsersRound,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -60,6 +62,9 @@ function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       actionUsers: "Utilisateurs actifs",
+      activeRegisteredUsers: "Membres actifs",
+      activeUsersSinceStart: "Visiteurs actifs",
+      averageDailyActiveUsers: "Actifs / jour",
       activityDiscovery: "Découverte",
       activityDiscoveryDescription: "Les cartes donnent-elles envie d'ouvrir ?",
       activityInfo: "Activités publiques",
@@ -91,6 +96,10 @@ function getCopy(locale: string) {
       friendRate: "Taux d'acceptation",
       friendSent: "Demandes",
       friendsTitle: "Amis",
+      growthDescription:
+        "Inscriptions et usage mesurés depuis le 8 septembre 2026.",
+      growthSince: (date: string) => `Depuis le ${date}`,
+      growthTitle: "Croissance utilisateurs",
       latencyAverage: "Moy.",
       latencyCount: "Échantillons",
       latencyDescription:
@@ -108,6 +117,9 @@ function getCopy(locale: string) {
       range30: "30 jours",
       range90: "90 jours",
       rangeLabel: "Période",
+      registeredSinceStart: "Nouveaux membres",
+      returningUsers: "Utilisateurs récurrents",
+      sessionsSinceStart: "Sessions",
       importSource: "Source",
       imported: "Importées",
       intentActions: "Interactions utiles",
@@ -149,6 +161,7 @@ function getCopy(locale: string) {
       subtitle: "Données",
       title: "Tableau de bord",
       topDecision: "Vue d'ensemble",
+      totalRegisteredUsers: "Membres inscrits",
       totalSamples: "Mesures",
       trendCommunication: "Échanges",
       trendDiscovery: "Découverte",
@@ -166,6 +179,9 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       actionUsers: "Active users",
+      activeRegisteredUsers: "Active members",
+      activeUsersSinceStart: "Active visitors",
+      averageDailyActiveUsers: "Average DAU",
       activityDiscovery: "Discovery",
       activityDiscoveryDescription: "Do cards make people open details?",
       activityInfo: "Public activities",
@@ -196,6 +212,10 @@ function getCopy(locale: string) {
       friendRate: "Accept rate",
       friendSent: "Requests",
       friendsTitle: "Friends",
+      growthDescription:
+        "Registration and product usage measured since September 8, 2026.",
+      growthSince: (date: string) => `Since ${date}`,
+      growthTitle: "User growth",
       latencyAverage: "Avg",
       latencyCount: "Samples",
       latencyDescription:
@@ -213,6 +233,9 @@ function getCopy(locale: string) {
       range30: "30 days",
       range90: "90 days",
       rangeLabel: "Range",
+      registeredSinceStart: "New members",
+      returningUsers: "Returning users",
+      sessionsSinceStart: "Sessions",
       importSource: "Source",
       imported: "Imported",
       intentActions: "Useful interactions",
@@ -254,6 +277,7 @@ function getCopy(locale: string) {
       subtitle: "Data",
       title: "Operations dashboard",
       topDecision: "Overview",
+      totalRegisteredUsers: "Registered members",
       totalSamples: "Samples",
       trendCommunication: "Communication",
       trendDiscovery: "Discovery",
@@ -270,6 +294,9 @@ function getCopy(locale: string) {
 
   return {
     actionUsers: "活跃用户",
+    activeRegisteredUsers: "活跃注册用户",
+    activeUsersSinceStart: "活跃访客",
+    averageDailyActiveUsers: "平均日活",
     activityDiscovery: "活动发现",
     activityDiscoveryDescription: "活动卡片是否吸引用户点开。",
     activityInfo: "活动",
@@ -299,6 +326,9 @@ function getCopy(locale: string) {
     friendRate: "通过率",
     friendSent: "申请",
     friendsTitle: "好友关系",
+    growthDescription: "固定统计 2026 年 9 月 8 日以来的注册增长和产品使用。",
+    growthSince: (date: string) => `自 ${date} 起`,
+    growthTitle: "用户增长",
     latencyAverage: "平均",
     latencyCount: "样本",
     latencyDescription:
@@ -316,6 +346,9 @@ function getCopy(locale: string) {
     range30: "30 天",
     range90: "90 天",
     rangeLabel: "时间范围",
+    registeredSinceStart: "新增注册",
+    returningUsers: "多日回访用户",
+    sessionsSinceStart: "使用会话",
     importSource: "来源",
     imported: "导入",
     intentActions: "有效互动",
@@ -356,6 +389,7 @@ function getCopy(locale: string) {
     subtitle: "数据后台",
     title: "运营数据看台",
     topDecision: "运营总览",
+    totalRegisteredUsers: "累计注册用户",
     totalSamples: "记录样本",
     trendCommunication: "沟通",
     trendDiscovery: "发现",
@@ -777,6 +811,118 @@ function getReportTargetLabel(
 }
 
 type AdminAnalyticsCopy = ReturnType<typeof getCopy>;
+
+function GrowthPanel({
+  dashboard,
+  locale,
+  t,
+}: {
+  dashboard: AdminAnalyticsDashboard;
+  locale: string;
+  t: AdminAnalyticsCopy;
+}) {
+  const growth = dashboard.growth;
+  const startLabel = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(growth.startedAt));
+  const maxDailyValue = Math.max(
+    1,
+    ...growth.trend.flatMap((item) => [item.activeUsers, item.newUsers]),
+  );
+
+  return (
+    <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-moss" />
+            <h2 className="text-lg font-semibold text-ink">{t.growthTitle}</h2>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {t.growthDescription}
+          </p>
+        </div>
+        <span className="inline-flex h-8 items-center rounded-full bg-[#F1F2EC] px-3 text-xs font-semibold text-moss ring-1 ring-[#8AB68E]">
+          {t.growthSince(startLabel)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
+        <MetricTile
+          icon={UsersRound}
+          label={t.totalRegisteredUsers}
+          value={growth.totalUsers}
+        />
+        <MetricTile
+          icon={UserPlus}
+          label={t.registeredSinceStart}
+          tone="bg-[#F1F2EC] text-moss ring-[#8AB68E]"
+          value={growth.newUsers}
+        />
+        <MetricTile
+          icon={Activity}
+          label={t.activeUsersSinceStart}
+          tone="bg-sky-50 text-sky-800 ring-sky-200"
+          value={growth.activeUsers}
+        />
+        <MetricTile
+          icon={UsersRound}
+          label={t.activeRegisteredUsers}
+          tone="bg-white text-clay ring-[#DEAAB3]"
+          value={growth.activeRegisteredUsers}
+        />
+        <MetricTile
+          icon={BarChart3}
+          label={t.averageDailyActiveUsers}
+          value={growth.averageDailyActiveUsers}
+        />
+        <MetricTile
+          icon={TimerReset}
+          label={`${t.sessionsSinceStart} · ${t.returningUsers} ${growth.returningUsers}`}
+          value={growth.sessions}
+        />
+      </div>
+
+      <div className="mt-5 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <div
+          className="grid h-40 min-w-[36rem] items-end gap-1.5 rounded-2xl bg-paper/70 px-3 pb-3 pt-5 ring-1 ring-black/5"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(growth.trend.length, 1)}, minmax(2rem, 1fr))`,
+          }}
+        >
+          {growth.trend.map((item) => (
+            <div
+              className="grid min-w-0 grid-rows-[1fr_auto] gap-2"
+              key={item.dateKey}
+              title={`${item.label}: ${t.activeUsersSinceStart} ${item.activeUsers}, ${t.registeredSinceStart} ${item.newUsers}`}
+            >
+              <div className="flex h-24 items-end justify-center gap-1">
+                <span
+                  className="w-2.5 rounded-t-full bg-moss"
+                  style={{
+                    height: `${Math.max(4, Math.round((item.activeUsers / maxDailyValue) * 88))}px`,
+                  }}
+                />
+                <span
+                  className="w-2.5 rounded-t-full bg-clay"
+                  style={{
+                    height: `${Math.max(4, Math.round((item.newUsers / maxDailyValue) * 88))}px`,
+                  }}
+                />
+              </div>
+              <span className="truncate text-center text-[0.68rem] font-medium text-zinc-500">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function buildAnalyticsHref({
   locale,
@@ -1350,10 +1496,13 @@ export default async function AdminAnalyticsPage({
       </section>
 
       {activeSection === "overview" ? (
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
-          <TrendPanel dashboard={dashboard} t={t} />
-          <PopularItemsPanel dashboard={dashboard} t={t} />
-        </div>
+        <>
+          <GrowthPanel dashboard={dashboard} locale={locale} t={t} />
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+            <TrendPanel dashboard={dashboard} t={t} />
+            <PopularItemsPanel dashboard={dashboard} t={t} />
+          </div>
+        </>
       ) : null}
 
       {activeSection === "journey" ? (

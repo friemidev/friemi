@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildCanonicalUrl,
+  buildDetailShareMetadata,
   buildPageShareMetadata,
+  buildPollShareImageUrl,
   buildTeamShareImageUrl,
   buildTeamShareMetadata,
   getRequestBaseUrl,
@@ -139,7 +141,7 @@ test("buildTeamShareImageUrl preserves private activity access token", () => {
 
   assert.equal(
     imageUrl,
-    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&access=private+token",
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&v=card-v2&access=private+token",
   );
 });
 
@@ -153,7 +155,49 @@ test("buildTeamShareImageUrl supports WeChat thumbnail variant", () => {
 
   assert.equal(
     imageUrl,
-    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&v=card-v2&variant=wechat",
+  );
+});
+
+test("buildPollShareImageUrl creates a same-origin PNG card endpoint", () => {
+  const imageUrl = buildPollShareImageUrl({
+    baseUrl: "https://friemi.example",
+    locale: "zh-CN",
+    shareToken: "poll token",
+    variant: "wechat",
+  });
+
+  assert.equal(
+    imageUrl,
+    "https://friemi.example/api/share/poll-card?token=poll+token&locale=zh-CN&v=card-v2&variant=wechat",
+  );
+});
+
+test("buildDetailShareMetadata describes a generated square share image", () => {
+  const metadata = buildDetailShareMetadata({
+    canonicalUrl: "https://friemi.example/zh-CN/poll/token",
+    description: "参与投票",
+    shareImage: {
+      height: 420,
+      type: "image/png",
+      url: "https://friemi.example/api/share/poll-card?token=token&variant=wechat",
+      width: 420,
+    },
+    title: "周六去哪？",
+  });
+  const images = metadata.openGraph?.images as Array<{
+    height?: number;
+    type?: string;
+    url: string;
+    width?: number;
+  }>;
+
+  assert.equal(images[0]?.width, 420);
+  assert.equal(images[0]?.height, 420);
+  assert.equal(images[0]?.type, "image/png");
+  assert.equal(
+    images[0]?.url,
+    "https://friemi.example/api/share/poll-card?token=token&variant=wechat",
   );
 });
 

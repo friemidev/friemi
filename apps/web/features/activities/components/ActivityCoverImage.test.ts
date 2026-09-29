@@ -49,3 +49,18 @@ test("activity cover does not render a duplicate primary for the fallback", () =
   assert.equal(markup.match(/<img/g)?.length, 1);
   assert.match(markup, /loading="eager"/);
 });
+
+test("activity cover can tighten the crop for category artwork", () => {
+  const fallbackSrc = "/illustrations/preview/wandering.webp";
+  const categoryArtworkClassName = "h-[140%]";
+  const markup = renderToStaticMarkup(
+    React.createElement(ActivityCoverImage, {
+      categoryArtworkClassName,
+      fallbackSrc,
+      src: fallbackSrc,
+    }),
+  );
+
+  assert.ok(markup.includes(categoryArtworkClassName));
+  assert.equal(markup.split(categoryArtworkClassName).length - 1, 1);
+});

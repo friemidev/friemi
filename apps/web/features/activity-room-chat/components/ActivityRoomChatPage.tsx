@@ -17,11 +17,10 @@ import {
   MessageCircle,
   Minus,
   MoreHorizontal,
-  Plus,
+  Reply,
   SendHorizontal,
   Trash2,
   UserMinus,
-  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -45,10 +44,18 @@ import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
 } from "@/features/chat/components/ChatImageAttachmentPicker";
+import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
 import { ChatImagePreviewGrid } from "@/features/chat/components/ChatImagePreviewGrid";
+import {
+  ChatReplyBubblePreview,
+  ChatReplyComposerPreview,
+  getChatReplyCopy,
+} from "@/features/chat/components/ChatReplyPreview";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
+import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
+import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
-import type { ChatMentionMember } from "@/features/chat/types";
+import type { ChatMentionMember, ChatReplyTarget } from "@/features/chat/types";
 import {
   getChatMentionEveryoneToken,
   getChatMentionMemberToken,
@@ -56,6 +63,8 @@ import {
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
+import { ActivityRoomInviteDialog } from "@/features/activity-room-chat/components/ActivityRoomInviteDialog";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import {
   CancelActivityForm,
   DeleteActivityForm,
@@ -76,7 +85,6 @@ import {
 } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
-import { getPerformanceRolloutMode } from "@/lib/performanceRollouts";
 import {
   formatChatDateSeparator,
   formatChatListTimestamp,
@@ -87,13 +95,11 @@ import {
 import {
   acknowledgeActivityAnnouncementAction,
   deleteActivityRoomMessagesAction,
-  inviteActivityRoomParticipantAction,
   removeActivityRoomParticipantAction,
   sendActivityRoomMessageAction,
   toggleActivityRoomMuteAction,
   toggleActivityRoomPinAction,
   type ActivityRoomChatActionState,
-  type ActivityRoomInviteActionState,
   type ActivityRoomMemberActionState,
 } from "../actions/activityRoomChatActions";
 import { getActivityRoomChatCopy } from "../copy";
@@ -139,7 +145,6 @@ type ActivityRoomManagePageProps = {
 
 const initialActionState: ActivityRoomChatActionState = {};
 const initialLeaveState: CancelParticipationState = {};
-const initialInviteActionState: ActivityRoomInviteActionState = {};
 const initialMemberActionState: ActivityRoomMemberActionState = {};
 const initialAnnouncementDeleteState: DeleteActivityAnnouncementState = {};
 
@@ -151,19 +156,12 @@ function getRoomManagementCopy(locale: string) {
   if (locale === "fr") {
     return {
       backToRoom: "Retour au chat",
-      addMember: "Ajouter",
       close: "Fermer",
       contactParticipants: "Contacter",
       groupAnnouncement: "Annonce",
       checkIn: "Pointage",
       groupName: "Nom du groupe",
       infoTitle: "Membres",
-      invite: "Inviter",
-      inviteEmpty: "Aucun contact mutuel à inviter.",
-      inviteFailed: "Invitation impossible.",
-      invitePending: "Invitation...",
-      inviteSuccess: "Invité.",
-      inviteTitle: "Inviter",
       kick: "Retirer",
       kickCancel: "Annuler",
       kickConfirm: "Retirer",
@@ -199,19 +197,12 @@ function getRoomManagementCopy(locale: string) {
   if (locale === "en") {
     return {
       backToRoom: "Back to chat",
-      addMember: "Add",
       close: "Close",
       contactParticipants: "Contact",
       groupAnnouncement: "Announcement",
       checkIn: "Check-in",
       groupName: "Group name",
       infoTitle: "Members",
-      invite: "Invite",
-      inviteEmpty: "No mutual follows to invite.",
-      inviteFailed: "Could not invite.",
-      invitePending: "Inviting...",
-      inviteSuccess: "Invited.",
-      inviteTitle: "Invite",
       kick: "Remove",
       kickCancel: "Cancel",
       kickConfirm: "Remove",
@@ -247,19 +238,12 @@ function getRoomManagementCopy(locale: string) {
 
   return {
     backToRoom: "返回群聊",
-    addMember: "添加",
     close: "关闭",
     contactParticipants: "联系成员",
     groupAnnouncement: "公告",
     checkIn: "签到",
     groupName: "群聊名称",
     infoTitle: "成员",
-    invite: "邀请",
-    inviteEmpty: "暂无可邀请的互关用户。",
-    inviteFailed: "邀请失败，请稍后再试。",
-    invitePending: "邀请中...",
-    inviteSuccess: "已邀请。",
-    inviteTitle: "邀请互关",
     kick: "移出",
     kickCancel: "取消",
     kickConfirm: "确认移出",
@@ -311,41 +295,6 @@ function RoomAvatar({
       ) : null}
     </span>
   );
-}
-
-function ActivityRoomChatAutoRefresh({
-  activityId,
-  intervalMs = 8000,
-}: {
-  activityId: string;
-  intervalMs?: number;
-}) {
-  const router = useRouter();
-  const mode = getPerformanceRolloutMode("chatCursor", activityId);
-
-  useEffect(() => {
-    if (mode === "canary") {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const activeElement = document.activeElement;
-      const composer = document.querySelector("[data-activity-room-composer]");
-      const textarea = composer?.querySelector("textarea");
-      const isComposing =
-        activeElement instanceof HTMLElement &&
-        Boolean(activeElement.closest("[data-activity-room-composer]"));
-      const hasDraft = Boolean(textarea?.value.trim());
-
-      if (document.visibilityState === "visible" && !isComposing && !hasDraft) {
-        router.refresh();
-      }
-    }, intervalMs);
-
-    return () => window.clearInterval(timer);
-  }, [activityId, intervalMs, mode, router]);
-
-  return null;
 }
 
 function ActivityRoomManagementMenu({
@@ -691,157 +640,10 @@ function ActivityRoomGridRemoveMemberButton({
   );
 }
 
-function ActivityRoomInviteCandidateForm({
-  activityId,
-  candidate,
-  locale,
-  onInvited,
-}: {
-  activityId: string;
-  candidate: ActivityRoomInviteCandidateViewModel;
-  locale: string;
-  onInvited: () => void;
-}) {
-  const router = useRouter();
-  const copy = getRoomManagementCopy(locale);
-  const [state, formAction, isPending] = useActionState(
-    inviteActivityRoomParticipantAction,
-    initialInviteActionState,
-  );
-
-  useEffect(() => {
-    if (!state.ok) {
-      return;
-    }
-
-    onInvited();
-    router.refresh();
-  }, [onInvited, router, state.ok]);
-
-  return (
-    <form action={formAction} className="grid gap-1.5" noValidate>
-      <input name="activityId" type="hidden" value={activityId} />
-      <input name="inviteeProfileId" type="hidden" value={candidate.id} />
-      <input name="locale" type="hidden" value={locale} />
-      <button
-        className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2 text-left ring-1 ring-[#E7E2D6] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
-        disabled={isPending}
-        type="submit"
-      >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <RoomAvatar
-            avatarUrl={candidate.avatarUrl}
-            name={candidate.nickname}
-          />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111210]">
-              {candidate.nickname}
-            </span>
-            {candidate.friendCode ? (
-              <span className="block text-xs font-semibold text-[#8B907F]">
-                {candidate.friendCode}
-              </span>
-            ) : null}
-          </span>
-        </span>
-        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white">
-          {isPending ? (
-            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <UserPlus className="h-3.5 w-3.5" />
-          )}
-          {isPending ? copy.invitePending : copy.invite}
-        </span>
-      </button>
-      {state.formError ? (
-        <p className="px-2 text-xs font-bold leading-5 text-[#B5301F]">
-          {state.formError || copy.inviteFailed}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-function ActivityRoomInviteDialog({
-  activityId,
-  candidates,
-  locale,
-}: {
-  activityId: string;
-  candidates: ActivityRoomInviteCandidateViewModel[];
-  locale: string;
-}) {
-  const copy = getRoomManagementCopy(locale);
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <ActivityRoomActionAvatar
-        icon={<Plus className="h-5 w-5" />}
-        label={copy.addMember}
-        onClick={() => setOpen(true)}
-      />
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-end bg-[#111210]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:justify-center sm:p-6"
-          role="presentation"
-        >
-          <section
-            aria-labelledby="activity-room-invite-title"
-            aria-modal="true"
-            className="max-h-[min(82svh,34rem)] w-full max-w-md overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
-            role="dialog"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-[#EFEFEA] px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
-                  <UserPlus className="h-4 w-4" />
-                </span>
-                <h2
-                  className="truncate text-base font-bold text-[#111210]"
-                  id="activity-room-invite-title"
-                >
-                  {copy.inviteTitle}
-                </h2>
-              </div>
-              <button
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6C746A] transition active:bg-[#F7F7F0]"
-                onClick={() => setOpen(false)}
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="max-h-[calc(min(82svh,34rem)-3.75rem)] overflow-y-auto px-4 py-3">
-              {candidates.length > 0 ? (
-                <div className="grid gap-2">
-                  {candidates.map((candidate) => (
-                    <ActivityRoomInviteCandidateForm
-                      activityId={activityId}
-                      candidate={candidate}
-                      key={candidate.id}
-                      locale={locale}
-                      onInvited={() => setOpen(false)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-2xl bg-[#F7F7F0] px-4 py-5 text-center text-sm font-bold leading-6 text-[#6C746A]">
-                  {copy.inviteEmpty}
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 function ActivityRoomMemberPreviewGrid({
   activityId,
   canManage,
+  isAuthenticated,
   inviteCandidates,
   locale,
   members,
@@ -850,6 +652,7 @@ function ActivityRoomMemberPreviewGrid({
 }: {
   activityId: string;
   canManage: boolean;
+  isAuthenticated: boolean;
   inviteCandidates: ActivityRoomInviteCandidateViewModel[];
   locale: string;
   members: ActivityRoomMemberPreviewViewModel[];
@@ -873,19 +676,33 @@ function ActivityRoomMemberPreviewGrid({
         {visibleMembers.map((member) => {
           const removableMember = removableMemberByProfileId.get(member.id);
 
-          return removeMode && removableMember ? (
-            <ActivityRoomGridRemoveMemberButton
-              activityId={activityId}
+          if (removeMode) {
+            return removableMember ? (
+              <ActivityRoomGridRemoveMemberButton
+                activityId={activityId}
+                key={member.id}
+                locale={locale}
+                member={removableMember}
+              />
+            ) : (
+              <RoomInfoAvatar key={member.id} member={member} muted />
+            );
+          }
+
+          return (
+            <UserProfilePreviewPopover
+              avatarUrl={member.avatarUrl}
+              giftSourceContextId={activityId}
+              giftSourceSurface="ACTIVITY"
+              isAuthenticated={isAuthenticated}
               key={member.id}
               locale={locale}
-              member={removableMember}
-            />
-          ) : (
-            <RoomInfoAvatar
-              key={member.id}
-              member={member}
-              muted={removeMode && !removableMember}
-            />
+              nickname={member.nickname}
+              profileId={member.id}
+              triggerClassName="w-full min-w-0 rounded-[0.9rem]"
+            >
+              <RoomInfoAvatar member={member} />
+            </UserProfilePreviewPopover>
           );
         })}
         {canManage ? (
@@ -893,6 +710,7 @@ function ActivityRoomMemberPreviewGrid({
             activityId={activityId}
             candidates={inviteCandidates}
             locale={locale}
+            triggerVariant="avatar"
           />
         ) : null}
         {canManage && removableMembers.length > 0 ? (
@@ -1598,6 +1416,7 @@ export function ActivityRoomManagePage({
           <ActivityRoomMemberPreviewGrid
             activityId={activity?.id ?? activityId}
             canManage={canManageRoom}
+            isAuthenticated={Boolean(viewer)}
             inviteCandidates={management?.inviteCandidates ?? []}
             locale={locale}
             members={memberPreview}
@@ -1791,6 +1610,7 @@ function MessageRow({
   message,
   onDelete,
   onOpenActionMenu,
+  onReply,
   onStartSelection,
   onToggleSelection,
   selectionMode,
@@ -1804,13 +1624,16 @@ function MessageRow({
   message: ActivityRoomMessageViewModel;
   onDelete: (messageIds: string[]) => void;
   onOpenActionMenu: (messageId: string) => void;
+  onReply: (message: ActivityRoomMessageViewModel) => void;
   onStartSelection: (messageId: string) => void;
   onToggleSelection: (messageId: string) => void;
   selectionMode: boolean;
   viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
+  const replyCopy = getChatReplyCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
+  const canOpenActions = !message.isDeleted;
   const sender = message.isMine && viewer ? viewer : message.sender;
   const senderProfileHref = withLocale(locale, `/profile/${sender.id}`);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1841,7 +1664,7 @@ function MessageRow({
       return;
     }
 
-    if (!canDelete || isDeleting || selectionMode || event.button !== 0) {
+    if (!canOpenActions || isDeleting || selectionMode || event.button !== 0) {
       return;
     }
 
@@ -1885,7 +1708,7 @@ function MessageRow({
 
   function handleMessageKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (
-      !canDelete ||
+      !canOpenActions ||
       isDeleting ||
       (event.key !== "Enter" && event.key !== " ")
     ) {
@@ -1923,37 +1746,50 @@ function MessageRow({
     ) : null;
 
   const actionMenu =
-    actionMenuOpen && canDelete && !selectionMode ? (
+    actionMenuOpen && canOpenActions && !selectionMode ? (
       <div
-        aria-label={`${copy.selectMessage} / ${copy.deleteMessage}`}
+        aria-label={`${replyCopy.reply}${canDelete ? ` / ${copy.selectMessage} / ${copy.deleteMessage}` : ""}`}
         className="mb-1 flex shrink-0 self-end overflow-hidden rounded-lg border border-[#D8D9CE] bg-white shadow-[0_8px_24px_rgba(17,18,16,0.12)]"
         data-room-message-action-menu
         role="toolbar"
       >
         <button
-          aria-label={copy.selectMessage}
+          aria-label={replyCopy.reply}
           className="inline-flex h-9 w-9 items-center justify-center text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
-          onClick={() => onStartSelection(message.id)}
-          title={copy.selectMessage}
+          onClick={() => onReply(message)}
+          title={replyCopy.reply}
           type="button"
         >
-          <ListChecks className="h-4 w-4" />
+          <Reply className="h-4 w-4" />
         </button>
-        <button
-          aria-busy={isDeleting}
-          aria-label={copy.deleteMessage}
-          className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
-          disabled={isDeleting}
-          onClick={() => onDelete([message.id])}
-          title={copy.deleteMessage}
-          type="button"
-        >
-          {isDeleting ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </button>
+        {canDelete ? (
+          <>
+            <button
+              aria-label={copy.selectMessage}
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#156240] transition hover:bg-[#F1F6F2] active:bg-[#E5EEE7]"
+              onClick={() => onStartSelection(message.id)}
+              title={copy.selectMessage}
+              type="button"
+            >
+              <ListChecks className="h-4 w-4" />
+            </button>
+            <button
+              aria-busy={isDeleting}
+              aria-label={copy.deleteMessage}
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-[#E5E5DE] text-[#C6283D] transition hover:bg-[#FFF1F3] active:bg-[#FFE4E8] disabled:cursor-wait disabled:opacity-60"
+              disabled={isDeleting}
+              onClick={() => onDelete([message.id])}
+              title={copy.deleteMessage}
+              type="button"
+            >
+              {isDeleting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </button>
+          </>
+        ) : null}
       </div>
     ) : null;
 
@@ -1996,7 +1832,7 @@ function MessageRow({
           aria-pressed={selectionMode && canDelete ? isSelected : undefined}
           className={cn(
             "relative touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
-            canDelete && "select-none [-webkit-touch-callout:none]",
+            canOpenActions && "select-none [-webkit-touch-callout:none]",
             selectionMode && canDelete && "cursor-pointer",
             isSelected &&
               "outline outline-2 outline-offset-2 outline-[#36A15F]",
@@ -2011,7 +1847,7 @@ function MessageRow({
           data-room-message-id={message.id}
           onClick={handleMessageClick}
           onContextMenu={(event) => {
-            if (!canDelete || isDeleting || selectionMode) {
+            if (!canOpenActions || isDeleting || selectionMode) {
               return;
             }
 
@@ -2023,9 +1859,16 @@ function MessageRow({
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
-          role={canDelete ? "button" : undefined}
-          tabIndex={canDelete ? 0 : undefined}
+          role={canOpenActions ? "button" : undefined}
+          tabIndex={canOpenActions ? 0 : undefined}
         >
+          {!message.isDeleted && message.replyTo ? (
+            <ChatReplyBubblePreview
+              inverted={message.isMine}
+              locale={locale}
+              replyTo={message.replyTo}
+            />
+          ) : null}
           {!message.isDeleted && message.imageUrls.length ? (
             <ChatImagePreviewGrid
               imageLabel={copy.imageMessage}
@@ -2115,12 +1958,16 @@ function RoomComposer({
   disabled,
   locale,
   onSent,
+  onCancelReply,
+  replyTo,
   viewer,
 }: {
   activityId: string;
   disabled: boolean;
   locale: string;
   onSent: (message: ActivityRoomMessageViewModel) => void;
+  onCancelReply: () => void;
+  replyTo: ChatReplyTarget | null;
   viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
@@ -2237,44 +2084,70 @@ function RoomComposer({
       return;
     }
 
-    const trimmedBody = body.trim();
+    const submissions = splitChatMessageSubmissions(body, imageUrls);
 
-    if (!trimmedBody && imageUrls.length === 0) {
+    if (submissions.length === 0) {
       setBody("");
       setFormError("");
       return;
     }
 
-    const formData = new FormData();
-    formData.set("activityId", activityId);
-    formData.set("body", trimmedBody);
-    formData.set("locale", locale);
-    formData.set("mentionsEveryone", mentionsEveryone ? "1" : "0");
-    imageUrls.forEach((imageUrl) => formData.append("imageUrls", imageUrl));
-    mentionedMembers.forEach((member) =>
-      formData.append("mentionedProfileIds", member.id),
-    );
-
     setFormError("");
     setIsSending(true);
+    setBody("");
+    setImageUrls([]);
+    setMentionedMembers([]);
+    setMentionsEveryone(false);
+    onCancelReply();
 
-    void sendActivityRoomMessageAction(initialActionState, formData)
-      .then((state) => {
-        if (state.ok && state.messageId) {
-          setBody("");
-          setImageUrls([]);
-          setMentionedMembers([]);
-          setMentionsEveryone(false);
+    void (async () => {
+      for (const [index, submission] of submissions.entries()) {
+        const formData = new FormData();
+        formData.set("activityId", activityId);
+        formData.set("body", submission.body);
+        formData.set("locale", locale);
+        if (index === 0 && replyTo) {
+          formData.set("replyToMessageId", replyTo.messageId);
+        }
+        formData.set(
+          "mentionsEveryone",
+          index === 0 && mentionsEveryone ? "1" : "0",
+        );
+        submission.imageUrls.forEach((imageUrl) =>
+          formData.append("imageUrls", imageUrl),
+        );
+        if (index === 0) {
+          mentionedMembers.forEach((member) =>
+            formData.append("mentionedProfileIds", member.id),
+          );
+        }
+
+        try {
+          const state = await sendActivityRoomMessageAction(
+            initialActionState,
+            formData,
+          );
+
+          if (!state.ok || !state.messageId) {
+            setFormError(state.formError ?? copy.sendFailed);
+            continue;
+          }
+
           onSent({
-            body: trimmedBody,
-            createdAt: new Date().toISOString(),
+            body: submission.body,
+            createdAt: new Date(Date.now() + index).toISOString(),
             id: state.messageId,
             isDeleted: false,
             isMine: true,
-            imageUrls,
-            mentionedProfileIds: mentionedMembers.map((member) => member.id),
-            mentionLabels: mentionedMembers.map((member) => member.nickname),
-            mentionsEveryone,
+            imageUrls: submission.imageUrls,
+            mentionedProfileIds:
+              index === 0 ? mentionedMembers.map((member) => member.id) : [],
+            mentionLabels:
+              index === 0
+                ? mentionedMembers.map((member) => member.nickname)
+                : [],
+            mentionsEveryone: index === 0 && mentionsEveryone,
+            replyTo: index === 0 ? replyTo : null,
             sender: {
               avatarUrl: viewer?.avatarUrl ?? null,
               friendCode: null,
@@ -2282,18 +2155,11 @@ function RoomComposer({
               nickname: viewer?.nickname ?? "Friemi",
             },
           });
-
-          return;
+        } catch {
+          setFormError(copy.sendFailed);
         }
-
-        setFormError(state.formError ?? copy.sendFailed);
-        setBody(state.values?.body ?? trimmedBody);
-      })
-      .catch(() => {
-        setFormError(copy.sendFailed);
-        setBody(trimmedBody);
-      })
-      .finally(() => setIsSending(false));
+      }
+    })().finally(() => setIsSending(false));
   }
 
   return (
@@ -2304,13 +2170,20 @@ function RoomComposer({
       onFocusCapture={keepMobileChatPageAnchored}
       onSubmit={handleSubmit}
     >
+      {replyTo ? (
+        <ChatReplyComposerPreview
+          locale={locale}
+          onCancel={onCancelReply}
+          replyTo={replyTo}
+        />
+      ) : null}
       <ChatImageAttachmentPreviews
         imageLabel={copy.imageMessage}
         imageUrls={imageUrls}
         onChange={setImageUrls}
         removeLabel={copy.removeImage}
       />
-      <div className="flex items-end gap-2">
+      <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
         <ChatEmojiPicker
           disabled={disabled || isSending}
           label={copy.addEmoji}
@@ -2340,7 +2213,7 @@ function RoomComposer({
           uploadingLabel={copy.imageUploading}
         />
         <textarea
-          className="max-h-28 min-h-11 min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC]"
+          className="max-h-28 min-h-11 w-full min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC] max-[360px]:min-h-10 max-[360px]:px-3 max-[360px]:py-2.5"
           disabled={disabled || isSending}
           maxLength={500}
           name="body"
@@ -2357,7 +2230,7 @@ function RoomComposer({
         />
         <Button
           aria-busy={isSending}
-          className="h-11 min-w-11 shrink-0 rounded-full bg-[#156240] px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5rem] sm:px-4"
+          className="h-11 min-w-11 shrink-0 rounded-full bg-[#156240] px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] max-[360px]:h-10 max-[360px]:min-w-10 sm:min-w-[5rem] sm:px-4"
           disabled={disabled || isSending || isImageUploading}
           type="submit"
         >
@@ -2403,11 +2276,19 @@ export function ActivityRoomChatPage({
   const [manageSheetOpen, setManageSheetOpen] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
-  const chatCursorMode = useChatCursorSync({
+  const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
+  useChatCursorSync({
     endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
     messages,
+    scope: "activity",
     setMessages,
     subjectKey: activityId,
+  });
+  const chatHistory = useChatHistoryPagination({
+    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    initialPageSize: 50,
+    messages,
+    setMessages,
   });
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -2426,7 +2307,7 @@ export function ActivityRoomChatPage({
   });
 
   useEffect(() => {
-    setMessages(initialMessages);
+    setMessages((current) => mergeChatCursorMessages(current, initialMessages));
   }, [initialMessages]);
 
   useEffect(() => {
@@ -2458,20 +2339,28 @@ export function ActivityRoomChatPage({
     return () => document.removeEventListener("pointerdown", dismissActionMenu);
   }, [actionMenuMessageId]);
 
-  useMobileChatViewportGuard();
+  useMobileChatViewportGuard(chatHistory.scrollContainerRef);
 
   function handleSent(message: ActivityRoomMessageViewModel) {
     setMessages((current) => [...current, message]);
-    if (chatCursorMode === "canary") {
-      dispatchChatCursorWake(activityId);
-    } else {
-      router.refresh();
-    }
+    dispatchChatCursorWake(activityId);
   }
 
   function handleOpenActionMenu(messageId: string) {
     setDeleteError("");
     setActionMenuMessageId(messageId);
+  }
+
+  function handleReply(message: ActivityRoomMessageViewModel) {
+    setReplyTo({
+      body: message.body,
+      hasImage: message.imageUrls.length > 0,
+      messageId: message.id,
+      senderName: message.sender.nickname,
+    });
+    setActionMenuMessageId("");
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
   }
 
   function handleStartSelection(messageId: string) {
@@ -2533,11 +2422,7 @@ export function ActivityRoomChatPage({
           );
           setActionMenuMessageId("");
           handleCancelSelection();
-          if (chatCursorMode === "canary") {
-            dispatchChatCursorWake(activityId);
-          } else {
-            router.refresh();
-          }
+          dispatchChatCursorWake(activityId);
           return;
         }
 
@@ -2549,9 +2434,6 @@ export function ActivityRoomChatPage({
 
   return (
     <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
-      {activity && policy.canView ? (
-        <ActivityRoomChatAutoRefresh activityId={activity.id} />
-      ) : null}
       <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <ActivityRoomChatBackButton
           activityId={activity?.id ?? activityId}
@@ -2583,7 +2465,26 @@ export function ActivityRoomChatPage({
         />
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+        onScroll={chatHistory.onScroll}
+        ref={chatHistory.scrollContainerRef}
+      >
+        {chatHistory.isLoadingOlder ? (
+          <div
+            aria-label={
+              locale === "fr"
+                ? "Chargement des messages"
+                : locale === "en"
+                  ? "Loading messages"
+                  : "正在加载聊天记录"
+            }
+            className="flex h-9 items-center justify-center text-[#7D857D]"
+            role="status"
+          >
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          </div>
+        ) : null}
         {policy.canView ? (
           messages.length > 0 ? (
             <div className="grid gap-3">
@@ -2616,6 +2517,7 @@ export function ActivityRoomChatPage({
                       message={message}
                       onDelete={handleDelete}
                       onOpenActionMenu={handleOpenActionMenu}
+                      onReply={handleReply}
                       onStartSelection={handleStartSelection}
                       onToggleSelection={handleToggleSelection}
                       selectionMode={selectionMode}
@@ -2692,7 +2594,9 @@ export function ActivityRoomChatPage({
           activityId={activity.id}
           disabled={deletingMessageIds.length > 0}
           locale={locale}
+          onCancelReply={() => setReplyTo(null)}
           onSent={handleSent}
+          replyTo={replyTo}
           viewer={viewer}
         />
       ) : policy.canView ? (

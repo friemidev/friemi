@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ChevronRight, Clock3, Dice5, LockKeyhole, UsersRound } from "lucide-react";
+import {
+  ChevronRight,
+  Clock3,
+  Dice5,
+  LockKeyhole,
+  UsersRound,
+} from "lucide-react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
@@ -15,6 +21,8 @@ import { MobileActivityDetailSheetLink } from "./MobileActivityDetailSheetLink";
 
 type MobileNewActivityEntryViewProps = {
   activities: ActivityCardViewModel[];
+  creationRestricted?: boolean;
+  creationRestrictionMessage?: string | null;
   locale: string;
 };
 
@@ -24,8 +32,9 @@ function getMobileEntryCopy(locale: string) {
       activity: "Activités",
       createDescription: "Lance une sortie et invite du monde.",
       createTitle: "Créer une sortie",
-      partyToolsDescription: "Des outils pour animer vos soirées jeux.",
-      partyToolsTitle: "Outils de jeu",
+      partyToolsDescription:
+        "Créez ou rejoignez une salle pour jouer ensemble.",
+      partyToolsTitle: "Salles de jeu",
       question: "Qu'est-ce que tu veux créer ?",
       seeAll: "Tout",
       title: "Créer",
@@ -47,8 +56,8 @@ function getMobileEntryCopy(locale: string) {
       activity: "Activity",
       createDescription: "Start a plan and invite people.",
       createTitle: "Create Plan",
-      partyToolsDescription: "Use tools to make your game night better.",
-      partyToolsTitle: "Party Tools",
+      partyToolsDescription: "Create or join a room for games at the table.",
+      partyToolsTitle: "Game Rooms",
       question: "What do you want to create?",
       seeAll: "See all",
       title: "Create Plan",
@@ -69,8 +78,8 @@ function getMobileEntryCopy(locale: string) {
     activity: "活动",
     createDescription: "发起一个线下约局，邀请朋友加入。",
     createTitle: "创建聚吧",
-    partyToolsDescription: "用工具让现场桌游更顺。",
-    partyToolsTitle: "桌游工具",
+    partyToolsDescription: "创建或加入现场游戏房间。",
+    partyToolsTitle: "游戏房间",
     question: "想创建什么？",
     seeAll: "全部",
     title: "聚聚",
@@ -169,27 +178,20 @@ function MobileCreateOption({
   description,
   href,
   icon,
+  disabled = false,
   tone,
   title,
 }: {
   description: string;
+  disabled?: boolean;
   href: string;
   icon: "party" | "team";
   tone: "cream" | "rose";
   title: string;
 }) {
   const Icon = icon === "team" ? UsersRound : Dice5;
-
-  return (
-    <Link
-      className={cn(
-        "group grid min-h-[8.1rem] grid-cols-[4.8rem_minmax(0,1fr)_1.6rem] items-center gap-3 rounded-[1.6rem] px-5 py-4 shadow-[0_16px_36px_rgba(29,29,27,0.06)] transition active:scale-[0.985]",
-        tone === "rose"
-          ? "bg-[#FFE5E4] text-[#7D1D27]"
-          : "bg-[#FFF8D8] text-[#6A5F12]",
-      )}
-      href={href}
-    >
+  const content = (
+    <>
       <span
         className={cn(
           "flex h-16 w-16 items-center justify-center rounded-[1.35rem]",
@@ -206,10 +208,38 @@ function MobileCreateOption({
           {description}
         </span>
       </span>
-      <ChevronRight
-        className="h-[18px] w-[18px] justify-self-end text-[#111210]/45 transition group-active:translate-x-0.5"
-        strokeWidth={2.35}
-      />
+      {disabled ? (
+        <LockKeyhole
+          className="h-[18px] w-[18px] justify-self-end text-[#111210]/45"
+          strokeWidth={2.35}
+        />
+      ) : (
+        <ChevronRight
+          className="h-[18px] w-[18px] justify-self-end text-[#111210]/45 transition group-active:translate-x-0.5"
+          strokeWidth={2.35}
+        />
+      )}
+    </>
+  );
+  const className = cn(
+    "group grid min-h-[8.1rem] grid-cols-[4.8rem_minmax(0,1fr)_1.6rem] items-center gap-3 rounded-[1.6rem] px-5 py-4 shadow-[0_16px_36px_rgba(29,29,27,0.06)] transition",
+    disabled ? "cursor-not-allowed opacity-70" : "active:scale-[0.985]",
+    tone === "rose"
+      ? "bg-[#FFE5E4] text-[#7D1D27]"
+      : "bg-[#FFF8D8] text-[#6A5F12]",
+  );
+
+  if (disabled) {
+    return (
+      <div aria-disabled="true" className={className}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link className={className} href={href}>
+      {content}
     </Link>
   );
 }
@@ -256,7 +286,9 @@ function MobileActivityPreviewCard({
           alt={activity.title}
           overlayClassName={cn(
             "bg-gradient-to-t to-transparent",
-            isInactive ? "from-zinc-900/38 via-zinc-800/5" : "from-black/34 via-black/4",
+            isInactive
+              ? "from-zinc-900/38 via-zinc-800/5"
+              : "from-black/34 via-black/4",
           )}
           src={activity.coverImageUrl}
         />
@@ -296,12 +328,14 @@ function MobileActivityPreviewCard({
 
 export function MobileNewActivityEntryView({
   activities,
+  creationRestricted = false,
+  creationRestrictionMessage,
   locale,
 }: MobileNewActivityEntryViewProps) {
   const copy = getMobileEntryCopy(locale);
 
   return (
-    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
+    <main className="friemi-native-app-mobile-only mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>
@@ -315,7 +349,12 @@ export function MobileNewActivityEntryView({
 
           <div className="space-y-5">
             <MobileCreateOption
-              description={copy.createDescription}
+              description={
+                creationRestricted && creationRestrictionMessage
+                  ? creationRestrictionMessage
+                  : copy.createDescription
+              }
+              disabled={creationRestricted}
               href={withLocale(locale, "/activities/new?mode=form")}
               icon="team"
               title={copy.createTitle}

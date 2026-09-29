@@ -11,6 +11,7 @@ import {
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -18,7 +19,7 @@ import {
 
 export const directMessageBodyMaxLength = 1000;
 export const directMessageImageMaxCount = 4;
-export const nonFriendDirectMessageLimit = 2;
+export const nonFriendDirectMessageLimit = 1;
 
 export type DirectMessageErrorCode =
   | "AUTH_REQUIRED"
@@ -30,7 +31,8 @@ export type DirectMessageErrorCode =
   | "EMPTY_BODY"
   | "BODY_TOO_LONG"
   | "TOO_MANY_IMAGES"
-  | "INVALID_IMAGE_URL";
+  | "INVALID_IMAGE_URL"
+  | "MESSAGE_NOT_FOUND";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
@@ -85,18 +87,22 @@ const directConversationSelect = {
   userAId: true,
   userBId: true,
   lastMessageAt: true,
+  nonFriendResetAt: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ConversationSelect;
 
 const directConversationMessageSendSelect = {
   id: true,
+  userAId: true,
+  userBId: true,
 } satisfies Prisma.ConversationSelect;
 
 const directConversationMessageAccessSelect = {
   id: true,
   userAId: true,
   userBId: true,
+  nonFriendResetAt: true,
 } satisfies Prisma.ConversationSelect;
 
 const directMessageSelect = {
@@ -106,6 +112,11 @@ const directMessageSelect = {
   activityId: true,
   body: true,
   imageUrls: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
+  recalledAt: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -333,6 +344,7 @@ async function findExistingConversation(
     },
     select: {
       id: true,
+      nonFriendResetAt: true,
     },
   });
 }
@@ -341,11 +353,19 @@ async function hasPeerReplied(
   db: DbClient,
   conversationId: string,
   peerProfileId: string,
+  nonFriendResetAt?: Date | null,
 ) {
   const reply = await db.directMessage.findFirst({
     where: {
       conversationId,
       senderId: peerProfileId,
+      ...(nonFriendResetAt
+        ? {
+            createdAt: {
+              gte: nonFriendResetAt,
+            },
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -359,11 +379,19 @@ async function countCurrentUserNonFriendMessages(
   db: DbClient,
   conversationId: string,
   currentUserProfileId: string,
+  nonFriendResetAt?: Date | null,
 ) {
   return db.directMessage.count({
     where: {
       conversationId,
       senderId: currentUserProfileId,
+      ...(nonFriendResetAt
+        ? {
+            createdAt: {
+              gte: nonFriendResetAt,
+            },
+          }
+        : {}),
     },
   });
 }
@@ -526,11 +554,17 @@ export async function getDirectMessageSendPolicy(
   }
 
   const [peerReplied, currentUserMessageCount] = await Promise.all([
-    hasPeerReplied(prisma, existingConversation.id, peerProfileId),
+    hasPeerReplied(
+      prisma,
+      existingConversation.id,
+      peerProfileId,
+      existingConversation.nonFriendResetAt,
+    ),
     countCurrentUserNonFriendMessages(
       prisma,
       existingConversation.id,
       currentUserProfileId,
+      existingConversation.nonFriendResetAt,
     ),
   ]);
 
@@ -561,7 +595,12 @@ async function assertDirectMessageSendAccess(
     ]);
 
   if (isMutualFollow) {
-    return;
+    return resolveDirectMessageSendPolicy({
+      conversationId: existingConversation?.id ?? null,
+      currentUserProfileId: userId,
+      isMutualFollow: true,
+      peerProfileId: otherUserId,
+    });
   }
 
   const trustScore = await getTrustScore(db, userId);
@@ -582,12 +621,22 @@ async function assertDirectMessageSendAccess(
       );
     }
 
-    return;
+    return policy;
   }
 
   const [peerReplied, currentUserMessageCount] = await Promise.all([
-    hasPeerReplied(db, existingConversation.id, otherUserId),
-    countCurrentUserNonFriendMessages(db, existingConversation.id, userId),
+    hasPeerReplied(
+      db,
+      existingConversation.id,
+      otherUserId,
+      existingConversation.nonFriendResetAt,
+    ),
+    countCurrentUserNonFriendMessages(
+      db,
+      existingConversation.id,
+      userId,
+      existingConversation.nonFriendResetAt,
+    ),
   ]);
   const policy = resolveDirectMessageSendPolicy({
     conversationId: existingConversation.id,
@@ -603,6 +652,8 @@ async function assertDirectMessageSendAccess(
   if (!policy.canSend) {
     throw new DirectMessageDomainError(policy.reason as DirectMessageErrorCode);
   }
+
+  return policy;
 }
 
 export async function canSendDirectMessageToProfile({
@@ -646,7 +697,9 @@ export async function getOrCreateDirectConversation({
         userAId_userBId: pair,
       },
       create: pair,
-      update: {},
+      update: {
+        nonFriendResetAt: null,
+      },
       select: directConversationSelect,
     });
   });
@@ -698,7 +751,10 @@ export async function getOrCreateOpenDirectConversation({
       where: {
         userAId_userBId: pair,
       },
-      create: pair,
+      create: {
+        ...pair,
+        nonFriendResetAt: new Date(),
+      },
       update: {},
       select: directConversationSelect,
     });
@@ -750,7 +806,10 @@ export async function getOrCreateActivityOrganizerConversation({
     where: {
       userAId_userBId: pair,
     },
-    create: pair,
+    create: {
+      ...pair,
+      nonFriendResetAt: new Date(),
+    },
     update: {},
     select: directConversationSelect,
   });
@@ -784,7 +843,10 @@ export async function getOrCreateActivityParticipantConversation({
     where: {
       userAId_userBId: pair,
     },
-    create: pair,
+    create: {
+      ...pair,
+      nonFriendResetAt: new Date(),
+    },
     update: {},
     select: directConversationSelect,
   });
@@ -796,12 +858,14 @@ export async function sendDirectMessage({
   conversationId,
   body,
   imageUrls,
+  replyToMessageId,
 }: {
   activityId?: string | null;
   currentUserProfileId: string;
   conversationId: string;
   body: string;
   imageUrls?: string[];
+  replyToMessageId?: string | null;
 }): Promise<{
   conversation: DirectMessageSendConversationViewModel;
   message: DirectMessageViewModel;
@@ -837,12 +901,37 @@ export async function sendDirectMessage({
     );
 
     const accessStartedAt = Date.now();
-    await assertDirectMessageSendAccess(
+    const sendPolicy = await assertDirectMessageSendAccess(
       tx,
       currentUserProfileId,
       peerProfileId,
     );
     const accessMs = Date.now() - accessStartedAt;
+
+    const replySource = replyToMessageId
+      ? await tx.directMessage.findFirst({
+          where: {
+            conversationId: conversation.id,
+            id: replyToMessageId,
+            recalledAt: null,
+          },
+          select: {
+            body: true,
+            id: true,
+            imageUrls: true,
+            sender: {
+              select: {
+                friendCode: true,
+                nickname: true,
+              },
+            },
+          },
+        })
+      : null;
+
+    if (replyToMessageId && !replySource) {
+      throw new DirectMessageDomainError("MESSAGE_NOT_FOUND");
+    }
 
     const createMessageStartedAt = Date.now();
     const message = await tx.directMessage.create({
@@ -852,6 +941,14 @@ export async function sendDirectMessage({
         activityId: activityId ?? null,
         body: payload.body,
         imageUrls: payload.imageUrls,
+        replyToBody: replySource?.body ?? null,
+        replyToHasImage: Boolean(replySource?.imageUrls.length),
+        replyToMessageId: replySource?.id ?? null,
+        replyToSenderName: replySource
+          ? replySource.sender.nickname.trim() ||
+            replySource.sender.friendCode ||
+            "Friemi"
+          : null,
       },
       select: directMessageSelect,
     });
@@ -864,6 +961,11 @@ export async function sendDirectMessage({
       },
       data: {
         lastMessageAt: message.createdAt,
+        ...(sendPolicy.isMutualFollow
+          ? {
+              nonFriendResetAt: null,
+            }
+          : {}),
       },
       select: directConversationMessageSendSelect,
     });
@@ -896,6 +998,112 @@ export async function sendDirectMessage({
   });
 }
 
+export async function recallDirectMessage({
+  conversationId,
+  currentUserProfileId,
+  messageId,
+}: {
+  conversationId: string;
+  currentUserProfileId: string;
+  messageId: string;
+}): Promise<{
+  message: DirectMessageViewModel;
+  participantProfileIds: string[];
+}> {
+  const result = await prisma.$transaction(async (tx) => {
+    const message = await tx.directMessage.findFirst({
+      where: {
+        conversationId,
+        id: messageId,
+        senderId: currentUserProfileId,
+        conversation: {
+          OR: [
+            {
+              userAId: currentUserProfileId,
+            },
+            {
+              userBId: currentUserProfileId,
+            },
+          ],
+        },
+      },
+      select: {
+        id: true,
+        recalledAt: true,
+        conversation: {
+          select: {
+            userAId: true,
+            userBId: true,
+          },
+        },
+      },
+    });
+
+    if (!message) {
+      throw new DirectMessageDomainError("MESSAGE_NOT_FOUND");
+    }
+
+    if (message.recalledAt) {
+      const recalledMessage = await tx.directMessage.findUnique({
+        where: {
+          id: message.id,
+        },
+        select: directMessageSelect,
+      });
+
+      if (!recalledMessage) {
+        throw new DirectMessageDomainError("MESSAGE_NOT_FOUND");
+      }
+
+      return {
+        message: recalledMessage,
+        recipientId: getConversationPeerId(
+          message.conversation,
+          currentUserProfileId,
+        ),
+      };
+    }
+
+    const recalledMessage = await tx.directMessage.update({
+      where: {
+        id: message.id,
+      },
+      data: {
+        recalledAt: new Date(),
+      },
+      select: directMessageSelect,
+    });
+
+    await tx.directMessage.updateMany({
+      where: {
+        conversationId,
+        replyToMessageId: message.id,
+      },
+      data: {
+        replyToBody: null,
+        replyToHasImage: false,
+        replyToMessageId: null,
+        replyToSenderName: null,
+      },
+    });
+
+    return {
+      message: recalledMessage,
+      recipientId: getConversationPeerId(
+        message.conversation,
+        currentUserProfileId,
+      ),
+    };
+  });
+
+  await invalidateUnreadBadgeCache([result.recipientId]);
+
+  return {
+    message: result.message,
+    participantProfileIds: [currentUserProfileId, result.recipientId],
+  };
+}
+
 export async function sendDirectMessageToFriend({
   currentUserProfileId,
   friendProfileId,
@@ -925,7 +1133,9 @@ export async function sendDirectMessageToFriend({
         userAId_userBId: pair,
       },
       create: pair,
-      update: {},
+      update: {
+        nonFriendResetAt: null,
+      },
       select: directConversationMessageSendSelect,
     });
     const upsertConversationMs = Date.now() - upsertConversationStartedAt;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
-import { LockKeyhole } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ type MobileActivityDetailSheetLinkProps = {
   locale?: string;
   locked?: boolean;
 };
+
+const fullPageNavigationDelayMs = 1000;
 
 function getLockedCopy(locale: string) {
   if (locale === "fr") {
@@ -32,7 +35,7 @@ function getLockedCopy(locale: string) {
   }
 
   return {
-    description: "这是私密聚吧，与发起人成为互相关注好友后即可解锁。",
+    description: "这是私密聚吧，仅限发起人好友才能申请。",
     title: "私密聚吧已锁定",
   };
 }
@@ -40,7 +43,9 @@ function getLockedCopy(locale: string) {
 function appendActivitySheetParam(href: string) {
   try {
     const base =
-      typeof window === "undefined" ? "https://friemi.local" : window.location.origin;
+      typeof window === "undefined"
+        ? "https://friemi.local"
+        : window.location.origin;
     const url = new URL(href, base);
     url.searchParams.set("sheet", "1");
 
@@ -55,6 +60,13 @@ function appendActivitySheetParam(href: string) {
   }
 }
 
+function getOpenPageLabel(locale: string) {
+  if (locale === "fr") return "Ouvrir la page complète";
+  if (locale === "en") return "Open full page";
+
+  return "打开完整页面";
+}
+
 export function MobileActivityDetailSheetLink({
   children,
   className,
@@ -63,9 +75,41 @@ export function MobileActivityDetailSheetLink({
   locale = "zh-CN",
   locked = false,
 }: MobileActivityDetailSheetLinkProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const fullPageNavigationTimerRef = useRef<number | null>(null);
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
+  const openPageLabel = getOpenPageLabel(locale);
+
+  useEffect(() => {
+    return () => {
+      if (fullPageNavigationTimerRef.current !== null) {
+        window.clearTimeout(fullPageNavigationTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open && !locked) {
+      router.prefetch(href);
+    }
+  }, [href, locked, open, router]);
+
+  function openFullPage() {
+    if (fullPageNavigationTimerRef.current !== null) {
+      return;
+    }
+
+    // Reveal the existing list while the prefetched detail route settles.
+    // This keeps the route-level loader out of the closing sheet.
+    setOpen(false);
+    router.prefetch(href);
+    fullPageNavigationTimerRef.current = window.setTimeout(() => {
+      fullPageNavigationTimerRef.current = null;
+      router.push(href);
+    }, fullPageNavigationDelayMs);
+  }
 
   return (
     <>
@@ -81,6 +125,19 @@ export function MobileActivityDetailSheetLink({
         ariaLabel={label}
         bodyClassName="overflow-hidden"
         closeLabel={label}
+        headerAction={
+          locked ? undefined : (
+            <button
+              aria-label={openPageLabel}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95"
+              onClick={openFullPage}
+              title={openPageLabel}
+              type="button"
+            >
+              <Maximize2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )
+        }
         initiallyExpanded
         onClose={() => setOpen(false)}
         open={open}

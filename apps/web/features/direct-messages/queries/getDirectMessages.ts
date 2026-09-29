@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import {
   compareOptionalFriendNearestActivities,
   getFriendNearestActivitySignals,
@@ -49,6 +50,11 @@ const messageSelect = {
   senderId: true,
   body: true,
   imageUrls: true,
+  replyToMessageId: true,
+  replyToSenderName: true,
+  replyToBody: true,
+  replyToHasImage: true,
+  recalledAt: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -145,6 +151,7 @@ export type DirectMessagePreviewViewModel = {
   senderId: string;
   body: string;
   imageUrls: string[];
+  isRecalled: boolean;
   createdAt: string;
   sourceActivity: {
     id: string;
@@ -191,6 +198,13 @@ export type DirectMessageThreadItemViewModel = {
   senderId: string;
   body: string;
   imageUrls: string[];
+  replyTo: {
+    body: string;
+    hasImage: boolean;
+    messageId: string;
+    senderName: string;
+  } | null;
+  recalledAt: string | null;
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
@@ -285,8 +299,9 @@ function mapLastMessage(
   return {
     id: lastMessage.id,
     senderId: lastMessage.senderId,
-    body: lastMessage.body,
-    imageUrls: lastMessage.imageUrls,
+    body: lastMessage.recalledAt ? "" : lastMessage.body,
+    imageUrls: lastMessage.recalledAt ? [] : lastMessage.imageUrls,
+    isRecalled: Boolean(lastMessage.recalledAt),
     createdAt: lastMessage.createdAt.toISOString(),
     sourceActivity: null,
   };
@@ -352,8 +367,20 @@ function mapConversationThread(
     messages: [...conversation.messages].reverse().map((message) => ({
       id: message.id,
       senderId: message.senderId,
-      body: message.body,
-      imageUrls: message.imageUrls,
+      body: message.recalledAt ? "" : message.body,
+      imageUrls: message.recalledAt ? [] : message.imageUrls,
+      replyTo:
+        !message.recalledAt &&
+        message.replyToMessageId &&
+        message.replyToSenderName
+          ? {
+              body: message.replyToBody ?? "",
+              hasImage: message.replyToHasImage,
+              messageId: message.replyToMessageId,
+              senderName: message.replyToSenderName,
+            }
+          : null,
+      recalledAt: message.recalledAt?.toISOString() ?? null,
       readAt: message.readAt?.toISOString() ?? null,
       createdAt: message.createdAt.toISOString(),
       isMine: message.senderId === currentUserProfileId,
@@ -376,6 +403,7 @@ async function getUnreadDirectMessageCountMap(
       conversationId: {
         in: conversationIds,
       },
+      recalledAt: null,
       readAt: null,
       senderId: {
         not: currentUserProfileId,
@@ -789,6 +817,7 @@ export async function getUnreadDirectMessageCount(
             },
           }
         : {}),
+      recalledAt: null,
       readAt: null,
       senderId: {
         not: currentUserProfileId,
@@ -821,7 +850,7 @@ export async function markDirectConversationRead({
   currentUserProfileId: string;
   peerProfileId: string;
 }) {
-  return prisma.$transaction([
+  const result = await prisma.$transaction([
     prisma.directMessage.updateMany({
       where: {
         conversationId,
@@ -853,6 +882,10 @@ export async function markDirectConversationRead({
       },
     }),
   ]);
+
+  await invalidateUnreadBadgeCache([currentUserProfileId]);
+
+  return result;
 }
 
 export async function getDirectConversationThread(

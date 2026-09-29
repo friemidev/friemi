@@ -39,7 +39,7 @@ const copy = {
       newActivity: "聚聚",
       newActivityShort: "组局",
       messages: "消息",
-      messagesShort: "消息",
+      messagesShort: "聊聊",
       footprints: "世界",
       footprintsShort: "世界",
       planet: "星球",
@@ -64,8 +64,6 @@ const copy = {
       activityOpsDescription: "维护活动库与公共活动导入",
       merchantOps: "商家管理",
       merchantOpsDescription: "维护合作商家与场地主页",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "维护移动首页置顶内容",
       reportOps: "举报处理",
       reportOpsDescription: "查看和处理用户举报",
       accountSettings: "账号设置",
@@ -865,7 +863,7 @@ const copy = {
         UNAUTHORIZED: "请登录后再解析链接。",
       },
       title: "聚吧标题",
-      titlePlaceholder: "例如：周五下班后桌游局",
+      titlePlaceholder: "例如：周末一起逛展喝咖啡",
       description: "聚吧说明",
       descriptionPlaceholder: "说明这次想怎么约、适合谁、需要注意什么",
       itinerary: "集合安排",
@@ -942,8 +940,6 @@ const copy = {
         "可选；填写后详情页会展示主要跳转按钮。聚吧报名仍在站内完成。",
       requiresApproval: "加入需要审核",
       requiresApprovalHint: "开启后，别人申请加入需要你审核。",
-      copyTimeReminder:
-        "此为复制聚吧草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
       create: "发布聚吧",
       saving: "保存中...",
@@ -1043,8 +1039,6 @@ const copy = {
       activityOpsDescription: "Maintain activities and public imports",
       merchantOps: "Merchant management",
       merchantOpsDescription: "Maintain partner and venue profiles",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "Maintain mobile home featured news",
       reportOps: "Report review",
       reportOpsDescription: "Review user reports",
       accountSettings: "Account settings",
@@ -1071,7 +1065,8 @@ const copy = {
       recommendationsHangoutsTitle: "Hangouts you may like",
       recommendationsActivitiesTitle: "Activities you may like",
       recommendationsEmptyTitle: "No recommendations yet",
-      recommendationsEmptyDescription: "More things to explore will appear soon.",
+      recommendationsEmptyDescription:
+        "More things to explore will appear soon.",
       emptyTitle: "Enter a keyword to search",
       emptyDescription:
         "Try an activity name, place, Friemi ID, nickname, or merchant name.",
@@ -1991,8 +1986,6 @@ const copy = {
       requiresApproval: "Review join requests",
       requiresApprovalHint:
         "When enabled, you review each request before someone joins.",
-      copyTimeReminder:
-        "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -2093,8 +2086,6 @@ const copy = {
       activityOpsDescription: "Gérer les activités et les imports publics",
       merchantOps: "Gestion partenaires",
       merchantOpsDescription: "Gérer les profils de partenaires et lieux",
-      topNewsOps: "Top News",
-      topNewsOpsDescription: "Gérer les contenus en avant sur mobile",
       reportOps: "Signalements",
       reportOpsDescription: "Traiter les signalements utilisateurs",
       accountSettings: "Paramètres du compte",
@@ -2410,8 +2401,7 @@ const copy = {
       teamTitle: "Partage du groupe",
       description:
         "Partagez l'activité ou téléchargez une affiche avec QR code.",
-      activityDescription:
-        "Partagez l'activité ou téléchargez une affiche QR.",
+      activityDescription: "Partagez l'activité ou téléchargez une affiche QR.",
       teamDescription:
         "Partagez l'invitation du groupe ou téléchargez une affiche QR.",
       expand: "Afficher les outils de partage",
@@ -2422,8 +2412,7 @@ const copy = {
       copyPrice: "Copier le coût",
       copyLink: "Copier le lien",
       systemShare: "Partager",
-      systemShareHint:
-        "Ouvrez le panneau de partage système pour l'envoyer.",
+      systemShareHint: "Ouvrez le panneau de partage système pour l'envoyer.",
       wechatShareHint:
         "Dans WeChat, utilisez le menu ··· pour l'envoyer à vos amis ou groupes.",
       shareUnavailable:
@@ -2941,8 +2930,7 @@ const copy = {
       coverUploadFailed:
         "Échec de l'import de la couverture. Réessayez plus tard.",
       coverTypeError: "Importez un format d'image courant.",
-      coverSizeError:
-        "Les images doivent faire 10 Mo maximum.",
+      coverSizeError: "Les images doivent faire 10 Mo maximum.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:
@@ -3079,8 +3067,6 @@ const copy = {
       requiresApproval: "Valider les demandes",
       requiresApprovalHint:
         "Si activé, vous validez chaque demande avant l'ajout au groupe.",
-      copyTimeReminder:
-        "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",

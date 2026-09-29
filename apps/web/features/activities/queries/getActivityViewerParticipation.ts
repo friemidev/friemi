@@ -2,9 +2,6 @@ import type { ParticipantStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type ActivityViewerParticipation = {
-  checkInCancelledAt: Date | null;
-  checkInRequestedAt: Date | null;
-  checkedInAt: Date | null;
   status: ParticipantStatus;
 } | null;
 
@@ -31,9 +28,6 @@ export async function getActivityViewerParticipation(
   }
 
   return {
-    checkInCancelledAt: null,
-    checkInRequestedAt: null,
-    checkedInAt: null,
     status: participation.status,
   };
 }

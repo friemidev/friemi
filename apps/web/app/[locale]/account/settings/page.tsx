@@ -22,8 +22,8 @@ const accountSettingsCopy = {
     accountSettings: "账号设置",
     accountSecurity: "账号与安全",
     activityPriorityAdmin: "活动权重管理",
+    couponMerchantAdmin: "优惠券与门店",
     officialMessagesAdmin: "官方消息发布",
-    topNewsAdmin: "Top News 管理",
     language: "语言",
     signOut: "退出登录",
   },
@@ -35,8 +35,8 @@ const accountSettingsCopy = {
     accountSettings: "Account settings",
     accountSecurity: "Account & security",
     activityPriorityAdmin: "Activity priority admin",
+    couponMerchantAdmin: "Coupons & stores",
     officialMessagesAdmin: "Official messages",
-    topNewsAdmin: "Top News admin",
     language: "Language",
     signOut: "Sign out",
   },
@@ -47,8 +47,8 @@ const accountSettingsCopy = {
     accountSettings: "Parametres du compte",
     accountSecurity: "Compte et securite",
     activityPriorityAdmin: "Priorite des activites",
+    couponMerchantAdmin: "Coupons et boutiques",
     officialMessagesAdmin: "Messages officiels",
-    topNewsAdmin: "Admin Top News",
     language: "Langue",
     signOut: "Deconnexion",
   },
@@ -105,12 +105,9 @@ export default async function AccountSettingsPage({
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
         </div>
-        <p className="mt-3 max-w-[24rem] text-[15px] font-semibold leading-7 text-[#156240]/78 md:text-base">
-          {copy.description}
-        </p>
       </header>
 
-      <div className="mt-9 space-y-8">
+      <div className="mt-6 space-y-8">
         <AccountLanguageSettingsSection label={copy.language} locale={locale} />
 
         {profile ? (
@@ -120,10 +117,12 @@ export default async function AccountSettingsPage({
             adminActivityPriorityLabel={
               isAdmin ? copy.activityPriorityAdmin : undefined
             }
+            adminCouponMerchantLabel={
+              isAdmin ? copy.couponMerchantAdmin : undefined
+            }
             adminOfficialMessagesLabel={
               isAdmin ? copy.officialMessagesAdmin : undefined
             }
-            adminTopNewsLabel={isAdmin ? copy.topNewsAdmin : undefined}
             locale={locale}
             signOutLabel={copy.signOut}
           />

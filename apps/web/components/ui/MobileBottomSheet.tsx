@@ -22,6 +22,7 @@ type MobileBottomSheetProps = {
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  headerAction?: ReactNode;
   heightClassName?: string;
   initiallyExpanded?: boolean;
   onClose: () => void;
@@ -35,7 +36,8 @@ export function MobileBottomSheet({
   children,
   className,
   closeLabel,
-  heightClassName = "h-[85svh]",
+  headerAction,
+  heightClassName = "h-[85%]",
   initiallyExpanded = false,
   onClose,
   open,
@@ -129,7 +131,8 @@ export function MobileBottomSheet({
 
     dragPointerIdRef.current = event.pointerId;
     dragStartYRef.current = event.clientY;
-    dragViewportHeightRef.current = window.innerHeight;
+    dragViewportHeightRef.current =
+      window.visualViewport?.height ?? window.innerHeight;
     dragDeltaYRef.current = 0;
     setDragDeltaY(0);
     setIsDragging(true);
@@ -225,10 +228,7 @@ export function MobileBottomSheet({
     const expansionRange = viewportHeight - collapsedHeight;
 
     if (isExpanded) {
-      const contraction = Math.min(
-        Math.max(dragDeltaY, 0),
-        expansionRange,
-      );
+      const contraction = Math.min(Math.max(dragDeltaY, 0), expansionRange);
 
       sheetStyle = {
         height: `calc(100svh - ${contraction}px)`,
@@ -245,7 +245,7 @@ export function MobileBottomSheet({
       };
     }
   } else if (isExpanded) {
-    sheetStyle = { height: "100svh" };
+    sheetStyle = { height: "100%" };
   }
 
   if (!open || !mounted) {
@@ -254,13 +254,18 @@ export function MobileBottomSheet({
 
   return createPortal(
     <div
+      data-friemi-modal-overlay="true"
       className={cn(
-        "fixed inset-0 flex items-end bg-[#111210]/42",
+        "fixed inset-x-0 flex items-end bg-[#111210]/42",
         isClosing
           ? "animate-[mobile-bottom-sheet-overlay-out_160ms_ease-in_forwards]"
           : null,
         zIndexClassName,
       )}
+      style={{
+        height: "var(--friemi-modal-viewport-height, 100dvh)",
+        top: "var(--friemi-modal-viewport-offset-top, 0px)",
+      }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           requestClose();
@@ -287,10 +292,8 @@ export function MobileBottomSheet({
       >
         <div
           className={cn(
-            "shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2",
-            isExpanded
-              ? "pt-[calc(0.5rem_+_var(--app-top-safe-area))]"
-              : null,
+            "relative shrink-0 touch-none select-none bg-white px-4 pb-1 pt-2",
+            isExpanded ? "pt-[calc(0.5rem_+_var(--app-top-safe-area))]" : null,
           )}
           onPointerCancel={handleDragCancel}
           onPointerDown={handleDragStart}
@@ -312,6 +315,14 @@ export function MobileBottomSheet({
           >
             <span className="h-1.5 w-12 rounded-full bg-[#D6D5B2]" />
           </button>
+          {headerAction ? (
+            <div
+              className="absolute bottom-0.5 right-3 z-10"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {headerAction}
+            </div>
+          ) : null}
         </div>
         <div
           className={cn(

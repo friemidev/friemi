@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ExternalLink,
   MapPin,
+  Orbit,
   PencilLine,
   Repeat2,
   ShieldAlert,
@@ -37,7 +38,6 @@ import { ActivityStatusBadge } from "@/features/activities/components/ActivitySt
 import { ActivityAnnouncementDetailPanel } from "@/features/activities/components/ActivityAnnouncementDetailPanel";
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
-import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
@@ -54,7 +54,6 @@ import {
   AdminGuestParticipantControl,
   JoinActivityForm,
 } from "@/features/activities/components/JoinActivityForm";
-import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
 import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
 import { TeamDetailMobileCtaSheet } from "@/features/activities/components/TeamDetailMobileCtaSheet";
 import {
@@ -86,10 +85,16 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
-import { getActivityRoomUnreadState } from "@/features/activity-room-chat/services/activityRoomChat";
+import { ActivityRoomInviteDialog } from "@/features/activity-room-chat/components/ActivityRoomInviteDialog";
+import {
+  getActivityRoomInviteCandidates,
+  getActivityRoomUnreadState,
+} from "@/features/activity-room-chat/services/activityRoomChat";
 import { ParticipantToolCard } from "@/features/aa/components/ParticipantToolCard";
 import { AaActivitySummaryCard } from "@/features/aa/components/AaActivitySummaryCard";
 import { getActivityAaEntryState } from "@/features/aa/server/ledgerService";
+import { PollToolEntry } from "@/features/polls/components/PollToolEntry";
+import { getActivityPollEntrySummary } from "@/features/polls/server/pollService";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
@@ -114,12 +119,12 @@ import {
   buildTeamShareImageUrl,
   buildTeamShareMetadata,
   getCanonicalMetadataBaseUrl,
+  getRequestBaseUrl,
   getShareDateLabel,
   getShareLocationLabel,
   getSharePriceLabel,
   resolveShareImageUrl,
 } from "@/lib/share-metadata";
-import { resolveTeamWechatShareImageUrl } from "@/features/activities/utils/teamWechatShareImage";
 import {
   ensurePrivateActivityShareToken,
   getPrivateActivitySharePath,
@@ -705,10 +710,11 @@ export async function generateActivityDetailMetadata(
     locale,
     getActivityDetailPath(activityId),
   );
-  const activity = await getActivityShareMetadataById(
-    activityId,
-    accessToken ?? null,
-  );
+  const [activity, requestHeaders] = await Promise.all([
+    getActivityShareMetadataById(activityId, accessToken ?? null),
+    headers(),
+  ]);
+  const requestBaseUrl = getRequestBaseUrl(requestHeaders);
 
   if (!activity) {
     return buildFallbackShareMetadata(baseUrl, fallbackActivityPath);
@@ -755,14 +761,16 @@ export async function generateActivityDetailMetadata(
         accessToken:
           activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
         activityId,
-        baseUrl,
+        baseUrl: requestBaseUrl,
         locale,
       }),
-      wechatShareImageUrl: resolveTeamWechatShareImageUrl({
+      wechatShareImageUrl: buildTeamShareImageUrl({
+        accessToken:
+          activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
         activityId,
-        activityUrl: canonicalUrl,
-        coverImageUrl: activity.coverImageUrl,
+        baseUrl: requestBaseUrl,
         locale,
+        variant: "wechat",
       }),
       title: activity.title,
     });
@@ -935,6 +943,8 @@ export async function ActivityDetailPageContent({
           shareToken: accessToken || shareToken || "",
         })
       : null;
+  const participantInvitePath =
+    privateSharePath ?? withLocale(locale, getActivityDetailPath(activity.id));
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
@@ -1454,10 +1464,6 @@ export async function ActivityDetailPageContent({
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
-  const canCheckInViewerParticipation =
-    !isTeamOperator &&
-    (viewerParticipation?.status === "JOINED" ||
-      viewerParticipation?.status === "APPROVED");
   const hasRoomRelevantParticipation =
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
@@ -1516,24 +1522,62 @@ export async function ActivityDetailPageContent({
   const canUseBoardGameTools =
     !activity.isActivityInfo && activity.category === "BOARD_GAME";
   const gameToolsHref = withLocale(locale, "/game-tools");
-  const [pendingParticipants, analyticsSummary, activityCheckInRoster] =
-    await Promise.all([
-      isTeamOperator && activity.requiresApproval && viewerProfile
-        ? perf.measure("activity.pendingParticipants", () =>
-            getPendingParticipants(activity.id, viewerProfile.id),
+  const canAccessPolls =
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT" &&
+    (isTeamOperator ||
+      viewerParticipation?.status === "JOINED" ||
+      viewerParticipation?.status === "APPROVED");
+  const canInviteParticipants = Boolean(
+    viewerProfile &&
+    isTeamOperator &&
+    !isClosed &&
+    !isFull &&
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT",
+  );
+  const pollsHref = withLocale(locale, `/lobby/${activity.id}/polls`);
+  const [
+    pendingParticipants,
+    analyticsSummary,
+    activityCheckInRoster,
+    pollEntrySummary,
+    activityInviteCandidates,
+  ] = await Promise.all([
+    isTeamOperator && activity.requiresApproval && viewerProfile
+      ? perf.measure("activity.pendingParticipants", () =>
+          getPendingParticipants(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    isTeamOperator && !isMobileRequest
+      ? perf.measure("activity.analyticsSummary", () =>
+          getActivityAnalyticsSummary(activity.id),
+        )
+      : Promise.resolve(null),
+    isTeamOperator && viewerProfile
+      ? perf.measure("activity.checkInRoster", () =>
+          getActivityCheckInRoster(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    canAccessPolls
+      ? perf
+          .measure("activity.pollEntrySummary", () =>
+            getActivityPollEntrySummary(activity.id),
           )
-        : Promise.resolve([]),
-      isTeamOperator && !isMobileRequest
-        ? perf.measure("activity.analyticsSummary", () =>
-            getActivityAnalyticsSummary(activity.id),
-          )
-        : Promise.resolve(null),
-      isTeamOperator && viewerProfile
-        ? perf.measure("activity.checkInRoster", () =>
-            getActivityCheckInRoster(activity.id, viewerProfile.id),
-          )
-        : Promise.resolve([]),
-    ]);
+          .catch((error: unknown) => {
+            console.error("Failed to load activity poll summary", error);
+            return { openCount: 0, totalCount: 0 };
+          })
+      : Promise.resolve({ openCount: 0, totalCount: 0 }),
+    canInviteParticipants && viewerProfile
+      ? perf.measure("activity.inviteCandidates", () =>
+          getActivityRoomInviteCandidates({
+            activityId: activity.id,
+            viewerProfileId: viewerProfile.id,
+          }),
+        )
+      : Promise.resolve([]),
+  ]);
   perf.finish(
     {
       commentCount: 0,
@@ -1859,6 +1903,27 @@ export async function ActivityDetailPageContent({
         <h1 className="text-[1.65rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
+        {activity.linkedPlanets.length > 0 ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 pt-1 text-xs font-semibold text-[#156240]">
+            <span className="inline-flex shrink-0 items-center gap-1 text-[#6C746A]">
+              <Orbit className="h-3.5 w-3.5" />
+              {locale === "fr"
+                ? "Planète"
+                : locale === "en"
+                  ? "Planet"
+                  : "所属星球"}
+            </span>
+            {activity.linkedPlanets.map((planet) => (
+              <Link
+                className="max-w-full truncate font-bold underline decoration-[#9FC8AA] underline-offset-4 transition hover:text-[#0D4B31]"
+                href={withLocale(locale, `/planets/${planet.slug}`)}
+                key={planet.id}
+              >
+                {planet.name}
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="relative aspect-[1.75/1] overflow-hidden rounded-[1.45rem] bg-moss shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:aspect-[16/9] md:aspect-[2.35/1]">
         <ActivityCoverImage
@@ -1975,19 +2040,6 @@ export async function ActivityDetailPageContent({
                   {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
                 </p>
               </div>
-              {!isTeamOperator && canCheckInViewerParticipation ? (
-                <ActivityCheckInForm
-                  activityId={activity.id}
-                  checkInRequestedAt={
-                    viewerParticipation?.checkInRequestedAt?.toISOString() ??
-                    null
-                  }
-                  checkedInAt={
-                    viewerParticipation?.checkedInAt?.toISOString() ?? null
-                  }
-                  locale={locale}
-                />
-              ) : null}
             </div>
           </div>
           {mobileParticipantPreview.length > 0 ? (
@@ -2038,15 +2090,6 @@ export async function ActivityDetailPageContent({
                     </span>
                   ) : null}
                 </div>
-                {isTeamOperator ? (
-                  <ActivityCheckInReviewPanel
-                    activityId={activity.id}
-                    locale={locale}
-                    participants={activityCheckInRoster}
-                    triggerLabel={operatorActionCopy.checkIn}
-                    triggerVariant="icon"
-                  />
-                ) : null}
               </div>
             </div>
           ) : null}
@@ -2063,6 +2106,78 @@ export async function ActivityDetailPageContent({
             }
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
+            additionalTools={
+              <>
+                {canUseBoardGameTools ? (
+                  <BoardGameToolFloatingEntry
+                    gameToolsHref={gameToolsHref}
+                    locale={locale}
+                    variant="tool"
+                  />
+                ) : null}
+                {canAccessPolls ? (
+                  <PollToolEntry
+                    href={pollsHref}
+                    locale={locale}
+                    openCount={pollEntrySummary.openCount}
+                  />
+                ) : null}
+                {canInviteParticipants ? (
+                  <ActivityRoomInviteDialog
+                    activityId={activity.id}
+                    candidates={activityInviteCandidates}
+                    locale={locale}
+                    sharePath={participantInvitePath}
+                  />
+                ) : null}
+                {isTeamOperator ? (
+                  <>
+                    <ActivityCheckInReviewPanel
+                      activityId={activity.id}
+                      locale={locale}
+                      pendingParticipants={pendingParticipants}
+                      participants={activityCheckInRoster}
+                      showParticipationApproval={activity.requiresApproval}
+                      triggerLabel={operatorActionCopy.checkIn}
+                      triggerVariant="tool"
+                    />
+                    <Link
+                      aria-label={operatorActionCopy.edit}
+                      className="group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-[#607268] transition hover:bg-[#F2F8F3] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758] active:scale-[0.97]"
+                      href={activityEditHref}
+                      target="_top"
+                      title={operatorActionCopy.edit}
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center text-[#5C8A6C] transition group-hover:text-[#156240]">
+                        <PencilLine
+                          className="h-[18px] w-[18px]"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="max-w-full truncate">
+                        {operatorActionCopy.edit}
+                      </span>
+                    </Link>
+                    {canCancelActivity ? (
+                      <CancelActivityForm
+                        activityId={activity.id}
+                        activityTitle={activity.title}
+                        locale={locale}
+                        triggerVariant="tool"
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+                {isAdmin && !isClosed && !isFull ? (
+                  <AdminGuestParticipantControl
+                    activityId={activity.id}
+                    formInstanceId="mobile-admin"
+                    locale={locale}
+                    triggerVariant="tool"
+                  />
+                ) : null}
+              </>
+            }
             announcementContent={
               showActivityAnnouncementPanel ? (
                 <ActivityAnnouncementDetailPanel
@@ -2097,26 +2212,6 @@ export async function ActivityDetailPageContent({
             participants={participantPreview}
             variant="bare"
           />
-          {isTeamOperator ? (
-            <>
-              <div className="grid gap-2">
-                <Link
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
-                  href={activityEditHref}
-                >
-                  <PencilLine className="h-4 w-4" />
-                  <span className="truncate">{operatorActionCopy.edit}</span>
-                </Link>
-              </div>
-              {canCancelActivity ? (
-                <CancelActivityForm
-                  activityId={activity.id}
-                  activityTitle={activity.title}
-                  locale={locale}
-                />
-              ) : null}
-            </>
-          ) : null}
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
               activityId={activity.id}
@@ -2168,23 +2263,8 @@ export async function ActivityDetailPageContent({
               </div>
             </TeamDetailMobileCtaSheet>
           ) : null}
-          {isAdmin && !isClosed && !isFull ? (
-            <AdminGuestParticipantControl
-              activityId={activity.id}
-              formInstanceId="mobile-admin"
-              locale={locale}
-            />
-          ) : null}
         </div>
       </div>
-
-      {isTeamOperator && activity.requiresApproval ? (
-        <ParticipationApprovalPanel
-          activityId={activity.id}
-          locale={locale}
-          pendingParticipants={pendingParticipants}
-        />
-      ) : null}
 
       <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
@@ -2193,6 +2273,36 @@ export async function ActivityDetailPageContent({
             aaActionCount={activityAaEntryState.actionCount}
             aaHref={withLocale(locale, `/lobby/${activity.id}/aa`)}
             aaUnavailable={activityAaEntryState.unavailable}
+            additionalTools={
+              canUseBoardGameTools ||
+              canAccessPolls ||
+              canInviteParticipants ? (
+                <>
+                  {canUseBoardGameTools ? (
+                    <BoardGameToolFloatingEntry
+                      gameToolsHref={gameToolsHref}
+                      locale={locale}
+                      variant="tool"
+                    />
+                  ) : null}
+                  {canAccessPolls ? (
+                    <PollToolEntry
+                      href={pollsHref}
+                      locale={locale}
+                      openCount={pollEntrySummary.openCount}
+                    />
+                  ) : null}
+                  {canInviteParticipants ? (
+                    <ActivityRoomInviteDialog
+                      activityId={activity.id}
+                      candidates={activityInviteCandidates}
+                      locale={locale}
+                      sharePath={participantInvitePath}
+                    />
+                  ) : null}
+                </>
+              ) : undefined
+            }
             announcementHref="#activity-announcement-desktop"
             announcementUnread={activityRoomUnreadState.hasUnreadAnnouncement}
             canAccessAa={activityAaEntryState.canAccess}
@@ -2349,7 +2459,9 @@ export async function ActivityDetailPageContent({
                   <ActivityCheckInReviewPanel
                     activityId={activity.id}
                     locale={locale}
+                    pendingParticipants={pendingParticipants}
                     participants={activityCheckInRoster}
+                    showParticipationApproval={activity.requiresApproval}
                     triggerLabel={operatorActionCopy.checkIn}
                   />
                 </div>
@@ -2401,20 +2513,6 @@ export async function ActivityDetailPageContent({
                 />
               </div>
               <div className="grid gap-3">
-                {canCheckInViewerParticipation ? (
-                  <ActivityCheckInForm
-                    activityId={activity.id}
-                    buttonClassName="min-h-11 px-4 text-sm"
-                    checkInRequestedAt={
-                      viewerParticipation?.checkInRequestedAt?.toISOString() ??
-                      null
-                    }
-                    checkedInAt={
-                      viewerParticipation?.checkedInAt?.toISOString() ?? null
-                    }
-                    locale={locale}
-                  />
-                ) : null}
                 {showActivityRoomEntry ? (
                   <ActivityPlayAgainLink
                     activityId={activity.id}
@@ -2689,12 +2787,6 @@ export async function ActivityDetailPageContent({
           </div>
         </aside>
       </section>
-      {canUseBoardGameTools ? (
-        <BoardGameToolFloatingEntry
-          gameToolsHref={gameToolsHref}
-          locale={locale}
-        />
-      ) : null}
     </PageContainer>
   );
 }

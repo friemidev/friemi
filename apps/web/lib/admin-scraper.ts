@@ -53,8 +53,16 @@ export type AdminMerchantListItem = AdminMerchantOption & {
   address: string | null;
   websiteUrl: string | null;
   contactEmail: string | null;
+  owner: AdminMerchantCandidate | null;
   activityCount: number;
   updatedAt: string;
+};
+
+export type AdminMerchantCandidate = {
+  email: string | null;
+  friendCode: string | null;
+  id: string;
+  nickname: string;
 };
 
 export type AdminMerchantCreateInput = {
@@ -181,7 +189,7 @@ function serializeAdminMerchant(merchant: AdminMerchantOption) {
   };
 }
 
-function serializeAdminMerchantListItem(merchant: {
+export function serializeAdminMerchantListItem(merchant: {
   id: string;
   name: string;
   slug: string;
@@ -190,6 +198,7 @@ function serializeAdminMerchantListItem(merchant: {
   address: string | null;
   websiteUrl: string | null;
   contactEmail: string | null;
+  owner: AdminMerchantCandidate | null;
   updatedAt: Date;
   _count: { activities: number };
 }): AdminMerchantListItem {
@@ -202,6 +211,7 @@ function serializeAdminMerchantListItem(merchant: {
     address: merchant.address,
     websiteUrl: merchant.websiteUrl,
     contactEmail: merchant.contactEmail,
+    owner: merchant.owner,
     activityCount: merchant._count.activities,
     updatedAt: merchant.updatedAt.toISOString(),
   };
@@ -300,12 +310,103 @@ export async function getAdminMerchants() {
       address: true,
       websiteUrl: true,
       contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
       updatedAt: true,
       _count: { select: { activities: true } },
     },
   });
 
   return merchants.map(serializeAdminMerchantListItem);
+}
+
+export async function getAdminMerchant(merchantId: string) {
+  const merchant = await prisma.merchant.findFirst({
+    where: { id: merchantId, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      city: true,
+      description: true,
+      address: true,
+      websiteUrl: true,
+      contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
+      updatedAt: true,
+      _count: { select: { activities: true } },
+    },
+  });
+
+  return merchant ? serializeAdminMerchantListItem(merchant) : null;
+}
+
+export async function getAdminMerchantCandidates() {
+  return prisma.userProfile.findMany({
+    where: {
+      ownedMerchant: null,
+      status: "ACTIVE",
+    },
+    orderBy: [{ nickname: "asc" }],
+    take: 300,
+    select: {
+      email: true,
+      friendCode: true,
+      id: true,
+      nickname: true,
+    },
+  });
+}
+
+function normalizeAdminMerchantCandidateSearch(value: string) {
+  return value
+    .replace(/[０-９]/g, (char) =>
+      String.fromCharCode(char.charCodeAt(0) - 0xfee0),
+    )
+    .trim();
+}
+
+export async function searchAdminMerchantCandidates(rawQuery: string) {
+  const query = normalizeAdminMerchantCandidateSearch(rawQuery);
+  if (!query) return [];
+
+  const compactFriendCode = query.replace(/[\s-]/g, "");
+  const friendCode = /^\d{6}$/.test(compactFriendCode)
+    ? compactFriendCode
+    : null;
+
+  return prisma.userProfile.findMany({
+    where: {
+      ownedMerchant: null,
+      status: "ACTIVE",
+      OR: [
+        ...(friendCode ? [{ friendCode }] : []),
+        { nickname: { contains: query, mode: "insensitive" } },
+        { email: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    orderBy: [{ nickname: "asc" }],
+    take: 30,
+    select: {
+      email: true,
+      friendCode: true,
+      id: true,
+      nickname: true,
+    },
+  });
 }
 
 function buildAdminActivityUpdateData(
@@ -441,6 +542,14 @@ export async function createAdminMerchant(data: AdminMerchantCreateInput) {
       address: true,
       websiteUrl: true,
       contactEmail: true,
+      owner: {
+        select: {
+          email: true,
+          friendCode: true,
+          id: true,
+          nickname: true,
+        },
+      },
       updatedAt: true,
       _count: { select: { activities: true } },
     },

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -22,11 +23,11 @@ import {
   MoreHorizontal,
   Package,
   PencilLine,
-  ScanLine,
   Settings,
   Share2,
   ShieldCheck,
   ShoppingBag,
+  Store,
   Ticket,
   Trophy,
   UsersRound,
@@ -35,6 +36,7 @@ import {
 } from "lucide-react";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { ProfileQrScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
   updateProfileRemarkAction,
   type UpdateProfileRemarkState,
@@ -44,11 +46,6 @@ import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
-import {
-  canUseNativeAndroidQrScanner,
-  parseAndroidQrScanPayload,
-  resolveGlobalQrScanDestination,
-} from "@/features/scan/globalQrScanner";
 import {
   charmLevels,
   getCharmLevelDescription,
@@ -104,6 +101,7 @@ type ProfileDashboardViewProps = {
   isGuestPlaceholder?: boolean;
   isSelf?: boolean;
   locale: string;
+  merchantHref?: string | null;
   profile: PublicProfileViewModel;
   achievementPreviewItems?: PublicAchievementWallItem[];
   publicAchievements?: PublicAchievementWallItem[];
@@ -366,6 +364,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
+      store: "Boutique",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -431,6 +430,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
+      store: "Store",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -495,6 +495,7 @@ function getMobileProfileCopy(locale: string) {
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
+    store: "门店",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -714,7 +715,7 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
+      <div className="friemi-native-app-mobile-only app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
           <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
@@ -780,7 +781,7 @@ function GuestProfilePlaceholder({
         </section>
       </div>
 
-      <div className="hidden space-y-5 md:block md:space-y-7">
+      <div className="friemi-native-app-desktop-only hidden space-y-5 md:block md:space-y-7">
         <section className="rounded-[1.35rem] border border-[#8AB68E]/40 bg-[linear-gradient(145deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-5 shadow-[0_14px_34px_rgba(21,98,64,0.07)] ring-1 ring-white/70">
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
             <div className="flex min-w-0 items-center gap-4">
@@ -1280,6 +1281,7 @@ function ProfilePreviewEmpty({ href, label }: { href: string; label: string }) {
 }
 
 function ProfileFeatureLink({
+  artwork,
   href,
   icon: Icon,
   label,
@@ -1288,6 +1290,7 @@ function ProfileFeatureLink({
   status,
   tone = "green",
 }: {
+  artwork?: ProfileFeatureArtworkKey;
   href: string;
   icon: LucideIcon;
   label: string;
@@ -1313,10 +1316,14 @@ function ProfileFeatureLink({
       <span
         className={cn(
           "relative flex h-12 w-12 items-center justify-center rounded-full",
-          toneClass,
+          artwork ? "overflow-hidden bg-white" : toneClass,
         )}
       >
-        <Icon className="h-5 w-5" strokeWidth={2.25} />
+        {artwork ? (
+          <ProfileFeatureArtwork artwork={artwork} />
+        ) : (
+          <Icon className="h-5 w-5" strokeWidth={2.25} />
+        )}
         {locked ? (
           <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
             <Lock className="h-3 w-3" strokeWidth={2.4} />
@@ -1358,6 +1365,46 @@ function ProfileFeatureLink({
     >
       {content}
     </Link>
+  );
+}
+
+type ProfileFeatureArtworkKey =
+  | "achievements"
+  | "bag"
+  | "friends"
+  | "giftWall"
+  | "invite"
+  | "settings"
+  | "shop"
+  | "store";
+
+const profileFeatureArtworkSources: Record<ProfileFeatureArtworkKey, string> = {
+  achievements: "/profile/buttons/achievements.png",
+  bag: "/profile/buttons/bag.png",
+  friends: "/profile/buttons/friends.png",
+  giftWall: "/profile/buttons/gift-wall.png",
+  invite: "/profile/buttons/invite.png",
+  settings: "/profile/buttons/settings.png",
+  shop: "/profile/buttons/shop.png",
+  store: "/profile/buttons/store.png",
+};
+
+function ProfileFeatureArtwork({
+  artwork,
+}: {
+  artwork: ProfileFeatureArtworkKey;
+}) {
+  return (
+    <Image
+      alt=""
+      aria-hidden="true"
+      className="pointer-events-none h-full w-full select-none object-cover"
+      height={48}
+      quality={80}
+      sizes="48px"
+      src={profileFeatureArtworkSources[artwork]}
+      width={48}
+    />
   );
 }
 
@@ -1884,11 +1931,11 @@ function ProfileRemarkEditor({
   profile: PublicProfileViewModel;
 }) {
   const copy = getProfileRemarkCopy(locale);
+  const router = useRouter();
   const [state, formAction] = useActionState(
     updateProfileRemarkAction,
     profileRemarkInitialState,
   );
-  const router = useRouter();
   const [value, setValue] = useState(profile.remarkName ?? "");
   const savedRemark = state.ok
     ? (state.remarkName ?? "")
@@ -2768,6 +2815,9 @@ function MobileProfileAvatarEditor({
     updateProfileIdentityAction,
     mobileAvatarInitialState,
   );
+  const handledSuccessStateRef = useRef<UpdateProfileIdentityState | null>(
+    null,
+  );
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
@@ -2797,9 +2847,11 @@ function MobileProfileAvatarEditor({
   }, [nicknameChangedAt]);
 
   useEffect(() => {
-    if (!state.success) {
+    if (!state.success || handledSuccessStateRef.current === state) {
       return;
     }
+
+    handledSuccessStateRef.current = state;
 
     const savedNickname = state.nickname ?? nicknameValue;
     const savedNicknameChangedAt =
@@ -3011,6 +3063,7 @@ function SelfMobileProfileHome({
   achievementPreviewItems,
   dashboard,
   locale,
+  merchantHref,
   onPresenceStatusChange,
   presenceStatus,
   profile,
@@ -3020,6 +3073,7 @@ function SelfMobileProfileHome({
   achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  merchantHref?: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
@@ -3027,7 +3081,6 @@ function SelfMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const router = useRouter();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
   const [currentNickname, setCurrentNickname] = useState(profile.nickname);
   const [currentNicknameChangedAt, setCurrentNicknameChangedAt] = useState(
@@ -3037,7 +3090,6 @@ function SelfMobileProfileHome({
     normalizeProfileHomeCity(profile.homeCity),
   );
   const [copied, setCopied] = useState(false);
-  const nativeQrScanPendingRef = useRef(false);
 
   useEffect(() => {
     setCurrentAvatarUrl(profile.avatarUrl);
@@ -3062,84 +3114,8 @@ function SelfMobileProfileHome({
     window.setTimeout(() => setCopied(false), 1600);
   };
 
-  const handleGlobalQrValue = (rawValue: string) => {
-    const destination = resolveGlobalQrScanDestination({ locale, rawValue });
-
-    if (!destination) {
-      window.alert(copy.scanUnknown);
-      return;
-    }
-
-    if (destination.kind === "internal") {
-      router.push(destination.href);
-      return;
-    }
-
-    if (typeof window.FriemiAndroid?.openExternal === "function") {
-      window.FriemiAndroid.openExternal(destination.href);
-      return;
-    }
-
-    window.location.assign(destination.href);
-  };
-
-  useEffect(() => {
-    function handleAndroidQrScan(event: Event) {
-      if (!nativeQrScanPendingRef.current) {
-        return;
-      }
-
-      nativeQrScanPendingRef.current = false;
-      const payload = parseAndroidQrScanPayload(
-        (event as CustomEvent<unknown>).detail,
-      );
-
-      if (!payload?.ok || !payload.rawValue) {
-        if (payload?.reason !== "CANCELLED") {
-          window.alert(copy.scanUnknown);
-        }
-
-        return;
-      }
-
-      handleGlobalQrValue(payload.rawValue);
-    }
-
-    window.addEventListener("friemi:android-qr-scan", handleAndroidQrScan);
-
-    return () => {
-      window.removeEventListener("friemi:android-qr-scan", handleAndroidQrScan);
-    };
-  }, [copy.scanUnknown, locale, router]);
-
-  const openGlobalQrScanner = () => {
-    if (!canUseNativeAndroidQrScanner()) {
-      window.alert(copy.scanUnavailable);
-      return;
-    }
-
-    nativeQrScanPendingRef.current = true;
-
-    try {
-      const payload = parseAndroidQrScanPayload(
-        window.FriemiAndroid?.scanQrCode?.(),
-      );
-
-      if (payload?.supported === false || payload?.ok === false) {
-        nativeQrScanPendingRef.current = false;
-        window.alert(copy.scanUnavailable);
-      }
-    } catch {
-      nativeQrScanPendingRef.current = false;
-      window.alert(copy.scanUnavailable);
-    }
-  };
-
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
-      <h1 className="mb-6 min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#111210]">
-        {copy.title}
-      </h1>
       <section>
         <div>
           <div className="flex items-start gap-4">
@@ -3206,15 +3182,7 @@ function SelfMobileProfileHome({
             </div>
 
             <div className="flex shrink-0 items-start gap-2">
-              <button
-                type="button"
-                aria-label={copy.scan}
-                title={copy.scan}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-                onClick={openGlobalQrScanner}
-              >
-                <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-              </button>
+              <ProfileQrScanner locale={locale} />
             </div>
           </div>
         </div>
@@ -3223,44 +3191,59 @@ function SelfMobileProfileHome({
       </section>
 
       <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
+        {merchantHref ? (
+          <ProfileFeatureLink
+            artwork="store"
+            href={merchantHref}
+            icon={Store}
+            label={copy.store}
+            tone="green"
+          />
+        ) : null}
         <ProfileFeatureLink
+          artwork="giftWall"
           href={withLocale(locale, "/profile/gift-wall")}
           icon={Gift}
           label={copy.giftWall}
           tone="pink"
         />
         <ProfileFeatureLink
+          artwork="friends"
           href={withLocale(locale, "/profile/network")}
           icon={UsersRound}
           label={copy.friendsFeature}
           tone="blue"
         />
         <ProfileFeatureLink
+          artwork="invite"
           href={withLocale(locale, "/profile/invite")}
           icon={Ticket}
           label={copy.inviteCode}
           tone="pink"
         />
         <ProfileFeatureLink
+          artwork="shop"
           href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
           tone="gold"
         />
         <ProfileFeatureLink
+          artwork="achievements"
           href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
           label={copy.achievements}
           tone="gold"
         />
         <ProfileFeatureLink
+          artwork="bag"
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
-          locked
-          lockedLabel={copy.soon}
+          tone="green"
         />
         <ProfileFeatureLink
+          artwork="settings"
           href={withLocale(locale, "/account/settings")}
           icon={Settings}
           label={copy.settings}
@@ -3344,6 +3327,7 @@ export function ProfileDashboardView({
   isGuestPlaceholder = false,
   isSelf = false,
   locale,
+  merchantHref = null,
   profile,
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
@@ -3395,12 +3379,13 @@ export function ProfileDashboardView({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="md:hidden">
+      <div className="friemi-native-app-mobile-only md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
             achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
+            merchantHref={merchantHref}
             onPresenceStatusChange={setCurrentPresenceStatus}
             presenceStatus={currentPresenceStatus}
             profile={profile}
@@ -3419,7 +3404,7 @@ export function ProfileDashboardView({
         )}
       </div>
 
-      <div className="hidden space-y-5 md:block md:space-y-7">
+      <div className="friemi-native-app-desktop-only hidden space-y-5 md:block md:space-y-7">
         <section
           className={
             isSelf

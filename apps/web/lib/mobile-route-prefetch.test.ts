@@ -11,7 +11,7 @@ test("home prefetches the other four bottom navigation pages in order", () => {
     [
       "/zh-CN/lobby",
       "/zh-CN/activities/new",
-      "/zh-CN/footprints?tab=moment",
+      "/zh-CN/footprints?tab=message",
       "/zh-CN/profile",
     ],
   );
@@ -26,7 +26,7 @@ test("a bottom navigation page is not prefetched again", () => {
     [
       "/fr/mobile-home",
       "/fr/activities/new",
-      "/fr/footprints?tab=moment",
+      "/fr/footprints?tab=message",
       "/fr/profile",
     ],
   );

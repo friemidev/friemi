@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
   CalendarPlus,
   Clock3,
-  Heart,
   MapPin,
   UsersRound,
 } from "lucide-react";
@@ -31,6 +31,9 @@ import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desk
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
+import { isIOSWebUserAgent } from "@/features/mobile/iosAppStore";
+import { IOSReferralAppBanner } from "@/features/referrals/components/IOSReferralAppBanner";
+import { normalizeReferralCode } from "@/features/referrals/referralCode";
 import {
   getMobileHomeTopNewsItems,
   type MobileHomeTopNewsItem,
@@ -48,11 +51,15 @@ import {
   getGeneralPageShareDescription,
 } from "@/lib/share-metadata";
 import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
+import { MobileHomeV23CitySelector } from "./MobileHomeV23CitySelector";
 import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 
 type MobileHomePageProps = {
   params: Promise<{
     locale: string;
+  }>;
+  searchParams?: Promise<{
+    ref?: string | string[];
   }>;
 };
 
@@ -95,6 +102,7 @@ type MobileHomeExperienceProps = {
 };
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
+  showIOSReferralBanner: boolean;
   topNewsItems: MobileHomeTopNewsItem[];
   trendingActivities: ActivityCardViewModel[];
   viewerName: string | null;
@@ -426,8 +434,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function MobileHomePage({ params }: MobileHomePageProps) {
-  const { locale } = await params;
+export default async function MobileHomePage({
+  params,
+  searchParams,
+}: MobileHomePageProps) {
+  const [{ locale }, requestHeaders] = await Promise.all([params, headers()]);
+  const query = (await searchParams) ?? {};
+  const rawReferralCode = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const showIOSReferralBanner = Boolean(
+    normalizeReferralCode(rawReferralCode) &&
+    isIOSWebUserAgent(requestHeaders.get("user-agent")),
+  );
   const perf = createPerformanceTracker({
     locale,
     route: "/mobile-home",
@@ -488,12 +505,13 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
       <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
           locale={locale}
+          showIOSReferralBanner={showIOSReferralBanner}
           swipeActivities={activitiesResult.swipeActivities}
           topNewsItems={topNewsItems}
           trendingActivities={trendingActivitiesResult.trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
         />
-        <div className="hidden md:block">
+        <div className="friemi-native-app-desktop-only hidden md:block">
           <MobileHomeExperience
             locale={locale}
             swipeActivities={activitiesResult.swipeActivities}
@@ -520,6 +538,7 @@ function getMobileHomeActivityHref(
 
 function MobileHomeV23Experience({
   locale,
+  showIOSReferralBanner,
   topNewsItems,
   trendingActivities,
   viewerName,
@@ -529,11 +548,17 @@ function MobileHomeV23Experience({
   const displayTrendingActivities = trendingActivities.slice(0, 5);
 
   return (
-    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
+    <section className="friemi-native-app-mobile-only mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-x-0 top-0 z-[65] h-[var(--app-top-safe-area)] bg-white"
       />
+      {showIOSReferralBanner ? (
+        <IOSReferralAppBanner
+          className="mx-auto w-full max-w-[430px]"
+          locale={locale}
+        />
+      ) : null}
       <div className="mx-auto flex w-full max-w-[430px] flex-col pl-5 pr-0">
         <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pr-5 pt-1">
           <Link
@@ -545,7 +570,10 @@ function MobileHomeV23Experience({
           </Link>
 
           <div className="flex min-w-0 items-center justify-end gap-1.5 pt-3">
-            <MobileHomeV23CitySelector currentCity={copy.location} />
+            <MobileHomeV23CitySelector
+              currentCity={copy.location}
+              locale={locale}
+            />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
@@ -572,7 +600,10 @@ function MobileHomeV23Experience({
             </h2>
           </div>
 
-          <div className="mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            className="mobile-home-activity-filters mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-mobile-activity-filters
+          >
             {copy.filters.map((filter) => (
               <Link
                 key={filter.label}
@@ -600,7 +631,7 @@ function MobileHomeV23Experience({
             <h2 className="text-[17px] font-bold tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
                   href={withLocale(locale, item.href)}
@@ -659,37 +690,29 @@ function MobileHomeV23NewsCard({
   image: string;
   title: string;
 }) {
+  const hasEmbeddedCanvasMargin =
+    image === "/top_news/founding-host-recruitment-cover.png" ||
+    image === "/top_news/friemi-intro-cover.png";
+
   return (
     <Link
       href={href}
-      className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+      className="relative h-[7.2rem] w-[17.8rem] flex-none snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
       aria-label={title}
     >
-      {/* Admin-managed images can be local paths or HTTPS URLs. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={image}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover"
+        className={`absolute inset-0 h-full w-full object-cover ${
+          hasEmbeddedCanvasMargin ? "scale-x-[1.05] scale-y-[1.28]" : ""
+        }`}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
       <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold text-[#123D31] shadow-sm">
         {title}
       </span>
     </Link>
-  );
-}
-
-function MobileHomeV23CitySelector({ currentCity }: { currentCity: string }) {
-  return (
-    <span
-      className="inline-flex h-9 min-w-0 cursor-default select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-semibold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
-      aria-label={currentCity}
-      title={currentCity}
-    >
-      <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
-      <span className="max-w-[4.4rem] truncate">{currentCity}</span>
-    </span>
   );
 }
 
@@ -716,6 +739,7 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
+          categoryArtworkClassName="h-[140%]"
           fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           src={getActivityCoverThumbnailUrl(
             getActivityListCoverSrc(activity.coverImageUrl, activity.category),
@@ -723,9 +747,6 @@ function MobileHomeV23ActivityCard({
           )}
           overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
         />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
-          <Heart className="h-3.5 w-3.5" />
-        </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
         <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
@@ -775,9 +796,6 @@ function MobileHomeV23FallbackCard({
           className="object-cover transition duration-500 group-active:scale-[1.03]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/24 to-transparent" />
-        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/96 text-[#111210] shadow-[0_4px_12px_rgba(17,18,16,0.18)] ring-1 ring-black/10">
-          <Heart className="h-3.5 w-3.5" />
-        </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
         <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">

@@ -35,6 +35,8 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
     pathname === withLocale(locale, "/activities") ||
     pathname === withLocale(locale, "/notifications") ||
     pathname === withLocale(locale, "/search") ||
+    pathname === withLocale(locale, "/official-messages") ||
+    pathname === withLocale(locale, "/official-feedback") ||
     pathname === localizedAdminActivityPriorityPath ||
     pathname.startsWith(localizedActivitiesPrefix) ||
     pathname.startsWith(localizedFootprintsPrefix) ||
@@ -51,14 +53,25 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
   );
 }
 
+function shouldHideHeader(pathname: string, locale: string) {
+  const localizedPollPath = withLocale(locale, "/poll");
+
+  return (
+    pathname === localizedPollPath ||
+    pathname.startsWith(`${localizedPollPath}/`)
+  );
+}
+
 export function AppHeaderChrome({ children, locale }: AppHeaderChromeProps) {
   const pathname = usePathname();
+  const hideHeader = shouldHideHeader(pathname, locale);
   const hideOnMobile = shouldHideHeaderOnMobile(pathname, locale);
 
   return (
     <header
       className={cn(
         "app-header sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC]",
+        hideHeader && "hidden",
         hideOnMobile && "max-md:hidden",
       )}
     >

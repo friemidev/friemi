@@ -19,6 +19,7 @@ const defaultShareImagePath = brand.shareImagePath;
 const defaultDescription = brand.description;
 export const generalPageShareDescription =
   "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！";
+export const shareCardVersion = "card-v2";
 
 export function getGeneralPageShareDescription(locale: string) {
   if (locale === "fr") {
@@ -43,6 +44,12 @@ type DetailShareMetadataInput = {
   description?: string | null;
   locationLabel?: string | null;
   priceLabel?: string | null;
+  shareImage?: {
+    height?: number;
+    type?: string;
+    url: string;
+    width?: number;
+  } | null;
   siteName?: string;
   title: string;
 };
@@ -60,6 +67,13 @@ type TeamShareImageUrlInput = {
   activityId: string;
   baseUrl: string;
   locale: string;
+  variant?: "default" | "wechat";
+};
+
+type PollShareImageUrlInput = {
+  baseUrl: string;
+  locale: string;
+  shareToken: string;
   variant?: "default" | "wechat";
 };
 
@@ -284,6 +298,7 @@ export function buildTeamShareImageUrl({
   const url = new URL("/api/share/team-card", baseUrl);
   url.searchParams.set("activityId", activityId);
   url.searchParams.set("locale", locale);
+  url.searchParams.set("v", shareCardVersion);
 
   if (variant !== "default") {
     url.searchParams.set("variant", variant);
@@ -291,6 +306,24 @@ export function buildTeamShareImageUrl({
 
   if (accessToken) {
     url.searchParams.set("access", accessToken);
+  }
+
+  return url.toString();
+}
+
+export function buildPollShareImageUrl({
+  baseUrl,
+  locale,
+  shareToken,
+  variant = "default",
+}: PollShareImageUrlInput) {
+  const url = new URL("/api/share/poll-card", baseUrl);
+  url.searchParams.set("token", shareToken);
+  url.searchParams.set("locale", locale);
+  url.searchParams.set("v", shareCardVersion);
+
+  if (variant !== "default") {
+    url.searchParams.set("variant", variant);
   }
 
   return url.toString();
@@ -441,6 +474,7 @@ export function buildDetailShareMetadata({
   description,
   locationLabel,
   priceLabel,
+  shareImage,
   siteName = defaultSiteName,
   title,
 }: DetailShareMetadataInput): Metadata {
@@ -452,19 +486,28 @@ export function buildDetailShareMetadata({
     locationLabel,
     priceLabel,
   });
-  const imageUrl = resolveShareImageUrl(coverImageUrl, baseUrl);
+  const fallbackImageUrl = resolveShareImageUrl(coverImageUrl, baseUrl);
+  const requestedShareImageUrl = resolveAbsoluteUrl(shareImage?.url, baseUrl);
+  const imageUrl = requestedShareImageUrl ?? fallbackImageUrl;
+  const openGraphImage = requestedShareImageUrl
+    ? {
+        alt: metadataTitle,
+        ...(shareImage?.height ? { height: shareImage.height } : {}),
+        ...(shareImage?.type ? { type: shareImage.type } : {}),
+        url: requestedShareImageUrl,
+        ...(shareImage?.width ? { width: shareImage.width } : {}),
+      }
+    : {
+        alt: metadataTitle,
+        url: fallbackImageUrl,
+      };
 
   return {
     alternates: getCanonicalAlternates(canonicalUrl),
     description: metadataDescription,
     openGraph: {
       description: metadataDescription,
-      images: [
-        {
-          alt: metadataTitle,
-          url: imageUrl,
-        },
-      ],
+      images: [openGraphImage],
       siteName,
       title: metadataTitle,
       type: "website",

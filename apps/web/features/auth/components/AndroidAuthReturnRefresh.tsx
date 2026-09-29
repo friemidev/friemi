@@ -75,7 +75,10 @@ function isFriemiNativeWebView() {
   return isFriemiAndroidWebView() || isFriemiIOSWebView();
 }
 
-function withoutAndroidAuthParams(pathname: string, searchParams: URLSearchParams) {
+function withoutAndroidAuthParams(
+  pathname: string,
+  searchParams: URLSearchParams,
+) {
   const nextParams = new URLSearchParams(searchParams.toString());
   nextParams.delete(androidAuthReturnParamName);
   nextParams.delete(androidAuthRetryParamName);
@@ -103,8 +106,10 @@ export function AndroidAuthReturnRefresh({
   const [phase, setPhase] = useState<AuthReturnPhase>("syncing");
   const activatedAtRef = useRef<number | null>(null);
   const retryStartedRef = useRef(false);
+  const sessionRefreshStartedRef = useRef(false);
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const isAndroidAuthReturn = searchParams.get(androidAuthReturnParamName) === "1";
+  const isAndroidAuthReturn =
+    searchParams.get(androidAuthReturnParamName) === "1";
   const hasRetried = searchParams.get(androidAuthRetryParamName) === "1";
 
   const cleanTarget = useMemo(
@@ -116,40 +121,44 @@ export function AndroidAuthReturnRefresh({
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       setVisible(false);
       activatedAtRef.current = null;
+      retryStartedRef.current = false;
+      sessionRefreshStartedRef.current = false;
       return;
     }
 
     activatedAtRef.current ??= Date.now();
     setPhase("syncing");
     setVisible(true);
-
-    const refreshTimers = [120, 650, 1500].map((delay) =>
-      window.setTimeout(() => {
-        router.refresh();
-      }, delay),
-    );
-
-    return () => {
-      refreshTimers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, [isAndroidAuthReturn, routeKey, router]);
+  }, [isAndroidAuthReturn, routeKey]);
 
   useEffect(() => {
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       return;
     }
 
-    if (serverAuthenticated || (isLoaded && isSignedIn)) {
+    if (serverAuthenticated) {
       setPhase("finishing");
       const elapsed = Date.now() - (activatedAtRef.current ?? Date.now());
-      const delay = Math.max(260, 900 - elapsed);
+      const delay = Math.max(40, 160 - elapsed);
       const finishTimer = window.setTimeout(() => {
-        window.location.replace(cleanTarget);
+        window.history.replaceState(window.history.state, "", cleanTarget);
+        setVisible(false);
       }, delay);
 
       return () => {
         window.clearTimeout(finishTimer);
       };
+    }
+
+    if (isLoaded && isSignedIn) {
+      setPhase("finishing");
+
+      if (!sessionRefreshStartedRef.current) {
+        sessionRefreshStartedRef.current = true;
+        router.refresh();
+      }
+
+      return;
     }
 
     if (isLoaded && !isSignedIn && hasRetried) {
@@ -176,8 +185,10 @@ export function AndroidAuthReturnRefresh({
       const query = new URLSearchParams({
         [authRedirectParamName]: targetWithRetry,
       });
-      window.location.replace(withLocale(locale, `/sign-in?${query.toString()}`));
-    }, 950);
+      window.location.replace(
+        withLocale(locale, `/sign-in?${query.toString()}`),
+      );
+    }, 1800);
 
     return () => {
       window.clearTimeout(retryTimer);

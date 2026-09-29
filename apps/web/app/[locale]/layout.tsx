@@ -1,6 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -13,6 +14,7 @@ import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
+import { ModalViewportGuard } from "@/components/ui/ModalViewportGuard";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notifications/unreadBadgePolling";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
@@ -29,6 +31,7 @@ import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfi
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { createPerformanceTracker } from "@/lib/performance";
+import { isFriemiNativeAppUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { withLocale } from "@/lib/routes";
 
 type LocaleLayoutProps = {
@@ -48,6 +51,10 @@ export default async function LocaleLayout({
     notFound();
   }
 
+  const requestHeaders = await headers();
+  const isNativeAppRequest = isFriemiNativeAppUserAgent(
+    requestHeaders.get("user-agent"),
+  );
   const perf = createPerformanceTracker({
     locale,
     route: "/[locale]/layout",
@@ -109,11 +116,17 @@ export default async function LocaleLayout({
             viewerState.initialUnreadNotificationCount
           }
           key={viewerProfile?.id ?? "anonymous"}
+          viewerProfileId={viewerProfile?.id ?? null}
         >
           <MobileNavSectionProvider>
-            <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
+            <div
+              className={`app-layout-shell min-h-screen pb-24 md:pb-0${
+                isNativeAppRequest ? " friemi-native-app-shell" : ""
+              }`}
+            >
               <RouteProgress />
               <RouteTransitionMetrics locale={locale} />
+              <ModalViewportGuard />
               <AndroidAppBridge locale={locale} />
               {clerkEnabled ? <IOSAppBridge /> : null}
               <AppHeader
@@ -160,5 +173,9 @@ export default async function LocaleLayout({
     </NextIntlClientProvider>
   );
 
-  return clerkEnabled ? <ClerkProvider>{content}</ClerkProvider> : content;
+  return clerkEnabled ? (
+    <ClerkProvider touchSession>{content}</ClerkProvider>
+  ) : (
+    content
+  );
 }

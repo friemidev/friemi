@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
+import { WerewolfAutoJoinRoom } from "@/features/game-tools/components/WerewolfAutoJoinRoom";
 import {
   getActiveGameToolRoomForProfile,
   getGameToolPrivateSeatPath,
@@ -29,6 +30,8 @@ function getCopy(locale: string) {
       endedTitle: "Partie terminée",
       notFoundBody: "Vérifiez le code ou demandez un nouveau lien.",
       notFoundTitle: "Table introuvable",
+      joining: "Entrée dans la salle...",
+      retry: "Réessayer",
       runningBody:
         "La partie a déjà commencé. Demandez au maître si vous devez rejoindre une prochaine table.",
       runningTitle: "Partie déjà lancée",
@@ -44,6 +47,8 @@ function getCopy(locale: string) {
       endedTitle: "Game finished",
       notFoundBody: "Check the code or ask for a new invite.",
       notFoundTitle: "Room not found",
+      joining: "Entering room...",
+      retry: "Try again",
       runningBody:
         "This game has already started. Ask the judge if you should join the next table.",
       runningTitle: "Game already started",
@@ -58,6 +63,8 @@ function getCopy(locale: string) {
     endedTitle: "本局已结束",
     notFoundBody: "检查房号是否输错，或者让朋友重新发一次邀请。",
     notFoundTitle: "没有找到房间",
+    joining: "正在进入房间...",
+    retry: "重新进入",
     runningBody: "这局已经开局，不能再加入本局。可以等下一局再进。",
     runningTitle: "本局已经开始",
   };
@@ -127,21 +134,7 @@ export default async function WerewolfJoinPage({
     redirect(withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`));
   }
 
-  if (room.status === "FINISHED") {
-    return (
-      <JoinStatusPage
-        body={t.endedBody}
-        code={room.code}
-        cta={t.cta}
-        ctaHref={withLocale(locale, "/game-tools/werewolf")}
-        label={t.codeLabel}
-        locale={locale}
-        title={t.endedTitle}
-      />
-    );
-  }
-
-  if (room.status !== "LOBBY") {
+  if (room.status !== "LOBBY" && room.status !== "FINISHED") {
     return (
       <JoinStatusPage
         body={t.runningBody}
@@ -155,7 +148,14 @@ export default async function WerewolfJoinPage({
     );
   }
 
-  redirect(withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`));
+  return (
+    <WerewolfAutoJoinRoom
+      joiningLabel={t.joining}
+      locale={locale}
+      retryLabel={t.retry}
+      roomId={room.id}
+    />
+  );
 }
 
 function JoinStatusPage({

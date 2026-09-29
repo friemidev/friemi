@@ -90,6 +90,7 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
   const pendingNavigationRef = useRef<PendingNavigation | null>(null);
   const previousRouteKeyRef = useRef<string | null>(null);
   const routeKey = getRouteKey(pathname, searchParams);
+  const analyticsLocale = locale === "en" || locale === "fr" ? locale : "zh-CN";
 
   useEffect(() => {
     if (!hasCheckedInitialReferrerRef.current) {
@@ -109,7 +110,28 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
 
     previousRouteKeyRef.current = routeKey;
     saveAppRouteHistory(routeKey);
-  }, [locale, routeKey]);
+
+    trackClientAnalyticsEvent({
+      locale: analyticsLocale,
+      name: "page_viewed",
+      route: pathname,
+    });
+
+    try {
+      const sessionStartKey = "friemi_analytics_session_started";
+
+      if (!window.sessionStorage.getItem(sessionStartKey)) {
+        window.sessionStorage.setItem(sessionStartKey, "1");
+        trackClientAnalyticsEvent({
+          locale: analyticsLocale,
+          name: "app_session_started",
+          route: pathname,
+        });
+      }
+    } catch {
+      // Private browsing can make sessionStorage unavailable; page views still work.
+    }
+  }, [analyticsLocale, locale, pathname, routeKey]);
 
   useEffect(() => {
     const pendingNavigation = pendingNavigationRef.current;
@@ -125,7 +147,7 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
     );
 
     trackClientAnalyticsEvent({
-      locale: locale === "en" || locale === "fr" ? locale : "zh-CN",
+      locale: analyticsLocale,
       name: "page_load_timed",
       properties: {
         duration_ms: durationMs,
@@ -138,7 +160,7 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
       },
       route: pathname,
     });
-  }, [locale, pathname, routeKey]);
+  }, [analyticsLocale, pathname, routeKey]);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {

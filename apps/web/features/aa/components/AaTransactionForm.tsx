@@ -27,6 +27,14 @@ import {
   type CreateAaTransactionState,
 } from "../actions/aaTransactionActions";
 import { evaluateMoneyExpression } from "../domain/calculator";
+import {
+  allocateByWeights,
+  allocateEqually,
+  convertToBaseMinor,
+  formatMinorAmount,
+  parseDecimalToScaledInteger,
+  parseMoneyToMinor,
+} from "../domain/money";
 import { cn } from "@/lib/utils";
 
 type Participant = {
@@ -117,6 +125,19 @@ function getCopy(locale: string) {
       total: "Total réparti",
       uploadHint: "Ajoutez un reçu ou saisissez la dépense à la main.",
       uploadTitle: "Ajouter une dépense",
+      allocated: "Réparti",
+      balanced: "Équilibré",
+      convertedAmount: "Montant dans la devise du groupe",
+      excluded: "Non inclus",
+      finalShare: "Part finale",
+      invalidSplit: "Complétez la répartition",
+      over: "En trop",
+      remainderTo: "Donner le reste à",
+      rounding: "supporte une unité minimale en plus",
+      splitRemainder: "Répartir le reste",
+      remaining: "Reste",
+      transactionTotal: "Montant de l'opération",
+      weightRequired: "Le total des parts doit être supérieur à 0.",
     };
   }
 
@@ -179,6 +200,19 @@ function getCopy(locale: string) {
       total: "Split total",
       uploadHint: "Add a receipt or enter the expense manually.",
       uploadTitle: "Upload expense",
+      allocated: "Allocated",
+      balanced: "Balanced",
+      convertedAmount: "Amount in group currency",
+      excluded: "Not included",
+      finalShare: "Final share",
+      invalidSplit: "Complete the split",
+      over: "Over",
+      remainderTo: "Give remainder to",
+      rounding: "takes one extra smallest currency unit",
+      splitRemainder: "Split remainder equally",
+      remaining: "Remaining",
+      transactionTotal: "Entry total",
+      weightRequired: "Total shares must be greater than 0.",
     };
   }
 
@@ -238,6 +272,19 @@ function getCopy(locale: string) {
     total: "分摊结果",
     uploadHint: "拍照上传小票，或直接手动输入金额。",
     uploadTitle: "上传开支",
+    allocated: "已分摊",
+    balanced: "已平衡",
+    convertedAmount: "折合账本币种",
+    excluded: "未参与",
+    finalShare: "最终份额",
+    invalidSplit: "请完成分摊",
+    over: "超出",
+    remainderTo: "余款给",
+    rounding: "多承担一个最小货币单位",
+    splitRemainder: "均分余款",
+    remaining: "剩余",
+    transactionTotal: "交易金额",
+    weightRequired: "总份数必须大于 0。",
   };
 }
 
@@ -251,6 +298,38 @@ function categoryIcon(name: string) {
 }
 
 const initialState: CreateAaTransactionState = {};
+
+type EditableSplitMode = "WEIGHT" | "PERCENT" | "CUSTOM";
+
+type SplitPreview = {
+  allocatedMinor: bigint;
+  allocations: Map<string, bigint>;
+  differenceMinor: bigint | null;
+  includedIds: Set<string>;
+  percentDifferenceScaled: bigint | null;
+  roundingParticipantIds: string[];
+  valid: boolean;
+  weightTotalValid: boolean;
+};
+
+function normalizeDecimal(value: string) {
+  return value.trim().replace(",", ".");
+}
+
+function minorToInputValue(amountMinor: bigint) {
+  const major = amountMinor / 100n;
+  const fraction = (amountMinor % 100n).toString().padStart(2, "0");
+  return `${major}.${fraction}`;
+}
+
+function formatScaledPercentage(value: bigint) {
+  const whole = value / 10000n;
+  const fraction = (value % 10000n)
+    .toString()
+    .padStart(4, "0")
+    .replace(/0+$/, "");
+  return `${whole}${fraction ? `.${fraction}` : ""}%`;
+}
 
 function Initial({ name }: { name: string }) {
   return (
@@ -310,6 +389,22 @@ export function AaTransactionForm({
   const [splitMode, setSplitMode] = useState<
     "EQUAL" | "WEIGHT" | "PERCENT" | "CUSTOM"
   >("EQUAL");
+  const [splitInputs, setSplitInputs] = useState<
+    Record<EditableSplitMode, Record<string, string>>
+  >(() => ({
+    WEIGHT: Object.fromEntries(
+      activeParticipants.map((participant) => [participant.id, "1"]),
+    ),
+    PERCENT: {},
+    CUSTOM: {},
+  }));
+  const [remainderTargetId, setRemainderTargetId] = useState(
+    activeParticipants.some(
+      (participant) => participant.id === viewerParticipantId,
+    )
+      ? viewerParticipantId
+      : (activeParticipants[0]?.id ?? ""),
+  );
   const [state, formAction, pending] = useActionState(
     createAaTransactionAction,
     initialState,
@@ -514,21 +609,291 @@ export function AaTransactionForm({
     }
   };
 
-  const selectedParticipants = activeParticipants.filter((participant) =>
-    selectedShareIds.has(participant.id),
+  const selectedParticipants = useMemo(
+    () =>
+      activeParticipants.filter((participant) =>
+        selectedShareIds.has(participant.id),
+      ),
+    [activeParticipants, selectedShareIds],
   );
-  const parsedAmount = Number.parseFloat(amount.replace(",", "."));
-  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const equalShare =
-    amountIsValid && selectedParticipants.length > 0
-      ? parsedAmount / selectedParticipants.length
-      : 0;
-  const formatPreviewAmount = (value: number) =>
-    new Intl.NumberFormat(locale, {
-      currency,
-      currencyDisplay: "narrowSymbol",
-      style: "currency",
-    }).format(value);
+  const selectedParticipantIds = useMemo(
+    () => selectedParticipants.map((participant) => participant.id),
+    [selectedParticipants],
+  );
+  const originalAmountMinor = useMemo(() => {
+    try {
+      const parsed = parseMoneyToMinor(normalizeDecimal(amount));
+      return parsed > 0n ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [amount]);
+  const baseAmountMinor = useMemo(() => {
+    if (originalAmountMinor === null) return null;
+    if (currency === baseCurrency) return originalAmountMinor;
+
+    try {
+      const converted = convertToBaseMinor(
+        originalAmountMinor,
+        normalizeDecimal(fxRate),
+      );
+      return converted > 0n ? converted : null;
+    } catch {
+      return null;
+    }
+  }, [baseCurrency, currency, fxRate, originalAmountMinor]);
+  const splitPreview = useMemo<SplitPreview>(() => {
+    const emptyPreview: SplitPreview = {
+      allocatedMinor: 0n,
+      allocations: new Map<string, bigint>(),
+      differenceMinor: baseAmountMinor,
+      includedIds: new Set<string>(),
+      percentDifferenceScaled: null,
+      roundingParticipantIds: [],
+      valid: false,
+      weightTotalValid: true,
+    };
+
+    if (baseAmountMinor === null || selectedParticipantIds.length === 0) {
+      return emptyPreview;
+    }
+
+    if (splitMode === "EQUAL") {
+      const allocations = allocateEqually(
+        baseAmountMinor,
+        selectedParticipantIds,
+      );
+      const floorShare =
+        baseAmountMinor / BigInt(selectedParticipantIds.length);
+      return {
+        allocatedMinor: baseAmountMinor,
+        allocations: new Map(
+          allocations.map((allocation) => [
+            allocation.participantId,
+            allocation.amountMinor,
+          ]),
+        ),
+        differenceMinor: 0n,
+        includedIds: new Set(selectedParticipantIds),
+        percentDifferenceScaled: null,
+        roundingParticipantIds: allocations
+          .filter((allocation) => allocation.amountMinor > floorShare)
+          .map((allocation) => allocation.participantId),
+        valid: true,
+        weightTotalValid: true,
+      };
+    }
+
+    if (splitMode === "CUSTOM") {
+      let allComplete = true;
+      let allValid = true;
+      const allocations = selectedParticipantIds.map((participantId) => {
+        const rawValue = splitInputs.CUSTOM[participantId] ?? "";
+        if (!rawValue.trim()) allComplete = false;
+
+        try {
+          return {
+            participantId,
+            amountMinor: rawValue.trim()
+              ? parseMoneyToMinor(normalizeDecimal(rawValue))
+              : 0n,
+          };
+        } catch {
+          allValid = false;
+          return { participantId, amountMinor: 0n };
+        }
+      });
+      const allocatedMinor = allocations.reduce(
+        (sum, allocation) => sum + allocation.amountMinor,
+        0n,
+      );
+      const differenceMinor = baseAmountMinor - allocatedMinor;
+
+      return {
+        allocatedMinor,
+        allocations: new Map(
+          allocations.map((allocation) => [
+            allocation.participantId,
+            allocation.amountMinor,
+          ]),
+        ),
+        differenceMinor,
+        includedIds: new Set(
+          allocations
+            .filter((allocation) => allocation.amountMinor > 0n)
+            .map((allocation) => allocation.participantId),
+        ),
+        percentDifferenceScaled: null,
+        roundingParticipantIds: [],
+        valid: allComplete && allValid && differenceMinor === 0n,
+        weightTotalValid: true,
+      };
+    }
+
+    let allComplete = true;
+    let allValid = true;
+    const weights = selectedParticipantIds.map((participantId) => {
+      const rawValue = splitInputs[splitMode][participantId] ?? "";
+      if (!rawValue.trim()) allComplete = false;
+
+      try {
+        return {
+          participantId,
+          weight: rawValue.trim()
+            ? parseDecimalToScaledInteger(normalizeDecimal(rawValue), 4)
+            : 0n,
+        };
+      } catch {
+        allValid = false;
+        return { participantId, weight: 0n };
+      }
+    });
+    const totalWeight = weights.reduce(
+      (sum, participant) => sum + participant.weight,
+      0n,
+    );
+    const includedIds = new Set(
+      weights
+        .filter((participant) => participant.weight > 0n)
+        .map((participant) => participant.participantId),
+    );
+
+    if (splitMode === "WEIGHT") {
+      if (!allValid || totalWeight <= 0n) {
+        return {
+          ...emptyPreview,
+          includedIds,
+          weightTotalValid: false,
+        };
+      }
+
+      const allocations = allocateByWeights(baseAmountMinor, weights);
+      return {
+        allocatedMinor: baseAmountMinor,
+        allocations: new Map(
+          allocations.map((allocation) => [
+            allocation.participantId,
+            allocation.amountMinor,
+          ]),
+        ),
+        differenceMinor: 0n,
+        includedIds,
+        percentDifferenceScaled: null,
+        roundingParticipantIds: [],
+        valid: allComplete,
+        weightTotalValid: true,
+      };
+    }
+
+    const percentDifferenceScaled = 1000000n - totalWeight;
+    const percentAllocations =
+      allValid && totalWeight === 1000000n
+        ? allocateByWeights(baseAmountMinor, weights)
+        : weights.map((participant) => ({
+            participantId: participant.participantId,
+            amountMinor: (baseAmountMinor * participant.weight) / 1000000n,
+          }));
+    const allocatedMinor = percentAllocations.reduce(
+      (sum, allocation) => sum + allocation.amountMinor,
+      0n,
+    );
+
+    return {
+      allocatedMinor,
+      allocations: new Map(
+        percentAllocations.map((allocation) => [
+          allocation.participantId,
+          allocation.amountMinor,
+        ]),
+      ),
+      differenceMinor: baseAmountMinor - allocatedMinor,
+      includedIds,
+      percentDifferenceScaled,
+      roundingParticipantIds: [],
+      valid: allComplete && allValid && percentDifferenceScaled === 0n,
+      weightTotalValid: totalWeight > 0n,
+    };
+  }, [baseAmountMinor, selectedParticipantIds, splitInputs, splitMode]);
+  const formatPreviewAmount = (value: bigint) =>
+    formatMinorAmount(value, baseCurrency, locale);
+  const effectiveParticipantCount =
+    splitMode === "EQUAL"
+      ? selectedParticipants.length
+      : splitPreview.includedIds.size;
+  const splitDifferenceText = (() => {
+    if (baseAmountMinor === null || selectedParticipants.length === 0) {
+      return copy.invalidSplit;
+    }
+    if (splitMode === "WEIGHT" && !splitPreview.weightTotalValid) {
+      return copy.weightRequired;
+    }
+    if (
+      splitMode === "PERCENT" &&
+      splitPreview.percentDifferenceScaled !== null
+    ) {
+      const difference = splitPreview.percentDifferenceScaled;
+      if (difference === 0n) return copy.balanced;
+      const absolute = difference < 0n ? -difference : difference;
+      const formatted = formatScaledPercentage(absolute);
+      return difference > 0n
+        ? `${copy.remaining} ${formatted}`
+        : `${copy.over} ${formatted}`;
+    }
+    if (splitPreview.differenceMinor === null) return copy.invalidSplit;
+    if (splitPreview.differenceMinor === 0n) return copy.balanced;
+    const difference = splitPreview.differenceMinor;
+    return difference > 0n
+      ? `${copy.remaining} ${formatPreviewAmount(difference)}`
+      : `${copy.over} ${formatPreviewAmount(-difference)}`;
+  })();
+  const updateSplitInput = (
+    mode: EditableSplitMode,
+    participantId: string,
+    value: string,
+  ) => {
+    setSplitInputs((current) => ({
+      ...current,
+      [mode]: { ...current[mode], [participantId]: value },
+    }));
+  };
+  const applyCustomRemainder = (spreadEvenly: boolean) => {
+    const difference = splitPreview.differenceMinor;
+    if (
+      splitMode !== "CUSTOM" ||
+      difference === null ||
+      difference <= 0n ||
+      selectedParticipantIds.length === 0
+    ) {
+      return;
+    }
+
+    const targetId = selectedShareIds.has(remainderTargetId)
+      ? remainderTargetId
+      : selectedParticipantIds[0];
+    const additions = spreadEvenly
+      ? allocateEqually(difference, selectedParticipantIds)
+      : [{ participantId: targetId, amountMinor: difference }];
+
+    setSplitInputs((current) => {
+      const next = { ...current.CUSTOM };
+      selectedParticipantIds.forEach((participantId) => {
+        let existing = 0n;
+        const currentValue = next[participantId] ?? "";
+        try {
+          existing = currentValue.trim()
+            ? parseMoneyToMinor(normalizeDecimal(currentValue))
+            : 0n;
+        } catch {
+          existing = 0n;
+        }
+        const addition =
+          additions.find((item) => item.participantId === participantId)
+            ?.amountMinor ?? 0n;
+        next[participantId] = minorToInputValue(existing + addition);
+      });
+      return { ...current, CUSTOM: next };
+    });
+  };
   const openReceiptPicker = (camera: boolean) => {
     const input = receiptInputRef.current;
     if (!input) return;
@@ -545,7 +910,10 @@ export function AaTransactionForm({
   return (
     <form
       action={formAction}
-      className="space-y-4"
+      className={cn(
+        "space-y-4",
+        type !== "TRANSFER" && step === "SPLIT" && "pb-52",
+      )}
       onSubmitCapture={handleSubmitCapture}
       ref={formRef}
     >
@@ -852,6 +1220,12 @@ export function AaTransactionForm({
           <span className="mt-1 block text-[11px] font-semibold text-[#6F756D]">
             {copy.rateHint} ({baseCurrency})
           </span>
+          {baseAmountMinor !== null ? (
+            <span className="mt-1.5 block text-[12px] font-black text-[#1D1D1B] friemi-tabular">
+              {copy.convertedAmount}：
+              {formatMinorAmount(baseAmountMinor, baseCurrency, locale)}
+            </span>
+          ) : null}
           <span className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-[#725C28]">
             {fxState === "LOADING" ? (
               <RefreshCw className="h-3 w-3 animate-spin" />
@@ -1045,77 +1419,175 @@ export function AaTransactionForm({
                 </button>
               ))}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {activeParticipants.map((participant) => (
-                <label
-                  className="flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-[#F5F8F2]"
-                  key={participant.id}
-                >
-                  <input
-                    className="h-4 w-4 accent-[#156240]"
-                    checked={selectedShareIds.has(participant.id)}
-                    name="shareParticipantIds"
-                    onChange={(event) => {
-                      setSelectedShareIds((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(participant.id);
-                        else next.delete(participant.id);
-                        return next;
-                      });
-                    }}
-                    type="checkbox"
-                    value={participant.id}
-                  />
-                  {participant.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      alt=""
-                      className="h-8 w-8 rounded-full object-cover ring-1 ring-[#C7DCCB]"
-                      src={participant.avatarUrl}
-                    />
-                  ) : (
-                    <Initial name={participant.displayName} />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
-                    {participant.displayName}
-                  </span>
-                  {splitMode !== "EQUAL" ? (
+            <div className="grid gap-2">
+              {activeParticipants.map((participant) => {
+                const selected = selectedShareIds.has(participant.id);
+                const included = splitPreview.includedIds.has(participant.id);
+                const finalShare = splitPreview.allocations.get(participant.id);
+
+                return (
+                  <div
+                    className={cn(
+                      "flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition",
+                      selected ? "bg-[#FBFCF8]" : "opacity-65",
+                    )}
+                    key={participant.id}
+                  >
                     <input
-                      aria-label={`${participant.displayName} ${copy.splitMode}`}
-                      className="h-9 w-20 rounded-xl border border-[#D6D5B2] bg-white px-2 text-right text-sm font-semibold tabular-nums outline-none focus:border-[#369758]"
-                      defaultValue={splitMode === "PERCENT" ? undefined : "1"}
-                      inputMode="decimal"
-                      min="0"
-                      name={
-                        splitMode === "CUSTOM"
-                          ? `shareAmount:${participant.id}`
-                          : `shareWeight:${participant.id}`
-                      }
-                      placeholder={
-                        splitMode === "PERCENT"
-                          ? "%"
-                          : splitMode === "CUSTOM"
-                            ? "0.00"
-                            : "1"
-                      }
-                      required
-                      step={splitMode === "CUSTOM" ? "0.01" : "0.0001"}
-                      type="number"
+                      aria-label={participant.displayName}
+                      className="h-4 w-4 shrink-0 accent-[#156240]"
+                      checked={selected}
+                      name="shareParticipantIds"
+                      onChange={(event) => {
+                        setSelectedShareIds((current) => {
+                          const next = new Set(current);
+                          if (event.target.checked) next.add(participant.id);
+                          else next.delete(participant.id);
+                          return next;
+                        });
+                      }}
+                      type="checkbox"
+                      value={participant.id}
                     />
-                  ) : (
-                    <span className="shrink-0 text-[12px] font-black text-[#1D1D1B] friemi-tabular">
-                      {selectedShareIds.has(participant.id)
-                        ? formatPreviewAmount(equalShare)
-                        : locale === "fr"
-                          ? "Exclu"
-                          : locale === "en"
-                            ? "Excluded"
-                            : "未参与"}
+                    {participant.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-[#C7DCCB]"
+                        src={participant.avatarUrl}
+                      />
+                    ) : (
+                      <Initial name={participant.displayName} />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">
+                        {participant.displayName}
+                      </span>
+                      <span
+                        className={cn(
+                          "mt-0.5 block text-[9px] font-bold",
+                          selected && (splitMode === "EQUAL" || included)
+                            ? "text-[#369758]"
+                            : "text-[#8E8383]",
+                        )}
+                      >
+                        {selected && (splitMode === "EQUAL" || included)
+                          ? copy.finalShare
+                          : copy.excluded}
+                      </span>
                     </span>
-                  )}
-                </label>
-              ))}
+                    <span className="flex w-[7.25rem] shrink-0 flex-col items-end gap-1">
+                      {selected && splitMode !== "EQUAL" ? (
+                        <input
+                          aria-label={`${participant.displayName} ${copy.splitMode}`}
+                          className="h-9 w-full rounded-xl border border-[#D6D5B2] bg-white px-2 text-right text-sm font-semibold tabular-nums outline-none focus:border-[#369758]"
+                          disabled={step !== "SPLIT"}
+                          inputMode="decimal"
+                          min="0"
+                          name={
+                            splitMode === "CUSTOM"
+                              ? `shareAmount:${participant.id}`
+                              : `shareWeight:${participant.id}`
+                          }
+                          onChange={(event) =>
+                            updateSplitInput(
+                              splitMode,
+                              participant.id,
+                              event.target.value,
+                            )
+                          }
+                          placeholder={
+                            splitMode === "PERCENT"
+                              ? "%"
+                              : splitMode === "CUSTOM"
+                                ? "0.00"
+                                : "1"
+                          }
+                          required
+                          step={splitMode === "CUSTOM" ? "0.01" : "0.0001"}
+                          type="number"
+                          value={splitInputs[splitMode][participant.id] ?? ""}
+                        />
+                      ) : null}
+                      <span
+                        className={cn(
+                          "text-[11px] font-black friemi-tabular",
+                          selected && (splitMode === "EQUAL" || included)
+                            ? "text-[#1D1D1B]"
+                            : "text-[#8E8383]",
+                        )}
+                      >
+                        {selected &&
+                        (splitMode === "EQUAL" || included) &&
+                        finalShare !== undefined
+                          ? formatPreviewAmount(finalShare)
+                          : copy.excluded}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+
+            {splitMode === "EQUAL" &&
+            splitPreview.roundingParticipantIds.length > 0 ? (
+              <p className="mt-3 rounded-[10px] bg-[#FFF8E9] px-3 py-2 text-[10px] font-bold leading-5 text-[#725C28]">
+                {splitPreview.roundingParticipantIds
+                  .map(
+                    (participantId) =>
+                      activeParticipants.find(
+                        (participant) => participant.id === participantId,
+                      )?.displayName ?? "—",
+                  )
+                  .join("、")}{" "}
+                {copy.rounding}（{formatPreviewAmount(1n)}）
+              </p>
+            ) : null}
+
+            {splitMode === "CUSTOM" &&
+            splitPreview.differenceMinor !== null &&
+            splitPreview.differenceMinor > 0n &&
+            selectedParticipants.length > 0 ? (
+              <div className="mt-3 border-t border-[#EEEBDD] pt-3">
+                <p className="text-[10px] font-bold text-[#725C28]">
+                  {splitDifferenceText}
+                </p>
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                  <select
+                    aria-label={copy.remainderTo}
+                    className="h-9 min-w-0 rounded-xl border border-[#D6D5B2] bg-white px-2 text-[10px] font-bold text-[#156240]"
+                    onChange={(event) =>
+                      setRemainderTargetId(event.target.value)
+                    }
+                    value={
+                      selectedShareIds.has(remainderTargetId)
+                        ? remainderTargetId
+                        : (selectedParticipantIds[0] ?? "")
+                    }
+                  >
+                    {selectedParticipants.map((participant) => (
+                      <option key={participant.id} value={participant.id}>
+                        {participant.displayName}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="min-h-9 rounded-full bg-[#ECF5EF] px-3 text-[10px] font-bold text-[#156240]"
+                    onClick={() => applyCustomRemainder(false)}
+                    type="button"
+                  >
+                    {copy.remainderTo}
+                  </button>
+                  <button
+                    className="col-span-2 min-h-9 rounded-full border border-[#C7DCCB] text-[10px] font-bold text-[#156240]"
+                    onClick={() => applyCustomRemainder(true)}
+                    type="button"
+                  >
+                    {copy.splitRemainder}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </fieldset>
 
           <label className="hidden">
@@ -1192,42 +1664,66 @@ export function AaTransactionForm({
         </p>
       ) : null}
 
-      {type !== "TRANSFER" ? (
-        <div
-          className={cn(
-            "rounded-[14px] border border-[#E7E1CE] bg-[#FEFFF9] p-4",
-            step !== "SPLIT" && "hidden",
-          )}
-        >
+      {type !== "TRANSFER" && step === "SPLIT" ? (
+        <div className="fixed bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] left-1/2 z-30 w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 rounded-[16px] border border-[#C7DCCB] bg-[#FEFFF9]/95 p-4 shadow-[0_14px_36px_rgba(21,98,64,0.18)] backdrop-blur md:bottom-6">
           <div className="grid grid-cols-3 text-center">
             <div>
               <p className="text-[9px] font-bold text-[#8E8383]">
-                {copy.total}
+                {copy.transactionTotal}
               </p>
               <p className="mt-1 text-[13px] font-black text-[#1D1D1B] friemi-tabular">
-                {formatPreviewAmount(amountIsValid ? parsedAmount : 0)}
+                {formatPreviewAmount(baseAmountMinor ?? 0n)}
               </p>
             </div>
             <div className="border-x border-[#EEEBDD] px-2">
               <p className="text-[9px] font-bold text-[#8E8383]">
-                {locale === "fr"
-                  ? "Participants"
-                  : locale === "en"
-                    ? "People"
-                    : "参与人数"}
+                {copy.allocated}
               </p>
-              <p className="mt-1 text-[13px] font-black text-[#1D1D1B]">
-                {selectedParticipants.length}
+              <p className="mt-1 truncate text-[13px] font-black text-[#1D1D1B] friemi-tabular">
+                {formatPreviewAmount(splitPreview.allocatedMinor)}
               </p>
             </div>
             <div>
               <p className="text-[9px] font-bold text-[#8E8383]">
-                {copy.perPerson}
+                {copy.remaining}
               </p>
-              <p className="mt-1 truncate text-[13px] font-black text-[#1D1D1B] friemi-tabular">
-                {formatPreviewAmount(equalShare)}
+              <p
+                className={cn(
+                  "mt-1 truncate text-[11px] font-black",
+                  splitPreview.valid ? "text-[#369758]" : "text-[#A56B27]",
+                )}
+              >
+                {splitDifferenceText}
               </p>
             </div>
+          </div>
+          <p className="mt-2 text-center text-[9px] font-bold text-[#8E8383]">
+            {effectiveParticipantCount} {copy.selected}
+          </p>
+          <div className="mt-3 grid gap-2 border-t border-[#EEEBDD] pt-3">
+            <button
+              className="inline-flex min-h-9 items-center justify-center gap-2 rounded-full text-[10px] font-bold text-[#156240]"
+              onClick={() => {
+                setStep("DETAILS");
+                window.scrollTo({ behavior: "smooth", top: 0 });
+              }}
+              type="button"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {copy.backStep}
+            </button>
+            <button
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#156240] to-[#369758] px-5 text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={pending || !splitPreview.valid}
+              type="submit"
+            >
+              {pending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {pending ? copy.saving : copy.confirmSplit}
+            </button>
           </div>
         </div>
       ) : null}
@@ -1250,27 +1746,11 @@ export function AaTransactionForm({
           {copy.next}
           <ChevronRight className="h-4 w-4" />
         </button>
-      ) : (
+      ) : type === "TRANSFER" ? (
         <div className="grid gap-2">
-          {type !== "TRANSFER" ? (
-            <button
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full text-[11px] font-bold text-[#156240]"
-              onClick={() => {
-                setStep("DETAILS");
-                window.scrollTo({ behavior: "smooth", top: 0 });
-              }}
-              type="button"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {copy.backStep}
-            </button>
-          ) : null}
           <button
             className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#156240] to-[#369758] px-5 text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)] transition active:scale-[0.99] disabled:opacity-60"
-            disabled={
-              pending ||
-              (type !== "TRANSFER" && selectedParticipants.length === 0)
-            }
+            disabled={pending}
             type="submit"
           >
             {pending ? (
@@ -1278,14 +1758,10 @@ export function AaTransactionForm({
             ) : (
               <Check className="h-4 w-4" />
             )}
-            {pending
-              ? copy.saving
-              : type === "TRANSFER"
-                ? copy.save
-                : copy.confirmSplit}
+            {pending ? copy.saving : copy.save}
           </button>
         </div>
-      )}
+      ) : null}
     </form>
   );
 }

@@ -51,6 +51,49 @@ enum ActivityVisibility {
   PRIVATE
 }
 
+enum ActivityPollKind {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
+enum ActivityPollStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+  ARCHIVED
+}
+
+enum ActivityPollAudience {
+  MEMBERS_ONLY
+  SIGNED_IN_WITH_LINK
+  ANYONE_WITH_LINK
+}
+
+enum ActivityPollGuestIdentityMode {
+  NICKNAME_REQUIRED
+  NICKNAME_OPTIONAL_ANONYMOUS
+}
+
+enum ActivityPollResultVisibility {
+  AFTER_VOTE
+  AFTER_CLOSE
+  ALWAYS
+  ORGANIZER_ONLY
+}
+
+enum ActivityPollVoterVisibility {
+  COUNTS_ONLY
+  PARTICIPANTS_VISIBLE
+  MANAGERS_ONLY
+}
+
+enum ActivityPollBallotStatus {
+  SUBMITTED
+  WITHDRAWN
+  REMOVED_BY_MODERATOR
+}
+
 enum PublicEventStatus {
   SCHEDULED
   CANCELLED
@@ -118,6 +161,35 @@ enum FriemiCheckStatus {
   EXPIRED
 }
 
+enum CouponWalletStatus {
+  AVAILABLE
+  REDEEMED
+  VOIDED
+}
+
+enum CouponClaimCodeStatus {
+  ACTIVE
+  CLAIMED
+  REVOKED
+}
+
+enum CouponCampaignStatus {
+  DRAFT
+  PUBLISHED
+  UNLISTED
+}
+
+enum CouponDistributionMode {
+  PUBLIC_QR
+  DIRECT_GRANT
+}
+
+enum CouponClaimSource {
+  PUBLIC_QR
+  POST_REDEMPTION_GIFT
+  LEGACY
+}
+
 enum FriemiCoinTransactionType {
   CHECK_REDEEMED
   RECHARGE
@@ -177,6 +249,10 @@ enum NotificationType {
   AA_TRANSFER_CONFIRMATION
   AA_DISPUTE_OPENED
   AA_PAYMENT_REQUEST
+  COUPON_RECEIVED
+  COUPON_CLAIMED
+  COUPON_REDEEMED
+  COUPON_REDEMPTION_COMPLETED
 }
 
 enum ReportTargetType {
@@ -310,6 +386,9 @@ enum GameToolSubmissionKind {
   TEAM_VOTE
   MISSION_CARD
   ASSASSINATION_TARGET
+  WEREWOLF_SHERIFF_VOTE
+  WEREWOLF_EXILE_VOTE
+  WEREWOLF_NIGHT_ACTION
 }
 
 model UserProfile {
@@ -360,6 +439,7 @@ model UserProfile {
   sentNotifications       Notification[]                @relation("NotificationActor")
   officialMessages        OfficialMessage[]             @relation("OfficialMessageAuthor")
   officialReadState       OfficialMessageReadState?
+  officialFeedbacks       OfficialFeedback[]            @relation("OfficialFeedbackSender")
   favoriteActivities      ActivityFavorite[]
   following               UserFollow[]                  @relation("UserFollowing")
   followers               UserFollow[]                  @relation("UserFollowers")
@@ -387,6 +467,11 @@ model UserProfile {
   submittedReports        Report[]                      @relation("ReportReporter")
   reviewedReports         Report[]                      @relation("ReportReviewer")
   mobileDevices           MobileDevice[]
+  ownedMerchant           Merchant?                     @relation("MerchantOwner")
+  couponWalletItems       CouponWalletItem[]            @relation("CouponWalletOwner")
+  redeemedCouponItems     CouponWalletItem[]            @relation("CouponRedeemer")
+  claimedCouponCodes      CouponClaimCode[]             @relation("CouponClaimCodeClaimer")
+  couponCampaignClaims    CouponCampaignClaim[]         @relation("CouponCampaignClaimant")
   trustScoreEvents        TrustScoreEvent[]
   charmBalance            UserCharmBalance?
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
@@ -415,6 +500,10 @@ model UserProfile {
   planetCommentLikes      PlanetMomentCommentLike[]     @relation("PlanetCommentLikeProfile")
   activityPriorityUpdates ActivityPriorityOverride[]    @relation("ActivityPriorityOverrideUpdatedBy")
   activityPriorityLogs    ActivityPriorityOverrideLog[] @relation("ActivityPriorityOverrideLogActor")
+  createdActivityPolls    ActivityPoll[]                @relation("ActivityPollCreator")
+  activityPollBallots     ActivityPollBallot[]          @relation("ActivityPollBallotProfile")
+  activityPollShares      ActivityPollShare[]           @relation("ActivityPollShareCreator")
+  activityPollAuditLogs   ActivityPollAuditLog[]        @relation("ActivityPollAuditActor")
   createdAt               DateTime                      @default(now())
   updatedAt               DateTime                      @updatedAt
   publicEventFavorites    PublicEventFavorite[]
@@ -435,6 +524,7 @@ model Planet {
   name             String
   nameTranslations Json?
   description      String?               @db.Text
+  announcement     String?               @db.Text
   coverImageUrl    String?
   tags             String[]              @default([])
   visibility       PlanetVisibility      @default(PUBLIC)
@@ -444,6 +534,7 @@ model Planet {
   messages         PlanetMessage[]
   chatReadStates   PlanetChatReadState[]
   moments          PlanetMoment[]
+  activityLinks    PlanetActivity[]
   notifications    Notification[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
@@ -476,6 +567,10 @@ model PlanetMessage {
   mentionedProfileIds String[]    @default([])
   mentionLabels       String[]    @default([])
   mentionsEveryone    Boolean     @default(false)
+  replyToMessageId    String?
+  replyToSenderName   String?
+  replyToBody         String?     @db.Text
+  replyToHasImage     Boolean     @default(false)
   planet              Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
   author              UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt           DateTime    @default(now())
@@ -515,6 +610,7 @@ model PlanetMoment {
   authorId  String
   content   String                @db.Text
   imageUrls String[]              @default([])
+  videoUrls String[]              @default([])
   planet    Planet                @relation(fields: [planetId], references: [id], onDelete: Cascade)
   author    UserProfile           @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   comments  PlanetMomentComment[]
@@ -524,6 +620,18 @@ model PlanetMoment {
 
   @@index([planetId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PlanetActivity {
+  planetId   String
+  activityId String
+  planet     Planet   @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  addedAt    DateTime @default(now())
+
+  @@id([planetId, activityId])
+  @@index([activityId, addedAt])
+  @@index([planetId, addedAt])
 }
 
 model PlanetMomentComment {
@@ -638,6 +746,9 @@ model Activity {
   announcements     ActivityAnnouncement[]
   trustScoreEvents  TrustScoreEvent[]
   aaLedger          AaLedger?
+  polls             ActivityPoll[]
+  planetLinks       PlanetActivity[]
+  moments           Moment[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -691,6 +802,10 @@ model ActivityRoomMessage {
   mentionedProfileIds String[]     @default([])
   mentionLabels       String[]     @default([])
   mentionsEveryone    Boolean      @default(false)
+  replyToMessageId    String?
+  replyToSenderName   String?
+  replyToBody         String?      @db.Text
+  replyToHasImage     Boolean      @default(false)
   deletedAt           DateTime?
   deletedById         String?
   activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
@@ -806,31 +921,168 @@ model ActivityPriorityOverrideLog {
 }
 
 model Merchant {
-  id             String     @id @default(cuid())
-  slug           String     @unique
-  name           String
-  description    String
-  logoUrl        String?
-  city           String     @default("Paris")
-  address        String?
-  latitude       Float?
-  longitude      Float?
-  websiteUrl     String?
-  contactEmail   String?
-  externalSource String?
-  externalId     String?
-  externalUrl    String?
-  sourcePayload  Json?
-  importedAt     DateTime?
-  isActive       Boolean    @default(true)
-  activities     Activity[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id              String                   @id @default(cuid())
+  slug            String                   @unique
+  name            String
+  description     String
+  logoUrl         String?
+  city            String                   @default("Paris")
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  websiteUrl      String?
+  contactEmail    String?
+  externalSource  String?
+  externalId      String?
+  externalUrl     String?
+  sourcePayload   Json?
+  importedAt      DateTime?
+  isActive        Boolean                  @default(true)
+  ownerProfileId  String?                  @unique
+  owner           UserProfile?             @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  activities      Activity[]
+  coupons         Coupon[]
+  couponTemplates MerchantCouponTemplate[]
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   @@index([isActive, city])
+  @@index([ownerProfileId, isActive])
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])
+}
+
+model CouponTemplate {
+  id               String                   @id @default(cuid())
+  key              String                   @unique @db.VarChar(80)
+  slug             String                   @unique @db.VarChar(80)
+  title            String                   @db.VarChar(120)
+  description      String                   @db.Text
+  defaultTerms     String?                  @db.Text
+  imageUrl         String?
+  backgroundColor  String                   @default("#0F6D46") @db.VarChar(7)
+  foregroundColor  String                   @default("#FFFFFF") @db.VarChar(7)
+  accentColor      String                   @default("#F1F2E3") @db.VarChar(7)
+  isActive         Boolean                  @default(true)
+  merchantBindings MerchantCouponTemplate[]
+  campaigns        Coupon[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([isActive, createdAt])
+}
+
+model MerchantCouponTemplate {
+  id                  String         @id @default(cuid())
+  merchantId          String
+  merchant            Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  templateId          String
+  template            CouponTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  assignedByProfileId String?
+  isActive            Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([merchantId, templateId])
+  @@index([merchantId, isActive, createdAt])
+  @@index([templateId, isActive])
+}
+
+model Coupon {
+  id                     String                 @id @default(cuid())
+  merchantId             String
+  merchant               Merchant               @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  templateId             String?
+  template               CouponTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  slug                   String                 @default("default") @db.VarChar(64)
+  title                  String                 @db.VarChar(120)
+  description            String                 @db.Text
+  terms                  String?                @db.Text
+  backgroundColor        String                 @default("#0F6D46") @db.VarChar(7)
+  foregroundColor        String                 @default("#FFFFFF") @db.VarChar(7)
+  accentColor            String                 @default("#F1F2E3") @db.VarChar(7)
+  validFrom              DateTime?
+  expiresAt              DateTime?
+  isActive               Boolean                @default(true)
+  campaignStatus         CouponCampaignStatus   @default(PUBLISHED)
+  distributionMode       CouponDistributionMode @default(PUBLIC_QR)
+  claimToken             String?                @unique @db.VarChar(64)
+  quantityLimit          Int?
+  claimedCount           Int                    @default(0)
+  publishedAt            DateTime?
+  unlistedAt             DateTime?
+  sourceRedemptionItemId String?                @unique
+  sourceRedemptionItem   CouponWalletItem?      @relation("PostRedemptionGiftSource", fields: [sourceRedemptionItemId], references: [id], onDelete: SetNull)
+  claimCodes             CouponClaimCode[]
+  claims                 CouponCampaignClaim[]
+  walletItems            CouponWalletItem[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@unique([merchantId, slug])
+  @@index([merchantId, campaignStatus, createdAt])
+  @@index([templateId, campaignStatus])
+  @@index([expiresAt])
+}
+
+model CouponCampaignClaim {
+  id            String            @id @default(cuid())
+  couponId      String
+  coupon        Coupon            @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userProfileId String
+  claimant      UserProfile       @relation("CouponCampaignClaimant", fields: [userProfileId], references: [id], onDelete: Cascade)
+  walletItemId  String            @unique
+  walletItem    CouponWalletItem  @relation(fields: [walletItemId], references: [id], onDelete: Cascade)
+  source        CouponClaimSource @default(PUBLIC_QR)
+  createdAt     DateTime          @default(now())
+
+  @@unique([couponId, userProfileId])
+  @@index([userProfileId, createdAt])
+}
+
+model CouponClaimCode {
+  id                  String                @id @default(cuid())
+  couponId            String
+  coupon              Coupon                @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  token               String                @unique @db.VarChar(64)
+  status              CouponClaimCodeStatus @default(ACTIVE)
+  claimedByProfileId  String?
+  claimedBy           UserProfile?          @relation("CouponClaimCodeClaimer", fields: [claimedByProfileId], references: [id], onDelete: SetNull)
+  claimedWalletItemId String?               @unique
+  claimedWalletItem   CouponWalletItem?     @relation(fields: [claimedWalletItemId], references: [id], onDelete: SetNull)
+  claimedAt           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([couponId, status, createdAt])
+  @@index([claimedByProfileId, claimedAt])
+}
+
+model CouponWalletItem {
+  id                       String               @id @default(cuid())
+  couponId                 String
+  coupon                   Coupon               @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  ownerProfileId           String
+  owner                    UserProfile          @relation("CouponWalletOwner", fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  redemptionToken          String?              @unique @db.VarChar(64)
+  redemptionTokenExpiresAt DateTime?
+  status                   CouponWalletStatus   @default(AVAILABLE)
+  claimedAt                DateTime             @default(now())
+  redeemedAt               DateTime?
+  redeemedByProfileId      String?
+  redeemedBy               UserProfile?         @relation("CouponRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
+  notifications            Notification[]
+  claimCode                CouponClaimCode?
+  campaignClaim            CouponCampaignClaim?
+  followUpCampaign         Coupon?              @relation("PostRedemptionGiftSource")
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  @@index([ownerProfileId, status, claimedAt])
+  @@index([couponId, status])
+  @@index([redeemedByProfileId, redeemedAt])
+  @@index([redemptionTokenExpiresAt])
 }
 
 model TopNewsItem {
@@ -1162,6 +1414,7 @@ model Comment {
 model Moment {
   id               String           @id @default(cuid())
   authorId         String
+  activityId       String?
   content          String?          @db.Text
   visibility       MomentVisibility @default(FRIENDS)
   likeCount        Int              @default(0)
@@ -1170,6 +1423,7 @@ model Moment {
   resharedMomentId String?
   deletedAt        DateTime?
   author           UserProfile      @relation("MomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  activity         Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
   resharedMoment   Moment?          @relation("MomentReshares", fields: [resharedMomentId], references: [id], onDelete: SetNull)
   reshares         Moment[]         @relation("MomentReshares")
   images           MomentImage[]
@@ -1180,6 +1434,7 @@ model Moment {
   updatedAt        DateTime         @updatedAt
 
   @@index([authorId, createdAt])
+  @@index([activityId, createdAt])
   @@index([visibility, createdAt])
   @@index([deletedAt, createdAt])
   @@index([resharedMomentId, createdAt])
@@ -1273,6 +1528,8 @@ model Notification {
   planet                 Planet?               @relation(fields: [planetId], references: [id], onDelete: SetNull)
   aaTransactionId        String?
   aaTransaction          AaTransaction?        @relation(fields: [aaTransactionId], references: [id], onDelete: SetNull)
+  couponWalletItemId     String?
+  couponWalletItem       CouponWalletItem?     @relation(fields: [couponWalletItemId], references: [id], onDelete: SetNull)
   dedupeKey              String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
@@ -1286,6 +1543,7 @@ model Notification {
   @@index([momentCommentId])
   @@index([planetId])
   @@index([aaTransactionId])
+  @@index([couponWalletItemId])
 }
 
 model OfficialMessage {
@@ -1312,6 +1570,20 @@ model OfficialMessageReadState {
   @@index([lastReadAt])
 }
 
+model OfficialFeedback {
+  id              String      @id @default(cuid())
+  senderProfileId String
+  sender          UserProfile @relation("OfficialFeedbackSender", fields: [senderProfileId], references: [id], onDelete: Cascade)
+  content         String      @db.Text
+  readAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([createdAt])
+  @@index([readAt, createdAt])
+  @@index([senderProfileId, createdAt])
+}
+
 model ActivityAnnouncement {
   id            String         @id @default(cuid())
   activityId    String
@@ -1325,6 +1597,119 @@ model ActivityAnnouncement {
 
   @@index([activityId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model ActivityPoll {
+  id                 String                       @id @default(cuid())
+  activityId         String
+  createdByProfileId String
+  question           String                       @db.VarChar(120)
+  description        String?                      @db.VarChar(500)
+  kind               ActivityPollKind             @default(SINGLE_CHOICE)
+  maxSelections      Int?
+  status             ActivityPollStatus           @default(OPEN)
+  resultVisibility   ActivityPollResultVisibility @default(AFTER_VOTE)
+  voterVisibility    ActivityPollVoterVisibility  @default(COUNTS_ONLY)
+  closesAt           DateTime?
+  closedAt           DateTime?
+  finalOptionId      String?                      @unique
+  finalNote          String?                      @db.VarChar(300)
+  version            Int                          @default(1)
+  activity           Activity                     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdBy          UserProfile                  @relation("ActivityPollCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  finalOption        ActivityPollOption?          @relation("ActivityPollFinalOption", fields: [finalOptionId], references: [id], onDelete: SetNull)
+  options            ActivityPollOption[]         @relation("ActivityPollOptions")
+  share              ActivityPollShare?
+  ballots            ActivityPollBallot[]
+  auditLogs          ActivityPollAuditLog[]
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  @@index([activityId, status, createdAt])
+  @@index([createdByProfileId, createdAt])
+}
+
+model ActivityPollOption {
+  id             String                  @id @default(cuid())
+  pollId         String
+  label          String                  @db.VarChar(80)
+  position       Int
+  poll           ActivityPoll            @relation("ActivityPollOptions", fields: [pollId], references: [id], onDelete: Cascade)
+  finalizedPolls ActivityPoll[]          @relation("ActivityPollFinalOption")
+  selections     ActivityPollSelection[]
+  createdAt      DateTime                @default(now())
+
+  @@unique([pollId, position])
+  @@index([pollId])
+}
+
+model ActivityPollShare {
+  id                 String                         @id @default(cuid())
+  pollId             String                         @unique
+  tokenHash          String                         @unique @db.VarChar(64)
+  audience           ActivityPollAudience           @default(MEMBERS_ONLY)
+  guestIdentityMode  ActivityPollGuestIdentityMode?
+  expiresAt          DateTime?
+  revokedAt          DateTime?
+  createdByProfileId String
+  poll               ActivityPoll                   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdBy          UserProfile                    @relation("ActivityPollShareCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+
+  @@index([createdByProfileId, createdAt])
+}
+
+model ActivityPollBallot {
+  id               String                   @id @default(cuid())
+  pollId           String
+  profileId        String?
+  guestKeyHash     String?                  @db.VarChar(64)
+  guestNickname    String?                  @db.VarChar(30)
+  guestDisplayCode String?                  @db.VarChar(8)
+  editTokenHash    String?                  @unique @db.VarChar(64)
+  isAnonymousGuest Boolean                  @default(false)
+  status           ActivityPollBallotStatus @default(SUBMITTED)
+  version          Int                      @default(1)
+  removedReason    String?                  @db.VarChar(200)
+  removedAt        DateTime?
+  submittedAt      DateTime                 @default(now())
+  poll             ActivityPoll             @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  profile          UserProfile?             @relation("ActivityPollBallotProfile", fields: [profileId], references: [id], onDelete: SetNull)
+  selections       ActivityPollSelection[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@unique([pollId, profileId])
+  @@unique([pollId, guestKeyHash])
+  @@index([pollId, status, updatedAt])
+  @@index([profileId, updatedAt])
+}
+
+model ActivityPollSelection {
+  id        String             @id @default(cuid())
+  ballotId  String
+  optionId  String
+  ballot    ActivityPollBallot @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  option    ActivityPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+
+  @@unique([ballotId, optionId])
+  @@index([optionId])
+}
+
+model ActivityPollAuditLog {
+  id             String       @id @default(cuid())
+  pollId         String
+  actorProfileId String?
+  action         String       @db.VarChar(64)
+  metadata       Json?
+  poll           ActivityPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  actor          UserProfile? @relation("ActivityPollAuditActor", fields: [actorProfileId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+
+  @@index([pollId, createdAt])
+  @@index([actorProfileId, createdAt])
 }
 
 model Report {
@@ -1704,16 +2089,17 @@ model Friendship {
 }
 
 model Conversation {
-  id            String                   @id @default(cuid())
-  userAId       String
-  userBId       String
-  userA         UserProfile              @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB         UserProfile              @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
-  messages      DirectMessage[]
-  preferences   ConversationPreference[]
-  lastMessageAt DateTime?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  id               String                   @id @default(cuid())
+  userAId          String
+  userBId          String
+  userA            UserProfile              @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB            UserProfile              @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages         DirectMessage[]
+  preferences      ConversationPreference[]
+  lastMessageAt    DateTime?
+  nonFriendResetAt DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@unique([userAId, userBId])
   @@index([userAId, lastMessageAt])
@@ -1741,19 +2127,24 @@ model ConversationPreference {
 }
 
 model DirectMessage {
-  id             String                  @id @default(cuid())
-  conversationId String
-  senderId       String
-  activityId     String?
-  body           String
-  imageUrls      String[]                @default([])
-  readAt         DateTime?
-  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  activity       Activity?               @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  deletions      DirectMessageDeletion[]
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  id                String                  @id @default(cuid())
+  conversationId    String
+  senderId          String
+  activityId        String?
+  body              String
+  imageUrls         String[]                @default([])
+  replyToMessageId  String?
+  replyToSenderName String?
+  replyToBody       String?                 @db.Text
+  replyToHasImage   Boolean                 @default(false)
+  recalledAt        DateTime?
+  readAt            DateTime?
+  conversation      Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            UserProfile             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  activity          Activity?               @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  deletions         DirectMessageDeletion[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
 
   @@index([conversationId, createdAt])
   @@index([conversationId, createdAt, id])
@@ -1901,6 +2292,7 @@ model GameToolSubmission {
   profileId   String?
   roundIndex  Int                    @default(0)
   kind        GameToolSubmissionKind
+  actionKey   String                 @default("") @db.VarChar(32)
   value       String
   metadata    Json?
   submittedAt DateTime               @default(now())
@@ -1908,7 +2300,7 @@ model GameToolSubmission {
   seat        GameToolSeat?          @relation(fields: [seatId], references: [id], onDelete: SetNull)
   profile     UserProfile?           @relation("GameToolSubmissionProfile", fields: [profileId], references: [id], onDelete: SetNull)
 
-  @@unique([roomId, roundIndex, kind, seatId])
+  @@unique([roomId, roundIndex, kind, seatId, actionKey], map: "GameToolSubmission_room_round_kind_seat_action_key")
   @@index([roomId, kind, roundIndex])
   @@index([profileId, submittedAt])
 }
@@ -1925,6 +2317,7 @@ model GameToolPlayerRecord {
   roleAlignment String?
   result        String?
   isJudge       Boolean      @default(false)
+  roundNumber   Int          @default(1)
   playedAt      DateTime     @default(now())
   metadata      Json?
   room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -1932,7 +2325,7 @@ model GameToolPlayerRecord {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@unique([roomId, profileId])
+  @@unique([roomId, profileId, roundNumber])
   @@index([profileId, kind, playedAt])
   @@index([roomId])
 }

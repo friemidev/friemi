@@ -49,6 +49,7 @@ type NewActivityFormProps = {
   mode?: "create" | "edit";
   showFormActions?: boolean;
   signInHref?: string;
+  submissionDisabled?: boolean;
 };
 
 const initialState: CreateActivityState = {};
@@ -2042,10 +2043,12 @@ function RequiredLabel({ children }: { children: ReactNode }) {
 
 function SubmitButton({
   disabled = false,
+  isUploading = false,
   locale,
   mode,
 }: {
   disabled?: boolean;
+  isUploading?: boolean;
   locale: string;
   mode: "create" | "edit";
 }) {
@@ -2057,13 +2060,13 @@ function SubmitButton({
       type="submit"
       className="mx-auto h-12 w-full min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-base font-semibold text-white shadow-[0_12px_28px_rgba(54,151,88,0.24)] hover:bg-[#156240] sm:mx-0 sm:w-auto sm:min-w-0"
       disabled={pending || disabled}
-      aria-busy={pending || disabled}
+      aria-busy={pending || isUploading}
     >
-      {pending || disabled ? (
+      {pending || isUploading ? (
         <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
       ) : null}
       <span className="truncate">
-        {disabled && !pending
+        {isUploading && !pending
           ? t.coverUploading
           : pending
             ? mode === "edit"
@@ -2205,11 +2208,13 @@ function FormActions({
   isCoverUploading,
   locale,
   mode,
+  submissionDisabled,
 }: {
   cancelHref?: string;
   isCoverUploading: boolean;
   locale: string;
   mode: "create" | "edit";
+  submissionDisabled: boolean;
 }) {
   const t = getCopy(locale).form;
 
@@ -2225,7 +2230,12 @@ function FormActions({
             {t.cancelEdit}
           </Link>
         ) : null}
-        <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
+        <SubmitButton
+          disabled={isCoverUploading || submissionDisabled}
+          isUploading={isCoverUploading}
+          locale={locale}
+          mode={mode}
+        />
       </div>
     </div>
   );
@@ -2241,6 +2251,7 @@ export function NewActivityForm({
   mode = "create",
   showFormActions = true,
   signInHref,
+  submissionDisabled = false,
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
@@ -2371,6 +2382,11 @@ export function NewActivityForm({
   }, [state.fieldErrors, state.version]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (mode === "create" && submissionDisabled) {
+      event.preventDefault();
+      return;
+    }
+
     if (mode === "create" && !isAuthenticated && signInHref) {
       event.preventDefault();
       saveNewActivityDraft(locale, event.currentTarget);
@@ -3061,6 +3077,7 @@ export function NewActivityForm({
               isCoverUploading={isCoverUploading}
               locale={locale}
               mode={mode}
+              submissionDisabled={submissionDisabled}
             />
           ) : null}
 

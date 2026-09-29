@@ -4,10 +4,14 @@ import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMo
 import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import {
+  getMomentLinkableActivities,
   getMomentFeedPage,
   momentFeedPageSize,
 } from "@/features/moments/queries/getMomentFeed";
-import { getOfficialMessageRoster } from "@/features/official-messages/services/officialMessages";
+import {
+  getOfficialFeedbackRoster,
+  getOfficialMessageRoster,
+} from "@/features/official-messages/services/officialMessages";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
 import { getPlanetSquarePage } from "@/features/planets/queries/planetQueries";
 import { getPlanetChatRoster } from "@/features/planets/services/planetChat";
@@ -76,12 +80,14 @@ export default async function FootprintsPage({
   const profile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
-  const initialTab = requestedTab ?? "moment";
+  const initialTab = requestedTab ?? "message";
   const viewerProfileId = profile?.id ?? null;
   const [
     momentsResult,
+    linkableActivitiesResult,
     messageFriendsResult,
     officialMessagesResult,
+    officialFeedbackResult,
     activityRoomChatsResult,
     planetChatsResult,
     planetsResult,
@@ -107,6 +113,17 @@ export default async function FootprintsPage({
           page: { hasMore: false, items: [], nextCursor: null },
           error: null,
         }),
+    profile
+      ? perf
+          .measure("moments.linkableActivities", () =>
+            getMomentLinkableActivities(profile.id),
+          )
+          .then((activities) => ({ activities, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load linkable activities", error);
+            return { activities: [], error };
+          })
+      : Promise.resolve({ activities: [], error: null }),
     profile && initialTab === "message"
       ? perf
           .measure("messages.friendRoster", () =>
@@ -135,6 +152,17 @@ export default async function FootprintsPage({
               roster: null,
               error,
             };
+          })
+      : Promise.resolve({ roster: null, error: null }),
+    profile && initialTab === "message"
+      ? perf
+          .measure("messages.officialFeedback", () =>
+            getOfficialFeedbackRoster(profile.id, locale),
+          )
+          .then((roster) => ({ roster, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load official feedback roster", error);
+            return { roster: null, error };
           })
       : Promise.resolve({ roster: null, error: null }),
     profile && initialTab === "message"
@@ -212,8 +240,11 @@ export default async function FootprintsPage({
       messageFriendCount: messageFriendsResult.friends.length,
       officialMessageLoaded:
         initialTab === "message" && !officialMessagesResult.error,
+      officialFeedbackLoaded:
+        initialTab === "message" && !officialFeedbackResult.error,
       planetChatCount: planetChatsResult.planetChats.length,
       momentCount: momentsResult.page.items.length,
+      linkableActivityCount: linkableActivitiesResult.activities.length,
       planetCount: planetsResult.page.items.length,
       planetCreationEligibilityLoaded:
         initialTab === "planet" && !canCreateResult.error,
@@ -232,9 +263,7 @@ export default async function FootprintsPage({
           moment.images.map((image) => image.url),
         )
       : initialTab === "message"
-        ? messageFriendsResult.friends.map(
-            (friend) => friend.friend.avatarUrl,
-          )
+        ? messageFriendsResult.friends.map((friend) => friend.friend.avatarUrl)
         : planetsResult.page.items.map((planet) => planet.coverImageUrl);
 
   return (
@@ -245,18 +274,21 @@ export default async function FootprintsPage({
         initialMomentScope={requestedMomentScope}
         initialTab={initialTab}
         moments={momentsResult.page.items}
+        linkableActivities={linkableActivitiesResult.activities}
         momentFeedHasMore={momentsResult.page.hasMore}
         momentFeedNextCursor={momentsResult.page.nextCursor}
         momentFeedLoaded={initialTab === "moment"}
         momentFeedError={Boolean(momentsResult.error)}
         messageFriends={messageFriendsResult.friends}
         officialMessages={officialMessagesResult.roster}
+        officialFeedbackInbox={officialFeedbackResult.roster}
         activityRoomChats={activityRoomChatsResult.rooms}
         planetChats={planetChatsResult.planetChats}
         messageRosterLoaded={!profile || initialTab === "message"}
         messageRosterError={Boolean(
           messageFriendsResult.error ||
           officialMessagesResult.error ||
+          officialFeedbackResult.error ||
           activityRoomChatsResult.error ||
           planetChatsResult.error,
         )}

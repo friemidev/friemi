@@ -24,6 +24,7 @@ import { formatActivityDate } from "@chill-club/shared";
 import {
   BadgeCheck,
   BellOff,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -33,6 +34,7 @@ import {
   ImagePlus,
   Loader2,
   MessageCircle,
+  MessageSquareText,
   MoreHorizontal,
   Pin,
   RefreshCw,
@@ -46,6 +48,11 @@ import {
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
+import {
+  chatRosterWakeEvent,
+  type ChatRealtimeScope,
+  type ChatRosterWakeDetail,
+} from "@/features/chat/chatRealtime";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
@@ -53,10 +60,15 @@ import { MessageAvatar } from "@/features/direct-messages/components/MessageAvat
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
+import { saveMessageThreadReturnHref } from "@/features/direct-messages/utils/messageThreadReturn";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
-import type { OfficialMessageRosterViewModel } from "@/features/official-messages/services/officialMessages";
+import type {
+  OfficialFeedbackRosterViewModel,
+  OfficialMessageRosterViewModel,
+} from "@/features/official-messages/services/officialMessages";
+import { buildOfficialMessageDetailHref } from "@/features/official-messages/utils/officialMessageReturn";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import type { PlanetChatRosterItemViewModel } from "@/features/planets/services/planetChat";
@@ -77,6 +89,7 @@ import {
   type CreateMomentState,
 } from "@/features/moments/actions/momentActions";
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
+import type { MomentLinkableActivityViewModel } from "@/features/moments/queries/getMomentFeed";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
@@ -108,6 +121,7 @@ type FootprintsMobilePageProps = {
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   messageRosterError?: boolean;
   messageRosterLoaded: boolean;
@@ -116,6 +130,7 @@ type FootprintsMobilePageProps = {
   momentFeedLoaded: boolean;
   momentFeedNextCursor: string | null;
   moments: MomentFeedItemViewModel[];
+  linkableActivities: MomentLinkableActivityViewModel[];
   canCreatePlanet: boolean;
   planetChats: PlanetChatRosterItemViewModel[];
   planets: PlanetSquare;
@@ -130,12 +145,16 @@ type MessageRosterSnapshot = {
   activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError: boolean;
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   planetChats: PlanetChatRosterItemViewModel[];
   updatedAt: number;
 };
 
-type MessageRosterResponse = Omit<MessageRosterSnapshot, "updatedAt"> & {
+type MessageRosterResponse = Partial<
+  Omit<MessageRosterSnapshot, "hasError" | "updatedAt">
+> & {
+  hasError?: boolean;
   ok?: boolean;
 };
 
@@ -238,7 +257,7 @@ const copyByLocale = {
     tabs: {
       message: "聊聊",
       moment: "晒晒",
-      planet: "星星",
+      planet: "星球",
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
@@ -281,6 +300,9 @@ const copyByLocale = {
     visibilityFriends: "互关可见",
     visibilityLabel: "发布范围",
     visibilityPublic: "公开",
+    linkedActivityLabel: "关联聚吧",
+    linkedActivityNone: "不关联聚吧",
+    linkedActivityPrefix: "来自聚吧",
     like: "点赞",
     comment: "评论",
     gift: "送礼",
@@ -295,8 +317,7 @@ const copyByLocale = {
     messageDescription: "私聊和组局聊天都在这里。",
     messageFilters: {
       all: "聊聊",
-      following: "我关注的",
-      mutual: "互相关注",
+      strangers: "陌生人",
       official: "官方",
       rooms: "群聊",
     },
@@ -348,8 +369,7 @@ const copyByLocale = {
     photoRemove: "Remove photo",
     photoRateLimitError: "Too many uploads. Wait a moment and try again.",
     photoRetry: "Retry upload",
-    photoSizeError:
-      "Images must be 10 MB or smaller.",
+    photoSizeError: "Images must be 10 MB or smaller.",
     photoStorageError:
       "Photo storage is temporarily unavailable. Try again later.",
     photoTypeError: "Choose a common image format.",
@@ -386,6 +406,9 @@ const copyByLocale = {
     visibilityFriends: "Mutual",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
+    linkedActivityLabel: "Link a meetup",
+    linkedActivityNone: "No linked meetup",
+    linkedActivityPrefix: "From meetup",
     like: "Like",
     comment: "Comment",
     gift: "Gift",
@@ -400,8 +423,7 @@ const copyByLocale = {
     messageDescription: "Chats and plan details stay here.",
     messageFilters: {
       all: "All chats",
-      following: "Following",
-      mutual: "Mutual",
+      strangers: "Requests",
       official: "Official",
       rooms: "Groups",
     },
@@ -456,8 +478,7 @@ const copyByLocale = {
     photoRateLimitError:
       "Trop d'envois successifs. Patientez un instant puis réessayez.",
     photoRetry: "Réessayer",
-    photoSizeError:
-      "Les images doivent faire 10 Mo maximum.",
+    photoSizeError: "Les images doivent faire 10 Mo maximum.",
     photoStorageError:
       "Le stockage des photos est indisponible. Réessayez plus tard.",
     photoTypeError: "Choisissez un format d'image courant.",
@@ -497,6 +518,9 @@ const copyByLocale = {
     visibilityFriends: "Mutuels",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
+    linkedActivityLabel: "Associer une rencontre",
+    linkedActivityNone: "Aucune rencontre liée",
+    linkedActivityPrefix: "Rencontre",
     like: "J'aime",
     comment: "Commenter",
     gift: "Cadeau",
@@ -511,8 +535,7 @@ const copyByLocale = {
     messageDescription: "Les échanges et messages de plans restent ici.",
     messageFilters: {
       all: "Tous",
-      following: "Suivis",
-      mutual: "Mutuels",
+      strangers: "Inconnus",
       official: "Officiel",
       rooms: "Groupes",
     },
@@ -902,6 +925,19 @@ export function FeedCard({
             />
           </div>
 
+          {moment.activity ? (
+            <Link
+              className="ml-[3.25rem] mt-1 inline-flex max-w-[calc(100%-3.25rem)] items-center gap-1.5 text-xs font-bold text-[#156240] transition hover:text-[#0D4B31]"
+              href={withLocale(locale, `/lobby/${moment.activity.id}`)}
+            >
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              <span className="shrink-0 text-[#6C746A]">
+                {copy.linkedActivityPrefix}
+              </span>
+              <span className="truncate">{moment.activity.title}</span>
+            </Link>
+          ) : null}
+
           {moment.resharedMoment ? (
             <SharedMomentPreview
               copy={copy}
@@ -1047,6 +1083,19 @@ export function MomentDetailContent({
             showDetailAction={false}
           />
         </header>
+
+        {moment.activity ? (
+          <Link
+            className="mt-3 inline-flex max-w-full items-center gap-1.5 text-xs font-bold text-[#156240] transition hover:text-[#0D4B31]"
+            href={withLocale(locale, `/lobby/${moment.activity.id}`)}
+          >
+            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            <span className="shrink-0 text-[#6C746A]">
+              {copy.linkedActivityPrefix}
+            </span>
+            <span className="truncate">{moment.activity.title}</span>
+          </Link>
+        ) : null}
 
         {moment.content ? (
           <p className="mt-4 whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-[#111210]">
@@ -1920,6 +1969,7 @@ function MomentCommentForm({
 
 const createMomentInitialState: CreateMomentState = {
   values: {
+    activityId: "",
     content: "",
     imageUrls: [],
     visibility: "PUBLIC",
@@ -2412,10 +2462,12 @@ function MomentVisibilitySelector({
 
 function MomentComposer({
   copy,
+  linkableActivities,
   locale,
   profile,
 }: {
   copy: ReturnType<typeof getFootprintsCopy>;
+  linkableActivities: MomentLinkableActivityViewModel[];
   locale: string;
   profile: FootprintsViewerProfile | null;
 }) {
@@ -2515,6 +2567,26 @@ function MomentComposer({
         defaultValue={state.ok ? "" : state.values?.content}
       />
 
+      {linkableActivities.length > 0 ? (
+        <label className="mt-3 flex min-w-0 items-center gap-2 text-xs font-bold text-[#156240]">
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          <span className="shrink-0">{copy.linkedActivityLabel}</span>
+          <select
+            key={state.ok ? "moment-activity-empty" : "moment-activity-active"}
+            className="min-w-0 flex-1 appearance-none truncate border-0 bg-transparent py-2 pr-1 text-right text-xs font-semibold text-[#1D1D1B] outline-none"
+            defaultValue={state.ok ? "" : (state.values?.activityId ?? "")}
+            name="activityId"
+          >
+            <option value="">{copy.linkedActivityNone}</option>
+            {linkableActivities.map((activity) => (
+              <option key={activity.id} value={activity.id}>
+                {activity.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <MomentImageUploadGrid
           key={state.ok ? "moment-images-empty" : "moment-images-active"}
@@ -2585,6 +2657,7 @@ function FootprintsMessageList({
   friends,
   hasError,
   locale,
+  officialFeedbackInbox,
   officialMessages,
   planetChats,
 }: {
@@ -2593,6 +2666,7 @@ function FootprintsMessageList({
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
+  officialFeedbackInbox: OfficialFeedbackRosterViewModel | null;
   officialMessages: OfficialMessageRosterViewModel | null;
   planetChats: PlanetChatRosterItemViewModel[];
 }) {
@@ -2743,19 +2817,46 @@ function FootprintsMessageList({
           },
         ]
       : [];
+    const feedbackEntries = officialFeedbackInbox
+      ? [
+          {
+            kind: "feedback" as const,
+            id: officialFeedbackInbox.id,
+            searchText: [
+              officialFeedbackInbox.title,
+              officialFeedbackInbox.preview,
+              "Friemi feedback 用户反馈 retour",
+            ].join(" "),
+            sortTime: new Date(officialFeedbackInbox.publishedAt).getTime(),
+            hasContent: true,
+            isFollowing: false,
+            isMutual: false,
+            isOfficial: true,
+            isPinned: false,
+            feedback: officialFeedbackInbox,
+          },
+        ]
+      : [];
 
     return [
       ...directEntries,
       ...roomEntries,
       ...planetEntries,
       ...officialEntries,
+      ...feedbackEntries,
     ].sort(
       (entryA, entryB) =>
         Number(entryB.isPinned) - Number(entryA.isPinned) ||
         entryB.sortTime - entryA.sortTime ||
         entryA.id.localeCompare(entryB.id),
     );
-  }, [activityRoomChats, friends, officialMessages, planetChats]);
+  }, [
+    activityRoomChats,
+    friends,
+    officialFeedbackInbox,
+    officialMessages,
+    planetChats,
+  ]);
   const visibleEntries = useMemo(
     () =>
       filterUnifiedChatRosterEntries(
@@ -2777,13 +2878,20 @@ function FootprintsMessageList({
     (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
     0,
   );
-  const mutualUnreadTotal = friends
-    .filter((friend) => friend.isMutualFollow && !friend.isMuted)
+  const strangerUnreadTotal = friends
+    .filter(
+      (friend) =>
+        !friend.isFollowing && !friend.isMutualFollow && !friend.isMuted,
+    )
     .reduce((total, friend) => total + friend.unreadCount, 0);
-  const followingUnreadTotal = friends
-    .filter((friend) => friend.isFollowing && !friend.isMuted)
-    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const strangerUnreadLabel =
+    locale === "fr"
+      ? `${strangerUnreadTotal} nouveau${strangerUnreadTotal > 1 ? "x" : ""} message${strangerUnreadTotal > 1 ? "s" : ""} d'inconnu`
+      : locale === "en"
+        ? `${strangerUnreadTotal} new message${strangerUnreadTotal === 1 ? "" : "s"} from strangers`
+        : `${strangerUnreadTotal} 条陌生人新消息`;
   const officialUnreadTotal = officialMessages?.unreadCount ?? 0;
+  const feedbackUnreadTotal = officialFeedbackInbox?.unreadCount ?? 0;
   const filters: Array<{
     count: number;
     icon: ComponentType<{ className?: string }>;
@@ -2797,7 +2905,8 @@ function FootprintsMessageList({
         directUnreadTotal +
         roomUnreadTotal +
         planetUnreadTotal +
-        officialUnreadTotal,
+        officialUnreadTotal +
+        feedbackUnreadTotal,
       icon: MessageCircle,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2813,23 +2922,15 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.rooms,
     },
     {
-      count: mutualUnreadTotal,
-      icon: UsersRound,
-      iconClassName: "text-[#6E46D6]",
-      iconFrameClassName: "bg-[#F0ECFF]",
-      key: "mutual",
-      label: pageCopy.messageFilters.mutual,
+      count: strangerUnreadTotal,
+      icon: UserRound,
+      iconClassName: "text-[#D6245F]",
+      iconFrameClassName: "bg-[#FFEAF1]",
+      key: "strangers",
+      label: pageCopy.messageFilters.strangers,
     },
     {
-      count: followingUnreadTotal,
-      icon: Heart,
-      iconClassName: "text-[#E7457A]",
-      iconFrameClassName: "bg-[#FFF0F5]",
-      key: "following",
-      label: pageCopy.messageFilters.following,
-    },
-    {
-      count: officialUnreadTotal,
+      count: officialUnreadTotal + feedbackUnreadTotal,
       icon: BadgeCheck,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2923,6 +3024,7 @@ function FootprintsMessageList({
     friends.length === 0 &&
     activityRoomChats.length === 0 &&
     !officialMessages &&
+    !officialFeedbackInbox &&
     planetChats.length === 0
   ) {
     return (
@@ -2943,47 +3045,82 @@ function FootprintsMessageList({
   return (
     <section className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
       {toolbar}
-      {visibleEntries.length > 0 ? (
-        <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent lg:mt-0">
-          {visibleEntries.map((entry) =>
-            entry.kind === "direct" ? (
-              <FootprintsMessageRow
-                key={entry.id}
-                currentUserProfileId={currentUserProfileId}
-                friend={entry.friend}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                showBackFollowAction={false}
-              />
-            ) : entry.kind === "official" ? (
-              <FootprintsOfficialMessageRow
-                key={entry.id}
-                locale={locale}
-                official={entry.official}
-              />
-            ) : entry.kind === "room" ? (
-              <FootprintsRoomChatRow
-                key={entry.id}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                room={entry.room}
-              />
-            ) : (
-              <FootprintsPlanetChatRow
-                key={entry.id}
-                locale={locale}
-                onDismiss={() => dismissEntry(entry.id)}
-                planet={entry.planet}
-                returnHref={returnHref}
-              />
-            ),
-          )}
-        </div>
-      ) : (
-        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74] lg:mt-0">
-          {t.emptyListTitle}
-        </div>
-      )}
+      <div className="mt-3 min-w-0 lg:mt-0">
+        {strangerUnreadTotal > 0 && activeFilter !== "strangers" ? (
+          <button
+            aria-live="polite"
+            className="flex w-full items-center gap-3 rounded-lg border border-[#F3C7D5] bg-[#FFF4F7] px-3 py-2.5 text-left text-[#A51D4D] transition hover:bg-[#FFEAF1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E7457A]/30"
+            onClick={() => setActiveFilter("strangers")}
+            type="button"
+          >
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#D6245F] ring-1 ring-[#F3C7D5]">
+              <UserRound className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 text-sm font-bold">
+              {strangerUnreadLabel}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0" />
+          </button>
+        ) : null}
+
+        {visibleEntries.length > 0 ? (
+          <div
+            className={cn(
+              "divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent",
+              strangerUnreadTotal > 0 && activeFilter !== "strangers"
+                ? "mt-2"
+                : null,
+            )}
+          >
+            {visibleEntries.map((entry) =>
+              entry.kind === "direct" ? (
+                <FootprintsMessageRow
+                  key={entry.id}
+                  currentUserProfileId={currentUserProfileId}
+                  friend={entry.friend}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  returnHref={returnHref}
+                  showBackFollowAction={false}
+                />
+              ) : entry.kind === "official" ? (
+                <FootprintsOfficialMessageRow
+                  key={entry.id}
+                  locale={locale}
+                  official={entry.official}
+                  returnHref={returnHref}
+                />
+              ) : entry.kind === "feedback" ? (
+                <FootprintsOfficialFeedbackRow
+                  feedback={entry.feedback}
+                  key={entry.id}
+                  locale={locale}
+                  returnHref={returnHref}
+                />
+              ) : entry.kind === "room" ? (
+                <FootprintsRoomChatRow
+                  key={entry.id}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  room={entry.room}
+                />
+              ) : (
+                <FootprintsPlanetChatRow
+                  key={entry.id}
+                  locale={locale}
+                  onDismiss={() => dismissEntry(entry.id)}
+                  planet={entry.planet}
+                  returnHref={returnHref}
+                />
+              ),
+            )}
+          </div>
+        ) : (
+          <div className="border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
+            {t.emptyListTitle}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -2991,9 +3128,11 @@ function FootprintsMessageList({
 function FootprintsOfficialMessageRow({
   locale,
   official,
+  returnHref,
 }: {
   locale: string;
   official: OfficialMessageRosterViewModel;
+  returnHref: string;
 }) {
   const unreadBadgeText =
     official.unreadCount > 99 ? "99+" : String(official.unreadCount);
@@ -3002,10 +3141,26 @@ function FootprintsOfficialMessageRow({
     <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
       <Link
         className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
-        href={withLocale(locale, "/official-messages")}
+        href={buildOfficialMessageDetailHref({
+          detailPath: "/official-messages",
+          locale,
+          returnHref,
+        })}
+        onClick={() => {
+          window.sessionStorage.setItem(
+            getPlanetChatListScrollStorageKey(returnHref),
+            String(window.scrollY),
+          );
+        }}
       >
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#156240] text-white">
-          <BadgeCheck className="h-5 w-5" />
+        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#156240] ring-1 ring-[#D6D5B2]">
+          <Image
+            alt="Friemi"
+            className="h-full w-full object-cover"
+            height={44}
+            src="/brand/v2_1/friemi-icon-transparent-512.png"
+            width={44}
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-start gap-2">
@@ -3028,6 +3183,69 @@ function FootprintsOfficialMessageRow({
               {official.preview}
             </span>
             {official.unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
+  );
+}
+
+function FootprintsOfficialFeedbackRow({
+  feedback,
+  locale,
+  returnHref,
+}: {
+  feedback: OfficialFeedbackRosterViewModel;
+  locale: string;
+  returnHref: string;
+}) {
+  const unreadBadgeText =
+    feedback.unreadCount > 99 ? "99+" : String(feedback.unreadCount);
+
+  return (
+    <article className="group flex min-w-0 items-center transition-colors hover:bg-[#FAFAF8] active:bg-[#F7F7F0]">
+      <Link
+        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={buildOfficialMessageDetailHref({
+          detailPath: "/official-feedback",
+          locale,
+          returnHref,
+        })}
+        onClick={() => {
+          window.sessionStorage.setItem(
+            getPlanetChatListScrollStorageKey(returnHref),
+            String(window.scrollY),
+          );
+        }}
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#FFF5E6] text-[#9A5E00] ring-1 ring-[#F2CC83]/60">
+          <MessageSquareText className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
+              {feedback.title}
+            </span>
+            <span className="shrink-0 text-[11px] font-semibold text-[#8F9189]">
+              {formatChatListTimestamp(feedback.publishedAt, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                feedback.unreadCount > 0
+                  ? "font-bold text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {feedback.preview}
+            </span>
+            {feedback.unreadCount > 0 ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white">
                 {unreadBadgeText}
               </span>
@@ -3310,12 +3528,14 @@ function FootprintsMessageRow({
   friend,
   locale,
   onDismiss,
+  returnHref,
   showBackFollowAction,
 }: {
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   locale: string;
   onDismiss: () => void;
+  returnHref: string;
   showBackFollowAction: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
@@ -3326,7 +3546,9 @@ function FootprintsMessageRow({
   const showMutedUnreadDot = unreadCount > 0 && friend.isMuted;
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
+    ? lastMessage.isRecalled
+      ? t.recalledMessagePreview
+      : `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
@@ -3425,6 +3647,7 @@ function FootprintsMessageRow({
             aria-label={t.openConversation(friend.friend.nickname)}
             className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
             href={withLocale(locale, `/messages/${friend.conversationId}`)}
+            onClick={() => saveMessageThreadReturnHref(returnHref)}
           >
             {content}
           </Link>
@@ -3442,6 +3665,7 @@ function FootprintsMessageRow({
           <form
             action={openDirectConversationAction}
             className="min-w-0 flex-1"
+            onSubmit={() => saveMessageThreadReturnHref(returnHref)}
           >
             <input name="locale" type="hidden" value={locale} />
             <input
@@ -3472,9 +3696,10 @@ function FootprintsMessageRow({
 export function FootprintsMobilePage({
   activityRoomChats: initialActivityRoomChats,
   initialMomentScope = "PUBLIC",
-  initialTab = "moment",
+  initialTab = "message",
   locale,
   messageFriends: initialMessageFriends,
+  officialFeedbackInbox: initialOfficialFeedbackInbox,
   officialMessages: initialOfficialMessages,
   messageRosterError = false,
   messageRosterLoaded,
@@ -3483,6 +3708,7 @@ export function FootprintsMobilePage({
   momentFeedLoaded,
   momentFeedNextCursor,
   moments: initialMoments,
+  linkableActivities,
   canCreatePlanet: initialCanCreatePlanet,
   planetChats: initialPlanetChats,
   planets: initialPlanets,
@@ -3517,6 +3743,9 @@ export function FootprintsMobilePage({
   const [officialMessages, setOfficialMessages] = useState(
     cachedMessageRoster?.officialMessages ?? initialOfficialMessages,
   );
+  const [officialFeedbackInbox, setOfficialFeedbackInbox] = useState(
+    cachedMessageRoster?.officialFeedbackInbox ?? initialOfficialFeedbackInbox,
+  );
   const [activityRoomChats, setActivityRoomChats] = useState(
     cachedMessageRoster?.activityRoomChats ?? initialActivityRoomChats,
   );
@@ -3542,6 +3771,9 @@ export function FootprintsMobilePage({
   const messageRosterRefreshControllerRef = useRef<AbortController | null>(
     null,
   );
+  const pendingMessageRosterRefreshScopeRef = useRef<
+    ChatRealtimeScope | "all" | null
+  >(null);
   const isAuthenticated = Boolean(profile);
   const [feedScope, setFeedScope] = useState<MomentFeedScope>(
     isAuthenticated ? initialMomentScope : "PUBLIC",
@@ -3564,8 +3796,15 @@ export function FootprintsMobilePage({
         (total, planet) => total + (planet.isMuted ? 0 : planet.unreadCount),
         0,
       ) +
-      (officialMessages?.unreadCount ?? 0),
-    [activityRoomChats, messageFriends, officialMessages, planetChats],
+      (officialMessages?.unreadCount ?? 0) +
+      (officialFeedbackInbox?.unreadCount ?? 0),
+    [
+      activityRoomChats,
+      messageFriends,
+      officialFeedbackInbox,
+      officialMessages,
+      planetChats,
+    ],
   );
   const { unreadDirectMessageCount } = useNotificationBadge(
     initialUnreadMessageCount,
@@ -3629,56 +3868,115 @@ export function FootprintsMobilePage({
       ]
     : [{ key: "PUBLIC", label: copy.feedPublic }];
 
-  const refreshMessageRoster = useCallback(async () => {
-    if (
-      !profileId ||
-      !messageRosterCacheKey ||
-      messageRosterRefreshControllerRef.current
-    ) {
-      return;
-    }
-
-    const controller = new AbortController();
-    messageRosterRefreshControllerRef.current = controller;
-
-    try {
-      const params = new URLSearchParams({ locale });
-      const response = await fetch(`/api/footprints/messages?${params}`, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      const payload = (await response.json()) as MessageRosterResponse;
-
-      if (!response.ok || !payload.ok || payload.hasError) {
-        throw new Error("Message roster refresh failed");
+  const refreshMessageRoster = useCallback(
+    async (scope?: ChatRealtimeScope) => {
+      if (!profileId || !messageRosterCacheKey) {
+        return;
       }
 
-      const nextSnapshot: MessageRosterSnapshot = {
-        activityRoomChats: payload.activityRoomChats,
-        friends: payload.friends,
-        hasError: false,
-        officialMessages: payload.officialMessages,
-        planetChats: payload.planetChats,
-        updatedAt: Date.now(),
-      };
+      if (messageRosterRefreshControllerRef.current) {
+        const requestedScope = scope ?? "all";
+        const pendingScope = pendingMessageRosterRefreshScopeRef.current;
 
-      messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
-      setMessageFriends(nextSnapshot.friends);
-      setOfficialMessages(nextSnapshot.officialMessages);
-      setActivityRoomChats(nextSnapshot.activityRoomChats);
-      setPlanetChats(nextSnapshot.planetChats);
-      setMessageRosterHasError(false);
-      setLoadedTabs((current) => ({ ...current, message: true }));
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        console.error("Failed to refresh message roster", error);
+        pendingMessageRosterRefreshScopeRef.current =
+          pendingScope && pendingScope !== requestedScope
+            ? "all"
+            : requestedScope;
+        return;
       }
-    } finally {
-      if (messageRosterRefreshControllerRef.current === controller) {
-        messageRosterRefreshControllerRef.current = null;
+
+      const controller = new AbortController();
+      messageRosterRefreshControllerRef.current = controller;
+
+      try {
+        const params = new URLSearchParams({ locale });
+
+        if (scope) {
+          params.set("scope", scope);
+        }
+
+        const response = await fetch(`/api/footprints/messages?${params}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as MessageRosterResponse;
+
+        if (!response.ok || !payload.ok || payload.hasError) {
+          throw new Error("Message roster refresh failed");
+        }
+
+        const currentSnapshot = messageRosterMemoryCache.get(
+          messageRosterCacheKey,
+        );
+        const nextSnapshot: MessageRosterSnapshot = {
+          activityRoomChats:
+            payload.activityRoomChats ??
+            currentSnapshot?.activityRoomChats ??
+            activityRoomChats,
+          friends:
+            payload.friends ?? currentSnapshot?.friends ?? messageFriends,
+          hasError: false,
+          officialFeedbackInbox:
+            payload.officialFeedbackInbox !== undefined
+              ? payload.officialFeedbackInbox
+              : (currentSnapshot?.officialFeedbackInbox ??
+                officialFeedbackInbox),
+          officialMessages:
+            payload.officialMessages !== undefined
+              ? payload.officialMessages
+              : (currentSnapshot?.officialMessages ?? officialMessages),
+          planetChats:
+            payload.planetChats ?? currentSnapshot?.planetChats ?? planetChats,
+          updatedAt: Date.now(),
+        };
+
+        messageRosterMemoryCache.set(messageRosterCacheKey, nextSnapshot);
+        setMessageFriends(nextSnapshot.friends);
+        setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
+        setOfficialMessages(nextSnapshot.officialMessages);
+        setActivityRoomChats(nextSnapshot.activityRoomChats);
+        setPlanetChats(nextSnapshot.planetChats);
+        setMessageRosterHasError(false);
+        setLoadedTabs((current) => ({ ...current, message: true }));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to refresh message roster", error);
+        }
+      } finally {
+        if (messageRosterRefreshControllerRef.current === controller) {
+          messageRosterRefreshControllerRef.current = null;
+        }
+
+        const pendingScope = pendingMessageRosterRefreshScopeRef.current;
+
+        if (pendingScope) {
+          pendingMessageRosterRefreshScopeRef.current = null;
+          window.setTimeout(() => {
+            window.dispatchEvent(
+              pendingScope === "all"
+                ? new Event(chatRosterWakeEvent)
+                : new CustomEvent(chatRosterWakeEvent, {
+                    detail: {
+                      scope: pendingScope,
+                      subjectKey: "pending-refresh",
+                    } satisfies ChatRosterWakeDetail,
+                  }),
+            );
+          }, 0);
+        }
       }
-    }
-  }, [locale, messageRosterCacheKey, profileId]);
+    },
+    [
+      activityRoomChats,
+      locale,
+      messageFriends,
+      messageRosterCacheKey,
+      officialFeedbackInbox,
+      officialMessages,
+      planetChats,
+      profileId,
+    ],
+  );
 
   useEffect(() => {
     if (!profile && feedScope !== "PUBLIC") {
@@ -3775,6 +4073,7 @@ export function FootprintsMobilePage({
         activityRoomChats: initialActivityRoomChats,
         friends: initialMessageFriends,
         hasError: messageRosterError,
+        officialFeedbackInbox: initialOfficialFeedbackInbox,
         officialMessages: initialOfficialMessages,
         planetChats: initialPlanetChats,
         updatedAt: Date.now(),
@@ -3785,6 +4084,7 @@ export function FootprintsMobilePage({
     }
 
     setMessageFriends(nextSnapshot.friends);
+    setOfficialFeedbackInbox(nextSnapshot.officialFeedbackInbox);
     setOfficialMessages(nextSnapshot.officialMessages);
     setActivityRoomChats(nextSnapshot.activityRoomChats);
     setPlanetChats(nextSnapshot.planetChats);
@@ -3793,6 +4093,7 @@ export function FootprintsMobilePage({
   }, [
     initialActivityRoomChats,
     initialMessageFriends,
+    initialOfficialFeedbackInbox,
     initialOfficialMessages,
     initialPlanetChats,
     messageRosterCacheKey,
@@ -3961,6 +4262,36 @@ export function FootprintsMobilePage({
     return () => window.clearTimeout(timeoutId);
   }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
 
+  useEffect(() => {
+    if (!profileId || !messageRosterCacheKey) {
+      return;
+    }
+
+    const handleRosterWake = (event: Event) => {
+      const cachedSnapshot = messageRosterMemoryCache.get(
+        messageRosterCacheKey,
+      );
+      const detail =
+        event instanceof CustomEvent
+          ? (event.detail as ChatRosterWakeDetail | undefined)
+          : undefined;
+
+      if (cachedSnapshot) {
+        cachedSnapshot.updatedAt = 0;
+      }
+
+      if (activeTab === "message") {
+        void refreshMessageRoster(detail?.scope);
+      }
+    };
+
+    window.addEventListener(chatRosterWakeEvent, handleRosterWake);
+
+    return () => {
+      window.removeEventListener(chatRosterWakeEvent, handleRosterWake);
+    };
+  }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
+
   useEffect(
     () => () => {
       messageRosterRefreshControllerRef.current?.abort();
@@ -4041,7 +4372,12 @@ export function FootprintsMobilePage({
           {activeTab === "moment" ? (
             <section className="mt-5 space-y-5 md:mt-8 lg:grid lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
               <div className="space-y-4 lg:sticky lg:top-24">
-                <MomentComposer copy={copy} locale={locale} profile={profile} />
+                <MomentComposer
+                  copy={copy}
+                  linkableActivities={linkableActivities}
+                  locale={locale}
+                  profile={profile}
+                />
 
                 <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] lg:grid lg:w-full lg:grid-cols-2 lg:gap-2 lg:overflow-visible lg:rounded-none lg:p-0 lg:ring-0 [&::-webkit-scrollbar]:hidden">
                   {feedScopeTabs.map((tab) => (
@@ -4118,6 +4454,7 @@ export function FootprintsMobilePage({
                   friends={messageFriends}
                   hasError={messageRosterHasError}
                   locale={locale}
+                  officialFeedbackInbox={officialFeedbackInbox}
                   officialMessages={officialMessages}
                   planetChats={planetChats}
                 />

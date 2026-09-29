@@ -18,7 +18,11 @@ import {
   parseDecimalToScaledInteger,
   parseMoneyToMinor,
 } from "../domain/money";
-import { assertTransactionInvariant } from "../domain/ledger";
+import {
+  assertTransactionInvariant,
+  buildSettlementSuggestions,
+  calculateBalances,
+} from "../domain/ledger";
 import { ensureActivityAaLedger } from "../server/ledgerService";
 import { getActivityAaAccess } from "../server/access";
 import { uploadAaReceipt } from "../server/receiptStorage";
@@ -177,6 +181,7 @@ function buildShares({
 function refreshAaViews(locale: string, activityId: string) {
   const aaPath = withLocale(locale, `/lobby/${activityId}/aa`);
   revalidatePath(aaPath);
+  revalidatePath(withLocale(locale, `/lobby/${activityId}/aa/progress`));
   revalidatePath(withLocale(locale, `/lobby/${activityId}`));
   return aaPath;
 }
@@ -677,6 +682,223 @@ export async function createAaTransactionAction(
   redirect(refreshAaViews(locale, parsed.data.activityId));
 }
 
+const settlementPaymentSchema = z.object({
+  activityId: z.string().min(1),
+  amountMinor: z.string().regex(/^\d+$/),
+  fromParticipantId: z.string().min(1),
+  ledgerVersion: z.coerce.number().int().positive(),
+  locale: z.string().min(1).default("zh-CN"),
+  toParticipantId: z.string().min(1),
+});
+
+export async function markAaSettlementPaidAction(formData: FormData) {
+  const input = settlementPaymentSchema.parse({
+    activityId: stringValue(formData, "activityId"),
+    amountMinor: stringValue(formData, "amountMinor"),
+    fromParticipantId: stringValue(formData, "fromParticipantId"),
+    ledgerVersion: stringValue(formData, "ledgerVersion"),
+    locale: stringValue(formData, "locale") || "zh-CN",
+    toParticipantId: stringValue(formData, "toParticipantId"),
+  });
+  const returnPath = withLocale(
+    input.locale,
+    `/lobby/${input.activityId}/aa/progress`,
+  );
+  const profile = await getCurrentUserProfileForMutation(
+    input.locale,
+    `/lobby/${input.activityId}/aa/progress`,
+  );
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const ledger = await tx.aaLedger.findUnique({
+        where: { activityId: input.activityId },
+        include: {
+          participants: true,
+          transactions: {
+            include: {
+              changeRequests: { where: { status: "PENDING" } },
+              conflicts: { where: { status: "OPEN" } },
+              contributions: true,
+              shares: true,
+            },
+          },
+        },
+      });
+
+      if (!ledger || ledger.status === "ARCHIVED") {
+        throw new Error("SETTLEMENT_UNAVAILABLE");
+      }
+
+      const viewer = ledger.participants.find(
+        (participant) => participant.userProfileId === profile.id,
+      );
+      const payer = ledger.participants.find(
+        (participant) => participant.id === input.fromParticipantId,
+      );
+      const payee = ledger.participants.find(
+        (participant) => participant.id === input.toParticipantId,
+      );
+
+      if (
+        !viewer ||
+        viewer.id !== input.fromParticipantId ||
+        payer?.status !== "ACTIVE" ||
+        payee?.status !== "ACTIVE" ||
+        payer.id === payee.id
+      ) {
+        throw new Error("FORBIDDEN");
+      }
+
+      const hasBlockingIssue = ledger.transactions.some(
+        (transaction) =>
+          transaction.status === "PENDING_REVIEW" ||
+          transaction.status === "DISPUTED" ||
+          transaction.conflicts.length > 0 ||
+          transaction.changeRequests.length > 0,
+      );
+      const hasPendingTransfer = ledger.transactions.some(
+        (transaction) =>
+          transaction.type === "TRANSFER" &&
+          transaction.status === "PENDING_CONFIRMATION" &&
+          transaction.transferFromParticipantId === payer.id &&
+          transaction.transferToParticipantId === payee.id,
+      );
+
+      if (hasBlockingIssue || hasPendingTransfer) {
+        throw new Error("SETTLEMENT_CHANGED");
+      }
+
+      const balances = calculateBalances(
+        ledger.participants.map((participant) => participant.id),
+        ledger.transactions.map((transaction) => ({
+          id: transaction.id,
+          type: transaction.type,
+          status: transaction.status,
+          baseAmountMinor: transaction.baseAmountMinor,
+          contributions: transaction.contributions.map((contribution) => ({
+            participantId: contribution.participantId,
+            amountMinor: contribution.amountMinor,
+          })),
+          shares: transaction.shares.map((share) => ({
+            participantId: share.participantId,
+            amountMinor: share.amountMinor,
+          })),
+          transferFromParticipantId: transaction.transferFromParticipantId,
+          transferToParticipantId: transaction.transferToParticipantId,
+        })),
+      );
+      const amountMinor = BigInt(input.amountMinor);
+      const suggestion = buildSettlementSuggestions(balances).find(
+        (candidate) =>
+          candidate.fromParticipantId === payer.id &&
+          candidate.toParticipantId === payee.id &&
+          candidate.amountMinor === amountMinor,
+      );
+
+      if (!suggestion || ledger.version !== input.ledgerVersion) {
+        throw new Error("SETTLEMENT_CHANGED");
+      }
+
+      const versionUpdate = await tx.aaLedger.updateMany({
+        where: { id: ledger.id, version: input.ledgerVersion },
+        data: { version: { increment: 1 } },
+      });
+      if (versionUpdate.count !== 1) {
+        throw new Error("SETTLEMENT_CHANGED");
+      }
+
+      const now = new Date();
+      const title =
+        input.locale === "fr"
+          ? "Paiement de règlement"
+          : input.locale === "en"
+            ? "Settlement payment"
+            : "结算付款";
+      const transaction = await tx.aaTransaction.create({
+        data: {
+          baseAmountMinor: amountMinor,
+          categoryNameSnapshot: "转账",
+          creatorParticipantId: viewer.id,
+          fxRate: "1",
+          fxRateSource: "LEDGER_BASE",
+          ledgerId: ledger.id,
+          occurredAt: now,
+          originalAmountMinor: amountMinor,
+          originalCurrency: ledger.baseCurrency,
+          payerConfirmedAt: now,
+          payerConfirmedById: viewer.id,
+          status: "PENDING_CONFIRMATION",
+          title,
+          transferFromParticipantId: payer.id,
+          transferToParticipantId: payee.id,
+          type: "TRANSFER",
+        },
+        select: { id: true },
+      });
+
+      const matchingRequest = await tx.aaPaymentRequest.findFirst({
+        where: {
+          amountMinor,
+          fromParticipantId: payer.id,
+          ledgerId: ledger.id,
+          status: { in: ["SENT", "VIEWED"] },
+          toParticipantId: payee.id,
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      if (matchingRequest) {
+        await tx.aaPaymentRequest.update({
+          where: { id: matchingRequest.id },
+          data: {
+            linkedTransferId: transaction.id,
+            status: "VIEWED",
+            viewedAt: now,
+          },
+        });
+      }
+
+      await tx.aaAuditEvent.create({
+        data: {
+          action: "MARK_SETTLEMENT_PAID",
+          actorParticipantId: viewer.id,
+          after: {
+            amountMinor: amountMinor.toString(),
+            fromId: payer.id,
+            status: "PENDING_CONFIRMATION",
+            toId: payee.id,
+          },
+          entityId: transaction.id,
+          entityType: "TRANSACTION",
+          ledgerId: ledger.id,
+          transactionId: transaction.id,
+        },
+      });
+      await createAaNotifications(tx, {
+        aaTransactionId: transaction.id,
+        activityId: input.activityId,
+        actor: viewer,
+        occurrenceId: `${transaction.id}:settlement-paid`,
+        participants: ledger.participants,
+        recipientParticipantIds: [payee.id],
+        type: "AA_TRANSFER_CONFIRMATION",
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      ["SETTLEMENT_CHANGED", "SETTLEMENT_UNAVAILABLE"].includes(error.message)
+    ) {
+      redirect(returnPath);
+    }
+    throw error;
+  }
+
+  refreshAaViews(input.locale, input.activityId);
+  redirect(returnPath);
+}
+
 const operationSchema = z.object({
   activityId: z.string().min(1),
   transactionId: z.string().min(1),
@@ -1038,11 +1260,14 @@ export async function reviewAaChangeRequestAction(formData: FormData) {
 }
 
 export async function confirmAaTransferAction(formData: FormData) {
-  const input = operationSchema.parse({
-    activityId: stringValue(formData, "activityId"),
-    transactionId: stringValue(formData, "transactionId"),
-    locale: stringValue(formData, "locale") || "zh-CN",
-  });
+  const input = operationSchema
+    .extend({ returnTo: z.enum(["ledger", "progress"]).default("ledger") })
+    .parse({
+      activityId: stringValue(formData, "activityId"),
+      transactionId: stringValue(formData, "transactionId"),
+      locale: stringValue(formData, "locale") || "zh-CN",
+      returnTo: stringValue(formData, "returnTo") || "ledger",
+    });
   const profile = await getCurrentUserProfileForMutation(
     input.locale,
     `/lobby/${input.activityId}/aa`,
@@ -1130,7 +1355,12 @@ export async function confirmAaTransferAction(formData: FormData) {
     });
   });
 
-  redirect(refreshAaViews(input.locale, input.activityId));
+  const aaPath = refreshAaViews(input.locale, input.activityId);
+  redirect(
+    input.returnTo === "progress"
+      ? withLocale(input.locale, `/lobby/${input.activityId}/aa/progress`)
+      : aaPath,
+  );
 }
 
 export async function voidAaTransactionAction(formData: FormData) {
