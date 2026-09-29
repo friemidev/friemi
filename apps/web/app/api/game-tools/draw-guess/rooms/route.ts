@@ -6,7 +6,7 @@ import { getOptionalCurrentUserProfile } from "@/lib/auth";
 const schema = z.object({
   locale: z.enum(["zh-CN", "en", "fr"]).default("zh-CN"),
   mode: z.enum(["CLASSIC", "CHAIN"]),
-  playerCount: z.number().int().min(3).max(10),
+  playerCount: z.number().int().min(2).max(10),
 });
 
 export async function POST(request: Request) {

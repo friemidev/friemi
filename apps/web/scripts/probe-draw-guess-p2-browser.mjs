@@ -5,6 +5,8 @@ import { createClerkClient } from "@clerk/backend";
 import { chromium } from "playwright";
 
 const origin = process.env.DRAW_GUESS_BROWSER_ORIGIN ?? "https://friemi-git-codex-draw-and-guess-friemi.vercel.app";
+const playerCount = Number(process.env.P2_BROWSER_PLAYER_COUNT ?? 5);
+assert.ok(playerCount === 2 || playerCount === 5);
 const loginOrigin = process.env.DRAW_GUESS_BROWSER_LOGIN_ORIGIN ?? origin;
 const allowedOrigin = "https://friemi-git-codex-draw-and-guess-friemi.vercel.app";
 assert.ok([allowedOrigin, "http://localhost:3210"].includes(origin));
@@ -33,7 +35,7 @@ try {
   } else {
     const stamp = randomUUID().replaceAll("-", "").slice(0, 12);
     credentials = { users: [] };
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < playerCount; index += 1) {
       const email = `p2-ui-${stamp}-${index}+clerk_test@example.com`;
       const password = `${randomBytes(24).toString("base64url")}Aa9!`;
       const user = await clerk.users.createUser({ emailAddress: [email], firstName: "P2 UI", lastName: index ? String(index + 1) : "Artist", password, skipPasswordChecks: true });
@@ -49,7 +51,7 @@ try {
   await prisma.$disconnect();
   throw error;
 }
-assert.equal(credentials.users.length, 5);
+assert.equal(credentials.users.length, playerCount);
 assert.ok(credentials.users.every((user) => /^p2-ui-[a-f0-9]{12}-[0-4]\+clerk_test@example\.com$/.test(user.email)));
 mkdirSync("../../output/playwright", { recursive: true });
 
@@ -103,22 +105,21 @@ try {
     await page.getByRole("button", { name: /Speed guessing/ }).waitFor({ state: "visible", timeout: 20_000 });
     console.log(`P2 browser player ${index + 1}: signed in`);
   }
-  currentStep = "create five-player room";
+  currentStep = `create ${playerCount}-player room`;
   const host = sessions[0].page;
   await host.getByRole("button", { name: /Speed guessing/ }).click();
   const slider = host.getByRole("slider", { name: /Players/ });
   await slider.focus();
   await slider.press("Home");
-  await slider.press("ArrowRight");
-  await slider.press("ArrowRight");
-  assert.equal(await slider.inputValue(), "5");
+  for (let count = Number(await slider.inputValue()); count < playerCount; count += 1) await slider.press("ArrowRight");
+  assert.equal(await slider.inputValue(), String(playerCount));
   await host.getByRole("button", { name: "Create room" }).click();
   await host.waitForURL(/\/en\/game-tools\/draw-guess\/rooms\//, { timeout: 30_000 });
   const roomId = new URL(host.url()).pathname.split("/").at(-1);
   const roomCode = (await host.locator("main strong").first().innerText()).trim();
   assert.match(roomCode, /^[A-Z0-9]{6}$/);
-  assert.match(await host.locator("main").innerText(), /1 \/ 5 Players/);
-  console.log(`P2 browser room: ${roomId}, five seats`);
+  assert.match(await host.locator("main").innerText(), new RegExp(`1 / ${playerCount} Players`));
+  console.log(`P2 browser room: ${roomId}, ${playerCount} seats`);
   for (let index = 1; index < sessions.length; index += 1) {
     currentStep = `join player ${index + 1}`;
     const page = sessions[index].page;
@@ -130,8 +131,8 @@ try {
   console.log("P2 browser visibility:", await Promise.all(sessions.map(({ page }) => page.evaluate(() => document.hidden))));
   await host.bringToFront();
   await host.getByRole("button", { name: "Start game" }).waitFor({ state: "visible", timeout: 20_000 });
-  await until(async () => (await host.locator("main").innerText()).includes("5 / 5 Players"), 15_000);
-  console.log("P2 browser host lobby:", (await host.locator("main").innerText()).match(/\d \/ 5 Players/)?.[0]);
+  await until(async () => (await host.locator("main").innerText()).includes(`${playerCount} / ${playerCount} Players`), 15_000);
+  console.log("P2 browser host lobby:", (await host.locator("main").innerText()).match(new RegExp(`\\d / ${playerCount} Players`))?.[0]);
   await host.getByRole("button", { name: "Start game" }).click();
   const chooseHeading = host.getByRole("heading", { name: "Choose a word to draw" });
   await chooseHeading.waitFor({ state: "visible", timeout: 20_000 });
@@ -210,7 +211,7 @@ try {
   assert.ok(recoveredNumbers.every((value, index) => Math.abs(value - beforeNumbers[index]) < 1e-9));
   await viewer.screenshot({ path: "../../output/playwright/p2-mobile-recovered.png" });
   console.log("P2 browser: mobile viewer recovered identical draft after disconnect");
-  currentStep = "five turns, guesses, ranking and rematch";
+  currentStep = `${playerCount} turns, guesses, ranking and rematch`;
   async function roomSnapshot() {
     const response = await sessions[0].context.request.get(`${origin}/api/game-tools/draw-guess/rooms/${roomId}`);
     assert.equal(response.status(), 200);
@@ -270,10 +271,10 @@ try {
   const history = await sessions[0].context.newPage();
   await history.goto(`${origin}/en/game-tools/draw-guess/rooms/${roomId}/history`);
   await history.getByRole("heading", { name: "Past games and artwork" }).waitFor({ state: "visible", timeout: 15_000 });
-  for (let turn = 1; turn <= 5; turn += 1) await history.getByRole("heading", { name: new RegExp(`^Turn ${turn} ·`) }).waitFor({ state: "visible" });
-  assert.equal(await history.locator('svg[aria-label="Artwork"] path').count(), 5);
+  for (let turn = 1; turn <= playerCount; turn += 1) await history.getByRole("heading", { name: new RegExp(`^Turn ${turn} ·`) }).waitFor({ state: "visible" });
+  assert.equal(await history.locator('svg[aria-label="Artwork"] path').count(), playerCount);
   await history.close();
-  console.log("P2 browser: five artists completed one turn; ranking visible to all players");
+  console.log(`P2 browser: ${playerCount} artists completed one turn; ranking visible to all players`);
   await host.getByRole("button", { name: "Play again" }).click();
   await until(async () => (await roomSnapshot()).view.gameNumber === 2, 15_000);
   console.log("P2 browser: rematch started game 2");

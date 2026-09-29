@@ -25,7 +25,7 @@ function copyFor(locale: string) {
   };
 }
 
-export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: { chainEnabled: boolean; classicEnabled: boolean; locale: string }) {
+export function DrawGuessEntryClient({ chainEnabled, classicEnabled, classicMinPlayers, locale }: { chainEnabled: boolean; classicEnabled: boolean; classicMinPlayers: 2 | 3; locale: string }) {
   const router = useRouter();
   const copy = copyFor(locale);
   const [mode, setMode] = useState<DrawGuessMode>("CHAIN");
@@ -83,7 +83,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
           const selected = mode === value;
           const isChain = value === "CHAIN";
           const enabled = isChain ? chainEnabled : classicEnabled;
-          return <button key={value} type="button" disabled={!enabled} onClick={() => { setMode(value); setPlayerCount(isChain ? 5 : 3); }} aria-pressed={selected}
+          return <button key={value} type="button" disabled={!enabled} onClick={() => { setMode(value); setPlayerCount(isChain ? 5 : classicMinPlayers); }} aria-pressed={selected}
             className={`rounded-[1.6rem] border p-5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240] ${selected ? "border-[#156240] bg-[#EAF3E9] shadow-[0_12px_28px_rgba(21,98,64,0.12)]" : "border-[#D9DDCE] bg-white hover:border-[#8AB68E]"} ${!enabled ? "cursor-not-allowed opacity-65" : ""}`}>
             <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${selected ? "bg-[#156240] text-white" : "bg-[#F4E9D9] text-[#A85E48]"}`}>{isChain ? <Sparkles className="h-5 w-5" /> : <Brush className="h-5 w-5" />}</span>
             <strong className="mt-4 block text-lg">{isChain ? copy.chain : copy.classic}</strong>
@@ -96,7 +96,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
 
       <section className="rounded-[1.6rem] border border-[#D9DDCE] bg-white p-5 sm:p-6">
         <label htmlFor="draw-guess-count" className="flex items-center gap-2 text-sm font-bold"><UsersRound className="h-4 w-4" />{copy.players}: <span className="text-[#C46D50]">{playerCount}</span></label>
-        <input id="draw-guess-count" className="mt-4 w-full accent-[#156240]" type="range" min={mode === "CHAIN" ? 5 : 3} max={mode === "CHAIN" ? 8 : 10} value={playerCount} onChange={(event) => setPlayerCount(Number(event.target.value))} />
+        <input id="draw-guess-count" className="mt-4 w-full accent-[#156240]" type="range" min={mode === "CHAIN" ? 5 : classicMinPlayers} max={mode === "CHAIN" ? 8 : 10} value={playerCount} onChange={(event) => setPlayerCount(Number(event.target.value))} />
         <button disabled={busy || mode === "CHAIN" && !chainEnabled || mode === "CLASSIC" && !classicEnabled} onClick={createRoom} type="button" className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#156240] px-5 font-bold text-white transition hover:bg-[#0B4E33] disabled:opacity-50">{busy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}{copy.create}</button>
       </section>
 

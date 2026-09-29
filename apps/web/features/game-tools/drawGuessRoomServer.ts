@@ -14,7 +14,7 @@ import {
   type DrawGuessState,
 } from "@/features/game-tools/drawGuessEngine";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
-import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { prisma } from "@/lib/prisma";
@@ -143,7 +143,9 @@ export async function createDrawGuessRoom(input: {
   mode: DrawGuessMode;
   playerCount: number;
 }) {
-  if (input.mode === "CLASSIC" ? input.playerCount < 3 || input.playerCount > 10 : input.playerCount < 5 || input.playerCount > 8) {
+  if (input.mode === "CLASSIC"
+    ? input.playerCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || input.playerCount > 10
+    : input.playerCount < 5 || input.playerCount > 8) {
     return { error: "INVALID_PLAYER_COUNT" } as const;
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;

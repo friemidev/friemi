@@ -39,7 +39,7 @@
 
 ## 验收口径与运行方式
 
-页面验收脚本位于 `apps/web/scripts/probe-draw-guess-p2-browser.mjs`。在 `apps/web` 目录运行 `node --env-file=../../.env.local --conditions=react-server --import tsx scripts/probe-draw-guess-p2-browser.mjs`。脚本只允许隔离 Preview 数据库、Clerk Development 密钥，以及画猜分支 Preview 或本地 3210 端口；默认创建五个一次性测试身份，并在退出时删除测试房间、资料和身份。也可设置 `P2_BROWSER_CREDENTIALS_FILE` 复用已有的五个一次性身份，此时身份由提供者负责清理。
+页面验收脚本位于 `apps/web/scripts/probe-draw-guess-p2-browser.mjs`。在 `apps/web` 目录运行 `node --env-file=../../.env.local --conditions=react-server --import tsx scripts/probe-draw-guess-p2-browser.mjs`。脚本只允许隔离 Preview 数据库、Clerk Development 密钥，以及画猜分支 Preview 或本地 3210 端口；默认创建五个一次性测试身份，并在退出时删除测试房间、资料和身份。设置 `P2_BROWSER_PLAYER_COUNT=2` 可运行 Preview 双人完整对局回归；也可设置 `P2_BROWSER_CREDENTIALS_FILE` 复用对应人数的一次性身份，此时身份由提供者负责清理。
 
 原计划的 P2 验收文字为“5 人真实设备对局”。本次证据是五个独立浏览器会话，并未使用五台实体设备或实际移动网络。若继续按原验收文字执行，最后需要五台实体设备复核实时画笔、断线恢复和页面显示；在此之前 P2 软件联调通过，但正式验收未闭环。延迟分位、10 人房与容量预算属于 P3。
 

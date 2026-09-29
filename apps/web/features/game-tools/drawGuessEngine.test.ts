@@ -62,6 +62,29 @@ test("correct classic guesses score earlier players higher and count the artist 
   assert.equal(advanceDrawGuessGame(second.state, 3, 40_000, "en").turnIndex, 1);
 });
 
+test("two-player classic alternates artist and guesser, then finishes with correct scores", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 2), 1_000, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const firstAnswer = started.state.options[0];
+  const firstChoice = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: firstAnswer }, 0, 2, 2_000, "en");
+  const firstViewer = getDrawGuessViewerState(firstChoice.state, 1, 2);
+  assert.ok("answer" in firstViewer);
+  assert.equal(firstViewer.answer, null);
+  const firstGuess = applyDrawGuessAction(firstChoice.state, { type: "GUESS", value: firstAnswer }, 1, 2, 3_000, "en");
+  assert.ok(!("error" in firstGuess) && firstGuess.correct);
+  assert.equal(firstGuess.state.phase, "TURN_REVEAL");
+
+  const secondTurn = advanceDrawGuessGame(firstGuess.state, 2, 8_000, "en");
+  assert.equal(secondTurn.turnIndex, 1);
+  const secondAnswer = secondTurn.options[0];
+  const secondChoice = applyDrawGuessAction(secondTurn, { type: "CHOOSE_WORD", value: secondAnswer }, 1, 2, 9_000, "en");
+  const secondGuess = applyDrawGuessAction(secondChoice.state, { type: "GUESS", value: secondAnswer }, 0, 2, 10_000, "en");
+  assert.ok(!("error" in secondGuess) && secondGuess.correct);
+  const finished = advanceDrawGuessGame(secondGuess.state, 2, 15_000, "en");
+  assert.equal(finished.phase, "FINISHED");
+  assert.deepEqual(finished.scores, [298, 298]);
+});
+
 test("a player cannot flood guesses in one second", () => {
   const state = createDrawGuessState("CLASSIC", 3);
   state.phase = "DRAW_GUESS";
