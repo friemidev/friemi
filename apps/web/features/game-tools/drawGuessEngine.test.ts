@@ -61,6 +61,7 @@ test("classic drawing stops at the host deadline while guessing remains open", (
   assert.equal(guess.state.phase, "DRAW_GUESS");
   const reveal = advanceDrawGuessGame(guess.state, 3, 51_000, "en");
   assert.equal(reveal.phase, "TURN_REVEAL");
+  assert.equal(reveal.deadlineAt, new Date(59_000).toISOString());
 });
 
 test("classic rounds draw their choices from the room's selected word bank", () => {
@@ -149,9 +150,17 @@ test("correct classic guesses score earlier players higher and count the artist 
   assert.ok(!("error" in first) && first.correct);
   assert.ok(!("error" in second) && second.correct);
   assert.ok(first.points! > second.points!);
+  const correctViewer = getDrawGuessViewerState(first.state, 1, 3);
+  const waitingViewer = getDrawGuessViewerState(first.state, 2, 3);
+  assert.ok("answer" in correctViewer && "answer" in waitingViewer);
+  assert.equal(correctViewer.answer, answer);
+  assert.equal(waitingViewer.answer, null);
+  assert.equal(correctViewer.scores[1], first.points);
   assert.equal(second.state.scores[0], 100);
   assert.equal(second.state.phase, "TURN_REVEAL");
-  assert.equal(advanceDrawGuessGame(second.state, 3, 40_000, "en").turnIndex, 1);
+  assert.equal(second.state.deadlineAt, new Date(35_000).toISOString());
+  assert.equal(advanceDrawGuessGame(second.state, 3, 34_999, "en").turnIndex, 0);
+  assert.equal(advanceDrawGuessGame(second.state, 3, 35_000, "en").turnIndex, 1);
 });
 
 test("two-player classic alternates artist and guesser, then finishes with correct scores", () => {
@@ -165,15 +174,15 @@ test("two-player classic alternates artist and guesser, then finishes with corre
   const firstGuess = applyDrawGuessAction(firstChoice.state, { type: "GUESS", value: firstAnswer }, 1, 2, 3_000, "en");
   assert.ok(!("error" in firstGuess) && firstGuess.correct);
   assert.equal(firstGuess.state.phase, "TURN_REVEAL");
-  assert.equal(firstGuess.state.deadlineAt, new Date(11_000).toISOString());
+  assert.equal(firstGuess.state.deadlineAt, new Date(8_000).toISOString());
 
-  const secondTurn = advanceDrawGuessGame(firstGuess.state, 2, 11_000, "en");
+  const secondTurn = advanceDrawGuessGame(firstGuess.state, 2, 8_000, "en");
   assert.equal(secondTurn.turnIndex, 1);
   const secondAnswer = secondTurn.options[0];
-  const secondChoice = applyDrawGuessAction(secondTurn, { type: "CHOOSE_WORD", value: secondAnswer }, 1, 2, 12_000, "en");
-  const secondGuess = applyDrawGuessAction(secondChoice.state, { type: "GUESS", value: secondAnswer }, 0, 2, 13_000, "en");
+  const secondChoice = applyDrawGuessAction(secondTurn, { type: "CHOOSE_WORD", value: secondAnswer }, 1, 2, 9_000, "en");
+  const secondGuess = applyDrawGuessAction(secondChoice.state, { type: "GUESS", value: secondAnswer }, 0, 2, 10_000, "en");
   assert.ok(!("error" in secondGuess) && secondGuess.correct);
-  const finished = advanceDrawGuessGame(secondGuess.state, 2, 21_000, "en");
+  const finished = advanceDrawGuessGame(secondGuess.state, 2, 15_000, "en");
   assert.equal(finished.phase, "FINISHED");
   assert.deepEqual(finished.scores, [298, 298]);
 });

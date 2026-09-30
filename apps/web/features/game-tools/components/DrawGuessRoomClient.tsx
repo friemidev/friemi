@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, Brush, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, Trash2, UsersRound, X } from "lucide-react";
+import { ArrowLeft, Brush, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, Trash2, Trophy, UsersRound, X } from "lucide-react";
 import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
 import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
@@ -55,9 +55,9 @@ export type DrawGuessRoomView = {
 };
 
 const TRANSLATIONS = {
-  "zh-CN": { title: "你画我猜", back: "桌游工具", room: "房间", copy: "复制邀请链接", copied: "已复制", players: "玩家", waiting: "等待玩家入座", start: "开始游戏", ready: "人齐了，可以开局", host: "房主", you: "你", seat: "号位", minute: "秒", modeClassic: "抢猜模式", modeChain: "画画接龙", select: "选一个词来画", choose: "选择", draw: "轮到你画", drawTimeUp: "作画结束，继续等大家猜", guessing: "猜猜这是什么", submitGuess: "提交猜词", answer: "答案", guessed: "已猜中", wrong: "还没猜对，继续试试", tooFast: "猜得太快了，请稍等一秒", wait: "等待其他玩家提交", word: "给你的接龙写一个起始词", nextDraw: "根据上一个词作画", nextGuess: "根据这幅画猜词", previousWord: "上一棒的词", submit: "提交这一棒", drawing: "作画中", stage: "第", vote: "首尾吻合吗？", yes: "吻合", no: "不吻合", result: "投票结果", pick: "选择你这条链最棒的画", picked: "已选", finish: "本局排行榜", rematch: "再来一局", history: "查看往期作品", chain: "传递故事", system: "系统补位", match: "吻合", mismatch: "不吻合", error: "操作没有完成，请刷新重试。", saved: "已保存", invalidWord: "请写 2–12 个字。", noArtwork: "这条链没有可评选的作品", invitation: "分享房间号或链接给朋友", loading: "加载房间中", next: "下一轮即将开始", submitted: "已提交", score: "分", draft: "画稿会自动保存", classicHint: "画者选词后，其他人边看边猜。", chainHint: "每人从一个词开始，画与猜轮流传递。" },
-  en: { title: "Draw & Guess", back: "Table tools", room: "Room", copy: "Copy invite link", copied: "Copied", players: "Players", waiting: "Waiting for players", start: "Start game", ready: "Everyone is here", host: "Host", you: "You", seat: "seat", minute: "s", modeClassic: "Speed guessing", modeChain: "Picture chain", select: "Choose a word to draw", choose: "Choose", draw: "Your turn to draw", drawTimeUp: "Drawing is done; guesses are still open", guessing: "What is this?", submitGuess: "Send guess", answer: "Answer", guessed: "Solved", wrong: "Not quite. Try again", tooFast: "Please wait a second before guessing again", wait: "Waiting for the others", word: "Write a starting word", nextDraw: "Draw the previous word", nextGuess: "Guess from this picture", previousWord: "Previous word", submit: "Pass it on", drawing: "Drawing", stage: "Stage", vote: "Does the ending match?", yes: "Matches", no: "Different", result: "Vote results", pick: "Pick your favorite drawing", picked: "Selected", finish: "Leaderboard", rematch: "Play again", history: "Past games", chain: "The story", system: "Auto-filled", match: "Matched", mismatch: "Changed", error: "That action did not complete. Please try again.", saved: "Saved", invalidWord: "Enter 2–12 characters.", noArtwork: "No eligible artwork", invitation: "Share the room code or link", loading: "Loading room", next: "Next turn soon", submitted: "Submitted", score: "pts", draft: "Draft saves automatically", classicHint: "Choose a word, draw, and let everyone guess.", chainHint: "Everyone starts a word and passes drawings and guesses." },
-  fr: { title: "Dessine et devine", back: "Jeux de table", room: "Salle", copy: "Copier le lien", copied: "Copié", players: "Joueurs", waiting: "En attente des joueurs", start: "Commencer", ready: "Tout le monde est là", host: "Hôte", you: "Vous", seat: "place", minute: "s", modeClassic: "Deviner vite", modeChain: "Chaîne de dessins", select: "Choisissez un mot", choose: "Choisir", draw: "À vous de dessiner", drawTimeUp: "Dessin terminé ; les réponses restent ouvertes", guessing: "Qu'est-ce que c'est ?", submitGuess: "Envoyer", answer: "Réponse", guessed: "Trouvé", wrong: "Pas encore. Réessayez", tooFast: "Attendez une seconde avant de réessayer", wait: "En attente des autres", word: "Écrivez un mot de départ", nextDraw: "Dessinez le mot reçu", nextGuess: "Devinez ce dessin", previousWord: "Mot précédent", submit: "Transmettre", drawing: "Dessin", stage: "Étape", vote: "La fin correspond-elle ?", yes: "Oui", no: "Non", result: "Votes", pick: "Choisissez le meilleur dessin", picked: "Choisi", finish: "Classement", rematch: "Rejouer", history: "Parties précédentes", chain: "L'histoire", system: "Automatique", match: "Correspond", mismatch: "Différent", error: "Action non terminée. Réessayez.", saved: "Enregistré", invalidWord: "Saisissez 2 à 12 caractères.", noArtwork: "Aucun dessin éligible", invitation: "Partagez le code ou le lien", loading: "Chargement", next: "Prochain tour", submitted: "Envoyé", score: "pts", draft: "Brouillon enregistré automatiquement", classicHint: "Choisissez un mot, dessinez et faites deviner les autres.", chainHint: "Chacun part d'un mot et transmet dessins et réponses." },
+  "zh-CN": { title: "你画我猜", back: "桌游工具", room: "房间", copy: "复制邀请链接", copied: "已复制", players: "玩家", waiting: "等待玩家入座", start: "开始游戏", ready: "人齐了，可以开局", host: "房主", you: "你", seat: "号位", minute: "秒", modeClassic: "抢答模式", modeChain: "画画接龙", select: "选一个词来画", choose: "选择", draw: "轮到你画", drawTimeUp: "作画结束，继续等大家猜", guessing: "猜猜这是什么", submitGuess: "提交猜词", answer: "答案", guessed: "答对了！", wrong: "还没猜对，继续试试", tooFast: "猜得太快了，请稍等一秒", wait: "等待其他玩家提交", word: "给你的接龙写一个起始词", nextDraw: "根据上一个词作画", nextGuess: "根据这幅画猜词", previousWord: "上一棒的词", submit: "提交这一棒", drawing: "作画中", stage: "第", vote: "首尾吻合吗？", yes: "吻合", no: "不吻合", result: "投票结果", pick: "选择你这条链最棒的画", picked: "已选", finish: "本局排行榜", rematch: "再来一局", history: "查看往期作品", chain: "传递故事", system: "系统补位", match: "吻合", mismatch: "不吻合", error: "操作没有完成，请刷新重试。", saved: "已保存", invalidWord: "请写 2–12 个字。", noArtwork: "这条链没有可评选的作品", invitation: "分享房间号或链接给朋友", loading: "加载房间中", next: "下一轮即将开始", submitted: "已提交", score: "分", liveScore: "实时积分", draft: "画稿会自动保存", classicHint: "画者选词后，其他人边看边猜。", chainHint: "每人从一个词开始，画与猜轮流传递。" },
+  en: { title: "Draw & Guess", back: "Table tools", room: "Room", copy: "Copy invite link", copied: "Copied", players: "Players", waiting: "Waiting for players", start: "Start game", ready: "Everyone is here", host: "Host", you: "You", seat: "seat", minute: "s", modeClassic: "Speed round", modeChain: "Picture chain", select: "Choose a word to draw", choose: "Choose", draw: "Your turn to draw", drawTimeUp: "Drawing is done; guesses are still open", guessing: "What is this?", submitGuess: "Send guess", answer: "Answer", guessed: "Correct!", wrong: "Not quite. Try again", tooFast: "Please wait a second before guessing again", wait: "Waiting for the others", word: "Write a starting word", nextDraw: "Draw the previous word", nextGuess: "Guess from this picture", previousWord: "Previous word", submit: "Pass it on", drawing: "Drawing", stage: "Stage", vote: "Does the ending match?", yes: "Matches", no: "Different", result: "Vote results", pick: "Pick your favorite drawing", picked: "Selected", finish: "Leaderboard", rematch: "Play again", history: "Past games", chain: "The story", system: "Auto-filled", match: "Matched", mismatch: "Changed", error: "That action did not complete. Please try again.", saved: "Saved", invalidWord: "Enter 2–12 characters.", noArtwork: "No eligible artwork", invitation: "Share the room code or link", loading: "Loading room", next: "Next turn soon", submitted: "Submitted", score: "pts", liveScore: "Live scores", draft: "Draft saves automatically", classicHint: "Choose a word, draw, and let everyone guess.", chainHint: "Everyone starts a word and passes drawings and guesses." },
+  fr: { title: "Dessine et devine", back: "Jeux de table", room: "Salle", copy: "Copier le lien", copied: "Copié", players: "Joueurs", waiting: "En attente des joueurs", start: "Commencer", ready: "Tout le monde est là", host: "Hôte", you: "Vous", seat: "place", minute: "s", modeClassic: "Devine vite", modeChain: "Chaîne de dessins", select: "Choisissez un mot", choose: "Choisir", draw: "À vous de dessiner", drawTimeUp: "Dessin terminé ; les réponses restent ouvertes", guessing: "Qu'est-ce que c'est ?", submitGuess: "Envoyer", answer: "Réponse", guessed: "Bravo !", wrong: "Pas encore. Réessayez", tooFast: "Attendez une seconde avant de réessayer", wait: "En attente des autres", word: "Écrivez un mot de départ", nextDraw: "Dessinez le mot reçu", nextGuess: "Devinez ce dessin", previousWord: "Mot précédent", submit: "Transmettre", drawing: "Dessin", stage: "Étape", vote: "La fin correspond-elle ?", yes: "Oui", no: "Non", result: "Votes", pick: "Choisissez le meilleur dessin", picked: "Choisi", finish: "Classement", rematch: "Rejouer", history: "Parties précédentes", chain: "L'histoire", system: "Automatique", match: "Correspond", mismatch: "Différent", error: "Action non terminée. Réessayez.", saved: "Enregistré", invalidWord: "Saisissez 2 à 12 caractères.", noArtwork: "Aucun dessin éligible", invitation: "Partagez le code ou le lien", loading: "Chargement", next: "Prochain tour", submitted: "Envoyé", score: "pts", liveScore: "Scores en direct", draft: "Brouillon enregistré automatiquement", classicHint: "Choisissez un mot, dessinez et faites deviner les autres.", chainHint: "Chacun part d'un mot et transmet dessins et réponses." },
 };
 
 const STATUS_COPY = {
@@ -125,6 +125,34 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const classicDraftDirty = useRef(false);
   const classicDraftSaving = useRef<Promise<void> | null>(null);
   const [strokeSaving, setStrokeSaving] = useState(false);
+  const [scoreGains, setScoreGains] = useState<Record<number, { points: number; id: number }>>({});
+  const previousScores = useRef({ gameNumber: initialRoom.view.gameNumber, scores: initialRoom.view.scores });
+  const scoreGainId = useRef(0);
+  const scoreGainTimers = useRef<number[]>([]);
+
+  useEffect(() => () => { scoreGainTimers.current.forEach((timer) => window.clearTimeout(timer)); }, []);
+
+  useEffect(() => {
+    const previous = previousScores.current;
+    previousScores.current = { gameNumber: room.view.gameNumber, scores: room.view.scores };
+    if (previous.gameNumber !== room.view.gameNumber) { setScoreGains({}); return; }
+    const gains: Record<number, { points: number; id: number }> = {};
+    room.view.scores.forEach((score, seat) => {
+      const points = score - (previous.scores[seat] ?? 0);
+      if (points > 0) gains[seat] = { points, id: ++scoreGainId.current };
+    });
+    if (!Object.keys(gains).length) return;
+    setScoreGains((current) => ({ ...current, ...gains }));
+    Object.entries(gains).forEach(([seatKey, gain]) => {
+      const seat = Number(seatKey);
+      scoreGainTimers.current.push(window.setTimeout(() => setScoreGains((current) => {
+        if (current[seat]?.id !== gain.id) return current;
+        const next = { ...current };
+        delete next[seat];
+        return next;
+      }), 1_650));
+    });
+  }, [room.view.gameNumber, room.view.scores]);
 
   const drainInk = useCallback(() => {
     if (inkDrain.current) return inkDrain.current;
@@ -482,7 +510,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const classicArtistWaiting = isClassicRound && room.view.phase === "DRAW_GUESS" && amArtist && !classicDrawingOpen;
     const isClassicGuessing = isClassicRound && room.view.phase === "DRAW_GUESS" && !amArtist;
     const stageTitle = room.view.phase === "WORD_SELECT" ? (amArtist ? t.select : `${currentArtist?.name ?? ""} · ${t.select}`)
-      : isClassicRound ? (amArtist ? classicArtistWaiting ? t.drawTimeUp : t.draw : `${currentArtist?.name ?? ""} · ${t.guessing}`)
+      : room.view.phase === "TURN_REVEAL" ? t.answer
+      : isClassicRound ? (amArtist ? classicArtistWaiting ? t.drawTimeUp : t.draw : t.guessing)
       : room.view.phase === "CHAIN_WORD" ? room.wordBank ? bankCopy.choose : t.word
       : chainTask?.kind === "DRAWING" ? t.nextDraw : t.nextGuess;
     const stageProgress = isClassic ? `${room.view.turnIndex + 1} / ${room.playerCount}`
@@ -490,7 +519,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const stageDeadlineAt = isClassicDrawing && room.view.drawDeadlineAt ? room.view.drawDeadlineAt : room.view.deadlineAt;
     const stageTimer = formatTimer(stageDeadlineAt ?? null, now);
     const secondsLeft = stageDeadlineAt ? Math.max(0, Math.ceil((Date.parse(stageDeadlineAt) - now) / 1_000)) : null;
-    const showControls = isClassicGuessing || classicArtistWaiting || isClassicDrawing && (draftFailed || strokeSaving || !ink.connected) || isChainDrawing || isChainGuessing || room.view.phase === "TURN_REVEAL" || room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length || syncStatus === "RECONNECTING" || refreshFailed || deadlinePassed || Boolean(error);
+    const showAnswerCelebration = isClassicRound && Boolean(room.view.answer) && (guessed || room.view.phase === "TURN_REVEAL");
+    const earnedPoints = room.view.guesses?.[String(room.viewerSeat)]?.points ?? scoreGains[room.viewerSeat]?.points;
+    const showControls = isClassicGuessing && !guessed || classicArtistWaiting || isClassicDrawing && (draftFailed || strokeSaving || !ink.connected) || isChainDrawing || isChainGuessing || room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length || syncStatus === "RECONNECTING" || refreshFailed || deadlinePassed || Boolean(error);
     const clearDrawing = () => {
       setConfirmClear(false);
       if (isClassicDrawing) replaceClassicDrawing([]);
@@ -507,9 +538,21 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full bg-white px-2.5 text-xs font-bold text-[#156240] shadow-sm transition-colors hover:bg-[#F1F8EF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240]"><UsersRound className="h-4 w-4" /><span>{humanCount}/{humanCapacity}</span></button>
       </header>
 
+      {isClassic ? <div role="region" aria-label={t.liveScore} className="relative z-10 mx-auto flex w-full max-w-5xl shrink-0 items-center gap-2 px-3 pb-2 sm:px-5">
+        <Trophy aria-hidden="true" className="h-4 w-4 shrink-0 text-[#D1844B]" />
+        <ol tabIndex={0} className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 outline-none focus-visible:ring-2 focus-visible:ring-[#176344] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {getDrawGuessRankings(room.view.scores).map(({ seat, score, rank }) => <li key={seat} className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm sm:text-xs ${seat === room.viewerSeat ? "bg-[#FFF0C9] text-[#795027]" : "bg-white text-[#426458]"}`}>
+            <span className="text-[10px] opacity-70">#{rank}</span>
+            <span className="max-w-16 truncate sm:max-w-24">{room.seats.find((item) => item.number === seat + 1)?.name ?? `#${seat + 1}`}</span>
+            <strong key={`${room.view.gameNumber}-${seat}-${score}`} className="draw-guess-score-pop text-xs tabular-nums sm:text-sm">{score}</strong>
+            {scoreGains[seat] ? <span key={scoreGains[seat].id} aria-hidden="true" className="draw-guess-score-gain pointer-events-none absolute -right-1 -top-3 rounded-full bg-[#FFCC78] px-1.5 py-0.5 text-[10px] font-black text-[#7C4C23] shadow-sm">+{scoreGains[seat].points}</span> : null}
+          </li>)}
+        </ol>
+      </div> : null}
+
       <main className="relative mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:gap-3 sm:px-5 sm:pb-4">
-        <section key={phaseKey} aria-label={stageTitle} className="draw-guess-stage-card flex min-h-0 flex-1 flex-col rounded-[1.6rem] bg-[#FFFDF8] p-2 shadow-[0_16px_45px_rgba(39,80,55,0.1)] sm:rounded-[2rem] sm:p-4">
-          {(isClassicRound && room.view.answer || isChainDrawing && chainTask?.previous?.kind === "WORD") ? <div className="mb-2 flex shrink-0 items-center gap-2 rounded-2xl bg-[#FFEBD8] px-3 py-2 sm:px-4"><Sparkles className="h-4 w-4 shrink-0 text-[#B66348]" /><span className="text-xs font-semibold text-[#80533D]">{isClassicRound ? t.answer : t.previousWord}</span><strong className="min-w-0 truncate text-base text-[#173D32] sm:text-lg">{isClassicRound ? room.view.answer : chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : ""}</strong></div> : null}
+        <section key={phaseKey} aria-label={stageTitle} className="draw-guess-stage-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-[#FFFDF8] p-2 shadow-[0_16px_45px_rgba(39,80,55,0.1)] sm:rounded-[2rem] sm:p-4">
+          {((isClassicRound && room.view.answer && !showAnswerCelebration) || isChainDrawing && chainTask?.previous?.kind === "WORD") ? <div className="mb-2 flex shrink-0 items-center gap-2 rounded-2xl bg-[#FFEBD8] px-3 py-2 sm:px-4"><Sparkles className="h-4 w-4 shrink-0 text-[#B66348]" /><span className="text-xs font-semibold text-[#80533D]">{isClassicRound ? t.answer : t.previousWord}</span><strong className="min-w-0 truncate text-base text-[#173D32] sm:text-lg">{isClassicRound ? room.view.answer : chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : ""}</strong></div> : null}
 
           {isClassicDrawing ? <DrawGuessCanvas compact strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => replaceClassicDrawing(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
           {isClassicRound && !isClassicDrawing ? <DrawGuessCanvas compact disabled strokes={amArtist ? strokes : room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /> : null}
@@ -521,16 +564,28 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
           {isChainStep && chainTask?.submitted ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><span className="grid h-16 w-16 place-items-center rounded-full bg-[#EAF3E9] text-[#156240]"><Check className="h-8 w-8" /></span><p className="text-lg font-bold">{t.submitted}</p><p className="text-sm text-[#62756A]">{t.wait}</p></div> : null}
           {isChainStep && !chainTask ? <div role="status" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center text-[#607268]"><LoaderCircle className="h-7 w-7 animate-spin" /><p className="text-sm font-semibold">{t.wait}</p></div> : null}
           {isChainGuessing && chainTask?.previous?.system && room.practiceBotSeat !== undefined ? <p className="shrink-0 px-2 pt-2 text-xs font-semibold text-[#9E634B]">{practiceCopy.botClue}</p> : null}
+          {showAnswerCelebration ? <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[#FFFDF8]/90 px-4 text-center backdrop-blur-[2px]">
+            <span aria-hidden="true" className="absolute left-[12%] top-[27%] text-xl text-[#F3AA6A] draw-guess-answer-spark">✦</span>
+            <span aria-hidden="true" className="absolute right-[14%] top-[20%] text-2xl text-[#78BB91] draw-guess-answer-spark [animation-delay:130ms]">✳</span>
+            <span aria-hidden="true" className="absolute bottom-[25%] left-[18%] text-lg text-[#8DB8E1] draw-guess-answer-spark [animation-delay:230ms]">●</span>
+            <span aria-hidden="true" className="absolute bottom-[20%] right-[15%] text-xl text-[#EBA98B] draw-guess-answer-spark [animation-delay:330ms]">✦</span>
+            <div className="relative flex max-w-full flex-col items-center gap-3">
+              <span aria-hidden="true" className={`draw-guess-answer-icon grid h-16 w-16 place-items-center rounded-[1.5rem] shadow-[0_6px_0_#B8DAB8] ${guessed ? "bg-[#D9F2DB] text-[#27794E]" : "bg-[#FFE5C9] text-[#B3693E]"}`}>{guessed ? <Check className="h-9 w-9 stroke-[3]" /> : <Sparkles className="h-8 w-8" />}</span>
+              <p className="draw-guess-answer-label text-xl font-black text-[#27794E] sm:text-2xl">{guessed ? t.guessed : t.answer}</p>
+              <strong className="draw-guess-answer-word max-w-full break-words rounded-[1.4rem] bg-white px-5 py-3 text-4xl font-black leading-tight text-[#173D32] shadow-[0_5px_0_#EAD9BB] sm:text-6xl">{room.view.answer}</strong>
+              {earnedPoints ? <span className="draw-guess-points-pop rounded-full bg-[#FFCE7C] px-4 py-1.5 text-lg font-black text-[#77451E] shadow-[0_4px_0_#E4A963]">+{earnedPoints} {t.score}</span> : null}
+              {room.view.phase === "TURN_REVEAL" ? <p className="text-sm font-bold text-[#7B8670]">{t.next}</p> : null}
+            </div>
+          </div> : null}
         </section>
 
         {showControls ? <div key={`${phaseKey}-controls`} className="draw-guess-stage-card shrink-0 rounded-[1.35rem] bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(39,80,55,0.08)] sm:p-3">
-          {isClassicGuessing ? guessed ? <p className="flex items-center gap-2 text-sm font-bold text-[#156240]"><Check className="h-5 w-5" />{t.guessed} · +{room.view.guesses?.[String(room.viewerSeat)]?.points}</p> : inputForm(t.guessing, t.submitGuess) : null}
+          {isClassicGuessing && !guessed ? inputForm(t.guessing, t.submitGuess) : null}
           {isClassicDrawing && (draftFailed || strokeSaving || !ink.connected) ? <p role="status" className={`flex items-center gap-2 text-xs font-semibold ${draftFailed ? "text-[#9E4B3C]" : "text-[#607268]"}`}><span className={`h-2.5 w-2.5 rounded-full ${ink.connected && !draftFailed ? "bg-[#5EAD7F]" : "bg-[#E6A17B]"}`} />{draftFailed ? statusCopy.draftFailed : strokeSaving ? t.drawing : statusCopy.inkSyncing}</p> : null}
           {classicArtistWaiting ? <p role="status" className="flex items-center gap-2 text-sm font-semibold text-[#607268]"><Clock3 className="h-4 w-4 text-[#C4734F]" />{t.drawTimeUp}</p> : null}
           {isChainDrawing ? <div className="flex items-center justify-between gap-3"><p role="status" className={`text-xs font-semibold ${draftFailed ? "text-[#9E4B3C]" : "text-[#738477]"}`}>{draftFailed ? statusCopy.draftFailed : t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t.submit}</ActionButton></div> : null}
           {isChainGuessing ? inputForm(t.nextGuess, t.submit) : null}
           {room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length ? inputForm(t.word, t.submit) : null}
-          {room.view.phase === "TURN_REVEAL" ? <p className="flex items-center gap-2 text-sm font-semibold text-[#607268]"><Sparkles className="h-4 w-4 text-[#E09370]" />{t.next}</p> : null}
           {isClassicGuessing && guessFeedback ? <p role="status" className="mt-2 text-xs font-semibold text-[#B05D49]">{guessFeedback}</p> : null}
           {syncStatus === "RECONNECTING" || refreshFailed ? <p role="status" className="mt-2 text-xs font-semibold text-[#9E634B]">{statusCopy.syncing}</p> : null}
           {deadlinePassed ? <p role="status" className="mt-2 text-xs font-semibold text-[#9E634B]">{statusCopy.expired}</p> : null}
@@ -538,7 +593,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         </div> : null}
       </main>
 
-      {phaseToast ? <div key={phaseKey} role="status" className="draw-guess-phase-toast pointer-events-none absolute left-1/2 top-[20%] z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#FFE3A8] px-5 py-3 text-sm font-black text-[#654728] shadow-[0_6px_0_#D9AD70,0_16px_40px_rgba(87,61,34,0.2)]"><Sparkles className="h-4 w-4 text-[#BA754A]" />{stageTitle}</div> : null}
+      {phaseToast && room.view.phase !== "TURN_REVEAL" ? <div key={phaseKey} role="status" className="draw-guess-phase-toast pointer-events-none absolute left-1/2 top-[20%] z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#FFE3A8] px-5 py-3 text-sm font-black text-[#654728] shadow-[0_6px_0_#D9AD70,0_16px_40px_rgba(87,61,34,0.2)]"><Sparkles className="h-4 w-4 text-[#BA754A]" />{stageTitle}</div> : null}
 
       {showPlayers ? <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#173D32]/45 p-3 sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPlayers(false); }}><div role="dialog" aria-modal="true" aria-label={t.players} className="draw-guess-dialog w-full max-w-md rounded-[1.8rem] bg-[#FFFDF8] p-5 shadow-[0_28px_70px_rgba(23,61,50,0.28)]"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#A75B48]">{t.room} · {room.code}</p><h2 className="text-xl font-bold">{t.players} <span className="text-sm text-[#738477]">{humanCount}/{humanCapacity}</span></h2></div><button aria-label={locale === "zh-CN" ? "关闭" : "Close"} autoFocus type="button" onClick={() => setShowPlayers(false)} className="grid h-9 w-9 place-items-center rounded-full bg-[#F0F2E9]"><X className="h-4 w-4" /></button></div><ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#EAF3E9]" : "bg-[#F5F4EC]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#156240]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#C98759]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums">{room.view.scores[index]}</span> : null}</li>; })}</ol><button type="button" onClick={() => void copyInvite()} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#156240] px-4 text-sm font-bold text-white"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div></div> : null}
       {confirmClear ? <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#173D32]/45 p-4"><div role="dialog" aria-modal="true" aria-label={locale === "zh-CN" ? "清空画布" : "Clear drawing"} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFDF8] p-6 text-center shadow-[0_28px_70px_rgba(23,61,50,0.28)]"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FBE4D8] text-[#B45C47]"><Trash2 className="h-6 w-6" /></span><h2 className="mt-4 text-xl font-bold">{locale === "zh-CN" ? "要清空这张画吗？" : locale === "fr" ? "Effacer ce dessin ?" : "Clear this drawing?"}</h2><p className="mt-2 text-sm text-[#607268]">{locale === "zh-CN" ? "这一张画的所有笔画都会被清除。" : locale === "fr" ? "Tous les traits de ce dessin seront effacés." : "Every stroke on this drawing will be removed."}</p><div className="mt-5 flex gap-2"><button autoFocus type="button" onClick={() => setConfirmClear(false)} className="min-h-11 flex-1 rounded-xl bg-[#F0F2E9] px-3 text-sm font-bold">{locale === "zh-CN" ? "继续画" : locale === "fr" ? "Continuer" : "Keep drawing"}</button><button type="button" onClick={clearDrawing} className="min-h-11 flex-1 rounded-xl bg-[#B45C47] px-3 text-sm font-bold text-white">{locale === "zh-CN" ? "清空画布" : locale === "fr" ? "Effacer" : "Clear"}</button></div></div></div> : null}

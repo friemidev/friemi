@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const baseUrl = getRequestBaseUrl(await headers());
   return buildPageShareMetadata({
     baseUrl,
-    description: locale === "zh-CN" ? "和朋友一起玩普通你画我猜或画画接龙。" : "Draw, guess, and pass the picture along with friends.",
+    description: locale === "zh-CN" ? "和朋友一起玩抢答模式或画画接龙。" : "Draw, guess, and pass the picture along with friends.",
     path: withLocale(locale, "/game-tools/draw-guess"),
     title: `${locale === "zh-CN" ? "你画我猜" : "Draw & Guess"} · ${brand.name}`,
   });
