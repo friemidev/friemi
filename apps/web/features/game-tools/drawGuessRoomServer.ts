@@ -37,7 +37,7 @@ async function readRoom(roomId: string) {
     where: { id: roomId },
     include: {
       members: { where: { leftAt: null } },
-      seats: { where: { leftAt: null }, orderBy: { seatNumber: "asc" } },
+      seats: { where: { leftAt: null }, orderBy: { seatNumber: "asc" }, include: { profile: { select: { avatarUrl: true } } } },
     },
   });
 }
@@ -144,15 +144,17 @@ export async function createDrawGuessRoom(input: {
   hostName: string;
   locale: string;
   mode: DrawGuessMode;
-  playerCount: number;
+  playerCount?: number;
   timing?: DrawGuessTiming;
   wordBankId?: string;
 }) {
   if (input.timing !== undefined && !isDrawGuessTiming(input.timing)) return { error: "INVALID_TIMING" } as const;
-  const practiceRelay = input.mode === "CHAIN" && input.playerCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
+  const autoSize = input.playerCount === undefined;
+  const requestedCount = input.playerCount ?? (input.mode === "CHAIN" ? 8 : 10);
+  const practiceRelay = input.mode === "CHAIN" && requestedCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
   if (input.mode === "CLASSIC"
-    ? input.playerCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || input.playerCount > 10
-    : !practiceRelay && (input.playerCount < 5 || input.playerCount > 8)) {
+    ? requestedCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || requestedCount > 10
+    : !practiceRelay && (requestedCount < 5 || requestedCount > 8)) {
     return { error: "INVALID_PLAYER_COUNT" } as const;
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;
@@ -161,9 +163,10 @@ export async function createDrawGuessRoom(input: {
     ? await getDrawGuessWordBank(input.wordBankId, input.locale)
     : (await listDrawGuessWordBanks(input.locale))[0] ?? null;
   if (!wordBank) return { error: "INVALID_WORD_BANK" } as const;
-  const seatCount = practiceRelay ? 3 : input.playerCount;
+  const seatCount = practiceRelay ? 3 : requestedCount;
   const timing = input.timing ?? { drawSeconds: 60, guessSeconds: 20 };
   const state = createDrawGuessState(input.mode, seatCount, shuffledDrawGuessWordBank(wordBank), { drawSeconds: timing.drawSeconds, guessSeconds: timing.guessSeconds });
+  if (autoSize) state.autoSize = true;
   if (practiceRelay) state.practiceBotSeat = 2;
   const code = await createUniqueGameToolRoomCode();
   const room = await prisma.$transaction(async (tx) => {
@@ -220,6 +223,11 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
     if (!seatNumber) return { error: "ROOM_FULL" } as const;
     try {
       await prisma.$transaction(async (tx) => {
+        const reserved = await tx.gameToolRoom.updateMany({
+          where: { id: room.id, revision: room.revision, status: "LOBBY" },
+          data: { revision: { increment: 1 } },
+        });
+        if (!reserved.count) throw new Error("JOIN_RACE");
         const seat = await tx.gameToolSeat.create({
           data: {
             displayName: input.displayName.slice(0, 40),
@@ -237,11 +245,11 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
             seatedSeatId: seat.id,
           },
         });
-        await tx.gameToolRoom.update({ where: { id: room.id }, data: { revision: { increment: 1 } } });
       });
       await broadcastDrawGuessRoomChange(room.id);
       return { roomId: room.id } as const;
     } catch (error) {
+      if (error instanceof Error && error.message === "JOIN_RACE") continue;
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
       throw error;
     }
@@ -312,11 +320,19 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         code: room.code,
         id: room.id,
         isHost: room.hostId === profileId,
+        autoSize: state.autoSize === true,
+        requiredPlayers: state.mode === "CLASSIC" ? isDrawGuessPreviewDuoEnabled() ? 2 : 3
+          : state.practiceBotSeat !== undefined || isDrawGuessPreviewRelayDuoEnabled() && room.seats.length <= 2 ? 2 : 5,
+        canStart: state.phase === "LOBBY" && room.seats.filter((seat) => seat.profileId).every((seat) => Boolean(seat.readyAt)) && (state.autoSize
+          ? (state.mode === "CLASSIC"
+            ? room.seats.length >= (isDrawGuessPreviewDuoEnabled() ? 2 : 3)
+            : room.seats.length >= 5 || room.seats.length === 2 && isDrawGuessPreviewRelayDuoEnabled())
+          : room.seats.length === room.playerCount),
         mode: state.mode,
         playerCount: room.playerCount,
         practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
+        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
         status: room.status,
         viewerSeat: viewer.seatNumber - 1,
         wordBank: state.wordBank
@@ -329,6 +345,61 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
   return { error: "TRY_AGAIN" } as const;
 }
 
+export async function setDrawGuessRoomReady(roomId: string, profileId: string, ready: boolean) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.status !== "LOBBY") return { error: "ALREADY_STARTED" } as const;
+    const seat = room.seats.find((item) => item.profileId === profileId);
+    if (!seat) return { error: "NOT_A_PLAYER" } as const;
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.gameToolRoom.updateMany({ where: { id: roomId, revision: room.revision, status: "LOBBY" }, data: { revision: { increment: 1 } } });
+      if (!result.count) return false;
+      await tx.gameToolSeat.update({ where: { id: seat.id }, data: { readyAt: ready ? new Date() : null } });
+      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: ready ? "DRAW_GUESS_PLAYER_READY" : "DRAW_GUESS_PLAYER_UNREADY", payload: { seatNumber: seat.seatNumber } } });
+      return true;
+    });
+    if (!updated) continue;
+    await broadcastDrawGuessRoomChange(roomId);
+    return { ok: true } as const;
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
+export async function updateDrawGuessRoomSettings(roomId: string, profileId: string, input: { timing?: DrawGuessTiming; wordBankId?: string }) {
+  if (!input.timing && !input.wordBankId) return { error: "INVALID_REQUEST" } as const;
+  if (input.timing && !isDrawGuessTiming(input.timing)) return { error: "INVALID_TIMING" } as const;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
+    if (room.status !== "LOBBY") return { error: "ALREADY_STARTED" } as const;
+    const state = asState(room.state);
+    if (!state || state.phase !== "LOBBY") return { error: "INVALID_STATE" } as const;
+    const bankChanged = Boolean(input.wordBankId && input.wordBankId !== state.wordBank?.id);
+    const currentTiming = state.timing ?? { drawSeconds: 60, guessSeconds: 20 };
+    const timingChanged = Boolean(input.timing && (input.timing.drawSeconds !== currentTiming.drawSeconds || input.timing.guessSeconds !== currentTiming.guessSeconds));
+    if (!bankChanged && !timingChanged) return { ok: true } as const;
+    const bank = bankChanged ? await getDrawGuessWordBank(input.wordBankId!, room.locale) : null;
+    if (bankChanged && !bank) return { error: "INVALID_WORD_BANK" } as const;
+    const next = { ...state, ...(input.timing ? { timing: input.timing } : {}), ...(bank ? { wordBank: shuffledDrawGuessWordBank(bank) } : {}) };
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.gameToolRoom.updateMany({
+        where: { id: room.id, revision: room.revision, status: "LOBBY" },
+        data: { revision: { increment: 1 }, state: toJson(next), ...(bank ? { wordBankId: bank.id } : {}) },
+      });
+      if (!result.count) return false;
+      await tx.gameToolSeat.updateMany({ where: { roomId, leftAt: null, profileId: { not: null } }, data: { readyAt: null } });
+      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_SETTINGS_UPDATED", payload: { wordBankId: bank?.id ?? null, timing: input.timing ?? null } } });
+      return true;
+    });
+    if (!updated) continue;
+    await broadcastDrawGuessRoomChange(roomId);
+    return { ok: true } as const;
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
 export async function startDrawGuessRoom(roomId: string, profileId: string) {
   await touchPresence(roomId, profileId);
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -337,9 +408,38 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
     if (await transferHostIfNeeded(room, Date.now())) continue;
     if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
     if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
-    if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
+    if (state.autoSize) {
+      const humanCount = room.seats.length;
+      const practiceRelay = state.mode === "CHAIN" && humanCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
+      const validCount = state.mode === "CLASSIC"
+        ? humanCount >= (isDrawGuessPreviewDuoEnabled() ? 2 : 3) && humanCount <= 10
+        : practiceRelay || humanCount >= 5 && humanCount <= 8;
+      if (!validCount) return { error: "WAIT_FOR_PLAYERS" } as const;
+      if (room.seats.some((seat) => seat.profileId && !seat.readyAt)) return { error: "WAIT_FOR_READY" } as const;
+      const playerCount = humanCount + (practiceRelay ? 1 : 0);
+      const fresh = createDrawGuessState(state.mode, playerCount, state.wordBank, state.timing);
+      fresh.gameNumber = state.gameNumber;
+      if (practiceRelay) fresh.practiceBotSeat = humanCount;
+      const started = startDrawGuessGame(fresh, Date.now(), room.locale);
+      if (!started.state) return { error: "TRY_AGAIN" } as const;
+      const updated = await prisma.$transaction(async (tx) => {
+        const result = await tx.gameToolRoom.updateMany({
+          where: { id: room.id, revision: room.revision, status: "LOBBY" },
+          data: { drawGuessDeadlineAt: new Date(started.state.deadlineAt!), playerCount, revision: { increment: 1 }, startedAt: new Date(), state: toJson(started.state), status: "IN_PROGRESS" },
+        });
+        if (!result.count) return false;
+        if (practiceRelay) await tx.gameToolSeat.create({ data: { displayName: room.locale === "en" ? "Practice helper" : room.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), roomId, seatNumber: playerCount } });
+        await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_STARTED", payload: { playerCount, revision: room.revision + 1 } } });
+        return true;
+      });
+      if (!updated) continue;
+      await broadcastDrawGuessRoomChange(roomId);
+      return { ok: true } as const;
+    }
+    if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
+    if (room.seats.some((seat) => seat.profileId && !seat.readyAt)) return { error: "WAIT_FOR_READY" } as const;
     await hydrateDrawGuessState(room.id, state);
     const started = startDrawGuessGame(state, Date.now(), room.locale);
     if ("error" in started) return { error: started.error } as const;

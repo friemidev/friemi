@@ -43,6 +43,7 @@ export function isDrawGuessTiming(value: unknown): value is DrawGuessTiming {
 }
 
 export type DrawGuessState = {
+  autoSize?: boolean;
   answer: string;
   chainStage: number;
   chains: ChainStep[][];

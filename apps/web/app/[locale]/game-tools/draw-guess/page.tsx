@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DrawGuessEntryClient } from "@/features/game-tools/components/DrawGuessEntryClient";
-import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
-import { listDrawGuessWordBanks } from "@/features/game-tools/drawGuessWordBanks";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import { buildPageShareMetadata, getRequestBaseUrl } from "@/lib/share-metadata";
@@ -21,10 +20,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function DrawGuessToolPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const wordBanks = await listDrawGuessWordBanks(locale);
   return (
-    <PageContainer className="max-w-[45rem] pb-28 pt-5" mobileSafeBottom mobileSafeTop>
-      <DrawGuessEntryClient chainEnabled={isDrawGuessChainEnabled()} classicEnabled={isDrawGuessClassicEnabled()} classicMinPlayers={isDrawGuessPreviewDuoEnabled() ? 2 : 3} chainMinPlayers={isDrawGuessPreviewRelayDuoEnabled() ? 2 : 5} locale={locale} wordBanks={wordBanks} />
+    <PageContainer className="max-w-[45rem] pb-12 pt-5" mobileSafeBottom mobileSafeTop>
+      <DrawGuessEntryClient chainEnabled={isDrawGuessChainEnabled()} classicEnabled={isDrawGuessClassicEnabled()} locale={locale} />
     </PageContainer>
   );
 }

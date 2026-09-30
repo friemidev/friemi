@@ -54,8 +54,16 @@ try {
   assert.deepEqual(await server.joinDrawGuessRoom({ code: created.room.code, profileId: playerIds[1], displayName: "双人测试 2" }), { roomId });
   current = await view(playerIds[0]);
   assert.deepEqual(current.seats.map((seat) => seat.number), [1, 2, 3]);
+  assert.equal(current.requiredPlayers, 2);
+  for (const profileId of playerIds) assert.deepEqual(await server.setDrawGuessRoomReady(roomId, profileId, true), { ok: true });
   assert.deepEqual(await server.startDrawGuessRoom(roomId, playerIds[0]), { ok: true });
-  for (let seat = 0; seat < 2; seat += 1) await command(playerIds[seat], { type: "SUBMIT_STEP", value: `起始词${seat}` });
+  for (let seat = 0; seat < 2; seat += 1) {
+    const currentWordView = (await view(playerIds[seat])).view;
+    const task = "task" in currentWordView ? currentWordView.task : null;
+    const word = task && "options" in task ? task.options?.[0] : undefined;
+    assert.ok(word);
+    await command(playerIds[seat], { type: "SUBMIT_STEP", value: word });
+  }
   current = await view(playerIds[0]);
   assert.equal(current.view.phase, "CHAIN_STEP");
   assert.equal(current.view.chainStage, 1);

@@ -1,0 +1,27 @@
+-- Activate the new packs together with the compact room settings UI.
+UPDATE "public"."DrawGuessWordBank" SET "isActive" = true WHERE "id" IN (
+  'food-zh',
+  'food-en',
+  'food-fr',
+  'transport-zh',
+  'transport-en',
+  'transport-fr',
+  'places-zh',
+  'places-en',
+  'places-fr',
+  'jobs-zh',
+  'jobs-en',
+  'jobs-fr',
+  'sports-zh',
+  'sports-en',
+  'sports-fr',
+  'plants-zh',
+  'plants-en',
+  'plants-fr',
+  'funny-zh',
+  'funny-en',
+  'funny-fr',
+  'fantasy-zh',
+  'fantasy-en',
+  'fantasy-fr'
+);

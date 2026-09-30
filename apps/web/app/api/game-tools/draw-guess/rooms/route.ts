@@ -7,7 +7,7 @@ import { getOptionalCurrentUserProfile } from "@/lib/auth";
 const schema = z.object({
   locale: z.enum(["zh-CN", "en", "fr"]).default("zh-CN"),
   mode: z.enum(["CLASSIC", "CHAIN"]),
-  playerCount: z.number().int().min(2).max(10),
+  playerCount: z.number().int().min(2).max(10).optional(),
   timing: z.custom<DrawGuessTiming>(isDrawGuessTiming).optional(),
   wordBankId: z.string().min(1).max(64).optional(),
 });

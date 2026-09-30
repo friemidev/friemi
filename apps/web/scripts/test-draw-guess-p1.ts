@@ -52,10 +52,18 @@ async function run() {
   const lobby = await view(roomId, players[0].id);
   const unchangedLobby = await server.getDrawGuessRoomView(roomId, players[0].id, lobby.revision);
   assert.ok("room" in unchangedLobby && unchangedLobby.room?.seats.length === 5);
+  assert.deepEqual(await server.startDrawGuessRoom(roomId, players[0].id), { error: "WAIT_FOR_READY" });
+  for (const player of players) assert.deepEqual(await server.setDrawGuessRoomReady(roomId, player.id, true), { ok: true });
   assert.deepEqual(await server.startDrawGuessRoom(roomId, players[0].id), { ok: true });
   const active = await view(roomId, players[0].id);
   assert.deepEqual(await server.getDrawGuessRoomView(roomId, players[0].id, active.revision), { notModified: true });
-  for (let index = 0; index < 5; index += 1) await command(roomId, players[index].id, { type: "SUBMIT_STEP", value: `词语${index}` });
+  for (let index = 0; index < 5; index += 1) {
+    const currentWordView = (await view(roomId, players[index].id)).view;
+    const task = "task" in currentWordView ? currentWordView.task : null;
+    const word = task && "options" in task ? task.options?.[0] : undefined;
+    assert.ok(word);
+    await command(roomId, players[index].id, { type: "SUBMIT_STEP", value: word });
+  }
   assert.deepEqual(await reports.reportDrawGuessContent({ ownerSeat: 0, profileId: players[2].id, reason: "OTHER", roomId, roundNumber: 1, stage: 0, targetKind: "WORD" }), { error: "NOT_REVEALED" });
 
   await command(roomId, players[1].id, { type: "SAVE_DRAFT", strokes: [stroke] });
@@ -138,8 +146,15 @@ async function run() {
     const joined = await server.joinDrawGuessRoom({ code: legacyCreated.room.code, profileId: player.id, displayName: player.nickname });
     assert.ok("roomId" in joined);
   }
+  for (const player of players) assert.deepEqual(await server.setDrawGuessRoomReady(legacyRoomId, player.id, true), { ok: true });
   assert.deepEqual(await server.startDrawGuessRoom(legacyRoomId, players[0].id), { ok: true });
-  for (let index = 0; index < 5; index += 1) await command(legacyRoomId, players[index].id, { type: "SUBMIT_STEP", value: `旧词${index}` });
+  for (let index = 0; index < 5; index += 1) {
+    const currentWordView = (await view(legacyRoomId, players[index].id)).view;
+    const task = "task" in currentWordView ? currentWordView.task : null;
+    const word = task && "options" in task ? task.options?.[0] : undefined;
+    assert.ok(word);
+    await command(legacyRoomId, players[index].id, { type: "SUBMIT_STEP", value: word });
+  }
   await command(legacyRoomId, players[1].id, { type: "SUBMIT_STEP", strokes: [stroke] });
   const legacyStored = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: legacyRoomId } });
   const legacyState = legacyStored.state as unknown as DrawGuessState;

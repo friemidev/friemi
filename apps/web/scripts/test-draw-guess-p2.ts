@@ -47,6 +47,7 @@ try {
   assert.equal(lobby.room.revision, 2);
   assert.equal(lobby.room.seats.length, 3);
   assert.deepEqual(await server.getDrawGuessRoomView(roomId, players[0].id, lobby.room.revision), { notModified: true });
+  for (const player of players.slice(0, 3)) assert.deepEqual(await server.setDrawGuessRoomReady(roomId, player.id, true), { ok: true });
   assert.deepEqual(await server.startDrawGuessRoom(roomId, players[0].id), { ok: true });
   const wordView = await server.getDrawGuessRoomView(roomId, players[0].id);
   assert.ok("room" in wordView && wordView.room);

@@ -46,6 +46,7 @@ async function roomFor(count: number, concurrentJoin = false) {
     assert.ok(player);
     return player;
   });
+  for (const player of bySeat) assert.deepEqual(await server.setDrawGuessRoomReady(created.room.id, player.id, true), { ok: true });
   return { id: created.room.id, players: bySeat };
 }
 
@@ -80,7 +81,9 @@ async function fullChain(count: number) {
     const current = await view(id, players[owner].id);
     assert.equal(current.view.phase, "CHAIN_WORD");
     assert.equal("chains" in current.view, false);
-    const submitted = await command(id, players[owner].id, { type: "SUBMIT_STEP", value: `词语${owner}` });
+    const word = current.view.task?.options?.[0];
+    assert.ok(word);
+    const submitted = await command(id, players[owner].id, { type: "SUBMIT_STEP", value: word });
     if (owner === 0) firstWord = submitted;
   }
   assert.ok(firstWord);
@@ -184,6 +187,8 @@ async function deadlineAndHostRecovery() {
   const late = await roomFor(5);
   assert.deepEqual(await server.startDrawGuessRoom(late.id, late.players[0].id), { ok: true });
   const lateView = await view(late.id, late.players[0].id);
+  const fallbackWord = lateView.view.task?.options?.[0];
+  assert.ok(fallbackWord);
   const lateRoom = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: late.id } });
   const lateState = lateRoom.state as unknown as DrawGuessState;
   const oneSecondAgo = new Date(Date.now() - 1000).toISOString();
@@ -199,7 +204,7 @@ async function deadlineAndHostRecovery() {
   const advanced = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: late.id } });
   const advancedState = advanced.state as unknown as DrawGuessState;
   assert.equal(advancedState.phase, "CHAIN_STEP");
-  assert.deepEqual(advancedState.chains[0][0], { kind: "WORD", seat: 0, system: true, value: "长颈鹿" });
+  assert.deepEqual(advancedState.chains[0][0], { kind: "WORD", seat: 0, system: true, value: fallbackWord });
   console.log("PASS host failover, fully offline deadline progression, concurrent sweep idempotency");
 }
 
@@ -219,8 +224,14 @@ async function previewDuoRelay() {
   assert.ok("roomId" in await server.joinDrawGuessRoom({ code: created.room.code, profileId: players[1].id, displayName: players[1].nickname }));
   current = await view(id, players[0].id);
   assert.deepEqual(current.seats.map((seat) => seat.number), [1, 2, 3]);
+  assert.deepEqual(await server.startDrawGuessRoom(id, players[0].id), { error: "WAIT_FOR_READY" });
+  for (const player of players) assert.deepEqual(await server.setDrawGuessRoomReady(id, player.id, true), { ok: true });
   assert.deepEqual(await server.startDrawGuessRoom(id, players[0].id), { ok: true });
-  for (let seat = 0; seat < 2; seat += 1) await command(id, players[seat].id, { type: "SUBMIT_STEP", value: `起始词${seat}` });
+  for (let seat = 0; seat < 2; seat += 1) {
+    const word = (await view(id, players[seat].id)).view.task?.options?.[0];
+    assert.ok(word);
+    await command(id, players[seat].id, { type: "SUBMIT_STEP", value: word });
+  }
   current = await view(id, players[0].id);
   assert.equal(current.view.phase, "CHAIN_STEP");
   assert.equal(current.view.chainStage, 1);
