@@ -86,7 +86,7 @@ function getMobileGameToolsCopy(locale: string) {
     intros: {
       AVALON: "发身份、投票、记任务。",
       BOTC: "魔典和夜晚流程。",
-      DRAW_GUESS: "抢猜或接龙，画出意想不到。",
+      DRAW_GUESS: "抢答或接龙，画出意想不到。",
       OTHER: "更多工具会继续接入。",
       STORYTELLER: "魔典和夜晚流程。",
       WEREWOLF: "发身份、记生死、看结算。",

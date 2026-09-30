@@ -9,15 +9,15 @@ import type { DrawGuessMode } from "@/features/game-tools/drawGuessEngine";
 import { withLocale } from "@/lib/routes";
 
 function copyFor(locale: string) {
-  if (locale === "en") return { back: "Table games", title: "Draw & Guess", chain: "Picture chain", chainBody: "Draw, pass, guess", classic: "Speed guessing", classicBody: "Draw and guess live", preview: "Preview", create: "Create room", join: "Join room", code: "Room code", enter: "Join", closed: "Coming soon", signedOut: "Sign in to create or join a room.", error: "Could not open the room. Try again.", full: "This room is full.", started: "This game has already started." };
-  if (locale === "fr") return { back: "Jeux de table", title: "Dessine et devine", chain: "Chaîne de dessins", chainBody: "Dessiner et transmettre", classic: "Deviner vite", classicBody: "Dessiner et deviner", preview: "Essai", create: "Créer une salle", join: "Rejoindre une salle", code: "Code de salle", enter: "Rejoindre", closed: "Bientôt", signedOut: "Connectez-vous pour créer ou rejoindre une salle.", error: "Impossible d'ouvrir la salle. Réessayez.", full: "Cette salle est complète.", started: "La partie a déjà commencé." };
-  return { back: "桌游工具", title: "你画我猜", chain: "画画接龙", chainBody: "轮流画猜", classic: "抢猜模式", classicBody: "边画边猜", preview: "体验版", create: "创建房间", join: "加入房间", code: "房间号", enter: "加入", closed: "暂未开放", signedOut: "请先登录 Friemi，再创建或加入房间。", error: "房间暂时无法打开，请重试。", full: "房间已满。", started: "这局已经开始，暂时不能加入。" };
+  if (locale === "en") return { back: "Table games", title: "Draw & Guess", chain: "Picture chain", chainBody: "Draw, pass, guess", classic: "Speed round", classicBody: "Draw and guess live", create: "Create room", join: "Join room", code: "Room code", enter: "Join", closed: "Coming soon", signedOut: "Sign in to create or join a room.", error: "Could not open the room. Try again.", full: "This room is full.", started: "This game has already started." };
+  if (locale === "fr") return { back: "Jeux de table", title: "Dessine et devine", chain: "Chaîne de dessins", chainBody: "Dessiner et transmettre", classic: "Devine vite", classicBody: "Dessiner et deviner", create: "Créer une salle", join: "Rejoindre une salle", code: "Code de salle", enter: "Rejoindre", closed: "Bientôt", signedOut: "Connectez-vous pour créer ou rejoindre une salle.", error: "Impossible d'ouvrir la salle. Réessayez.", full: "Cette salle est complète.", started: "La partie a déjà commencé." };
+  return { back: "桌游工具", title: "你画我猜", chain: "画画接龙", chainBody: "轮流画猜", classic: "抢答模式", classicBody: "边画边猜", create: "创建房间", join: "加入房间", code: "房间号", enter: "加入", closed: "暂未开放", signedOut: "请先登录 Friemi，再创建或加入房间。", error: "房间暂时无法打开，请重试。", full: "房间已满。", started: "这局已经开始，暂时不能加入。" };
 }
 
 export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: { chainEnabled: boolean; classicEnabled: boolean; locale: string }) {
   const router = useRouter();
   const copy = copyFor(locale);
-  const [mode, setMode] = useState<DrawGuessMode>(chainEnabled ? "CHAIN" : "CLASSIC");
+  const [mode, setMode] = useState<DrawGuessMode>(classicEnabled ? "CLASSIC" : "CHAIN");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -61,7 +61,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
       </div>
     </header>
     <section aria-label={copy.title} className="grid grid-cols-2 gap-3">
-      {(["CHAIN", "CLASSIC"] as const).map((value) => {
+      {(["CLASSIC", "CHAIN"] as const).map((value) => {
         const isChain = value === "CHAIN";
         const enabled = isChain ? chainEnabled : classicEnabled;
         const selected = mode === value;
@@ -72,14 +72,13 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
           onClick={() => setMode(value)}
           aria-pressed={selected}
           className={`draw-guess-mode-tile group relative min-h-36 overflow-hidden rounded-[1.65rem] p-4 text-left outline-none transition-[transform,box-shadow,background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-[#176344] focus-visible:ring-offset-2 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0.5 motion-reduce:transition-none sm:min-h-40 sm:p-5 ${isChain ? selected ? "bg-[#DDF2E3] shadow-[0_6px_0_#A9D3B7]" : "bg-[#F0F8EE] shadow-[0_4px_0_#D8E9D8]" : selected ? "bg-[#FFE5D5] shadow-[0_6px_0_#F1B79C]" : "bg-[#FFF2E9] shadow-[0_4px_0_#F0DED0]"} ${enabled ? "" : "cursor-not-allowed opacity-55 motion-safe:hover:translate-y-0"}`}
-          style={{ animationDelay: isChain ? "70ms" : "150ms" }}
+          style={{ animationDelay: isChain ? "150ms" : "70ms" }}
         >
           <span aria-hidden="true" className="absolute -right-6 -top-7 h-20 w-20 rounded-full bg-white/35" />
           <span className={`relative inline-grid h-10 w-10 place-items-center rounded-2xl transition-transform duration-200 motion-safe:group-hover:rotate-12 ${isChain ? "bg-[#2A7653] text-white" : "bg-[#E58B65] text-white"}`}>{isChain ? <Sparkles className="h-5 w-5" /> : <Brush className="h-5 w-5" />}</span>
           <strong className="relative mt-3 block text-base font-black leading-tight sm:text-lg">{isChain ? copy.chain : copy.classic}</strong>
           <span className="relative mt-1 block text-xs font-medium leading-5 text-[#5D7369] sm:text-sm">{isChain ? copy.chainBody : copy.classicBody}</span>
-          {selected ? <span aria-hidden="true" className={`draw-guess-check-pop absolute right-3 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-[#176344] shadow-sm ${isChain ? "top-3" : "bottom-3"}`}><Check className="h-4 w-4 stroke-[3]" /></span> : null}
-          {!isChain && enabled ? <span className="absolute right-3 top-3 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#965235]">{copy.preview}</span> : null}
+          {selected ? <span aria-hidden="true" className="draw-guess-check-pop absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-[#176344] shadow-sm"><Check className="h-4 w-4 stroke-[3]" /></span> : null}
           {!enabled ? <span className="absolute right-3 top-3 text-[10px] font-bold text-[#9A5A43]">{copy.closed}</span> : null}
         </button>;
       })}
@@ -94,7 +93,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
     </button>
     <section aria-label={copy.join} className="draw-guess-join-in pt-1">
       <div className="flex gap-2">
-        <input id="draw-guess-room-code" aria-label={copy.code} autoComplete="off" className="min-h-12 min-w-0 flex-1 rounded-full border border-[#DCE8D9] bg-[#F7FAF4] px-5 text-base font-bold uppercase tracking-widest outline-none transition-colors focus:border-[#4E9A68]" maxLength={8} placeholder={copy.code} value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} onKeyDown={(event) => { if (event.key === "Enter") void joinRoom(); }} />
+        <input id="draw-guess-room-code" aria-label={copy.code} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#DCE8D9] bg-[#F7FAF4] px-5 text-base font-bold uppercase tracking-widest outline-none transition-colors focus:border-[#4E9A68]" maxLength={8} placeholder={copy.code} value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void joinRoom(); }} />
         <button disabled={busy || !code.trim()} onClick={() => void joinRoom()} type="button" className="min-h-12 rounded-full bg-[#D9F0E0] px-5 text-sm font-black text-[#21553C] shadow-[0_4px_0_#ABD4B7] outline-none transition-[transform,box-shadow,background-color] hover:bg-[#C9EAD4] focus-visible:ring-2 focus-visible:ring-[#176344] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0.5 motion-safe:active:shadow-[0_2px_0_#ABD4B7] motion-safe:disabled:hover:translate-y-0 motion-reduce:transition-none">{copy.enter}</button>
       </div>
     </section>

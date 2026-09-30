@@ -93,6 +93,7 @@ const DURATION = {
   WORD_SELECT: 10_000,
   DRAW_GUESS: 60_000,
   TURN_REVEAL: 8_000,
+  ALL_GUESSED_REVEAL: 5_000,
   CHAIN_WORD: 20_000,
   CHAIN_DRAW: 60_000,
   CHAIN_GUESS: 20_000,
@@ -302,7 +303,7 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       const solved = Object.keys(next.guesses[String(next.turnIndex)] ?? {}).length;
       next.scores[next.turnIndex] += Math.floor(100 * solved / (count - 1));
       next.drawDeadlineAt = null;
-      setDeadline(next, "TURN_REVEAL", base, DURATION.TURN_REVEAL);
+      setDeadline(next, "TURN_REVEAL", base, allDone ? DURATION.ALL_GUESSED_REVEAL : DURATION.TURN_REVEAL);
     } else if (next.phase === "TURN_REVEAL") {
       next.classicAnswers[next.turnIndex] = next.answer;
       next.turnIndex += 1;
@@ -436,7 +437,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
   if (state.mode === "CLASSIC") {
     return {
       ...shared,
-      answer: seat === state.turnIndex || state.phase === "TURN_REVEAL" || state.phase === "FINISHED" ? state.answer : null,
+      answer: seat === state.turnIndex || Boolean(state.guesses[String(state.turnIndex)]?.[String(seat)]) || state.phase === "TURN_REVEAL" || state.phase === "FINISHED" ? state.answer : null,
       drawing: state.drawings[state.turnIndex] ?? [],
       inkSeq: state.inkSeq ?? 0,
       guesses: state.guesses[String(state.turnIndex)] ?? {},
