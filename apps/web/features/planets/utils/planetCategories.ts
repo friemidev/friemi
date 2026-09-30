@@ -60,3 +60,18 @@ export function getPlanetCategoryLabel(value: string, locale: string) {
       : categoryLabels["zh-CN"];
   return labels[value];
 }
+
+export function resolvePlanetCategory(value: string): PlanetCategory | null {
+  const normalizedValue = value.trim().toLocaleLowerCase();
+
+  return (
+    planetCategoryValues.find((category) =>
+      [
+        category,
+        categoryLabels["zh-CN"][category],
+        categoryLabels.en[category],
+        categoryLabels.fr[category],
+      ].some((candidate) => candidate.toLocaleLowerCase() === normalizedValue),
+    ) ?? null
+  );
+}

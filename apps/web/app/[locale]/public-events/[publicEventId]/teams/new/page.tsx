@@ -21,6 +21,7 @@ import {
   DESKTOP_LOBBY_CANDIDATE_CONTEXT,
   DESKTOP_LOBBY_CANDIDATE_ORIGIN,
 } from "@/features/activities/utils/desktopLobbyCandidates";
+import { getLinkablePlanets } from "@/features/activities/queries/getLinkablePlanets";
 
 type NewPublicEventTeamPageProps = {
   params: Promise<{
@@ -157,6 +158,7 @@ export default async function NewPublicEventTeamPage({
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
   const canCreateTeam = !isCancelled && !isEnded;
+  const linkablePlanets = profile ? await getLinkablePlanets(profile.id) : [];
   const unavailableReason = isCancelled ? t.eventCancelled : t.eventEnded;
   const headerCopy = getCreateTeamHeaderCopy(locale);
   const formId = `public-event-team-form-${publicEvent.id}`;
@@ -265,6 +267,7 @@ export default async function NewPublicEventTeamPage({
                   : undefined,
               )}
               isAuthenticated={Boolean(profile)}
+              linkablePlanets={linkablePlanets}
               locale={locale}
               showFormActions={false}
               signInHref={getSignInHref(

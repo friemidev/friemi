@@ -102,11 +102,6 @@ const planetAnnouncementSchema = planetIdSchema.extend({
   announcement: z.string().trim().max(1000),
 });
 
-const planetActivitySchema = planetIdSchema.extend({
-  activityId: z.string().min(1),
-  decision: z.enum(["add", "remove"]),
-});
-
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
@@ -566,65 +561,6 @@ export async function updatePlanetAnnouncementAction(formData: FormData) {
     data: { announcement: result.data.announcement || null },
   });
   revalidatePlanet(result.data.locale, result.data.planetSlug);
-}
-
-export async function updatePlanetActivityLinkAction(formData: FormData) {
-  const result = planetActivitySchema.safeParse({
-    locale: readString(formData, "locale") || "zh-CN",
-    planetId: readString(formData, "planetId"),
-    planetSlug: readString(formData, "planetSlug"),
-    activityId: readString(formData, "activityId"),
-    decision: readString(formData, "decision"),
-  });
-  if (!result.success) return;
-
-  const profile = await ensureCurrentUserProfile(result.data.locale);
-  const membership = await requirePlanetMembership(
-    result.data.planetId,
-    profile.id,
-    { approvedOnly: true },
-  );
-  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
-
-  if (result.data.decision === "add") {
-    const activity = await prisma.activity.findFirst({
-      where: {
-        id: result.data.activityId,
-        visibility: "PUBLIC",
-        status: { notIn: ["DRAFT", "CANCELLED"] },
-        OR: [
-          { organizerId: profile.id },
-          { coManagers: { some: { managerProfileId: profile.id } } },
-        ],
-      },
-      select: { id: true },
-    });
-    if (!activity) return;
-    await prisma.planetActivity.upsert({
-      where: {
-        planetId_activityId: {
-          planetId: result.data.planetId,
-          activityId: activity.id,
-        },
-      },
-      create: {
-        planetId: result.data.planetId,
-        activityId: activity.id,
-      },
-      update: {},
-    });
-  } else {
-    await prisma.planetActivity.deleteMany({
-      where: {
-        planetId: result.data.planetId,
-        activityId: result.data.activityId,
-      },
-    });
-  }
-  revalidatePlanet(result.data.locale, result.data.planetSlug);
-  revalidatePath(
-    withLocale(result.data.locale, `/lobby/${result.data.activityId}`),
-  );
 }
 
 export async function sendPlanetMessageAction(

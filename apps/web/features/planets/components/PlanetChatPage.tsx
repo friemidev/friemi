@@ -70,14 +70,6 @@ export function PlanetChatPage({
   const name = getPlanetName(planet, locale);
   const lockedMessage =
     planet.viewerMembership?.status === "PENDING" ? copy.pending : copy.locked;
-  const managementActivities = [
-    ...planet.activityLinks.map(({ activity }) => activity),
-    ...planet.availableActivities,
-  ].filter(
-    (activity, index, activities) =>
-      activities.findIndex((candidate) => candidate.id === activity.id) ===
-      index,
-  );
   const messages = planet.messages.map((message) => ({
     id: message.id,
     author: message.author,
@@ -126,19 +118,11 @@ export function PlanetChatPage({
                 profileId: member.profileId,
                 role: member.role,
               }))}
-              availableActivities={managementActivities.map((activity) => ({
-                id: activity.id,
-                startAtLabel: activity.startAt.toLocaleDateString(locale),
-                title: activity.title,
-              }))}
               inviteUrl={buildCanonicalSiteUrl(
                 withLocale(locale, `/planets/invite/${planet.inviteCode}`),
               )}
               isMuted={planet.isMuted}
               isPinned={planet.isPinned}
-              linkedActivityIds={planet.activityLinks.map(
-                (activityLink) => activityLink.activityId,
-              )}
               locale={locale}
               pendingMembers={planet.pendingMembers.map((member) => ({
                 avatarUrl: member.profile.avatarUrl,

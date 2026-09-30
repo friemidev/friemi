@@ -120,6 +120,7 @@ export const createActivitySchema = z
     requiresApproval: z.coerce.boolean().default(false),
     priceType: z.enum(priceTypeValues),
     priceText: activityPriceText,
+    planetIds: z.array(z.string().trim().min(1).max(80)).default([]),
     ticketUrl: optionalExternalUrl.optional(),
     ticketLabel: optionalLinkLabel.optional(),
     publicEventId: z

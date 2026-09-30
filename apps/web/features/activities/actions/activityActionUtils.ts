@@ -24,6 +24,7 @@ export type ActivityFormValues = {
   requiresApproval: boolean;
   priceType: string;
   priceText: string;
+  planetIds?: string[];
   ticketUrl: string;
   ticketLabel: string;
   publicEventId?: string;
@@ -188,6 +189,15 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     requiresApproval: formData.get("requiresApproval") === "on",
     priceType: getString(formData, "priceType"),
     priceText: getString(formData, "priceText"),
+    planetIds: Array.from(
+      new Set(
+        formData
+          .getAll("planetIds")
+          .flatMap((value) =>
+            typeof value === "string" && value.trim() ? [value.trim()] : [],
+          ),
+      ),
+    ),
     ticketUrl: getString(formData, "ticketUrl"),
     ticketLabel: getString(formData, "ticketLabel"),
     publicEventId: getString(formData, "publicEventId"),

@@ -20,6 +20,7 @@ import {
   getActivityCreationTrustRestrictionMessage,
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { getLinkablePlanets } from "@/features/activities/queries/getLinkablePlanets";
 
 type NewActivityPageProps = {
   params: Promise<{
@@ -103,6 +104,8 @@ export default async function NewActivityPage({
   const creationRestrictionMessage = creationRestricted
     ? getActivityCreationTrustRestrictionMessage(locale)
     : null;
+  const linkablePlanets =
+    profile && showForm ? await getLinkablePlanets(profile.id) : [];
   const activityPreviewList = showForm
     ? null
     : await getActivityList(
@@ -169,6 +172,7 @@ export default async function NewActivityPage({
         isAuthenticated={Boolean(profile)}
         locale={locale}
         initialValues={initialValues ?? undefined}
+        linkablePlanets={linkablePlanets}
         submissionDisabled={creationRestricted}
         signInHref={getSignInHref(
           locale,

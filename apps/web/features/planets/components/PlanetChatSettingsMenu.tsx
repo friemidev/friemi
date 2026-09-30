@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   BellOff,
-  CalendarPlus,
   Check,
   Ellipsis,
   ExternalLink,
@@ -22,7 +21,6 @@ import {
   reviewPlanetMemberAction,
   togglePlanetChatMuteAction,
   togglePlanetChatPinAction,
-  updatePlanetActivityLinkAction,
   updatePlanetAnnouncementAction,
 } from "@/features/planets/actions/planetActions";
 
@@ -34,16 +32,13 @@ type Member = {
 };
 
 type PendingMember = Omit<Member, "role"> & { joinedAtLabel: string };
-type ActivityOption = { id: string; startAtLabel: string; title: string };
 
 type PlanetChatSettingsMenuProps = {
   announcement: string | null;
   approvedMembers: Member[];
-  availableActivities: ActivityOption[];
   inviteUrl: string;
   isMuted: boolean;
   isPinned: boolean;
-  linkedActivityIds: string[];
   locale: string;
   pendingMembers: PendingMember[];
   planetHref: string;
@@ -55,8 +50,6 @@ type PlanetChatSettingsMenuProps = {
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      activities: "Rencontres de la planète",
-      add: "Ajouter",
       announcement: "Annonce du groupe",
       announcementHint: "Visible en haut de la planète.",
       approve: "Approuver",
@@ -64,7 +57,6 @@ function getCopy(locale: string) {
       copyFailed: "Copie impossible.",
       copyInvite: "Copier le lien d'invitation",
       copied: "Lien copié",
-      emptyActivities: "Aucune rencontre publique à ajouter.",
       emptyMembers: "Aucune demande en attente.",
       manage: "Gérer la planète",
       members: "Membres",
@@ -77,7 +69,6 @@ function getCopy(locale: string) {
       reject: "Refuser",
       remove: "Retirer de la planète",
       removeConfirm: "Retirer ce membre de la planète ?",
-      removeActivity: "Retirer",
       requests: "Demandes d'adhésion",
       save: "Enregistrer",
       viewPlanet: "Voir la planète",
@@ -85,8 +76,6 @@ function getCopy(locale: string) {
   }
   if (locale === "en") {
     return {
-      activities: "Planet meetups",
-      add: "Add",
       announcement: "Group announcement",
       announcementHint: "Shown at the top of the planet.",
       approve: "Approve",
@@ -94,7 +83,6 @@ function getCopy(locale: string) {
       copyFailed: "Unable to copy the link.",
       copyInvite: "Copy invite link",
       copied: "Invite link copied",
-      emptyActivities: "No public meetups are available to add.",
       emptyMembers: "No pending requests.",
       manage: "Manage planet",
       members: "Members",
@@ -107,15 +95,12 @@ function getCopy(locale: string) {
       reject: "Reject",
       remove: "Remove from planet",
       removeConfirm: "Remove this member from the planet?",
-      removeActivity: "Remove",
       requests: "Join requests",
       save: "Save",
       viewPlanet: "View planet",
     };
   }
   return {
-    activities: "星球聚吧",
-    add: "加入星球",
     announcement: "群公告",
     announcementHint: "将展示在星球详情顶部。",
     approve: "通过",
@@ -123,7 +108,6 @@ function getCopy(locale: string) {
     copyFailed: "复制失败，请手动复制链接。",
     copyInvite: "复制邀请链接",
     copied: "邀请链接已复制",
-    emptyActivities: "暂无可添加的公开聚吧。",
     emptyMembers: "暂时没有待审核申请。",
     manage: "管理星球",
     members: "成员管理",
@@ -136,7 +120,6 @@ function getCopy(locale: string) {
     reject: "拒绝",
     remove: "移出星球",
     removeConfirm: "确定将这位成员移出星球吗？",
-    removeActivity: "移除",
     requests: "加入申请",
     save: "保存公告",
     viewPlanet: "查看星球",
@@ -224,7 +207,6 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const copy = getCopy(props.locale);
-  const linkedActivityIds = new Set(props.linkedActivityIds);
   const canManage =
     props.viewerRole === "OWNER" || props.viewerRole === "ADMIN";
   const roleLabels = {
@@ -498,58 +480,6 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
                     );
                   })}
                 </div>
-              </section>
-
-              <section className="py-5">
-                <h3 className="flex items-center gap-2 text-sm font-bold">
-                  <CalendarPlus className="h-4 w-4 text-[#155F40]" />
-                  {copy.activities}
-                </h3>
-                {props.availableActivities.length ? (
-                  <div className="mt-3 divide-y divide-[#ECEAE2]">
-                    {props.availableActivities.map((activity) => {
-                      const linked = linkedActivityIds.has(activity.id);
-                      return (
-                        <div
-                          className="flex items-center gap-3 py-3"
-                          key={activity.id}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold">
-                              {activity.title}
-                            </p>
-                            <p className="text-[11px] text-[#858B84]">
-                              {activity.startAtLabel}
-                            </p>
-                          </div>
-                          <form action={updatePlanetActivityLinkAction}>
-                            <HiddenPlanetFields {...props} />
-                            <input
-                              name="activityId"
-                              type="hidden"
-                              value={activity.id}
-                            />
-                            <input
-                              name="decision"
-                              type="hidden"
-                              value={linked ? "remove" : "add"}
-                            />
-                            <button
-                              className={`rounded-full px-3 py-1.5 text-xs font-bold ${linked ? "border border-[#D8D5C8] text-[#6C716B]" : "bg-[#155F40] text-white"}`}
-                              type="submit"
-                            >
-                              {linked ? copy.removeActivity : copy.add}
-                            </button>
-                          </form>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-sm text-[#858B84]">
-                    {copy.emptyActivities}
-                  </p>
-                )}
               </section>
             </div>
           </section>

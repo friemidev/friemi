@@ -43,6 +43,7 @@ import { ActivityAnnouncementComposer } from "@/features/activities/components/A
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
+import { ActivityPlanetLinkManager } from "@/features/activities/components/ActivityPlanetLinkManager";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { ActivityShareDialogButton } from "@/features/activities/components/ActivityShareDialogButton";
@@ -61,6 +62,7 @@ import {
   getActivityShareMetadataById,
 } from "@/features/activities/queries/getActivityById";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
+import { getLinkablePlanets } from "@/features/activities/queries/getLinkablePlanets";
 import { getActivityCheckInRoster } from "@/features/activities/queries/getActivityCheckInRoster";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
@@ -909,6 +911,12 @@ export async function ActivityDetailPageContent({
   const isPrivateActivity = activity.visibility === "PRIVATE";
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
   const isTeamOperator = Boolean(activity.viewerCanManage) || isOrganizer;
+  const linkablePlanets =
+    isTeamOperator && viewerProfile
+      ? await perf.measure("activity.linkablePlanets", () =>
+          getLinkablePlanets(viewerProfile.id),
+        )
+      : [];
   const shareToken =
     isPrivateActivity && isTeamOperator
       ? await ensurePrivateActivityShareToken(activity.id)
@@ -1903,7 +1911,7 @@ export async function ActivityDetailPageContent({
         <h1 className="text-[1.65rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
-        {activity.linkedPlanets.length > 0 ? (
+        {activity.linkedPlanets.length > 0 || isTeamOperator ? (
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 pt-1 text-xs font-semibold text-[#156240]">
             <span className="inline-flex shrink-0 items-center gap-1 text-[#6C746A]">
               <Orbit className="h-3.5 w-3.5" />
@@ -1922,6 +1930,16 @@ export async function ActivityDetailPageContent({
                 {planet.name}
               </Link>
             ))}
+            {isTeamOperator ? (
+              <ActivityPlanetLinkManager
+                activityId={activity.id}
+                linkedPlanetIds={activity.linkedPlanets.map(
+                  (planet) => planet.id,
+                )}
+                linkablePlanets={linkablePlanets}
+                locale={locale}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
