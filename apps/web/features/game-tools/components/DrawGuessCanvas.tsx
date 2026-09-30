@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Eraser, RotateCcw, Trash2 } from "lucide-react";
 import type { DrawStroke } from "@/features/game-tools/drawGuessEngine";
 
@@ -36,6 +36,9 @@ export function DrawGuessCanvas({ compact = false, disabled = false, onClear, on
   const [color, setColor] = useState(COLORS[0]);
   const [width, setWidth] = useState(6);
   const [compactSize, setCompactSize] = useState<{ width: number; height: number } | null>(null);
+  const committedPaths = useMemo(() => strokes.map((stroke, index) => stroke.points.length === 1
+    ? <circle key={index} cx={stroke.points[0][0] * 1000} cy={stroke.points[0][1] * 700} r={stroke.width / 2} fill={stroke.color} />
+    : <path key={index} d={pathFor(stroke.points)} fill="none" stroke={stroke.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={stroke.width} />), [strokes]);
 
   useEffect(() => {
     if (!compact || !frameRef.current) return;
@@ -72,9 +75,10 @@ export function DrawGuessCanvas({ compact = false, disabled = false, onClear, on
         onPointerDown={(event) => { if (disabled) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); const stroke = { color, width, points: [point(event)] } satisfies DrawStroke; currentRef.current = stroke; setCurrent(stroke); onProgress?.(stroke); }}
         onPointerMove={(event) => { if (!currentRef.current || disabled) return; const nextPoint = point(event); const points = currentRef.current.points; const last = points.at(-1)!; if (points.length >= 512 || Math.hypot((nextPoint[0] - last[0]) * 1000, (nextPoint[1] - last[1]) * 700) < 2) return; const next = { ...currentRef.current, points: [...points, nextPoint] }; currentRef.current = next; setCurrent(next); onProgress?.(next); }}
         onPointerUp={finish} onPointerCancel={finish}>
-        {[...strokes, ...(current ? [current] : [])].map((stroke, index) => stroke.points.length === 1
-          ? <circle key={index} cx={stroke.points[0][0] * 1000} cy={stroke.points[0][1] * 700} r={stroke.width / 2} fill={stroke.color} />
-          : <path key={index} d={pathFor(stroke.points)} fill="none" stroke={stroke.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={stroke.width} />)}
+        {committedPaths}
+        {current ? current.points.length === 1
+          ? <circle cx={current.points[0][0] * 1000} cy={current.points[0][1] * 700} r={current.width / 2} fill={current.color} />
+          : <path d={pathFor(current.points)} fill="none" stroke={current.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={current.width} /> : null}
       </svg>
     </div>
     {!disabled ? <div className={`flex shrink-0 flex-wrap items-center gap-2 rounded-2xl bg-[#F4F0E6] ${compact ? "p-1.5 sm:p-2" : "p-2.5"}`}>

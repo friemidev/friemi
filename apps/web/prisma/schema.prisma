@@ -2211,6 +2211,8 @@ model GameToolRoom {
   finishedAt          DateTime?
   cancelledAt         DateTime?
   drawGuessDeadlineAt DateTime?
+  wordBankId          String?                @db.VarChar(64)
+  wordBank            DrawGuessWordBank?     @relation(fields: [wordBankId], references: [id], onDelete: SetNull)
   revision            Int                    @default(0)
   seats               GameToolSeat[]
   members             GameToolRoomMember[]
@@ -2227,7 +2229,25 @@ model GameToolRoom {
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
   @@index([kind, status, drawGuessDeadlineAt])
+  @@index([wordBankId])
   @@index([code])
+}
+
+model DrawGuessWordBank {
+  id          String         @id @db.VarChar(64)
+  locale      String         @db.VarChar(8)
+  category    String?        @db.VarChar(80)
+  title       String         @db.VarChar(80)
+  description String?        @db.Text
+  words       String[]       @db.Text
+  isActive    Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  rooms       GameToolRoom[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([locale, title])
+  @@index([locale, isActive, sortOrder])
 }
 
 model DrawGuessRound {

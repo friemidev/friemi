@@ -33,6 +33,7 @@ export async function getAuthorizedDrawGuessInkArtist(input: {
       AND room."drawGuessDeadlineAt" > NOW()
       AND room.state->>'mode' = 'CLASSIC'
       AND room.state->>'phase' = 'DRAW_GUESS'
+      AND (room.state->>'drawDeadlineAt' IS NULL OR (room.state->>'drawDeadlineAt')::timestamptz > NOW())
       AND (room.state->>'gameNumber')::int = ${input.gameNumber}
       AND (room.state->>'turnIndex')::int = ${input.turnIndex}
       AND seat."seatNumber" = ${input.turnIndex + 1}

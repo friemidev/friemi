@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createDrawGuessRoom } from "@/features/game-tools/drawGuessRoomServer";
+import { isDrawGuessTiming, type DrawGuessTiming } from "@/features/game-tools/drawGuessEngine";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 
 const schema = z.object({
   locale: z.enum(["zh-CN", "en", "fr"]).default("zh-CN"),
   mode: z.enum(["CLASSIC", "CHAIN"]),
   playerCount: z.number().int().min(2).max(10),
+  timing: z.custom<DrawGuessTiming>(isDrawGuessTiming).optional(),
+  wordBankId: z.string().min(1).max(64).optional(),
 });
 
 export async function POST(request: Request) {

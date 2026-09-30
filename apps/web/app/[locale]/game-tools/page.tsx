@@ -148,7 +148,9 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                         className={
                           tool.kind === "OTHER"
                             ? "object-contain p-8"
-                            : "object-cover"
+                            : tool.kind === "DRAW_GUESS"
+                              ? "object-contain p-1"
+                              : "object-cover"
                         }
                         fill
                         priority={tool.kind === "WEREWOLF"}
@@ -280,7 +282,9 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                             className={
                               tool.kind === "OTHER"
                                 ? "h-20 w-20 object-contain p-2"
-                                : "h-full w-full object-cover"
+                                : tool.kind === "DRAW_GUESS"
+                                  ? "h-full w-full object-contain p-1"
+                                  : "h-full w-full object-cover"
                             }
                             height={112}
                             src={tool.imageSrc}

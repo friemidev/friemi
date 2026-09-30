@@ -7,9 +7,99 @@ import {
   getChainActor,
   getChainStageCount,
   getDrawGuessViewerState,
+  isDrawGuessTiming,
+  normalizeDrawGuessWordBankWords,
   startDrawGuessGame,
+  type DrawGuessWordBankSnapshot,
   validateDrawGuessWord,
 } from "./drawGuessEngine";
+
+const testBank: DrawGuessWordBankSnapshot = {
+  id: "test-bank",
+  category: "Animals",
+  title: "Animal Friends",
+  description: null,
+  words: ["cat", "dog", "rabbit", "panda", "giraffe", "elephant", "lion"],
+};
+
+test("word bank words are nonempty, valid, and unique after normalization", () => {
+  assert.deepEqual(normalizeDrawGuessWordBankWords([" cat ", "Dog"]), ["cat", "Dog"]);
+  assert.equal(normalizeDrawGuessWordBankWords([]), null);
+  assert.equal(normalizeDrawGuessWordBankWords(["cat", "CAT"]), null);
+  assert.equal(normalizeDrawGuessWordBankWords(["www.example"]), null);
+  assert.equal(normalizeDrawGuessWordBankWords(["a".repeat(21)]), null);
+});
+
+test("host timing presets are validated and apply to both kinds of relay step", () => {
+  assert.equal(isDrawGuessTiming({ drawSeconds: 90, guessSeconds: 40 }), true);
+  assert.equal(isDrawGuessTiming({ drawSeconds: 120, guessSeconds: 40 }), false);
+  assert.equal(isDrawGuessTiming({ drawSeconds: 60, guessSeconds: 10 }), false);
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5, testBank, { drawSeconds: 90, guessSeconds: 40 }), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const drawing = advanceDrawGuessGame(started.state, 5, 20_000, "en");
+  assert.equal(drawing.phase, "CHAIN_STEP");
+  assert.equal(drawing.deadlineAt, new Date(110_000).toISOString());
+  const guessing = advanceDrawGuessGame(drawing, 5, 110_000, "en");
+  assert.equal(guessing.chainStage, 2);
+  assert.equal(guessing.deadlineAt, new Date(150_000).toISOString());
+  assert.deepEqual(getDrawGuessViewerState(guessing, 0, 5).timing, { drawSeconds: 90, guessSeconds: 40 });
+});
+
+test("classic drawing stops at the host deadline while guessing remains open", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank, { drawSeconds: 30, guessSeconds: 20 }), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const selected = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: started.state.options[0] }, 0, 3, 1_000, "en");
+  assert.ok(!("error" in selected));
+  assert.equal(selected.state.drawDeadlineAt, new Date(31_000).toISOString());
+  assert.equal(selected.state.deadlineAt, new Date(51_000).toISOString());
+  const stroke = { color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] as [number, number][] };
+  assert.ok(!("error" in applyDrawGuessAction(selected.state, { type: "ADD_STROKE", stroke }, 0, 3, 30_999, "en")));
+  const lateStroke = applyDrawGuessAction(selected.state, { type: "ADD_STROKE", stroke }, 0, 3, 31_000, "en");
+  assert.equal("error" in lateStroke ? lateStroke.error : null, "DRAW_TIME_ENDED");
+  const guess = applyDrawGuessAction(selected.state, { type: "GUESS", value: selected.state.answer }, 1, 3, 35_000, "en");
+  assert.ok(!("error" in guess) && guess.correct);
+  assert.equal(guess.state.phase, "DRAW_GUESS");
+  const reveal = advanceDrawGuessGame(guess.state, 3, 51_000, "en");
+  assert.equal(reveal.phase, "TURN_REVEAL");
+});
+
+test("classic rounds draw their choices from the room's selected word bank", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank), 0, "zh-CN");
+  if (!started.state) throw new Error("Game did not start");
+  assert.deepEqual(started.state.options, testBank.words.slice(0, 3));
+  const selected = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: "cat" }, 0, 3, 1_000, "zh-CN");
+  assert.ok(!("error" in selected));
+  const revealed = advanceDrawGuessGame(selected.state, 3, Date.parse(selected.state.deadlineAt!), "zh-CN");
+  assert.equal(revealed.phase, "TURN_REVEAL");
+  const nextTurn = advanceDrawGuessGame(revealed, 3, Date.parse(revealed.deadlineAt!), "zh-CN");
+  assert.equal(nextTurn.phase, "WORD_SELECT");
+  assert.deepEqual(nextTurn.options, testBank.words.slice(3, 6));
+});
+
+test("relay opening words and automatic timeout words use the selected bank", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5, testBank), 0, "zh-CN");
+  if (!started.state) throw new Error("Game did not start");
+  const viewer = getDrawGuessViewerState(started.state, 0, 5);
+  assert.ok("task" in viewer && viewer.task?.kind === "WORD");
+  assert.deepEqual("options" in viewer.task ? viewer.task.options : null, testBank.words.slice(0, 3));
+  const rejected = applyDrawGuessAction(started.state, { type: "SUBMIT_STEP", value: "umbrella" }, 0, 5, 1_000, "zh-CN");
+  assert.equal("error" in rejected ? rejected.error : null, "INVALID_WORD");
+  const accepted = applyDrawGuessAction(started.state, { type: "SUBMIT_STEP", value: "cat" }, 0, 5, 1_000, "zh-CN");
+  assert.ok(!("error" in accepted));
+  const timedOut = advanceDrawGuessGame(accepted.state, 5, 21_000, "zh-CN");
+  assert.equal(timedOut.phase, "CHAIN_STEP");
+  assert.ok(timedOut.chains.every((chain) => chain[0].kind === "WORD" && testBank.words.includes(chain[0].value)));
+});
+
+test("rooms created before word banks retain their original opening-word flow", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5), 0, "zh-CN");
+  if (!started.state) throw new Error("Game did not start");
+  const viewer = getDrawGuessViewerState(started.state, 0, 5);
+  assert.ok("task" in viewer && viewer.task?.kind === "WORD");
+  assert.equal("options" in viewer.task, false);
+  const submitted = applyDrawGuessAction(started.state, { type: "SUBMIT_STEP", value: "旧房间词语" }, 0, 5, 1_000, "zh-CN");
+  assert.ok(!("error" in submitted));
+});
 
 test("manual words reject hidden characters, links, contact data, and blocked phrases", () => {
   assert.equal(validateDrawGuessWord("  热气球  ", 12, 2), "热气球");
@@ -18,6 +108,8 @@ test("manual words reject hidden characters, links, contact data, and blocked ph
   assert.equal(validateDrawGuessWord("www.example", 40), null);
   assert.equal(validateDrawGuessWord("12345678", 40), null);
   assert.equal(validateDrawGuessWord("去死", 12, 2), null);
+  assert.equal(validateDrawGuessWord("pute", 20), null);
+  assert.equal(validateDrawGuessWord("computer", 20), "computer");
 });
 
 test("each relay ends with another player's guess for 5–8 seats", () => {
@@ -73,14 +165,15 @@ test("two-player classic alternates artist and guesser, then finishes with corre
   const firstGuess = applyDrawGuessAction(firstChoice.state, { type: "GUESS", value: firstAnswer }, 1, 2, 3_000, "en");
   assert.ok(!("error" in firstGuess) && firstGuess.correct);
   assert.equal(firstGuess.state.phase, "TURN_REVEAL");
+  assert.equal(firstGuess.state.deadlineAt, new Date(11_000).toISOString());
 
-  const secondTurn = advanceDrawGuessGame(firstGuess.state, 2, 8_000, "en");
+  const secondTurn = advanceDrawGuessGame(firstGuess.state, 2, 11_000, "en");
   assert.equal(secondTurn.turnIndex, 1);
   const secondAnswer = secondTurn.options[0];
-  const secondChoice = applyDrawGuessAction(secondTurn, { type: "CHOOSE_WORD", value: secondAnswer }, 1, 2, 9_000, "en");
-  const secondGuess = applyDrawGuessAction(secondChoice.state, { type: "GUESS", value: secondAnswer }, 0, 2, 10_000, "en");
+  const secondChoice = applyDrawGuessAction(secondTurn, { type: "CHOOSE_WORD", value: secondAnswer }, 1, 2, 12_000, "en");
+  const secondGuess = applyDrawGuessAction(secondChoice.state, { type: "GUESS", value: secondAnswer }, 0, 2, 13_000, "en");
   assert.ok(!("error" in secondGuess) && secondGuess.correct);
-  const finished = advanceDrawGuessGame(secondGuess.state, 2, 15_000, "en");
+  const finished = advanceDrawGuessGame(secondGuess.state, 2, 21_000, "en");
   assert.equal(finished.phase, "FINISHED");
   assert.deepEqual(finished.scores, [298, 298]);
 });
@@ -156,6 +249,20 @@ test("relay task reveals only the prior step and votes remain private until clos
   if (!("voteCounts" in reveal)) throw new Error("Wrong viewer shape");
   assert.equal(reveal.voteCounts, null);
   assert.equal("votes" in reveal, false);
+});
+
+test("relay waiting count and own artwork pick are visible without exposing other picks", () => {
+  const state = createDrawGuessState("CHAIN", 5);
+  state.phase = "CHAIN_WORD";
+  state.chains[0][0] = { kind: "WORD", seat: 0, system: false, value: "cat" };
+  const waiting = getDrawGuessViewerState(state, 1, 5);
+  assert.equal(waiting.chainSubmittedCount, 1);
+
+  state.phase = "AUTHOR_PICK";
+  state.picks = { "0": 1, "1": 3 };
+  const owner = getDrawGuessViewerState(state, 0, 5);
+  assert.ok("picks" in owner);
+  assert.deepEqual(owner.picks, { "0": 1 });
 });
 
 test("five-player relay completes, votes, awards drawings, and freezes scores", () => {

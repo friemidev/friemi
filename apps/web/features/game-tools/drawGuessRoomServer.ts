@@ -7,16 +7,19 @@ import {
   applyDrawGuessAction,
   createDrawGuessState,
   getDrawGuessViewerState,
+  isDrawGuessTiming,
   startDrawGuessGame,
   type DrawGuessAction,
   type DrawGuessMode,
   type DrawGuessPhase,
   type DrawGuessState,
+  type DrawGuessTiming,
 } from "@/features/game-tools/drawGuessEngine";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
+import { getDrawGuessWordBank, listDrawGuessWordBanks, shuffledDrawGuessWordBank } from "@/features/game-tools/drawGuessWordBanks";
 import { prisma } from "@/lib/prisma";
 
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
@@ -142,7 +145,10 @@ export async function createDrawGuessRoom(input: {
   locale: string;
   mode: DrawGuessMode;
   playerCount: number;
+  timing?: DrawGuessTiming;
+  wordBankId?: string;
 }) {
+  if (input.timing !== undefined && !isDrawGuessTiming(input.timing)) return { error: "INVALID_TIMING" } as const;
   const practiceRelay = input.mode === "CHAIN" && input.playerCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
   if (input.mode === "CLASSIC"
     ? input.playerCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || input.playerCount > 10
@@ -151,8 +157,13 @@ export async function createDrawGuessRoom(input: {
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;
   if (input.mode === "CHAIN" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
+  const wordBank = input.wordBankId
+    ? await getDrawGuessWordBank(input.wordBankId, input.locale)
+    : (await listDrawGuessWordBanks(input.locale))[0] ?? null;
+  if (!wordBank) return { error: "INVALID_WORD_BANK" } as const;
   const seatCount = practiceRelay ? 3 : input.playerCount;
-  const state = createDrawGuessState(input.mode, seatCount);
+  const timing = input.timing ?? { drawSeconds: 60, guessSeconds: 20 };
+  const state = createDrawGuessState(input.mode, seatCount, shuffledDrawGuessWordBank(wordBank), { drawSeconds: timing.drawSeconds, guessSeconds: timing.guessSeconds });
   if (practiceRelay) state.practiceBotSeat = 2;
   const code = await createUniqueGameToolRoomCode();
   const room = await prisma.$transaction(async (tx) => {
@@ -165,6 +176,7 @@ export async function createDrawGuessRoom(input: {
         mode: input.mode.toLowerCase(),
         playerCount: seatCount,
         state: toJson(state),
+        wordBankId: wordBank.id,
         title: input.locale === "en" ? "Draw & Guess" : input.locale === "fr" ? "Dessine et devine" : "你画我猜",
         seats: {
           create: [{
@@ -307,6 +319,9 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
         status: room.status,
         viewerSeat: viewer.seatNumber - 1,
+        wordBank: state.wordBank
+          ? { ...state.wordBank, words: [...state.wordBank.words].sort((a, b) => a.localeCompare(b, room.locale)) }
+          : null,
         view: getDrawGuessViewerState(state, viewer.seatNumber - 1, room.playerCount),
       },
     } as const;
@@ -347,7 +362,7 @@ export async function rematchDrawGuessRoom(roomId: string, profileId: string) {
     await hydrateDrawGuessState(room.id, state);
     if (state.phase !== "FINISHED" || room.status !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
     if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
-    const fresh = createDrawGuessState(state.mode, room.playerCount);
+    const fresh = createDrawGuessState(state.mode, room.playerCount, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing);
     fresh.practiceBotSeat = state.practiceBotSeat;
     fresh.gameNumber = state.gameNumber + 1;
     const started = startDrawGuessGame(fresh, Date.now(), room.locale);

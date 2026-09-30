@@ -231,7 +231,7 @@ export function ActiveGameToolFloatingWindow({
     >
       <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
       {currentRoom.kind === "DRAW_GUESS" ? (
-        <Image alt="" className="relative h-7 w-7 rounded-[0.45rem]" height={28} src="/game-tools/draw-guess/logo.svg" width={28} />
+        <Image alt="" className="relative h-7 w-7 object-contain" height={28} src="/game-tools/draw-guess/logo.png" width={28} />
       ) : (
         <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
       )}
