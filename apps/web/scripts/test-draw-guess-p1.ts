@@ -10,7 +10,7 @@ if (parsedUrl.protocol !== "postgresql:" || !["127.0.0.1", "localhost"].includes
 }
 process.env.DATABASE_URL = testUrl;
 process.env.DIRECT_URL = testUrl;
-process.env.DRAW_GUESS_CHAIN_ENABLED = "true";
+process.env.VERCEL_ENV = "preview";
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const { prisma } = await import("../lib/prisma");
@@ -124,9 +124,9 @@ async function run() {
   assert.deepEqual(await reports.reviewDrawGuessReport({ id: report.reportId, reviewerProfileId: players[0].id, status: "REVIEWED", note: "Reviewed in local test" }), { ok: true });
   assert.deepEqual(await reports.reviewDrawGuessReport({ id: report.reportId, reviewerProfileId: players[0].id, status: "DISMISSED", note: "Duplicate review" }), { error: "NOT_OPEN" });
 
-  process.env.DRAW_GUESS_CHAIN_ENABLED = "false";
+  process.env.VERCEL_ENV = "production";
   assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: "P1", locale: "zh-CN", mode: "CHAIN", playerCount: 5 }), { error: "CHAIN_NOT_ENABLED" });
-  process.env.DRAW_GUESS_CHAIN_ENABLED = "true";
+  process.env.VERCEL_ENV = "preview";
   const cleanup = await maintainDrawGuessData(Date.now());
   assert.deepEqual(cleanup, { commandsDeleted: 0, draftsDeleted: 0, roomsDeleted: 0 });
   const future = Date.now() + 366 * 86_400_000;

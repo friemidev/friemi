@@ -29,6 +29,12 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  type StoredActiveGameToolRoom,
+} from "@/features/game-tools/activeGameToolRoomStorage";
+import {
   getWerewolfDefaultRoomTitle,
   getWerewolfPlayerJudgeLabel,
   getWerewolfRoleLabel,
@@ -50,6 +56,7 @@ import {
 import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
+  exitedRoomId?: string;
   locale: string;
 };
 
@@ -640,6 +647,7 @@ function CustomModeCard({
 }
 
 export function WerewolfCreateRoomPanel({
+  exitedRoomId,
   locale,
 }: WerewolfCreateRoomPanelProps) {
   const router = useRouter();
@@ -664,6 +672,37 @@ export function WerewolfCreateRoomPanel({
   ]
     .map((key) => werewolfVariants.find((variant) => variant.key === key))
     .filter((variant): variant is WerewolfVariant => Boolean(variant));
+
+  useEffect(() => {
+    if (!exitedRoomId) {
+      return;
+    }
+
+    try {
+      const storedValue = window.localStorage.getItem(
+        ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+      );
+      const storedRoom = storedValue
+        ? (JSON.parse(storedValue) as Partial<StoredActiveGameToolRoom>)
+        : null;
+
+      if (storedRoom?.id === exitedRoomId) {
+        window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
+      }
+
+      window.sessionStorage.setItem(
+        DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        exitedRoomId,
+      );
+      window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+    } catch {
+      // Exiting the server-side room remains successful without local storage.
+    }
+
+    router.replace(withLocale(locale, "/game-tools/werewolf"), {
+      scroll: false,
+    });
+  }, [exitedRoomId, locale, router]);
 
   useEffect(() => {
     if (state.redirectHref) {

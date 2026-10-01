@@ -25,6 +25,7 @@ import {
 import {
   canUseWerewolfAntidote,
   formatWerewolfSeatLabel,
+  getActiveWerewolfVoteResultNotice,
   getWerewolfFlowRecordLabel,
   getWerewolfNightCues,
   getWerewolfNightActionLabel,
@@ -315,6 +316,9 @@ export function WerewolfFlowPanel({
   const [dismissedFactionAlertId, setDismissedFactionAlertId] = useState<
     string | null
   >(null);
+  const [dismissedVoteResultEventId, setDismissedVoteResultEventId] = useState<
+    string | null
+  >(null);
   const [factionAlertDragY, setFactionAlertDragY] = useState(0);
   const factionAlertDragStartYRef = useRef<number | null>(null);
   const factionAlertDragYRef = useRef(0);
@@ -486,6 +490,14 @@ export function WerewolfFlowPanel({
     flow.factionAlert?.id === dismissedFactionAlertId
       ? null
       : flow.factionAlert;
+  const voteResultNotice = useMemo(
+    () => getActiveWerewolfVoteResultNotice({ events, flow }),
+    [events, flow],
+  );
+  const visibleVoteResultNotice =
+    voteResultNotice?.id === dismissedVoteResultEventId
+      ? null
+      : voteResultNotice;
 
   const updateFactionAlertDrag = (offset: number) => {
     const nextOffset = Math.max(0, offset);
@@ -690,6 +702,127 @@ export function WerewolfFlowPanel({
               {t.close}
             </SubmitButton>
           </form>
+        </div>
+      ) : null}
+
+      {visibleVoteResultNotice ? (
+        <div className="pointer-events-none fixed inset-0 z-[125] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+          <section
+            aria-labelledby={`werewolf-vote-result-${visibleVoteResultNotice.id}`}
+            className="pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/55 bg-[#FFFDF7] p-5 text-[#18362D] shadow-[0_24px_80px_rgba(0,0,0,0.46)]"
+            role="dialog"
+          >
+            <button
+              aria-label={t.close}
+              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-[#D6D5B2] bg-white text-[#58645F] transition hover:bg-[#F1F2E3] active:scale-95"
+              onClick={() =>
+                setDismissedVoteResultEventId(visibleVoteResultNotice.id)
+              }
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-3 pr-10">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#E7F1EA] text-[#1F6E4C]">
+                <Vote className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-bold text-[#68736E]">
+                  {localizeWerewolfFlowText(locale, {
+                    "zh-CN": `第 ${visibleVoteResultNotice.voteRound} 轮投票`,
+                    en: `Vote round ${visibleVoteResultNotice.voteRound}`,
+                    fr: `Tour de vote ${visibleVoteResultNotice.voteRound}`,
+                  })}
+                </p>
+                <h2
+                  className="mt-0.5 text-xl font-bold"
+                  id={`werewolf-vote-result-${visibleVoteResultNotice.id}`}
+                >
+                  {localizeWerewolfFlowText(locale, {
+                    "zh-CN":
+                      visibleVoteResultNotice.kind === "SHERIFF"
+                        ? "警长投票结果"
+                        : "放逐投票结果",
+                    en:
+                      visibleVoteResultNotice.kind === "SHERIFF"
+                        ? "Sheriff vote result"
+                        : "Exile vote result",
+                    fr:
+                      visibleVoteResultNotice.kind === "SHERIFF"
+                        ? "Résultat du vote du capitaine"
+                        : "Résultat du vote d'élimination",
+                  })}
+                </h2>
+              </div>
+            </div>
+
+            <p className="mt-5 rounded-xl bg-[#F1F2E3] px-4 py-3 text-center text-base font-bold leading-7 text-[#153B31]">
+              {visibleVoteResultNotice.leaders.length
+                ? localizeWerewolfFlowText(locale, {
+                    "zh-CN": `${visibleVoteResultNotice.leaders.length > 1 ? "平票" : "最高票"}：${visibleVoteResultNotice.leaders
+                      .map((number) => {
+                        const seat = seats.find(
+                          (candidate) => candidate.seatNumber === number,
+                        );
+                        return `${formatWerewolfSeatLabel(number, locale)}${seat ? ` ${seat.displayName}` : ""}`;
+                      })
+                      .join("、")}`,
+                    en: `${visibleVoteResultNotice.leaders.length > 1 ? "Tie" : "Top vote"}: ${visibleVoteResultNotice.leaders
+                      .map((number) => {
+                        const seat = seats.find(
+                          (candidate) => candidate.seatNumber === number,
+                        );
+                        return `${formatWerewolfSeatLabel(number, locale)}${seat ? ` ${seat.displayName}` : ""}`;
+                      })
+                      .join(", ")}`,
+                    fr: `${visibleVoteResultNotice.leaders.length > 1 ? "Égalité" : "En tête"} : ${visibleVoteResultNotice.leaders
+                      .map((number) => {
+                        const seat = seats.find(
+                          (candidate) => candidate.seatNumber === number,
+                        );
+                        return `${formatWerewolfSeatLabel(number, locale)}${seat ? ` ${seat.displayName}` : ""}`;
+                      })
+                      .join(", ")}`,
+                  })
+                : localizeWerewolfFlowText(locale, {
+                    "zh-CN": "无人当选或出局",
+                    en: "No one was selected",
+                    fr: "Personne n'est élu ou éliminé",
+                  })}
+            </p>
+
+            {visibleVoteResultNotice.totals.length ? (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {visibleVoteResultNotice.totals.map(
+                  ({ seatNumber: targetSeatNumber, voteCount }) => {
+                    const targetSeat = seats.find(
+                      (seat) => seat.seatNumber === targetSeatNumber,
+                    );
+
+                    return (
+                      <div
+                        className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E2E0D2] bg-white px-3 py-2.5"
+                        key={targetSeatNumber}
+                      >
+                        <span className="min-w-0 truncate text-sm font-semibold">
+                          {formatWerewolfSeatLabel(targetSeatNumber, locale)}
+                          {targetSeat ? ` ${targetSeat.displayName}` : ""}
+                        </span>
+                        <span className="shrink-0 text-sm font-bold text-[#9B2433]">
+                          {localizeWerewolfFlowText(locale, {
+                            "zh-CN": `${voteCount}票`,
+                            en: `${voteCount} vote${voteCount === 1 ? "" : "s"}`,
+                            fr: `${voteCount} voix`,
+                          })}
+                        </span>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            ) : null}
+          </section>
         </div>
       ) : null}
 

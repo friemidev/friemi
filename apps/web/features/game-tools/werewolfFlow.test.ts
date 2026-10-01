@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   canUseWerewolfAntidote,
   formatWerewolfSeatLabel,
+  getActiveWerewolfVoteResultNotice,
   getWerewolfFactionAlert,
   getWerewolfFlowRecordLabel,
   getWerewolfNightActionLabel,
@@ -28,6 +29,83 @@ test("shows a suggested seat only during a vote result stage", () => {
   assert.equal(shouldShowWerewolfSuggestedSeat("EXILE_RESULT"), true);
   assert.equal(shouldShowWerewolfSuggestedSeat("DAY_ANNOUNCEMENT"), false);
   assert.equal(shouldShowWerewolfSuggestedSeat("EXILE_VOTE"), false);
+});
+
+test("shows the latest vote result only during its matching flow step", () => {
+  const event = {
+    id: "vote-result-1",
+    payload: {
+      leaders: [2, 4],
+      resultCueIndex: 0,
+      resultSessionIndex: 8,
+      resultStage: "EXILE_RUNOFF_SPEECH",
+      totals: { 2: 2.5, 4: 2.5, invalid: "ignored" },
+      voteRound: 1,
+    },
+    type: "werewolf_exile_vote_resolved",
+  };
+
+  assert.deepEqual(
+    getActiveWerewolfVoteResultNotice({
+      events: [event],
+      flow: {
+        cueIndex: 0,
+        sessionIndex: 8,
+        stage: "EXILE_RUNOFF_SPEECH",
+      },
+    }),
+    {
+      id: "vote-result-1",
+      kind: "EXILE",
+      leaders: [2, 4],
+      totals: [
+        { seatNumber: 2, voteCount: 2.5 },
+        { seatNumber: 4, voteCount: 2.5 },
+      ],
+      voteRound: 1,
+    },
+  );
+
+  assert.equal(
+    getActiveWerewolfVoteResultNotice({
+      events: [event],
+      flow: {
+        cueIndex: 0,
+        sessionIndex: 9,
+        stage: "EXILE_RUNOFF_VOTE",
+      },
+    }),
+    null,
+  );
+});
+
+test("hides a vote result after the judge advances the next night cue", () => {
+  const event = {
+    id: "vote-result-2",
+    payload: {
+      leaders: [],
+      resultCueIndex: 0,
+      resultSessionIndex: 12,
+      resultStage: "NIGHT",
+      totals: {},
+      voteRound: 2,
+    },
+    type: "werewolf_exile_vote_resolved",
+  };
+
+  assert.ok(
+    getActiveWerewolfVoteResultNotice({
+      events: [event],
+      flow: { cueIndex: 0, sessionIndex: 12, stage: "NIGHT" },
+    }),
+  );
+  assert.equal(
+    getActiveWerewolfVoteResultNotice({
+      events: [event],
+      flow: { cueIndex: 1, sessionIndex: 12, stage: "NIGHT" },
+    }),
+    null,
+  );
 });
 
 test("allows the antidote only after a confirmed wolf kill", () => {

@@ -4,7 +4,7 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UsersRound, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
@@ -20,9 +20,9 @@ const READY_SPARKS = [
 ] as const;
 
 function copyFor(locale: string) {
-  if (locale === "en") return { back: "Leave room", title: "Waiting room", classic: "Speed round", chain: "Picture chain", players: "Players", ready: "Ready", notReady: "Not ready", meReady: "I'm ready", cancelReady: "Cancel ready", start: "Start game", launching: "Here we go!", allReady: "Everyone's ready!", settings: "Room settings", bank: "Word pack", selectedBank: "This round's pack", saveBank: "Save word pack", loadingBanks: "Loading packs...", noBanks: "No packs found", type: "Type", allTypes: "All types", otherType: "Other", words: "words", time: "Timers", invite: "Invite", preview: "Preview words", search: "Search packs or words", draw: "Drawing", guess: "Guessing", seconds: "s", save: "Save settings", saving: "Saving", code: "Room code", copy: "Copy invite link", copied: "Copied", scan: "Scan to join", close: "Close", retry: "Please try again.", practice: "Two-player round: one automatic helper.", character: "Choose your cat", turnCat: "Turn cat", saveCat: "Use this cat" };
-  if (locale === "fr") return { back: "Quitter la salle", title: "Salle d'attente", classic: "Devine vite", chain: "Chaîne de dessins", players: "Joueurs", ready: "Prêt", notReady: "Pas prêt", meReady: "Je suis prêt", cancelReady: "Annuler", start: "Commencer", launching: "C'est parti !", allReady: "Tout le monde est prêt !", settings: "Paramètres", bank: "Thème", selectedBank: "Thème choisi", saveBank: "Enregistrer le thème", loadingBanks: "Chargement...", noBanks: "Aucun thème trouvé", type: "Type", allTypes: "Tous les types", otherType: "Autre", words: "mots", time: "Durées", invite: "Inviter", preview: "Voir les mots", search: "Chercher thème ou mot", draw: "Dessin", guess: "Réponse", seconds: "s", save: "Enregistrer", saving: "Enregistrement", code: "Code", copy: "Copier le lien", copied: "Copié", scan: "Scanner pour rejoindre", close: "Fermer", retry: "Veuillez réessayer.", practice: "À deux : un joueur automatique.", character: "Choisir un chat", turnCat: "Tourner le chat", saveCat: "Choisir ce chat" };
-  return { back: "退出房间", title: "等待开局", classic: "抢答模式", chain: "画画接龙", players: "玩家", ready: "已准备", notReady: "准备", meReady: "准备", cancelReady: "取消准备", start: "开始游戏", launching: "开画啦！", allReady: "全员就绪！", settings: "房间设置", bank: "词库", selectedBank: "本局词库", saveBank: "保存词库", loadingBanks: "正在加载词库…", noBanks: "没有找到词库", type: "词库类型", allTypes: "全部类型", otherType: "其他", words: "个词", time: "计时", invite: "邀请", preview: "预览词语", search: "搜词库或词语", draw: "作画", guess: "答题", seconds: "秒", save: "保存设置", saving: "保存中", code: "房间号", copy: "复制邀请链接", copied: "已复制", scan: "扫码加入", close: "关闭", retry: "操作未完成，请重试。", practice: "双人局自动补位", character: "选择猫咪", turnCat: "转个身", saveCat: "选这只猫" };
+  if (locale === "en") return { back: "Leave room", title: "Waiting room", classic: "Speed round", chain: "Picture chain", players: "Players", ready: "Ready", notReady: "Not ready", meReady: "I'm ready", cancelReady: "Cancel ready", start: "Start game", launching: "Here we go!", allReady: "Everyone's ready!", settings: "Room settings", bank: "Word pack", selectedBank: "This round's pack", saveBank: "Save word pack", loadingBanks: "Loading packs...", noBanks: "No packs found", type: "Type", allTypes: "All types", otherType: "Other", words: "words", time: "Timers", invite: "Invite", preview: "Preview words", search: "Search packs or words", draw: "Drawing", guess: "Guessing", seconds: "s", save: "Save settings", saving: "Saving", code: "Room code", copy: "Copy invite link", copied: "Copied", scan: "Scan to join", close: "Close", retry: "Please try again.", practice: "Two-player round: one automatic helper.", character: "Choose your cat", turnCat: "Turn cat", saveCat: "Use this cat", kick: "Remove", kickTitle: "Remove this player?", kickHint: "They won't be able to rejoin this room.", kickConfirm: "Remove player", cancel: "Keep player" };
+  if (locale === "fr") return { back: "Quitter la salle", title: "Salle d'attente", classic: "Devine vite", chain: "Chaîne de dessins", players: "Joueurs", ready: "Prêt", notReady: "Pas prêt", meReady: "Je suis prêt", cancelReady: "Annuler", start: "Commencer", launching: "C'est parti !", allReady: "Tout le monde est prêt !", settings: "Paramètres", bank: "Thème", selectedBank: "Thème choisi", saveBank: "Enregistrer le thème", loadingBanks: "Chargement...", noBanks: "Aucun thème trouvé", type: "Type", allTypes: "Tous les types", otherType: "Autre", words: "mots", time: "Durées", invite: "Inviter", preview: "Voir les mots", search: "Chercher thème ou mot", draw: "Dessin", guess: "Réponse", seconds: "s", save: "Enregistrer", saving: "Enregistrement", code: "Code", copy: "Copier le lien", copied: "Copié", scan: "Scanner pour rejoindre", close: "Fermer", retry: "Veuillez réessayer.", practice: "À deux : un joueur automatique.", character: "Choisir un chat", turnCat: "Tourner le chat", saveCat: "Choisir ce chat", kick: "Retirer", kickTitle: "Retirer ce joueur ?", kickHint: "Il ne pourra plus rejoindre cette salle.", kickConfirm: "Retirer", cancel: "Garder" };
+  return { back: "退出房间", title: "等待开局", classic: "抢答模式", chain: "画画接龙", players: "玩家", ready: "已准备", notReady: "准备", meReady: "准备", cancelReady: "取消准备", start: "开始游戏", launching: "开画啦！", allReady: "全员就绪！", settings: "房间设置", bank: "词库", selectedBank: "本局词库", saveBank: "保存词库", loadingBanks: "正在加载词库…", noBanks: "没有找到词库", type: "词库类型", allTypes: "全部类型", otherType: "其他", words: "个词", time: "计时", invite: "邀请", preview: "预览词语", search: "搜词库或词语", draw: "作画", guess: "答题", seconds: "秒", save: "保存设置", saving: "保存中", code: "房间号", copy: "复制邀请链接", copied: "已复制", scan: "扫码加入", close: "关闭", retry: "操作未完成，请重试。", practice: "双人局自动补位", character: "选择猫咪", turnCat: "转个身", saveCat: "选这只猫", kick: "移出", kickTitle: "移出这位玩家？", kickHint: "移出后，对方不能再加入这个房间。", kickConfirm: "确认移出", cancel: "留下玩家" };
 }
 
 export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: string; room: DrawGuessRoomView; onRefresh: () => Promise<void>; onLeave: () => Promise<void> }) {
@@ -45,6 +45,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   const [celebrate, setCelebrate] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [kickTarget, setKickTarget] = useState<string | null>(null);
   const wasStartable = useRef(Boolean(room.canStart));
   const bankTrigger = useRef<HTMLButtonElement>(null);
   const settingsTrigger = useRef<HTMLButtonElement>(null);
@@ -53,6 +54,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   const currentTiming = room.view.timing ?? { drawSeconds: 60, guessSeconds: 20 };
   const me = room.seats.find((seat) => seat.number === room.viewerSeat + 1);
   const humanSeats = room.seats.filter((seat) => !seat.isSystem);
+  const kickSeat = humanSeats.find((seat) => seat.id === kickTarget);
   const selectedBank = banks?.find((bank) => bank.id === selectedBankId) ?? (room.wordBank?.id === selectedBankId ? room.wordBank : null);
   const bankChanged = selectedBankId !== (room.wordBank?.id ?? "");
   const settingsChanged = timing.drawSeconds !== currentTiming.drawSeconds || timing.guessSeconds !== currentTiming.guessSeconds;
@@ -83,11 +85,11 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   }, [room.canStart]);
 
   useEffect(() => {
-    if (!bankOpen && !settingsOpen && !characterOpen) return;
+    if (!bankOpen && !settingsOpen && !characterOpen && kickTarget === null) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setBankOpen(false); setSettingsOpen(false); setCharacterOpen(false); setError(""); }
+      if (event.key === "Escape") { setBankOpen(false); setSettingsOpen(false); setCharacterOpen(false); setKickTarget(null); setError(""); }
       if (event.key !== "Tab" || !dialogRef.current) return;
       const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), summary, a[href]"));
       if (!focusable.length) return;
@@ -96,7 +98,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
     };
     window.addEventListener("keydown", onKeyDown);
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", onKeyDown); (characterOpen ? characterTrigger : bankOpen ? bankTrigger : settingsTrigger).current?.focus(); };
-  }, [bankOpen, settingsOpen, characterOpen]);
+  }, [bankOpen, settingsOpen, characterOpen, kickTarget]);
 
   useEffect(() => {
     if (!settingsOpen || tab !== "invite" || !inviteUrl) return;
@@ -130,7 +132,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   function openCharacter() { setSelectedCatId(me?.catId ?? DRAW_GUESS_CATS[0].id); setCatDirectionIndex(0); setError(""); setCharacterOpen(true); }
   function closeCharacter() { setCharacterOpen(false); setError(""); }
 
-  async function mutate(path: string, method: "POST" | "PATCH", body: unknown, close?: "bank" | "settings" | "character") {
+  async function mutate(path: string, method: "POST" | "PATCH", body: unknown, close?: "bank" | "settings" | "character" | "kick") {
     setBusy(true);
     setError("");
     try {
@@ -141,6 +143,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
       if (close === "bank") setBankOpen(false);
       if (close === "settings") setSettingsOpen(false);
       if (close === "character") setCharacterOpen(false);
+      if (close === "kick") setKickTarget(null);
     } catch { setError(t.retry); }
     finally { setBusy(false); }
   }
@@ -181,7 +184,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
         {room.wordBank?.category ? <span className="hidden max-w-28 truncate rounded-full bg-white/75 px-2 py-0.5 text-[10px] font-bold sm:block">{room.wordBank.category}</span> : null}
       </div>
       <div className={`mx-auto mt-4 grid justify-items-center gap-x-2 gap-y-3 ${humanSeats.length === 1 ? "max-w-28 grid-cols-1" : humanSeats.length === 2 ? "max-w-xs grid-cols-2" : "max-w-xl grid-cols-3"}`}>
-        {humanSeats.map((seat, index) => <div key={seat.number} className="draw-guess-seat-in flex min-w-0 w-full flex-col items-center px-1 py-1 text-center" style={{ animationDelay: `${index * 65}ms` }}>
+        {humanSeats.map((seat, index) => <div key={seat.number} className="draw-guess-seat-in relative flex min-w-0 w-full flex-col items-center px-1 py-1 text-center" style={{ animationDelay: `${index * 65}ms` }}>
+          {room.isHost && !seat.isHost ? <button type="button" disabled={busy} onClick={() => { setError(""); setKickTarget(seat.id); }} aria-label={`${t.kick} ${seat.name}`} className="absolute right-0 top-0 z-10 grid h-8 w-8 place-items-center rounded-full bg-white text-[#6B7890] shadow-[0_2px_0_#D7E3EF] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3E6FA8] disabled:opacity-50"><UserMinus className="h-4 w-4" /></button> : null}
           <div className={`relative grid h-16 w-16 place-items-center rounded-full ring-4 ring-white sm:h-[4.5rem] sm:w-[4.5rem] ${seat.ready ? "draw-guess-avatar-ready bg-[#DFECF8] shadow-[0_4px_0_#B8D3EA]" : "bg-[#E8ECF6] shadow-[0_4px_0_#DCE4EF]"}`}>
             <DrawGuessCatSprite catId={seat.catId} mood={seat.ready ? "happy" : "idle"} size={61} />
             <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center overflow-hidden rounded-full border-2 border-white bg-[#FFE7B1] text-[9px] font-black text-[#765A35]">
@@ -202,7 +206,9 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
         {READY_SPARKS.map(([x, y, color], index) => <span key={index} className="draw-guess-ready-spark absolute left-1/2 top-1/2 text-xl leading-none" style={{ "--spark-x": x, "--spark-y": y, "--spark-rotate": `${index * 41}deg`, "--spark-delay": `${index * 18}ms`, color } as CSSProperties}>{index % 3 === 0 ? "●" : "✦"}</span>)}
       </div> : null}
     </main>
-    {error && !settingsOpen && !bankOpen && !characterOpen ? <p role="alert" className="rounded-xl bg-[#FFE8E5] px-4 py-3 text-sm text-[#9A3B32]">{error}</p> : null}
+    {error && !settingsOpen && !bankOpen && !characterOpen && kickTarget === null ? <p role="alert" className="rounded-xl bg-[#FFE8E5] px-4 py-3 text-sm text-[#9A3B32]">{error}</p> : null}
+
+    {kickSeat && typeof document !== "undefined" ? createPortal(<div className="draw-guess-theme fixed inset-0 z-[110] grid place-items-center bg-[#273A53]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setKickTarget(null); }}><div ref={dialogRef} role="alertdialog" aria-modal="true" aria-label={t.kickTitle} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFCF5] p-6 text-center shadow-[0_25px_70px_rgba(48,66,92,0.28)]"><DrawGuessCatSprite animated catId={kickSeat.catId} mood="sad" size={78} /><h2 className="mt-2 text-xl font-black">{t.kickTitle}</h2><strong className="mt-1 block truncate text-sm text-[#3E6FA8]">{kickSeat.name}</strong><p className="mt-2 text-sm text-[#63758D]">{t.kickHint}</p>{error ? <p role="alert" className="mt-3 rounded-xl bg-[#FFE8E5] px-3 py-2 text-xs text-[#9A3B32]">{error}</p> : null}<div className="mt-5 flex gap-2"><button autoFocus type="button" disabled={busy} onClick={() => setKickTarget(null)} className="draw-guess-btn draw-guess-btn--milk min-h-11 flex-1 px-3 text-sm">{t.cancel}</button><button type="button" disabled={busy} onClick={() => void mutate(`/api/game-tools/draw-guess/rooms/${room.id}/kick`, "POST", { seatId: kickSeat.id }, "kick")} className="draw-guess-btn draw-guess-btn--candy min-h-11 flex-1 px-3 text-sm">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}{t.kickConfirm}</button></div></div></div>, document.body) : null}
 
     {characterOpen && typeof document !== "undefined" ? createPortal(<div className="draw-guess-theme fixed inset-0 z-[100] flex items-end justify-center bg-[#273A53]/50 p-2 sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCharacter(); }}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t.character} className="draw-guess-dialog flex max-h-[92dvh] w-full max-w-xl flex-col rounded-[1.8rem] bg-[#FFFCF5] shadow-[0_25px_70px_rgba(48,66,92,0.28)] sm:max-h-[85dvh]">

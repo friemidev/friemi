@@ -17,7 +17,7 @@ export async function GET(request: Request, context: { params: Promise<{ roomId:
       "cache-control": "private, no-store",
       ...("room" in result && result.room ? { etag: `W/"draw-guess-${result.room.revision}"` } : {}),
     },
-    status: "error" in result ? 404 : 200,
+    status: "error" in result ? result.error === "KICKED" ? 403 : 404 : 200,
   });
 }
 

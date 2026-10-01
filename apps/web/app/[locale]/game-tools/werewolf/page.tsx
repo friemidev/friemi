@@ -13,6 +13,9 @@ type WerewolfToolPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    exitedRoomId?: string | string[];
+  }>;
 };
 
 const metadataCopy = {
@@ -50,8 +53,13 @@ export async function generateMetadata({
 
 export default async function WerewolfToolPage({
   params,
+  searchParams,
 }: WerewolfToolPageProps) {
   const { locale } = await params;
+  const query = (await searchParams) ?? {};
+  const exitedRoomId = Array.isArray(query.exitedRoomId)
+    ? query.exitedRoomId[0]
+    : query.exitedRoomId;
 
   return (
     <PageContainer
@@ -59,7 +67,7 @@ export default async function WerewolfToolPage({
       mobileSafeBottom
       mobileSafeTop
     >
-      <WerewolfCreateRoomPanel locale={locale} />
+      <WerewolfCreateRoomPanel exitedRoomId={exitedRoomId} locale={locale} />
     </PageContainer>
   );
 }
