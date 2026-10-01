@@ -10,6 +10,7 @@ import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCa
 import { DrawGuessClassicChat } from "@/features/game-tools/components/DrawGuessClassicChat";
 import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
+import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
 import { DrawGuessPodium } from "@/features/game-tools/components/DrawGuessPodium";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
@@ -30,7 +31,7 @@ export type DrawGuessRoomView = {
   requiredPlayers?: number;
   practiceBotSeat?: number;
   revision: number;
-  seats: { name: string; number: number; avatarUrl?: string | null; catId?: string | null; ready?: boolean; isHost: boolean; isSystem?: boolean; managed?: boolean }[];
+  seats: { id: string; name: string; number: number; avatarUrl?: string | null; catId?: string | null; ready?: boolean; isHost: boolean; isSystem?: boolean; managed?: boolean }[];
   status: string;
   viewerSeat: number;
   wordBank?: DrawGuessWordBankSnapshot | null;
@@ -113,6 +114,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const [showPlayers, setShowPlayers] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [removed, setRemoved] = useState(false);
   const [phaseToast, setPhaseToast] = useState(false);
   const lastPhaseKey = useRef("");
   const playStageRef = useRef<HTMLDivElement>(null);
@@ -125,18 +127,22 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const leaveTimer = useRef<number | null>(null);
   useEffect(() => {
     if (leaveTimer.current !== null) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
+    const onPageHide = () => {
+      const path = `/api/game-tools/draw-guess/rooms/${latestRoom.current.id}/depart`;
+      if (!navigator.sendBeacon?.(path)) void fetch(path, { method: "POST", keepalive: true }).catch(() => {});
+    };
+    window.addEventListener("pagehide", onPageHide);
     return () => {
+      window.removeEventListener("pagehide", onPageHide);
       leaveTimer.current = window.setTimeout(() => {
-        if (latestRoom.current.view.phase !== "FINISHED") {
-          void fetch(`/api/game-tools/draw-guess/rooms/${latestRoom.current.id}/leave`, { method: "POST", keepalive: true });
-          try {
-            const active = JSON.parse(window.localStorage.getItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY) ?? "null") as { id?: string } | null;
-            if (active?.id === latestRoom.current.id) {
-              window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
-              window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
-            }
-          } catch { /* Private browsing may block local storage. */ }
-        }
+        void fetch(`/api/game-tools/draw-guess/rooms/${latestRoom.current.id}/leave`, { method: "POST", keepalive: true });
+        try {
+          const active = JSON.parse(window.localStorage.getItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY) ?? "null") as { id?: string } | null;
+          if (active?.id === latestRoom.current.id) {
+            window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
+            window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+          }
+        } catch { /* Private browsing may block local storage. */ }
       }, 500);
     };
   }, []);
@@ -218,6 +224,11 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
           if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
           setRefreshFailed(false);
         } else {
+          const result = await response.json().catch(() => null) as { error?: string } | null;
+          if (result?.error === "KICKED") {
+            setRemoved(true);
+            return;
+          }
           setRefreshFailed(true);
           if (response.status === 401) setError(statusCopy.signIn);
         }
@@ -245,7 +256,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }, [room.id, room.mode, room.viewerSeat, room.view.gameNumber, room.view.phase, room.view.turnIndex]);
 
   useEffect(() => {
-    const intervalMs = syncStatus === "CONNECTED" ? 10_000 : 2_000;
+    if (removed) return;
+    const intervalMs = room.view.phase === "LOBBY" ? 2_000 : syncStatus === "CONNECTED" ? 10_000 : 2_000;
     // Spread safety polls across clients that subscribe to the same room at once.
     const poll = () => { void refresh(); };
     let intervalId: number | null = null;
@@ -260,7 +272,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       if (intervalId !== null) window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
     };
-  }, [refresh, syncStatus]);
+  }, [refresh, removed, room.view.phase, syncStatus]);
 
   useEffect(() => {
     const config = getDrawGuessRealtimeBrowserConfig();
@@ -571,6 +583,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }
 
   const inputForm = (placeholder: string, action: string, disabled = false) => <form onSubmit={submitText} className="flex gap-2"><input aria-label={placeholder} autoComplete="off" enterKeyHint="send" maxLength={room.view.phase === "CHAIN_WORD" ? 12 : room.view.phase === "DRAW_GUESS" ? 20 : 40} value={input} onChange={(event) => setInput(event.target.value)} placeholder={placeholder} disabled={disabled} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-4 text-base outline-none focus:border-[#3F74AE] disabled:opacity-50" /><button type="submit" disabled={disabled || busy || !input.trim()} className="draw-guess-btn draw-guess-btn--candy min-h-12 shrink-0 whitespace-nowrap px-4 text-sm sm:px-5"><Send className="h-4 w-4" />{action}</button></form>;
+
+  if (removed) return <DrawGuessKickedNotice catId={viewerCatId} locale={locale} roomId={room.id} />;
 
   if (room.view.phase === "LOBBY") return <DrawGuessLobby locale={locale} room={room} onRefresh={() => refresh(true)} onLeave={leaveRoom} />;
 

@@ -26,6 +26,31 @@ import { DRAW_GUESS_CATS, fallbackDrawGuessCatId, isDrawGuessCatId, type DrawGue
 import { prisma } from "@/lib/prisma";
 
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
+const DRAW_GUESS_STALE_MS = 35_000;
+const DRAW_GUESS_DEPART_GRACE_MS = 8_000;
+
+function kickedDrawGuessProfiles(config: Prisma.JsonValue | null): string[] {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return [];
+  const ids = (config as Record<string, unknown>).drawGuessKickedProfileIds;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
+}
+
+type DrawGuessStoredSeat = { name: string; number: number; profileId: string | null };
+
+function storedDrawGuessSeats(state: Prisma.JsonValue): DrawGuessStoredSeat[] | null {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return null;
+  const seats = (state as Record<string, unknown>).seatRoster;
+  if (!Array.isArray(seats)) return null;
+  return seats.filter((seat): seat is DrawGuessStoredSeat => Boolean(seat && typeof seat === "object"
+    && typeof seat.name === "string" && Number.isInteger(seat.number)
+    && (typeof seat.profileId === "string" || seat.profileId === null)));
+}
+
+async function compactLobbySeatNumbers(tx: Prisma.TransactionClient, seats: { id: string; seatNumber: number }[]) {
+  for (const [index, seat] of [...seats].sort((a, b) => a.seatNumber - b.seatNumber).entries()) {
+    if (seat.seatNumber !== index + 1) await tx.gameToolSeat.update({ where: { id: seat.id }, data: { seatNumber: index + 1 } });
+  }
+}
 
 function randomDrawGuessCatId(): DrawGuessCatId {
   return DRAW_GUESS_CATS[randomInt(DRAW_GUESS_CATS.length)].id;
@@ -127,13 +152,14 @@ async function updateState(
       });
     }
     if (state.phase === "FINISHED" && room.status !== "FINISHED") {
+      const seatRoster = room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }));
       await tx.drawGuessRound.create({
         data: {
           finishedAt: finishedAt!,
           mode: state.mode,
           roomId: room.id,
           roundNumber: state.gameNumber,
-          state: compactDrawGuessState(state),
+          state: { ...(compactDrawGuessState(state) as Record<string, unknown>), seatRoster } as Prisma.InputJsonValue,
         },
       });
     }
@@ -230,6 +256,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
       include: { seats: { where: { leftAt: null } } },
     });
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (kickedDrawGuessProfiles(room.config).includes(input.profileId)) return { error: "KICKED" } as const;
     const existing = room.seats.find((seat) => seat.profileId === input.profileId);
     if (existing) {
       await prisma.gameToolRoomMember.upsert({
@@ -245,6 +272,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
       }
       return { roomId: room.id, spectator: false } as const;
     }
+    if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
     if (room.status !== "LOBBY") {
       await prisma.gameToolRoomMember.upsert({
         where: { roomId_profileId: { roomId: room.id, profileId: input.profileId } },
@@ -303,6 +331,7 @@ export async function leaveDrawGuessRoom(roomId: string, profileId: string, stal
     }
     if (room.status === "LOBBY") {
       const others = room.seats.filter((item) => item.id !== seat.id && item.profileId);
+      const autoSize = asState(room.state)?.autoSize === true;
       const changed = await prisma.$transaction(async (tx) => {
         const reserved = await tx.gameToolRoom.updateMany({ where: { id: room.id, revision: room.revision, status: "LOBBY" }, data: { revision: { increment: 1 }, ...(room.hostId === profileId && others[0]?.profileId ? { hostId: others[0].profileId } : {}) } });
         if (!reserved.count) return false;
@@ -312,6 +341,7 @@ export async function leaveDrawGuessRoom(roomId: string, profileId: string, stal
         else {
           await tx.gameToolRoomMember.delete({ where: { id: member.id } });
           await tx.gameToolSeat.delete({ where: { id: seat.id } });
+          if (autoSize) await compactLobbySeatNumbers(tx, room.seats.filter((item) => item.id !== seat.id));
         }
         return true;
       }).catch((error) => {
@@ -331,6 +361,45 @@ export async function leaveDrawGuessRoom(roomId: string, profileId: string, stal
       return { ok: true } as const;
     }
     await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+    return { ok: true } as const;
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
+export async function markDrawGuessPresenceDeparting(roomId: string, profileId: string) {
+  const departingAt = new Date(Date.now() - DRAW_GUESS_STALE_MS + DRAW_GUESS_DEPART_GRACE_MS);
+  await prisma.gameToolRoomMember.updateMany({
+    where: { roomId, profileId, leftAt: null, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS", "FINISHED"] } } },
+    data: { lastSeenAt: departingAt },
+  });
+  return { ok: true } as const;
+}
+
+export async function kickDrawGuessRoomPlayer(roomId: string, hostId: string, seatId: string) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.hostId !== hostId) return { error: "HOST_ONLY" } as const;
+    if (room.status !== "LOBBY") return { error: "ALREADY_STARTED" } as const;
+    const target = room.seats.find((seat) => seat.id === seatId);
+    if (!target?.profileId || target.profileId === hostId) return { error: "PLAYER_NOT_FOUND" } as const;
+    const config = room.config && typeof room.config === "object" && !Array.isArray(room.config) ? room.config : {};
+    const kicked = [...new Set([...kickedDrawGuessProfiles(room.config), target.profileId])];
+    const autoSize = asState(room.state)?.autoSize === true;
+    const changed = await prisma.$transaction(async (tx) => {
+      const reserved = await tx.gameToolRoom.updateMany({
+        where: { id: roomId, hostId, revision: room.revision, status: "LOBBY" },
+        data: { config: { ...config, drawGuessKickedProfileIds: kicked } as Prisma.InputJsonValue, revision: { increment: 1 } },
+      });
+      if (!reserved.count) return false;
+      await tx.gameToolRoomMember.deleteMany({ where: { roomId, profileId: target.profileId } });
+      await tx.gameToolSeat.delete({ where: { id: target.id } });
+      if (autoSize) await compactLobbySeatNumbers(tx, room.seats.filter((seat) => seat.id !== target.id));
+      await tx.gameToolEvent.create({ data: { actorId: hostId, roomId, type: "DRAW_GUESS_PLAYER_KICKED", payload: { seatNumber: target.seatNumber } } });
+      return true;
+    });
+    if (!changed) continue;
+    await broadcastDrawGuessRoomChange(roomId);
     return { ok: true } as const;
   }
   return { error: "TRY_AGAIN" } as const;
@@ -379,7 +448,14 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (kickedDrawGuessProfiles(room.config).includes(profileId)) return { error: "KICKED" } as const;
     if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
+    const staleBefore = new Date(Date.now() - DRAW_GUESS_STALE_MS);
+    const staleMembers = room.members.filter((member) => member.profileId !== profileId && member.lastSeenAt <= staleBefore);
+    if (staleMembers.length) {
+      for (const member of staleMembers) if (member.profileId) await leaveDrawGuessRoom(roomId, member.profileId, staleBefore);
+      continue;
+    }
     const viewer = room.seats.find((seat) => seat.profileId === profileId);
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
@@ -402,7 +478,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         autoSize: state.autoSize === true,
         requiredPlayers: state.mode === "CLASSIC" ? isDrawGuessPreviewDuoEnabled() ? 2 : 3
           : state.practiceBotSeat !== undefined || isDrawGuessPreviewRelayDuoEnabled() && room.seats.length <= 2 ? 2 : 5,
-        canStart: state.phase === "LOBBY" && room.seats.filter((seat) => seat.profileId).every((seat) => Boolean(seat.readyAt)) && (state.autoSize
+        canStart: state.phase === "LOBBY" && (state.mode !== "CHAIN" || isDrawGuessChainEnabled()) && room.seats.filter((seat) => seat.profileId).every((seat) => Boolean(seat.readyAt)) && (state.autoSize
           ? (state.mode === "CLASSIC"
             ? room.seats.length >= (isDrawGuessPreviewDuoEnabled() ? 2 : 3)
             : room.seats.length >= 5 || room.seats.length === 2 && isDrawGuessPreviewRelayDuoEnabled())
@@ -411,7 +487,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         playerCount: room.playerCount,
         practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat, managed: Boolean(state.managedSeats?.includes(seat.seatNumber - 1)) })),
+        seats: room.seats.map((seat) => ({ id: seat.id, name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat, managed: Boolean(state.managedSeats?.includes(seat.seatNumber - 1)) })),
         status: room.status,
         viewerSeat: viewer ? viewer.seatNumber - 1 : -1,
         wordBank: state.wordBank
@@ -565,6 +641,9 @@ export async function returnDrawGuessRoomToLobby(roomId: string, profileId: stri
     if (room.status === "LOBBY") return { ok: true } as const;
     const state = asState(room.state);
     if (!state || room.status !== "FINISHED" || state.phase !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
+    const activeProfiles = new Set(room.members.map((member) => member.profileId));
+    const departedSeats = room.seats.filter((seat) => seat.profileId && !activeProfiles.has(seat.profileId));
+    const seatRoster = room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }));
     const capacity = state.autoSize ? state.mode === "CLASSIC" ? 10 : 8 : room.playerCount;
     const fresh = createDrawGuessState(state.mode, capacity, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing);
     fresh.gameNumber = state.gameNumber + 1;
@@ -576,14 +655,22 @@ export async function returnDrawGuessRoomToLobby(roomId: string, profileId: stri
         data: { drawGuessDeadlineAt: null, finishedAt: null, startedAt: null, playerCount: capacity, revision: { increment: 1 }, state: toJson(fresh), status: "LOBBY" },
       });
       if (!reserved.count) return false;
+      if (departedSeats.length) {
+        const oldRounds = await tx.drawGuessRound.findMany({ where: { roomId }, orderBy: { roundNumber: "desc" }, take: 20, select: { id: true, state: true } });
+        for (const round of oldRounds) if (!storedDrawGuessSeats(round.state)) {
+          await tx.drawGuessRound.update({ where: { id: round.id }, data: { state: { ...(round.state as Record<string, unknown>), seatRoster } as Prisma.InputJsonValue } });
+        }
+      }
       if (state.autoSize && state.practiceBotSeat !== undefined) {
         await tx.gameToolSeat.deleteMany({ where: { roomId, seatNumber: state.practiceBotSeat + 1, profileId: null } });
       }
+      if (departedSeats.length) await tx.gameToolSeat.deleteMany({ where: { id: { in: departedSeats.map((seat) => seat.id) } } });
+      if (state.autoSize) await compactLobbySeatNumbers(tx, room.seats.filter((seat) => !departedSeats.some((departed) => departed.id === seat.id) && (state.practiceBotSeat === undefined || seat.seatNumber !== state.practiceBotSeat + 1)));
       await tx.gameToolSeat.updateMany({ where: { roomId, leftAt: null, profileId: { not: null } }, data: { readyAt: null } });
       await tx.gameToolRoomMember.updateMany({ where: { roomId, leftAt: null }, data: { readyAt: null } });
       await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_RETURNED_TO_LOBBY", payload: { gameNumber: fresh.gameNumber } } });
       return true;
-    });
+    }, { maxWait: 10_000, timeout: 15_000 });
     if (!returned) continue;
     await broadcastDrawGuessRoomChange(roomId);
     return { ok: true } as const;
@@ -594,12 +681,12 @@ export async function returnDrawGuessRoomToLobby(roomId: string, profileId: stri
 export async function getDrawGuessHistory(roomId: string, profileId: string) {
   const room = await readRoom(roomId);
   if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
-  if (!room.seats.some((seat) => seat.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
   const rounds = await prisma.drawGuessRound.findMany({
     where: { roomId },
     orderBy: { roundNumber: "desc" },
     take: 20,
   });
+  if (!room.seats.some((seat) => seat.profileId === profileId) && !rounds.some((round) => storedDrawGuessSeats(round.state)?.some((seat) => seat.profileId === profileId))) return { error: "NOT_A_PLAYER" } as const;
   const history = await Promise.all(rounds.map(async (round) => {
     const state = asState(round.state);
     if (!state) return null;
@@ -624,8 +711,10 @@ export async function getDrawGuessHistory(roomId: string, profileId: string) {
       matchResults: state.mode === "CHAIN" ? state.matchResults : null,
       mode: state.mode,
       picks: state.mode === "CHAIN" ? state.picks : null,
+      practiceBotSeat: state.practiceBotSeat,
       roundNumber: round.roundNumber,
       scores: state.scores,
+      seats: (storedDrawGuessSeats(round.state) ?? room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }))).map((seat) => ({ name: seat.name, number: seat.number })),
       voteCounts: state.mode === "CHAIN" ? state.chains.map((_, owner) => {
         const votes = Object.values(state.votes[String(owner)] ?? {});
         return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: room.playerCount - votes.length };
@@ -660,9 +749,9 @@ export async function advanceDrawGuessRoom(roomId: string, now = Date.now()) {
 }
 
 export async function sweepDueDrawGuessRooms(now = Date.now()) {
-  const staleBefore = new Date(now - 35_000);
+  const staleBefore = new Date(now - DRAW_GUESS_STALE_MS);
   const staleMembers = await prisma.gameToolRoomMember.findMany({
-    where: { lastSeenAt: { lte: staleBefore }, leftAt: null, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS"] } } },
+    where: { lastSeenAt: { lte: staleBefore }, leftAt: null, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS", "FINISHED"] } } },
     select: { profileId: true, roomId: true },
     take: 100,
   });
