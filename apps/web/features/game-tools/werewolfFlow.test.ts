@@ -9,6 +9,8 @@ import {
   getWerewolfNightActionSubmissionKey,
   getWerewolfNightCues,
   getWerewolfSeerResult,
+  getVisibleWerewolfSheriffCandidateSeatNumbers,
+  groupWerewolfVotesByTarget,
   shouldShowWerewolfSuggestedSeat,
   tallyWerewolfVotes,
 } from "@/features/game-tools/werewolfFlow";
@@ -166,6 +168,96 @@ test("reports tied leaders for a runoff", () => {
       ],
     }).leaders,
     [3, 4],
+  );
+});
+
+test("groups voter seat numbers beside the player receiving each vote", () => {
+  assert.deepEqual(
+    groupWerewolfVotesByTarget({
+      kind: "WEREWOLF_EXILE_VOTE",
+      roundIndex: 4,
+      submissions: [
+        {
+          kind: "WEREWOLF_EXILE_VOTE",
+          roundIndex: 4,
+          targetSeatNumber: 2,
+          voterSeatNumber: 1,
+        },
+        {
+          kind: "WEREWOLF_EXILE_VOTE",
+          roundIndex: 4,
+          targetSeatNumber: 2,
+          voterSeatNumber: 5,
+        },
+        {
+          kind: "WEREWOLF_EXILE_VOTE",
+          roundIndex: 4,
+          targetSeatNumber: 3,
+          voterSeatNumber: 4,
+        },
+      ],
+    }),
+    { 2: [1, 5], 3: [4] },
+  );
+});
+
+test("vote markers ignore abstentions and records from another vote", () => {
+  assert.deepEqual(
+    groupWerewolfVotesByTarget({
+      kind: "WEREWOLF_SHERIFF_VOTE",
+      roundIndex: 2,
+      submissions: [
+        {
+          kind: "WEREWOLF_SHERIFF_VOTE",
+          roundIndex: 2,
+          targetSeatNumber: null,
+          voterSeatNumber: 1,
+        },
+        {
+          kind: "WEREWOLF_SHERIFF_VOTE",
+          roundIndex: 1,
+          targetSeatNumber: 2,
+          voterSeatNumber: 3,
+        },
+        {
+          kind: "WEREWOLF_EXILE_VOTE",
+          roundIndex: 2,
+          targetSeatNumber: 2,
+          voterSeatNumber: 4,
+        },
+      ],
+    }),
+    {},
+  );
+});
+
+test("shows raised hands only for active sheriff candidates", () => {
+  assert.deepEqual(
+    getVisibleWerewolfSheriffCandidateSeatNumbers({
+      candidateSeatNumbers: [1, 3, 5],
+      stage: "SHERIFF_WITHDRAW",
+      withdrawnSeatNumbers: [3],
+    }),
+    [1, 5],
+  );
+});
+
+test("hides every raised hand when the sheriff election is finished", () => {
+  assert.deepEqual(
+    getVisibleWerewolfSheriffCandidateSeatNumbers({
+      candidateSeatNumbers: [1, 3],
+      stage: "SHERIFF_RESULT",
+      withdrawnSeatNumbers: [],
+    }),
+    [],
+  );
+  assert.deepEqual(
+    getVisibleWerewolfSheriffCandidateSeatNumbers({
+      candidateSeatNumbers: [1, 3],
+      stage: "DAY_ANNOUNCEMENT",
+      withdrawnSeatNumbers: [],
+    }),
+    [],
   );
 });
 
