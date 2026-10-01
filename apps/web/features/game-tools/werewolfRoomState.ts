@@ -17,6 +17,8 @@ export type WerewolfFinishSelection =
   | Exclude<WerewolfWinner, null>
   | "TERMINATED";
 
+export type WerewolfDepartureIntent = "exit_room" | "leave_seat";
+
 export type WerewolfRoomState = {
   deadSeatNumbers: number[];
   finishedAt?: string | null;
@@ -56,6 +58,22 @@ export function didWerewolfRoomStartNextRound(
   currentStatus: string,
 ) {
   return previousStatus === "FINISHED" && currentStatus === "IN_PROGRESS";
+}
+
+export function getWerewolfDepartureBehavior({
+  intent,
+  status,
+}: {
+  intent: WerewolfDepartureIntent;
+  status: string;
+}) {
+  const shouldLeaveRoom = intent === "exit_room" || status !== "LOBBY";
+
+  return {
+    notice: shouldLeaveRoom ? ("exited" as const) : ("left" as const),
+    shouldLeaveRoom,
+    shouldReleaseSeat: status !== "IN_PROGRESS",
+  };
 }
 
 function getPhase(value: unknown): WerewolfRoomPhase {

@@ -2621,9 +2621,20 @@ export function WerewolfRoomOverview({
                           return;
                         }
 
-                        applyOptimisticLeaveSeat();
+                        if (room.status === "LOBBY") {
+                          applyOptimisticLeaveSeat();
+                        }
                       }}
                     >
+                      <input
+                        name="intent"
+                        type="hidden"
+                        value={
+                          room.status === "FINISHED"
+                            ? "exit_room"
+                            : "leave_seat"
+                        }
+                      />
                       <input name="locale" type="hidden" value={locale} />
                       <input name="roomId" type="hidden" value={room.id} />
                       {currentMemberToken ? (
@@ -2643,7 +2654,9 @@ export function WerewolfRoomOverview({
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.leaveSeat}
+                        label={
+                          room.status === "FINISHED" ? t.exitGame : t.leaveSeat
+                        }
                       />
                     </form>
                   </div>
@@ -2728,6 +2741,33 @@ export function WerewolfRoomOverview({
                   </form>
                 ) : null}
               </div>
+            ) : null}
+
+            {canExitRoom &&
+            !currentViewerSeat &&
+            room.status === "FINISHED" ? (
+              <form
+                action={leaveAction}
+                onSubmit={(event) => {
+                  canSubmitOnline(event);
+                }}
+              >
+                <input name="intent" type="hidden" value="exit_room" />
+                <input name="locale" type="hidden" value={locale} />
+                <input name="responseMode" type="hidden" value="inline" />
+                <input name="roomId" type="hidden" value={room.id} />
+                {currentMemberToken ? (
+                  <input
+                    name="memberToken"
+                    type="hidden"
+                    value={currentMemberToken}
+                  />
+                ) : null}
+                <SubmitButton
+                  className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.exitGame}
+                />
+              </form>
             ) : null}
 
             {!canExitRoom && !isSeatingOpen ? (
