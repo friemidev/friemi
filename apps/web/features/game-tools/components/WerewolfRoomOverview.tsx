@@ -844,6 +844,7 @@ export function WerewolfRoomOverview({
   const syncProbeInFlightRef = useRef(false);
   const syncProbeQueuedRef = useRef(false);
   const syncVersionRef = useRef(initialRoom.syncVersion);
+  const exitNavigationStartedRef = useRef(false);
   const [localFormError, setLocalFormError] = useState<string | null>(null);
   const [seatState, seatAction] = useActionState(
     claimWerewolfSeatAction,
@@ -970,7 +971,10 @@ export function WerewolfRoomOverview({
         : "Sheriff candidate";
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (
+      typeof window === "undefined" ||
+      exitNavigationStartedRef.current
+    ) {
       return;
     }
 
@@ -1328,9 +1332,10 @@ export function WerewolfRoomOverview({
     }
 
     if (leaveState.formNotice === "exited") {
+      exitNavigationStartedRef.current = true;
       clearActiveRoomClientState();
       setExitDialogOpen(false);
-      router.replace(werewolfHomeHref);
+      window.location.replace(werewolfHomeHref);
       return;
     }
 
@@ -1342,7 +1347,6 @@ export function WerewolfRoomOverview({
     clearActiveRoomClientState,
     leaveState.formNotice,
     refreshRoom,
-    router,
     werewolfHomeHref,
   ]);
 

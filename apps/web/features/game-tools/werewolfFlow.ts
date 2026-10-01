@@ -95,6 +95,18 @@ export type WerewolfFlowRecordEvent = {
   type: string;
 };
 
+export type WerewolfVoteResultEvent = WerewolfFlowRecordEvent & {
+  id: string;
+};
+
+export type WerewolfVoteResultNotice = {
+  id: string;
+  kind: "EXILE" | "SHERIFF";
+  leaders: number[];
+  totals: Array<{ seatNumber: number; voteCount: number }>;
+  voteRound: 1 | 2;
+};
+
 const WEREWOLF_SHERIFF_ELECTION_STAGES = new Set<WerewolfFlowStage>([
   "SHERIFF_SIGNUP",
   "SHERIFF_SPEECH",
@@ -365,6 +377,77 @@ export function getWerewolfNightActionSubmissionKey(actionKind: string) {
 
 export function shouldShowWerewolfSuggestedSeat(stage: WerewolfFlowStage) {
   return stage === "SHERIFF_RESULT" || stage === "EXILE_RESULT";
+}
+
+export function getActiveWerewolfVoteResultNotice({
+  events,
+  flow,
+}: {
+  events: WerewolfVoteResultEvent[];
+  flow: Pick<WerewolfFlowState, "cueIndex" | "sessionIndex" | "stage">;
+}): WerewolfVoteResultNotice | null {
+  const event = events.find(
+    (candidate) =>
+      candidate.type === "werewolf_sheriff_vote_resolved" ||
+      candidate.type === "werewolf_exile_vote_resolved",
+  );
+
+  if (!event?.payload || typeof event.payload !== "object") {
+    return null;
+  }
+
+  const payload = event.payload as Record<string, unknown>;
+  const resultStage = payload.resultStage;
+  const resultSessionIndex = Number(payload.resultSessionIndex);
+  const resultCueIndex = Number(payload.resultCueIndex);
+
+  if (
+    typeof resultStage !== "string" ||
+    resultStage !== flow.stage ||
+    !Number.isInteger(resultSessionIndex) ||
+    resultSessionIndex !== flow.sessionIndex ||
+    !Number.isInteger(resultCueIndex) ||
+    resultCueIndex !== flow.cueIndex
+  ) {
+    return null;
+  }
+
+  const leaders = Array.isArray(payload.leaders)
+    ? Array.from(
+        new Set(
+          payload.leaders
+            .map(Number)
+            .filter(
+              (seatNumber) => Number.isInteger(seatNumber) && seatNumber > 0,
+            ),
+        ),
+      ).sort((first, second) => first - second)
+    : [];
+  const totalsPayload =
+    payload.totals && typeof payload.totals === "object"
+      ? (payload.totals as Record<string, unknown>)
+      : {};
+  const totals = Object.entries(totalsPayload)
+    .flatMap(([rawSeatNumber, rawVoteCount]) => {
+      const seatNumber = Number(rawSeatNumber);
+      const voteCount = Number(rawVoteCount);
+
+      return Number.isInteger(seatNumber) &&
+        seatNumber > 0 &&
+        Number.isFinite(voteCount) &&
+        voteCount > 0
+        ? [{ seatNumber, voteCount }]
+        : [];
+    })
+    .sort((first, second) => first.seatNumber - second.seatNumber);
+
+  return {
+    id: event.id,
+    kind: event.type === "werewolf_sheriff_vote_resolved" ? "SHERIFF" : "EXILE",
+    leaders,
+    totals,
+    voteRound: Number(payload.voteRound) === 2 ? 2 : 1,
+  };
 }
 
 export function canUseWerewolfAntidote({

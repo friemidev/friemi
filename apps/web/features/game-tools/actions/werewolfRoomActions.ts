@@ -3030,6 +3030,9 @@ export async function updateWerewolfFlowAction(
       });
       eventPayload = {
         leaders: voteResult.leaders,
+        resultCueIndex: nextFlow.cueIndex,
+        resultSessionIndex: nextFlow.sessionIndex,
+        resultStage: nextFlow.stage,
         stage: currentFlow.stage,
         totals: voteResult.totals,
         voteRound: currentFlow.voteRound,
@@ -4319,6 +4322,9 @@ export async function runWerewolfTestBotAction(
         });
         eventPayload = {
           leaders: voteResult.leaders,
+          resultCueIndex: nextFlow.cueIndex,
+          resultSessionIndex: nextFlow.sessionIndex,
+          resultStage: nextFlow.stage,
           stage: currentFlow.stage,
           testOnly: true,
           totals: voteResult.totals,
