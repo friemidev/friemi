@@ -52,6 +52,9 @@ export function isDrawGuessTiming(value: unknown): value is DrawGuessTiming {
 
 export type DrawGuessState = {
   autoSize?: boolean;
+  managedSeats?: number[];
+  forfeitedTurns?: Record<string, number[]>;
+  forfeitedChainSeats?: number[];
   answer: string;
   chainStage: number;
   chains: ChainStep[][];
@@ -252,13 +255,13 @@ function allChainStepsDone(state: DrawGuessState) {
 }
 
 function allVotesDone(state: DrawGuessState, count: number) {
-  const voters = count - (state.practiceBotSeat === undefined ? 0 : 1);
-  return state.chains.every((_, owner) => Object.keys(state.votes[String(owner)] ?? {}).length === voters);
+  const voters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
+  return state.chains.every((_, owner) => voters.every((seat) => state.votes[String(owner)]?.[String(seat)] !== undefined));
 }
 
 function allPicksDone(state: DrawGuessState) {
   return state.chains.every((chain, owner) => {
-    if (owner === state.practiceBotSeat) return true;
+    if (owner === state.practiceBotSeat || state.managedSeats?.includes(owner)) return true;
     const hasArtwork = chain.some((step) => step.kind === "DRAWING" && !step.system);
     return !hasArtwork || state.picks[String(owner)] !== undefined;
   });
@@ -280,20 +283,34 @@ function fillPracticeBotStep(state: DrawGuessState, count: number, locale: strin
   }
 }
 
+function fillManagedSteps(state: DrawGuessState, count: number, locale: string) {
+  for (const seat of state.managedSeats ?? []) {
+    if (seat < 0 || seat >= count) continue;
+    if (state.phase === "CHAIN_WORD") {
+      state.chains[seat][0] ??= { kind: "WORD", seat, system: true, value: optionsFor(state, seat, locale)[0] };
+    } else if (state.phase === "CHAIN_STEP") {
+      const owner = (seat - state.chainStage + count) % count;
+      state.chains[owner][state.chainStage] ??= state.chainStage % 2
+        ? { kind: "DRAWING", seat, system: true, value: [] }
+        : { kind: "WORD", seat, system: true, value: locale === "en" ? "no guess" : locale === "fr" ? "sans réponse" : "未猜出" };
+    }
+  }
+}
+
 function settleChainScores(state: DrawGuessState, count: number) {
   for (let owner = 0; owner < count; owner += 1) {
     const chain = state.chains[owner];
     if (state.matchResults[String(owner)]) {
-      if (chain[0]?.kind === "WORD" && !chain[0].system) state.scores[owner] += 20;
+      if (chain[0]?.kind === "WORD" && !chain[0].system && !state.forfeitedChainSeats?.includes(owner)) state.scores[owner] += 20;
       for (const step of chain.slice(1)) {
-        if (!step.system) state.scores[step.seat] += 40;
+        if (!step.system && !state.forfeitedChainSeats?.includes(step.seat)) state.scores[step.seat] += 40;
       }
       const last = chain.at(-1);
-      if (last?.kind === "WORD" && !last.system) state.scores[last.seat] += 40;
+      if (last?.kind === "WORD" && !last.system && !state.forfeitedChainSeats?.includes(last.seat)) state.scores[last.seat] += 40;
     }
     const picked = state.picks[String(owner)];
     const artwork = picked === undefined ? null : chain[picked];
-    if (artwork?.kind === "DRAWING" && !artwork.system) state.scores[artwork.seat] += 100;
+    if (artwork?.kind === "DRAWING" && !artwork.system && !state.forfeitedChainSeats?.includes(artwork.seat)) state.scores[artwork.seat] += 100;
   }
 }
 
@@ -302,10 +319,12 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
   for (let safety = 0; safety < count * 3 + 8; safety += 1) {
     if (!next.deadlineAt || next.phase === "LOBBY" || next.phase === "FINISHED") break;
     fillPracticeBotStep(next, count, locale);
+    fillManagedSteps(next, count, locale);
     const deadline = Date.parse(next.deadlineAt);
     const timedOut = now >= deadline;
-    const allDone = next.phase === "WORD_SELECT" ? Boolean(next.answer)
-      : next.phase === "DRAW_GUESS" ? Object.keys(next.guesses[String(next.turnIndex)] ?? {}).length === count - 1
+    const allDone = next.phase === "WORD_SELECT" ? Boolean(next.answer) || Boolean(next.managedSeats?.includes(next.turnIndex))
+      : next.phase === "DRAW_GUESS" ? Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== next.turnIndex && !next.managedSeats?.includes(seat)).every((seat) => Boolean(next.guesses[String(next.turnIndex)]?.[String(seat)]))
+        || Boolean(next.managedSeats?.includes(next.turnIndex))
       : next.phase === "CHAIN_WORD" || next.phase === "CHAIN_STEP" ? allChainStepsDone(next)
       : next.phase === "REVEAL_VOTE" ? allVotesDone(next, count)
       : next.phase === "AUTHOR_PICK" ? allPicksDone(next)
@@ -315,12 +334,20 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
 
     if (next.phase === "WORD_SELECT") {
       next.answer ||= next.options[0];
+      if (next.managedSeats?.includes(next.turnIndex)) {
+        next.drawDeadlineAt = null;
+        setDeadline(next, "TURN_REVEAL", base, 1_000);
+        continue;
+      }
       const drawDuration = next.timing ? next.timing.drawSeconds * 1_000 : DURATION.DRAW_GUESS;
       next.drawDeadlineAt = next.timing ? new Date(base + drawDuration).toISOString() : null;
       setDeadline(next, "DRAW_GUESS", base, drawDuration + (next.timing?.guessSeconds ?? 0) * 1_000);
     } else if (next.phase === "DRAW_GUESS") {
-      const solved = Object.keys(next.guesses[String(next.turnIndex)] ?? {}).length;
-      next.scores[next.turnIndex] += Math.floor(100 * solved / (count - 1));
+      const activeGuessers = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== next.turnIndex && !next.managedSeats?.includes(seat));
+      const solved = activeGuessers.filter((seat) => next.guesses[String(next.turnIndex)]?.[String(seat)]).length;
+      if (!next.managedSeats?.includes(next.turnIndex) && !next.forfeitedTurns?.[String(next.turnIndex)]?.includes(next.turnIndex)) {
+        next.scores[next.turnIndex] += activeGuessers.length ? Math.floor(100 * solved / activeGuessers.length) : 0;
+      }
       next.drawDeadlineAt = null;
       setDeadline(next, "TURN_REVEAL", base, allDone ? DURATION.ALL_GUESSED_REVEAL : DURATION.TURN_REVEAL);
     } else if (next.phase === "TURN_REVEAL") {
@@ -358,9 +385,10 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
           : next.timing?.guessSeconds ?? DURATION.CHAIN_GUESS / 1_000) * 1_000);
       }
     } else if (next.phase === "REVEAL_VOTE") {
+      const eligibleVoters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== next.practiceBotSeat && !next.managedSeats?.includes(seat));
       for (let owner = 0; owner < count; owner += 1) {
-        const yes = Object.values(next.votes[String(owner)] ?? {}).filter(Boolean).length;
-        next.matchResults[String(owner)] = yes > count / 2;
+        const yes = eligibleVoters.filter((seat) => next.votes[String(owner)]?.[String(seat)] === true).length;
+        next.matchResults[String(owner)] = yes > eligibleVoters.length / 2;
       }
       setDeadline(next, "AUTHOR_PICK", base, DURATION.AUTHOR_PICK);
     } else if (next.phase === "AUTHOR_PICK") {
@@ -372,11 +400,32 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
   return next;
 }
 
+export function setDrawGuessSeatManaged(state: DrawGuessState, seat: number, managed: boolean, count: number, now: number, locale: string) {
+  const next = structuredClone(state);
+  const current = new Set(next.managedSeats ?? []);
+  if (managed) {
+    current.add(seat);
+    if (next.mode === "CLASSIC" && (next.phase === "WORD_SELECT" || next.phase === "DRAW_GUESS")) {
+      const turn = String(next.turnIndex);
+      const forfeited = new Set(next.forfeitedTurns?.[turn] ?? []);
+      forfeited.add(seat);
+      (next.forfeitedTurns ??= {})[turn] = [...forfeited];
+      const guess = next.guesses[turn]?.[String(seat)];
+      if (guess?.points) { next.scores[seat] = Math.max(0, next.scores[seat] - guess.points); guess.points = 0; }
+    } else if (next.mode === "CHAIN") {
+      next.forfeitedChainSeats = [...new Set([...(next.forfeitedChainSeats ?? []), seat])];
+    }
+  } else current.delete(seat);
+  next.managedSeats = [...current].sort((a, b) => a - b);
+  return advanceDrawGuessGame(next, count, now, locale);
+}
+
 export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAction, seat: number, count: number, now: number, locale: string) {
   const next = advanceDrawGuessGame(state, count, now, locale);
   const invalid = (error: string) => ({ error, state: next });
   if (seat < 0 || seat >= count) return invalid("NOT_A_PLAYER");
   if (seat === next.practiceBotSeat) return invalid("NOT_A_PLAYER");
+  if (next.managedSeats?.includes(seat)) return invalid("PLAYER_MANAGED");
   if (state.deadlineAt && now >= Date.parse(state.deadlineAt)) return invalid("PHASE_ENDED");
   if (next.phase !== state.phase || next.chainStage !== state.chainStage || next.turnIndex !== state.turnIndex) return invalid("PHASE_ENDED");
 
@@ -403,7 +452,7 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
     if (!correct) return { state: next, correct: false };
     const duration = next.timing ? (next.timing.drawSeconds + next.timing.guessSeconds) * 1_000 : DURATION.DRAW_GUESS;
     const remaining = Math.max(0, Math.min(duration, Date.parse(next.deadlineAt!) - now));
-    const points = 100 + Math.floor(100 * remaining / duration);
+    const points = next.forfeitedTurns?.[String(next.turnIndex)]?.includes(seat) ? 0 : 100 + Math.floor(100 * remaining / duration);
     results[String(seat)] = { at: new Date(now).toISOString(), points };
     next.scores[seat] += points;
     return { state: advanceDrawGuessGame(next, count, now, locale), correct: true, points };
@@ -461,6 +510,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
     mode: state.mode,
     phase: state.phase,
     scores: state.scores,
+    managedSeats: state.managedSeats ?? [],
     timing: state.timing,
     turnIndex: state.turnIndex,
   };
@@ -475,6 +525,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       options: seat === state.turnIndex && state.phase === "WORD_SELECT" ? state.options : [],
     };
   }
+  if (seat < 0 && state.phase !== "REVEAL_VOTE" && state.phase !== "AUTHOR_PICK" && state.phase !== "FINISHED") return { ...shared, task: null };
   if (state.phase === "REVEAL_VOTE" || state.phase === "AUTHOR_PICK" || state.phase === "FINISHED") {
     return {
       ...shared,

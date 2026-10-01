@@ -9,6 +9,7 @@ import {
   getDrawGuessViewerState,
   isDrawGuessTiming,
   normalizeDrawGuessWordBankWords,
+  setDrawGuessSeatManaged,
   startDrawGuessGame,
   type DrawGuessWordBankSnapshot,
   validateDrawGuessWord,
@@ -138,6 +139,62 @@ test("a guesser never receives the classic answer before reveal", () => {
   assert.equal(artist.answer, selected.state.options[0]);
   assert.equal(guesser.answer, null);
   assert.deepEqual(guesser.options, []);
+});
+
+test("spectators see public classic drawing and chat without the answer or word choices", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const chosen = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: "cat" }, 0, 3, 1_000, "en");
+  const spectator = getDrawGuessViewerState(chosen.state, -1, 3);
+  assert.ok("answer" in spectator && "options" in spectator);
+  assert.equal(spectator.answer, null);
+  assert.deepEqual(spectator.options, []);
+  const chain = startDrawGuessGame(createDrawGuessState("CHAIN", 5, testBank), 0, "en");
+  if (!chain.state) throw new Error("Game did not start");
+  const chainSpectator = getDrawGuessViewerState(chain.state, -1, 5);
+  assert.ok("task" in chainSpectator);
+  assert.deepEqual(chainSpectator.task, null);
+});
+
+test("managed classic artist is skipped and managed guessers do not delay the next turn", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const skipped = setDrawGuessSeatManaged(started.state, 0, true, 3, 1_000, "en");
+  assert.equal(skipped.phase, "TURN_REVEAL");
+  assert.equal(skipped.scores[0], 0);
+  const next = advanceDrawGuessGame(skipped, 3, 2_000, "en");
+  assert.equal(next.turnIndex, 1);
+  const selected = applyDrawGuessAction(next, { type: "CHOOSE_WORD", value: next.options[0] }, 1, 3, 3_000, "en");
+  assert.equal(selected.state.phase, "DRAW_GUESS");
+  const guessed = applyDrawGuessAction(selected.state, { type: "GUESS", value: selected.state.answer }, 2, 3, 4_000, "en");
+  assert.equal(guessed.state.phase, "TURN_REVEAL");
+  assert.equal(guessed.state.scores[0], 0);
+  assert.equal(guessed.state.scores[1], 100);
+});
+
+test("leaving during a classic guess forfeits points from that turn", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const selected = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: "cat" }, 0, 3, 1_000, "en");
+  const guessed = applyDrawGuessAction(selected.state, { type: "GUESS", value: "cat" }, 1, 3, 2_000, "en");
+  assert.ok(guessed.state.scores[1] > 0);
+  const managed = setDrawGuessSeatManaged(guessed.state, 1, true, 3, 3_000, "en");
+  assert.equal(managed.scores[1], 0);
+  assert.equal(managed.guesses["0"]["1"].points, 0);
+  assert.equal(managed.phase, "DRAW_GUESS");
+  const resumed = setDrawGuessSeatManaged(managed, 1, false, 3, 4_000, "en");
+  assert.equal(resumed.scores[1], 0);
+});
+
+test("managed relay actor submits a system step and earns no match points", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 5, testBank), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const managed = setDrawGuessSeatManaged(started.state, 0, true, 5, 1_000, "en");
+  assert.equal(managed.chains[0][0].system, true);
+  assert.equal("error" in applyDrawGuessAction(managed, { type: "SUBMIT_STEP", value: "cat" }, 0, 5, 2_000, "en") ? "PLAYER_MANAGED" : null, "PLAYER_MANAGED");
+  const advanced = advanceDrawGuessGame(managed, 5, 20_000, "en");
+  assert.equal(advanced.phase, "CHAIN_STEP");
+  assert.equal(advanced.scores[0], 0);
 });
 
 test("classic chat shares wrong guesses but hides the winning word until reveal", () => {

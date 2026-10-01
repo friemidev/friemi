@@ -2070,12 +2070,94 @@ html[data-home-motion-ready="true"]
   background-color: #f9fbfd;
   background-image: radial-gradient(circle at 0 0, #dcecf9 0, transparent 34%), radial-gradient(circle at 100% 100%, #fff0d3 0, transparent 36%);
 }
+.draw-guess-play-stage,
+.draw-guess-play-stage * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.draw-guess-play-stage input:not([type="range"]),
+.draw-guess-play-stage textarea,
+.draw-guess-play-stage [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
 .draw-guess-btn:focus-visible { outline: 3px solid #356eaf; outline-offset: 3px; }
 .draw-guess-btn:disabled { --dg-button-face: #edf0f2; --dg-button-edge: #d9e0e6; --dg-button-ink: #8190a0; cursor: not-allowed; box-shadow: 0 2px 0 var(--dg-button-edge); }
 .draw-guess-paper-stage {
   background-image: radial-gradient(circle, rgba(105, 155, 201, .2) 1px, transparent 1px);
   background-position: 10px 10px;
   background-size: 22px 22px;
+}
+.draw-guess-landscape-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100vw;
+  height: 100dvh;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  overflow: hidden;
+  background: #f9fbfd;
+}
+.draw-guess-landscape-header {
+  display: flex;
+  min-height: 38px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+.draw-guess-landscape-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  gap: 8px;
+}
+.draw-guess-landscape-body .draw-guess-canvas-tools {
+  width: 114px;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  margin: 0;
+  padding: 7px;
+}
+.draw-guess-landscape-body .draw-guess-canvas-palette {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  gap: 4px;
+}
+.draw-guess-landscape-body .draw-guess-canvas-palette button {
+  width: 30px;
+  height: 30px;
+}
+.draw-guess-landscape-body .draw-guess-canvas-actions {
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+.draw-guess-landscape-body .draw-guess-canvas-actions label {
+  width: 100%;
+  padding: 4px;
+}
+.draw-guess-landscape-body .draw-guess-canvas-actions input[type="range"] { width: 100%; }
+.draw-guess-landscape-body .draw-guess-canvas-actions > div { justify-content: center; }
+@media (orientation: portrait) {
+  .draw-guess-landscape-shell {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    width: 100dvh;
+    height: 100dvw;
+    padding: 8px;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+  }
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
