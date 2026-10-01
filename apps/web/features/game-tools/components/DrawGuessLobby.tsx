@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
+import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
+import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
+import { playDrawGuessSound } from "@/features/game-tools/drawGuessSound";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, DRAW_GUESS_ROUND_COUNTS, estimateDrawGuessDurationSeconds, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
@@ -95,6 +99,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     wasStartable.current = startable;
     if (!startable) { setCelebrate(false); return; }
     if (!justReady) return;
+    playDrawGuessSound("ready");
     setCelebrate(true);
     const timeout = window.setTimeout(() => setCelebrate(false), 1300);
     return () => window.clearTimeout(timeout);
@@ -197,6 +202,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     <div className="flex items-center justify-between gap-2">
       <button disabled={leaving} type="button" aria-label={t.back} onClick={() => { setLeaving(true); void onLeave().catch(() => { setLeaving(false); setError(t.retry); }); }} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#63758D] transition-colors hover:text-[#3E6FA8] disabled:opacity-50 sm:gap-1.5 sm:text-sm"><ArrowLeft className="h-4 w-4" /><span>{t.back}</span></button>
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+        <DrawGuessSoundToggle locale={locale} />
+        <DrawGuessMusicToggle locale={locale} />
         <button ref={bankTrigger} aria-label={t.bank} type="button" onClick={() => void openBank()} className="draw-guess-btn draw-guess-btn--blush group min-h-10 shrink-0 whitespace-nowrap px-3 text-xs max-[374px]:w-11 max-[374px]:px-0 sm:px-4 sm:text-sm"><BookOpen className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:-rotate-12" /><span className="max-[374px]:sr-only">{t.bank}</span></button>
         <button ref={settingsTrigger} aria-label={t.settings} type="button" onClick={openSettings} className="draw-guess-btn draw-guess-btn--milk group min-h-10 shrink-0 whitespace-nowrap px-3 text-xs max-[374px]:w-11 max-[374px]:px-0 sm:px-4 sm:text-sm"><Settings2 className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:rotate-12" /><span className="max-[374px]:sr-only">{t.settings}</span></button>
       </div>
@@ -228,7 +235,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
         {humanSeats.map((seat, index) => <div key={seat.number} className="draw-guess-seat-in relative flex min-w-0 w-full flex-col items-center px-1 py-1 text-center" style={{ animationDelay: `${index * 65}ms` }}>
           {room.isHost && !seat.isHost ? <button type="button" disabled={busy} onClick={() => { setError(""); setKickTarget(seat.id); }} aria-label={`${t.kick} ${seat.name}`} className="absolute right-0 top-0 z-10 grid h-8 w-8 place-items-center rounded-full bg-white text-[#6B7890] shadow-[0_2px_0_#D7E3EF] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3E6FA8] disabled:opacity-50"><UserMinus className="h-4 w-4" /></button> : null}
           <div className={`relative grid h-16 w-16 place-items-center rounded-full ring-4 ring-white sm:h-[4.5rem] sm:w-[4.5rem] ${seat.ready ? "draw-guess-avatar-ready bg-[#DFECF8] shadow-[0_4px_0_#B8D3EA]" : "bg-[#E8ECF6] shadow-[0_4px_0_#DCE4EF]"}`}>
-            <DrawGuessCatSprite catId={seat.catId} mood={seat.ready ? "happy" : "idle"} size={61} />
+            <DrawGuessPet ambientSeed={index} catId={seat.catId} idleSurprise locale={locale} reactionKey={String(Boolean(seat.ready))} reactionKind={seat.ready ? "cheer" : undefined} size={61} socialKey={seat.id} />
             <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center overflow-hidden rounded-full border-2 border-white bg-[#FFE7B1] text-[9px] font-black text-[#765A35]">
               {seat.avatarUrl ? <Image alt="" className="object-cover" fill sizes="20px" src={seat.avatarUrl} unoptimized /> : Array.from(seat.name)[0] ?? "?"}
             </span>
@@ -239,7 +246,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
       </div>
       <div className="mt-5 flex gap-2.5">
         <button type="button" disabled={busy} onClick={() => void mutate(`/api/game-tools/draw-guess/rooms/${room.id}/ready`, "POST", { ready: !me?.ready })} aria-pressed={Boolean(me?.ready)} aria-label={me?.ready ? t.cancelReady : t.meReady} className={`draw-guess-btn group min-h-12 min-w-0 flex-1 whitespace-nowrap px-3 text-sm ${me?.ready ? "draw-guess-btn--milk" : "draw-guess-btn--blush"}`}>{me?.ready ? <Check className="h-4 w-4 shrink-0 stroke-[3]" /> : <Sparkles className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:rotate-12" />}{me?.ready ? locale === "zh-CN" ? t.ready : t.cancelReady : t.meReady}</button>
-        {room.isHost ? <button type="button" disabled={busy || !room.canStart} onClick={() => { setLaunching(true); void mutate(`/api/game-tools/draw-guess/rooms/${room.id}/actions`, "POST", { action: { type: "START" } }).finally(() => setLaunching(false)); }} className={`draw-guess-btn draw-guess-btn--candy group relative min-h-12 min-w-0 flex-1 overflow-hidden whitespace-nowrap px-3 text-sm ${room.canStart ? "draw-guess-start-ready" : ""}`}>{busy ? <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" /> : <Play className="h-4 w-4 shrink-0 fill-current transition-transform motion-safe:group-hover:translate-x-0.5" />}{t.start}</button> : null}
+        {room.isHost ? <button type="button" disabled={busy || !room.canStart} onClick={() => { setLaunching(true); playDrawGuessSound("start"); void mutate(`/api/game-tools/draw-guess/rooms/${room.id}/actions`, "POST", { action: { type: "START" } }).finally(() => setLaunching(false)); }} className={`draw-guess-btn draw-guess-btn--candy group relative min-h-12 min-w-0 flex-1 overflow-hidden whitespace-nowrap px-3 text-sm ${room.canStart ? "draw-guess-start-ready" : ""}`}>{busy ? <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" /> : <Play className="h-4 w-4 shrink-0 fill-current transition-transform motion-safe:group-hover:translate-x-0.5" />}{t.start}</button> : null}
       </div>
       {room.mode === "CHAIN" && humanSeats.length === 2 && minimum === 2 ? <p className="mt-3 text-center text-xs text-[#63758D]">{t.practice}</p> : null}
       {celebrate ? <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
@@ -255,8 +262,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t.character} className="draw-guess-dialog flex max-h-[92dvh] w-full max-w-xl flex-col rounded-[1.8rem] bg-[#FFFCF5] shadow-[0_25px_70px_rgba(48,66,92,0.28)] sm:max-h-[85dvh]">
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4"><h2 className="text-lg font-black">{t.character}</h2><button autoFocus type="button" aria-label={t.close} onClick={closeCharacter} className="grid h-9 w-9 place-items-center rounded-full bg-[#E6F1FB] text-[#405875] outline-none focus-visible:ring-2 focus-visible:ring-[#3E6FA8]"><X className="h-4 w-4" /></button></div>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 sm:px-5">
-          <div className="flex items-center justify-center gap-4 rounded-2xl bg-[#E8F2FB] py-2">
-            <DrawGuessCatSprite animated catId={selectedCatId} direction={CAT_DIRECTIONS[catDirectionIndex]} size={106} />
+          <div className="flex items-center justify-center gap-4 rounded-2xl bg-[#E8F2FB] pb-2 pt-4">
+            <DrawGuessPet bubbleSide="inside" catId={selectedCatId} direction={CAT_DIRECTIONS[catDirectionIndex]} idleSurprise locale={locale} size={106} />
             <div className="flex flex-col items-start gap-2"><strong className="text-base font-black">{getDrawGuessCatName(selectedCatId, locale)}</strong><button type="button" onClick={() => setCatDirectionIndex((index) => (index + 1) % CAT_DIRECTIONS.length)} className="draw-guess-btn draw-guess-btn--milk min-h-9 px-3 text-xs"><RotateCw className="h-3.5 w-3.5" />{t.turnCat}</button></div>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">{DRAW_GUESS_CATS.map((cat) => <button key={cat.id} type="button" aria-pressed={selectedCatId === cat.id} onClick={() => { setSelectedCatId(cat.id); setCatDirectionIndex(0); }} className={`flex min-w-0 flex-col items-center rounded-2xl px-1 py-2 text-center outline-none transition-transform focus-visible:ring-2 focus-visible:ring-[#3E6FA8] motion-safe:hover:-translate-y-0.5 ${selectedCatId === cat.id ? "bg-[#DCECF9] shadow-[0_3px_0_#B6D3EB]" : "bg-[#F4F7FA]"}`}><DrawGuessCatSprite catId={cat.id} size={66} /><span className="mt-0.5 max-w-full truncate text-[11px] font-bold">{getDrawGuessCatName(cat.id, locale)}</span></button>)}</div>

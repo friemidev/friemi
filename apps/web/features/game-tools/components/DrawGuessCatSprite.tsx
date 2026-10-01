@@ -379,13 +379,16 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
         setAnimatedFrame(0);
         return;
       }
+      if (document.hidden) return;
       timer = window.setInterval(() => setAnimatedFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 70 : mood === "sad" ? 110 : 90);
     };
     syncMotion();
     reducedMotion.addEventListener("change", syncMotion);
+    document.addEventListener("visibilitychange", syncMotion);
     return () => {
       if (timer !== undefined) window.clearInterval(timer);
       reducedMotion.removeEventListener("change", syncMotion);
+      document.removeEventListener("visibilitychange", syncMotion);
     };
   }, [animated, frame, mood]);
 
