@@ -10,7 +10,7 @@ import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCa
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
-import { playDrawGuessSound, setDrawGuessMusicEnabled } from "@/features/game-tools/drawGuessSound";
+import { playDrawGuessSound, setDrawGuessMusicEnabled, setDrawGuessMusicPhase, shouldPlayDrawGuessMusic, stopDrawGuessMusic } from "@/features/game-tools/drawGuessSound";
 import { DrawGuessClassicChat } from "@/features/game-tools/components/DrawGuessClassicChat";
 import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
@@ -98,12 +98,17 @@ function ActionButton({ children, disabled, onClick, tone = "soft" }: { children
 }
 
 export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: DrawGuessRoomView; locale: string }) {
-  useEffect(() => () => setDrawGuessMusicEnabled(false), []);
+  useEffect(() => {
+    setDrawGuessMusicPhase(initialRoom.view.phase === "LOBBY" ? "lobby" : "game");
+    setDrawGuessMusicEnabled(shouldPlayDrawGuessMusic());
+    return stopDrawGuessMusic;
+  }, []);
   const router = useRouter();
   const t = TRANSLATIONS[locale as keyof typeof TRANSLATIONS] ?? TRANSLATIONS.en;
   const statusCopy = STATUS_COPY[locale as keyof typeof STATUS_COPY] ?? STATUS_COPY.en;
   const bankCopy = BANK_COPY[locale as keyof typeof BANK_COPY] ?? BANK_COPY.en;
   const [room, setRoom] = useState(initialRoom);
+  useEffect(() => setDrawGuessMusicPhase(room.view.phase === "LOBBY" ? "lobby" : "game"), [room.view.phase]);
   const practiceCopy = locale === "en" ? { note: "Two-player practice · helper uses test drawings", people: "people", botClue: "Automatic test drawing" }
     : locale === "fr" ? { note: "À deux · le joueur automatique utilise des dessins tests", people: "personnes", botClue: "Dessin automatique de test" }
     : { note: "双人练习 · 系统画作仅供测试", people: "位真人", botClue: "系统测试画作" };

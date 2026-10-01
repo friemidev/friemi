@@ -22,16 +22,16 @@ const SHAPES: Record<View, { body: string; ears: string; innerEar: string; cloth
     clothes: "M20 78Q59 86 100 78V96Q84 106 59 106Q35 106 20 96Z",
   },
   quarter: {
-    body: "M24 63C25 43 39 32 57 30Q79 27 92 39Q101 47 102 57Q111 61 110 68Q109 74 100 77V80C99 96 84 104 62 104Q25 104 24 79Z",
+    body: "M24 63C25 43 39 32 57 30Q79 27 91 39Q99 47 100 57Q105 60 105 66Q105 72 99 75V80C98 96 84 104 62 104Q25 104 24 79Z",
     ears: "M36 43 33 17Q33 12 38 14L53 33ZM79 34 94 17Q99 13 100 20L96 45Z",
     innerEar: "M40 32 38 22 47 33ZM86 33 95 24 94 36Z",
     clothes: "M28 80Q55 88 101 79V96Q86 106 62 106Q40 106 28 97Z",
   },
   side: {
-    body: "M34 64C34 47 45 36 62 31Q83 26 94 40Q101 48 102 57Q111 61 111 67Q110 74 99 76L98 80Q96 96 82 102Q71 106 59 104Q36 101 33 81Q31 71 34 64Z",
-    ears: "M51 42 49 20Q50 15 54 17L68 33ZM73 35 83 14Q86 10 91 16L94 44Z",
-    innerEar: "M78 33 86 20 89 35Z",
-    clothes: "M35 80Q61 87 98 79Q96 98 80 104Q57 109 38 96Z",
+    body: "M32 65C32 49 43 37 58 32Q70 27 81 32Q94 37 98 50Q101 56 99 60Q104 63 104 67Q104 71 98 74L96 79Q95 94 81 101Q69 107 55 103Q33 98 32 80Z",
+    ears: "M47 42 45 21Q45 16 50 18L65 34ZM74 35 82 16Q85 12 90 17L93 43Z",
+    innerEar: "M78 33 86 22 88 35Z",
+    clothes: "M34 79Q58 87 96 78L94 91Q86 105 69 105Q43 104 36 92Z",
   },
   backQuarter: {
     body: "M25 61C27 42 42 32 59 29Q81 27 93 40Q102 51 104 65V78Q102 96 84 103Q62 109 39 99Q24 91 25 75Z",
@@ -64,6 +64,25 @@ const DESIGNS: Record<DrawGuessCatId, { ears: EarStyle; tail: TailStyle }> = {
   mango: { ears: "tufted", tail: "curl" },
   peach: { ears: "folded", tail: "fluffy" },
   inventor: { ears: "tall", tail: "curl" },
+};
+
+// Tiny differences in timing and gesture keep a room of cats from moving in lockstep.
+const PERSONALITY: Record<DrawGuessCatId, { phase: number; sway: number; tail: number; paw: "left" | "right" | "none"; ear: number }> = {
+  scholar: { phase: 0, sway: .65, tail: .55, paw: "left", ear: .7 },
+  baker: { phase: 3, sway: .85, tail: .8, paw: "right", ear: .5 },
+  explorer: { phase: 6, sway: 1.2, tail: 1.2, paw: "right", ear: 1.1 },
+  cocoa: { phase: 9, sway: .5, tail: .45, paw: "none", ear: .7 },
+  cloud: { phase: 2, sway: 1.1, tail: 1.1, paw: "left", ear: 1.2 },
+  artist: { phase: 5, sway: .9, tail: .85, paw: "right", ear: .8 },
+  captain: { phase: 8, sway: .75, tail: .7, paw: "left", ear: .7 },
+  dreamer: { phase: 11, sway: .4, tail: .35, paw: "none", ear: .4 },
+  disco: { phase: 4, sway: 1.3, tail: 1.25, paw: "right", ear: 1.1 },
+  sunny: { phase: 7, sway: 1.05, tail: 1, paw: "left", ear: 1 },
+  calico: { phase: 10, sway: .8, tail: 1.15, paw: "right", ear: .9 },
+  mocha: { phase: 1, sway: .55, tail: .5, paw: "none", ear: .6 },
+  mango: { phase: 6, sway: 1.2, tail: 1.3, paw: "left", ear: 1.2 },
+  peach: { phase: 9, sway: .8, tail: .95, paw: "right", ear: .8 },
+  inventor: { phase: 3, sway: 1, tail: .9, paw: "left", ear: 1.15 },
 };
 
 const EAR_VARIANTS: Record<Exclude<EarStyle, "pointed" | "tufted">, Record<"front" | "quarter" | "side", string>> = {
@@ -105,8 +124,9 @@ function tailFor(cat: Cat, view: View) {
   }
 }
 
-function motionAt(mood: DrawGuessCatMood, frame: number, performance: DrawGuessCatPerformance) {
-  const idleY = [0, 0, -.4, -.8, -1.2, -1, -.5, 0, .2, 0, 0, 0];
+function motionAt(cat: Cat, mood: DrawGuessCatMood, frame: number, performance: DrawGuessCatPerformance) {
+  const personality = PERSONALITY[cat.id];
+  const idleY = [0, 0, -.5, -1.5, -2, -1.8, -1, 0, .5, .3, 0, 0];
   const happyY = [0, 1.5, 3.5, -2, -8, -13, -13, -9, -3, 2.5, -2, 0];
   const happyTilt = [0, -1, -2, 2, 4, 3, 0, -3, -2, 1, 1, 0];
   const happySquash = [1, .96, .88, 1.08, 1.06, 1.02, 1.02, 1.04, .98, .9, 1.04, 1];
@@ -114,12 +134,20 @@ function motionAt(mood: DrawGuessCatMood, frame: number, performance: DrawGuessC
   const sadY = [0, .5, 1.5, 2.5, 3.5, 4, 4, 3.5, 2.5, 1.5, .5, 0];
   const sadTilt = [0, -.5, -1, -2, -3, -4, -4, -3.5, -2.5, -1.5, -.5, 0];
   if (mood === "idle") {
+    const pawBeat = [0, 0, 0, 0, 0, 1, 3, 4, 2, 0, 0, 0][frame];
+    const waveBeat = performance === "wave" ? [0, 0, 2, 5, 9, 13, 11, 7, 3, 0, 0, 0][frame] : 0;
     return {
-      y: idleY[frame], tilt: [0, .2, .4, .6, .7, .5, 0, -.3, -.5, -.2, 0, 0][frame],
-      scaleX: 1, scaleY: [1, 1, 1.01, 1.015, 1.02, 1.015, 1, .995, 1, 1, 1, 1][frame],
-      leftLift: [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0][frame], rightLift: 0,
-      handsIn: 0, rightOut: 0, footStep: [0, 0, .5, 1, 1, .5, 0, -.5, -1, -.5, 0, 0][frame],
-      tailY: [0, 0, -1, -2, -2, -1, 0, 1, 2, 1, 0, 0][frame],
+      y: idleY[frame] * personality.sway, tilt: [0, 0, .4, .7, 1, .6, 0, -.6, -1, -.4, 0, 0][frame] * personality.sway,
+      scaleX: [1, 1, .998, .991, .987, .99, .997, 1, 1.01, 1.006, 1, 1][frame],
+      scaleY: [1, 1, 1.005, 1.018, 1.028, 1.022, 1.01, 1, .99, .995, 1, 1][frame],
+      leftLift: personality.paw === "left" ? pawBeat : 0,
+      rightLift: Math.max(personality.paw === "right" ? pawBeat : 0, waveBeat),
+      handsIn: 0, rightOut: waveBeat > 0 ? waveBeat * .35 : 0,
+      footStep: [0, 0, .5, 1, 1, .5, 0, -.5, -1, -.5, 0, 0][frame] * personality.sway,
+      tailY: [0, 0, -1, -2, -2, -1, 0, 1, 2, 1, 0, 0][frame] * personality.tail,
+      tailAngle: [0, 1, 3, 5, 6, 4, 0, -3, -5, -2, 0, 0][frame] * personality.tail,
+      earTilt: [0, 0, 0, 1, 2, 0, 0, -1, -2, 0, 0, 0][frame] * personality.ear,
+      gaze: [0, 0, 0, 0, 0, .5, 1, 1, .5, 0, 0, 0][frame],
     };
   }
   if (mood === "sad") {
@@ -127,8 +155,12 @@ function motionAt(mood: DrawGuessCatMood, frame: number, performance: DrawGuessC
       y: sadY[frame], tilt: sadTilt[frame],
       scaleX: [1, 1, 1.01, 1.02, 1.03, 1.04, 1.04, 1.03, 1.02, 1.01, 1, 1][frame],
       scaleY: [1, .99, .97, .95, .93, .92, .92, .93, .95, .97, .99, 1][frame],
-      leftLift: 0, rightLift: 0, handsIn: 0, rightOut: 0, footStep: 0,
+      leftLift: [0, 0, -1, -2, -3, -3, -3, -2, -1, 0, 0, 0][frame],
+      rightLift: [0, 0, -1, -2, -3, -3, -3, -2, -1, 0, 0, 0][frame],
+      handsIn: 0, rightOut: 0, footStep: 0,
       tailY: [0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0][frame],
+      tailAngle: [0, -1, -3, -5, -6, -6, -6, -4, -2, -1, 0, 0][frame],
+      earTilt: [0, 0, -1, -2, -3, -4, -4, -3, -2, -1, 0, 0][frame], gaze: 0,
     };
   }
   const arms = happyArms[frame];
@@ -144,6 +176,9 @@ function motionAt(mood: DrawGuessCatMood, frame: number, performance: DrawGuessC
     rightOut: performance === "wave" && onAction ? [0, 0, 0, 2, 5, 8, 8, 5, 2, 0, 0, 0][frame] : 0,
     footStep: [0, 0, 1, 2, 1, 0, 0, -1, -2, 0, 1, 0][frame],
     tailY: [0, -1, -3, -5, -6, -4, -2, 1, 3, 2, 1, 0][frame],
+    tailAngle: [0, 2, 5, 9, 11, 8, 3, -6, -9, -3, 1, 0][frame] * personality.tail,
+    earTilt: [0, -1, -2, 2, 4, 3, 1, -2, -3, 1, 0, 0][frame] * personality.ear,
+    gaze: 0,
   };
 }
 
@@ -169,7 +204,7 @@ function Hat({ cat, view }: { cat: Cat; view: View }) {
     case "beret":
       return <g stroke={INK} strokeWidth="2.4" strokeLinejoin="round"><path d={profile ? "M48 30Q52 14 73 12Q90 10 100 24Q92 35 68 36Q53 35 48 30Z" : threeQuarter ? "M38 29Q41 13 63 11Q83 9 97 24Q88 35 60 35Q46 34 38 29Z" : "M32 28Q34 12 58 12Q81 9 91 22Q80 33 54 33Q40 33 32 28Z"} fill="#D77F72" /><path d={profile ? "M52 33Q73 39 96 27" : threeQuarter ? "M42 31Q67 38 93 27" : "M37 30Q61 36 87 26"} stroke="#AF5F59" fill="none" /><path d={profile ? "m70 14 2-8" : threeQuarter ? "m62 13 2-8" : "m57 14 2-8"} strokeLinecap="round" /><path d={profile ? "M61 21q11-6 23-3" : threeQuarter ? "M53 19q11-5 23-2" : "M47 19q10-5 21-2"} stroke="#F8B6A2" strokeWidth="2" fill="none" strokeLinecap="round" /></g>;
     case "crown":
-      return <g stroke={INK} strokeWidth="2.4" strokeLinejoin="round"><path d={profile ? "M52 30 50 12 63 20 76 5 86 19 97 12 94 32Z" : threeQuarter ? "M39 29 36 10 50 19 65 5 78 19 94 10 93 31Z" : "m36 28-3-20 14 10L60 5l13 13L87 8l-3 20Z"} fill="#F3CB68" /><path d={profile ? "M52 30Q74 35 95 30v7Q73 42 52 37Z" : threeQuarter ? "M39 29Q67 35 93 30v7Q65 42 39 36Z" : "M37 28Q60 32 83 28v7Q60 39 37 35Z"} fill="#529FAF" /><path d={profile ? "m63 22 5 2m16 0 4-2" : threeQuarter ? "m49 21 5 2m22 0 5-2" : "m46 20 5 2m18 0 5-2"} stroke="#FFF1BB" strokeWidth="2" strokeLinecap="round" /><circle cx={profile ? 76 : threeQuarter ? 66 : 60} cy="26" r="3" fill="#DF765B" /></g>;
+      return <g stroke={INK} strokeWidth="2.4" strokeLinejoin="round"><path d={profile ? "M56 30 55 14 66 21 77 8 86 21 96 15 94 32Z" : threeQuarter ? "M39 29 36 10 50 19 65 5 78 19 94 10 93 31Z" : "m36 28-3-20 14 10L60 5l13 13L87 8l-3 20Z"} fill="#F3CB68" /><path d={profile ? "M56 30Q75 35 94 30v7Q75 41 56 36Z" : threeQuarter ? "M39 29Q67 35 93 30v7Q65 42 39 36Z" : "M37 28Q60 32 83 28v7Q60 39 37 35Z"} fill="#529FAF" /><path d={profile ? "m65 23 5 2m15 0 4-2" : threeQuarter ? "m49 21 5 2m22 0 5-2" : "m46 20 5 2m18 0 5-2"} stroke="#FFF1BB" strokeWidth="2" strokeLinecap="round" /><circle cx={profile ? 77 : threeQuarter ? 66 : 60} cy="26" r="3" fill="#DF765B" /></g>;
     case "beanie":
       return <g stroke={INK} strokeWidth="2.4" strokeLinejoin="round"><path d={profile ? "M47 31Q51 11 76 10Q91 10 97 29Q76 37 47 31Z" : threeQuarter ? "M37 30Q42 9 70 10Q88 10 96 28Q70 38 37 30Z" : "M32 30Q37 8 67 10Q83 10 90 27Q62 37 32 30Z"} fill="#86AFC6" /><path d={profile ? "M47 30Q71 39 97 29l2 8Q72 44 47 37Z" : threeQuarter ? "M37 29Q66 39 96 28l2 8Q66 44 36 36Z" : "M30 29Q57 38 90 28l2 8Q60 43 29 36Z"} fill="#638EA9" /><path d={profile ? "M65 16q11-4 22 0" : threeQuarter ? "M57 15q12-5 24 0" : "M51 15q12-5 24 0"} stroke="#BEDAE4" strokeWidth="2" fill="none" /><circle cx={profile ? 92 : threeQuarter ? 89 : 83} cy="11" r="6" fill="#F4E1BB" /></g>;
     case "visor":
@@ -180,7 +215,10 @@ function Hat({ cat, view }: { cat: Cat; view: View }) {
 }
 
 function Glasses({ cat, view }: { cat: Cat; view: View }) {
-  if (cat.glasses === "none" || view === "back") return null;
+  if (cat.glasses === "none") return null;
+  if (view === "back") return cat.glasses === "goggles"
+    ? <g><path d="M29 51Q59 57 91 51v7Q59 64 29 58Z" fill="#76A7B2" stroke={INK} strokeWidth="2" /><path d="M38 54q21 5 44 0" stroke="#D6ECE8" strokeWidth="1.5" fill="none" /></g>
+    : <g><path d="M29 53Q60 59 91 53" stroke={INK} strokeWidth="2.4" fill="none" /><path d="M29 52v7m62-7v7" stroke={INK} strokeWidth="2.2" strokeLinecap="round" /></g>;
   if (view === "backQuarter") {
     return <g stroke={INK} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round">
       <path d="M63 50Q81 48 94 52" fill="none" />
@@ -225,8 +263,21 @@ function CharacterAccent({ cat, view, compact }: { cat: Cat; view: View; compact
 }
 
 function Markings({ cat, view }: { cat: Cat; view: View }) {
-  const back = view === "back" || view === "backQuarter";
-  const shift = view === "quarter" ? 7 : view === "side" ? 14 : 0;
+  if (view === "side" || view === "backQuarter") {
+    const side = view === "side";
+    const shoulder = side ? "M33 43Q44 29 59 31Q67 33 69 43Q61 50 47 53L33 62Z" : "M27 43Q40 29 58 30Q68 33 69 44Q59 52 40 57L26 66Z";
+    const forehead = side ? "M78 34Q94 37 98 51L88 54Q75 47 78 34Z" : "M78 33Q95 37 101 52L88 55Q76 48 78 33Z";
+    if (cat.id === "cloud") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill={cat.patch} opacity=".8" /></>;
+    if (cat.id === "calico") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#DDA16D" /><path d="M41 71q8-8 15 1l-3 9-15-1Z" fill="#DDA16D" /></>;
+    if (cat.id === "mango") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#D7804D" /><path d="M39 66q7 4 13 0m19-6q5 3 10 0" stroke="#D7804D" strokeWidth="4" strokeLinecap="round" /></>;
+    if (cat.id === "peach") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#F4C4AF" /><path d="M39 71q7 4 13 0" stroke="#EAB5A2" strokeWidth="4" strokeLinecap="round" /></>;
+    if (cat.id === "sunny") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#F1C075" /></>;
+    if (cat.id === "mocha") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#A4735E" /><path d="M39 68q9 5 18 0" stroke="#D7AC8C" strokeWidth="5" strokeLinecap="round" opacity=".7" /></>;
+    if (cat.id === "cocoa") return <><path d={shoulder} fill={cat.patch} /><path d={forehead} fill="#8C6256" /></>;
+    return <><path d={shoulder} fill={cat.patch} />{cat.id === "artist" || cat.id === "explorer" || cat.id === "baker" ? <path d={forehead} fill={cat.patch} opacity=".78" /> : null}</>;
+  }
+  const back = view === "back";
+  const shift = view === "quarter" ? 7 : 0;
   const base = <path d={back ? "M20 43Q30 27 49 29Q60 34 55 46Q41 49 25 62L17 56Z" : "M19 46Q23 32 41 29Q57 27 61 40Q53 49 38 49L18 57Z"} fill={cat.patch} />;
   switch (cat.id) {
     case "cloud":
@@ -256,7 +307,7 @@ function Outfit({ cat, view, path, compact }: { cat: Cat; view: View; path: stri
     return <g>
       {!plain && <path d={path} fill={cat.outfit} />}
       {!plain && <path d="M83 79q8 10 4 24" stroke={mix(cat.outfit, "#FFFFFF", .43)} strokeWidth={compact ? 4 : 3} fill="none" />}
-      {cat.id === "baker" && <path d="M45 80q10 5 20 5v19H47Z" fill="#FFF4DB" />}
+      {cat.id === "baker" && <path d="M52 84q11 4 25 1v18H53Z" fill="#FFF4DB" />}
       {cat.id === "explorer" && <path d="M48 78 77 104" stroke="#F5E0A8" strokeWidth="5" />}
       {cat.id === "mango" && <path d="M37 89q25 8 55-2" stroke="#D97D4A" strokeWidth="5" fill="none" />}
       {cat.id === "inventor" && <circle cx="82" cy="91" r="5" fill="#F5D987" />}
@@ -304,27 +355,28 @@ function Outfit({ cat, view, path, compact }: { cat: Cat; view: View; path: stri
   </g>;
 }
 
-function Face({ mood, view, blink, compact }: { mood: DrawGuessCatMood; view: View; blink: boolean; compact: boolean }) {
+function Face({ mood, view, blink, compact, gaze = 0 }: { mood: DrawGuessCatMood; view: View; blink: boolean; compact: boolean; gaze?: number }) {
   if (view === "back") return null;
   if (view === "backQuarter") return <g><path d="M97 67q4 2 6 0" stroke={INK} strokeWidth="2" strokeLinecap="round" /><ellipse cx="99" cy="57" rx="2" ry={blink ? 1 : 3} fill={INK} /></g>;
   const quarter = view === "quarter";
   const side = view === "side";
-  const left = side ? 84 : quarter ? 61 : 44;
+  const left = side ? 82 : quarter ? 61 : 44;
   const right = quarter ? 86 : 76;
-  const nose = side ? 105 : quarter ? 92 : 60;
+  const nose = side ? 103 : quarter ? 91 : 60;
   return <g>
     {!compact && !side && <><ellipse cx={quarter ? 59 : 42} cy="72" rx="6" ry="3.5" fill={BLUSH} opacity=".48" /><ellipse cx={quarter ? 92 : 82} cy="72" rx="6" ry="3.5" fill={BLUSH} opacity=".48" /></>}
-    {!compact && side && <ellipse cx="88" cy="72" rx="6" ry="3.5" fill={BLUSH} opacity=".5" />}
-    {mood === "happy" ? <path d={side ? "M74 55q5-6 10 0" : "M" + (left - 5) + " 55q5-6 10 0 M" + (right - 5) + " 55q5-6 10 0"} stroke={INK} strokeWidth="2.7" strokeLinecap="round" /> :
-      mood === "sad" ? <path d={side ? "M74 54l10 4" : "M" + (left - 5) + " 54l10 4 M" + (right - 5) + " 58l10-4"} stroke={INK} strokeWidth="2.7" strokeLinecap="round" /> :
-        <><ellipse cx={left} cy="55" rx="2.5" ry={blink ? .8 : 3.5} fill={INK} />{!side && <ellipse cx={right} cy="55" rx="2.5" ry={blink ? .8 : 3.5} fill={INK} />}</>}
-    <path d={side ? "m101 64 6 2-6 2Z" : "m" + (nose - 5) + " 66 5 3 5-3Z"} fill="#B87972" />
-    {side ? <path d={mood === "sad" ? "M94 77q5-4 9 0" : "M94 72q5 7 9 1"} stroke={INK} strokeWidth="2" strokeLinecap="round" fill="none" /> :
+    {!compact && side && <ellipse cx="89" cy="70" rx="5.5" ry="3.2" fill={BLUSH} opacity=".55" />}
+    {mood === "happy" ? <path d={side ? "M76 55q5-6 10 0" : "M" + (left - 5) + " 55q5-6 10 0 M" + (right - 5) + " 55q5-6 10 0"} stroke={INK} strokeWidth="2.7" strokeLinecap="round" /> :
+      mood === "sad" ? <path d={side ? "M76 54q5-2 9 3" : "M" + (left - 5) + " 54l10 4 M" + (right - 5) + " 58l10-4"} stroke={INK} strokeWidth="2.7" strokeLinecap="round" /> :
+        <><ellipse cx={left + gaze} cy="55" rx="2.5" ry={blink ? .8 : 3.5} fill={INK} />{!side && <ellipse cx={right + gaze} cy="55" rx="2.5" ry={blink ? .8 : 3.5} fill={INK} />}</>}
+    <path d={side ? "M99 64q3-2 5 1l-3 3Z" : "m" + (nose - 5) + " 66 5 3 5-3Z"} fill="#B87972" />
+    {side ? <path d={mood === "sad" ? "M93 76q5-4 9 0" : mood === "happy" ? "M93 72q4 7 9 0" : "M95 71q3 5 7 0"} stroke={INK} strokeWidth="1.9" strokeLinecap="round" fill="none" /> :
       quarter ? <path d={mood === "sad" ? "M84 78q7-5 13 0" : mood === "happy" ? "M91 71q-7 12-14 1m14-1q6 8 11 0" : "M92 69v4m0 0q-4 4-8 0m8 0q4 4 8 0"} stroke={INK} strokeWidth="2" strokeLinecap="round" fill="none" /> :
         mood === "happy" ? <path d={"M" + nose + " 70q-10 14-18 0m18 0q10 14 18 0"} stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" /> :
           mood === "sad" ? <path d={"M" + (nose - 8) + " 77q8-7 16 0"} stroke={INK} strokeWidth="2" strokeLinecap="round" fill="none" /> :
             <path d={"M" + nose + " 69v4m0 0q-5 4-9 0m9 0q5 4 9 0"} stroke={INK} strokeWidth="1.9" strokeLinecap="round" fill="none" />}
     {mood === "sad" && <path d={side ? "M86 63q-3 5-1 7 3 1 3-2Z" : "M" + (right + 3) + " 63q-3 5-1 7 3 1 3-2Z"} fill="#89C7DD" />}
+    {!compact && side && <path d="m94 67 6-2m-6 6 6 1" stroke={SOFT_INK} strokeWidth="1.3" strokeLinecap="round" opacity=".72" />}
     {!compact && !side && <path d={quarter ? "m51 68-8-2m9 6-8 1m55-8 7-2m-6 6 7 1" : "m35 67-8-2m9 6-8 1m57-5 8-2m-9 6 8 1"} stroke={SOFT_INK} strokeWidth="1.3" strokeLinecap="round" opacity=".75" />}
   </g>;
 }
@@ -342,15 +394,17 @@ function TinyCat({ cat, className, frame, id, mood, size, title }: {
   return <span className={"inline-grid shrink-0 place-items-center " + className} style={{ width: size, height: size }} title={title} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true} data-cat={cat.id} data-detail="tiny" data-frame={frame} data-mood={mood}>
     <svg viewBox="0 0 120 108" width="100%" height="100%" fill="none" aria-hidden="true">
       <defs><clipPath id={id}><path d={head} /></clipPath></defs>
-      <path d={tailFor(cat, "front")} fill={cat.patch} stroke={INK} strokeWidth="3.8" strokeLinejoin="round" />
-      <path d={earsFor(cat, "front")} fill={cat.fur} stroke={INK} strokeWidth="4.2" strokeLinejoin="round" />
-      <path d={head} fill={cat.fur} stroke={INK} strokeWidth="4.2" />
-      <g clipPath={"url(#" + id + ")"}><Markings cat={cat} view="front" /><Outfit cat={cat} view="front" path={SHAPES.front.clothes} compact /></g>
-      <Face mood={mood} view="front" blink={false} compact />
-      <Glasses cat={cat} view="front" />
-      <Hat cat={cat} view="front" />
-      <CharacterAccent cat={cat} view="front" compact />
-      {cat.id === "peach" && <path d="m88 35 9-5-2 10-7-3-8 3v-9Z" fill="#E8A99B" stroke={INK} strokeWidth="2" />}
+      <g transform={"translate(0 " + motionAt(cat, mood, frame, "default").y + ")"}>
+        <path d={tailFor(cat, "front")} fill={cat.patch} stroke={INK} strokeWidth="3.8" strokeLinejoin="round" />
+        <path d={earsFor(cat, "front")} fill={cat.fur} stroke={INK} strokeWidth="4.2" strokeLinejoin="round" />
+        <path d={head} fill={cat.fur} stroke={INK} strokeWidth="4.2" />
+        <g clipPath={"url(#" + id + ")"}><Markings cat={cat} view="front" /><Outfit cat={cat} view="front" path={SHAPES.front.clothes} compact /></g>
+        <Face mood={mood} view="front" blink={mood === "idle" && frame === 10} compact />
+        <Glasses cat={cat} view="front" />
+        <Hat cat={cat} view="front" />
+        <CharacterAccent cat={cat} view="front" compact />
+        {cat.id === "peach" && <path d="m88 35 9-5-2 10-7-3-8 3v-9Z" fill="#E8A99B" stroke={INK} strokeWidth="2" />}
+      </g>
     </svg>
   </span>;
 }
@@ -369,6 +423,7 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
   const cat = getDrawGuessCat(catId);
   const uniqueId = useId().replaceAll(":", "");
   const [animatedFrame, setAnimatedFrame] = useState(0);
+  useEffect(() => setAnimatedFrame(mood === "idle" && performance !== "wave" ? PERSONALITY[cat.id].phase : 0), [cat.id, mood, performance]);
   useEffect(() => {
     if (!animated || frame !== undefined) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -380,7 +435,7 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
         return;
       }
       if (document.hidden) return;
-      timer = window.setInterval(() => setAnimatedFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 70 : mood === "sad" ? 110 : 90);
+      timer = window.setInterval(() => setAnimatedFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 75 : mood === "sad" ? 120 : 155 + PERSONALITY[cat.id].phase % 3 * 12);
     };
     syncMotion();
     reducedMotion.addEventListener("change", syncMotion);
@@ -390,7 +445,7 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
       reducedMotion.removeEventListener("change", syncMotion);
       document.removeEventListener("visibilitychange", syncMotion);
     };
-  }, [animated, frame, mood]);
+  }, [animated, cat.id, frame, mood]);
 
   const current = frame !== undefined && Number.isFinite(frame) ? Math.trunc(frame) : animatedFrame;
   const activeFrame = ((current % DRAW_GUESS_CAT_FRAME_COUNT) + DRAW_GUESS_CAT_FRAME_COUNT) % DRAW_GUESS_CAT_FRAME_COUNT;
@@ -400,7 +455,7 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
   const back = view === "back" || view === "backQuarter";
   const shape = SHAPES[view];
   const compact = size <= 72;
-  const motion = motionAt(mood, activeFrame, performance);
+  const motion = motionAt(cat, mood, activeFrame, performance);
   const blink = mood === "idle" && activeFrame === 10;
   const furLight = mix(cat.fur, "#FFFFFF", .16);
   const furDark = mix(cat.fur, "#705746", .18);
@@ -419,26 +474,28 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
       <ellipse cx="60" cy="108" rx={mood === "happy" && motion.y < -7 ? 26 : 32} ry="4.5" fill="#55443A" opacity={mood === "happy" && motion.y < -7 ? .09 : .14} />
       <g transform={mirror ? "translate(120 0) scale(-1 1)" : undefined}>
         <g transform={poseTransform}>
-          <g transform={"translate(0 " + motion.tailY + ")"}><path d={tailPath} fill={cat.patch} stroke={INK} strokeWidth={compact ? 3.2 : 2.8} strokeLinecap="round" strokeLinejoin="round" /></g>
+          <g transform={"translate(0 " + motion.tailY + ") rotate(" + motion.tailAngle + " " + (view === "front" || view === "back" ? 91 : 36) + " 85)"}><path d={tailPath} fill={cat.patch} stroke={INK} strokeWidth={compact ? 3.2 : 2.8} strokeLinecap="round" strokeLinejoin="round" /></g>
           {(view === "quarter" || view === "side" || view === "backQuarter") && <g><ellipse cx={view === "side" ? 42 : 32} cy="84" rx="7.5" ry="6" fill={furDark} stroke={INK} strokeWidth="2.2" /><ellipse cx={view === "side" ? 52 : 47} cy="101" rx="8.5" ry="4.5" fill={furDark} stroke={INK} strokeWidth="2" /></g>}
-          <g transform={mood === "sad" ? "translate(0 4) scale(1 .9)" : undefined}>
-            <path d={earPath} fill={cat.fur} stroke={INK} strokeWidth={compact ? 3.2 : 2.8} strokeLinejoin="round" />
-            {!compact && shape.innerEar && <path d={shape.innerEar} fill="#DDA391" />}
+          <g transform={"rotate(" + motion.earTilt + " " + (view === "side" ? 72 : 60) + " 39)"}>
+            <g transform={mood === "sad" ? "translate(0 4) scale(1 .9)" : undefined}>
+              <path d={earPath} fill={cat.fur} stroke={INK} strokeWidth={compact ? 3.2 : 2.8} strokeLinejoin="round" />
+              {!compact && shape.innerEar && <path d={shape.innerEar} fill="#DDA391" />}
+            </g>
           </g>
           <path d={shape.body} fill={compact ? cat.fur : "url(#" + gradientId + ")"} stroke={INK} strokeWidth={compact ? 3.2 : 2.8} strokeLinejoin="round" />
           <g clipPath={"url(#" + clipId + ")"}>
             <Markings cat={cat} view={view} />
-            {!compact && !back && <><path d={view === "side" ? "M83 60q18-4 23 10l-10 10q-15 1-20-10Z" : "M41 69q3-9 13-11 6-1 10 4 7-6 15-3 8 4 7 12l-5 11H39Z"} fill={mix(cat.fur, "#FFF7DF", .29)} opacity=".88" /><path d={view === "side" ? "M86 75q8 5 18 0" : "M43 76q18 5 36 0"} stroke="#FFFFFF" strokeOpacity=".28" strokeWidth="1.6" fill="none" /></>}
+            {!compact && !back && <><path d={view === "side" ? "M72 70q10-7 20-2 6 4 5 11l-9 6q-10-2-16-15Z" : "M41 69q3-9 13-11 6-1 10 4 7-6 15-3 8 4 7 12l-5 11H39Z"} fill={mix(cat.fur, "#FFF7DF", .29)} opacity=".88" /><path d={view === "side" ? "M76 77q8 5 17 1" : "M43 76q18 5 36 0"} stroke="#FFFFFF" strokeOpacity=".28" strokeWidth="1.6" fill="none" /></>}
             {back && <><path d="M43 42q17 7 34 0m-31 9q14 6 28 0" stroke={mix(cat.patch, cat.fur, .38)} strokeWidth={compact ? 5 : 4} strokeLinecap="round" opacity=".75" /><path d="M59 81v22" stroke={INK} strokeWidth="1.5" opacity=".3" /></>}
             <Outfit cat={cat} view={view} path={shape.clothes} compact={compact} />
             {!compact && <path d={view === "side" ? "M45 45q-6 17-2 32" : "M28 54q-5 15 0 25"} stroke="#FFFFFF" strokeWidth="2.3" strokeLinecap="round" opacity=".22" />}
           </g>
-          <Face mood={mood} view={view} blink={blink} compact={compact} />
+          <Face mood={mood} view={view} blink={blink} compact={compact} gaze={motion.gaze} />
           <Glasses cat={cat} view={view} />
           <Hat cat={cat} view={view} />
           <CharacterAccent cat={cat} view={view} compact={compact} />
           {(view === "front" || view === "back") && <ellipse cx={27 + motion.handsIn} cy={86 - motion.leftLift} rx="8.5" ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />}
-          <ellipse cx={(view === "front" || view === "back" ? 93 : view === "side" ? 82 : view === "backQuarter" ? 89 : 91) - motion.handsIn + motion.rightOut} cy={86 - motion.rightLift} rx={view === "side" ? 8 : 8.5} ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />
+          {view === "side" ? <g transform={"rotate(" + -motion.rightLift * 3 + " 82 78)"}><path d="M82 77Q90 74 95 78Q99 83 96 88Q92 92 87 90Q82 87 82 82Z" fill={cat.fur} /><path d="M84 77Q91 74 95 78Q99 83 96 88Q92 92 87 90" stroke={INK} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" fill="none" />{!compact && <path d="M89 87q3 2 6-1" stroke={furDark} strokeWidth="1.2" strokeLinecap="round" />}</g> : <ellipse cx={(view === "front" || view === "back" ? 93 : view === "backQuarter" ? 89 : 91) - motion.handsIn + motion.rightOut} cy={86 - motion.rightLift} rx="8.5" ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />}
           {view !== "side" && view !== "backQuarter" && <ellipse cx={43 + motion.footStep} cy="102" rx="11" ry="5" fill={furDark} stroke={INK} strokeWidth="2.3" />}
           <ellipse cx={(view === "front" || view === "back" ? 78 : 80) - motion.footStep} cy="102" rx={view === "side" ? 12 : 11} ry="5" fill={furDark} stroke={INK} strokeWidth="2.3" />
           {!compact && view !== "side" && view !== "backQuarter" && <path d={"M" + (38 + motion.footStep) + " 101q5-2 10 0M" + (73 - motion.footStep) + " 101q5-2 10 0"} stroke={furLight} strokeWidth="1.6" strokeLinecap="round" />}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Brush, Check, LoaderCircle, Sparkles, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import type { DrawGuessMode } from "@/features/game-tools/drawGuessEngine";
 import { withLocale } from "@/lib/routes";
 
@@ -55,7 +56,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
   }
 
   return <div className="draw-guess-theme mx-auto flex w-full max-w-2xl flex-col gap-5">
-    <Link href={withLocale(locale, "/game-tools")} className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#63758D] transition-colors hover:text-[#3E6FA8]"><ArrowLeft className="h-4 w-4" />{copy.back}</Link>
+    <div className="flex items-center justify-between gap-3"><Link href={withLocale(locale, "/game-tools")} className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#63758D] transition-colors hover:text-[#3E6FA8]"><ArrowLeft className="h-4 w-4" />{copy.back}</Link><DrawGuessSoundToggle locale={locale} /></div>
     <header className="draw-guess-hero-in flex items-center justify-between gap-3 px-1 py-1">
       <div className="min-w-0">
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{copy.title}</h1>
