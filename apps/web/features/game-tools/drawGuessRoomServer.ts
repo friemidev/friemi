@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { changedDrawGuessArtworks, compactDrawGuessState, hydrateDrawGuessState, prepareArtworkChanges } from "@/features/game-tools/drawGuessArtworkPersistence";
 import {
@@ -159,9 +160,10 @@ export async function createDrawGuessRoom(input: {
   }
   if (input.mode === "CLASSIC" && !isDrawGuessClassicEnabled()) return { error: "CLASSIC_NOT_ENABLED" } as const;
   if (input.mode === "CHAIN" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
+  const availableBanks = input.wordBankId ? null : await listDrawGuessWordBanks(input.locale);
   const wordBank = input.wordBankId
     ? await getDrawGuessWordBank(input.wordBankId, input.locale)
-    : (await listDrawGuessWordBanks(input.locale))[0] ?? null;
+    : availableBanks?.length ? availableBanks[randomInt(availableBanks.length)] : null;
   if (!wordBank) return { error: "INVALID_WORD_BANK" } as const;
   const seatCount = practiceRelay ? 3 : requestedCount;
   const timing = input.timing ?? { drawSeconds: 60, guessSeconds: 20 };
