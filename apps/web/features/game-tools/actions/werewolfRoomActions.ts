@@ -46,6 +46,7 @@ import {
 } from "@/features/game-tools/gameToolRooms";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 import { werewolfAtmospheres } from "@/features/game-tools/werewolfCardAssets";
+import { getWerewolfExitHref } from "@/features/game-tools/werewolfRoomLinks";
 import {
   canUseWerewolfAntidote,
   createInitialWerewolfFlowState,
@@ -2111,21 +2112,28 @@ export async function leaveWerewolfSeatAction(
     return { formError: t.leaveFailed };
   }
 
+  if (redirectToTool) {
+    redirect(
+      getWerewolfExitHref({
+        locale: result.data.locale,
+        roomId: roomId ?? "",
+      }),
+    );
+  }
+
   if (returnInline) {
     return {
-      formNotice: redirectToTool ? "exited" : "left",
+      formNotice: "left",
     };
   }
 
   redirect(
-    redirectToTool
-      ? withLocale(result.data.locale, werewolfToolPath)
-      : getRoomHref({
-          locale: result.data.locale,
-          memberToken: redirectMemberToken,
-          notice: "left",
-          roomId: roomId ?? "",
-        }),
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: redirectMemberToken,
+      notice: "left",
+      roomId: roomId ?? "",
+    }),
   );
 }
 
