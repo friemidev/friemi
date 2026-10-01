@@ -21,15 +21,20 @@ import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewD
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { getDrawGuessWordBank, listDrawGuessWordBanks, shuffledDrawGuessWordBank } from "@/features/game-tools/drawGuessWordBanks";
+import { DRAW_GUESS_CATS, fallbackDrawGuessCatId, isDrawGuessCatId, type DrawGuessCatId } from "@/features/game-tools/drawGuessCats";
 import { prisma } from "@/lib/prisma";
 
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
+
+function randomDrawGuessCatId(): DrawGuessCatId {
+  return DRAW_GUESS_CATS[randomInt(DRAW_GUESS_CATS.length)].id;
+}
 
 function asState(value: Prisma.JsonValue | null): DrawGuessState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as DrawGuessState;
   return state.phase && state.mode && Array.isArray(state.scores)
-    ? { ...state, classicAnswers: state.classicAnswers ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0 }
+    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0 }
     : null;
 }
 
@@ -188,8 +193,9 @@ export async function createDrawGuessRoom(input: {
             displayName: input.hostName.slice(0, 40),
             privateToken: createGameToolPrivateToken(),
             profileId: input.hostId,
+            roleKey: randomDrawGuessCatId(),
             seatNumber: 1,
-          }, ...(practiceRelay ? [{ displayName: input.locale === "en" ? "Practice helper" : input.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), seatNumber: 3 }] : [])],
+          }, ...(practiceRelay ? [{ displayName: input.locale === "en" ? "Practice helper" : input.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), roleKey: randomDrawGuessCatId(), seatNumber: 3 }] : [])],
         },
       },
       include: { seats: true },
@@ -235,6 +241,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
             displayName: input.displayName.slice(0, 40),
             privateToken: createGameToolPrivateToken(),
             profileId: input.profileId,
+            roleKey: randomDrawGuessCatId(),
             roomId: room.id,
             seatNumber,
           },
@@ -334,7 +341,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         playerCount: room.playerCount,
         practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
+        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
         status: room.status,
         viewerSeat: viewer.seatNumber - 1,
         wordBank: state.wordBank
@@ -359,6 +366,29 @@ export async function setDrawGuessRoomReady(roomId: string, profileId: string, r
       if (!result.count) return false;
       await tx.gameToolSeat.update({ where: { id: seat.id }, data: { readyAt: ready ? new Date() : null } });
       await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: ready ? "DRAW_GUESS_PLAYER_READY" : "DRAW_GUESS_PLAYER_UNREADY", payload: { seatNumber: seat.seatNumber } } });
+      return true;
+    });
+    if (!updated) continue;
+    await broadcastDrawGuessRoomChange(roomId);
+    return { ok: true } as const;
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
+export async function setDrawGuessCharacter(roomId: string, profileId: string, catId: string) {
+  if (!isDrawGuessCatId(catId)) return { error: "INVALID_CHARACTER" } as const;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.status !== "LOBBY") return { error: "ALREADY_STARTED" } as const;
+    const seat = room.seats.find((item) => item.profileId === profileId);
+    if (!seat) return { error: "NOT_A_PLAYER" } as const;
+    if (seat.roleKey === catId) return { ok: true } as const;
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.gameToolRoom.updateMany({ where: { id: roomId, revision: room.revision, status: "LOBBY" }, data: { revision: { increment: 1 } } });
+      if (!result.count) return false;
+      await tx.gameToolSeat.update({ where: { id: seat.id }, data: { roleKey: catId } });
+      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_CHARACTER_SELECTED", payload: { catId, seatNumber: seat.seatNumber } } });
       return true;
     });
     if (!updated) continue;
@@ -432,7 +462,7 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
           data: { drawGuessDeadlineAt: new Date(started.state.deadlineAt!), playerCount, revision: { increment: 1 }, startedAt: new Date(), state: toJson(started.state), status: "IN_PROGRESS" },
         });
         if (!result.count) return false;
-        if (practiceRelay) await tx.gameToolSeat.create({ data: { displayName: room.locale === "en" ? "Practice helper" : room.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), roomId, seatNumber: playerCount } });
+        if (practiceRelay) await tx.gameToolSeat.create({ data: { displayName: room.locale === "en" ? "Practice helper" : room.locale === "fr" ? "Aide à l'essai" : "测试补位", privateToken: createGameToolPrivateToken(), roleKey: randomDrawGuessCatId(), roomId, seatNumber: playerCount } });
         await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_STARTED", payload: { playerCount, revision: room.revision + 1 } } });
         return true;
       });

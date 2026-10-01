@@ -28,6 +28,14 @@ export type DrawGuessWordBankSnapshot = {
   words: string[];
 };
 
+export type DrawGuessChatMessage = {
+  id: string;
+  seat: number;
+  text: string | null;
+  correct: boolean;
+  at: string;
+};
+
 export const DRAW_GUESS_DRAW_SECONDS = [30, 60, 90] as const;
 export const DRAW_GUESS_GUESS_SECONDS = [20, 40, 60] as const;
 export type DrawGuessTiming = {
@@ -48,6 +56,7 @@ export type DrawGuessState = {
   chainStage: number;
   chains: ChainStep[][];
   classicAnswers: string[];
+  classicChat: DrawGuessChatMessage[];
   commandResults: Record<string, { correct?: boolean; points?: number }>;
   deadlineAt: string | null;
   drawDeadlineAt?: string | null;
@@ -124,6 +133,15 @@ export function validateDrawGuessWord(value: string, maxLength: number, minLengt
   return word;
 }
 
+function validateDrawGuessChatText(value: string) {
+  const text = value.normalize("NFKC").trim().replace(/\s+/gu, " ");
+  if (!text || Array.from(text).length > 20 || /\p{C}/u.test(text)) return null;
+  if (/https?:|www\.|@|\b\d{6,}\b|\b[a-z0-9-]+\.(?:com|net|org|io|app|dev|cn|fr|sk|me)\b/iu.test(text)) return null;
+  const comparable = text.toLocaleLowerCase().replace(/[\s\p{P}]+/gu, "");
+  if (blockedWordFragments.some((fragment) => comparable.includes(fragment)) || /(^|[^\p{L}])pute($|[^\p{L}])/iu.test(text)) return null;
+  return text;
+}
+
 export function normalizeDrawGuessWordBankWords(words: unknown): string[] | null {
   if (!Array.isArray(words) || words.length < 1 || words.length > 500) return null;
   const normalized: string[] = [];
@@ -170,6 +188,7 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, w
     chainStage: 0,
     chains: Array.from({ length: playerCount }, () => []),
     classicAnswers: [],
+    classicChat: [],
     commandResults: {},
     deadlineAt: null,
     drawDeadlineAt: null,
@@ -306,6 +325,7 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       setDeadline(next, "TURN_REVEAL", base, allDone ? DURATION.ALL_GUESSED_REVEAL : DURATION.TURN_REVEAL);
     } else if (next.phase === "TURN_REVEAL") {
       next.classicAnswers[next.turnIndex] = next.answer;
+      next.classicChat = [];
       next.turnIndex += 1;
       next.inkSeq = 0;
       next.answer = "";
@@ -364,13 +384,23 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
     if (next.phase !== "WORD_SELECT" || seat !== next.turnIndex || !next.options.includes(action.value)) return invalid("NOT_ALLOWED");
     next.answer = action.value;
   } else if (action.type === "GUESS") {
-    if (next.phase !== "DRAW_GUESS" || seat === next.turnIndex || !action.value.trim() || Array.from(action.value.trim()).length > 20) return invalid("NOT_ALLOWED");
+    if (next.phase !== "DRAW_GUESS" || seat === next.turnIndex) return invalid("NOT_ALLOWED");
+    const chatText = validateDrawGuessChatText(action.value);
+    if (!chatText) return invalid("INVALID_WORD");
     const results = next.guesses[String(next.turnIndex)] ??= {};
     if (results[String(seat)]) return invalid("ALREADY_GUESSED");
     const attempts = next.guessAttempts[String(next.turnIndex)] ??= {};
     if (now - (attempts[String(seat)] ?? -Infinity) < 1_000) return invalid("TOO_FAST");
     attempts[String(seat)] = now;
-    if (normalized(action.value) !== normalized(next.answer)) return { state: next, correct: false };
+    const correct = normalized(chatText) === normalized(next.answer);
+    next.classicChat = [...(next.classicChat ?? []), {
+      id: `${next.gameNumber}:${next.turnIndex}:${seat}:${now}`,
+      seat,
+      text: correct ? null : chatText,
+      correct,
+      at: new Date(now).toISOString(),
+    }].slice(-120);
+    if (!correct) return { state: next, correct: false };
     const duration = next.timing ? (next.timing.drawSeconds + next.timing.guessSeconds) * 1_000 : DURATION.DRAW_GUESS;
     const remaining = Math.max(0, Math.min(duration, Date.parse(next.deadlineAt!) - now));
     const points = 100 + Math.floor(100 * remaining / duration);
@@ -438,6 +468,7 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
     return {
       ...shared,
       answer: seat === state.turnIndex || Boolean(state.guesses[String(state.turnIndex)]?.[String(seat)]) || state.phase === "TURN_REVEAL" || state.phase === "FINISHED" ? state.answer : null,
+      chat: state.classicChat ?? [],
       drawing: state.drawings[state.turnIndex] ?? [],
       inkSeq: state.inkSeq ?? 0,
       guesses: state.guesses[String(state.turnIndex)] ?? {},

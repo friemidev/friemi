@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Crown, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Crown } from "lucide-react";
+import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessArtwork } from "@/features/game-tools/components/DrawGuessCanvas";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
@@ -47,45 +48,45 @@ export function DrawGuessChainReview({ busy, locale, onPick, onVote, room }: {
     if (next >= 0 || wrapped >= 0) setActiveOwner(next >= 0 ? next : wrapped);
   }
 
-  return <section className="draw-guess-stage-card rounded-[1.6rem] border border-[#D9E4D8] bg-[#FFFDF8] p-4 shadow-[0_12px_32px_rgba(39,80,55,0.08)] sm:p-6">
+  return <section className="draw-guess-stage-card rounded-[1.6rem] border border-[#DCE8F2] bg-[#FFFCF5] p-4 shadow-[0_12px_32px_rgba(48,66,92,0.08)] sm:p-6">
     <div className="flex items-start gap-3">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#FCE9DC] text-[#AB5B3F]"><Sparkles className="h-5 w-5" /></span>
-      <div className="min-w-0 flex-1"><h2 className="text-xl font-bold sm:text-2xl">{voting ? copy.voteTitle : copy.pickTitle}</h2><p className="mt-1 text-sm leading-6 text-[#607268]">{voting ? copy.votePrompt : copy.pickPrompt}</p></div>
-      {voting ? <span className="shrink-0 rounded-full bg-[#E8F3E8] px-3 py-1.5 text-xs font-bold text-[#156240]">{copy.progress} {votedOwners.length}/{chains.length}</span> : null}
+      <DrawGuessCatSprite animated catId={room.seats[owner]?.catId} mood="happy" size={48} />
+      <div className="min-w-0 flex-1"><h2 className="text-xl font-bold sm:text-2xl">{voting ? copy.voteTitle : copy.pickTitle}</h2><p className="mt-1 text-sm leading-6 text-[#63758D]">{voting ? copy.votePrompt : copy.pickPrompt}</p></div>
+      {voting ? <span className="shrink-0 rounded-full bg-[#ECF4FB] px-3 py-1.5 text-xs font-bold text-[#3E6FA8]">{copy.progress} {votedOwners.length}/{chains.length}</span> : null}
     </div>
 
     {voting ? <div role="group" aria-label={copy.voteTitle} className="mt-5 flex gap-2 overflow-x-auto pb-1">
-      {chains.map((_, index) => <button key={index} aria-pressed={owner === index} type="button" onClick={() => setActiveOwner(index)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold transition ${owner === index ? "bg-[#156240] text-white shadow-[0_6px_16px_rgba(21,98,64,0.18)]" : "bg-[#F1F4ED] text-[#45675B] hover:bg-[#E6F0E4]"}`}><span>{room.seats[index]?.name ?? `#${index + 1}`}</span>{votedOwners.includes(index) ? <Check className="h-4 w-4" /> : null}</button>)}
+      {chains.map((_, index) => <button key={index} aria-pressed={owner === index} type="button" onClick={() => setActiveOwner(index)} className={`draw-guess-btn ${owner === index ? "draw-guess-btn--blush" : "draw-guess-btn--milk"} min-h-11 shrink-0 px-3 text-sm`}><span>{room.seats[index]?.name ?? `#${index + 1}`}</span>{votedOwners.includes(index) ? <Check className="h-4 w-4" /> : null}</button>)}
     </div> : null}
 
-    <div className="mt-5 rounded-2xl bg-[#F6F3EA] p-4">
-      <p className="text-xs font-bold text-[#8F634E]">{room.seats[owner]?.name ?? `#${owner + 1}`} · {owner + 1}/{chains.length}</p>
+    <div className="mt-5 rounded-2xl bg-[#F8FBFE] p-4">
+      <p className="text-xs font-bold text-[#3E70AA]">{room.seats[owner]?.name ?? `#${owner + 1}`} · {owner + 1}/{chains.length}</p>
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-        <div className="min-w-0 rounded-xl bg-white px-3 py-3"><p className="text-[11px] font-bold text-[#7B8D80]">{copy.start}</p><p className="mt-1 break-words text-base font-bold">{first?.kind === "WORD" ? first.value : "—"}</p></div>
-        <ArrowRight className="h-5 w-5 shrink-0 text-[#C67652]" />
-        <div className="min-w-0 rounded-xl bg-white px-3 py-3"><p className="text-[11px] font-bold text-[#7B8D80]">{copy.end}</p><p className="mt-1 break-words text-base font-bold">{last?.kind === "WORD" ? last.value : "—"}</p></div>
+        <div className="min-w-0 rounded-xl bg-white px-3 py-3"><p className="text-[11px] font-bold text-[#65748A]">{copy.start}</p><p className="mt-1 break-words text-base font-bold">{first?.kind === "WORD" ? first.value : "—"}</p></div>
+        <ArrowRight className="h-5 w-5 shrink-0 text-[#7EA6CE]" />
+        <div className="min-w-0 rounded-xl bg-white px-3 py-3"><p className="text-[11px] font-bold text-[#65748A]">{copy.end}</p><p className="mt-1 break-words text-base font-bold">{last?.kind === "WORD" ? last.value : "—"}</p></div>
       </div>
-      {!voting && room.view.matchResults ? <p className={`mt-3 text-sm font-bold ${room.view.matchResults[String(owner)] ? "text-[#156240]" : "text-[#A95A43]"}`}>{copy.result} · {room.view.matchResults[String(owner)] ? copy.yes : copy.no}{voteCount ? ` (${voteCount.yes} / ${voteCount.no} / ${voteCount.abstain} ${copy.votes})` : ""}</p> : null}
+      {!voting && room.view.matchResults ? <p className={`mt-3 text-sm font-bold ${room.view.matchResults[String(owner)] ? "text-[#3E6FA8]" : "text-[#506E9E]"}`}>{copy.result} · {room.view.matchResults[String(owner)] ? copy.yes : copy.no}{voteCount ? ` (${voteCount.yes} / ${voteCount.no} / ${voteCount.abstain} ${copy.votes})` : ""}</p> : null}
     </div>
 
-    {voting ? <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#E5EAE1] pt-4">
-      <button disabled={busy || votedOwners.includes(owner)} type="button" onClick={() => void vote(true)} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#156240] px-4 text-sm font-bold text-white transition hover:bg-[#0E4E35] disabled:opacity-45"><Check className="h-4 w-4" />{copy.yes}</button>
-      <button disabled={busy || votedOwners.includes(owner)} type="button" onClick={() => void vote(false)} className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-[#E8A184] px-4 text-sm font-bold text-[#472A21] transition hover:bg-[#F2B197] disabled:opacity-45">{copy.no}</button>
-      {votedOwners.includes(owner) ? <span className="w-full text-center text-xs font-bold text-[#156240] sm:w-auto">✓ {copy.done}</span> : null}
+    {voting ? <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#DCE8F2] pt-4">
+      <button disabled={busy || votedOwners.includes(owner)} type="button" onClick={() => void vote(true)} className="draw-guess-btn draw-guess-btn--blush min-h-12 flex-1 px-4 text-sm"><Check className="h-4 w-4" />{copy.yes}</button>
+      <button disabled={busy || votedOwners.includes(owner)} type="button" onClick={() => void vote(false)} className="draw-guess-btn draw-guess-btn--candy min-h-12 flex-1 px-4 text-sm">{copy.no}</button>
+      {votedOwners.includes(owner) ? <span className="w-full text-center text-xs font-bold text-[#3E6FA8] sm:w-auto">✓ {copy.done}</span> : null}
     </div> : null}
 
-    <p className="mt-5 text-xs font-semibold text-[#738477]">{copy.swipe}</p>
-    <ol tabIndex={0} className="mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240]">
-      {chain.map((step, index) => <li key={index} className="w-40 shrink-0 snap-start rounded-2xl border border-[#E2E9DF] bg-white p-2.5 sm:w-44">
-        <p className="mb-2 truncate text-xs font-bold text-[#61796A]">{index + 1} · {room.seats[step.seat]?.name ?? "—"}{step.system ? " · 🤖" : ""}</p>
-        {step.kind === "WORD" ? <div className="flex aspect-[10/7] items-center justify-center rounded-xl bg-[#F7F6EF] px-2 text-center text-sm font-bold break-words">{step.value}</div> : <div className="aspect-[10/7] overflow-hidden rounded-xl border border-[#E5EAE2]"><DrawGuessArtwork strokes={step.value} /></div>}
+    <p className="mt-5 text-xs font-semibold text-[#65748A]">{copy.swipe}</p>
+    <ol tabIndex={0} className="mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3E6FA8]">
+      {chain.map((step, index) => <li key={index} className="w-40 shrink-0 snap-start rounded-2xl border border-[#DCE8F2] bg-white p-2.5 sm:w-44">
+        <p className="mb-2 truncate text-xs font-bold text-[#63758D]">{index + 1} · {room.seats[step.seat]?.name ?? "—"}{step.system ? " · 🤖" : ""}</p>
+        {step.kind === "WORD" ? <div className="flex aspect-[10/7] items-center justify-center rounded-xl bg-[#F7FAFE] px-2 text-center text-sm font-bold break-words">{step.value}</div> : <div className="aspect-[10/7] overflow-hidden rounded-xl border border-[#DCE8F2]"><DrawGuessArtwork strokes={step.value} /></div>}
         {!step.system ? <DrawGuessReportButton kind={step.kind} locale={locale} ownerSeat={owner} roomId={room.id} roundNumber={room.view.gameNumber} stage={index} /> : null}
       </li>)}
     </ol>
 
-    {!voting && eligible.length ? <div className="mt-5 grid gap-3 border-t border-[#E5EAE1] pt-4 sm:grid-cols-2">
-      {eligible.map(({ step, index }) => step.kind === "DRAWING" ? <button key={index} disabled={busy || ownPick !== undefined} type="button" onClick={() => void onPick(owner, index)} className={`rounded-2xl border-2 p-2 text-left transition hover:-translate-y-0.5 disabled:opacity-50 ${ownPick === index ? "border-[#156240] bg-[#EAF3E9]" : "border-[#E0E8DE] bg-white hover:border-[#8AB68E]"}`}><div className="aspect-[10/7] overflow-hidden rounded-xl"><DrawGuessArtwork strokes={step.value} /></div><div className="mt-2 flex items-center gap-2 px-1 text-sm font-bold"><Crown className="h-4 w-4 text-[#C98759]" />{room.seats[step.seat]?.name ?? "—"}<span className="ml-auto text-[#156240]">{ownPick === index ? copy.selected : copy.pickTitle}</span></div></button> : null)}
-      {ownPick !== undefined ? <p role="status" className="text-sm font-semibold text-[#607268] sm:col-span-2">{copy.waiting}</p> : null}
-    </div> : !voting ? <p role="status" className="mt-5 rounded-xl bg-[#F4F0E6] px-4 py-3 text-sm font-semibold text-[#607268]">{copy.noArtwork}</p> : null}
+    {!voting && eligible.length ? <div className="mt-5 grid gap-3 border-t border-[#DCE8F2] pt-4 sm:grid-cols-2">
+      {eligible.map(({ step, index }) => step.kind === "DRAWING" ? <button key={index} disabled={busy || ownPick !== undefined} type="button" onClick={() => void onPick(owner, index)} className={`rounded-[1.4rem] border-2 p-2 text-left shadow-[0_4px_0_#E0EAF2] transition-[transform,box-shadow,border-color] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3F74AE] motion-safe:enabled:hover:-translate-y-1 motion-safe:enabled:active:translate-y-0.5 disabled:opacity-60 ${ownPick === index ? "border-[#8FB5D8] bg-[#DCECF9]" : "border-[#DCE8F2] bg-white hover:border-[#BED6EC]"}`}><div className="aspect-[10/7] overflow-hidden rounded-xl"><DrawGuessArtwork strokes={step.value} /></div><div className="mt-2 flex items-center gap-2 px-1 text-sm font-bold"><Crown className="h-4 w-4 text-[#E1A451]" />{room.seats[step.seat]?.name ?? "—"}<span className="ml-auto text-[#3E6FA8]">{ownPick === index ? copy.selected : copy.pickTitle}</span></div></button> : null)}
+      {ownPick !== undefined ? <p role="status" className="text-sm font-semibold text-[#63758D] sm:col-span-2">{copy.waiting}</p> : null}
+    </div> : !voting ? <p role="status" className="mt-5 rounded-xl bg-[#ECF4FB] px-4 py-3 text-sm font-semibold text-[#63758D]">{copy.noArtwork}</p> : null}
   </section>;
 }

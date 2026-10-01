@@ -3,13 +3,17 @@
 import { createClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, Brush, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, Trash2, Trophy, UsersRound, X } from "lucide-react";
+import { ArrowLeft, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, Trash2, Trophy, UsersRound, X } from "lucide-react";
 import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
+import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { DrawGuessClassicChat } from "@/features/game-tools/components/DrawGuessClassicChat";
 import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
+import { DrawGuessPodium } from "@/features/game-tools/components/DrawGuessPodium";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
-import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessMode, type DrawGuessPhase, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessMode, type DrawGuessPhase, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
 import { withLocale } from "@/lib/routes";
@@ -25,7 +29,7 @@ export type DrawGuessRoomView = {
   requiredPlayers?: number;
   practiceBotSeat?: number;
   revision: number;
-  seats: { name: string; number: number; avatarUrl?: string | null; ready?: boolean; isHost: boolean; isSystem?: boolean }[];
+  seats: { name: string; number: number; avatarUrl?: string | null; catId?: string | null; ready?: boolean; isHost: boolean; isSystem?: boolean }[];
   status: string;
   viewerSeat: number;
   wordBank?: DrawGuessWordBankSnapshot | null;
@@ -34,6 +38,7 @@ export type DrawGuessRoomView = {
     chainStage: number;
     chainSubmittedCount?: number;
     chains?: ChainStep[][];
+    chat?: DrawGuessChatMessage[];
     deadlineAt: string | null;
     drawDeadlineAt?: string | null;
     gameNumber: number;
@@ -78,8 +83,8 @@ function formatTimer(deadlineAt: string | null, now: number) {
   return `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
 }
 
-function ActionButton({ children, disabled, onClick, tone = "green" }: { children: React.ReactNode; disabled?: boolean; onClick: () => void; tone?: "green" | "peach" }) {
-  return <button type="button" disabled={disabled} onClick={onClick} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-black outline-none transition-[transform,box-shadow,background-color] focus-visible:ring-2 focus-visible:ring-[#176344] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0.5 motion-safe:disabled:hover:translate-y-0 motion-reduce:transition-none ${tone === "green" ? "bg-[#D6F0DF] text-[#21553C] shadow-[0_4px_0_#A5D0B2] hover:bg-[#C9EBD4] motion-safe:active:shadow-[0_2px_0_#A5D0B2]" : "bg-[#FFE1CD] text-[#75432D] shadow-[0_4px_0_#E9B392] hover:bg-[#FFD4B9] motion-safe:active:shadow-[0_2px_0_#E9B392]"}`}>{children}</button>;
+function ActionButton({ children, disabled, onClick, tone = "soft" }: { children: React.ReactNode; disabled?: boolean; onClick: () => void; tone?: "soft" | "strong" }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className={`draw-guess-btn ${tone === "soft" ? "draw-guess-btn--blush" : "draw-guess-btn--candy"} min-h-11 px-5 text-sm`}>{children}</button>;
 }
 
 export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: DrawGuessRoomView; locale: string }) {
@@ -94,7 +99,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
-  const [guessFeedback, setGuessFeedback] = useState("");
+  const [pendingGuess, setPendingGuess] = useState<{ id: string; text: string } | null>(null);
+  const [guessMood, setGuessMood] = useState<DrawGuessCatMood>("idle");
+  const guessMoodTimer = useRef<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [strokes, setStrokes] = useState<DrawStroke[]>(initialRoom.view.drawing ?? []);
   const [syncStatus, setSyncStatus] = useState<"CONNECTED" | "RECONNECTING" | "POLLING">("POLLING");
@@ -130,7 +137,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const scoreGainId = useRef(0);
   const scoreGainTimers = useRef<number[]>([]);
 
-  useEffect(() => () => { scoreGainTimers.current.forEach((timer) => window.clearTimeout(timer)); }, []);
+  useEffect(() => () => { scoreGainTimers.current.forEach((timer) => window.clearTimeout(timer)); if (guessMoodTimer.current !== null) window.clearTimeout(guessMoodTimer.current); }, []);
 
   useEffect(() => {
     const previous = previousScores.current;
@@ -259,7 +266,6 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     if (inkTimer.current !== null) window.clearTimeout(inkTimer.current);
     inkTimer.current = null;
     setInput("");
-    setGuessFeedback("");
     const nextStrokes = room.view.phase === "CHAIN_STEP" ? room.view.task?.draft ?? [] : room.view.drawing ?? [];
     strokesRef.current = nextStrokes;
     setStrokes(nextStrokes);
@@ -386,8 +392,10 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const timer = formatTimer(room.view.deadlineAt, now);
   const deadlinePassed = Boolean(room.view.deadlineAt && now >= Date.parse(room.view.deadlineAt));
   const currentArtist = room.seats.find((seat) => seat.number === room.view.turnIndex + 1);
+  const viewerCatId = room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.catId;
   const amArtist = room.viewerSeat === room.view.turnIndex;
   const guessed = Boolean(room.view.guesses?.[String(room.viewerSeat)]);
+  const displayedGuessMood: DrawGuessCatMood = guessed ? "happy" : guessMood;
   const humanCapacity = room.playerCount - (room.practiceBotSeat === undefined ? 0 : 1);
   const humanCount = room.seats.filter((seat) => !seat.isSystem).length;
   const immersivePhase = ["WORD_SELECT", "DRAW_GUESS", "TURN_REVEAL", "CHAIN_WORD", "CHAIN_STEP"].includes(room.view.phase);
@@ -399,6 +407,9 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     lastPhaseKey.current = phaseKey;
     setShowPlayers(false);
     setConfirmClear(false);
+    setPendingGuess(null);
+    setGuessMood("idle");
+    if (guessMoodTimer.current !== null) window.clearTimeout(guessMoodTimer.current);
     if (!hadPreviousPhase) return;
     setError("");
     setPhaseToast(true);
@@ -451,11 +462,23 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     event.preventDefault();
     const value = input.trim();
     if (!value) return;
+    if (room.view.phase === "DRAW_GUESS") {
+      if (busy || pendingGuess) return;
+      const pending = { id: crypto.randomUUID(), text: value };
+      setPendingGuess(pending);
+      setInput("");
+      void send({ type: "GUESS", value }).then((result) => {
+        if (!result || typeof result.correct !== "boolean") return;
+        setGuessMood(result.correct ? "happy" : "sad");
+        if (guessMoodTimer.current !== null) window.clearTimeout(guessMoodTimer.current);
+        guessMoodTimer.current = window.setTimeout(() => setGuessMood("idle"), result.correct ? 2_600 : 1_700);
+      }).finally(() => setPendingGuess((current) => current?.id === pending.id ? null : current));
+      return;
+    }
     if (room.view.phase === "CHAIN_WORD") {
       if (Array.from(value).length < 2 || Array.from(value).length > 12) { setError(t.invalidWord); return; }
       void send({ type: "SUBMIT_STEP", value });
     } else if (room.view.phase === "CHAIN_STEP") void send({ type: "SUBMIT_STEP", value });
-    else if (room.view.phase === "DRAW_GUESS") void send({ type: "GUESS", value }).then((result) => { if (result?.correct === false) setGuessFeedback(t.wrong); else setGuessFeedback(""); });
     setInput("");
   }
 
@@ -500,7 +523,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     void flushClassicDraft();
   }
 
-  const inputForm = (placeholder: string, action: string, disabled = false) => <form onSubmit={submitText} className="flex gap-2"><input aria-label={placeholder} autoComplete="off" enterKeyHint="send" maxLength={room.view.phase === "CHAIN_WORD" ? 12 : room.view.phase === "DRAW_GUESS" ? 20 : 40} value={input} onChange={(event) => setInput(event.target.value)} placeholder={placeholder} disabled={disabled} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#D5E4D4] bg-[#F8FAF5] px-4 text-base outline-none focus:border-[#4E9A68] disabled:opacity-50" /><button type="submit" disabled={disabled || busy || !input.trim()} className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-full bg-[#FFB578] px-4 text-sm font-black text-[#563721] shadow-[0_4px_0_#D77C56] outline-none transition-[transform,box-shadow,background-color] hover:bg-[#FFC48E] focus-visible:ring-2 focus-visible:ring-[#9D573F] disabled:cursor-not-allowed disabled:bg-[#E8EDE6] disabled:text-[#728779] disabled:shadow-none motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0.5 motion-safe:active:shadow-[0_2px_0_#D77C56] motion-reduce:transition-none sm:px-5"><Send className="h-4 w-4" />{action}</button></form>;
+  const inputForm = (placeholder: string, action: string, disabled = false) => <form onSubmit={submitText} className="flex gap-2"><input aria-label={placeholder} autoComplete="off" enterKeyHint="send" maxLength={room.view.phase === "CHAIN_WORD" ? 12 : room.view.phase === "DRAW_GUESS" ? 20 : 40} value={input} onChange={(event) => setInput(event.target.value)} placeholder={placeholder} disabled={disabled} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-4 text-base outline-none focus:border-[#3F74AE] disabled:opacity-50" /><button type="submit" disabled={disabled || busy || !input.trim()} className="draw-guess-btn draw-guess-btn--candy min-h-12 shrink-0 whitespace-nowrap px-4 text-sm sm:px-5"><Send className="h-4 w-4" />{action}</button></form>;
 
   if (room.view.phase === "LOBBY") return <DrawGuessLobby locale={locale} room={room} onRefresh={() => refresh(true)} />;
 
@@ -514,7 +537,6 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const classicDrawingOpen = !room.view.drawDeadlineAt || now < Date.parse(room.view.drawDeadlineAt);
     const isClassicDrawing = isClassicRound && room.view.phase === "DRAW_GUESS" && amArtist && classicDrawingOpen;
     const classicArtistWaiting = isClassicRound && room.view.phase === "DRAW_GUESS" && amArtist && !classicDrawingOpen;
-    const isClassicGuessing = isClassicRound && room.view.phase === "DRAW_GUESS" && !amArtist;
     const stageTitle = room.view.phase === "WORD_SELECT" ? (amArtist ? t.select : `${currentArtist?.name ?? ""} · ${t.select}`)
       : room.view.phase === "TURN_REVEAL" ? t.answer
       : isClassicRound ? (amArtist ? classicArtistWaiting ? t.drawTimeUp : t.draw : t.guessing)
@@ -527,120 +549,120 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const secondsLeft = stageDeadlineAt ? Math.max(0, Math.ceil((Date.parse(stageDeadlineAt) - now) / 1_000)) : null;
     const showAnswerCelebration = isClassicRound && Boolean(room.view.answer) && (guessed || room.view.phase === "TURN_REVEAL");
     const earnedPoints = room.view.guesses?.[String(room.viewerSeat)]?.points ?? scoreGains[room.viewerSeat]?.points;
-    const showControls = isClassicGuessing && !guessed || classicArtistWaiting || isClassicDrawing && (draftFailed || strokeSaving || !ink.connected) || isChainDrawing || isChainGuessing || room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length || syncStatus === "RECONNECTING" || refreshFailed || deadlinePassed || Boolean(error);
+    const showControls = !isClassicRound && (isChainDrawing || isChainGuessing || room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length || syncStatus === "RECONNECTING" || refreshFailed || deadlinePassed || Boolean(error));
+    const classicStatus = draftFailed ? statusCopy.draftFailed : syncStatus === "RECONNECTING" || refreshFailed ? statusCopy.syncing : deadlinePassed ? statusCopy.expired : isClassicDrawing && (strokeSaving || !ink.connected) ? statusCopy.inkSyncing : classicArtistWaiting ? t.drawTimeUp : undefined;
     const clearDrawing = () => {
       setConfirmClear(false);
       if (isClassicDrawing) replaceClassicDrawing([]);
       else updateStrokes([]);
     };
 
-    return <div ref={playStageRef} className="draw-guess-play-stage fixed inset-x-0 top-0 z-[80] flex h-dvh flex-col overflow-hidden bg-[#F8F4EA] text-[#173D32]" style={{ top: "var(--draw-guess-visual-top, 0px)", height: "var(--draw-guess-visual-height, 100dvh)" }}>
-      <span aria-hidden="true" className="pointer-events-none absolute -left-16 top-16 h-48 w-48 rounded-full bg-[#E8A184]/20 blur-3xl" />
-      <span aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-10 h-56 w-56 rounded-full bg-[#8AB68E]/20 blur-3xl" />
+    return <div ref={playStageRef} className="draw-guess-theme draw-guess-game-shell draw-guess-play-stage fixed inset-x-0 top-0 z-[80] flex h-dvh flex-col overflow-hidden" style={{ top: "var(--draw-guess-visual-top, 0px)", height: "var(--draw-guess-visual-height, 100dvh)" }}>
+      <span aria-hidden="true" className="pointer-events-none absolute -left-16 top-16 h-48 w-48 rounded-full bg-[#BED6EC]/20 blur-3xl" />
+      <span aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-10 h-56 w-56 rounded-full bg-[#DADAF0]/20 blur-3xl" />
       <header className="relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-3 sm:px-5 sm:pt-4">
-        <Link aria-label={t.back} href={withLocale(locale, "/game-tools")} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#156240] shadow-sm transition-transform motion-safe:hover:-translate-x-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240]"><ArrowLeft className="h-4 w-4" /></Link>
-        <div className="min-w-0 flex-1"><p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-[#A75B48]">{isClassic ? t.modeClassic : t.modeChain} <span aria-hidden="true">·</span> {stageProgress}</p><h1 className="truncate text-lg font-bold leading-tight sm:text-2xl">{stageTitle}</h1></div>
-        {stageTimer ? <span className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-sm font-bold tabular-nums shadow-sm sm:px-3 sm:text-base ${secondsLeft !== null && secondsLeft <= 10 ? "bg-[#FFE1CC] text-[#A24636] motion-safe:animate-pulse" : "bg-white text-[#156240]"}`}><Clock3 className="h-4 w-4" />{stageTimer}</span> : null}
-        <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full bg-white px-2.5 text-xs font-bold text-[#156240] shadow-sm transition-colors hover:bg-[#F1F8EF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#156240]"><UsersRound className="h-4 w-4" /><span>{humanCount}/{humanCapacity}</span></button>
+        <Link aria-label={t.back} href={withLocale(locale, "/game-tools")} className="draw-guess-btn draw-guess-btn--milk grid h-10 min-h-10 w-10 shrink-0 place-items-center"><ArrowLeft className="h-4 w-4" /></Link>
+        <div className="min-w-0 flex-1"><p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-[#3E70AA]">{isClassic ? t.modeClassic : t.modeChain} <span aria-hidden="true">·</span> {stageProgress}</p><h1 className="line-clamp-2 text-lg font-bold leading-tight sm:truncate sm:text-2xl">{stageTitle}</h1></div>
+        {stageTimer ? <span className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-sm font-black tabular-nums shadow-[0_3px_0_#DFE8F0] sm:px-3 sm:text-base ${secondsLeft !== null && secondsLeft <= 10 ? "bg-[#DFECF8] text-[#506E9E] motion-safe:animate-pulse" : "bg-white text-[#3E6FA8]"}`}><Clock3 className="h-4 w-4" />{stageTimer}</span> : null}
+        <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="draw-guess-btn draw-guess-btn--milk h-10 min-h-10 shrink-0 gap-1 px-2.5 text-xs"><UsersRound className="h-4 w-4" /><span>{humanCount}/{humanCapacity}</span></button>
       </header>
 
       {isClassic ? <div role="region" aria-label={t.liveScore} className="relative z-10 mx-auto flex w-full max-w-5xl shrink-0 items-center gap-2 px-3 pb-2 sm:px-5">
-        <Trophy aria-hidden="true" className="h-4 w-4 shrink-0 text-[#D1844B]" />
-        <ol tabIndex={0} className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 outline-none focus-visible:ring-2 focus-visible:ring-[#176344] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {getDrawGuessRankings(room.view.scores).map(({ seat, score, rank }) => <li key={seat} className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm sm:text-xs ${seat === room.viewerSeat ? "bg-[#FFF0C9] text-[#795027]" : "bg-white text-[#426458]"}`}>
+        <Trophy aria-hidden="true" className="h-4 w-4 shrink-0 text-[#D8A14B]" />
+        <ol tabIndex={0} className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 outline-none focus-visible:ring-2 focus-visible:ring-[#3F74AE] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {getDrawGuessRankings(room.view.scores).map(({ seat, score, rank }) => <li key={seat} className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-[0_2px_0_#DEE8F1] sm:text-xs ${seat === room.viewerSeat ? "bg-[#FFF0C9] text-[#765A35]" : "bg-white text-[#405875]"}`}>
             <span className="text-[10px] opacity-70">#{rank}</span>
+            <DrawGuessCatSprite catId={room.seats.find((item) => item.number === seat + 1)?.catId} size={22} />
             <span className="max-w-16 truncate sm:max-w-24">{room.seats.find((item) => item.number === seat + 1)?.name ?? `#${seat + 1}`}</span>
             <strong key={`${room.view.gameNumber}-${seat}-${score}`} className="draw-guess-score-pop text-xs tabular-nums sm:text-sm">{score}</strong>
-            {scoreGains[seat] ? <span key={scoreGains[seat].id} aria-hidden="true" className="draw-guess-score-gain pointer-events-none absolute -right-1 -top-3 rounded-full bg-[#FFCC78] px-1.5 py-0.5 text-[10px] font-black text-[#7C4C23] shadow-sm">+{scoreGains[seat].points}</span> : null}
+            {scoreGains[seat] ? <span key={scoreGains[seat].id} aria-hidden="true" className="draw-guess-score-gain pointer-events-none absolute -right-1 -top-3 rounded-full bg-[#FFE4A4] px-1.5 py-0.5 text-[10px] font-black text-[#765A35] shadow-sm">+{scoreGains[seat].points}</span> : null}
           </li>)}
         </ol>
       </div> : null}
 
       <main className="relative mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:gap-3 sm:px-5 sm:pb-4">
-        <section key={phaseKey} aria-label={stageTitle} className="draw-guess-stage-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-[#FFFDF8] p-2 shadow-[0_16px_45px_rgba(39,80,55,0.1)] sm:rounded-[2rem] sm:p-4">
-          {((isClassicRound && room.view.answer && !showAnswerCelebration) || isChainDrawing && chainTask?.previous?.kind === "WORD") ? <div className="mb-2 flex shrink-0 items-center gap-2 rounded-2xl bg-[#FFEBD8] px-3 py-2 sm:px-4"><Sparkles className="h-4 w-4 shrink-0 text-[#B66348]" /><span className="text-xs font-semibold text-[#80533D]">{isClassicRound ? t.answer : t.previousWord}</span><strong className="min-w-0 truncate text-base text-[#173D32] sm:text-lg">{isClassicRound ? room.view.answer : chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : ""}</strong></div> : null}
+        <section key={phaseKey} aria-label={stageTitle} className="draw-guess-stage-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-[#FFFCF5] p-2 shadow-[0_16px_45px_rgba(48,66,92,0.1)] sm:rounded-[2rem] sm:p-4">
+          {((isClassicRound && room.view.answer && !showAnswerCelebration) || isChainDrawing && chainTask?.previous?.kind === "WORD") ? <div className="mb-2 flex shrink-0 items-center gap-2 rounded-2xl bg-[#E8F2FB] px-3 py-2 sm:px-4"><Sparkles className="h-4 w-4 shrink-0 text-[#3C70A9]" /><span className="text-xs font-semibold text-[#405875]">{isClassicRound ? t.answer : t.previousWord}</span><strong className="min-w-0 truncate text-base text-[#30425C] sm:text-lg">{isClassicRound ? room.view.answer : chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : ""}</strong></div> : null}
 
-          {isClassicDrawing ? <DrawGuessCanvas compact strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => replaceClassicDrawing(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
-          {isClassicRound && !isClassicDrawing ? <DrawGuessCanvas compact disabled strokes={amArtist ? strokes : room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /> : null}
-          {isChainDrawing ? <DrawGuessCanvas compact strokes={strokes} onStroke={addStroke} onUndo={() => updateStrokes(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
-          {isChainGuessing && chainTask?.previous?.kind === "DRAWING" ? <DrawGuessCanvas compact disabled strokes={chainTask.previous.value} /> : null}
+          {isClassicDrawing ? <DrawGuessCanvas catId={viewerCatId} compact strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => replaceClassicDrawing(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
+          {isClassicRound && !isClassicDrawing ? <DrawGuessCanvas catId={currentArtist?.catId} compact disabled strokes={amArtist ? strokes : room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /> : null}
+          {isChainDrawing ? <DrawGuessCanvas catId={viewerCatId} compact strokes={strokes} onStroke={addStroke} onUndo={() => updateStrokes(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
+          {isChainGuessing && chainTask?.previous?.kind === "DRAWING" ? <DrawGuessCanvas catId={viewerCatId} compact disabled strokes={chainTask.previous.value} /> : null}
 
-          {room.view.phase === "WORD_SELECT" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 text-center"><div aria-hidden="true" className="draw-guess-logo-in relative grid h-24 w-24 place-items-center"><span className="absolute inset-2 rotate-[-9deg] rounded-[1.8rem] bg-[#FFE4CE] shadow-[0_6px_0_#EDBB9C]" /><Brush className="relative h-10 w-10 -rotate-12 text-[#B86645]" /><Sparkles className="absolute -right-1 -top-1 h-6 w-6 text-[#E9A45C]" /></div>{!amArtist ? <p className="text-sm text-[#62756A]">{t.wait}</p> : null}{amArtist ? <div className="flex flex-wrap justify-center gap-2">{room.view.options?.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "CHOOSE_WORD", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
-          {room.view.phase === "CHAIN_WORD" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 text-center"><div aria-hidden="true" className="draw-guess-logo-in relative grid h-24 w-24 place-items-center"><span className="absolute inset-2 rotate-[-9deg] rounded-[1.8rem] bg-[#DDF2E3] shadow-[0_6px_0_#ADD4B8]" /><Brush className="relative h-10 w-10 -rotate-12 text-[#28724E]" /><Sparkles className="absolute -right-1 -top-1 h-6 w-6 text-[#E9A45C]" /></div>{room.wordBank ? <p className="text-sm font-semibold text-[#62756A]">{room.wordBank.title}</p> : null}{chainTask?.submitted ? <p className="draw-guess-check-pop flex items-center gap-2 text-sm font-black text-[#24734E]"><Check className="h-5 w-5" />{t.submitted}</p> : chainTask?.options?.length ? <div className="flex flex-wrap justify-center gap-2">{chainTask.options.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "SUBMIT_STEP", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
-          {isChainStep && chainTask?.submitted ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><span className="grid h-16 w-16 place-items-center rounded-full bg-[#EAF3E9] text-[#156240]"><Check className="h-8 w-8" /></span><p className="text-lg font-bold">{t.submitted}</p><p className="text-sm text-[#62756A]">{t.wait}</p></div> : null}
-          {isChainStep && !chainTask ? <div role="status" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center text-[#607268]"><LoaderCircle className="h-7 w-7 animate-spin" /><p className="text-sm font-semibold">{t.wait}</p></div> : null}
-          {isChainGuessing && chainTask?.previous?.system && room.practiceBotSeat !== undefined ? <p className="shrink-0 px-2 pt-2 text-xs font-semibold text-[#9E634B]">{practiceCopy.botClue}</p> : null}
-          {showAnswerCelebration ? <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[#FFFDF8]/90 px-4 text-center backdrop-blur-[2px]">
-            <span aria-hidden="true" className="absolute left-[12%] top-[27%] text-xl text-[#F3AA6A] draw-guess-answer-spark">✦</span>
-            <span aria-hidden="true" className="absolute right-[14%] top-[20%] text-2xl text-[#78BB91] draw-guess-answer-spark [animation-delay:130ms]">✳</span>
-            <span aria-hidden="true" className="absolute bottom-[25%] left-[18%] text-lg text-[#8DB8E1] draw-guess-answer-spark [animation-delay:230ms]">●</span>
-            <span aria-hidden="true" className="absolute bottom-[20%] right-[15%] text-xl text-[#EBA98B] draw-guess-answer-spark [animation-delay:330ms]">✦</span>
+          {room.view.phase === "WORD_SELECT" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><div className="draw-guess-logo-in"><DrawGuessCatSprite animated catId={currentArtist?.catId} mood="happy" size={96} /></div>{!amArtist ? <p className="text-sm text-[#63758D]">{t.wait}</p> : null}{amArtist ? <div className="flex flex-wrap justify-center gap-2">{room.view.options?.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "CHOOSE_WORD", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
+          {room.view.phase === "CHAIN_WORD" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><div className="draw-guess-logo-in"><DrawGuessCatSprite animated catId={viewerCatId} mood="happy" size={96} /></div>{room.wordBank ? <p className="text-sm font-semibold text-[#63758D]">{room.wordBank.title}</p> : null}{chainTask?.submitted ? <p className="draw-guess-check-pop flex items-center gap-2 text-sm font-black text-[#3E6FA8]"><Check className="h-5 w-5" />{t.submitted}</p> : chainTask?.options?.length ? <div className="flex flex-wrap justify-center gap-2">{chainTask.options.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "SUBMIT_STEP", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
+          {isChainStep && chainTask?.submitted ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><span className="grid h-16 w-16 place-items-center rounded-full bg-[#ECF4FB] text-[#3E6FA8]"><Check className="h-8 w-8" /></span><p className="text-lg font-bold">{t.submitted}</p><p className="text-sm text-[#63758D]">{t.wait}</p></div> : null}
+          {isChainStep && !chainTask ? <div role="status" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center text-[#63758D]"><LoaderCircle className="h-7 w-7 animate-spin" /><p className="text-sm font-semibold">{t.wait}</p></div> : null}
+          {isChainGuessing && chainTask?.previous?.system && room.practiceBotSeat !== undefined ? <p className="shrink-0 px-2 pt-2 text-xs font-semibold text-[#506E9E]">{practiceCopy.botClue}</p> : null}
+          {showAnswerCelebration ? <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[#FFFCF5]/90 px-4 text-center backdrop-blur-[2px]">
+            <span aria-hidden="true" className="absolute left-[12%] top-[27%] text-xl text-[#BED6EC] draw-guess-answer-spark">✦</span>
+            <span aria-hidden="true" className="absolute right-[14%] top-[20%] text-2xl text-[#BED6EA] draw-guess-answer-spark [animation-delay:130ms]">✳</span>
+            <span aria-hidden="true" className="absolute bottom-[25%] left-[18%] text-lg text-[#D8DEF2] draw-guess-answer-spark [animation-delay:230ms]">●</span>
+            <span aria-hidden="true" className="absolute bottom-[20%] right-[15%] text-xl text-[#AFCFEC] draw-guess-answer-spark [animation-delay:330ms]">✦</span>
             <div className="relative flex max-w-full flex-col items-center gap-3">
-              <span aria-hidden="true" className={`draw-guess-answer-icon grid h-16 w-16 place-items-center rounded-[1.5rem] shadow-[0_6px_0_#B8DAB8] ${guessed ? "bg-[#D9F2DB] text-[#27794E]" : "bg-[#FFE5C9] text-[#B3693E]"}`}>{guessed ? <Check className="h-9 w-9 stroke-[3]" /> : <Sparkles className="h-8 w-8" />}</span>
-              <p className="draw-guess-answer-label text-xl font-black text-[#27794E] sm:text-2xl">{guessed ? t.guessed : t.answer}</p>
-              <strong className="draw-guess-answer-word max-w-full break-words rounded-[1.4rem] bg-white px-5 py-3 text-4xl font-black leading-tight text-[#173D32] shadow-[0_5px_0_#EAD9BB] sm:text-6xl">{room.view.answer}</strong>
-              {earnedPoints ? <span className="draw-guess-points-pop rounded-full bg-[#FFCE7C] px-4 py-1.5 text-lg font-black text-[#77451E] shadow-[0_4px_0_#E4A963]">+{earnedPoints} {t.score}</span> : null}
-              {room.view.phase === "TURN_REVEAL" ? <p className="text-sm font-bold text-[#7B8670]">{t.next}</p> : null}
+              <span className="draw-guess-answer-icon"><DrawGuessCatSprite animated catId={viewerCatId} mood="happy" size={78} /></span>
+              <p className="draw-guess-answer-label text-xl font-black text-[#3E70AA] sm:text-2xl">{guessed ? t.guessed : t.answer}</p>
+              <strong className="draw-guess-answer-word max-w-full break-words rounded-[1.4rem] bg-white px-5 py-3 text-4xl font-black leading-tight text-[#30425C] shadow-[0_5px_0_#DFE8F0] sm:text-6xl">{room.view.answer}</strong>
+              {earnedPoints ? <span className="draw-guess-points-pop rounded-full bg-[#FFE4A4] px-4 py-1.5 text-lg font-black text-[#765A35] shadow-[0_4px_0_#E4BF76]">+{earnedPoints} {t.score}</span> : null}
+              {room.view.phase === "TURN_REVEAL" ? <p className="text-sm font-bold text-[#65748A]">{t.next}</p> : null}
             </div>
           </div> : null}
         </section>
 
-        {showControls ? <div key={`${phaseKey}-controls`} className="draw-guess-stage-card shrink-0 rounded-[1.35rem] bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(39,80,55,0.08)] sm:p-3">
-          {isClassicGuessing && !guessed ? inputForm(t.guessing, t.submitGuess) : null}
-          {isClassicDrawing && (draftFailed || strokeSaving || !ink.connected) ? <p role="status" className={`flex items-center gap-2 text-xs font-semibold ${draftFailed ? "text-[#9E4B3C]" : "text-[#607268]"}`}><span className={`h-2.5 w-2.5 rounded-full ${ink.connected && !draftFailed ? "bg-[#5EAD7F]" : "bg-[#E6A17B]"}`} />{draftFailed ? statusCopy.draftFailed : strokeSaving ? t.drawing : statusCopy.inkSyncing}</p> : null}
-          {classicArtistWaiting ? <p role="status" className="flex items-center gap-2 text-sm font-semibold text-[#607268]"><Clock3 className="h-4 w-4 text-[#C4734F]" />{t.drawTimeUp}</p> : null}
-          {isChainDrawing ? <div className="flex items-center justify-between gap-3"><p role="status" className={`text-xs font-semibold ${draftFailed ? "text-[#9E4B3C]" : "text-[#738477]"}`}>{draftFailed ? statusCopy.draftFailed : t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t.submit}</ActionButton></div> : null}
+        {isClassicRound ? <DrawGuessClassicChat busy={busy} error={error} guessed={guessed} input={input} locale={locale} mood={displayedGuessMood} onInputChange={setInput} onSubmit={submitText} pending={pendingGuess} room={room} status={classicStatus} /> : null}
+
+        {showControls ? <div key={`${phaseKey}-controls`} className="draw-guess-stage-card shrink-0 rounded-[1.35rem] bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(48,66,92,0.08)] sm:p-3">
+          {isChainDrawing ? <div className="flex items-center justify-between gap-3"><p role="status" className={`text-xs font-semibold ${draftFailed ? "text-[#506E9E]" : "text-[#65748A]"}`}>{draftFailed ? statusCopy.draftFailed : t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t.submit}</ActionButton></div> : null}
           {isChainGuessing ? inputForm(t.nextGuess, t.submit) : null}
           {room.view.phase === "CHAIN_WORD" && !chainTask?.submitted && !chainTask?.options?.length ? inputForm(t.word, t.submit) : null}
-          {isClassicGuessing && guessFeedback ? <p role="status" className="mt-2 text-xs font-semibold text-[#B05D49]">{guessFeedback}</p> : null}
-          {syncStatus === "RECONNECTING" || refreshFailed ? <p role="status" className="mt-2 text-xs font-semibold text-[#9E634B]">{statusCopy.syncing}</p> : null}
-          {deadlinePassed ? <p role="status" className="mt-2 text-xs font-semibold text-[#9E634B]">{statusCopy.expired}</p> : null}
-          {error ? <p role="alert" className="mt-2 flex items-center gap-2 rounded-2xl bg-[#FFF0D2] px-3 py-2 text-xs font-semibold text-[#865731]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0" />{error}</p> : null}
+          {syncStatus === "RECONNECTING" || refreshFailed ? <p role="status" className="mt-2 text-xs font-semibold text-[#506E9E]">{statusCopy.syncing}</p> : null}
+          {deadlinePassed ? <p role="status" className="mt-2 text-xs font-semibold text-[#506E9E]">{statusCopy.expired}</p> : null}
+          {error ? <p role="alert" className="mt-2 flex items-center gap-2 rounded-2xl bg-[#FFF0C9] px-3 py-2 text-xs font-semibold text-[#765A35]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0" />{error}</p> : null}
         </div> : null}
       </main>
 
-      {phaseToast && room.view.phase !== "TURN_REVEAL" ? <div key={phaseKey} role="status" className="draw-guess-phase-toast pointer-events-none absolute left-1/2 top-[20%] z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#FFE3A8] px-5 py-3 text-sm font-black text-[#654728] shadow-[0_6px_0_#D9AD70,0_16px_40px_rgba(87,61,34,0.2)]"><Sparkles className="h-4 w-4 text-[#BA754A]" />{stageTitle}</div> : null}
+      {phaseToast && room.view.phase !== "TURN_REVEAL" ? <div key={phaseKey} role="status" className="draw-guess-phase-toast pointer-events-none absolute left-1/2 top-[20%] z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#FFE4A4] px-5 py-3 text-sm font-black text-[#765A35] shadow-[0_6px_0_#E2C080,0_16px_40px_rgba(87,61,34,0.2)]"><Sparkles className="h-4 w-4 text-[#3C70A9]" />{stageTitle}</div> : null}
 
-      {showPlayers ? <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#173D32]/45 p-3 sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPlayers(false); }}><div role="dialog" aria-modal="true" aria-label={t.players} className="draw-guess-dialog w-full max-w-md rounded-[1.8rem] bg-[#FFFDF8] p-5 shadow-[0_28px_70px_rgba(23,61,50,0.28)]"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#A75B48]">{t.room} · {room.code}</p><h2 className="text-xl font-bold">{t.players} <span className="text-sm text-[#738477]">{humanCount}/{humanCapacity}</span></h2></div><button aria-label={locale === "zh-CN" ? "关闭" : "Close"} autoFocus type="button" onClick={() => setShowPlayers(false)} className="grid h-9 w-9 place-items-center rounded-full bg-[#F0F2E9]"><X className="h-4 w-4" /></button></div><ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#EAF3E9]" : "bg-[#F5F4EC]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#156240]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#C98759]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums">{room.view.scores[index]}</span> : null}</li>; })}</ol><button type="button" onClick={() => void copyInvite()} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#156240] px-4 text-sm font-bold text-white"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div></div> : null}
-      {confirmClear ? <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#173D32]/45 p-4"><div role="dialog" aria-modal="true" aria-label={locale === "zh-CN" ? "清空画布" : "Clear drawing"} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFDF8] p-6 text-center shadow-[0_28px_70px_rgba(23,61,50,0.28)]"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#FBE4D8] text-[#B45C47]"><Trash2 className="h-6 w-6" /></span><h2 className="mt-4 text-xl font-bold">{locale === "zh-CN" ? "要清空这张画吗？" : locale === "fr" ? "Effacer ce dessin ?" : "Clear this drawing?"}</h2><p className="mt-2 text-sm text-[#607268]">{locale === "zh-CN" ? "这一张画的所有笔画都会被清除。" : locale === "fr" ? "Tous les traits de ce dessin seront effacés." : "Every stroke on this drawing will be removed."}</p><div className="mt-5 flex gap-2"><button autoFocus type="button" onClick={() => setConfirmClear(false)} className="min-h-11 flex-1 rounded-xl bg-[#F0F2E9] px-3 text-sm font-bold">{locale === "zh-CN" ? "继续画" : locale === "fr" ? "Continuer" : "Keep drawing"}</button><button type="button" onClick={clearDrawing} className="min-h-11 flex-1 rounded-xl bg-[#B45C47] px-3 text-sm font-bold text-white">{locale === "zh-CN" ? "清空画布" : locale === "fr" ? "Effacer" : "Clear"}</button></div></div></div> : null}
+      {showPlayers ? <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#30425C]/45 p-3 sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPlayers(false); }}><div role="dialog" aria-modal="true" aria-label={t.players} className="draw-guess-dialog w-full max-w-md rounded-[1.8rem] bg-[#FFFCF5] p-5 shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#3E70AA]">{t.room} · {room.code}</p><h2 className="text-xl font-bold">{t.players} <span className="text-sm text-[#65748A]">{humanCount}/{humanCapacity}</span></h2></div><button aria-label={locale === "zh-CN" ? "关闭" : "Close"} autoFocus type="button" onClick={() => setShowPlayers(false)} className="grid h-9 w-9 place-items-center rounded-full bg-[#ECF4FB]"><X className="h-4 w-4" /></button></div><ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#ECF4FB]" : "bg-[#F1F6FC]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3E6FA8]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#E1A451]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums">{room.view.scores[index]}</span> : null}</li>; })}</ol><button type="button" onClick={() => void copyInvite()} className="mt-4 draw-guess-btn draw-guess-btn--blush min-h-11 w-full px-4 text-sm"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div></div> : null}
+      {confirmClear ? <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#30425C]/45 p-4"><div role="dialog" aria-modal="true" aria-label={locale === "zh-CN" ? "清空画布" : "Clear drawing"} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFCF5] p-6 text-center shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#DBEBF9] text-[#558BC3]"><Trash2 className="h-6 w-6" /></span><h2 className="mt-4 text-xl font-bold">{locale === "zh-CN" ? "要清空这张画吗？" : locale === "fr" ? "Effacer ce dessin ?" : "Clear this drawing?"}</h2><p className="mt-2 text-sm text-[#63758D]">{locale === "zh-CN" ? "这一张画的所有笔画都会被清除。" : locale === "fr" ? "Tous les traits de ce dessin seront effacés." : "Every stroke on this drawing will be removed."}</p><div className="mt-5 flex gap-2"><button autoFocus type="button" onClick={() => setConfirmClear(false)} className="draw-guess-btn draw-guess-btn--milk min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "继续画" : locale === "fr" ? "Continuer" : "Keep drawing"}</button><button type="button" onClick={clearDrawing} className="draw-guess-btn draw-guess-btn--candy min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "清空画布" : locale === "fr" ? "Effacer" : "Clear"}</button></div></div></div> : null}
     </div>;
   }
 
   const compactSummary = true;
-  return <div className="min-h-[80vh] pb-24 text-[#173D32]">
-    <Link href={withLocale(locale, "/game-tools")} className="inline-flex items-center gap-2 text-sm font-semibold text-[#156240] hover:underline"><ArrowLeft className="h-4 w-4" />{t.back}</Link>
-    <header className={`relative overflow-hidden bg-[#F6F3E8] shadow-[0_18px_55px_rgba(20,57,42,0.09)] ${compactSummary ? "mt-3 rounded-2xl p-4 sm:p-5" : "mt-5 rounded-[2rem] p-6 sm:p-8"}`}>
-      <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-[#E8A184]/50 blur-3xl" />
+  return <div className="draw-guess-theme min-h-[80vh] pb-24">
+    <Link href={withLocale(locale, "/game-tools")} className="inline-flex items-center gap-2 text-sm font-semibold text-[#3E6FA8] hover:underline"><ArrowLeft className="h-4 w-4" />{t.back}</Link>
+    <header className={`relative overflow-hidden bg-[#F1F6FC] shadow-[0_18px_55px_rgba(48,66,92,0.09)] ${compactSummary ? "mt-3 rounded-2xl p-4 sm:p-5" : "mt-5 rounded-[2rem] p-6 sm:p-8"}`}>
+      <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-[#BED6EC]/50 blur-3xl" />
       <div className="relative flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#A75B48]">Friemi · {room.mode === "CLASSIC" ? t.modeClassic : t.modeChain} · #{room.view.gameNumber}</p><h1 className={`font-bold ${compactSummary ? "mt-1 text-xl sm:text-2xl" : "mt-3 text-3xl sm:text-4xl"}`}>{t.title}</h1>{!compactSummary ? <p className="mt-2 text-sm text-[#5D7369]">{room.mode === "CLASSIC" ? t.classicHint : t.chainHint}</p> : null}</div>
-        {compactSummary ? <div className="flex shrink-0 flex-col items-end gap-2"><button type="button" aria-label={copied ? t.copied : t.copy} onClick={() => void copyInvite()} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white/80 px-2.5 text-sm font-bold tracking-widest shadow-sm"><Copy className="h-3.5 w-3.5 text-[#156240]" />{room.code}</button>{timer ? <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-mono text-sm font-bold tabular-nums"><Clock3 className="h-3.5 w-3.5 text-[#D07153]" />{timer}</span> : null}</div>
-          : <div className="rounded-2xl bg-white/80 px-5 py-3 text-center shadow-sm"><span className="block text-[11px] font-bold uppercase tracking-widest text-[#718679]">{t.room}</span><strong className="text-2xl tracking-[0.18em]">{room.code}</strong></div>}
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#3E70AA]">Friemi · {room.mode === "CLASSIC" ? t.modeClassic : t.modeChain} · #{room.view.gameNumber}</p><h1 className={`font-bold ${compactSummary ? "mt-1 text-xl sm:text-2xl" : "mt-3 text-3xl sm:text-4xl"}`}>{t.title}</h1>{!compactSummary ? <p className="mt-2 text-sm text-[#63758D]">{room.mode === "CLASSIC" ? t.classicHint : t.chainHint}</p> : null}</div>
+        {compactSummary ? <div className="flex shrink-0 flex-col items-end gap-2"><button type="button" aria-label={copied ? t.copied : t.copy} onClick={() => void copyInvite()} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white/80 px-2.5 text-sm font-bold tracking-widest shadow-sm"><Copy className="h-3.5 w-3.5 text-[#3E6FA8]" />{room.code}</button>{timer ? <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-mono text-sm font-bold tabular-nums"><Clock3 className="h-3.5 w-3.5 text-[#3C70A9]" />{timer}</span> : null}</div>
+          : <div className="rounded-2xl bg-white/80 px-5 py-3 text-center shadow-sm"><span className="block text-[11px] font-bold uppercase tracking-widest text-[#65748A]">{t.room}</span><strong className="text-2xl tracking-[0.18em]">{room.code}</strong></div>}
       </div>
-      {compactSummary ? room.view.gameNumber > 1 || room.view.phase === "FINISHED" ? <Link className="relative mt-2 inline-block text-xs font-bold text-[#156240] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null
-        : <div className="relative mt-5 flex flex-wrap items-center gap-3"><ActionButton tone="peach" onClick={copyInvite}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? t.copied : t.copy}</ActionButton><span className="text-sm text-[#62756A]">{t.invitation}</span>{room.view.gameNumber > 1 ? <Link className="text-sm font-bold text-[#156240] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null}{timer ? <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-mono text-lg font-bold tabular-nums"><Clock3 className="h-4 w-4 text-[#D07153]" />{timer}</span> : null}</div>}
+      {compactSummary ? room.view.gameNumber > 1 || room.view.phase === "FINISHED" ? <Link className="relative mt-2 inline-block text-xs font-bold text-[#3E6FA8] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null
+        : <div className="relative mt-5 flex flex-wrap items-center gap-3"><ActionButton tone="strong" onClick={copyInvite}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? t.copied : t.copy}</ActionButton><span className="text-sm text-[#63758D]">{t.invitation}</span>{room.view.gameNumber > 1 ? <Link className="text-sm font-bold text-[#3E6FA8] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null}{timer ? <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-mono text-lg font-bold tabular-nums"><Clock3 className="h-4 w-4 text-[#3C70A9]" />{timer}</span> : null}</div>}
     </header>
 
-    {room.practiceBotSeat !== undefined && room.view.phase !== "FINISHED" ? <p className={`rounded-xl border border-[#E8D6C8] bg-[#FFF9F0] font-semibold text-[#78553E] ${compactSummary ? "mt-3 px-3 py-2 text-xs leading-5" : "mt-4 px-4 py-3 text-sm leading-6"}`}>{practiceCopy.note}</p> : null}
+    {room.practiceBotSeat !== undefined && room.view.phase !== "FINISHED" ? <p className={`rounded-xl border border-[#D5E4F2] bg-[#F7FAFE] font-semibold text-[#60758C] ${compactSummary ? "mt-3 px-3 py-2 text-xs leading-5" : "mt-4 px-4 py-3 text-sm leading-6"}`}>{practiceCopy.note}</p> : null}
 
-    {syncStatus === "RECONNECTING" || refreshFailed ? <p role="status" className="mt-4 rounded-xl bg-[#FFF9F5] px-4 py-3 text-sm font-semibold text-[#73584A]">{statusCopy.syncing}</p> : null}
-    {deadlinePassed ? <p role="status" className="mt-3 rounded-xl bg-[#EAF3E9] px-4 py-3 text-sm font-semibold text-[#156240]">{statusCopy.expired}</p> : null}
+    {syncStatus === "RECONNECTING" || refreshFailed ? <p role="status" className="mt-4 rounded-xl bg-[#F7FAFE] px-4 py-3 text-sm font-semibold text-[#60758C]">{statusCopy.syncing}</p> : null}
+    {deadlinePassed ? <p role="status" className="mt-3 rounded-xl bg-[#ECF4FB] px-4 py-3 text-sm font-semibold text-[#3E6FA8]">{statusCopy.expired}</p> : null}
 
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
       <section className="min-w-0 space-y-5">
-        {room.view.phase === "FINISHED" ? <section className="rounded-[1.6rem] bg-[#173D32] p-6 text-white"><h2 className="flex items-center gap-2 text-2xl font-black"><Sparkles className="h-6 w-6 text-[#FFCB82]" />{t.finish}</h2>{getDrawGuessRankings(room.practiceBotSeat === undefined ? room.view.scores : room.view.scores.slice(0, -1)).map((item, index) => <div key={item.seat} className={`draw-guess-rank-in mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 ${item.rank === 1 ? "bg-[#FFE0A4] text-[#4B3828]" : "bg-white/10"}`} style={{ animationDelay: `${index * 90}ms` }}><span className={`w-7 text-xl font-black ${item.rank === 1 ? "text-[#A96639]" : "text-[#F1BD8D]"}`}>{item.rank}</span><span className="min-w-0 flex-1 truncate font-semibold">{room.seats[item.seat]?.name}</span><strong>{item.score} {t.score}</strong></div>)}{room.isHost ? <button type="button" disabled={busy} onClick={() => void send({ type: "REMATCH" })} className="mt-5 min-h-11 rounded-full bg-[#FFB578] px-5 text-sm font-black text-[#563721] shadow-[0_4px_0_#D77C56] outline-none transition-[transform,box-shadow] focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0.5 motion-safe:active:shadow-[0_2px_0_#D77C56] motion-reduce:transition-none">{t.rematch}</button> : null}</section> : null}
+        {room.view.phase === "FINISHED" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} isHost={room.isHost} locale={locale} onRematch={() => void send({ type: "REMATCH" })} rematchLabel={t.rematch} room={room} scoreLabel={t.score} /> : null}
 
         {room.mode === "CHAIN" && (room.view.phase === "REVEAL_VOTE" || room.view.phase === "AUTHOR_PICK") ? <DrawGuessChainReview busy={busy} locale={locale} room={room} onVote={(owner, value) => send({ type: "VOTE", owner, value })} onPick={(owner, step) => send({ type: "PICK", owner, step })} /> : null}
 
-        {room.mode === "CHAIN" && room.view.phase === "FINISHED" ? <div className="space-y-5">{room.view.chains?.map((chain, owner) => <article key={owner} className="rounded-[1.6rem] border border-[#DFE7D9] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{room.seats[owner]?.name ?? `#${owner + 1}`} · {t.chain}</h2>{room.view.matchResults ? <span className={`rounded-full px-3 py-1 text-xs font-bold ${room.view.matchResults[String(owner)] ? "bg-[#EAF3E9] text-[#156240]" : "bg-[#FBECE5] text-[#B05D49]"}`}>{room.view.matchResults[String(owner)] ? t.match : t.mismatch}</span> : null}</div><div className="mt-4 space-y-3">{chain.map((step, index) => <div key={index} className="rounded-2xl bg-[#F7F6F0] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#6A7D70]"><span className="rounded-full bg-white px-2 py-1">{index + 1}</span>{room.seats[step.seat]?.name}{step.system ? ` · ${t.system}` : ""}{room.view.picks?.[String(owner)] === index ? <span className="ml-auto text-[#C4734F]">★ {t.picked}</span> : null}</div>{step.kind === "WORD" ? <p className="py-2 text-center text-xl font-bold">{step.value}</p> : <div className="aspect-[10/7] max-w-xl overflow-hidden rounded-xl border border-[#E3E6DE]"><DrawGuessArtwork strokes={step.value} /></div>}{room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && step.kind === "DRAWING" && !step.system ? <button type="button" disabled={busy || room.view.picks?.[String(owner)] !== undefined} onClick={() => void send({ type: "PICK", owner, step: index })} className="mt-2 rounded-lg bg-[#E8A184] px-3 py-2 text-xs font-bold text-[#472A21] disabled:opacity-50">★ {t.pick}</button> : null}{!step.system ? <DrawGuessReportButton kind={step.kind} locale={locale} ownerSeat={owner} roomId={room.id} roundNumber={room.view.gameNumber} stage={index} /> : null}</div>)}</div>
-          {room.view.phase === "REVEAL_VOTE" ? <div className="mt-4 border-t border-[#E6EBE1] pt-4"><p className="mb-3 text-sm font-bold">{t.vote}</p><div className="flex flex-wrap gap-2"><ActionButton disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: true })}>{t.yes}</ActionButton><ActionButton tone="peach" disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: false })}>{t.no}</ActionButton>{room.view.votedOwners?.includes(owner) ? <span className="self-center text-xs text-[#5B7E62]">✓ {t.saved}</span> : null}</div></div> : null}
-          {room.view.voteCounts?.[owner] ? <p className="mt-4 text-xs text-[#607268]">{t.result}: {t.yes} {room.view.voteCounts[owner].yes} · {t.no} {room.view.voteCounts[owner].no} · — {room.view.voteCounts[owner].abstain}</p> : null}
-          {room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && !chain.some((step) => step.kind === "DRAWING" && !step.system) ? <p className="mt-4 text-sm text-[#607268]">{t.noArtwork}</p> : null}
+        {room.mode === "CHAIN" && room.view.phase === "FINISHED" ? <div className="space-y-5">{room.view.chains?.map((chain, owner) => <article key={owner} className="rounded-[1.6rem] border border-[#DCE8F2] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{room.seats[owner]?.name ?? `#${owner + 1}`} · {t.chain}</h2>{room.view.matchResults ? <span className={`rounded-full px-3 py-1 text-xs font-bold ${room.view.matchResults[String(owner)] ? "bg-[#ECF4FB] text-[#3E6FA8]" : "bg-[#E8F2FB] text-[#506E9E]"}`}>{room.view.matchResults[String(owner)] ? t.match : t.mismatch}</span> : null}</div><div className="mt-4 space-y-3">{chain.map((step, index) => <div key={index} className="rounded-2xl bg-[#F7FAFE] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#65748A]"><span className="rounded-full bg-white px-2 py-1">{index + 1}</span>{room.seats[step.seat]?.name}{step.system ? ` · ${t.system}` : ""}{room.view.picks?.[String(owner)] === index ? <span className="ml-auto text-[#3C70A9]">★ {t.picked}</span> : null}</div>{step.kind === "WORD" ? <p className="py-2 text-center text-xl font-bold">{step.value}</p> : <div className="aspect-[10/7] max-w-xl overflow-hidden rounded-xl border border-[#DCE8F2]"><DrawGuessArtwork strokes={step.value} /></div>}{room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && step.kind === "DRAWING" && !step.system ? <button type="button" disabled={busy || room.view.picks?.[String(owner)] !== undefined} onClick={() => void send({ type: "PICK", owner, step: index })} className="mt-2 rounded-lg bg-[#BED6EC] px-3 py-2 text-xs font-bold text-[#30425C] disabled:opacity-50">★ {t.pick}</button> : null}{!step.system ? <DrawGuessReportButton kind={step.kind} locale={locale} ownerSeat={owner} roomId={room.id} roundNumber={room.view.gameNumber} stage={index} /> : null}</div>)}</div>
+          {room.view.phase === "REVEAL_VOTE" ? <div className="mt-4 border-t border-[#DCE8F2] pt-4"><p className="mb-3 text-sm font-bold">{t.vote}</p><div className="flex flex-wrap gap-2"><ActionButton disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: true })}>{t.yes}</ActionButton><ActionButton tone="strong" disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: false })}>{t.no}</ActionButton>{room.view.votedOwners?.includes(owner) ? <span className="self-center text-xs text-[#3E6FA8]">✓ {t.saved}</span> : null}</div></div> : null}
+          {room.view.voteCounts?.[owner] ? <p className="mt-4 text-xs text-[#63758D]">{t.result}: {t.yes} {room.view.voteCounts[owner].yes} · {t.no} {room.view.voteCounts[owner].no} · — {room.view.voteCounts[owner].abstain}</p> : null}
+          {room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && !chain.some((step) => step.kind === "DRAWING" && !step.system) ? <p className="mt-4 text-sm text-[#63758D]">{t.noArtwork}</p> : null}
         </article>)}</div> : null}
 
-        {error ? <p role="alert" className="flex items-center gap-2 rounded-2xl bg-[#FFF0D2] px-4 py-3 text-sm font-semibold text-[#865731]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0" />{error}</p> : null}
+        {error ? <p role="alert" className="flex items-center gap-2 rounded-2xl bg-[#FFF0C9] px-4 py-3 text-sm font-semibold text-[#765A35]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0" />{error}</p> : null}
       </section>
 
-      <aside className="h-fit rounded-[1.6rem] border border-[#DCE6D7] bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-[#156240]" />{t.players} <span className="ml-auto text-xs text-[#708579]">{humanCount}/{humanCapacity}</span></h2><ol className="mt-4 space-y-2">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#EAF3E9]" : "bg-[#F8F8F3]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#156240]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#C98759]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums text-[#61796A]">{room.view.scores[index]}</span> : null}</li>; })}</ol></aside>
+      <aside className="h-fit rounded-[1.6rem] border border-[#DCE8F2] bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-[#3E6FA8]" />{t.players} <span className="ml-auto text-xs text-[#65748A]">{humanCount}/{humanCapacity}</span></h2><ol className="mt-4 space-y-2">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#ECF4FB]" : "bg-[#FAFCFE]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3E6FA8]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#E1A451]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums text-[#63758D]">{room.view.scores[index]}</span> : null}</li>; })}</ol></aside>
     </div>
   </div>;
 }

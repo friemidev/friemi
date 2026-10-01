@@ -140,6 +140,39 @@ test("a guesser never receives the classic answer before reveal", () => {
   assert.deepEqual(guesser.options, []);
 });
 
+test("classic chat shares wrong guesses but hides the winning word until reveal", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3, testBank), 1_000, "en");
+  if (!started.state) throw new Error("Game did not start");
+  const selected = applyDrawGuessAction(started.state, { type: "CHOOSE_WORD", value: "cat" }, 0, 3, 2_000, "en");
+  const wrong = applyDrawGuessAction(selected.state, { type: "GUESS", value: "dog?" }, 1, 3, 3_000, "en");
+  assert.ok(!("error" in wrong) && !wrong.correct);
+  const correct = applyDrawGuessAction(wrong.state, { type: "GUESS", value: "cat!" }, 1, 3, 4_100, "en");
+  assert.ok(!("error" in correct) && correct.correct);
+  const waitingViewer = getDrawGuessViewerState(correct.state, 2, 3);
+  if (!("answer" in waitingViewer) || !("chat" in waitingViewer)) throw new Error("Wrong viewer shape");
+  assert.equal(waitingViewer.answer, null);
+  assert.deepEqual(waitingViewer.chat.map(({ seat, text, correct }) => ({ seat, text, correct })), [
+    { seat: 1, text: "dog?", correct: false },
+    { seat: 1, text: null, correct: true },
+  ]);
+  assert.equal(JSON.stringify(waitingViewer.chat).includes("cat"), false);
+  const reveal = advanceDrawGuessGame(correct.state, 3, Date.parse(correct.state.deadlineAt!), "en");
+  const nextTurn = advanceDrawGuessGame(reveal, 3, Date.parse(reveal.deadlineAt!), "en");
+  assert.deepEqual(nextTurn.classicChat, []);
+});
+
+test("classic chat rejects unsafe public guesses without adding a bubble", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.answer = "giraffe";
+  state.deadlineAt = new Date(60_000).toISOString();
+  for (const value of ["https://a.co", "hi@example.com", "12345678", "gira\u200bffe", "fuck"]) {
+    const result = applyDrawGuessAction(state, { type: "GUESS", value }, 1, 3, 1_000, "en");
+    assert.equal("error" in result ? result.error : null, "INVALID_WORD");
+    assert.deepEqual(result.state.classicChat, []);
+  }
+});
+
 test("correct classic guesses score earlier players higher and count the artist once", () => {
   const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 3), 1_000, "en");
   if (!started.state) throw new Error("Game did not start");
@@ -194,10 +227,13 @@ test("a player cannot flood guesses in one second", () => {
   state.deadlineAt = new Date(60_000).toISOString();
   const wrong = applyDrawGuessAction(state, { type: "GUESS", value: "cat" }, 1, 3, 1_000, "en");
   assert.ok(!("error" in wrong));
+  assert.equal(wrong.state.classicChat.length, 1);
   const tooFast = applyDrawGuessAction(wrong.state, { type: "GUESS", value: "giraffe" }, 1, 3, 1_500, "en");
   assert.equal("error" in tooFast ? tooFast.error : null, "TOO_FAST");
+  assert.equal(tooFast.state.classicChat.length, 1);
   const later = applyDrawGuessAction(wrong.state, { type: "GUESS", value: "giraffe" }, 1, 3, 2_000, "en");
   assert.ok(!("error" in later) && later.correct);
+  assert.equal(later.state.classicChat[1].text, null);
 });
 
 test("classic live ink keeps a recoverable draft without exposing the answer", () => {

@@ -2013,9 +2013,78 @@ html[data-home-motion-ready="true"]
   100% { opacity: 0; transform: translate(-50%, -15px) scale(0.96); }
 }
 
+@keyframes draw-guess-chat-bubble-in {
+  from { opacity: 0; transform: translateY(7px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .draw-guess-stage-card { animation: draw-guess-card-in 460ms cubic-bezier(0.16, 0.92, 0.2, 1) backwards; }
 .draw-guess-dialog { animation: draw-guess-dialog-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .draw-guess-phase-toast { animation: draw-guess-toast-in 1500ms ease-out both; }
+.draw-guess-chat-bubble { animation: draw-guess-chat-bubble-in 220ms cubic-bezier(.16, 1, .3, 1) both; }
+
+/* One small set of tactile controls across the lobby, canvas, and review screens. */
+.draw-guess-btn {
+  --dg-button-face: #fff2d9;
+  --dg-button-edge: #ead3a5;
+  --dg-button-ink: #654a2c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  background: var(--dg-button-face);
+  color: var(--dg-button-ink);
+  box-shadow: 0 4px 0 var(--dg-button-edge);
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms, background-color 180ms;
+}
+.draw-guess-btn--candy { --dg-button-face: #3c73b0; --dg-button-edge: #285d99; --dg-button-ink: #fff; }
+.draw-guess-btn--blush { --dg-button-face: #dcecf9; --dg-button-edge: #b6d3eb; --dg-button-ink: #355a80; }
+.draw-guess-btn--milk { --dg-button-face: #fffcf5; --dg-button-edge: #dce4eb; --dg-button-ink: #405875; }
+.draw-guess-btn--butter { --dg-button-face: #ffe7b1; --dg-button-edge: #dfc17f; --dg-button-ink: #765a35; }
+.draw-guess-theme {
+  --dg-ink: #30425c;
+  --dg-muted: #63758d;
+  --dg-sky: #3c73b0;
+  --dg-mist: #dcecf9;
+  --dg-butter: #ffe7b1;
+  --dg-paper: #fffcf5;
+  color: var(--dg-ink);
+}
+.draw-guess-theme .draw-guess-btn:focus-visible { outline-color: #356eaf; }
+.draw-guess-theme .draw-guess-btn:disabled {
+  --dg-button-face: #edf0f2;
+  --dg-button-edge: #d9e0e6;
+  --dg-button-ink: #8190a0;
+}
+.draw-guess-lobby-card {
+  background: radial-gradient(circle at 92% 4%, #dcecf9 0, transparent 38%), linear-gradient(155deg, #fffdf6 0%, #f4f8fc 100%);
+  border: 1px solid #d8e6f2;
+  box-shadow: 0 8px 0 #dbe6ef, 0 20px 42px rgba(48, 66, 92, .1);
+}
+.draw-guess-game-shell {
+  background-color: #f9fbfd;
+  background-image: radial-gradient(circle at 0 0, #dcecf9 0, transparent 34%), radial-gradient(circle at 100% 100%, #fff0d3 0, transparent 36%);
+}
+.draw-guess-btn:focus-visible { outline: 3px solid #356eaf; outline-offset: 3px; }
+.draw-guess-btn:disabled { --dg-button-face: #edf0f2; --dg-button-edge: #d9e0e6; --dg-button-ink: #8190a0; cursor: not-allowed; box-shadow: 0 2px 0 var(--dg-button-edge); }
+.draw-guess-paper-stage {
+  background-image: radial-gradient(circle, rgba(105, 155, 201, .2) 1px, transparent 1px);
+  background-position: 10px 10px;
+  background-size: 22px 22px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .draw-guess-btn:not(:disabled):hover { transform: translateY(-3px) rotate(-1deg); box-shadow: 0 7px 0 var(--dg-button-edge); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .draw-guess-btn:not(:disabled):active { transform: translateY(3px) scale(.98); box-shadow: 0 1px 0 var(--dg-button-edge); }
+}
+@media (prefers-reduced-motion: reduce) { .draw-guess-btn { transition: none; } }
 
 @keyframes draw-guess-hero-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -2083,6 +2152,12 @@ html[data-home-motion-ready="true"]
   100% { opacity: 1; transform: translateX(0) scale(1); }
 }
 
+@keyframes draw-guess-podium-in {
+  0% { opacity: 0; transform: translateY(36px) scale(.85) rotate(-4deg); }
+  72% { opacity: 1; transform: translateY(-5px) scale(1.04) rotate(2deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
 @keyframes draw-guess-score-pop {
   0% { transform: scale(0.6) rotate(-12deg); }
   55% { transform: scale(1.4) rotate(7deg); }
@@ -2127,6 +2202,7 @@ html[data-home-motion-ready="true"]
 .draw-guess-launch-overlay { animation: draw-guess-launch-in 180ms ease-out backwards; }
 .draw-guess-launch-mark { animation: draw-guess-launch-mark 650ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 .draw-guess-rank-in { animation: draw-guess-rank-in 480ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.draw-guess-podium-in { animation: draw-guess-podium-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .draw-guess-score-pop { display: inline-block; animation: draw-guess-score-pop 530ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .draw-guess-score-gain { animation: draw-guess-score-gain 1650ms ease-out both; }
 .draw-guess-answer-icon { animation: draw-guess-answer-pop 650ms cubic-bezier(0.16, 1, 0.3, 1) both; }
@@ -2148,6 +2224,7 @@ html[data-home-motion-ready="true"]
 @media (prefers-reduced-motion: reduce) {
   .draw-guess-stage-card,
   .draw-guess-dialog,
+  .draw-guess-chat-bubble,
   .draw-guess-phase-toast,
   .draw-guess-hero-in,
   .draw-guess-logo-in,
@@ -2163,6 +2240,7 @@ html[data-home-motion-ready="true"]
   .draw-guess-launch-overlay,
   .draw-guess-launch-mark,
   .draw-guess-rank-in,
+  .draw-guess-podium-in,
   .draw-guess-score-pop,
   .draw-guess-score-gain,
   .draw-guess-answer-icon,
