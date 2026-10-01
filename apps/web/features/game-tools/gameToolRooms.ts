@@ -55,6 +55,10 @@ export function getGameToolRoomPath({
     return `/game-tools/werewolf/rooms/${roomId}`;
   }
 
+  if (kind === "DRAW_GUESS") {
+    return `/game-tools/draw-guess/rooms/${roomId}`;
+  }
+
   return "/game-tools/storyteller";
 }
 

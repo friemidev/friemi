@@ -167,19 +167,6 @@ export async function getPlanetChatPageData(
       nameTranslations: true,
       announcement: true,
       inviteCode: true,
-      activityLinks: {
-        orderBy: { addedAt: "desc" },
-        select: {
-          activityId: true,
-          activity: {
-            select: {
-              id: true,
-              title: true,
-              startAt: true,
-            },
-          },
-        },
-      },
     },
   });
 
@@ -232,7 +219,7 @@ export async function getPlanetChatPageData(
       ])
     : [[], null];
 
-  const [pendingMembers, approvedMembers, availableActivities] =
+  const [pendingMembers, approvedMembers] =
     canManage && viewerProfileId
       ? await Promise.all([
           prisma.planetMember.findMany({
@@ -253,21 +240,8 @@ export async function getPlanetChatPageData(
               profile: { select: { nickname: true, avatarUrl: true } },
             },
           }),
-          prisma.activity.findMany({
-            where: {
-              visibility: "PUBLIC",
-              status: { notIn: ["DRAFT", "CANCELLED"] },
-              OR: [
-                { organizerId: viewerProfileId },
-                { coManagers: { some: { managerProfileId: viewerProfileId } } },
-              ],
-            },
-            orderBy: [{ startAt: "desc" }, { id: "desc" }],
-            take: 30,
-            select: { id: true, title: true, startAt: true },
-          }),
         ])
-      : [[], [], []];
+      : [[], []];
 
   return {
     ...planet,
@@ -276,7 +250,6 @@ export async function getPlanetChatPageData(
     canManage,
     pendingMembers,
     approvedMembers,
-    availableActivities,
     isMuted: Boolean(readState?.mutedAt),
     isPinned: Boolean(readState?.pinnedAt),
     messages: [...messages].reverse(),

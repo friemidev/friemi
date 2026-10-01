@@ -38,6 +38,8 @@ import type { ActivityTextImportDraft } from "../utils/activityTextImport";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
 import { ActivityPlacePicker } from "./ActivityPlacePicker";
 import { ActivityTextImportPanel } from "./ActivityTextImportPanel";
+import { ActivityPlanetPickerField } from "./ActivityPlanetPickerField";
+import type { LinkablePlanetOption } from "../queries/getLinkablePlanets";
 
 type NewActivityFormProps = {
   activityId?: string;
@@ -45,6 +47,7 @@ type NewActivityFormProps = {
   formId?: string;
   initialValues?: ActivityFormValues;
   isAuthenticated?: boolean;
+  linkablePlanets?: LinkablePlanetOption[];
   locale: string;
   mode?: "create" | "edit";
   showFormActions?: boolean;
@@ -206,6 +209,9 @@ function getNewActivityDraftValues(
     otherCategoryText: getFormDataText(formData, "otherCategoryText"),
     priceText: getFormDataText(formData, "priceText"),
     priceType: getFormDataText(formData, "priceType"),
+    planetIds: formData
+      .getAll("planetIds")
+      .flatMap((value) => (typeof value === "string" ? [value] : [])),
     publicEventId: getFormDataText(formData, "publicEventId"),
     requiresApproval: getFormDataBoolean(formData, "requiresApproval"),
     startAt: getFormDataText(formData, "startAt"),
@@ -463,6 +469,7 @@ const teamFormSectionFields: Record<TeamFormSectionId, string[]> = {
     "ticketUrl",
     "ticketLabel",
     "requiresApproval",
+    "planetIds",
   ],
 };
 
@@ -2247,6 +2254,7 @@ export function NewActivityForm({
   formId,
   initialValues,
   isAuthenticated = true,
+  linkablePlanets = [],
   locale,
   mode = "create",
   showFormActions = true,
@@ -2276,6 +2284,9 @@ export function NewActivityForm({
     getInitialTicketLinkKind(values),
   );
   const [ticketUrl, setTicketUrl] = useState(values?.ticketUrl ?? "");
+  const [selectedPlanetIds, setSelectedPlanetIds] = useState<string[]>(
+    values?.planetIds ?? [],
+  );
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const titleInputId = useId();
   const formRef = useRef<HTMLFormElement>(null);
@@ -2357,6 +2368,7 @@ export function NewActivityForm({
     setPriceType(normalizePriceTypeForSimpleMode(draftValues.priceType));
     setTicketUrl(draftValues.ticketUrl ?? "");
     setTicketLinkKind(getInitialTicketLinkKind(draftValues));
+    setSelectedPlanetIds(draftValues.planetIds ?? []);
     setIsCapacityLimited(
       draftValues.capacityLimitEnabled ?? Number(draftValues.capacity ?? 0) > 0,
     );
@@ -3054,6 +3066,18 @@ export function NewActivityForm({
               />
             </FormSection>
           </div>
+
+          {linkablePlanets.length > 0 ? (
+            <div className="grid gap-2" data-field-name="planetIds">
+              <ActivityPlanetPickerField
+                locale={locale}
+                onChange={setSelectedPlanetIds}
+                options={linkablePlanets}
+                selectedIds={selectedPlanetIds}
+              />
+              <FieldError errors={state.fieldErrors?.planetIds} />
+            </div>
+          ) : null}
 
           <div className="grid gap-2" data-field-name="coverImageUrl">
             <ActivityCoverUpload

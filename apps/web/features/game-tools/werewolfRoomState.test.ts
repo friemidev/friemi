@@ -2,9 +2,38 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createInitialWerewolfRoomState,
+  getWerewolfDepartureBehavior,
   getWerewolfRoomStateForViewer,
   isWerewolfEventVisibleToViewer,
 } from "./werewolfRoomState";
+
+test("leaving a finished Werewolf room fully exits instead of only releasing the seat", () => {
+  assert.deepEqual(
+    getWerewolfDepartureBehavior({
+      intent: "leave_seat",
+      status: "FINISHED",
+    }),
+    {
+      notice: "exited",
+      shouldLeaveRoom: true,
+      shouldReleaseSeat: true,
+    },
+  );
+});
+
+test("leaving a lobby seat keeps the member in the room", () => {
+  assert.deepEqual(
+    getWerewolfDepartureBehavior({
+      intent: "leave_seat",
+      status: "LOBBY",
+    }),
+    {
+      notice: "left",
+      shouldLeaveRoom: false,
+      shouldReleaseSeat: true,
+    },
+  );
+});
 
 test("hides night-action events from players until the game is finished", () => {
   assert.equal(

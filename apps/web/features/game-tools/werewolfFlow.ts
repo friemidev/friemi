@@ -83,10 +83,81 @@ export type WerewolfVoteResult = {
   totals: Record<number, number>;
 };
 
+export type WerewolfVoteSubmission = {
+  kind: string;
+  roundIndex: number;
+  targetSeatNumber: number | null;
+  voterSeatNumber: number | null;
+};
+
 export type WerewolfFlowRecordEvent = {
   payload?: unknown;
   type: string;
 };
+
+const WEREWOLF_SHERIFF_ELECTION_STAGES = new Set<WerewolfFlowStage>([
+  "SHERIFF_SIGNUP",
+  "SHERIFF_SPEECH",
+  "SHERIFF_WITHDRAW",
+  "SHERIFF_VOTE",
+  "SHERIFF_RUNOFF_SPEECH",
+  "SHERIFF_RUNOFF_VOTE",
+]);
+
+export function getVisibleWerewolfSheriffCandidateSeatNumbers(
+  flow: Pick<
+    WerewolfFlowState,
+    "candidateSeatNumbers" | "stage" | "withdrawnSeatNumbers"
+  >,
+) {
+  if (!WEREWOLF_SHERIFF_ELECTION_STAGES.has(flow.stage)) {
+    return [];
+  }
+
+  const withdrawnSeatNumbers = new Set(flow.withdrawnSeatNumbers);
+
+  return flow.candidateSeatNumbers.filter(
+    (seatNumber) => !withdrawnSeatNumbers.has(seatNumber),
+  );
+}
+
+export function groupWerewolfVotesByTarget({
+  kind,
+  roundIndex,
+  submissions,
+}: {
+  kind: "WEREWOLF_EXILE_VOTE" | "WEREWOLF_SHERIFF_VOTE";
+  roundIndex: number;
+  submissions: WerewolfVoteSubmission[];
+}) {
+  const votersByTarget = new Map<number, Set<number>>();
+
+  submissions.forEach((submission) => {
+    if (
+      submission.kind !== kind ||
+      submission.roundIndex !== roundIndex ||
+      !Number.isInteger(submission.targetSeatNumber) ||
+      !submission.targetSeatNumber ||
+      submission.targetSeatNumber < 1 ||
+      !Number.isInteger(submission.voterSeatNumber) ||
+      !submission.voterSeatNumber ||
+      submission.voterSeatNumber < 1
+    ) {
+      return;
+    }
+
+    const voters = votersByTarget.get(submission.targetSeatNumber) ?? new Set();
+    voters.add(submission.voterSeatNumber);
+    votersByTarget.set(submission.targetSeatNumber, voters);
+  });
+
+  return Object.fromEntries(
+    [...votersByTarget.entries()].map(([targetSeatNumber, voters]) => [
+      targetSeatNumber,
+      [...voters].sort((first, second) => first - second),
+    ]),
+  ) as Record<number, number[]>;
+}
 
 export function localizeWerewolfFlowText(
   locale: string,

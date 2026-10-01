@@ -18,6 +18,7 @@ import {
   Check,
   Crown,
   Flag,
+  Hand,
   HeartPulse,
   LogOut,
   Monitor,
@@ -53,6 +54,10 @@ import {
   getWerewolfViewerPrivateToken,
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
+import {
+  getVisibleWerewolfSheriffCandidateSeatNumbers,
+  groupWerewolfVotesByTarget,
+} from "@/features/game-tools/werewolfFlow";
 import {
   getWerewolfAtmosphereById,
   werewolfUiAssets,
@@ -928,6 +933,41 @@ export function WerewolfRoomOverview({
           : null;
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
+  const activeVoteKind =
+    room.state.flow.stage === "SHERIFF_VOTE" ||
+    room.state.flow.stage === "SHERIFF_RUNOFF_VOTE"
+      ? ("WEREWOLF_SHERIFF_VOTE" as const)
+      : room.state.flow.stage === "EXILE_VOTE" ||
+          room.state.flow.stage === "EXILE_RUNOFF_VOTE"
+        ? ("WEREWOLF_EXILE_VOTE" as const)
+        : null;
+  const votersByTargetSeat = useMemo(
+    () =>
+      activeVoteKind
+        ? groupWerewolfVotesByTarget({
+            kind: activeVoteKind,
+            roundIndex: room.state.flow.sessionIndex,
+            submissions: room.flowSubmissions,
+          })
+        : {},
+    [activeVoteKind, room.flowSubmissions, room.state.flow.sessionIndex],
+  );
+  const getVoteMarkerLabel = (voterSeatNumber: number) =>
+    locale === "zh-CN"
+      ? `${voterSeatNumber}号投票`
+      : locale === "fr"
+        ? `Le siège ${voterSeatNumber} a voté`
+        : `Seat ${voterSeatNumber} voted`;
+  const visibleSheriffCandidateSeatNumbers = useMemo(
+    () => getVisibleWerewolfSheriffCandidateSeatNumbers(room.state.flow),
+    [room.state.flow],
+  );
+  const sheriffCandidateLabel =
+    locale === "zh-CN"
+      ? "正在竞选警长"
+      : locale === "fr"
+        ? "Candidat au poste de capitaine"
+        : "Sheriff candidate";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1974,13 +2014,10 @@ export function WerewolfRoomOverview({
       !isLobby &&
       seat.isClaimed &&
       (judgeIsViewer || room.status === "FINISHED");
-    const activeVote = room.flowSubmissions.find(
-      (submission) =>
-        submission.roundIndex === room.state.flow.sessionIndex &&
-        submission.voterSeatNumber === seat.seatNumber &&
-        (submission.kind === "WEREWOLF_SHERIFF_VOTE" ||
-          submission.kind === "WEREWOLF_EXILE_VOTE"),
+    const isSheriffCandidate = visibleSheriffCandidateSeatNumbers.includes(
+      seat.seatNumber,
     );
+    const activeVoterSeatNumbers = votersByTargetSeat[seat.seatNumber] ?? [];
     const topPercent =
       sideCount <= 1 ? 52 : 22 + (rowIndex / (sideCount - 1)) * 64;
     const sidePositionClass = side === "left" ? "left-[4%]" : "right-[4%]";
@@ -2080,6 +2117,17 @@ export function WerewolfRoomOverview({
               <Crown className="h-3 w-3" />
             </span>
           ) : null}
+          {isSheriffCandidate ? (
+            <span
+              aria-label={sheriffCandidateLabel}
+              className={`absolute -top-2 z-30 grid h-7 w-7 place-items-center rounded-full bg-[#F4C95D] text-[#153B31] shadow-lg ring-2 ring-[#082E28] ${
+                side === "left" ? "-right-2" : "-left-2"
+              }`}
+              title={sheriffCandidateLabel}
+            >
+              <Hand className="h-4 w-4" strokeWidth={2.4} />
+            </span>
+          ) : null}
           <span
             className={`absolute -bottom-1 z-30 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-bold text-[#153B31] shadow-md friemi-tabular ${
               side === "left" ? "-left-1" : "-right-1"
@@ -2087,20 +2135,26 @@ export function WerewolfRoomOverview({
           >
             {seat.seatNumber}
           </span>
-          {activeVote ? (
+          {activeVoterSeatNumbers.length > 0 ? (
             <span
-              className={`absolute top-1/2 z-40 -translate-y-1/2 rounded-full bg-[#F1F2E3] px-2 py-1 text-[10px] font-black text-[#7A1F2B] shadow-lg ring-1 ring-[#7A1F2B]/25 ${
-                side === "left" ? "-right-8" : "-left-8"
+              aria-label={activeVoterSeatNumbers
+                .map(getVoteMarkerLabel)
+                .join("、")}
+              className={`absolute top-1/2 z-40 flex w-[4.75rem] -translate-y-1/2 flex-wrap gap-1 ${
+                side === "left"
+                  ? "left-[calc(100%+0.35rem)] justify-start"
+                  : "right-[calc(100%+0.35rem)] justify-end"
               }`}
-              title={
-                activeVote.targetSeatNumber
-                  ? `${activeVote.targetSeatNumber}`
-                  : locale === "zh-CN"
-                    ? "弃票"
-                    : "Abstain"
-              }
             >
-              {activeVote.targetSeatNumber ?? "-"}
+              {activeVoterSeatNumbers.map((voterSeatNumber) => (
+                <span
+                  className="grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-black text-[#7A1F2B] shadow-lg ring-1 ring-[#7A1F2B]/25 friemi-tabular"
+                  key={voterSeatNumber}
+                  title={getVoteMarkerLabel(voterSeatNumber)}
+                >
+                  {voterSeatNumber}
+                </span>
+              ))}
             </span>
           ) : null}
         </div>
@@ -2567,9 +2621,20 @@ export function WerewolfRoomOverview({
                           return;
                         }
 
-                        applyOptimisticLeaveSeat();
+                        if (room.status === "LOBBY") {
+                          applyOptimisticLeaveSeat();
+                        }
                       }}
                     >
+                      <input
+                        name="intent"
+                        type="hidden"
+                        value={
+                          room.status === "FINISHED"
+                            ? "exit_room"
+                            : "leave_seat"
+                        }
+                      />
                       <input name="locale" type="hidden" value={locale} />
                       <input name="roomId" type="hidden" value={room.id} />
                       {currentMemberToken ? (
@@ -2589,7 +2654,9 @@ export function WerewolfRoomOverview({
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#F1F2E3] disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.leaveSeat}
+                        label={
+                          room.status === "FINISHED" ? t.exitGame : t.leaveSeat
+                        }
                       />
                     </form>
                   </div>
@@ -2674,6 +2741,33 @@ export function WerewolfRoomOverview({
                   </form>
                 ) : null}
               </div>
+            ) : null}
+
+            {canExitRoom &&
+            !currentViewerSeat &&
+            room.status === "FINISHED" ? (
+              <form
+                action={leaveAction}
+                onSubmit={(event) => {
+                  canSubmitOnline(event);
+                }}
+              >
+                <input name="intent" type="hidden" value="exit_room" />
+                <input name="locale" type="hidden" value={locale} />
+                <input name="responseMode" type="hidden" value="inline" />
+                <input name="roomId" type="hidden" value={room.id} />
+                {currentMemberToken ? (
+                  <input
+                    name="memberToken"
+                    type="hidden"
+                    value={currentMemberToken}
+                  />
+                ) : null}
+                <SubmitButton
+                  className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F1F2E3] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.exitGame}
+                />
+              </form>
             ) : null}
 
             {!canExitRoom && !isSeatingOpen ? (

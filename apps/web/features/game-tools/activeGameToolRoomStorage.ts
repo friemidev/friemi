@@ -11,7 +11,7 @@ export type StoredActiveGameToolRoom = {
   code: string;
   href: string;
   id: string;
-  kind: "AVALON" | "STORYTELLER" | "WEREWOLF";
+  kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "WEREWOLF";
   locale: string;
   privateSeatHref: string | null;
   seatNumber: number | null;

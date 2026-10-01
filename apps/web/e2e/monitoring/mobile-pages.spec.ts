@@ -13,6 +13,7 @@ const mobilePages = [
     path: "/zh-CN/footprints?tab=message",
   },
   { name: "mobile search", path: "/zh-CN/search?q=paris" },
+  { name: "mobile draw and guess", path: "/zh-CN/game-tools/draw-guess" },
 ];
 
 async function expectMobileLayoutFits(page: import("@playwright/test").Page) {

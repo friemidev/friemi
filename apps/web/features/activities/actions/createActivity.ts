@@ -38,6 +38,7 @@ import {
   buildDesktopLobbyCandidateSourceUrl,
   DESKTOP_LOBBY_CANDIDATE_CONTEXT,
 } from "@/features/activities/utils/desktopLobbyCandidates";
+import { canLinkAllPlanets } from "@/features/activities/queries/getLinkablePlanets";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -251,6 +252,22 @@ export async function createActivityAction(
       ? `/public-events/${result.data.publicEventId}/teams/new`
       : "/activities/new",
   );
+  const canLinkRequestedPlanets = await canLinkAllPlanets(
+    profile.id,
+    result.data.planetIds,
+  );
+
+  if (!canLinkRequestedPlanets) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "无法关联所选星球，请重新选择。",
+      {
+        planetIds: ["只能关联你担任主理人或管理员的公开星球。"],
+      },
+    );
+  }
+
   const description = formatStoredDescription(result.data);
   const publicEventId = result.data.publicEventId ?? null;
   const isLobbyCandidateCreation =
@@ -487,6 +504,11 @@ export async function createActivityAction(
             status: "APPROVED",
           },
         },
+        planetLinks: result.data.planetIds.length
+          ? {
+              create: result.data.planetIds.map((planetId) => ({ planetId })),
+            }
+          : undefined,
       } satisfies Prisma.ActivityUncheckedCreateInput;
     const activity = lobbyCandidateSourceUrl
       ? await prisma.$transaction(async (transaction) => {

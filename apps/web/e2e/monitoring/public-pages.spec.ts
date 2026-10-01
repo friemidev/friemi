@@ -9,6 +9,7 @@ const publicPages = [
   { name: "activities", path: "/zh-CN/activities" },
   { name: "lobby", path: "/zh-CN/lobby" },
   { name: "search", path: "/zh-CN/search?q=paris" },
+  { name: "draw and guess", path: "/zh-CN/game-tools/draw-guess" },
 ];
 
 test.describe("public site monitoring", () => {

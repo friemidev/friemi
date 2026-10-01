@@ -24,6 +24,7 @@ import {
 } from "@/features/game-tools/werewolfConfig";
 import {
   createInitialWerewolfRoomState,
+  getWerewolfDepartureBehavior,
   getWerewolfWinnerFromFinishSelection,
   normalizeWerewolfRoomState,
   type WerewolfFinishSelection,
@@ -2005,9 +2006,11 @@ export async function leaveWerewolfSeatAction(
       return { formError: t.leaveFailed };
     }
 
-    const shouldReleaseSeat = room.status !== "IN_PROGRESS";
-    const shouldLeaveRoom =
-      result.data.intent === "exit_room" || room.status === "IN_PROGRESS";
+    const departureBehavior = getWerewolfDepartureBehavior({
+      intent: result.data.intent,
+      status: room.status,
+    });
+    const { shouldLeaveRoom, shouldReleaseSeat } = departureBehavior;
     redirectToTool = shouldLeaveRoom;
     const updates: Prisma.PrismaPromise<unknown>[] = [
       prisma.gameToolRoom.update({
@@ -2110,7 +2113,7 @@ export async function leaveWerewolfSeatAction(
 
   if (returnInline) {
     return {
-      formNotice: result.data.intent === "exit_room" ? "exited" : "left",
+      formNotice: redirectToTool ? "exited" : "left",
     };
   }
 

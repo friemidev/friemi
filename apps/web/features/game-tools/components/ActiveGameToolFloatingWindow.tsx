@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,7 +19,7 @@ type ActiveGameToolFloatingWindowProps = {
     code: string;
     href: string;
     id: string;
-    kind: "AVALON" | "STORYTELLER" | "WEREWOLF";
+    kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
     title: string;
@@ -31,6 +32,7 @@ function getCopy(locale: string) {
     return {
       action: "Revenir",
       avalon: "Avalon en cours",
+      drawGuess: "Dessine et devine en cours",
       seat: "Place",
       storyteller: "Table en cours",
       werewolf: "Loups-garous en cours",
@@ -41,6 +43,7 @@ function getCopy(locale: string) {
     return {
       action: "Return",
       avalon: "Avalon running",
+      drawGuess: "Draw & Guess running",
       seat: "Seat",
       storyteller: "Game running",
       werewolf: "Werewolf running",
@@ -50,6 +53,7 @@ function getCopy(locale: string) {
   return {
     action: "回到本局",
     avalon: "阿瓦隆进行中",
+    drawGuess: "你画我猜进行中",
     seat: "座位",
     storyteller: "桌游进行中",
     werewolf: "狼人杀进行中",
@@ -66,6 +70,10 @@ function getKindLabel(
 
   if (kind === "WEREWOLF") {
     return copy.werewolf;
+  }
+
+  if (kind === "DRAW_GUESS") {
+    return copy.drawGuess;
   }
 
   return copy.storyteller;
@@ -222,7 +230,11 @@ export function ActiveGameToolFloatingWindow({
       title={label}
     >
       <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
-      <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
+      {currentRoom.kind === "DRAW_GUESS" ? (
+        <Image alt="" className="relative h-7 w-7 object-contain" height={28} src="/game-tools/draw-guess/logo.png" width={28} />
+      ) : (
+        <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
+      )}
       {currentRoom.seatNumber ? (
         <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[10px] font-bold leading-none text-[#052F28] ring-2 ring-white">
           {currentRoom.seatNumber}

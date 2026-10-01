@@ -85,9 +85,8 @@ export async function expectHealthyPage(
   await expect(body, `${path} did not render a body`).toBeVisible();
   await expect(body).not.toContainText(criticalBrowserIssuePattern);
 
-  const bodyText = await body.innerText();
-  expect(
-    bodyText.trim().length,
-    `${path} rendered too little visible text`,
+  await expect.poll(
+    async () => (await body.innerText()).trim().length,
+    { message: `${path} rendered too little visible text` },
   ).toBeGreaterThanOrEqual(minBodyTextLength);
 }
