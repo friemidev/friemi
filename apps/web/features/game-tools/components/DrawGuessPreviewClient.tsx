@@ -11,13 +11,13 @@ const DIRECTIONS: DrawGuessCatDirection[] = ["S", "SW", "W", "NW", "N", "NE", "E
 
 const COPY = {
   "zh-CN": {
-    back: "你画我猜", title: "猫咪角色预览", cats: "选择猫咪", mood: "表情", directions: "八个方向", frames: "十二帧动作", sizes: "小尺寸", podium: "领奖台动作", idle: "平时", happy: "答对", sad: "答错", play: "播放", pause: "暂停", turnLeft: "向左转", turnRight: "向右转", frame: "第 {number} 帧", direction: "朝向", catCount: "15 只猫", directionCount: "8 个方向", frameCount: "12 帧", names: ["正面", "左前", "左侧", "左后", "背面", "右后", "右侧", "右前"],
+    back: "你画我猜", title: "猫咪角色预览", cats: "选择猫咪", mood: "表情", directions: "八个方向", profiles: "侧面轮廓对比", frames: "十二帧动作", sizes: "小尺寸", podium: "领奖台动作", idle: "平时", happy: "答对", sad: "答错", play: "播放", pause: "暂停", turnLeft: "向左转", turnRight: "向右转", frame: "第 {number} 帧", direction: "朝向", catCount: "15 只猫", directionCount: "8 个方向", frameCount: "12 帧", names: ["正面", "左前", "左侧", "左后", "背面", "右后", "右侧", "右前"],
   },
   en: {
-    back: "Draw & Guess", title: "Cat character preview", cats: "Choose a cat", mood: "Expression", directions: "Eight directions", frames: "Twelve frames", sizes: "Small sizes", podium: "Podium performances", idle: "Idle", happy: "Correct", sad: "Wrong", play: "Play", pause: "Pause", turnLeft: "Turn left", turnRight: "Turn right", frame: "Frame {number}", direction: "Facing", catCount: "15 cats", directionCount: "8 directions", frameCount: "12 frames", names: ["Front", "Front left", "Left", "Back left", "Back", "Back right", "Right", "Front right"],
+    back: "Draw & Guess", title: "Cat character preview", cats: "Choose a cat", mood: "Expression", directions: "Eight directions", profiles: "Side silhouettes", frames: "Twelve frames", sizes: "Small sizes", podium: "Podium performances", idle: "Idle", happy: "Correct", sad: "Wrong", play: "Play", pause: "Pause", turnLeft: "Turn left", turnRight: "Turn right", frame: "Frame {number}", direction: "Facing", catCount: "15 cats", directionCount: "8 directions", frameCount: "12 frames", names: ["Front", "Front left", "Left", "Back left", "Back", "Back right", "Right", "Front right"],
   },
   fr: {
-    back: "Dessine et devine", title: "Aperçu des chats", cats: "Choisir un chat", mood: "Expression", directions: "Huit directions", frames: "Douze images", sizes: "Petites tailles", podium: "Animations du podium", idle: "Repos", happy: "Réussi", sad: "Raté", play: "Lire", pause: "Pause", turnLeft: "Tourner à gauche", turnRight: "Tourner à droite", frame: "Image {number}", direction: "Direction", catCount: "15 chats", directionCount: "8 directions", frameCount: "12 images", names: ["Face", "Avant gauche", "Gauche", "Arrière gauche", "Dos", "Arrière droit", "Droite", "Avant droit"],
+    back: "Dessine et devine", title: "Aperçu des chats", cats: "Choisir un chat", mood: "Expression", directions: "Huit directions", profiles: "Silhouettes de profil", frames: "Douze images", sizes: "Petites tailles", podium: "Animations du podium", idle: "Repos", happy: "Réussi", sad: "Raté", play: "Lire", pause: "Pause", turnLeft: "Tourner à gauche", turnRight: "Tourner à droite", frame: "Image {number}", direction: "Direction", catCount: "15 chats", directionCount: "8 directions", frameCount: "12 images", names: ["Face", "Avant gauche", "Gauche", "Arrière gauche", "Dos", "Arrière droit", "Droite", "Avant droit"],
   },
 } as const;
 
@@ -40,7 +40,7 @@ export function DrawGuessPreviewClient({ locale }: { locale: string }) {
 
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(() => setFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 70 : mood === "sad" ? 110 : 90);
+    const timer = window.setInterval(() => setFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 75 : mood === "sad" ? 120 : 165);
     return () => window.clearInterval(timer);
   }, [mood, playing]);
 
@@ -84,6 +84,11 @@ export function DrawGuessPreviewClient({ locale }: { locale: string }) {
     <section aria-labelledby="draw-guess-directions-title" className="mt-5 rounded-[1.8rem] bg-[#F4F8FC] p-4 sm:p-6">
       <div className="flex items-center justify-between"><h2 id="draw-guess-directions-title" className="text-lg font-black">{t.directions}</h2><span className="text-xs font-bold text-[#7B8EA4]">{t.direction}</span></div>
       <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-8">{DIRECTIONS.map((value, index) => <button key={value} type="button" aria-label={t.names[index]} aria-pressed={directionIndex === index} onClick={() => setDirectionIndex(index)} className={`flex min-w-0 flex-col items-center rounded-2xl px-1 py-2 outline-none focus-visible:ring-2 focus-visible:ring-[#3E70AA] ${directionIndex === index ? "bg-[#DCECF9] shadow-[0_3px_0_#BDD6EB]" : "bg-white"}`}><DrawGuessCatSprite catId={catId} direction={value} frame={3} mood={mood} size={65} /><span className="mt-0.5 text-[11px] font-bold text-[#405875]">{t.names[index]}</span></button>)}</div>
+    </section>
+
+    <section aria-labelledby="draw-guess-profiles-title" className="mt-4 rounded-[1.8rem] bg-[#FFFCF6] p-4 sm:p-6">
+      <h2 id="draw-guess-profiles-title" className="text-lg font-black">{t.profiles}</h2>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">{DRAW_GUESS_CATS.map((cat) => <div key={cat.id} className="min-w-0 rounded-2xl bg-[#F3F7FB] px-2 py-2 text-center"><strong className="block truncate text-[11px] font-bold text-[#405875]">{getDrawGuessCatName(cat.id, locale)}</strong><div className="mt-1 flex items-end justify-center gap-0.5">{(["SE", "E", "NE"] as const).map((view) => <DrawGuessCatSprite key={view} catId={cat.id} direction={view} frame={4} mood={mood} size={53} />)}</div></div>)}</div>
     </section>
 
     <section aria-labelledby="draw-guess-frames-title" className="mt-4 rounded-[1.8rem] bg-[#FFFCF6] p-4 sm:p-6">

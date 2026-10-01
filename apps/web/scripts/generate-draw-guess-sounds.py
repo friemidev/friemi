@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "public/sounds/draw-guess"
 CACHE = Path(tempfile.gettempdir()) / "friemi-draw-guess-audio-sources"
 BASE = "https://opengameart.org/sites/default/files/"
+
+
 def source(name: str) -> Path:
     path = CACHE / name
     if not path.exists():
@@ -70,6 +72,7 @@ def main() -> None:
     CACHE.mkdir(parents=True, exist_ok=True)
     render("cat", [("cat_mewfood.wav", 0, .9, 1.0)])
     render("purr", [("cat_mewpurr.wav", 0, .82, 1.4)])
+    render("tap", [("pop8.wav", 0, .68, None)])
     render("secret", [("squeak2.wav", 0, .7, None), ("pop8.wav", .30, .45, None)])
     render("ready", [("pop5.wav", 0, .8, None), ("pop2.wav", .15, .55, None)])
     render("start", [("squeak1.wav", 0, .56, None), ("pop9.wav", .21, .48, None)])
@@ -84,12 +87,20 @@ def main() -> None:
         target.setnchannels(1)
         target.setsampwidth(2)
         target.setframerate(RATE)
-        for cue in ("cat", "purr", "secret", "ready", "start", "correct", "wrong", "score", "next", "finish"):
+        for cue in ("tap", "cat", "purr", "secret", "ready", "start", "correct", "wrong", "score", "next", "finish"):
             with wave.open(str(OUT / f"{cue}.wav"), "rb") as item:
                 target.writeframes(item.readframes(item.getnframes()))
             target.writeframes(silence)
 
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(source("HappyClappyLoop.wav")), "-codec:a", "libmp3lame", "-b:a", "96k", str(OUT / "music.mp3")], check=True)
+    for phase, filename in (
+        ("lobby", "cozy_puzzle_in-game_2_bpm90.mp3"),
+        ("game", "cozy_puzzle_in-game_1_bpm118.mp3"),
+    ):
+        original = source(filename)
+        duration = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(original)], text=True))
+        if duration < 120:
+            raise ValueError(f"{filename} is shorter than the 2-minute minimum: {duration:.1f}s")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(original), "-codec:a", "libmp3lame", "-b:a", "112k", str(OUT / f"music-{phase}.mp3")], check=True)
 
 
 if __name__ == "__main__":

@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Headphones, Music2, Pause, Play, Sparkles } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
-import { playDrawGuessSound, stopDrawGuessSounds, type DrawGuessSound } from "@/features/game-tools/drawGuessSound";
+import { playDrawGuessSound, stopDrawGuessSounds, type DrawGuessMusicPhase, type DrawGuessSound } from "@/features/game-tools/drawGuessSound";
 import { withLocale } from "@/lib/routes";
 
 const CUES: { id: DrawGuessSound; symbol: string; zh: string; en: string; fr: string; duration: number }[] = [
+  { id: "tap", symbol: "●", zh: "点击按钮", en: "Tap a button", fr: "Toucher un bouton", duration: 120 },
   { id: "cat", symbol: "🐾", zh: "摸摸猫咪", en: "Pet the cat", fr: "Caresser le chat", duration: 1000 },
   { id: "purr", symbol: "♡", zh: "猫咪呼噜", en: "Cat purr", fr: "Ronronnement", duration: 1400 },
   { id: "secret", symbol: "✦", zh: "隐藏彩蛋", en: "Secret trick", fr: "Surprise", duration: 500 },
@@ -24,7 +25,7 @@ const CUES: { id: DrawGuessSound; symbol: string; zh: string; en: string; fr: st
 export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
   const [active, setActive] = useState<DrawGuessSound | null>(null);
   const [demoPlaying, setDemoPlaying] = useState(false);
-  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState<DrawGuessMusicPhase | null>(null);
   const demo = useRef<HTMLAudioElement | null>(null);
   const music = useRef<HTMLAudioElement | null>(null);
   const timeout = useRef<number | null>(null);
@@ -42,7 +43,7 @@ export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
     demo.current?.pause();
     music.current?.pause();
     setDemoPlaying(false);
-    setMusicPlaying(false);
+    setMusicPlaying(null);
     if (timeout.current !== null) window.clearTimeout(timeout.current);
   };
 
@@ -56,6 +57,7 @@ export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
 
   const playAll = () => {
     if (demoPlaying) { clear(); return; }
+    clear();
     stopDrawGuessSounds();
     setActive(null);
     if (timeout.current !== null) window.clearTimeout(timeout.current);
@@ -67,17 +69,16 @@ export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
     void audio.play().then(() => setDemoPlaying(true)).catch(() => setDemoPlaying(false));
   };
 
-  const playMusic = () => {
-    if (musicPlaying) { clear(); return; }
+  const playMusic = (phase: DrawGuessMusicPhase) => {
+    if (musicPlaying === phase) { clear(); return; }
     clear();
     stopDrawGuessSounds();
     setActive(null);
-    const audio = music.current ?? new Audio("/sounds/draw-guess/music.mp3");
+    const audio = new Audio(`/sounds/draw-guess/music-${phase}.mp3`);
     music.current = audio;
-    audio.volume = 0.3;
-    audio.currentTime = 0;
-    audio.onended = () => setMusicPlaying(false);
-    void audio.play().then(() => setMusicPlaying(true)).catch(() => setMusicPlaying(false));
+    audio.volume = 0.28;
+    audio.onended = () => setMusicPlaying(null);
+    void audio.play().then(() => setMusicPlaying(phase)).catch(() => setMusicPlaying(null));
   };
 
   return <div className="draw-guess-theme mx-auto max-w-4xl pb-12 text-[#30425C]">
@@ -88,7 +89,7 @@ export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
     <header className="relative mt-5 overflow-hidden rounded-[2rem] bg-[#E8F2FB] px-5 py-6 shadow-[0_7px_0_#D7E6F3] sm:px-8 sm:py-8">
       <span aria-hidden="true" className="absolute -right-7 -top-9 h-44 w-44 rounded-full bg-white/60 blur-2xl" />
       <div className="relative flex items-center gap-4 sm:gap-6">
-        <DrawGuessCatSprite animated catId="disco" mood={active || demoPlaying ? "happy" : "idle"} size={96} />
+        <DrawGuessCatSprite animated catId="disco" mood={active || demoPlaying || musicPlaying ? "happy" : "idle"} size={96} />
         <div className="min-w-0 flex-1"><p className="flex items-center gap-1 text-[11px] font-black text-[#3E70AA]"><Sparkles className="h-3.5 w-3.5" />DRAW & GUESS</p><h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{zh ? "猫咪音效小屋" : fr ? "Le studio sonore des chats" : "Cat sound studio"}</h1><p className="mt-1 text-xs font-semibold text-[#63758D] sm:text-sm">{zh ? "点一下，听听游戏里的小声音" : fr ? "Touchez pour écouter les sons du jeu" : "Tap to hear the little sounds in the game"}</p></div>
       </div>
       <button type="button" onClick={playAll} className="draw-guess-btn draw-guess-btn--candy relative mt-5 min-h-11 w-full px-5 text-sm sm:w-auto">{demoPlaying ? <Pause className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}{demoPlaying ? zh ? "停止试听" : fr ? "Arrêter" : "Stop preview" : zh ? "全部试听" : fr ? "Tout écouter" : "Play all"}</button>
@@ -99,11 +100,13 @@ export function DrawGuessSoundPreviewClient({ locale }: { locale: string }) {
         <span className="flex w-full items-end justify-between gap-2"><strong className="text-sm font-black sm:text-base">{zh ? cue.zh : fr ? cue.fr : cue.en}</strong><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${active === cue.id ? "bg-[#3E70AA] text-white" : "bg-white text-[#3E70AA]"}`}><Play className="ml-0.5 h-3.5 w-3.5 fill-current" /></span></span>
       </button>)}
     </section>
-    <section className="mt-7 flex flex-wrap items-center gap-4 rounded-[1.5rem] bg-[#FFF1D0] p-4 shadow-[0_5px_0_#E9D8A8] sm:p-5">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-[#3E70AA]"><Music2 className="h-6 w-6" /></span>
-      <div className="min-w-0 flex-1"><h2 className="font-black">{zh ? "背景音乐 · 轻快钢琴" : fr ? "Musique · piano joyeux" : "Background music · cheerful piano"}</h2><p className="text-xs font-semibold text-[#765A35]">Happy Clappy Loop · OwlishMedia · CC0</p></div>
-      <button type="button" onClick={playMusic} className="draw-guess-btn draw-guess-btn--milk min-h-10 px-4 text-sm">{musicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}{musicPlaying ? zh ? "停止" : fr ? "Arrêter" : "Stop" : zh ? "试听音乐" : fr ? "Écouter" : "Play music"}</button>
+    <section aria-label={zh ? "背景音乐试听" : fr ? "Musique de fond" : "Background music"} className="mt-7 grid gap-3 sm:grid-cols-2">
+      {(["lobby", "game"] as const).map((phase) => <div key={phase} className="flex flex-wrap items-center gap-3 rounded-[1.5rem] bg-[#FFF1D0] p-4 shadow-[0_5px_0_#E9D8A8]">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-[#3E70AA]"><Music2 className="h-5 w-5" /></span>
+        <div className="min-w-0 flex-1"><h2 className="font-black">{phase === "lobby" ? zh ? "准备房间 · 2:08" : fr ? "Salle d'attente · 2:08" : "Lobby · 2:08" : zh ? "游戏进行 · 2:10" : fr ? "En jeu · 2:10" : "In game · 2:10"}</h2><p className="text-xs font-semibold text-[#765A35]">{phase === "lobby" ? "Cozy Puzzle In-Game 2" : "Cozy Puzzle In-Game 1"} · MintoDog · CC0</p></div>
+        <button type="button" onClick={() => playMusic(phase)} className="draw-guess-btn draw-guess-btn--milk min-h-10 px-4 text-sm">{musicPlaying === phase ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}{musicPlaying === phase ? zh ? "停止" : fr ? "Arrêter" : "Stop" : zh ? "试听" : fr ? "Écouter" : "Play"}</button>
+      </div>)}
     </section>
-    <p className="mt-6 text-center text-xs font-semibold text-[#7C8AA0]">{zh ? "音效和音乐默认关闭，可在房间里分别开启" : fr ? "Sons et musique désactivés par défaut ; activez-les séparément dans la salle" : "Sounds and music are off by default. Turn them on separately in the room."}</p>
+    <p className="mt-6 text-center text-xs font-semibold text-[#7C8AA0]">{zh ? "音效和音乐默认开启，可随时在房间里关闭" : fr ? "Les sons et la musique sont activés par défaut ; désactivez-les dans la salle" : "Sounds and music are on by default. You can turn them off in the room."}</p>
   </div>;
 }
