@@ -4,9 +4,11 @@ import {
   advanceDrawGuessGame,
   applyDrawGuessAction,
   createDrawGuessState,
+  estimateDrawGuessDurationSeconds,
   getChainActor,
   getChainStageCount,
   getDrawGuessViewerState,
+  isDrawGuessRoundCount,
   isDrawGuessTiming,
   normalizeDrawGuessWordBankWords,
   setDrawGuessSeatManaged,
@@ -29,6 +31,77 @@ test("word bank words are nonempty, valid, and unique after normalization", () =
   assert.equal(normalizeDrawGuessWordBankWords(["cat", "CAT"]), null);
   assert.equal(normalizeDrawGuessWordBankWords(["www.example"]), null);
   assert.equal(normalizeDrawGuessWordBankWords(["a".repeat(21)]), null);
+});
+
+test("round settings accept only one to three rounds and estimate both modes", () => {
+  assert.equal(isDrawGuessRoundCount(1), true);
+  assert.equal(isDrawGuessRoundCount(3), true);
+  assert.equal(isDrawGuessRoundCount(0), false);
+  assert.equal(isDrawGuessRoundCount(4), false);
+  assert.equal(isDrawGuessRoundCount("2"), false);
+  const timing = { drawSeconds: 30, guessSeconds: 20 } as const;
+  assert.equal(estimateDrawGuessDurationSeconds("CLASSIC", 3, timing, 1), 204);
+  assert.equal(estimateDrawGuessDurationSeconds("CHAIN", 5, timing, 2), 488);
+});
+
+test("classic runs two complete rounds, keeps scores, then finishes", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CLASSIC", 2, testBank, { drawSeconds: 30, guessSeconds: 20 }, 2), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  let state = started.state;
+  for (let round = 1; round <= 2; round += 1) {
+    for (let turn = 0; turn < 2; turn += 1) {
+      state = advanceDrawGuessGame(state, 2, Date.parse(state.deadlineAt!), "en");
+      assert.equal(state.phase, "DRAW_GUESS");
+      state = advanceDrawGuessGame(state, 2, Date.parse(state.deadlineAt!), "en");
+      assert.equal(state.phase, "TURN_REVEAL");
+      state = advanceDrawGuessGame(state, 2, Date.parse(state.deadlineAt!), "en");
+    }
+    if (round === 1) {
+      assert.equal(state.phase, "ROUND_BREAK");
+      assert.equal(state.gameNumber, 1);
+      assert.equal(state.roundIndex, 1);
+      state.scores[0] = 42;
+      state = advanceDrawGuessGame(state, 2, Date.parse(state.deadlineAt!), "en");
+      assert.equal(state.phase, "WORD_SELECT");
+      assert.equal(state.gameNumber, 2);
+      assert.equal(state.roundIndex, 2);
+      assert.equal(state.scores[0], 42);
+      assert.deepEqual(state.guesses, {});
+      assert.deepEqual(state.drawings, [[], []]);
+      assert.deepEqual(getDrawGuessViewerState(state, 0, 2).roundCount, 2);
+    }
+  }
+  assert.equal(state.phase, "FINISHED");
+  assert.equal(state.roundIndex, 2);
+  assert.equal(state.scores[0], 42);
+});
+
+test("relay runs three chains before the final result", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 3, testBank, { drawSeconds: 30, guessSeconds: 20 }, 3), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  let state = started.state;
+  for (let round = 1; round <= 3; round += 1) {
+    for (const phase of ["CHAIN_WORD", "CHAIN_STEP", "CHAIN_STEP", "REVEAL_VOTE"]) {
+      assert.equal(state.phase, phase);
+      state = advanceDrawGuessGame(state, 3, Date.parse(state.deadlineAt!), "en");
+    }
+    if (state.phase === "AUTHOR_PICK") state = advanceDrawGuessGame(state, 3, Date.parse(state.deadlineAt!), "en");
+    if (round < 3) {
+      assert.equal(state.phase, "ROUND_BREAK");
+      assert.equal(state.roundIndex, round);
+      state.scores[0] = 20 * round;
+      state = advanceDrawGuessGame(state, 3, Date.parse(state.deadlineAt!), "en");
+      assert.equal(state.phase, "CHAIN_WORD");
+      assert.equal(state.roundIndex, round + 1);
+      assert.equal(state.scores[0], 20 * round);
+      assert.deepEqual(state.votes, {});
+      assert.deepEqual(state.chains, [[], [], []]);
+    }
+  }
+  assert.equal(state.phase, "FINISHED");
+  assert.equal(state.roundIndex, 3);
+  assert.equal(state.gameNumber, 3);
+  assert.equal(state.scores[0], 40);
 });
 
 test("host timing presets are validated and apply to both kinds of relay step", () => {

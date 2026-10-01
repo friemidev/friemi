@@ -8,12 +8,14 @@ import {
   applyDrawGuessAction,
   createDrawGuessState,
   getDrawGuessViewerState,
+  isDrawGuessRoundCount,
   isDrawGuessTiming,
   setDrawGuessSeatManaged,
   startDrawGuessGame,
   type DrawGuessAction,
   type DrawGuessMode,
   type DrawGuessPhase,
+  type DrawGuessRoundCount,
   type DrawGuessState,
   type DrawGuessTiming,
 } from "@/features/game-tools/drawGuessEngine";
@@ -60,7 +62,7 @@ function asState(value: Prisma.JsonValue | null): DrawGuessState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as DrawGuessState;
   return state.phase && state.mode && Array.isArray(state.scores)
-    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0 }
+    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0, roundCount: state.roundCount ?? 1, roundIndex: state.roundIndex ?? 1 }
     : null;
 }
 
@@ -151,11 +153,11 @@ async function updateState(
         data: { actorProfileId: actorId, commandId: command.id, result: command.result, roomId: room.id, roundNumber: state.gameNumber },
       });
     }
-    if (state.phase === "FINISHED" && room.status !== "FINISHED") {
+    if (state.phase === "FINISHED" && room.status !== "FINISHED" || state.phase === "ROUND_BREAK" && previousState.phase !== "ROUND_BREAK") {
       const seatRoster = room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }));
       await tx.drawGuessRound.create({
         data: {
-          finishedAt: finishedAt!,
+          finishedAt: finishedAt ?? new Date(),
           mode: state.mode,
           roomId: room.id,
           roundNumber: state.gameNumber,
@@ -187,10 +189,12 @@ export async function createDrawGuessRoom(input: {
   locale: string;
   mode: DrawGuessMode;
   playerCount?: number;
+  roundCount?: DrawGuessRoundCount;
   timing?: DrawGuessTiming;
   wordBankId?: string;
 }) {
   if (input.timing !== undefined && !isDrawGuessTiming(input.timing)) return { error: "INVALID_TIMING" } as const;
+  if (input.roundCount !== undefined && !isDrawGuessRoundCount(input.roundCount)) return { error: "INVALID_ROUND_COUNT" } as const;
   const autoSize = input.playerCount === undefined;
   const requestedCount = input.playerCount ?? (input.mode === "CHAIN" ? 8 : 10);
   const practiceRelay = input.mode === "CHAIN" && requestedCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
@@ -208,7 +212,7 @@ export async function createDrawGuessRoom(input: {
   if (!wordBank) return { error: "INVALID_WORD_BANK" } as const;
   const seatCount = practiceRelay ? 3 : requestedCount;
   const timing = input.timing ?? { drawSeconds: 60, guessSeconds: 20 };
-  const state = createDrawGuessState(input.mode, seatCount, shuffledDrawGuessWordBank(wordBank), { drawSeconds: timing.drawSeconds, guessSeconds: timing.guessSeconds });
+  const state = createDrawGuessState(input.mode, seatCount, shuffledDrawGuessWordBank(wordBank), { drawSeconds: timing.drawSeconds, guessSeconds: timing.guessSeconds }, input.roundCount ?? 1);
   if (autoSize) state.autoSize = true;
   if (practiceRelay) state.practiceBotSeat = 2;
   const code = await createUniqueGameToolRoomCode();
@@ -544,9 +548,10 @@ export async function setDrawGuessCharacter(roomId: string, profileId: string, c
   return { error: "TRY_AGAIN" } as const;
 }
 
-export async function updateDrawGuessRoomSettings(roomId: string, profileId: string, input: { timing?: DrawGuessTiming; wordBankId?: string }) {
-  if (!input.timing && !input.wordBankId) return { error: "INVALID_REQUEST" } as const;
+export async function updateDrawGuessRoomSettings(roomId: string, profileId: string, input: { roundCount?: DrawGuessRoundCount; timing?: DrawGuessTiming; wordBankId?: string }) {
+  if (!input.timing && !input.wordBankId && input.roundCount === undefined) return { error: "INVALID_REQUEST" } as const;
   if (input.timing && !isDrawGuessTiming(input.timing)) return { error: "INVALID_TIMING" } as const;
+  if (input.roundCount !== undefined && !isDrawGuessRoundCount(input.roundCount)) return { error: "INVALID_ROUND_COUNT" } as const;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
@@ -557,10 +562,11 @@ export async function updateDrawGuessRoomSettings(roomId: string, profileId: str
     const bankChanged = Boolean(input.wordBankId && input.wordBankId !== state.wordBank?.id);
     const currentTiming = state.timing ?? { drawSeconds: 60, guessSeconds: 20 };
     const timingChanged = Boolean(input.timing && (input.timing.drawSeconds !== currentTiming.drawSeconds || input.timing.guessSeconds !== currentTiming.guessSeconds));
-    if (!bankChanged && !timingChanged) return { ok: true } as const;
+    const roundCountChanged = input.roundCount !== undefined && input.roundCount !== (state.roundCount ?? 1);
+    if (!bankChanged && !timingChanged && !roundCountChanged) return { ok: true } as const;
     const bank = bankChanged ? await getDrawGuessWordBank(input.wordBankId!, room.locale) : null;
     if (bankChanged && !bank) return { error: "INVALID_WORD_BANK" } as const;
-    const next = { ...state, ...(input.timing ? { timing: input.timing } : {}), ...(bank ? { wordBank: shuffledDrawGuessWordBank(bank) } : {}) };
+    const next = { ...state, ...(input.timing ? { timing: input.timing } : {}), ...(input.roundCount !== undefined ? { roundCount: input.roundCount } : {}), ...(bank ? { wordBank: shuffledDrawGuessWordBank(bank) } : {}) };
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.gameToolRoom.updateMany({
         where: { id: room.id, revision: room.revision, status: "LOBBY" },
@@ -568,7 +574,7 @@ export async function updateDrawGuessRoomSettings(roomId: string, profileId: str
       });
       if (!result.count) return false;
       await tx.gameToolSeat.updateMany({ where: { roomId, leftAt: null, profileId: { not: null } }, data: { readyAt: null } });
-      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_SETTINGS_UPDATED", payload: { wordBankId: bank?.id ?? null, timing: input.timing ?? null } } });
+      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_SETTINGS_UPDATED", payload: { wordBankId: bank?.id ?? null, timing: input.timing ?? null, roundCount: input.roundCount ?? null } } });
       return true;
     });
     if (!updated) continue;
@@ -598,7 +604,7 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
       if (!validCount) return { error: "WAIT_FOR_PLAYERS" } as const;
       if (room.seats.some((seat) => seat.profileId && !seat.readyAt)) return { error: "WAIT_FOR_READY" } as const;
       const playerCount = humanCount + (practiceRelay ? 1 : 0);
-      const fresh = createDrawGuessState(state.mode, playerCount, state.wordBank, state.timing);
+      const fresh = createDrawGuessState(state.mode, playerCount, state.wordBank, state.timing, state.roundCount ?? 1);
       fresh.gameNumber = state.gameNumber;
       if (practiceRelay) fresh.practiceBotSeat = humanCount;
       const started = startDrawGuessGame(fresh, Date.now(), room.locale);
@@ -645,7 +651,7 @@ export async function returnDrawGuessRoomToLobby(roomId: string, profileId: stri
     const departedSeats = room.seats.filter((seat) => seat.profileId && !activeProfiles.has(seat.profileId));
     const seatRoster = room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }));
     const capacity = state.autoSize ? state.mode === "CLASSIC" ? 10 : 8 : room.playerCount;
-    const fresh = createDrawGuessState(state.mode, capacity, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing);
+    const fresh = createDrawGuessState(state.mode, capacity, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing, state.roundCount ?? 1);
     fresh.gameNumber = state.gameNumber + 1;
     if (state.autoSize) fresh.autoSize = true;
     else fresh.practiceBotSeat = state.practiceBotSeat;

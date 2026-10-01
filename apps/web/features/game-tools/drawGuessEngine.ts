@@ -8,6 +8,7 @@ export type DrawGuessPhase =
   | "CHAIN_STEP"
   | "REVEAL_VOTE"
   | "AUTHOR_PICK"
+  | "ROUND_BREAK"
   | "FINISHED";
 
 export type DrawStroke = {
@@ -38,6 +39,11 @@ export type DrawGuessChatMessage = {
 
 export const DRAW_GUESS_DRAW_SECONDS = [30, 60, 90] as const;
 export const DRAW_GUESS_GUESS_SECONDS = [20, 40, 60] as const;
+export const DRAW_GUESS_ROUND_COUNTS = [1, 2, 3] as const;
+export type DrawGuessRoundCount = (typeof DRAW_GUESS_ROUND_COUNTS)[number];
+export function isDrawGuessRoundCount(value: unknown): value is DrawGuessRoundCount {
+  return DRAW_GUESS_ROUND_COUNTS.some((count) => count === value);
+}
 export type DrawGuessTiming = {
   drawSeconds: (typeof DRAW_GUESS_DRAW_SECONDS)[number];
   guessSeconds: (typeof DRAW_GUESS_GUESS_SECONDS)[number];
@@ -75,6 +81,8 @@ export type DrawGuessState = {
   phase: DrawGuessPhase;
   picks: Record<string, number>;
   practiceBotSeat?: number;
+  roundCount?: DrawGuessRoundCount;
+  roundIndex?: number;
   scores: number[];
   storageVersion?: number;
   timing?: DrawGuessTiming;
@@ -111,11 +119,19 @@ const DURATION = {
   CHAIN_GUESS: 20_000,
   REVEAL_VOTE: 90_000,
   AUTHOR_PICK: 30_000,
+  ROUND_BREAK: 8_000,
 } as const;
+
+export function estimateDrawGuessDurationSeconds(mode: DrawGuessMode, playerCount: number, timing: DrawGuessTiming, roundCount: DrawGuessRoundCount) {
+  const oneRound = mode === "CLASSIC"
+    ? playerCount * (DURATION.WORD_SELECT + (timing.drawSeconds + timing.guessSeconds) * 1_000 + DURATION.TURN_REVEAL)
+    : DURATION.CHAIN_WORD + Math.floor(getChainStageCount(playerCount) / 2) * (timing.drawSeconds + timing.guessSeconds) * 1_000 + DURATION.REVEAL_VOTE + DURATION.AUTHOR_PICK;
+  return Math.ceil((oneRound * roundCount + DURATION.ROUND_BREAK * (roundCount - 1)) / 1_000);
+}
 
 function optionsFor(state: DrawGuessState, turnIndex: number, locale = "en") {
   const words = state.wordBank?.words.length ? state.wordBank.words : WORDS[locale] ?? WORDS.en;
-  const start = (turnIndex * 3) % words.length;
+  const start = (((state.roundIndex ?? 1) - 1) * state.chains.length * 3 + turnIndex * 3) % words.length;
   return Array.from({ length: Math.min(3, words.length) }, (_, index) => words[(start + index) % words.length]);
 }
 
@@ -185,7 +201,7 @@ export function isValidDrawing(strokes: unknown): strokes is DrawStroke[] {
     JSON.stringify(strokes).length <= 90_000;
 }
 
-export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, wordBank?: DrawGuessWordBankSnapshot, timing?: DrawGuessTiming): DrawGuessState {
+export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, wordBank?: DrawGuessWordBankSnapshot, timing?: DrawGuessTiming, roundCount: DrawGuessRoundCount = 1): DrawGuessState {
   return {
     answer: "",
     chainStage: 0,
@@ -206,6 +222,8 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, w
     options: [],
     phase: "LOBBY",
     picks: {},
+    roundCount,
+    roundIndex: 1,
     scores: Array(playerCount).fill(0),
     storageVersion: 1,
     turnIndex: 0,
@@ -315,8 +333,8 @@ function settleChainScores(state: DrawGuessState, count: number) {
 }
 
 export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: number, locale: string) {
-  const next = structuredClone(state);
-  for (let safety = 0; safety < count * 3 + 8; safety += 1) {
+  let next = structuredClone(state);
+  for (let safety = 0; safety < (count * 3 + 8) * (next.roundCount ?? 1); safety += 1) {
     if (!next.deadlineAt || next.phase === "LOBBY" || next.phase === "FINISHED") break;
     fillPracticeBotStep(next, count, locale);
     fillManagedSteps(next, count, locale);
@@ -357,6 +375,10 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       next.inkSeq = 0;
       next.answer = "";
       if (next.turnIndex >= count) {
+        if ((next.roundIndex ?? 1) < (next.roundCount ?? 1)) {
+          setDeadline(next, "ROUND_BREAK", base, DURATION.ROUND_BREAK);
+          break;
+        }
         next.phase = "FINISHED";
         next.deadlineAt = null;
       } else {
@@ -393,8 +415,24 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       setDeadline(next, "AUTHOR_PICK", base, DURATION.AUTHOR_PICK);
     } else if (next.phase === "AUTHOR_PICK") {
       settleChainScores(next, count);
+      if ((next.roundIndex ?? 1) < (next.roundCount ?? 1)) {
+        setDeadline(next, "ROUND_BREAK", base, DURATION.ROUND_BREAK);
+        break;
+      }
       next.phase = "FINISHED";
       next.deadlineAt = null;
+    } else if (next.phase === "ROUND_BREAK") {
+      const fresh = createDrawGuessState(next.mode, count, next.wordBank, next.timing, next.roundCount ?? 1);
+      fresh.autoSize = next.autoSize;
+      fresh.practiceBotSeat = next.practiceBotSeat;
+      fresh.managedSeats = next.managedSeats;
+      if (next.mode === "CHAIN") fresh.forfeitedChainSeats = [...(next.managedSeats ?? [])];
+      fresh.scores = next.scores;
+      fresh.gameNumber = next.gameNumber + 1;
+      fresh.roundIndex = (next.roundIndex ?? 1) + 1;
+      const started = startDrawGuessGame(fresh, base, locale);
+      if ("error" in started) break;
+      next = started.state;
     }
   }
   return next;
@@ -507,6 +545,8 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       : undefined,
     deadlineAt: state.deadlineAt,
     gameNumber: state.gameNumber,
+    roundCount: state.roundCount ?? 1,
+    roundIndex: state.roundIndex ?? 1,
     mode: state.mode,
     phase: state.phase,
     scores: state.scores,
@@ -525,13 +565,13 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       options: seat === state.turnIndex && state.phase === "WORD_SELECT" ? state.options : [],
     };
   }
-  if (seat < 0 && state.phase !== "REVEAL_VOTE" && state.phase !== "AUTHOR_PICK" && state.phase !== "FINISHED") return { ...shared, task: null };
-  if (state.phase === "REVEAL_VOTE" || state.phase === "AUTHOR_PICK" || state.phase === "FINISHED") {
+  if (seat < 0 && state.phase !== "REVEAL_VOTE" && state.phase !== "AUTHOR_PICK" && state.phase !== "ROUND_BREAK" && state.phase !== "FINISHED") return { ...shared, task: null };
+  if (state.phase === "REVEAL_VOTE" || state.phase === "AUTHOR_PICK" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED") {
     return {
       ...shared,
       chains: state.chains,
       matchResults: state.phase === "REVEAL_VOTE" ? null : state.matchResults,
-      picks: state.phase === "FINISHED" ? state.picks
+      picks: state.phase === "FINISHED" || state.phase === "ROUND_BREAK" ? state.picks
         : state.picks[String(seat)] === undefined ? {} : { [String(seat)]: state.picks[String(seat)] },
       voteCounts: state.phase === "REVEAL_VOTE" ? null : state.chains.map((_, owner) => {
         const votes = Object.values(state.votes[String(owner)] ?? {});

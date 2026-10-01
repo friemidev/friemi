@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDrawGuessRoomView, updateDrawGuessRoomSettings } from "@/features/game-tools/drawGuessRoomServer";
-import { isDrawGuessTiming, type DrawGuessTiming } from "@/features/game-tools/drawGuessEngine";
+import { isDrawGuessRoundCount, isDrawGuessTiming, type DrawGuessRoundCount, type DrawGuessTiming } from "@/features/game-tools/drawGuessEngine";
 import { getExistingDrawGuessProfileId } from "@/features/game-tools/drawGuessAuth";
 
 export async function GET(request: Request, context: { params: Promise<{ roomId: string }> }) {
@@ -22,9 +22,10 @@ export async function GET(request: Request, context: { params: Promise<{ roomId:
 }
 
 const settingsSchema = z.object({
+  roundCount: z.custom<DrawGuessRoundCount>(isDrawGuessRoundCount).optional(),
   timing: z.custom<DrawGuessTiming>(isDrawGuessTiming).optional(),
   wordBankId: z.string().min(1).max(64).optional(),
-}).refine((value) => Boolean(value.timing || value.wordBankId));
+}).refine((value) => Boolean(value.timing || value.wordBankId || value.roundCount !== undefined));
 
 export async function PATCH(request: Request, context: { params: Promise<{ roomId: string }> }) {
   const profileId = await getExistingDrawGuessProfileId();

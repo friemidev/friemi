@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
-import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
+import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, DRAW_GUESS_ROUND_COUNTS, estimateDrawGuessDurationSeconds, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 import { withLocale } from "@/lib/routes";
 
@@ -25,8 +25,19 @@ function copyFor(locale: string) {
   return { back: "退出房间", title: "等待开局", classic: "抢答模式", chain: "画画接龙", players: "玩家", ready: "已准备", notReady: "准备", meReady: "准备", cancelReady: "取消准备", start: "开始游戏", launching: "开画啦！", allReady: "全员就绪！", settings: "房间设置", bank: "词库", selectedBank: "本局词库", saveBank: "保存词库", loadingBanks: "正在加载词库…", noBanks: "没有找到词库", type: "词库类型", allTypes: "全部类型", otherType: "其他", words: "个词", time: "计时", invite: "邀请", preview: "预览词语", search: "搜词库或词语", draw: "作画", guess: "答题", seconds: "秒", save: "保存设置", saving: "保存中", code: "房间号", copy: "复制邀请链接", copied: "已复制", scan: "扫码加入", close: "关闭", retry: "操作未完成，请重试。", practice: "双人局自动补位", character: "选择猫咪", turnCat: "转个身", saveCat: "选这只猫", kick: "移出", kickTitle: "移出这位玩家？", kickHint: "移出后，对方不能再加入这个房间。", kickConfirm: "确认移出", cancel: "留下玩家" };
 }
 
-export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: string; room: DrawGuessRoomView; onRefresh: () => Promise<void>; onLeave: () => Promise<void> }) {
+function roundCopyFor(locale: string) {
+  if (locale === "en") return { rounds: "Rounds", estimate: "About", minutes: "min" };
+  if (locale === "fr") return { rounds: "Manches", estimate: "Environ", minutes: "min" };
+  return { rounds: "轮数", estimate: "预计约", minutes: "分钟" };
+}
+
+function roundUnit(locale: string, count: number) {
+  return locale === "en" ? count === 1 ? "round" : "rounds" : locale === "fr" ? count === 1 ? "manche" : "manches" : "轮";
+}
+
+export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { locale: string; room: DrawGuessRoomView; onRefresh: () => Promise<void>; onLeave: () => Promise<void>; preview?: { wordBanks: DrawGuessWordBankSnapshot[]; onChange: (room: DrawGuessRoomView) => void } }) {
   const t = copyFor(locale);
+  const roundCopy = roundCopyFor(locale);
   const [bankOpen, setBankOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [characterOpen, setCharacterOpen] = useState(false);
@@ -38,6 +49,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   const [bankCategory, setBankCategory] = useState("");
   const [selectedBankId, setSelectedBankId] = useState(room.wordBank?.id ?? "");
   const [timing, setTiming] = useState<DrawGuessTiming>(room.view.timing ?? { drawSeconds: 60, guessSeconds: 20 });
+  const [roundCount, setRoundCount] = useState<DrawGuessRoundCount>(room.view.roundCount ?? 1);
   const [qr, setQr] = useState("");
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -57,7 +69,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
   const kickSeat = humanSeats.find((seat) => seat.id === kickTarget);
   const selectedBank = banks?.find((bank) => bank.id === selectedBankId) ?? (room.wordBank?.id === selectedBankId ? room.wordBank : null);
   const bankChanged = selectedBankId !== (room.wordBank?.id ?? "");
-  const settingsChanged = timing.drawSeconds !== currentTiming.drawSeconds || timing.guessSeconds !== currentTiming.guessSeconds;
+  const settingsChanged = timing.drawSeconds !== currentTiming.drawSeconds || timing.guessSeconds !== currentTiming.guessSeconds || roundCount !== (room.view.roundCount ?? 1);
   const bankCategories = Array.from(new Set((banks ?? []).map((bank) => bank.category?.trim() || t.otherType)));
   const bankQuery = bankSearch.trim().toLocaleLowerCase();
   const shownBanks = (banks ?? []).filter((bank) => {
@@ -65,9 +77,13 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
     return (!bankCategory || category === bankCategory)
       && (!bankQuery || `${bank.title} ${category} ${bank.description ?? ""} ${bank.words.join(" ")}`.toLocaleLowerCase().includes(bankQuery));
   });
-  const inviteUrl = typeof window === "undefined" ? "" : new URL(withLocale(locale, `/game-tools/draw-guess/join/${room.code}`), window.location.origin).toString();
+  const inviteUrl = typeof window === "undefined" ? "" : preview ? window.location.href : new URL(withLocale(locale, `/game-tools/draw-guess/join/${room.code}`), window.location.origin).toString();
   const readyCount = humanSeats.filter((seat) => seat.ready).length;
   const minimum = room.requiredPlayers ?? room.playerCount;
+  const estimatedPlayers = room.autoSize
+    ? Math.max(humanSeats.length, minimum) + (room.mode === "CHAIN" && minimum === 2 && humanSeats.length <= 2 ? 1 : 0)
+    : room.playerCount;
+  const estimatedMinutes = Math.max(1, Math.ceil(estimateDrawGuessDurationSeconds(room.mode, estimatedPlayers, timing, roundCount) / 60));
   const enoughPlayers = room.autoSize ? humanSeats.length >= minimum : humanSeats.length === room.playerCount - (room.practiceBotSeat === undefined ? 0 : 1);
   const status = !enoughPlayers
     ? locale === "zh-CN" ? `还需 ${minimum - humanSeats.length} 人` : locale === "fr" ? `Encore ${minimum - humanSeats.length}` : `Need ${minimum - humanSeats.length} more`
@@ -111,6 +127,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
     setBankCategory("");
     setError("");
     setBankOpen(true);
+    if (preview) { setBanks(preview.wordBanks); return; }
     if (banks) return;
     try {
       const response = await fetch(`/api/game-tools/draw-guess/word-banks?locale=${encodeURIComponent(locale)}`);
@@ -122,6 +139,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
 
   function openSettings() {
     setTiming(room.view.timing ?? { drawSeconds: 60, guessSeconds: 20 });
+    setRoundCount(room.view.roundCount ?? 1);
     setTab("time");
     setError("");
     setSettingsOpen(true);
@@ -136,6 +154,28 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
     setBusy(true);
     setError("");
     try {
+      if (preview) {
+        const change = body as { ready?: boolean; catId?: string; wordBankId?: string; timing?: DrawGuessTiming; roundCount?: DrawGuessRoundCount; seatId?: string; action?: { type: string } };
+        if (change.action?.type === "START") await new Promise((resolve) => window.setTimeout(resolve, 900));
+        else {
+          const seats = change.ready === undefined && !change.catId && !change.seatId ? room.seats : room.seats
+            .filter((seat) => seat.id !== change.seatId)
+            .map((seat) => seat.number === room.viewerSeat + 1 ? { ...seat, ready: change.ready ?? seat.ready, catId: change.catId ?? seat.catId } : seat);
+          const humanSeats = seats.filter((seat) => !seat.isSystem);
+          preview.onChange({
+            ...room,
+            seats,
+            canStart: humanSeats.length >= (room.requiredPlayers ?? room.playerCount) && humanSeats.every((seat) => seat.ready),
+            wordBank: preview.wordBanks.find((bank) => bank.id === change.wordBankId) ?? room.wordBank,
+            view: { ...room.view, timing: change.timing ?? room.view.timing, roundCount: change.roundCount ?? room.view.roundCount },
+          });
+        }
+        if (close === "bank") setBankOpen(false);
+        if (close === "settings") setSettingsOpen(false);
+        if (close === "character") setCharacterOpen(false);
+        if (close === "kick") setKickTarget(null);
+        return;
+      }
       const response = await fetch(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
@@ -165,6 +205,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
       <div className="min-w-0">
         <p className="flex items-center gap-1 text-[11px] font-extrabold text-[#3E70AA]"><Sparkles className="h-3.5 w-3.5" />{room.mode === "CHAIN" ? t.chain : t.classic}</p>
         <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{t.title}</h1>
+        <p className="mt-1 text-xs font-bold text-[#63758D]">{roundCopy.rounds} · {room.view.roundCount ?? 1} {roundUnit(locale, room.view.roundCount ?? 1)}</p>
       </div>
       <button type="button" aria-label={t.copy} onClick={() => void copyInvite()} className="draw-guess-btn draw-guess-btn--butter group shrink-0 flex-col gap-0 rounded-[1.1rem] px-3 py-1.5 motion-safe:-rotate-2 motion-safe:hover:rotate-0"><span className="text-[10px] font-bold text-[#765A35]">{t.code}</span><strong className="font-mono text-base tracking-widest text-[#30425C]">{room.code}</strong></button>
     </header>
@@ -257,11 +298,11 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave }: { locale: s
         <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4"><h2 className="flex items-center gap-2 text-lg font-black"><Settings2 className="h-5 w-5 text-[#3C70A9]" />{t.settings}</h2><button autoFocus type="button" aria-label={t.close} onClick={closeSettings} className="grid h-9 w-9 place-items-center rounded-full bg-[#EAF2FA] text-[#60758C] outline-none transition-colors hover:bg-[#DCE9F5] focus-visible:ring-2 focus-visible:ring-[#3F74AE]"><X className="h-4 w-4" /></button></div>
         <div className="mx-4 mt-2 grid shrink-0 grid-cols-2 gap-1 rounded-full bg-[#EAF2FA] p-1">{([["time", t.time, Clock3], ["invite", t.invite, QrCode]] as const).map(([key, label, Icon]) => <button key={key} type="button" onClick={() => setTab(key)} aria-pressed={tab === key} className={`flex min-h-10 items-center justify-center gap-1 rounded-full text-sm font-bold outline-none transition-[transform,background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-[#3F74AE] ${tab === key ? "bg-white text-[#405875] shadow-[0_2px_6px_rgba(48,66,92,0.1)]" : "text-[#65748A] hover:bg-white/60"}`}><Icon className="h-4 w-4" />{label}</button>)}</div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {tab === "time" ? <div className="space-y-5">{([{ key: "drawSeconds", label: t.draw, options: DRAW_GUESS_DRAW_SECONDS }, { key: "guessSeconds", label: t.guess, options: DRAW_GUESS_GUESS_SECONDS }] as const).map(({ key, label, options }) => <fieldset key={key}><legend className="text-sm font-bold">{label}</legend><div className="mt-2 grid grid-cols-3 gap-2">{options.map((seconds) => <button key={seconds} type="button" disabled={!room.isHost} onClick={() => setTiming((value) => ({ ...value, [key]: seconds }))} aria-pressed={timing[key] === seconds} className={`draw-guess-btn min-h-11 px-2 text-sm disabled:cursor-default ${timing[key] === seconds ? "draw-guess-btn--blush" : "draw-guess-btn--milk"}`}>{seconds} {t.seconds}</button>)}</div></fieldset>)}</div> : null}
+          {tab === "time" ? <div className="space-y-5"><fieldset><legend className="text-sm font-bold">{roundCopy.rounds}</legend><div className="mt-2 grid grid-cols-3 gap-2">{DRAW_GUESS_ROUND_COUNTS.map((count) => <button key={count} type="button" disabled={!room.isHost} onClick={() => setRoundCount(count)} aria-pressed={roundCount === count} className={`draw-guess-btn min-h-11 px-2 text-sm disabled:cursor-default ${roundCount === count ? "draw-guess-btn--blush" : "draw-guess-btn--milk"}`}>{count} {roundUnit(locale, count)}</button>)}</div></fieldset>{([{ key: "drawSeconds", label: t.draw, options: DRAW_GUESS_DRAW_SECONDS }, { key: "guessSeconds", label: t.guess, options: DRAW_GUESS_GUESS_SECONDS }] as const).map(({ key, label, options }) => <fieldset key={key}><legend className="text-sm font-bold">{label}</legend><div className="mt-2 grid grid-cols-3 gap-2">{options.map((seconds) => <button key={seconds} type="button" disabled={!room.isHost} onClick={() => setTiming((value) => ({ ...value, [key]: seconds }))} aria-pressed={timing[key] === seconds} className={`draw-guess-btn min-h-11 px-2 text-sm disabled:cursor-default ${timing[key] === seconds ? "draw-guess-btn--blush" : "draw-guess-btn--milk"}`}>{seconds} {t.seconds}</button>)}</div></fieldset>)}<p aria-live="polite" className="rounded-2xl bg-[#E8F2FB] px-4 py-3 text-center text-sm font-black text-[#3E6FA8]">{roundCopy.estimate} {estimatedMinutes} {roundCopy.minutes}</p></div> : null}
           {tab === "invite" ? <div className="flex flex-col items-center text-center"><p className="text-sm font-semibold text-[#63758D]">{t.scan}</p>{qr ? <Image alt={t.scan} className="mt-3 h-44 w-44 rounded-2xl bg-white p-2" height={176} src={qr} unoptimized width={176} /> : <div className="mt-3 grid h-44 w-44 place-items-center rounded-2xl bg-[#F1F6FC]"><QrCode className="h-8 w-8 text-[#7CA5CC]" /></div>}<strong className="mt-3 font-mono text-xl tracking-[0.2em]">{room.code}</strong><button type="button" onClick={() => void copyInvite()} className="draw-guess-btn draw-guess-btn--blush mt-3 min-h-11 px-5 text-sm"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div> : null}
         </div>
         {error ? <p role="alert" className="mx-5 mb-2 rounded-xl bg-[#FFE8E5] px-3 py-2 text-xs text-[#9A3B32]">{error}</p> : null}
-        {room.isHost && tab === "time" ? <div className="shrink-0 px-4 pb-5 pt-2"><button type="button" disabled={busy || !settingsChanged} onClick={() => void mutate(`/api/game-tools/draw-guess/rooms/${room.id}`, "PATCH", { timing }, "settings")} className="draw-guess-btn draw-guess-btn--candy min-h-12 w-full px-4 text-sm">{busy ? t.saving : t.save}</button></div> : null}
+        {room.isHost && tab === "time" ? <div className="shrink-0 px-4 pb-5 pt-2"><button type="button" disabled={busy || !settingsChanged} onClick={() => void mutate(`/api/game-tools/draw-guess/rooms/${room.id}`, "PATCH", { timing, roundCount }, "settings")} className="draw-guess-btn draw-guess-btn--candy min-h-12 w-full px-4 text-sm">{busy ? t.saving : t.save}</button></div> : null}
       </div>
     </div>, document.body) : null}
     {launching && typeof document !== "undefined" ? createPortal(<div role="status" className="draw-guess-launch-overlay fixed inset-0 z-[120] grid place-items-center bg-[#30425C]/90 text-center text-white"><div><DrawGuessCatSprite animated catId={me?.catId} mood="happy" size={112} /><strong className="mt-4 block text-3xl font-black tracking-wide">{t.launching}</strong><span className="mx-auto mt-5 block h-1 w-24 overflow-hidden rounded-full bg-white/30"><span className="block h-full w-full origin-left animate-pulse rounded-full bg-[#6B99D0]" /></span></div></div>, document.body) : null}
