@@ -1,4 +1,4 @@
-export const initialTrustScore = 95;
+export const initialTrustScore = 100;
 export const lowTrustScoreThreshold = 60;
 
 export type TrustLevel =

@@ -12,11 +12,12 @@ import {
 } from "./trustScore";
 import { getTrustScoreEventDelta } from "./trustScoreEvents";
 
-test("trust score starts at 95 and clamps between 0 and 100", () => {
-  assert.equal(initialTrustScore, 95);
+test("trust score starts at 100 and clamps between 0 and 100", () => {
+  assert.equal(initialTrustScore, 100);
   assert.equal(calculateTrustScore(null), initialTrustScore);
-  assert.equal(calculateTrustScore(0.1), 95.1);
-  assert.equal(calculateTrustScore(0.1 + 0.1 + 0.1), 95.3);
+  assert.equal(calculateTrustScore(0.1), 100);
+  assert.equal(calculateTrustScore(-0.1), 99.9);
+  assert.equal(calculateTrustScore(-0.1 - 0.1 - 0.1), 99.7);
   assert.equal(calculateTrustScore(50), 100);
   assert.equal(calculateTrustScore(-200), 0);
 });
