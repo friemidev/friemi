@@ -9,6 +9,7 @@ import {
   createDrawGuessState,
   getDrawGuessViewerState,
   isDrawGuessTiming,
+  setDrawGuessSeatManaged,
   startDrawGuessGame,
   type DrawGuessAction,
   type DrawGuessMode,
@@ -59,6 +60,7 @@ async function updateState(
   eventType?: string,
   actorId?: string,
   command?: { id: string; result: { correct?: boolean; points?: number } },
+  leavingMember?: { id: string; staleBefore?: Date },
 ) {
   const crossingRounds = previousState.gameNumber !== state.gameNumber;
   const artworkRoundNumber = crossingRounds ? previousState.gameNumber : state.gameNumber;
@@ -81,6 +83,13 @@ async function updateState(
       },
     });
     if (!updated.count) return false;
+    if (leavingMember) {
+      const left = await tx.gameToolRoomMember.updateMany({
+        where: { id: leavingMember.id, leftAt: null, ...(leavingMember.staleBefore ? { lastSeenAt: { lte: leavingMember.staleBefore } } : {}) },
+        data: { leftAt: new Date() },
+      });
+      if (!left.count) throw new Error("PRESENCE_CHANGED");
+    }
     if (previousState.storageVersion !== 1) {
       const legacyCommands = Object.entries(previousState.commandResults);
       if (legacyCommands.length) {
@@ -135,6 +144,7 @@ async function updateState(
     }
     return true;
   }).catch((error) => {
+    if (error instanceof Error && error.message === "PRESENCE_CHANGED") return false;
     console.error("[draw-guess] state persistence failed", { roomId: room.id, errorName: error instanceof Error ? error.name : "UnknownError" });
     throw error;
   });
@@ -222,10 +232,27 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     const existing = room.seats.find((seat) => seat.profileId === input.profileId);
     if (existing) {
-      await touchPresence(room.id, input.profileId);
-      return { roomId: room.id } as const;
+      await prisma.gameToolRoomMember.upsert({
+        where: { roomId_profileId: { roomId: room.id, profileId: input.profileId } },
+        create: { memberToken: createGameToolPrivateToken(), profileId: input.profileId, roomId: room.id, seatedSeatId: existing.id },
+        update: { lastSeenAt: new Date(), leftAt: null, seatedSeatId: existing.id },
+      });
+      const state = asState(room.state);
+      if (state?.managedSeats?.includes(existing.seatNumber - 1)) {
+        const next = setDrawGuessSeatManaged(state, existing.seatNumber - 1, false, room.playerCount, Date.now(), room.locale);
+        const current = await readRoom(room.id);
+        if (!current || current.revision !== room.revision || !(await updateState(current, state, next, "DRAW_GUESS_PLAYER_RECONNECTED", input.profileId))) continue;
+      }
+      return { roomId: room.id, spectator: false } as const;
     }
-    if (room.status !== "LOBBY") return { error: "ALREADY_STARTED" } as const;
+    if (room.status !== "LOBBY") {
+      await prisma.gameToolRoomMember.upsert({
+        where: { roomId_profileId: { roomId: room.id, profileId: input.profileId } },
+        create: { memberToken: createGameToolPrivateToken(), profileId: input.profileId, roomId: room.id },
+        update: { lastSeenAt: new Date(), leftAt: null, seatedSeatId: null },
+      });
+      return { roomId: room.id, spectator: true } as const;
+    }
     const taken = new Set(room.seats.map((seat) => seat.seatNumber));
     const seatNumber = Array.from({ length: room.playerCount }, (_, index) => index + 1).find((seat) => !taken.has(seat));
     if (!seatNumber) return { error: "ROOM_FULL" } as const;
@@ -246,13 +273,10 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
             seatNumber,
           },
         });
-        await tx.gameToolRoomMember.create({
-          data: {
-            memberToken: createGameToolPrivateToken(),
-            profileId: input.profileId,
-            roomId: room.id,
-            seatedSeatId: seat.id,
-          },
+        await tx.gameToolRoomMember.upsert({
+          where: { roomId_profileId: { roomId: room.id, profileId: input.profileId } },
+          create: { memberToken: createGameToolPrivateToken(), profileId: input.profileId, roomId: room.id, seatedSeatId: seat.id },
+          update: { lastSeenAt: new Date(), leftAt: null, seatedSeatId: seat.id },
         });
       });
       await broadcastDrawGuessRoomChange(room.id);
@@ -262,6 +286,52 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
       throw error;
     }
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
+export async function leaveDrawGuessRoom(roomId: string, profileId: string, staleBefore?: Date) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    const member = room.members.find((item) => item.profileId === profileId);
+    if (!member || staleBefore && member.lastSeenAt > staleBefore) return { ok: true } as const;
+    const seat = room.seats.find((item) => item.profileId === profileId);
+    if (!seat) {
+      await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+      return { ok: true } as const;
+    }
+    if (room.status === "LOBBY") {
+      const others = room.seats.filter((item) => item.id !== seat.id && item.profileId);
+      const changed = await prisma.$transaction(async (tx) => {
+        const reserved = await tx.gameToolRoom.updateMany({ where: { id: room.id, revision: room.revision, status: "LOBBY" }, data: { revision: { increment: 1 }, ...(room.hostId === profileId && others[0]?.profileId ? { hostId: others[0].profileId } : {}) } });
+        if (!reserved.count) return false;
+        const marked = await tx.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+        if (!marked.count) throw new Error("PRESENCE_CHANGED");
+        if (!others.length) await tx.gameToolRoom.delete({ where: { id: room.id } });
+        else {
+          await tx.gameToolRoomMember.delete({ where: { id: member.id } });
+          await tx.gameToolSeat.delete({ where: { id: seat.id } });
+        }
+        return true;
+      }).catch((error) => {
+        if (error instanceof Error && error.message === "PRESENCE_CHANGED") return false;
+        throw error;
+      });
+      if (!changed) continue;
+      await broadcastDrawGuessRoomChange(roomId);
+      return { ok: true } as const;
+    }
+    const state = asState(room.state);
+    if (!state) return { error: "INVALID_STATE" } as const;
+    if (!state.managedSeats?.includes(seat.seatNumber - 1) && state.phase !== "FINISHED") {
+      await hydrateDrawGuessState(room.id, state);
+      const next = setDrawGuessSeatManaged(state, seat.seatNumber - 1, true, room.playerCount, Date.now(), room.locale);
+      if (!(await updateState(room, state, next, "DRAW_GUESS_PLAYER_MANAGED", profileId, undefined, { id: member.id, staleBefore }))) continue;
+      return { ok: true } as const;
+    }
+    await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+    return { ok: true } as const;
   }
   return { error: "TRY_AGAIN" } as const;
 }
@@ -309,8 +379,8 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
     const viewer = room.seats.find((seat) => seat.profileId === profileId);
-    if (!viewer) return { error: "NOT_A_PLAYER" } as const;
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
@@ -328,7 +398,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
       room: {
         code: room.code,
         id: room.id,
-        isHost: room.hostId === profileId,
+        isHost: Boolean(viewer && room.hostId === profileId),
         autoSize: state.autoSize === true,
         requiredPlayers: state.mode === "CLASSIC" ? isDrawGuessPreviewDuoEnabled() ? 2 : 3
           : state.practiceBotSeat !== undefined || isDrawGuessPreviewRelayDuoEnabled() && room.seats.length <= 2 ? 2 : 5,
@@ -341,13 +411,13 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         playerCount: room.playerCount,
         practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat })),
+        seats: room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat, managed: Boolean(state.managedSeats?.includes(seat.seatNumber - 1)) })),
         status: room.status,
-        viewerSeat: viewer.seatNumber - 1,
+        viewerSeat: viewer ? viewer.seatNumber - 1 : -1,
         wordBank: state.wordBank
-          ? { ...state.wordBank, words: [...state.wordBank.words].sort((a, b) => a.localeCompare(b, room.locale)) }
+          ? { ...state.wordBank, words: viewer ? [...state.wordBank.words].sort((a, b) => a.localeCompare(b, room.locale)) : [] }
           : null,
-        view: getDrawGuessViewerState(state, viewer.seatNumber - 1, room.playerCount),
+        view: getDrawGuessViewerState(state, viewer ? viewer.seatNumber - 1 : -1, room.playerCount),
       },
     } as const;
   }
@@ -438,6 +508,7 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     if (await transferHostIfNeeded(room, Date.now())) continue;
+    if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
     if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
     if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
     const state = asState(room.state);
@@ -482,25 +553,40 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
 }
 
 export async function rematchDrawGuessRoom(roomId: string, profileId: string) {
+  return returnDrawGuessRoomToLobby(roomId, profileId);
+}
+
+export async function returnDrawGuessRoomToLobby(roomId: string, profileId: string) {
   await touchPresence(roomId, profileId);
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
-    if (await transferHostIfNeeded(room, Date.now())) continue;
-    if (room.hostId !== profileId) return { error: "HOST_ONLY" } as const;
-    if (room.mode === "chain" && !isDrawGuessChainEnabled()) return { error: "CHAIN_NOT_ENABLED" } as const;
+    if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_MEMBER" } as const;
+    if (room.status === "LOBBY") return { ok: true } as const;
     const state = asState(room.state);
-    if (!state) return { error: "INVALID_STATE" } as const;
-    await hydrateDrawGuessState(room.id, state);
-    if (state.phase !== "FINISHED" || room.status !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
-    if (room.seats.length !== room.playerCount) return { error: "WAIT_FOR_PLAYERS" } as const;
-    const fresh = createDrawGuessState(state.mode, room.playerCount, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing);
-    fresh.practiceBotSeat = state.practiceBotSeat;
+    if (!state || room.status !== "FINISHED" || state.phase !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
+    const capacity = state.autoSize ? state.mode === "CLASSIC" ? 10 : 8 : room.playerCount;
+    const fresh = createDrawGuessState(state.mode, capacity, state.wordBank ? shuffledDrawGuessWordBank(state.wordBank) : undefined, state.timing);
     fresh.gameNumber = state.gameNumber + 1;
-    const started = startDrawGuessGame(fresh, Date.now(), room.locale);
-    if (!started.state) return { error: "TRY_AGAIN" } as const;
-    if (!(await updateState(room, state, started.state, "DRAW_GUESS_REMATCH_STARTED", profileId))) continue;
-    return { ok: true, gameNumber: fresh.gameNumber } as const;
+    if (state.autoSize) fresh.autoSize = true;
+    else fresh.practiceBotSeat = state.practiceBotSeat;
+    const returned = await prisma.$transaction(async (tx) => {
+      const reserved = await tx.gameToolRoom.updateMany({
+        where: { id: room.id, revision: room.revision, status: "FINISHED" },
+        data: { drawGuessDeadlineAt: null, finishedAt: null, startedAt: null, playerCount: capacity, revision: { increment: 1 }, state: toJson(fresh), status: "LOBBY" },
+      });
+      if (!reserved.count) return false;
+      if (state.autoSize && state.practiceBotSeat !== undefined) {
+        await tx.gameToolSeat.deleteMany({ where: { roomId, seatNumber: state.practiceBotSeat + 1, profileId: null } });
+      }
+      await tx.gameToolSeat.updateMany({ where: { roomId, leftAt: null, profileId: { not: null } }, data: { readyAt: null } });
+      await tx.gameToolRoomMember.updateMany({ where: { roomId, leftAt: null }, data: { readyAt: null } });
+      await tx.gameToolEvent.create({ data: { actorId: profileId, roomId, type: "DRAW_GUESS_RETURNED_TO_LOBBY", payload: { gameNumber: fresh.gameNumber } } });
+      return true;
+    });
+    if (!returned) continue;
+    await broadcastDrawGuessRoomChange(roomId);
+    return { ok: true } as const;
   }
   return { error: "TRY_AGAIN" } as const;
 }
@@ -574,6 +660,30 @@ export async function advanceDrawGuessRoom(roomId: string, now = Date.now()) {
 }
 
 export async function sweepDueDrawGuessRooms(now = Date.now()) {
+  const staleBefore = new Date(now - 35_000);
+  const staleMembers = await prisma.gameToolRoomMember.findMany({
+    where: { lastSeenAt: { lte: staleBefore }, leftAt: null, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS"] } } },
+    select: { profileId: true, roomId: true },
+    take: 100,
+  });
+  const staleRooms = new Map<string, string[]>();
+  for (const member of staleMembers) {
+    if (!member.profileId) continue;
+    staleRooms.set(member.roomId, [...(staleRooms.get(member.roomId) ?? []), member.profileId]);
+  }
+  const staleResults: PromiseSettledResult<Awaited<ReturnType<typeof leaveDrawGuessRoom>>>[] = [];
+  const staleEntries = [...staleRooms];
+  for (let index = 0; index < staleEntries.length; index += 5) {
+    const batches = await Promise.all(staleEntries.slice(index, index + 5).map(async ([roomId, profileIds]) => {
+      const results: typeof staleResults = [];
+      for (const profileId of profileIds) {
+        try { results.push({ status: "fulfilled", value: await leaveDrawGuessRoom(roomId, profileId, staleBefore) }); }
+        catch (reason) { results.push({ status: "rejected", reason }); }
+      }
+      return results;
+    }));
+    staleResults.push(...batches.flat());
+  }
   const due = await prisma.gameToolRoom.findMany({
     where: {
       drawGuessDeadlineAt: { lte: new Date(now) },
@@ -590,8 +700,8 @@ export async function sweepDueDrawGuessRooms(now = Date.now()) {
   }
   return {
     advanced: results.filter((result) => result.status === "fulfilled" && "advanced" in result.value && result.value.advanced).length,
-    errors: results.filter((result) => result.status === "rejected" || result.status === "fulfilled" && "error" in result.value).length,
-    scanned: due.length,
+    errors: [...results, ...staleResults].filter((result) => result.status === "rejected" || result.status === "fulfilled" && "error" in result.value).length,
+    scanned: due.length + staleMembers.length,
   };
 }
 
@@ -611,7 +721,7 @@ export async function commandDrawGuessRoom(input: {
     const room = await readRoom(input.roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     const viewer = room.seats.find((seat) => seat.profileId === input.profileId);
-    if (!viewer) return { error: "NOT_A_PLAYER" } as const;
+    if (!viewer || !room.members.some((member) => member.profileId === input.profileId)) return { error: "NOT_A_PLAYER" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
     const previous = await prisma.drawGuessCommand.findUnique({

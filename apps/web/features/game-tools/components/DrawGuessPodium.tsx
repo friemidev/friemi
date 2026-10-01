@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Crown, Trophy } from "lucide-react";
+import { ArrowRight, Crown, Trophy } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 import { getDrawGuessCatName } from "@/features/game-tools/drawGuessCats";
@@ -13,13 +13,12 @@ function ProfileBadge({ avatarUrl, name, size = 28 }: { avatarUrl?: string | nul
   </span>;
 }
 
-export function DrawGuessPodium({ busy, finishLabel, isHost, locale, onRematch, rematchLabel, room, scoreLabel }: {
+export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLabel, room, scoreLabel }: {
   busy: boolean;
   finishLabel: string;
-  isHost: boolean;
   locale: string;
-  onRematch: () => void;
-  rematchLabel: string;
+  onReturn: () => void;
+  returnLabel: string;
   room: DrawGuessRoomView;
   scoreLabel: string;
 }) {
@@ -57,6 +56,6 @@ export function DrawGuessPodium({ busy, finishLabel, isHost, locale, onRematch, 
       const name = seat?.name ?? `#${entry.seat + 1}`;
       return <li key={entry.seat} className="draw-guess-rank-in flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2 shadow-[0_3px_0_#E2EAF1]"><span className="w-7 shrink-0 text-center text-sm font-black text-[#63758D]">#{entry.rank}</span><DrawGuessCatSprite catId={seat?.catId} size={46} title={getDrawGuessCatName(seat?.catId, locale)} /><ProfileBadge avatarUrl={seat?.avatarUrl} name={name} size={18} /><strong className="min-w-0 flex-1 truncate text-sm" title={name}>{name}</strong><span className="shrink-0 text-sm font-black tabular-nums">{entry.score} {scoreLabel}</span></li>;
     })}</ol> : null}
-    {isHost ? <div className="relative mt-6 flex justify-center"><button type="button" disabled={busy} onClick={onRematch} className="draw-guess-btn draw-guess-btn--candy min-h-11 px-6 text-sm">{rematchLabel}</button></div> : null}
+    <div className="relative mt-6 flex justify-center"><button type="button" disabled={busy} onClick={onReturn} className="draw-guess-btn draw-guess-btn--candy min-h-11 px-6 text-sm"><ArrowRight className="h-4 w-4" />{returnLabel}</button></div>
   </section>;
 }
