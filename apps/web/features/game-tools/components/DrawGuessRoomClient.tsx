@@ -12,9 +12,10 @@ import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuess
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
 import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
 import { DrawGuessPodium } from "@/features/game-tools/components/DrawGuessPodium";
+import { DrawGuessRoundBreak } from "@/features/game-tools/components/DrawGuessRoundBreak";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
-import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessMode, type DrawGuessPhase, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessMode, type DrawGuessPhase, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
@@ -44,6 +45,8 @@ export type DrawGuessRoomView = {
     deadlineAt: string | null;
     drawDeadlineAt?: string | null;
     gameNumber: number;
+    roundCount: DrawGuessRoundCount;
+    roundIndex: number;
     drawing?: DrawStroke[];
     guesses?: Record<string, { at: string; points: number }>;
     inkSeq?: number;
@@ -432,6 +435,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const displayedGuessMood: DrawGuessCatMood = guessed ? "happy" : guessMood;
   const humanCapacity = room.playerCount - (room.practiceBotSeat === undefined ? 0 : 1);
   const humanCount = room.seats.filter((seat) => !seat.isSystem).length;
+  const roundLabel = locale === "zh-CN" ? `第 ${room.view.roundIndex ?? 1}/${room.view.roundCount ?? 1} 轮` : locale === "fr" ? `Manche ${room.view.roundIndex ?? 1}/${room.view.roundCount ?? 1}` : `Round ${room.view.roundIndex ?? 1}/${room.view.roundCount ?? 1}`;
   const immersivePhase = ["WORD_SELECT", "DRAW_GUESS", "TURN_REVEAL", "CHAIN_WORD", "CHAIN_STEP"].includes(room.view.phase);
   const phaseKey = `${room.view.gameNumber}:${room.view.phase}:${room.view.turnIndex}:${room.view.chainStage}`;
 
@@ -623,7 +627,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       <span aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-10 h-56 w-56 rounded-full bg-[#DADAF0]/20 blur-3xl" />
       <header className="relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-3 sm:px-5 sm:pt-4">
         <button aria-label={locale === "zh-CN" ? "退出游戏，进入托管" : "Leave game"} type="button" onClick={() => setConfirmLeave(true)} className="draw-guess-btn draw-guess-btn--milk grid h-10 min-h-10 w-10 shrink-0 place-items-center"><ArrowLeft className="h-4 w-4" /></button>
-        <div className="min-w-0 flex-1"><p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-[#3E70AA]">{isClassic ? t.modeClassic : t.modeChain} <span aria-hidden="true">·</span> {stageProgress}</p><h1 className="line-clamp-2 text-lg font-bold leading-tight sm:truncate sm:text-2xl">{stageTitle}</h1></div>
+        <div className="min-w-0 flex-1"><p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-[#3E70AA]">{isClassic ? t.modeClassic : t.modeChain} <span aria-hidden="true">·</span> {roundLabel} <span aria-hidden="true">·</span> {stageProgress}</p><h1 className="line-clamp-2 text-lg font-bold leading-tight sm:truncate sm:text-2xl">{stageTitle}</h1></div>
         {stageTimer ? <span className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-sm font-black tabular-nums shadow-[0_3px_0_#DFE8F0] sm:px-3 sm:text-base ${secondsLeft !== null && secondsLeft <= 10 ? "bg-[#DFECF8] text-[#506E9E] motion-safe:animate-pulse" : "bg-white text-[#3E6FA8]"}`}><Clock3 className="h-4 w-4" />{stageTimer}</span> : null}
         <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="draw-guess-btn draw-guess-btn--milk h-10 min-h-10 shrink-0 gap-1 px-2.5 text-xs"><UsersRound className="h-4 w-4" /><span>{humanCount}/{humanCapacity}</span></button>
       </header>
@@ -696,11 +700,11 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     <header className={`relative overflow-hidden bg-[#F1F6FC] shadow-[0_18px_55px_rgba(48,66,92,0.09)] ${compactSummary ? "mt-3 rounded-2xl p-4 sm:p-5" : "mt-5 rounded-[2rem] p-6 sm:p-8"}`}>
       <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-[#BED6EC]/50 blur-3xl" />
       <div className="relative flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#3E70AA]">Friemi · {room.mode === "CLASSIC" ? t.modeClassic : t.modeChain} · #{room.view.gameNumber}</p><h1 className={`font-bold ${compactSummary ? "mt-1 text-xl sm:text-2xl" : "mt-3 text-3xl sm:text-4xl"}`}>{t.title}</h1>{!compactSummary ? <p className="mt-2 text-sm text-[#63758D]">{room.mode === "CLASSIC" ? t.classicHint : t.chainHint}</p> : null}</div>
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#3E70AA]">Friemi · {room.mode === "CLASSIC" ? t.modeClassic : t.modeChain} · {roundLabel}</p><h1 className={`font-bold ${compactSummary ? "mt-1 text-xl sm:text-2xl" : "mt-3 text-3xl sm:text-4xl"}`}>{t.title}</h1>{!compactSummary ? <p className="mt-2 text-sm text-[#63758D]">{room.mode === "CLASSIC" ? t.classicHint : t.chainHint}</p> : null}</div>
         {compactSummary ? <div className="flex shrink-0 flex-col items-end gap-2"><button type="button" aria-label={copied ? t.copied : t.copy} onClick={() => void copyInvite()} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white/80 px-2.5 text-sm font-bold tracking-widest shadow-sm"><Copy className="h-3.5 w-3.5 text-[#3E6FA8]" />{room.code}</button>{timer ? <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-mono text-sm font-bold tabular-nums"><Clock3 className="h-3.5 w-3.5 text-[#3C70A9]" />{timer}</span> : null}</div>
           : <div className="rounded-2xl bg-white/80 px-5 py-3 text-center shadow-sm"><span className="block text-[11px] font-bold uppercase tracking-widest text-[#65748A]">{t.room}</span><strong className="text-2xl tracking-[0.18em]">{room.code}</strong></div>}
       </div>
-      {compactSummary ? room.view.gameNumber > 1 || room.view.phase === "FINISHED" ? <Link className="relative mt-2 inline-block text-xs font-bold text-[#3E6FA8] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null
+      {compactSummary ? room.view.phase === "FINISHED" ? <Link className="relative mt-2 inline-block text-xs font-bold text-[#3E6FA8] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null
         : <div className="relative mt-5 flex flex-wrap items-center gap-3"><ActionButton tone="strong" onClick={copyInvite}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? t.copied : t.copy}</ActionButton><span className="text-sm text-[#63758D]">{t.invitation}</span>{room.view.gameNumber > 1 ? <Link className="text-sm font-bold text-[#3E6FA8] underline" href={withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}>{t.history}</Link> : null}{timer ? <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-mono text-lg font-bold tabular-nums"><Clock3 className="h-4 w-4 text-[#3C70A9]" />{timer}</span> : null}</div>}
     </header>
 
@@ -711,6 +715,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
       <section className="min-w-0 space-y-5">
+        {room.view.phase === "ROUND_BREAK" ? <DrawGuessRoundBreak locale={locale} now={now} room={room} /> : null}
         {room.view.phase === "FINISHED" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} locale={locale} onReturn={() => void returnToLobby()} returnLabel={locale === "zh-CN" ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} room={room} scoreLabel={t.score} /> : null}
 
         {room.mode === "CHAIN" && (room.view.phase === "REVEAL_VOTE" || room.view.phase === "AUTHOR_PICK") ? <DrawGuessChainReview busy={busy} locale={locale} room={room} onVote={(owner, value) => send({ type: "VOTE", owner, value })} onPick={(owner, step) => send({ type: "PICK", owner, step })} /> : null}
