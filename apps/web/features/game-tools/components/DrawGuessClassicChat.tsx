@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, type FormEvent } from "react";
 import { Check, LoaderCircle, Send, Sparkles } from "lucide-react";
-import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 
@@ -32,6 +32,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
   const messages = room.view.chat ?? [];
   const isArtist = room.viewerSeat === room.view.turnIndex;
   const canGuess = room.view.phase === "DRAW_GUESS" && !isArtist && !guessed;
+  const lastOwnMessage = [...messages].reverse().find((message) => message.seat === room.viewerSeat);
 
   useLayoutEffect(() => {
     if (lastTurn.current !== room.view.turnIndex) {
@@ -56,7 +57,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
 
   return <section aria-label={t.title} className="draw-guess-stage-card flex h-[clamp(11rem,33dvh,18rem)] min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.5rem] bg-[#F7FAFE] text-[#30425C] shadow-[0_8px_24px_rgba(48,66,92,0.1)]">
     <header className="flex shrink-0 items-center gap-2 px-3 pb-1.5 pt-2.5 sm:px-4">
-      <DrawGuessCatSprite animated catId={room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.catId} mood={mood} size={39} />
+      <DrawGuessPet bubbleSide="compact" catId={room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.catId} locale={locale} mood={mood} reactionKey={lastOwnMessage?.id} reactionKind={lastOwnMessage?.correct ? "cheer" : "oops"} size={39} />
       <div className="min-w-0 flex-1"><h2 className="text-sm font-black leading-tight">{t.title}</h2><p className="text-[11px] font-semibold text-[#65748A]">{isArtist ? t.empty : t.hint}</p></div>
       {status ? <span role="status" className="max-w-24 truncate rounded-full bg-[#FFF0C9] px-2 py-1 text-[10px] font-bold text-[#765A35]">{status}</span> : null}
     </header>

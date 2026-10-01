@@ -2270,6 +2270,102 @@ html[data-home-motion-ready="true"]
   to { transform: translateX(520%) skewX(-22deg); }
 }
 
+@keyframes draw-guess-pet-boop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  28% { transform: translateY(3px) scale(1.08, .88) rotate(-5deg); }
+  62% { transform: translateY(-5px) scale(.96, 1.06) rotate(5deg); }
+}
+@keyframes draw-guess-pet-wave {
+  0%, 100% { transform: rotate(0); }
+  25%, 70% { transform: rotate(-12deg) translateY(-2px); }
+  48% { transform: rotate(9deg) translateY(-5px); }
+}
+@keyframes draw-guess-pet-hop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(3px) scale(1.06, .9); }
+  48% { transform: translateY(-11px) scale(.95, 1.06) rotate(-7deg); }
+  75% { transform: translateY(2px) scale(1.04, .94) rotate(4deg); }
+}
+@keyframes draw-guess-pet-oops {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  42% { transform: translateY(4px) rotate(-9deg); }
+}
+@keyframes draw-guess-pet-snooze {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(7deg) translateY(2px); }
+}
+@keyframes draw-guess-pet-ambient {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  22% { transform: translateY(-2px) rotate(-2deg) scale(1.015); }
+  50% { transform: translateY(0) rotate(0) scale(1); }
+  75% { transform: translateY(-1px) rotate(2deg) scale(1.02); }
+}
+@keyframes draw-guess-pet-peek {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  26%, 70% { transform: translateX(5px) rotate(8deg); }
+  47% { transform: translateX(2px) rotate(-4deg); }
+}
+@keyframes draw-guess-pet-stretch {
+  0%, 100% { transform: translateY(0) scale(1); }
+  24% { transform: translateY(3px) scale(1.12, .86); }
+  54% { transform: translateY(-5px) scale(.91, 1.14); }
+  76% { transform: translateY(1px) scale(1.04, .96); }
+}
+@keyframes draw-guess-pet-party {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  18% { transform: translateY(2px) rotate(-8deg) scale(1.08, .92); }
+  42% { transform: translateY(-12px) rotate(12deg) scale(.95, 1.05); }
+  70% { transform: translateY(-4px) rotate(-10deg) scale(1.03); }
+}
+@keyframes draw-guess-pet-purr {
+  0%, 100% { transform: rotate(0) scale(1); }
+  20%, 60% { transform: rotate(-3deg) scale(1.035); }
+  40%, 80% { transform: rotate(3deg) scale(1.035); }
+}
+@keyframes draw-guess-pet-bubble-in {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(.6) rotate(-10deg); }
+  32% { opacity: 1; transform: translate(-50%, -3px) scale(1.14) rotate(4deg); }
+  75% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -9px) scale(.9); }
+}
+@keyframes draw-guess-pet-bubble-right-in {
+  0% { opacity: 0; transform: translateY(8px) scale(.6) rotate(-10deg); }
+  32% { opacity: 1; transform: translateY(-3px) scale(1.14) rotate(4deg); }
+  75% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-9px) scale(.9); }
+}
+@keyframes draw-guess-pet-spark {
+  0% { opacity: 0; transform: translate(0, 3px) scale(.5); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--pet-x), var(--pet-y)) scale(1.2) rotate(42deg); }
+}
+
+.draw-guess-pet { padding: 0; border: 0; background: transparent; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.draw-guess-pet-figure { display: block; transform-origin: 50% 80%; }
+.draw-guess-pet-figure--ambient { animation: draw-guess-pet-ambient var(--pet-idle-duration, 3.4s) ease-in-out var(--pet-idle-delay, 0s) infinite; }
+.draw-guess-pet-figure--boop { animation: draw-guess-pet-boop 580ms cubic-bezier(.2, .8, .2, 1) both; }
+.draw-guess-pet-figure--wave { animation: draw-guess-pet-wave 850ms ease-in-out both; }
+.draw-guess-pet-figure--secret, .draw-guess-pet-figure--cheer { animation: draw-guess-pet-hop 850ms cubic-bezier(.2, .8, .2, 1) both; }
+.draw-guess-pet-figure--peek { animation: draw-guess-pet-peek 900ms ease-in-out both; }
+.draw-guess-pet-figure--stretch { animation: draw-guess-pet-stretch 1100ms cubic-bezier(.2, .8, .2, 1) both; }
+.draw-guess-pet-figure--party { animation: draw-guess-pet-party 1150ms cubic-bezier(.2, .8, .2, 1) both; }
+.draw-guess-pet-figure--purr { animation: draw-guess-pet-purr 920ms ease-in-out both; }
+.draw-guess-pet-figure--oops { animation: draw-guess-pet-oops 780ms ease-in-out both; }
+.draw-guess-pet-figure--snooze { animation: draw-guess-pet-snooze 1150ms ease-in-out both; }
+.draw-guess-pet-bubble { position: absolute; z-index: 5; bottom: calc(100% - 8px); left: 82%; min-width: 1.7rem; border: 1px solid #D5E4F2; border-radius: 999px; background: #FFFCF5; padding: 2px 7px; color: #3E70AA; font-size: 12px; font-weight: 900; line-height: 1.35; white-space: nowrap; box-shadow: 0 3px 0 #D5E4F2; pointer-events: none; animation: draw-guess-pet-bubble-in 1300ms ease-out both; }
+.draw-guess-pet-bubble--right { top: -3px; bottom: auto; left: calc(100% + 3px); animation-name: draw-guess-pet-bubble-right-in; }
+.draw-guess-pet-bubble--inside { top: 2px; bottom: auto; left: 70%; animation-name: draw-guess-pet-bubble-right-in; }
+.draw-guess-pet-bubble--compact { top: 5px; bottom: auto; left: 60%; min-width: 1.15rem; padding: 1px 3px; font-size: 10px; animation-name: draw-guess-pet-bubble-right-in; }
+.draw-guess-pet-bubble--secret { background: #FFF0C9; border-color: #E8CB8A; color: #806132; box-shadow: 0 3px 0 #E8CB8A; }
+.draw-guess-pet-sparks { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.draw-guess-pet-sparks i { position: absolute; top: 15%; left: 50%; color: #E4B457; font-size: 15px; font-style: normal; animation: draw-guess-pet-spark 1000ms ease-out both; }
+.draw-guess-pet-sparks i:nth-child(1) { --pet-x: -24px; --pet-y: -25px; }
+.draw-guess-pet-sparks i:nth-child(2) { --pet-x: 20px; --pet-y: -34px; animation-delay: 90ms; color: #80AAD6; }
+.draw-guess-pet-sparks i:nth-child(3) { --pet-x: 31px; --pet-y: 10px; animation-delay: 170ms; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .draw-guess-pet:hover .draw-guess-pet-figure:not([class*="--"]) { transform: translateY(-3px) rotate(-3deg); }
+}
+
 .draw-guess-hero-in { animation: draw-guess-hero-in 420ms ease-out backwards; }
 .draw-guess-logo-in { animation: draw-guess-logo-in 680ms cubic-bezier(0.16, 1, 0.3, 1) 80ms backwards; }
 .draw-guess-mode-tile { animation: draw-guess-tile-in 580ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
@@ -2331,5 +2427,8 @@ html[data-home-motion-ready="true"]
   .draw-guess-points-pop,
   .draw-guess-answer-spark,
   .draw-guess-start-ready,
-  .draw-guess-start-ready::after { animation: none; }
+  .draw-guess-start-ready::after,
+  .draw-guess-pet-figure,
+  .draw-guess-pet-bubble,
+  .draw-guess-pet-sparks i { animation: none; }
 }

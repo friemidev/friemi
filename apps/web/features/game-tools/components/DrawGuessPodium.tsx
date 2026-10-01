@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ArrowRight, Crown, Trophy } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 import { getDrawGuessCatName } from "@/features/game-tools/drawGuessCats";
 import { getDrawGuessRankings } from "@/features/game-tools/drawGuessEngine";
@@ -44,7 +45,7 @@ export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLab
         const name = seat?.name ?? `#${entry.seat + 1}`;
         return <div key={entry.seat} className="draw-guess-podium-in flex min-w-0 w-[32%] max-w-44 flex-col items-center text-center" style={{ animationDelay: `${place * 130}ms` }}>
           <span className={`mb-1 inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-black ${place === 0 ? "bg-[#FFE5A5] text-[#705329]" : "bg-white text-[#405875]"}`}>{place === 0 ? <Crown className="h-3.5 w-3.5" /> : null}#{entry.rank}</span>
-          <DrawGuessCatSprite animated catId={seat?.catId} mood="happy" performance={place === 0 ? "champion" : place === 1 ? "clap" : "wave"} size={place === 0 ? 98 : 84} title={getDrawGuessCatName(seat?.catId, locale)} />
+          <DrawGuessPet autoCelebrate catId={seat?.catId} locale={locale} mood="happy" performance={place === 0 ? "champion" : place === 1 ? "clap" : "wave"} size={place === 0 ? 98 : 84} />
           <div className="mt-1 flex max-w-full items-center justify-center gap-1"><ProfileBadge avatarUrl={seat?.avatarUrl} name={name} size={20} /><strong className="min-w-0 truncate text-xs font-black sm:text-sm" title={name}>{name}</strong></div>
           <span className="mt-0.5 text-xs font-extrabold tabular-nums">{entry.score} {scoreLabel}</span>
           <div className={`mt-2 flex w-full items-center justify-center rounded-t-[1.25rem] text-2xl font-black ${podiumHeights[place]} ${podiumStyles[place]}`}>{place + 1}</div>
