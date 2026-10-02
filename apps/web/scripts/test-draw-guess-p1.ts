@@ -128,7 +128,7 @@ async function run() {
   assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: "P1", locale: "zh-CN", mode: "CHAIN", playerCount: 5 }), { error: "CHAIN_NOT_ENABLED" });
   process.env.VERCEL_ENV = "preview";
   const cleanup = await maintainDrawGuessData(Date.now());
-  assert.deepEqual(cleanup, { commandsDeleted: 0, draftsDeleted: 0, roomsDeleted: 0 });
+  assert.deepEqual(cleanup, { commandsDeleted: 0, draftsDeleted: 0, roomsCleared: 0, roomsDeleted: 0 });
   const future = Date.now() + 366 * 86_400_000;
   await maintainDrawGuessData(future);
   assert.ok(await prisma.gameToolRoom.findUnique({ where: { id: roomId } }), "An open report must preserve its room and artwork.");

@@ -24,6 +24,7 @@ import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/feat
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
+import { pruneEmptyFinishedDrawGuessRoom } from "@/features/game-tools/drawGuessMaintenance";
 import { getDrawGuessWordBank, listDrawGuessWordBanks, shuffledDrawGuessWordBank } from "@/features/game-tools/drawGuessWordBanks";
 import { DRAW_GUESS_CATS, fallbackDrawGuessCatId, isDrawGuessCatId, type DrawGuessCatId } from "@/features/game-tools/drawGuessCats";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,29 @@ import { prisma } from "@/lib/prisma";
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
 const DRAW_GUESS_STALE_MS = 35_000;
 const DRAW_GUESS_DEPART_GRACE_MS = 8_000;
+
+async function markDrawGuessAbandonedIfEmpty(roomId: string) {
+  const stamp = new Date().toISOString();
+  await prisma.$executeRaw`
+    UPDATE "public"."GameToolRoom" AS room
+    SET "config" = jsonb_set(COALESCE(room."config", '{}'::jsonb), '{drawGuessAbandonedAt}', to_jsonb(${stamp}::text), true)
+    WHERE room."id" = ${roomId}
+      AND room."kind" = 'DRAW_GUESS'
+      AND room."status" IN ('IN_PROGRESS', 'FINISHED')
+      AND NOT EXISTS (
+        SELECT 1 FROM "public"."GameToolRoomMember" AS member
+        WHERE member."roomId" = room."id" AND member."leftAt" IS NULL
+      )
+  `;
+}
+
+async function clearDrawGuessAbandoned(roomId: string) {
+  await prisma.$executeRaw`
+    UPDATE "public"."GameToolRoom"
+    SET "config" = COALESCE("config", '{}'::jsonb) - 'drawGuessAbandonedAt'
+    WHERE "id" = ${roomId} AND "kind" = 'DRAW_GUESS' AND "config" ? 'drawGuessAbandonedAt'
+  `;
+}
 
 function kickedDrawGuessProfiles(config: Prisma.JsonValue | null): string[] {
   if (!config || typeof config !== "object" || Array.isArray(config)) return [];
@@ -98,7 +122,7 @@ async function updateState(
     throw error;
   });
   const updated = await prisma.$transaction(async (tx) => {
-    const finishedAt = state.phase === "FINISHED" ? new Date() : null;
+    const finishedAt = state.phase === "FINISHED" ? room.finishedAt ?? new Date() : null;
     const updated = await tx.gameToolRoom.updateMany({
       where: { id: room.id, revision: room.revision },
       data: {
@@ -117,6 +141,18 @@ async function updateState(
         data: { leftAt: new Date() },
       });
       if (!left.count) throw new Error("PRESENCE_CHANGED");
+      if (room.status === "IN_PROGRESS") {
+        const stamp = new Date().toISOString();
+        await tx.$executeRaw`
+          UPDATE "public"."GameToolRoom" AS room
+          SET "config" = jsonb_set(COALESCE(room."config", '{}'::jsonb), '{drawGuessAbandonedAt}', to_jsonb(${stamp}::text), true)
+          WHERE room."id" = ${room.id}
+            AND NOT EXISTS (
+              SELECT 1 FROM "public"."GameToolRoomMember" AS member
+              WHERE member."roomId" = room."id" AND member."leftAt" IS NULL
+            )
+        `;
+      }
     }
     if (previousState.storageVersion !== 1) {
       const legacyCommands = Object.entries(previousState.commandResults);
@@ -261,6 +297,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
       include: { seats: { where: { leftAt: null } } },
     });
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.status === "CANCELLED") return { error: "ROOM_NOT_FOUND" } as const;
     if (kickedDrawGuessProfiles(room.config).includes(input.profileId)) return { error: "KICKED" } as const;
     const existing = room.seats.find((seat) => seat.profileId === input.profileId);
     if (existing) {
@@ -269,6 +306,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
         create: { memberToken: createGameToolPrivateToken(), profileId: input.profileId, roomId: room.id, seatedSeatId: existing.id },
         update: { lastSeenAt: new Date(), leftAt: null, seatedSeatId: existing.id },
       });
+      await clearDrawGuessAbandoned(room.id);
       const state = asState(room.state);
       if (state?.managedSeats?.includes(existing.seatNumber - 1)) {
         const next = setDrawGuessSeatManaged(state, existing.seatNumber - 1, false, room.playerCount, Date.now(), room.locale);
@@ -284,6 +322,7 @@ export async function joinDrawGuessRoom(input: { code: string; profileId: string
         create: { memberToken: createGameToolPrivateToken(), profileId: input.profileId, roomId: room.id },
         update: { lastSeenAt: new Date(), leftAt: null, seatedSeatId: null },
       });
+      await clearDrawGuessAbandoned(room.id);
       return { roomId: room.id, spectator: true } as const;
     }
     const taken = new Set(room.seats.map((seat) => seat.seatNumber));
@@ -331,7 +370,9 @@ export async function leaveDrawGuessRoom(roomId: string, profileId: string, stal
     if (!member || staleBefore && member.lastSeenAt > staleBefore) return { ok: true } as const;
     const seat = room.seats.find((item) => item.profileId === profileId);
     if (!seat) {
-      await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+      const marked = await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+      if (marked.count && room.status === "FINISHED") await pruneEmptyFinishedDrawGuessRoom(room.id);
+      if (marked.count && room.status === "IN_PROGRESS") await markDrawGuessAbandonedIfEmpty(room.id);
       return { ok: true } as const;
     }
     if (room.status === "LOBBY") {
@@ -365,7 +406,9 @@ export async function leaveDrawGuessRoom(roomId: string, profileId: string, stal
       if (!(await updateState(room, state, next, "DRAW_GUESS_PLAYER_MANAGED", profileId, undefined, { id: member.id, staleBefore }))) continue;
       return { ok: true } as const;
     }
-    await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+    const marked = await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null, ...(staleBefore ? { lastSeenAt: { lte: staleBefore } } : {}) }, data: { leftAt: new Date() } });
+    if (marked.count && room.status === "FINISHED") await pruneEmptyFinishedDrawGuessRoom(room.id);
+    if (marked.count && room.status === "IN_PROGRESS") await markDrawGuessAbandonedIfEmpty(room.id);
     return { ok: true } as const;
   }
   return { error: "TRY_AGAIN" } as const;
@@ -453,8 +496,10 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const room = await readRoom(roomId);
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (room.status === "CANCELLED") return { error: "ROOM_NOT_FOUND" } as const;
     if (kickedDrawGuessProfiles(room.config).includes(profileId)) return { error: "KICKED" } as const;
     if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
+    if (room.config && typeof room.config === "object" && !Array.isArray(room.config) && "drawGuessAbandonedAt" in room.config) await clearDrawGuessAbandoned(room.id);
     const staleBefore = new Date(Date.now() - DRAW_GUESS_STALE_MS);
     const staleMembers = room.members.filter((member) => member.profileId !== profileId && member.lastSeenAt <= staleBefore);
     if (staleMembers.length) {
