@@ -24,8 +24,15 @@ type MobileNavProps = {
 function shouldHideMobileNav(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
   const localizedPlanetsPath = withLocale(locale, "/planets");
+  const segments = pathname.split("/").filter(Boolean);
+  const isAaRoute =
+    segments[0] === locale &&
+    segments[1] === "lobby" &&
+    segments.length >= 4 &&
+    segments[3] === "aa";
 
   return (
+    isAaRoute ||
     pathname === localizedPollPath ||
     pathname.startsWith(`${localizedPollPath}/`) ||
     pathname.startsWith(`${localizedPlanetsPath}/`) ||

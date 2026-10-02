@@ -1,0 +1,17 @@
+.route {
+  --app-mobile-nav-height: 0px;
+}
+
+@media (max-width: 767px) {
+  :global(.app-layout-shell):has(.route) {
+    padding-bottom: 0 !important;
+  }
+}
+
+:global(.friemi-native-app-shell):has(.route) {
+  padding-bottom: 0 !important;
+}
+
+:global(.app-layout-shell):has(.route) :global([data-mobile-scroll-progress]) {
+  display: none !important;
+}
