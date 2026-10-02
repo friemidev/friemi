@@ -7,6 +7,7 @@ import {
   advanceDrawGuessGame,
   applyDrawGuessAction,
   createDrawGuessState,
+  getDrawGuessClassicHighlight,
   getDrawGuessViewerState,
   isDrawGuessRoundCount,
   isDrawGuessTiming,
@@ -62,7 +63,7 @@ function asState(value: Prisma.JsonValue | null): DrawGuessState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as DrawGuessState;
   return state.phase && state.mode && Array.isArray(state.scores)
-    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0, roundCount: state.roundCount ?? 1, roundIndex: state.roundIndex ?? 1 }
+    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], classicChats: state.classicChats ?? [], classicReactionCounts: state.classicReactionCounts ?? {}, reactions: state.reactions ?? [], reactionUsed: state.reactionUsed ?? {}, reactionLastAt: state.reactionLastAt ?? {}, gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0, roundCount: state.roundCount ?? 1, roundIndex: state.roundIndex ?? 1 }
     : null;
 }
 
@@ -708,8 +709,10 @@ export async function getDrawGuessHistory(roomId: string, profileId: string) {
     return {
       artworkUrls,
       chains: state.mode === "CHAIN" ? state.chains : null,
+      classicHighlight: state.mode === "CLASSIC" ? getDrawGuessClassicHighlight(state) : null,
       classicTurns: state.mode === "CLASSIC" ? state.drawings.map((drawing, index) => ({
         answer: state.classicAnswers[index] ?? "",
+        chat: state.classicChats[index] ?? [],
         drawing,
         guesses: state.guesses[String(index)] ?? {},
       })) : null,

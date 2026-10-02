@@ -2399,6 +2399,17 @@ html[data-home-motion-ready="true"]
   animation: draw-guess-glint 900ms ease-out 180ms both;
 }
 
+@keyframes draw-guess-danmaku-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - 1100px)); }
+}
+.draw-guess-danmaku-item {
+  left: 100%;
+  white-space: nowrap;
+  animation: draw-guess-danmaku-drift linear infinite;
+}
+.draw-guess-danmaku-layer[data-paused="true"] .draw-guess-danmaku-item { animation-play-state: paused; }
+
 @media (prefers-reduced-motion: reduce) {
   .draw-guess-stage-card,
   .draw-guess-dialog,
@@ -2430,5 +2441,6 @@ html[data-home-motion-ready="true"]
   .draw-guess-start-ready::after,
   .draw-guess-pet-figure,
   .draw-guess-pet-bubble,
-  .draw-guess-pet-sparks i { animation: none; }
+  .draw-guess-pet-sparks i,
+  .draw-guess-danmaku-item { animation: none; }
 }

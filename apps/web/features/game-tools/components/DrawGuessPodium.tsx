@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, Crown, Trophy } from "lucide-react";
+import { ArrowRight, Crown, Images, Trophy } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
@@ -14,7 +14,7 @@ function ProfileBadge({ avatarUrl, name, size = 28 }: { avatarUrl?: string | nul
   </span>;
 }
 
-export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLabel, room, scoreLabel }: {
+export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLabel, room, scoreLabel, showRecapLink = false }: {
   busy: boolean;
   finishLabel: string;
   locale: string;
@@ -22,6 +22,7 @@ export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLab
   returnLabel: string;
   room: DrawGuessRoomView;
   scoreLabel: string;
+  showRecapLink?: boolean;
 }) {
   const humanSeatIndexes = room.view.scores.map((_, seat) => seat).filter((seat) => seat !== room.practiceBotSeat);
   const rankings = getDrawGuessRankings(humanSeatIndexes.map((seat) => room.view.scores[seat])).map((entry) => ({ ...entry, seat: humanSeatIndexes[entry.seat] }));
@@ -38,6 +39,7 @@ export function DrawGuessPodium({ busy, finishLabel, locale, onReturn, returnLab
     <span aria-hidden="true" className="pointer-events-none absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#FFE7B1]/65 blur-3xl" />
     <span aria-hidden="true" className="pointer-events-none absolute -right-12 top-20 h-40 w-40 rounded-full bg-[#DCECF9] blur-3xl" />
     <h2 className="relative flex items-center justify-center gap-2 text-2xl font-black sm:text-3xl"><Trophy className="h-6 w-6 text-[#D9A447]" />{finishLabel}</h2>
+    {showRecapLink ? <a href="#draw-guess-classic-recap" className="relative mx-auto mt-2 flex w-fit items-center gap-1 text-xs font-bold text-[#3E6FA8] underline-offset-2 hover:underline"><Images className="h-4 w-4" />{locale === "zh-CN" ? "看看这局的趣味回放" : locale === "fr" ? "Voir les moments de la partie" : "See this round's fun moments"}</a> : null}
     <div className="relative mx-auto mt-5 flex max-w-xl items-end justify-center gap-2 sm:gap-4">
       {podiumOrder.map((entry) => {
         const place = top.indexOf(entry);

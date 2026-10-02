@@ -3,19 +3,57 @@ export type DrawGuessMusicPhase = "lobby" | "game";
 
 const STORAGE_KEY = "friemi-draw-guess-sound";
 const MUSIC_STORAGE_KEY = "friemi-draw-guess-music";
+const SOUND_VOLUME_STORAGE_KEY = "friemi-draw-guess-sound-volume";
+const MUSIC_VOLUME_STORAGE_KEY = "friemi-draw-guess-music-volume";
+export const DEFAULT_DRAW_GUESS_SOUND_VOLUME = 80;
+export const DEFAULT_DRAW_GUESS_MUSIC_VOLUME = 17;
 export const DRAW_GUESS_SOUND_EVENT = "friemi:draw-guess-sound";
 export const DRAW_GUESS_MUSIC_EVENT = "friemi:draw-guess-music";
 
 const players = new Map<DrawGuessSound, HTMLAudioElement>();
+const soundBuffers = new Map<DrawGuessSound, AudioBuffer>();
+const soundLoads = new Map<DrawGuessSound, Promise<void>>();
+const activeSources = new Set<AudioBufferSourceNode>();
+const SOUND_CUES: DrawGuessSound[] = ["tap", "cat", "purr", "secret", "ready", "start", "correct", "wrong", "score", "next", "finish"];
+let soundContext: AudioContext | null = null;
 let sessionEnabled = true;
 let lastPlayedAt = 0;
 let lastPlayedSound: DrawGuessSound | null = null;
+let lastTapAt = 0;
 let musicEnabled = false;
 let musicPhase: DrawGuessMusicPhase = "lobby";
 const musicPlayers = new Map<DrawGuessMusicPhase, HTMLAudioElement>();
-const MUSIC_VOLUME = 0.17;
 let fadeFrame: number | null = null;
 let visibilityBound = false;
+
+function storedVolume(key: string, fallback: number) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const value = window.localStorage.getItem(key);
+    if (value === null) return fallback;
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : fallback;
+  } catch { return fallback; }
+}
+
+export function getDrawGuessSoundVolume() { return storedVolume(SOUND_VOLUME_STORAGE_KEY, DEFAULT_DRAW_GUESS_SOUND_VOLUME); }
+export function getDrawGuessMusicVolume() { return storedVolume(MUSIC_VOLUME_STORAGE_KEY, DEFAULT_DRAW_GUESS_MUSIC_VOLUME); }
+
+export function setDrawGuessSoundVolume(volume: number) {
+  if (typeof window === "undefined") return;
+  const next = Math.max(0, Math.min(100, Math.round(volume)));
+  try { window.localStorage.setItem(SOUND_VOLUME_STORAGE_KEY, String(next)); } catch { /* Keep the current sound preference. */ }
+  players.forEach((player, sound) => { player.volume = soundVolume(sound); });
+  window.dispatchEvent(new Event(DRAW_GUESS_SOUND_EVENT));
+}
+
+export function setDrawGuessMusicVolume(volume: number) {
+  if (typeof window === "undefined") return;
+  const next = Math.max(0, Math.min(100, Math.round(volume)));
+  try { window.localStorage.setItem(MUSIC_VOLUME_STORAGE_KEY, String(next)); } catch { /* Keep the current music preference. */ }
+  for (const audio of musicPlayers.values()) if (!audio.paused) audio.volume = next / 100;
+  window.dispatchEvent(new Event(DRAW_GUESS_MUSIC_EVENT));
+}
 
 export function isDrawGuessMusicEnabled() { return musicEnabled; }
 
@@ -31,7 +69,7 @@ function musicFor(phase: DrawGuessMusicPhase) {
     audio = new Audio(`/sounds/draw-guess/music-${phase}.mp3`);
     audio.loop = true;
     audio.preload = "none";
-    audio.volume = MUSIC_VOLUME;
+    audio.volume = getDrawGuessMusicVolume() / 100;
     musicPlayers.set(phase, audio);
   }
   return audio;
@@ -49,7 +87,7 @@ function syncMusic() {
   }
   if (!musicEnabled || document.hidden) return;
   const audio = musicFor(musicPhase);
-  audio.volume = MUSIC_VOLUME;
+  audio.volume = getDrawGuessMusicVolume() / 100;
   void audio.play().catch(() => { /* Browsers may require a fresh tap after navigation. */ });
 }
 
@@ -61,22 +99,21 @@ export function setDrawGuessMusicPhase(phase: DrawGuessMusicPhase) {
   stopFade();
   const next = musicFor(phase);
   next.currentTime = 0;
-  if (!previous || previous.paused) { next.volume = MUSIC_VOLUME; syncMusic(); return; }
+  if (!previous || previous.paused) { next.volume = getDrawGuessMusicVolume() / 100; syncMusic(); return; }
   next.volume = 0;
   void next.play().then(() => {
     if (!musicEnabled || document.hidden || musicPhase !== phase) { next.pause(); return; }
     const start = performance.now();
-    const previousVolume = previous.volume;
     const step = (now: number) => {
       if (!musicEnabled || document.hidden || musicPhase !== phase) { syncMusic(); return; }
       const progress = Math.min(1, (now - start) / 700);
-      previous.volume = previousVolume * (1 - progress);
-      next.volume = MUSIC_VOLUME * progress;
+      previous.volume = getDrawGuessMusicVolume() / 100 * (1 - progress);
+      next.volume = getDrawGuessMusicVolume() / 100 * progress;
       if (progress < 1) fadeFrame = requestAnimationFrame(step);
       else { previous.pause(); previous.currentTime = 0; fadeFrame = null; }
     };
     fadeFrame = requestAnimationFrame(step);
-  }).catch(() => { previous.pause(); previous.currentTime = 0; next.volume = MUSIC_VOLUME; });
+  }).catch(() => { previous.pause(); previous.currentTime = 0; next.volume = getDrawGuessMusicVolume() / 100; });
 }
 
 export function setDrawGuessMusicEnabled(enabled: boolean) {
@@ -121,6 +158,13 @@ export function setDrawGuessSoundEnabled(enabled: boolean) {
 
 export function stopDrawGuessSounds() {
   players.forEach((player) => player.pause());
+  activeSources.forEach((source) => { try { source.stop(); } catch { /* The cue already ended. */ } });
+  activeSources.clear();
+}
+
+function soundVolume(sound: DrawGuessSound) {
+  const balance = sound === "tap" ? 0.78 : sound === "wrong" ? 0.69 : sound === "cat" || sound === "purr" ? 0.78 : 0.91;
+  return balance * getDrawGuessSoundVolume() / 100;
 }
 
 function audioFor(sound: DrawGuessSound) {
@@ -128,23 +172,58 @@ function audioFor(sound: DrawGuessSound) {
   if (!audio) {
     audio = new Audio(`/sounds/draw-guess/${sound}.wav`);
     audio.preload = "auto";
-    audio.volume = sound === "tap" ? 0.46 : sound === "wrong" ? 0.48 : sound === "cat" || sound === "purr" ? 0.57 : 0.68;
+    audio.volume = soundVolume(sound);
     players.set(sound, audio);
   }
   return audio;
 }
 
-export function preloadDrawGuessClicks() {
-  if (typeof window !== "undefined") audioFor("tap");
+function contextForSounds() {
+  if (typeof window === "undefined" || typeof AudioContext === "undefined") return null;
+  if (!soundContext) {
+    try { soundContext = new AudioContext(); }
+    catch { return null; }
+  }
+  return soundContext;
+}
+
+export function preloadDrawGuessSounds() {
+  if (typeof window !== "undefined") audioFor("tap").load();
+  const context = contextForSounds();
+  if (!context) return;
+  for (const sound of SOUND_CUES) {
+    if (soundBuffers.has(sound) || soundLoads.has(sound)) continue;
+    const load = fetch(`/sounds/draw-guess/${sound}.wav`)
+      .then((response) => { if (!response.ok) throw new Error("AUDIO_FETCH"); return response.arrayBuffer(); })
+      .then((bytes) => context.decodeAudioData(bytes))
+      .then((buffer) => { soundBuffers.set(sound, buffer); })
+      .catch(() => { soundLoads.delete(sound); });
+    soundLoads.set(sound, load);
+  }
 }
 
 export function playDrawGuessSound(sound: DrawGuessSound, preview = false) {
   if (typeof window === "undefined" || (!preview && (!isDrawGuessSoundEnabled() || document.hidden))) return;
   const now = performance.now();
-  if (!preview && now - lastPlayedAt < (sound === "tap" ? 45 : lastPlayedSound === sound ? 300 : 120)) return;
+  if (!preview && (sound === "tap" ? now - lastTapAt < 55 : lastPlayedSound !== "tap" && now - lastPlayedAt < (lastPlayedSound === sound ? 300 : 120))) return;
   lastPlayedAt = now;
   lastPlayedSound = sound;
+  if (sound === "tap") lastTapAt = now;
   try {
+    const context = contextForSounds();
+    const buffer = soundBuffers.get(sound);
+    if (context && buffer) {
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer;
+      gain.gain.value = soundVolume(sound);
+      source.connect(gain).connect(context.destination);
+      source.onended = () => { activeSources.delete(source); source.disconnect(); gain.disconnect(); };
+      activeSources.add(source);
+      if (context.state !== "running") void context.resume().catch(() => { /* The next gesture can unlock audio. */ });
+      source.start(0);
+      return;
+    }
     const audio = audioFor(sound);
     audio.currentTime = 0;
     void audio.play().catch(() => { /* Browser audio policies can block playback until a tap. */ });

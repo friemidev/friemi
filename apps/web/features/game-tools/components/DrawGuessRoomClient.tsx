@@ -10,8 +10,10 @@ import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCa
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
+import { DrawGuessVolumeControls } from "@/features/game-tools/components/DrawGuessVolumeControls";
 import { playDrawGuessSound, setDrawGuessMusicEnabled, setDrawGuessMusicPhase, shouldPlayDrawGuessMusic, stopDrawGuessMusic } from "@/features/game-tools/drawGuessSound";
 import { DrawGuessClassicChat } from "@/features/game-tools/components/DrawGuessClassicChat";
+import { DrawGuessClassicRecap } from "@/features/game-tools/components/DrawGuessClassicRecap";
 import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
 import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
@@ -19,7 +21,7 @@ import { DrawGuessPodium } from "@/features/game-tools/components/DrawGuessPodiu
 import { DrawGuessRoundBreak } from "@/features/game-tools/components/DrawGuessRoundBreak";
 import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
 import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
-import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessMode, type DrawGuessPhase, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessClassicHighlight, type DrawGuessMode, type DrawGuessPhase, type DrawGuessReaction, type DrawGuessReactionKind, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
@@ -46,6 +48,7 @@ export type DrawGuessRoomView = {
     chainSubmittedCount?: number;
     chains?: ChainStep[][];
     chat?: DrawGuessChatMessage[];
+    classicHighlight?: DrawGuessClassicHighlight | null;
     deadlineAt: string | null;
     drawDeadlineAt?: string | null;
     gameNumber: number;
@@ -58,6 +61,9 @@ export type DrawGuessRoomView = {
     mode: DrawGuessMode;
     options?: string[];
     phase: DrawGuessPhase;
+    reactions?: DrawGuessReaction[];
+    myReactions?: DrawGuessReactionKind[];
+    reactionCounts?: Partial<Record<DrawGuessReactionKind, number>>;
     picks?: Record<string, number>;
     scores: number[];
     managedSeats?: number[];
@@ -379,6 +385,23 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     return queued;
   }, [refresh, room.id, room.view.chainStage, room.view.gameNumber, room.view.phase, room.view.turnIndex, statusCopy, t.error, t.tooFast]);
 
+  const sendSocialAction = useCallback(async (action: { type: "REACT"; kind: DrawGuessReactionKind } | { type: "LAUGH_GUESS"; messageId: string }) => {
+    const current = latestRoom.current;
+    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS") return false;
+    try {
+      const response = await fetch(`/api/game-tools/draw-guess/rooms/${current.id}/actions`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action, commandId: crypto.randomUUID(),
+          expectedChainStage: current.view.chainStage, expectedPhase: current.view.phase,
+          expectedTurnIndex: current.view.turnIndex, gameNumber: current.view.gameNumber }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) return false;
+      void refresh(true);
+      return true;
+    } catch { return false; }
+  }, [refresh]);
+
   const sendRef = useRef(send);
   sendRef.current = send;
   const flushClassicDraft = useCallback(() => {
@@ -692,7 +715,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
           </div> : null}
         </section>
 
-        {isClassicRound ? <DrawGuessClassicChat busy={busy} error={error} guessed={guessed} input={input} locale={locale} mood={displayedGuessMood} onInputChange={setInput} onSubmit={submitText} pending={pendingGuess} room={room} status={classicStatus} /> : null}
+        {isClassicRound ? <DrawGuessClassicChat busy={busy} error={error} guessed={guessed} input={input} locale={locale} mood={displayedGuessMood} onInputChange={setInput} onLaughGuess={(messageId) => sendSocialAction({ type: "LAUGH_GUESS", messageId })} onReact={(kind) => sendSocialAction({ type: "REACT", kind })} onSubmit={submitText} pending={pendingGuess} room={room} status={classicStatus} /> : null}
 
         {showControls ? <div key={`${phaseKey}-controls`} className="draw-guess-stage-card shrink-0 rounded-[1.35rem] bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(48,66,92,0.08)] sm:p-3">
           {isChainDrawing ? <div className="flex items-center justify-between gap-3"><p role="status" className={`text-xs font-semibold ${draftFailed ? "text-[#506E9E]" : "text-[#65748A]"}`}>{draftFailed ? statusCopy.draftFailed : t.draft}</p><ActionButton disabled={busy || !strokes.length} onClick={() => void send({ type: "SUBMIT_STEP", strokes })}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t.submit}</ActionButton></div> : null}
@@ -706,7 +729,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
       {phaseToast && room.view.phase !== "TURN_REVEAL" ? <div key={phaseKey} role="status" className="draw-guess-phase-toast pointer-events-none absolute left-1/2 top-[20%] z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#FFE4A4] px-5 py-3 text-sm font-black text-[#765A35] shadow-[0_6px_0_#E2C080,0_16px_40px_rgba(87,61,34,0.2)]"><Sparkles className="h-4 w-4 text-[#3C70A9]" />{stageTitle}</div> : null}
 
-      {showPlayers ? <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#30425C]/45 p-3 sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPlayers(false); }}><div role="dialog" aria-modal="true" aria-label={t.players} className="draw-guess-dialog w-full max-w-md rounded-[1.8rem] bg-[#FFFCF5] p-5 shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#3E70AA]">{t.room} · {room.code}</p><h2 className="text-xl font-bold">{t.players} <span className="text-sm text-[#65748A]">{humanCount}/{humanCapacity}</span></h2></div><DrawGuessSoundToggle locale={locale} /><DrawGuessMusicToggle locale={locale} /><button aria-label={locale === "zh-CN" ? "关闭" : "Close"} autoFocus type="button" onClick={() => setShowPlayers(false)} className="grid h-9 w-9 place-items-center rounded-full bg-[#ECF4FB]"><X className="h-4 w-4" /></button></div><ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#ECF4FB]" : "bg-[#F1F6FC]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3E6FA8]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{seat?.managed ? ` · ${locale === "zh-CN" ? "托管" : locale === "fr" ? "Absent" : "Away"}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#E1A451]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums">{room.view.scores[index]}</span> : null}</li>; })}</ol><button type="button" onClick={() => void copyInvite()} className="mt-4 draw-guess-btn draw-guess-btn--blush min-h-11 w-full px-4 text-sm"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div></div> : null}
+      {showPlayers ? <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#30425C]/45 p-3 sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPlayers(false); }}><div role="dialog" aria-modal="true" aria-label={t.players} className="draw-guess-dialog max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[1.8rem] bg-[#FFFCF5] p-5 shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-[#3E70AA]">{t.room} · {room.code}</p><h2 className="text-xl font-bold">{t.players} <span className="text-sm text-[#65748A]">{humanCount}/{humanCapacity}</span></h2></div><DrawGuessSoundToggle locale={locale} /><DrawGuessMusicToggle locale={locale} /><button aria-label={locale === "zh-CN" ? "关闭" : "Close"} autoFocus type="button" onClick={() => setShowPlayers(false)} className="grid h-9 w-9 place-items-center rounded-full bg-[#ECF4FB]"><X className="h-4 w-4" /></button></div><ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{Array.from({ length: room.playerCount }, (_, index) => { const seat = room.seats.find((item) => item.number === index + 1); return <li key={index} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === room.viewerSeat ? "bg-[#ECF4FB]" : "bg-[#F1F6FC]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3E6FA8]">{index + 1}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat?.name ?? "—"}{seat?.isSystem ? ` · ${t.system}` : ""}{seat?.managed ? ` · ${locale === "zh-CN" ? "托管" : locale === "fr" ? "Absent" : "Away"}` : ""}{index === room.viewerSeat ? ` · ${t.you}` : ""}</span>{seat?.isHost ? <Crown className="h-4 w-4 text-[#E1A451]" /> : null}{!seat?.isSystem ? <span className="text-xs font-bold tabular-nums">{room.view.scores[index]}</span> : null}</li>; })}</ol><details className="mt-4 rounded-2xl bg-[#F1F6FC] px-3 py-2"><summary className="cursor-pointer text-sm font-bold text-[#405875]">{locale === "zh-CN" ? "音量设置" : locale === "fr" ? "Volume" : "Volume"}</summary><div className="pt-3"><DrawGuessVolumeControls locale={locale} /></div></details><button type="button" onClick={() => void copyInvite()} className="mt-4 draw-guess-btn draw-guess-btn--blush min-h-11 w-full px-4 text-sm"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div></div> : null}
       {confirmLeave ? <div className="absolute inset-0 z-40 grid place-items-center bg-[#30425C]/55 p-4"><div role="dialog" aria-modal="true" aria-label={locale === "zh-CN" ? "退出游戏" : "Leave game"} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFCF5] p-6 text-center shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><DrawGuessCatSprite animated catId={viewerCatId} mood="sad" size={82} /><h2 className="mt-2 text-xl font-black">{locale === "zh-CN" ? "先离开一下？" : locale === "fr" ? "Quitter la partie ?" : "Leave the game?"}</h2><p className="mt-2 text-sm font-semibold text-[#63758D]">{locale === "zh-CN" ? "离开后由系统托管，输入房间号可以重连。" : locale === "fr" ? "Votre place sera gardée. Revenez avec le code de salle." : "Your seat stays saved. Rejoin with the room code."}</p><div className="mt-5 flex gap-2"><button autoFocus type="button" onClick={() => setConfirmLeave(false)} className="draw-guess-btn draw-guess-btn--milk min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "继续玩" : locale === "fr" ? "Continuer" : "Keep playing"}</button><button type="button" onClick={() => { void leaveRoom().catch(() => { setConfirmLeave(false); setError(t.error); }); }} className="draw-guess-btn draw-guess-btn--candy min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "退出房间" : locale === "fr" ? "Quitter" : "Leave"}</button></div></div></div> : null}
       {confirmClear ? <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#30425C]/45 p-4"><div role="dialog" aria-modal="true" aria-label={locale === "zh-CN" ? "清空画布" : "Clear drawing"} className="draw-guess-dialog w-full max-w-sm rounded-[1.8rem] bg-[#FFFCF5] p-6 text-center shadow-[0_28px_70px_rgba(48,66,92,0.28)]"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#DBEBF9] text-[#558BC3]"><Trash2 className="h-6 w-6" /></span><h2 className="mt-4 text-xl font-bold">{locale === "zh-CN" ? "要清空这张画吗？" : locale === "fr" ? "Effacer ce dessin ?" : "Clear this drawing?"}</h2><p className="mt-2 text-sm text-[#63758D]">{locale === "zh-CN" ? "这一张画的所有笔画都会被清除。" : locale === "fr" ? "Tous les traits de ce dessin seront effacés." : "Every stroke on this drawing will be removed."}</p><div className="mt-5 flex gap-2"><button autoFocus type="button" onClick={() => setConfirmClear(false)} className="draw-guess-btn draw-guess-btn--milk min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "继续画" : locale === "fr" ? "Continuer" : "Keep drawing"}</button><button type="button" onClick={clearDrawing} className="draw-guess-btn draw-guess-btn--candy min-h-11 flex-1 px-3 text-sm">{locale === "zh-CN" ? "清空画布" : locale === "fr" ? "Effacer" : "Clear"}</button></div></div></div> : null}
     </div>;
@@ -734,7 +757,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
       <section className="min-w-0 space-y-5">
         {room.view.phase === "ROUND_BREAK" ? <DrawGuessRoundBreak locale={locale} now={now} room={room} /> : null}
-        {room.view.phase === "FINISHED" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} locale={locale} onReturn={() => void returnToLobby()} returnLabel={locale === "zh-CN" ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} room={room} scoreLabel={t.score} /> : null}
+        {room.view.phase === "FINISHED" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} locale={locale} onReturn={() => void returnToLobby()} returnLabel={locale === "zh-CN" ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} room={room} scoreLabel={t.score} showRecapLink={room.mode === "CLASSIC" && Boolean(room.view.classicHighlight)} /> : null}
+        {room.mode === "CLASSIC" && room.view.phase === "FINISHED" ? <DrawGuessClassicRecap code={room.code} highlight={room.view.classicHighlight} historyHref={`${withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}#artwork-${room.view.gameNumber}`} locale={locale} roomId={room.id} roundNumber={room.view.gameNumber} seats={room.seats} /> : null}
 
         {room.mode === "CHAIN" && (room.view.phase === "REVEAL_VOTE" || room.view.phase === "AUTHOR_PICK") ? <DrawGuessChainReview busy={busy} locale={locale} room={room} onVote={(owner, value) => send({ type: "VOTE", owner, value })} onPick={(owner, step) => send({ type: "PICK", owner, step })} /> : null}
 

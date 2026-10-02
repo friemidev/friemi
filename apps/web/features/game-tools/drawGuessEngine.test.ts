@@ -5,6 +5,7 @@ import {
   applyDrawGuessAction,
   createDrawGuessState,
   estimateDrawGuessDurationSeconds,
+  getDrawGuessClassicHighlight,
   getChainActor,
   getChainStageCount,
   getDrawGuessViewerState,
@@ -40,8 +41,8 @@ test("round settings accept only one to three rounds and estimate both modes", (
   assert.equal(isDrawGuessRoundCount(4), false);
   assert.equal(isDrawGuessRoundCount("2"), false);
   const timing = { drawSeconds: 30, guessSeconds: 20 } as const;
-  assert.equal(estimateDrawGuessDurationSeconds("CLASSIC", 3, timing, 1), 204);
-  assert.equal(estimateDrawGuessDurationSeconds("CHAIN", 5, timing, 2), 488);
+  assert.equal(estimateDrawGuessDurationSeconds("CLASSIC", 3, timing, 1), 195);
+  assert.equal(estimateDrawGuessDurationSeconds("CHAIN", 5, timing, 2), 485);
 });
 
 test("classic runs two complete rounds, keeps scores, then finishes", () => {
@@ -135,7 +136,79 @@ test("classic drawing stops at the host deadline while guessing remains open", (
   assert.equal(guess.state.phase, "DRAW_GUESS");
   const reveal = advanceDrawGuessGame(guess.state, 3, 51_000, "en");
   assert.equal(reveal.phase, "TURN_REVEAL");
-  assert.equal(reveal.deadlineAt, new Date(59_000).toISOString());
+  assert.equal(reveal.deadlineAt, new Date(56_000).toISOString());
+});
+
+test("classic reactions stay small, visible, and feed a finished-turn recap", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.answer = "cat";
+  state.deadlineAt = new Date(60_000).toISOString();
+  state.drawings[0] = [{ color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] }];
+  const first = applyDrawGuessAction(state, { type: "REACT", kind: "😂" }, 1, 3, 1_000, "en");
+  assert.ok(!("error" in first));
+  const firstViewer = getDrawGuessViewerState(first.state, 1, 3);
+  const waitingViewer = getDrawGuessViewerState(first.state, 2, 3);
+  assert.ok("answer" in waitingViewer && "myReactions" in firstViewer && "reactionCounts" in waitingViewer);
+  assert.equal(waitingViewer.answer, null);
+  assert.deepEqual(firstViewer.myReactions, ["😂"]);
+  assert.equal(waitingViewer.reactionCounts["😂"], 1);
+  const repeated = applyDrawGuessAction(first.state, { type: "REACT", kind: "😂" }, 1, 3, 3_000, "en");
+  assert.equal("error" in repeated ? repeated.error : null, "REACTION_USED");
+  const tooSoon = applyDrawGuessAction(first.state, { type: "REACT", kind: "👏" }, 1, 3, 2_000, "en");
+  assert.equal("error" in tooSoon ? tooSoon.error : null, "TOO_FAST");
+  const second = applyDrawGuessAction(first.state, { type: "REACT", kind: "😂" }, 2, 3, 2_000, "en");
+  const guessed = applyDrawGuessAction(second.state, { type: "GUESS", value: "dog" }, 1, 3, 4_000, "en");
+  const reveal = advanceDrawGuessGame(guessed.state, 3, 60_000, "en");
+  const next = advanceDrawGuessGame(reveal, 3, 65_000, "en");
+  assert.deepEqual(next.reactions, []);
+  assert.deepEqual(next.reactionUsed, {});
+  assert.equal(next.classicChats[0][0].text, "dog");
+  const highlight = getDrawGuessClassicHighlight(next);
+  assert.equal(highlight?.laughCount, 2);
+  assert.deepEqual(highlight?.wrongGuesses, [{ seat: 1, text: "dog", artistSeat: 0, answer: "cat", laughs: 0 }]);
+});
+
+test("classic recap ranks the room's funniest guesses and shows their real answers", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.drawings[0] = [{ color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] }];
+  state.drawings[1] = [{ color: "#654321", width: 4, points: [[0.1, 0.2], [0.3, 0.4]] }];
+  state.classicAnswers = ["cat", "tree"];
+  state.classicReactionCounts = { "0": { "😂": 1 } };
+  state.classicChats = [
+    [{ id: "one", seat: 1, text: "potato cat", correct: false, at: new Date(0).toISOString() }],
+    [{ id: "two", seat: 2, text: "flying tree", correct: false, at: new Date(1).toISOString(), laughedBy: [0, 1] }],
+  ];
+  const highlight = getDrawGuessClassicHighlight(state);
+  assert.equal(highlight?.artistSeat, 0);
+  assert.deepEqual(highlight?.wrongGuesses.map((guess) => [guess.text, guess.answer, guess.laughs]),
+    [["flying tree", "tree", 2], ["potato cat", "cat", 0]]);
+});
+
+test("players can laugh at three other players' wrong guesses per turn", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.answer = "cat";
+  state.deadlineAt = new Date(60_000).toISOString();
+  state.drawings[0] = [{ color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] }];
+  state.classicChat = ["one1", "two2", "three3", "four4"].map((id) => ({ id, seat: 1, text: id, correct: false, at: new Date(0).toISOString() }));
+  let next = state;
+  for (const messageId of ["one1", "two2", "three3"]) {
+    const result = applyDrawGuessAction(next, { type: "LAUGH_GUESS", messageId }, 0, 3, 1_000, "en");
+    assert.ok(!("error" in result));
+    next = result.state;
+  }
+  assert.deepEqual(next.classicChat.slice(0, 3).map((message) => message.laughedBy), [[0], [0], [0]]);
+  const repeat = applyDrawGuessAction(next, { type: "LAUGH_GUESS", messageId: "one1" }, 0, 3, 1_000, "en");
+  assert.equal("error" in repeat ? repeat.error : null, "REACTION_USED");
+  const excess = applyDrawGuessAction(next, { type: "LAUGH_GUESS", messageId: "four4" }, 0, 3, 1_000, "en");
+  assert.equal("error" in excess ? excess.error : null, "REACTION_LIMIT");
+  const own = applyDrawGuessAction(state, { type: "LAUGH_GUESS", messageId: "one1" }, 1, 3, 1_000, "en");
+  assert.equal("error" in own ? own.error : null, "NOT_ALLOWED");
+  const reveal = advanceDrawGuessGame(next, 3, 60_000, "en");
+  const nextTurn = advanceDrawGuessGame(reveal, 3, 65_000, "en");
+  assert.deepEqual(nextTurn.classicChats[0][0].laughedBy, [0]);
+  assert.equal(getDrawGuessClassicHighlight(nextTurn)?.wrongGuesses[0]?.laughs, 1);
 });
 
 test("classic rounds draw their choices from the room's selected word bank", () => {
