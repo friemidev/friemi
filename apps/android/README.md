@@ -149,7 +149,7 @@ window.FriemiAndroid?.scanQrCode()
 window.FriemiAndroid?.setBackBehavior(JSON.stringify({ hasModal: true }))
 ```
 
-`getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status. The web app also reports modal / sheet state through `setBackBehavior`, so Android back closes open UI first before navigating away.
+`getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status. The web app also reports modal / sheet state through `setBackBehavior`, so both the Android system gesture and legacy navigation button close open UI first, then navigate back. At `/mobile-home`, Back closes the activity.
 
 `registerPushToken()` is asynchronous. The native shell requests the FCM token and dispatches a `friemi:android-push-token` browser event; the web bridge then posts the token to `/api/mobile/devices/register` using the current WebView login session.
 
