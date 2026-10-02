@@ -4,18 +4,19 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, Volume2, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
+import { DrawGuessVolumeControls } from "@/features/game-tools/components/DrawGuessVolumeControls";
 import { playDrawGuessSound } from "@/features/game-tools/drawGuessSound";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, DRAW_GUESS_ROUND_COUNTS, estimateDrawGuessDurationSeconds, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 import { withLocale } from "@/lib/routes";
 
-type SettingsTab = "time" | "invite";
+type SettingsTab = "time" | "sound" | "invite";
 const CAT_DIRECTIONS: DrawGuessCatDirection[] = ["S", "SW", "W", "NW", "N", "NE", "E", "SE"];
 const READY_SPARKS = [
   ["-116px", "-62px", "#3C73B0"], ["-74px", "-91px", "#B4D0EA"], ["-21px", "-106px", "#F2C56D"],
@@ -42,6 +43,7 @@ function roundUnit(locale: string, count: number) {
 export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { locale: string; room: DrawGuessRoomView; onRefresh: () => Promise<void>; onLeave: () => Promise<void>; preview?: { wordBanks: DrawGuessWordBankSnapshot[]; onChange: (room: DrawGuessRoomView) => void } }) {
   const t = copyFor(locale);
   const roundCopy = roundCopyFor(locale);
+  const soundTabLabel = locale === "zh-CN" ? "声音" : locale === "fr" ? "Son" : "Sound";
   const [bankOpen, setBankOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [characterOpen, setCharacterOpen] = useState(false);
@@ -88,10 +90,19 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     ? Math.max(humanSeats.length, minimum) + (room.mode === "CHAIN" && minimum === 2 && humanSeats.length <= 2 ? 1 : 0)
     : room.playerCount;
   const estimatedMinutes = Math.max(1, Math.ceil(estimateDrawGuessDurationSeconds(room.mode, estimatedPlayers, timing, roundCount) / 60));
+  const displayedMinutes = Math.max(1, Math.ceil(estimateDrawGuessDurationSeconds(room.mode, estimatedPlayers, currentTiming, room.view.roundCount ?? 1) / 60));
   const enoughPlayers = room.autoSize ? humanSeats.length >= minimum : humanSeats.length === room.playerCount - (room.practiceBotSeat === undefined ? 0 : 1);
-  const status = !enoughPlayers
-    ? locale === "zh-CN" ? `还需 ${minimum - humanSeats.length} 人` : locale === "fr" ? `Encore ${minimum - humanSeats.length}` : `Need ${minimum - humanSeats.length} more`
-    : `${readyCount}/${humanSeats.length} ${t.ready}`;
+  const remainingPlayers = Math.max(0, (room.autoSize ? minimum : room.playerCount - (room.practiceBotSeat === undefined ? 0 : 1)) - humanSeats.length);
+  const remainingReady = humanSeats.length - readyCount;
+  const status = !me?.ready
+    ? locale === "zh-CN" ? "点准备，一起开画" : locale === "fr" ? "Prêt ? Lancez le dessin" : "Tap Ready to play"
+    : !enoughPlayers
+      ? locale === "zh-CN" ? `还差 ${remainingPlayers} 人 · 点房间号邀请` : locale === "fr" ? `Encore ${remainingPlayers} joueur(s) · invitez-les avec le code` : `Need ${remainingPlayers} more · tap the room code to invite`
+      : remainingReady > 0
+        ? locale === "zh-CN" ? `还差 ${remainingReady} 人准备` : locale === "fr" ? `Encore ${remainingReady} joueur(s) à préparer` : `Waiting for ${remainingReady} to ready up`
+        : room.canStart
+          ? room.isHost ? locale === "zh-CN" ? "全员已准备，点击开始游戏" : locale === "fr" ? "Tous prêts, lancez la partie" : "Everyone's ready · start the game" : locale === "zh-CN" ? "全员已准备，等房主开局" : locale === "fr" ? "Tous prêts, en attente de l'hôte" : "Everyone's ready · waiting for host"
+          : locale === "zh-CN" ? "等待开局" : locale === "fr" ? "En attente du départ" : "Waiting to start";
 
   useEffect(() => {
     const startable = Boolean(room.canStart);
@@ -212,7 +223,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
       <div className="min-w-0">
         <p className="flex items-center gap-1 text-[11px] font-extrabold text-[#3E70AA]"><Sparkles className="h-3.5 w-3.5" />{room.mode === "CHAIN" ? t.chain : t.classic}</p>
         <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{t.title}</h1>
-        <p className="mt-1 text-xs font-bold text-[#63758D]">{roundCopy.rounds} · {room.view.roundCount ?? 1} {roundUnit(locale, room.view.roundCount ?? 1)}</p>
+        <p className="mt-1 text-xs font-bold text-[#63758D]">{room.view.roundCount ?? 1} {roundUnit(locale, room.view.roundCount ?? 1)} · {roundCopy.estimate} {displayedMinutes} {roundCopy.minutes}</p>
       </div>
       <button type="button" aria-label={t.copy} onClick={() => void copyInvite()} className="draw-guess-btn draw-guess-btn--butter group shrink-0 flex-col gap-0 rounded-[1.1rem] px-3 py-1.5 motion-safe:-rotate-2 motion-safe:hover:rotate-0"><span className="text-[10px] font-bold text-[#765A35]">{t.code}</span><strong className="font-mono text-base tracking-widest text-[#30425C]">{room.code}</strong></button>
     </header>
@@ -303,9 +314,10 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     {settingsOpen && typeof document !== "undefined" ? createPortal(<div className="draw-guess-theme fixed inset-0 z-[100] flex items-end justify-center bg-[#273A53]/50 p-2 sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettings(); }}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t.settings} className="draw-guess-dialog flex max-h-[92dvh] w-full max-w-xl flex-col rounded-[1.8rem] bg-[#FFFCF5] shadow-[0_25px_70px_rgba(48,66,92,0.28)] sm:max-h-[85dvh]">
         <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4"><h2 className="flex items-center gap-2 text-lg font-black"><Settings2 className="h-5 w-5 text-[#3C70A9]" />{t.settings}</h2><button autoFocus type="button" aria-label={t.close} onClick={closeSettings} className="grid h-9 w-9 place-items-center rounded-full bg-[#EAF2FA] text-[#60758C] outline-none transition-colors hover:bg-[#DCE9F5] focus-visible:ring-2 focus-visible:ring-[#3F74AE]"><X className="h-4 w-4" /></button></div>
-        <div className="mx-4 mt-2 grid shrink-0 grid-cols-2 gap-1 rounded-full bg-[#EAF2FA] p-1">{([["time", t.time, Clock3], ["invite", t.invite, QrCode]] as const).map(([key, label, Icon]) => <button key={key} type="button" onClick={() => setTab(key)} aria-pressed={tab === key} className={`flex min-h-10 items-center justify-center gap-1 rounded-full text-sm font-bold outline-none transition-[transform,background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-[#3F74AE] ${tab === key ? "bg-white text-[#405875] shadow-[0_2px_6px_rgba(48,66,92,0.1)]" : "text-[#65748A] hover:bg-white/60"}`}><Icon className="h-4 w-4" />{label}</button>)}</div>
+        <div className="mx-4 mt-2 grid shrink-0 grid-cols-3 gap-1 rounded-full bg-[#EAF2FA] p-1">{([["time", t.time, Clock3], ["sound", soundTabLabel, Volume2], ["invite", t.invite, QrCode]] as const).map(([key, label, Icon]) => <button key={key} type="button" onClick={() => setTab(key)} aria-pressed={tab === key} className={`flex min-h-10 items-center justify-center gap-1 rounded-full text-sm font-bold outline-none transition-[transform,background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-[#3F74AE] ${tab === key ? "bg-white text-[#405875] shadow-[0_2px_6px_rgba(48,66,92,0.1)]" : "text-[#65748A] hover:bg-white/60"}`}><Icon className="h-4 w-4" />{label}</button>)}</div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {tab === "time" ? <div className="space-y-5"><fieldset><legend className="text-sm font-bold">{roundCopy.rounds}</legend><div className="mt-2 grid grid-cols-3 gap-2">{DRAW_GUESS_ROUND_COUNTS.map((count) => <button key={count} type="button" disabled={!room.isHost} onClick={() => setRoundCount(count)} aria-pressed={roundCount === count} className={`draw-guess-btn min-h-11 px-2 text-sm disabled:cursor-default ${roundCount === count ? "draw-guess-btn--blush" : "draw-guess-btn--milk"}`}>{count} {roundUnit(locale, count)}</button>)}</div></fieldset>{([{ key: "drawSeconds", label: t.draw, options: DRAW_GUESS_DRAW_SECONDS }, { key: "guessSeconds", label: t.guess, options: DRAW_GUESS_GUESS_SECONDS }] as const).map(({ key, label, options }) => <fieldset key={key}><legend className="text-sm font-bold">{label}</legend><div className="mt-2 grid grid-cols-3 gap-2">{options.map((seconds) => <button key={seconds} type="button" disabled={!room.isHost} onClick={() => setTiming((value) => ({ ...value, [key]: seconds }))} aria-pressed={timing[key] === seconds} className={`draw-guess-btn min-h-11 px-2 text-sm disabled:cursor-default ${timing[key] === seconds ? "draw-guess-btn--blush" : "draw-guess-btn--milk"}`}>{seconds} {t.seconds}</button>)}</div></fieldset>)}<p aria-live="polite" className="rounded-2xl bg-[#E8F2FB] px-4 py-3 text-center text-sm font-black text-[#3E6FA8]">{roundCopy.estimate} {estimatedMinutes} {roundCopy.minutes}</p></div> : null}
+          {tab === "sound" ? <DrawGuessVolumeControls locale={locale} /> : null}
           {tab === "invite" ? <div className="flex flex-col items-center text-center"><p className="text-sm font-semibold text-[#63758D]">{t.scan}</p>{qr ? <Image alt={t.scan} className="mt-3 h-44 w-44 rounded-2xl bg-white p-2" height={176} src={qr} unoptimized width={176} /> : <div className="mt-3 grid h-44 w-44 place-items-center rounded-2xl bg-[#F1F6FC]"><QrCode className="h-8 w-8 text-[#7CA5CC]" /></div>}<strong className="mt-3 font-mono text-xl tracking-[0.2em]">{room.code}</strong><button type="button" onClick={() => void copyInvite()} className="draw-guess-btn draw-guess-btn--blush mt-3 min-h-11 px-5 text-sm"><Copy className="h-4 w-4" />{copied ? t.copied : t.copy}</button></div> : null}
         </div>
         {error ? <p role="alert" className="mx-5 mb-2 rounded-xl bg-[#FFE8E5] px-3 py-2 text-xs text-[#9A3B32]">{error}</p> : null}

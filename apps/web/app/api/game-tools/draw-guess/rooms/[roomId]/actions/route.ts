@@ -11,6 +11,8 @@ const stroke = z.object({
 const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CHOOSE_WORD"), value: z.string().min(1).max(40) }),
   z.object({ type: z.literal("GUESS"), value: z.string().min(1).max(20) }),
+  z.object({ type: z.literal("REACT"), kind: z.enum(["😂", "👏", "👀"]) }),
+  z.object({ type: z.literal("LAUGH_GUESS"), messageId: z.string().min(4).max(80) }),
   z.object({ type: z.literal("ADD_STROKE"), stroke }),
   z.object({ type: z.literal("UNDO_STROKE") }),
   z.object({ type: z.literal("CLEAR_STROKES") }),
