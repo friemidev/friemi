@@ -3,12 +3,16 @@ import test from "node:test";
 import {
   advanceDrawGuessGame,
   applyDrawGuessAction,
+  canResetDrawGuessPostgame,
   createDrawGuessState,
   estimateDrawGuessDurationSeconds,
   getDrawGuessClassicHighlight,
   getChainActor,
   getChainStageCount,
+  getChainRevealPosition,
+  getChainRevealTotalMs,
   getDrawGuessViewerState,
+  getDrawGuessVoteCounts,
   isDrawGuessRoundCount,
   isDrawGuessTiming,
   normalizeDrawGuessWordBankWords,
@@ -42,7 +46,7 @@ test("round settings accept only one to three rounds and estimate both modes", (
   assert.equal(isDrawGuessRoundCount("2"), false);
   const timing = { drawSeconds: 30, guessSeconds: 20 } as const;
   assert.equal(estimateDrawGuessDurationSeconds("CLASSIC", 3, timing, 1), 195);
-  assert.equal(estimateDrawGuessDurationSeconds("CHAIN", 5, timing, 2), 485);
+  assert.equal(estimateDrawGuessDurationSeconds("CHAIN", 5, timing, 2), 539);
 });
 
 test("classic runs two complete rounds, keeps scores, then finishes", () => {
@@ -82,11 +86,10 @@ test("relay runs three chains before the final result", () => {
   if (!started.state) throw new Error("Game did not start");
   let state = started.state;
   for (let round = 1; round <= 3; round += 1) {
-    for (const phase of ["CHAIN_WORD", "CHAIN_STEP", "CHAIN_STEP", "REVEAL_VOTE"]) {
+    for (const phase of ["CHAIN_WORD", "CHAIN_STEP", "CHAIN_STEP", "MATCH_VOTE", "MATCH_RESULT", "ARTWORK_RESULT"]) {
       assert.equal(state.phase, phase);
       state = advanceDrawGuessGame(state, 3, Date.parse(state.deadlineAt!), "en");
     }
-    if (state.phase === "AUTHOR_PICK") state = advanceDrawGuessGame(state, 3, Date.parse(state.deadlineAt!), "en");
     if (round < 3) {
       assert.equal(state.phase, "ROUND_BREAK");
       assert.equal(state.roundIndex, round);
@@ -95,7 +98,7 @@ test("relay runs three chains before the final result", () => {
       assert.equal(state.phase, "CHAIN_WORD");
       assert.equal(state.roundIndex, round + 1);
       assert.equal(state.scores[0], 20 * round);
-      assert.deepEqual(state.votes, {});
+      assert.deepEqual(state.artworkVotes, {});
       assert.deepEqual(state.chains, [[], [], []]);
     }
   }
@@ -478,7 +481,7 @@ test("a late relay command cannot be applied to the next phase", () => {
   assert.equal(late.state.chains[4][1], undefined);
 });
 
-test("relay task reveals only the prior step and votes remain private until close", () => {
+test("relay word voting hides drawings, then artwork voting shows live selections", () => {
   const state = createDrawGuessState("CHAIN", 5);
   state.phase = "CHAIN_STEP";
   state.chainStage = 2;
@@ -491,26 +494,141 @@ test("relay task reveals only the prior step and votes remain private until clos
   if (!("task" in actor)) throw new Error("Wrong viewer shape");
   assert.equal(actor.task?.previous?.kind, "DRAWING");
   assert.equal("chains" in actor, false);
-  state.phase = "REVEAL_VOTE";
-  state.votes["0"] = { "1": true };
+  state.chains[0][2] = { kind: "WORD", seat: 2, system: false, value: "final guess" };
+  state.phase = "MATCH_VOTE";
+  state.votes = { "0": { "1": true } };
+  const wordVote = getDrawGuessViewerState(state, 2, 5);
+  assert.ok("chains" in wordVote);
+  assert.deepEqual(wordVote.chains?.[0].map((step) => step.kind), ["WORD", "WORD"]);
+  assert.equal(JSON.stringify(wordVote).includes("#123456"), false);
+  state.phase = "ARTWORK_VOTE";
+  state.artworkVotes = { "0": { "1": 1 } };
   const reveal = getDrawGuessViewerState(state, 2, 5);
   if (!("voteCounts" in reveal)) throw new Error("Wrong viewer shape");
-  assert.equal(reveal.voteCounts, null);
-  assert.equal("votes" in reveal, false);
+  assert.deepEqual(reveal.voteCounts?.[0], { yes: 1, no: 0, abstain: 4 });
+  assert.deepEqual(reveal.myArtworkVotes, {});
+  assert.deepEqual(reveal.artworkVotes, { "0": { "1": 1 } });
+  const voter = getDrawGuessViewerState(state, 1, 5);
+  assert.ok("myArtworkVotes" in voter);
+  assert.deepEqual(voter.myArtworkVotes, { "0": 1 });
 });
 
-test("relay waiting count and own artwork pick are visible without exposing other picks", () => {
+test("relay waiting count and final artwork pick are visible at the proper stage", () => {
   const state = createDrawGuessState("CHAIN", 5);
   state.phase = "CHAIN_WORD";
   state.chains[0][0] = { kind: "WORD", seat: 0, system: false, value: "cat" };
   const waiting = getDrawGuessViewerState(state, 1, 5);
   assert.equal(waiting.chainSubmittedCount, 1);
 
-  state.phase = "AUTHOR_PICK";
+  state.phase = "ARTWORK_VOTE";
   state.picks = { "0": 1, "1": 3 };
   const owner = getDrawGuessViewerState(state, 0, 5);
   assert.ok("picks" in owner);
-  assert.deepEqual(owner.picks, { "0": 1 });
+  assert.deepEqual(owner.picks, {});
+  state.phase = "FINISHED";
+  const finished = getDrawGuessViewerState(state, 0, 5);
+  assert.ok("picks" in finished);
+  assert.deepEqual(finished.picks, { "0": 1, "1": 3 });
+});
+
+test("legacy guess-vote totals exclude the practice helper and managed players", () => {
+  const state = createDrawGuessState("CHAIN", 3);
+  state.practiceBotSeat = 2;
+  state.phase = "FINISHED";
+  state.votes["0"] = { "0": true, "1": false, "2": true };
+  assert.deepEqual(getDrawGuessVoteCounts(state)[0], { yes: 1, no: 1, abstain: 0 });
+  state.managedSeats = [1];
+  assert.deepEqual(getDrawGuessVoteCounts(state)[0], { yes: 1, no: 0, abstain: 0 });
+});
+
+test("one player returning from results does not reset the shared room", () => {
+  assert.equal(canResetDrawGuessPostgame(["host"], ["host", "friend"]), false);
+  assert.equal(canResetDrawGuessPostgame(["host", "friend"], ["host", "friend"]), true);
+  assert.equal(canResetDrawGuessPostgame(["host", "friend"], ["host", "friend", "spectator"]), false);
+  assert.equal(canResetDrawGuessPostgame(["host", "friend"], ["host"]), true);
+  assert.equal(canResetDrawGuessPostgame([], []), false);
+});
+
+test("a saved relay drawing stays a player artwork when the timer expires", () => {
+  const state = createDrawGuessState("CHAIN", 3);
+  state.phase = "CHAIN_STEP";
+  state.chainStage = 1;
+  state.deadlineAt = new Date(5_000).toISOString();
+  const drawing = [{ color: "#123456", width: 4, points: [[0.2, 0.3], [0.4, 0.5]] as [number, number][] }];
+  state.drafts["0:1"] = drawing;
+  const advanced = advanceDrawGuessGame(state, 3, 5_000, "en");
+  assert.deepEqual(advanced.chains[0][1], { kind: "DRAWING", seat: 1, system: false, value: drawing });
+  assert.deepEqual(advanced.chains[1][1], { kind: "DRAWING", seat: 2, system: true, value: [] });
+  advanced.phase = "ARTWORK_VOTE";
+  advanced.deadlineAt = new Date(10_000).toISOString();
+  advanced.artworkVotes = { "0": { "0": 1 } };
+  const settled = advanceDrawGuessGame(advanced, 3, 10_000, "en");
+  assert.equal(settled.scores[1], 100);
+});
+
+test("relay reveal shares one timed position and resumes after a bounded pause", () => {
+  const state = createDrawGuessState("CHAIN", 3);
+  state.phase = "CHAIN_REVEAL";
+  state.chains = Array.from({ length: 3 }, (_, owner) => [
+    { kind: "WORD" as const, seat: owner, system: false, value: `word${owner}` },
+    { kind: "DRAWING" as const, seat: (owner + 1) % 3, system: false, value: [] },
+    { kind: "WORD" as const, seat: (owner + 2) % 3, system: false, value: `guess${owner}` },
+  ]);
+  assert.equal(getChainRevealTotalMs(state.chains), 42_000);
+  state.chainReveal = { elapsedMs: 0, startedAt: new Date(0).toISOString(), pausedUntil: null };
+  state.deadlineAt = new Date(42_000).toISOString();
+  assert.deepEqual(getChainRevealPosition(state, 3_000), { owner: 0, step: 1, elapsedMs: 3_000, nextBoundaryMs: 4_000, totalMs: 42_000 });
+  const tooEarly = applyDrawGuessAction(state, { type: "VOTE_ARTWORK", owner: 0, step: 1 }, 1, 3, 3_000, "en");
+  assert.equal("error" in tooEarly ? tooEarly.error : null, "NOT_ALLOWED");
+  const paused = applyDrawGuessAction(state, { type: "REVEAL_CONTROL", command: "PAUSE" }, 0, 3, 3_000, "en");
+  assert.ok(!("error" in paused));
+  assert.deepEqual(getChainRevealPosition(paused.state, 30_000), getChainRevealPosition(paused.state, 3_000));
+  assert.equal(paused.state.deadlineAt, new Date(63_000).toISOString());
+  const resumed = applyDrawGuessAction(paused.state, { type: "REVEAL_CONTROL", command: "RESUME" }, 0, 3, 30_000, "en");
+  assert.ok(!("error" in resumed));
+  assert.equal(resumed.state.deadlineAt, new Date(69_000).toISOString());
+  const skipped = applyDrawGuessAction(resumed.state, { type: "REVEAL_CONTROL", command: "NEXT" }, 0, 3, 31_000, "en");
+  assert.ok(!("error" in skipped));
+  assert.deepEqual([getChainRevealPosition(skipped.state, 31_000).owner, getChainRevealPosition(skipped.state, 31_000).step], [1, 1]);
+  const earlyVote = applyDrawGuessAction(skipped.state, { type: "VOTE_ARTWORK", owner: 0, step: 1 }, 1, 3, 31_000, "en");
+  assert.equal("error" in earlyVote ? earlyVote.error : null, "NOT_ALLOWED");
+  const hiddenReaction = applyDrawGuessAction(skipped.state, { type: "CHAIN_REACT", kind: "😂", owner: 2, step: 2 }, 1, 3, 31_100, "en");
+  assert.equal("error" in hiddenReaction ? hiddenReaction.error : null, "NOT_ALLOWED");
+  const autoResumed = advanceDrawGuessGame(paused.state, 3, 63_000, "en");
+  assert.equal(autoResumed.phase, "CHAIN_REVEAL");
+  assert.equal(autoResumed.chainReveal?.pausedUntil, null);
+  assert.equal(autoResumed.deadlineAt, new Date(102_000).toISOString());
+  const voting = advanceDrawGuessGame(autoResumed, 3, 102_000, "en");
+  assert.equal(voting.phase, "MATCH_VOTE");
+  assert.equal(voting.chainReveal, undefined);
+});
+
+test("relay cheers show live presence without revealing unfinished chains or allowing repeat reactions", () => {
+  const state = createDrawGuessState("CHAIN", 5);
+  state.phase = "CHAIN_WORD";
+  state.deadlineAt = new Date(50_000).toISOString();
+  state.chains[0][0] = { kind: "WORD", seat: 0, system: false, value: "secret cat" };
+  const waiting = applyDrawGuessAction(state, { type: "CHAIN_REACT", kind: "👏", owner: -1, step: -1 }, 0, 5, 1_000, "en");
+  assert.ok(!("error" in waiting));
+  const other = getDrawGuessViewerState(waiting.state, 1, 5);
+  assert.deepEqual(other.chainFinishedSeats, [0]);
+  assert.equal(other.chainReactions?.[0]?.kind, "👏");
+  assert.equal("chains" in other, false);
+  assert.equal(JSON.stringify(other).includes("secret cat"), false);
+  const repeated = applyDrawGuessAction(waiting.state, { type: "CHAIN_REACT", kind: "😂", owner: -1, step: -1 }, 0, 5, 2_000, "en");
+  assert.equal("error" in repeated ? repeated.error : null, "REACTION_USED");
+  const unfinished = applyDrawGuessAction(waiting.state, { type: "CHAIN_REACT", kind: "😂", owner: -1, step: -1 }, 1, 5, 2_000, "en");
+  assert.equal("error" in unfinished ? unfinished.error : null, "NOT_ALLOWED");
+
+  const reveal = structuredClone(waiting.state);
+  reveal.phase = "ARTWORK_VOTE";
+  reveal.chains[0][1] = { kind: "DRAWING", seat: 1, system: false, value: [] };
+  const reacted = applyDrawGuessAction(reveal, { type: "CHAIN_REACT", kind: "😮", owner: 0, step: 1 }, 1, 5, 3_000, "en");
+  assert.ok(!("error" in reacted));
+  const viewer = getDrawGuessViewerState(reacted.state, 2, 5);
+  assert.deepEqual(viewer.chainReactions?.map((item) => item.kind), ["😮"]);
+  if (!("voteCounts" in viewer)) throw new Error("Wrong viewer shape");
+  assert.deepEqual(viewer.voteCounts?.[0], { yes: 0, no: 0, abstain: 5 });
 });
 
 test("five-player relay completes, votes, awards drawings, and freezes scores", () => {
@@ -534,7 +652,7 @@ test("five-player relay completes, votes, awards drawings, and freezes scores", 
       state = result.state;
     }
   }
-  assert.equal(state.phase, "REVEAL_VOTE");
+  assert.equal(state.phase, "MATCH_VOTE");
   for (let owner = 0; owner < 5; owner += 1) {
     for (let voter = 0; voter < 5; voter += 1) {
       const result = applyDrawGuessAction(state, { type: "VOTE", owner, value: true }, voter, 5, now++, "en");
@@ -542,14 +660,150 @@ test("five-player relay completes, votes, awards drawings, and freezes scores", 
       state = result.state;
     }
   }
-  assert.equal(state.phase, "AUTHOR_PICK");
-  for (let owner = 0; owner < 5; owner += 1) {
-    const result = applyDrawGuessAction(state, { type: "PICK", owner, step: 1 }, owner, 5, now++, "en");
+  assert.equal(state.phase, "MATCH_RESULT");
+  assert.ok(Object.values(state.matchResults).every(Boolean));
+  state = advanceDrawGuessGame(state, 5, Date.parse(state.deadlineAt!), "en");
+  now = Date.parse(state.deadlineAt!) - 59_000;
+  assert.equal(state.phase, "ARTWORK_VOTE");
+  for (let voter = 0; voter < 5; voter += 1) {
+    const result = applyDrawGuessAction(state, { type: "VOTE_ARTWORK", owner: 0, step: 1 }, voter, 5, now++, "en");
     assert.ok(!("error" in result));
     state = result.state;
   }
+  assert.equal(state.phase, "ARTWORK_RESULT");
+  assert.ok(Object.values(state.matchResults).every(Boolean));
+  assert.deepEqual(state.scores, [180, 280, 180, 180, 180]);
+  assert.deepEqual(state.picks, { "0": 1 });
+  assert.deepEqual(state.artworkVoterSeats, [0, 1, 2, 3, 4]);
+  const resultView = getDrawGuessViewerState(state, 3, 5);
+  if (!("artworkVotes" in resultView)) throw new Error("Wrong viewer shape");
+  assert.deepEqual(resultView.artworkVotes?.["0"], { "0": 1, "1": 1, "2": 1, "3": 1, "4": 1 });
+  assert.deepEqual(resultView.picks, { "0": 1 });
+  const scoreSnapshot = [...state.scores];
+  state = advanceDrawGuessGame(state, 5, Date.parse(state.deadlineAt!) - 1, "en");
+  assert.equal(state.phase, "ARTWORK_RESULT");
+  state = advanceDrawGuessGame(state, 5, Date.parse(state.deadlineAt!), "en");
   assert.equal(state.phase, "FINISHED");
-  assert.deepEqual(state.scores, [320, 320, 320, 320, 320]);
+  assert.deepEqual(state.scores, scoreSnapshot);
+});
+
+test("a word-vote majority decides the match, then all players pick artwork", () => {
+  const state = createDrawGuessState("CHAIN", 5);
+  state.phase = "MATCH_VOTE";
+  state.deadlineAt = new Date(60_000).toISOString();
+  state.chains[0] = [
+    { kind: "WORD", seat: 0, system: false, value: "Cat" },
+    { kind: "DRAWING", seat: 1, system: false, value: [] },
+    { kind: "WORD", seat: 2, system: false, value: "kitten" },
+    { kind: "DRAWING", seat: 3, system: false, value: [] },
+    { kind: "WORD", seat: 4, system: false, value: "moon" },
+  ];
+  for (let owner = 1; owner < 5; owner += 1) state.votes[String(owner)] = { "0": false, "1": false, "2": false, "3": false, "4": false };
+  const prematureArtwork = applyDrawGuessAction(state, { type: "VOTE_ARTWORK", owner: 0, step: 1 }, 0, 5, 1_000, "en");
+  assert.equal("error" in prematureArtwork ? prematureArtwork.error : null, "NOT_ALLOWED");
+  let current = state;
+  for (let voter = 0; voter < 5; voter += 1) {
+    const result = applyDrawGuessAction(current, { type: "VOTE", owner: 0, value: voter < 3 }, voter, 5, 2_000 + voter, "en");
+    assert.ok(!("error" in result));
+    current = result.state;
+  }
+  assert.equal(current.phase, "MATCH_RESULT");
+  assert.equal(current.matchResults["0"], true);
+  assert.deepEqual(getDrawGuessVoteCounts(current)[0], { yes: 3, no: 2, abstain: 0 });
+  current = advanceDrawGuessGame(current, 5, Date.parse(current.deadlineAt!), "en");
+  assert.equal(current.phase, "ARTWORK_VOTE");
+  const invalidArtwork = applyDrawGuessAction(current, { type: "VOTE_ARTWORK", owner: 0, step: 2 }, 0, 5, Date.parse(current.deadlineAt!) - 59_000, "en");
+  assert.equal("error" in invalidArtwork ? invalidArtwork.error : null, "INVALID_ARTWORK");
+  let voteTime = Date.parse(current.deadlineAt!) - 58_000;
+  for (let voter = 0; voter < 5; voter += 1) {
+    const result = applyDrawGuessAction(current, { type: "VOTE_ARTWORK", owner: 0, step: voter < 3 ? 3 : 1 }, voter, 5, voteTime++, "en");
+    assert.ok(!("error" in result));
+    current = result.state;
+  }
+  assert.equal(current.phase, "ARTWORK_RESULT");
+  assert.equal(current.picks["0"], 3);
+  assert.deepEqual(current.scores, [20, 40, 40, 140, 40]);
+  current = advanceDrawGuessGame(current, 5, Date.parse(current.deadlineAt!), "en");
+  assert.equal(current.phase, "FINISHED");
+});
+
+test("identical words without a vote majority earn no match points or artwork prize", () => {
+  const state = createDrawGuessState("CHAIN", 3);
+  state.phase = "MATCH_VOTE";
+  state.deadlineAt = new Date(10_000).toISOString();
+  state.chains[0] = [
+    { kind: "WORD", seat: 0, system: false, value: "Moon" },
+    { kind: "DRAWING", seat: 1, system: false, value: [] },
+    { kind: "WORD", seat: 2, system: false, value: "moon" },
+  ];
+  const result = advanceDrawGuessGame(state, 3, 10_000, "en");
+  assert.equal(result.phase, "MATCH_RESULT");
+  assert.equal(result.matchResults["0"], false);
+  const artwork = advanceDrawGuessGame(result, 3, Date.parse(result.deadlineAt!), "en");
+  const resultPhase = advanceDrawGuessGame(artwork, 3, Date.parse(artwork.deadlineAt!), "en");
+  assert.equal(resultPhase.phase, "ARTWORK_RESULT");
+  const finished = advanceDrawGuessGame(resultPhase, 3, Date.parse(resultPhase.deadlineAt!), "en");
+  assert.equal(finished.phase, "FINISHED");
+  assert.equal(finished.matchResults["0"], false);
+  assert.equal(finished.picks["0"], undefined);
+  assert.deepEqual(finished.scores, [0, 0, 0]);
+});
+
+test("a tied word vote does not award match points even when the words are identical", () => {
+  const state = createDrawGuessState("CHAIN", 4);
+  state.phase = "MATCH_VOTE";
+  state.deadlineAt = new Date(60_000).toISOString();
+  state.chains[0] = [
+    { kind: "WORD", seat: 0, system: false, value: "Moon" },
+    { kind: "DRAWING", seat: 1, system: false, value: [] },
+    { kind: "WORD", seat: 2, system: false, value: "moon" },
+  ];
+  for (let owner = 1; owner < 4; owner += 1) state.votes[String(owner)] = { "0": false, "1": false, "2": false, "3": false };
+  let current = state;
+  for (let seat = 0; seat < 4; seat += 1) {
+    const result = applyDrawGuessAction(current, { type: "VOTE", owner: 0, value: seat < 2 }, seat, 4, 1_000 + seat, "en");
+    assert.ok(!("error" in result));
+    current = result.state;
+  }
+  assert.equal(current.phase, "MATCH_RESULT");
+  assert.equal(current.matchResults["0"], false);
+  assert.deepEqual(getDrawGuessVoteCounts(current)[0], { yes: 2, no: 2, abstain: 0 });
+  current.managedSeats = [0];
+  assert.deepEqual(current.matchVoterSeats, [0, 1, 2, 3]);
+  assert.deepEqual(getDrawGuessVoteCounts(current)[0], { yes: 2, no: 2, abstain: 0 });
+});
+
+test("each player has one artwork vote across the round and can change it", () => {
+  const state = createDrawGuessState("CHAIN", 4);
+  state.phase = "ARTWORK_VOTE";
+  state.deadlineAt = new Date(60_000).toISOString();
+  state.chains[0] = [
+    { kind: "WORD", seat: 0, system: false, value: "Moon" },
+    { kind: "DRAWING", seat: 1, system: false, value: [] },
+  ];
+  state.chains[1] = [
+    { kind: "WORD", seat: 1, system: false, value: "Cat" },
+    { kind: "DRAWING", seat: 2, system: false, value: [] },
+  ];
+  let current = state;
+  for (const [seat, owner] of [[0, 0], [0, 1], [1, 0], [2, 1], [3, 0]]) {
+    const result = applyDrawGuessAction(current, { type: "VOTE_ARTWORK", owner, step: 1 }, seat, 4, 1_000 + seat, "en");
+    assert.ok(!("error" in result));
+    current = result.state;
+    if (seat === 0 && owner === 1) {
+      assert.equal(current.artworkVotes?.["0"]?.["0"], undefined);
+      const viewer = getDrawGuessViewerState(current, 0, 4);
+      assert.ok("myArtworkVotes" in viewer);
+      assert.deepEqual(viewer.myArtworkVotes, { "1": 1 });
+    }
+  }
+  assert.equal(current.phase, "ARTWORK_RESULT");
+  assert.deepEqual(current.picks, { "0": 1 });
+  assert.deepEqual(current.scores, [0, 100, 0, 0]);
+  const lateVote = applyDrawGuessAction(current, { type: "VOTE_ARTWORK", owner: 1, step: 1 }, 0, 4, Date.parse(current.deadlineAt!) - 1, "en");
+  assert.equal("error" in lateVote ? lateVote.error : null, "NOT_ALLOWED");
+  current = advanceDrawGuessGame(current, 4, Date.parse(current.deadlineAt!), "en");
+  assert.equal(current.phase, "FINISHED");
 });
 
 test("Preview two-person relay uses a third system seat without self-guessing", () => {
@@ -591,20 +845,49 @@ test("Preview two-person relay uses a third system seat without self-guessing", 
     assert.ok(!("error" in submitted));
     state = submitted.state;
   }
-  assert.equal(state.phase, "REVEAL_VOTE");
+  assert.equal(state.phase, "MATCH_VOTE");
+  let matchTime = Date.parse(state.deadlineAt!) - 59_000;
   for (let owner = 0; owner < count; owner += 1) {
     for (let seat = 0; seat < 2; seat += 1) {
-      const voted = applyDrawGuessAction(state, { type: "VOTE", owner, value: true }, seat, count, 400 + owner * 2 + seat, "zh-CN");
+      const voted = applyDrawGuessAction(state, { type: "VOTE", owner, value: true }, seat, count, matchTime++, "zh-CN");
       assert.ok(!("error" in voted));
       state = voted.state;
     }
   }
-  assert.equal(state.phase, "AUTHOR_PICK");
+  assert.equal(state.phase, "MATCH_RESULT");
   assert.ok(Object.values(state.matchResults).every(Boolean));
-  const picked = applyDrawGuessAction(state, { type: "PICK", owner: 0, step: 1 }, 0, count, 500, "zh-CN");
-  assert.ok(!("error" in picked));
-  state = picked.state;
-  assert.equal(state.phase, "FINISHED");
+  assert.deepEqual(getDrawGuessVoteCounts(state)[0], { yes: 2, no: 0, abstain: 0 });
+  state = advanceDrawGuessGame(state, count, Date.parse(state.deadlineAt!), "zh-CN");
+  assert.equal(state.phase, "ARTWORK_VOTE");
+  let voteTime = Date.parse(state.deadlineAt!) - 59_000;
+  for (let seat = 0; seat < 2; seat += 1) {
+    const voted = applyDrawGuessAction(state, { type: "VOTE_ARTWORK", owner: 0, step: 1 }, seat, count, voteTime++, "zh-CN");
+    assert.ok(!("error" in voted));
+    state = voted.state;
+  }
+  assert.equal(state.phase, "ARTWORK_RESULT");
+  assert.ok(Object.values(state.matchResults).every(Boolean));
   assert.equal(state.scores[botSeat], 0);
   assert.equal(state.picks[String(botSeat)], undefined);
+  state = advanceDrawGuessGame(state, count, Date.parse(state.deadlineAt!), "zh-CN");
+  assert.equal(state.phase, "FINISHED");
+});
+
+test("eight-player relay with timeouts completes three rounds without waiting forever", () => {
+  const started = startDrawGuessGame(createDrawGuessState("CHAIN", 8, testBank, { drawSeconds: 30, guessSeconds: 20 }, 3), 0, "en");
+  if (!started.state) throw new Error("Game did not start");
+  let state = started.state;
+  const seen = new Set<string>();
+  for (let safety = 0; safety < 60 && state.phase !== "FINISHED"; safety += 1) {
+    seen.add(state.phase);
+    assert.ok(state.deadlineAt, `Missing deadline in ${state.phase}`);
+    state = advanceDrawGuessGame(state, 8, Date.parse(state.deadlineAt), "en");
+  }
+  assert.equal(state.phase, "FINISHED");
+  assert.equal(state.gameNumber, 3);
+  assert.ok(seen.has("MATCH_VOTE"));
+  assert.ok(seen.has("MATCH_RESULT"));
+  assert.ok(seen.has("ARTWORK_RESULT"));
+  assert.ok(seen.has("ROUND_BREAK"));
+  assert.deepEqual(state.scores, Array(8).fill(0));
 });

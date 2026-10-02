@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock3, Copy, Crown, LoaderCircle, Send, Sparkles, Trash2, Trophy, UsersRound, X } from "lucide-react";
-import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
+import { DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
@@ -14,14 +14,18 @@ import { DrawGuessVolumeControls } from "@/features/game-tools/components/DrawGu
 import { playDrawGuessSound, setDrawGuessMusicEnabled, setDrawGuessMusicPhase, shouldPlayDrawGuessMusic, stopDrawGuessMusic } from "@/features/game-tools/drawGuessSound";
 import { DrawGuessClassicChat } from "@/features/game-tools/components/DrawGuessClassicChat";
 import { DrawGuessClassicRecap } from "@/features/game-tools/components/DrawGuessClassicRecap";
-import { DrawGuessChainReview } from "@/features/game-tools/components/DrawGuessChainReview";
+import { DrawGuessArtworkVote } from "@/features/game-tools/components/DrawGuessArtworkVote";
+import { DrawGuessChainReveal } from "@/features/game-tools/components/DrawGuessChainReveal";
+import { DrawGuessMatchVote } from "@/features/game-tools/components/DrawGuessMatchVote";
+import { DrawGuessChainResult } from "@/features/game-tools/components/DrawGuessChainResult";
+import { DrawGuessChainWaiting } from "@/features/game-tools/components/DrawGuessChainWaiting";
 import { DrawGuessLobby } from "@/features/game-tools/components/DrawGuessLobby";
 import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
 import { DrawGuessPodium } from "@/features/game-tools/components/DrawGuessPodium";
 import { DrawGuessRoundBreak } from "@/features/game-tools/components/DrawGuessRoundBreak";
-import { DrawGuessReportButton } from "@/features/game-tools/components/DrawGuessReportButton";
+import { DrawGuessPostgameWaiting } from "@/features/game-tools/components/DrawGuessPostgameWaiting";
 import { useDrawGuessInk } from "@/features/game-tools/hooks/useDrawGuessInk";
-import { getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChatMessage, type DrawGuessClassicHighlight, type DrawGuessMode, type DrawGuessPhase, type DrawGuessReaction, type DrawGuessReactionKind, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { getChainStageCount, getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChainReaction, type DrawGuessChainReactionKind, type DrawGuessChatMessage, type DrawGuessClassicHighlight, type DrawGuessMode, type DrawGuessPhase, type DrawGuessReaction, type DrawGuessReactionKind, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_ROOM_EVENT, getDrawGuessRealtimeBrowserConfig, getDrawGuessRoomTopic } from "@/features/game-tools/drawGuessRealtime";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "@/features/game-tools/activeGameToolRoomStorage";
@@ -38,7 +42,9 @@ export type DrawGuessRoomView = {
   requiredPlayers?: number;
   practiceBotSeat?: number;
   revision: number;
-  seats: { id: string; name: string; number: number; avatarUrl?: string | null; catId?: string | null; ready?: boolean; isHost: boolean; isSystem?: boolean; managed?: boolean }[];
+  returnedToLobby?: boolean;
+  postgameReturnProgress?: { done: number; total: number };
+  seats: { id: string; name: string; number: number; avatarUrl?: string | null; catId?: string | null; ready?: boolean; returned?: boolean; present?: boolean; isHost: boolean; isSystem?: boolean; managed?: boolean }[];
   status: string;
   viewerSeat: number;
   wordBank?: DrawGuessWordBankSnapshot | null;
@@ -46,6 +52,10 @@ export type DrawGuessRoomView = {
     answer?: string | null;
     chainStage: number;
     chainSubmittedCount?: number;
+    chainFinishedSeats?: number[];
+    chainReactions?: DrawGuessChainReaction[];
+    chainReveal?: { elapsedMs: number; startedAt: string | null; pausedUntil: string | null };
+    myChainReactionTargets?: string[];
     chains?: ChainStep[][];
     chat?: DrawGuessChatMessage[];
     classicHighlight?: DrawGuessClassicHighlight | null;
@@ -58,6 +68,7 @@ export type DrawGuessRoomView = {
     guesses?: Record<string, { at: string; points: number }>;
     inkSeq?: number;
     matchResults?: Record<string, boolean> | null;
+    matchVoterSeats?: number[];
     mode: DrawGuessMode;
     options?: string[];
     phase: DrawGuessPhase;
@@ -66,12 +77,17 @@ export type DrawGuessRoomView = {
     reactionCounts?: Partial<Record<DrawGuessReactionKind, number>>;
     picks?: Record<string, number>;
     scores: number[];
+    serverNow?: string;
     managedSeats?: number[];
     task?: { kind: "WORD" | "DRAWING"; owner?: number; previous?: ChainStep | null; submitted: boolean; draft?: DrawStroke[]; options?: string[] } | null;
     timing?: DrawGuessTiming;
     turnIndex: number;
     voteCounts?: { yes: number; no: number; abstain: number }[] | null;
     votedOwners?: number[];
+    myArtworkVotes?: Record<string, number>;
+    artworkVotes?: Record<string, Record<string, number>>;
+    artworkVoterSeats?: number[];
+    matchVotes?: Record<string, Record<string, boolean>>;
   };
 };
 
@@ -114,7 +130,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const statusCopy = STATUS_COPY[locale as keyof typeof STATUS_COPY] ?? STATUS_COPY.en;
   const bankCopy = BANK_COPY[locale as keyof typeof BANK_COPY] ?? BANK_COPY.en;
   const [room, setRoom] = useState(initialRoom);
-  useEffect(() => setDrawGuessMusicPhase(room.view.phase === "LOBBY" ? "lobby" : "game"), [room.view.phase]);
+  useEffect(() => setDrawGuessMusicPhase(room.view.phase === "LOBBY" || room.returnedToLobby ? "lobby" : "game"), [room.returnedToLobby, room.view.phase]);
   const practiceCopy = locale === "en" ? { note: "Two-player practice · helper uses test drawings", people: "people", botClue: "Automatic test drawing" }
     : locale === "fr" ? { note: "À deux · le joueur automatique utilise des dessins tests", people: "personnes", botClue: "Dessin automatique de test" }
     : { note: "双人练习 · 系统画作仅供测试", people: "位真人", botClue: "系统测试画作" };
@@ -143,6 +159,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const warmedInkTurn = useRef("");
   const latestRoom = useRef(room);
   latestRoom.current = room;
+  const serverClockOffset = useRef(initialRoom.view.serverNow ? Date.parse(initialRoom.view.serverNow) - Date.now() : 0);
   const leaveTimer = useRef<number | null>(null);
   useEffect(() => {
     if (leaveTimer.current !== null) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
@@ -174,6 +191,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   const inkYieldForDraft = useRef(false);
   const currentStroke = useRef<DrawStroke | null>(null);
   const strokesRef = useRef(strokes);
+  const lastChainDraft = useRef({ key: "", hash: "", at: 0 });
+  const chainDraftSaving = useRef(false);
   const lastInkSeq = useRef(initialRoom.view.inkSeq ?? 0);
   const classicEdited = useRef(false);
   const classicDraftDirty = useRef(false);
@@ -233,6 +252,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     }
     const running = (async () => {
       try {
+        const sentAt = Date.now();
         const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, {
           cache: "no-store",
           headers: { "if-none-match": `W/"draw-guess-${latestRoom.current.revision}"` },
@@ -241,6 +261,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
           setRefreshFailed(false);
         } else if (response.ok) {
           const result = await response.json() as { room: DrawGuessRoomView };
+          if (result.room?.view.serverNow) serverClockOffset.current = Date.parse(result.room.view.serverNow) - (sentAt + Date.now()) / 2;
           if (result.room && result.room.revision >= latestRoom.current.revision) setRoom(result.room);
           setRefreshFailed(false);
         } else {
@@ -277,7 +298,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   useEffect(() => {
     if (removed) return;
-    const intervalMs = room.view.phase === "LOBBY" ? 2_000 : syncStatus === "CONNECTED" ? 10_000 : 2_000;
+    const revealSoon = room.mode === "CHAIN" && (["CHAIN_REVEAL", "MATCH_VOTE", "MATCH_RESULT", "ARTWORK_VOTE", "ARTWORK_RESULT"].includes(room.view.phase) || room.view.phase === "CHAIN_STEP" && room.view.chainStage >= getChainStageCount(room.playerCount));
+    const intervalMs = room.view.phase === "LOBBY" || revealSoon ? 2_000 : syncStatus === "CONNECTED" ? 10_000 : 2_000;
     // Spread safety polls across clients that subscribe to the same room at once.
     const poll = () => { void refresh(); };
     let intervalId: number | null = null;
@@ -292,7 +314,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
       if (intervalId !== null) window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
     };
-  }, [refresh, removed, room.view.phase, syncStatus]);
+  }, [refresh, removed, room.mode, room.playerCount, room.view.chainStage, room.view.phase, syncStatus]);
 
   useEffect(() => {
     const config = getDrawGuessRealtimeBrowserConfig();
@@ -323,6 +345,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const nextStrokes = room.view.phase === "CHAIN_STEP" ? room.view.task?.draft ?? [] : room.view.drawing ?? [];
     strokesRef.current = nextStrokes;
     setStrokes(nextStrokes);
+    lastChainDraft.current = { key: `${room.id}:${room.view.gameNumber}:${room.view.chainStage}`, hash: JSON.stringify(nextStrokes), at: 0 };
   }, [room.view]);
 
   useEffect(() => {
@@ -343,7 +366,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   const send = useCallback((action: DrawGuessAction | { type: "START" } | { type: "REMATCH" }) => {
     const run = async () => {
-      setBusy(true); setError("");
+      const quietDraft = action.type === "SAVE_DRAFT";
+      if (!quietDraft) { setBusy(true); setError(""); }
       try {
         const response = await fetch(`/api/game-tools/draw-guess/rooms/${room.id}/actions`, {
           method: "POST", headers: { "content-type": "application/json" },
@@ -359,10 +383,10 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
         if (action.type === "GUESS" && typeof result.correct === "boolean") playDrawGuessSound(result.correct ? "correct" : "wrong");
-        else if (action.type === "SUBMIT_STEP" || action.type === "CHOOSE_WORD" || action.type === "VOTE") playDrawGuessSound("ready");
+        else if (action.type === "SUBMIT_STEP" || action.type === "CHOOSE_WORD" || action.type === "VOTE_ARTWORK" || action.type === "VOTE") playDrawGuessSound("ready");
         else if (action.type === "PICK") playDrawGuessSound("score");
         if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(false);
-        await refresh(true);
+        if (!quietDraft) await refresh(true);
         return result as { correct?: boolean; points?: number };
       } catch (cause) {
         const code = cause instanceof Error ? cause.message : "UNKNOWN";
@@ -370,24 +394,28 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         const expectedDraftEnd = action.type === "SAVE_CLASSIC_DRAFT" && code === "DRAW_TIME_ENDED";
         if (phaseChanged || expectedDraftEnd) {
           setError("");
-          await refresh(true);
+          if (!quietDraft) await refresh(true);
           return null;
         }
         if (action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT") setDraftFailed(true);
-        setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_DRAFT" || action.type === "SAVE_CLASSIC_DRAFT" ? statusCopy.draftFailed : t.error);
+        if (quietDraft) return null;
+        setError(code === "TOO_FAST" ? t.tooFast : code === "SIGN_IN_REQUIRED" ? statusCopy.signIn : code === "WAIT_FOR_PLAYERS" ? statusCopy.missing : code === "CHAIN_NOT_ENABLED" ? statusCopy.closed : code === "INVALID_WORD" ? statusCopy.invalid : code === "RATE_LIMITED" ? statusCopy.rate : action.type === "SAVE_CLASSIC_DRAFT" ? statusCopy.draftFailed : t.error);
         await refresh(true);
         return null;
       }
-      finally { setBusy(false); }
+      finally { if (!quietDraft) setBusy(false); }
     };
     const queued = mutationQueue.current.then(run, run);
     mutationQueue.current = queued.then(() => undefined, () => undefined);
     return queued;
   }, [refresh, room.id, room.view.chainStage, room.view.gameNumber, room.view.phase, room.view.turnIndex, statusCopy, t.error, t.tooFast]);
 
-  const sendSocialAction = useCallback(async (action: { type: "REACT"; kind: DrawGuessReactionKind } | { type: "LAUGH_GUESS"; messageId: string }) => {
+  const sendSocialAction = useCallback(async (action: { type: "REACT"; kind: DrawGuessReactionKind } | { type: "LAUGH_GUESS"; messageId: string } | { type: "CHAIN_REACT"; kind: DrawGuessChainReactionKind; owner: number; step: number }) => {
     const current = latestRoom.current;
-    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS") return false;
+    const chainReaction = action.type === "CHAIN_REACT";
+    if (chainReaction ? current.mode !== "CHAIN" || !["CHAIN_WORD", "CHAIN_STEP", "CHAIN_REVEAL", "ARTWORK_VOTE"].includes(current.view.phase)
+      : current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS") return false;
+    if (chainReaction) playDrawGuessSound("cat");
     try {
       const response = await fetch(`/api/game-tools/draw-guess/rooms/${current.id}/actions`, {
         method: "POST", headers: { "content-type": "application/json" },
@@ -458,13 +486,33 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }, [draftFailed, flushClassicDraft, room.mode, room.view.phase, room.view.turnIndex, room.viewerSeat]);
 
   useEffect(() => {
-    if (room.view.phase !== "CHAIN_STEP" || room.view.task?.kind !== "DRAWING" || room.view.task.submitted || !strokes.length) return;
-    const id = window.setTimeout(() => { void send({ type: "SAVE_DRAFT", strokes }); }, 5_000);
-    return () => window.clearTimeout(id);
-  }, [room.view.phase, room.view.chainStage, room.view.task?.kind, room.view.task?.submitted, strokes, send]);
+    if (room.view.phase !== "CHAIN_STEP" || room.view.task?.kind !== "DRAWING" || room.view.task.submitted) return;
+    const key = `${room.id}:${room.view.gameNumber}:${room.view.chainStage}`;
+    const saveIfChanged = () => {
+      const partial = currentStroke.current;
+      const snapshot = partial && strokesRef.current.length < 120 ? [...strokesRef.current, partial] : strokesRef.current;
+      const hash = JSON.stringify(snapshot);
+      const last = lastChainDraft.current;
+      if (last.key !== key) lastChainDraft.current = { key, hash: "", at: 0 };
+      if (lastChainDraft.current.hash === hash) return;
+      if (chainDraftSaving.current) return;
+      const at = Date.now();
+      const remaining = room.view.deadlineAt ? Date.parse(room.view.deadlineAt) - at : Infinity;
+      if (at - lastChainDraft.current.at < 3_000 && remaining > 3_000) return;
+      lastChainDraft.current = { key, hash, at };
+      chainDraftSaving.current = true;
+      void sendRef.current({ type: "SAVE_DRAFT", strokes: snapshot }).then((result) => {
+        if (!result && lastChainDraft.current.key === key && lastChainDraft.current.hash === hash) lastChainDraft.current.hash = "";
+      }).finally(() => { chainDraftSaving.current = false; });
+    };
+    saveIfChanged();
+    const id = window.setInterval(saveIfChanged, 1_000);
+    return () => window.clearInterval(id);
+  }, [room.id, room.view.phase, room.view.gameNumber, room.view.chainStage, room.view.task?.kind, room.view.task?.submitted, room.view.deadlineAt, strokes]);
 
-  const timer = formatTimer(room.view.deadlineAt, now);
-  const deadlinePassed = Boolean(room.view.deadlineAt && now >= Date.parse(room.view.deadlineAt));
+  const roomNow = now + serverClockOffset.current;
+  const timer = formatTimer(room.view.deadlineAt, roomNow);
+  const deadlinePassed = Boolean(room.view.deadlineAt && roomNow >= Date.parse(room.view.deadlineAt));
   const currentArtist = room.seats.find((seat) => seat.number === room.view.turnIndex + 1);
   const viewerCatId = room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.catId;
   const amArtist = room.viewerSeat === room.view.turnIndex;
@@ -488,6 +536,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     if (guessMoodTimer.current !== null) window.clearTimeout(guessMoodTimer.current);
     if (!hadPreviousPhase) return;
     if (room.view.phase === "ROUND_BREAK" || room.view.phase === "WORD_SELECT" && room.view.turnIndex > 0 || room.view.phase === "CHAIN_STEP") playDrawGuessSound("next");
+    else if (room.view.phase === "MATCH_VOTE" || room.view.phase === "CHAIN_REVEAL") playDrawGuessSound("start");
+    else if (room.view.phase === "ARTWORK_RESULT") playDrawGuessSound("score");
     else if (room.view.phase === "FINISHED") playDrawGuessSound("finish");
     else if ((room.view.phase === "WORD_SELECT" && room.view.turnIndex === 0 || room.view.phase === "CHAIN_WORD") && !room.isHost) playDrawGuessSound("start");
     setError("");
@@ -586,8 +636,8 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   }
 
   function addStroke(stroke: DrawStroke) {
-    if (strokesRef.current.length >= 120) return;
     currentStroke.current = null;
+    if (strokesRef.current.length >= 120) return;
     const nextStrokes = [...strokesRef.current, stroke];
     strokesRef.current = nextStrokes;
     setStrokes(nextStrokes);
@@ -631,6 +681,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
   if (removed) return <DrawGuessKickedNotice catId={viewerCatId} locale={locale} roomId={room.id} />;
 
   if (room.view.phase === "LOBBY") return <DrawGuessLobby locale={locale} room={room} onRefresh={() => refresh(true)} onLeave={leaveRoom} />;
+  if (room.view.phase === "FINISHED" && room.returnedToLobby) return <DrawGuessPostgameWaiting locale={locale} room={room} onLeave={leaveRoom} />;
 
   if (immersivePhase) {
     const isClassic = room.mode === "CLASSIC";
@@ -642,10 +693,12 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const classicDrawingOpen = !room.view.drawDeadlineAt || now < Date.parse(room.view.drawDeadlineAt);
     const isClassicDrawing = isClassicRound && room.view.phase === "DRAW_GUESS" && amArtist && classicDrawingOpen;
     const classicArtistWaiting = isClassicRound && room.view.phase === "DRAW_GUESS" && amArtist && !classicDrawingOpen;
-    const stageTitle = room.view.phase === "WORD_SELECT" ? (amArtist ? t.select : `${currentArtist?.name ?? ""} · ${t.select}`)
+    const stageTitle = room.mode === "CHAIN" && room.viewerSeat < 0 ? locale === "zh-CN" ? "接龙进行中" : locale === "fr" ? "La chaîne avance" : "Picture chain underway"
+      : room.view.phase === "WORD_SELECT" ? (amArtist ? t.select : `${currentArtist?.name ?? ""} · ${t.select}`)
       : room.view.phase === "TURN_REVEAL" ? t.answer
       : isClassicRound ? (amArtist ? classicArtistWaiting ? t.drawTimeUp : t.draw : t.guessing)
-      : room.view.phase === "CHAIN_WORD" ? room.wordBank ? bankCopy.choose : t.word
+      : room.view.phase === "CHAIN_WORD" ? chainTask?.submitted ? t.wait : room.wordBank ? bankCopy.choose : t.word
+      : chainTask?.submitted ? t.wait
       : chainTask?.kind === "DRAWING" ? t.nextDraw : t.nextGuess;
     const stageProgress = isClassic ? `${room.view.turnIndex + 1} / ${room.playerCount}`
       : `${t.stage} ${Math.max(1, room.view.chainStage)}${room.view.chainSubmittedCount === undefined ? "" : ` · ${room.view.chainSubmittedCount}/${room.playerCount} ${bankCopy.progress}`}`;
@@ -692,13 +745,13 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
           {isClassicDrawing ? <DrawGuessCanvas catId={viewerCatId} compact fullscreenPrompt={room.view.answer ?? undefined} fullscreenTimer={stageTimer} locale={locale} strokes={strokes} onProgress={progressStroke} onStroke={addStroke} onUndo={() => replaceClassicDrawing(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} /> : null}
           {isClassicRound && !isClassicDrawing ? <DrawGuessCanvas catId={currentArtist?.catId} compact disabled strokes={amArtist ? strokes : room.view.phase === "DRAW_GUESS" ? ink.drawing : room.view.drawing ?? []} /> : null}
-          {isChainDrawing ? <DrawGuessCanvas catId={viewerCatId} compact fullscreenPrompt={chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : undefined} fullscreenTimer={stageTimer} locale={locale} strokes={strokes} onStroke={addStroke} onUndo={() => updateStrokes(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} onSubmit={() => void send({ type: "SUBMIT_STEP", strokes })} submitDisabled={busy} /> : null}
+          {isChainDrawing ? <DrawGuessCanvas catId={viewerCatId} compact fullscreenPrompt={chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : undefined} fullscreenTimer={stageTimer} locale={locale} strokes={strokes} onProgress={(stroke) => { currentStroke.current = stroke; }} onStroke={addStroke} onUndo={() => updateStrokes(strokesRef.current.slice(0, -1))} onClear={() => setConfirmClear(true)} onSubmit={() => void send({ type: "SUBMIT_STEP", strokes })} submitDisabled={busy} /> : null}
           {isChainGuessing && chainTask?.previous?.kind === "DRAWING" ? <DrawGuessCanvas catId={viewerCatId} compact disabled strokes={chainTask.previous.value} /> : null}
 
           {room.view.phase === "WORD_SELECT" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><div className="draw-guess-logo-in"><DrawGuessPet catId={currentArtist?.catId} locale={locale} mood="happy" size={96} /></div>{!amArtist ? <p className="text-sm text-[#63758D]">{t.wait}</p> : null}{amArtist ? <div className="flex flex-wrap justify-center gap-2">{room.view.options?.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "CHOOSE_WORD", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
-          {room.view.phase === "CHAIN_WORD" ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><div className="draw-guess-logo-in"><DrawGuessPet catId={viewerCatId} locale={locale} mood="happy" size={96} /></div>{room.wordBank ? <p className="text-sm font-semibold text-[#63758D]">{room.wordBank.title}</p> : null}{chainTask?.submitted ? <p className="draw-guess-check-pop flex items-center gap-2 text-sm font-black text-[#3E6FA8]"><Check className="h-5 w-5" />{t.submitted}</p> : chainTask?.options?.length ? <div className="flex flex-wrap justify-center gap-2">{chainTask.options.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "SUBMIT_STEP", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
-          {isChainStep && chainTask?.submitted ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><span className="grid h-16 w-16 place-items-center rounded-full bg-[#ECF4FB] text-[#3E6FA8]"><Check className="h-8 w-8" /></span><p className="text-lg font-bold">{t.submitted}</p><p className="text-sm text-[#63758D]">{t.wait}</p></div> : null}
-          {isChainStep && !chainTask ? <div role="status" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center text-[#63758D]"><LoaderCircle className="h-7 w-7 animate-spin" /><p className="text-sm font-semibold">{t.wait}</p></div> : null}
+          {room.view.phase === "CHAIN_WORD" ? chainTask?.submitted || room.viewerSeat < 0 ? <DrawGuessChainWaiting locale={locale} onReact={room.viewerSeat >= 0 ? (kind) => sendSocialAction({ type: "CHAIN_REACT", kind, owner: -1, step: -1 }) : undefined} room={room} /> : <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><div className="draw-guess-logo-in"><DrawGuessPet catId={viewerCatId} locale={locale} mood="happy" size={96} /></div>{room.wordBank ? <p className="text-sm font-semibold text-[#63758D]">{room.wordBank.title}</p> : null}{chainTask?.options?.length ? <div className="flex flex-wrap justify-center gap-2">{chainTask.options.map((word) => <ActionButton key={word} disabled={busy} onClick={() => void send({ type: "SUBMIT_STEP", value: word })}>{word}</ActionButton>)}</div> : null}</div> : null}
+          {isChainStep && (chainTask?.submitted || room.viewerSeat < 0) ? <DrawGuessChainWaiting locale={locale} onReact={room.viewerSeat >= 0 ? (kind) => sendSocialAction({ type: "CHAIN_REACT", kind, owner: -1, step: -1 }) : undefined} room={room} /> : null}
+          {isChainStep && !chainTask && room.viewerSeat >= 0 ? <div role="status" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center text-[#63758D]"><LoaderCircle className="h-7 w-7 animate-spin" /><p className="text-sm font-semibold">{t.wait}</p></div> : null}
           {isChainGuessing && chainTask?.previous?.system && room.practiceBotSeat !== undefined ? <p className="shrink-0 px-2 pt-2 text-xs font-semibold text-[#506E9E]">{practiceCopy.botClue}</p> : null}
           {showAnswerCelebration ? <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[#FFFCF5]/90 px-4 text-center backdrop-blur-[2px]">
             <span aria-hidden="true" className="absolute left-[12%] top-[27%] text-xl text-[#BED6EC] draw-guess-answer-spark">✦</span>
@@ -757,16 +810,13 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
       <section className="min-w-0 space-y-5">
         {room.view.phase === "ROUND_BREAK" ? <DrawGuessRoundBreak locale={locale} now={now} room={room} /> : null}
-        {room.view.phase === "FINISHED" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} locale={locale} onReturn={() => void returnToLobby()} returnLabel={locale === "zh-CN" ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} room={room} scoreLabel={t.score} showRecapLink={room.mode === "CLASSIC" && Boolean(room.view.classicHighlight)} /> : null}
+        {room.view.phase === "FINISHED" && room.mode === "CLASSIC" ? <DrawGuessPodium busy={busy} finishLabel={t.finish} locale={locale} onReturn={() => void returnToLobby()} returnLabel={locale === "zh-CN" ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} room={room} scoreLabel={t.score} showRecapLink={Boolean(room.view.classicHighlight)} /> : null}
+        {room.view.phase === "FINISHED" && room.mode === "CHAIN" ? <DrawGuessChainResult key={room.view.gameNumber} busy={busy} locale={locale} onReturn={() => void returnToLobby()} room={room} /> : null}
         {room.mode === "CLASSIC" && room.view.phase === "FINISHED" ? <DrawGuessClassicRecap code={room.code} highlight={room.view.classicHighlight} historyHref={`${withLocale(locale, `/game-tools/draw-guess/rooms/${room.id}/history`)}#artwork-${room.view.gameNumber}`} locale={locale} roomId={room.id} roundNumber={room.view.gameNumber} seats={room.seats} /> : null}
 
-        {room.mode === "CHAIN" && (room.view.phase === "REVEAL_VOTE" || room.view.phase === "AUTHOR_PICK") ? <DrawGuessChainReview busy={busy} locale={locale} room={room} onVote={(owner, value) => send({ type: "VOTE", owner, value })} onPick={(owner, step) => send({ type: "PICK", owner, step })} /> : null}
-
-        {room.mode === "CHAIN" && room.view.phase === "FINISHED" ? <div className="space-y-5">{room.view.chains?.map((chain, owner) => <article key={owner} className="rounded-[1.6rem] border border-[#DCE8F2] bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{room.seats[owner]?.name ?? `#${owner + 1}`} · {t.chain}</h2>{room.view.matchResults ? <span className={`rounded-full px-3 py-1 text-xs font-bold ${room.view.matchResults[String(owner)] ? "bg-[#ECF4FB] text-[#3E6FA8]" : "bg-[#E8F2FB] text-[#506E9E]"}`}>{room.view.matchResults[String(owner)] ? t.match : t.mismatch}</span> : null}</div><div className="mt-4 space-y-3">{chain.map((step, index) => <div key={index} className="rounded-2xl bg-[#F7FAFE] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#65748A]"><span className="rounded-full bg-white px-2 py-1">{index + 1}</span>{room.seats[step.seat]?.name}{step.system ? ` · ${t.system}` : ""}{room.view.picks?.[String(owner)] === index ? <span className="ml-auto text-[#3C70A9]">★ {t.picked}</span> : null}</div>{step.kind === "WORD" ? <p className="py-2 text-center text-xl font-bold">{step.value}</p> : <div className="aspect-[10/7] max-w-xl overflow-hidden rounded-xl border border-[#DCE8F2]"><DrawGuessArtwork strokes={step.value} /></div>}{room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && step.kind === "DRAWING" && !step.system ? <button type="button" disabled={busy || room.view.picks?.[String(owner)] !== undefined} onClick={() => void send({ type: "PICK", owner, step: index })} className="mt-2 rounded-lg bg-[#BED6EC] px-3 py-2 text-xs font-bold text-[#30425C] disabled:opacity-50">★ {t.pick}</button> : null}{!step.system ? <DrawGuessReportButton kind={step.kind} locale={locale} ownerSeat={owner} roomId={room.id} roundNumber={room.view.gameNumber} stage={index} /> : null}</div>)}</div>
-          {room.view.phase === "REVEAL_VOTE" ? <div className="mt-4 border-t border-[#DCE8F2] pt-4"><p className="mb-3 text-sm font-bold">{t.vote}</p><div className="flex flex-wrap gap-2"><ActionButton disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: true })}>{t.yes}</ActionButton><ActionButton tone="strong" disabled={busy} onClick={() => void send({ type: "VOTE", owner, value: false })}>{t.no}</ActionButton>{room.view.votedOwners?.includes(owner) ? <span className="self-center text-xs text-[#3E6FA8]">✓ {t.saved}</span> : null}</div></div> : null}
-          {room.view.voteCounts?.[owner] ? <p className="mt-4 text-xs text-[#63758D]">{t.result}: {t.yes} {room.view.voteCounts[owner].yes} · {t.no} {room.view.voteCounts[owner].no} · — {room.view.voteCounts[owner].abstain}</p> : null}
-          {room.view.phase === "AUTHOR_PICK" && owner === room.viewerSeat && !chain.some((step) => step.kind === "DRAWING" && !step.system) ? <p className="mt-4 text-sm text-[#63758D]">{t.noArtwork}</p> : null}
-        </article>)}</div> : null}
+        {room.mode === "CHAIN" && (room.view.phase === "MATCH_VOTE" || room.view.phase === "MATCH_RESULT") ? <DrawGuessMatchVote busy={busy} locale={locale} room={room} onVote={(owner, value) => send({ type: "VOTE", owner, value })} /> : null}
+        {room.mode === "CHAIN" && room.view.phase === "CHAIN_REVEAL" ? <DrawGuessChainReveal busy={busy} locale={locale} now={roomNow} room={room} onControl={(command) => send({ type: "REVEAL_CONTROL", command })} onReact={(owner, step, kind) => sendSocialAction({ type: "CHAIN_REACT", owner, step, kind })} /> : null}
+        {room.mode === "CHAIN" && (room.view.phase === "ARTWORK_VOTE" || room.view.phase === "ARTWORK_RESULT") ? <DrawGuessArtworkVote busy={busy} locale={locale} room={room} onVote={(owner, step) => send({ type: "VOTE_ARTWORK", owner, step })} /> : null}
 
         {error ? <p role="alert" className="flex items-center gap-2 rounded-2xl bg-[#FFF0C9] px-4 py-3 text-sm font-semibold text-[#765A35]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0" />{error}</p> : null}
       </section>

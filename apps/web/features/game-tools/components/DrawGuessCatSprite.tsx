@@ -8,11 +8,58 @@ type View = "front" | "quarter" | "side" | "backQuarter" | "back";
 type EarStyle = "pointed" | "round" | "folded" | "tall" | "tufted";
 type TailStyle = "curl" | "fluffy" | "straight" | "short";
 export type DrawGuessCatPerformance = "default" | "champion" | "clap" | "wave";
+export type DrawGuessCatActivity = "none" | "drawing" | "thinking";
 
 const INK = "#57463F";
 const SOFT_INK = "#8E7062";
 const BLUSH = "#EAAE98";
 export const DRAW_GUESS_CAT_FRAME_COUNT = 12;
+const DRAW_GUESS_ACTIVITY_FRAME_COUNT = 18;
+
+// One loop has a poised beat, a continuous stroke, a lifted pencil, then a quiet reset.
+const DRAWING_POSES = [
+  { x: 101, y: 92, ink: 0, fade: 0 },
+  { x: 101, y: 92, ink: 0, fade: 0 },
+  { x: 100, y: 96, ink: 0, fade: 0 },
+  { x: 100, y: 100, ink: 0, fade: 0 },
+  { x: 102, y: 98, ink: 14, fade: 1 },
+  { x: 104, y: 99, ink: 28, fade: 1 },
+  { x: 105, y: 96, ink: 42, fade: 1 },
+  { x: 107, y: 97, ink: 56, fade: 1 },
+  { x: 109, y: 99, ink: 70, fade: 1 },
+  { x: 110, y: 97, ink: 83, fade: 1 },
+  { x: 108, y: 100, ink: 94, fade: 1 },
+  { x: 110, y: 99, ink: 100, fade: 1 },
+  { x: 110, y: 95, ink: 100, fade: 1 },
+  { x: 109, y: 92, ink: 100, fade: 1 },
+  { x: 107, y: 91, ink: 100, fade: .75 },
+  { x: 104, y: 91, ink: 100, fade: .5 },
+  { x: 102, y: 91, ink: 100, fade: .25 },
+  { x: 101, y: 92, ink: 100, fade: 0 },
+] as const;
+
+const THINKING_POSES = [
+  { x: 93, y: 86, gaze: 0, bubble: 0 },
+  { x: 92, y: 85, gaze: 0, bubble: 0 },
+  { x: 90, y: 82, gaze: 1, bubble: 0 },
+  { x: 87, y: 78, gaze: 1, bubble: 1 },
+  { x: 83, y: 75, gaze: 2, bubble: 1 },
+  { x: 80, y: 73, gaze: 2, bubble: 2 },
+  { x: 79, y: 73, gaze: 2, bubble: 2 },
+  { x: 79, y: 73, gaze: 2, bubble: 3 },
+  { x: 78, y: 72, gaze: 2, bubble: 3 },
+  { x: 78, y: 72, gaze: 2, bubble: 3 },
+  { x: 78, y: 72, gaze: 2, bubble: 3 },
+  { x: 80, y: 74, gaze: 2, bubble: 3 },
+  { x: 82, y: 76, gaze: 2, bubble: 3 },
+  { x: 84, y: 78, gaze: 1, bubble: 2 },
+  { x: 87, y: 81, gaze: 1, bubble: 2 },
+  { x: 90, y: 84, gaze: 0, bubble: 1 },
+  { x: 92, y: 85, gaze: 0, bubble: 1 },
+  { x: 93, y: 86, gaze: 0, bubble: 0 },
+] as const;
+
+const ACTIVITY_BODY_FRAMES = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 11, 11] as const;
 
 const SHAPES: Record<View, { body: string; ears: string; innerEar: string; clothes: string }> = {
   front: {
@@ -409,7 +456,8 @@ function TinyCat({ cat, className, frame, id, mood, size, title }: {
   </span>;
 }
 
-export function DrawGuessCatSprite({ animated = false, catId, className = "", direction = "S", frame, mood = "idle", performance = "default", size = 72, title }: {
+export function DrawGuessCatSprite({ activity = "none", animated = false, catId, className = "", direction = "S", frame, mood = "idle", performance = "default", size = 72, title }: {
+  activity?: DrawGuessCatActivity;
   animated?: boolean;
   catId?: string | null;
   className?: string;
@@ -423,7 +471,7 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
   const cat = getDrawGuessCat(catId);
   const uniqueId = useId().replaceAll(":", "");
   const [animatedFrame, setAnimatedFrame] = useState(0);
-  useEffect(() => setAnimatedFrame(mood === "idle" && performance !== "wave" ? PERSONALITY[cat.id].phase : 0), [cat.id, mood, performance]);
+  useEffect(() => setAnimatedFrame(mood === "idle" && performance !== "wave" ? PERSONALITY[cat.id].phase : 0), [activity, cat.id, mood, performance]);
   useEffect(() => {
     if (!animated || frame !== undefined) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -431,11 +479,11 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
     const syncMotion = () => {
       if (timer !== undefined) window.clearInterval(timer);
       if (reducedMotion.matches) {
-        setAnimatedFrame(0);
+        setAnimatedFrame(activity === "none" ? 0 : 8);
         return;
       }
       if (document.hidden) return;
-      timer = window.setInterval(() => setAnimatedFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 75 : mood === "sad" ? 120 : 155 + PERSONALITY[cat.id].phase % 3 * 12);
+      timer = window.setInterval(() => setAnimatedFrame((current) => (current + 1) % (activity === "none" ? DRAW_GUESS_CAT_FRAME_COUNT : DRAW_GUESS_ACTIVITY_FRAME_COUNT)), activity === "drawing" ? 90 : activity === "thinking" ? 112 : mood === "happy" ? 75 : mood === "sad" ? 120 : 155 + PERSONALITY[cat.id].phase % 3 * 12);
     };
     syncMotion();
     reducedMotion.addEventListener("change", syncMotion);
@@ -445,18 +493,20 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
       reducedMotion.removeEventListener("change", syncMotion);
       document.removeEventListener("visibilitychange", syncMotion);
     };
-  }, [animated, cat.id, frame, mood]);
+  }, [activity, animated, cat.id, frame, mood]);
 
   const current = frame !== undefined && Number.isFinite(frame) ? Math.trunc(frame) : animatedFrame;
-  const activeFrame = ((current % DRAW_GUESS_CAT_FRAME_COUNT) + DRAW_GUESS_CAT_FRAME_COUNT) % DRAW_GUESS_CAT_FRAME_COUNT;
-  if (size <= 36) return <TinyCat cat={cat} className={className} frame={activeFrame} id={uniqueId + "-tiny"} mood={mood} size={size} title={title} />;
+  const frameCount = activity === "none" ? DRAW_GUESS_CAT_FRAME_COUNT : DRAW_GUESS_ACTIVITY_FRAME_COUNT;
+  const activeFrame = ((current % frameCount) + frameCount) % frameCount;
+  const bodyFrame = activity === "none" ? activeFrame : ACTIVITY_BODY_FRAMES[activeFrame];
+  if (size <= 36) return <TinyCat cat={cat} className={className} frame={bodyFrame} id={uniqueId + "-tiny"} mood={mood} size={size} title={title} />;
   const view: View = direction === "S" ? "front" : direction === "SE" || direction === "SW" ? "quarter" : direction === "E" || direction === "W" ? "side" : direction === "NE" || direction === "NW" ? "backQuarter" : "back";
   const mirror = direction === "SW" || direction === "W" || direction === "NW";
   const back = view === "back" || view === "backQuarter";
   const shape = SHAPES[view];
   const compact = size <= 72;
-  const motion = motionAt(cat, mood, activeFrame, performance);
-  const blink = mood === "idle" && activeFrame === 10;
+  const motion = motionAt(cat, mood, bodyFrame, performance);
+  const blink = mood === "idle" && bodyFrame === 10;
   const furLight = mix(cat.fur, "#FFFFFF", .16);
   const furDark = mix(cat.fur, "#705746", .18);
   const faceX = view === "front" ? 60 : view === "quarter" ? 73 : 88;
@@ -464,8 +514,12 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
   const gradientId = uniqueId + "-fur";
   const earPath = earsFor(cat, view);
   const tailPath = tailFor(cat, view);
+  const drawing = activity === "drawing" && view === "front";
+  const thinking = activity === "thinking" && view === "front";
+  const drawingPose = DRAWING_POSES[activeFrame % DRAW_GUESS_ACTIVITY_FRAME_COUNT];
+  const thinkingPose = THINKING_POSES[activeFrame % DRAW_GUESS_ACTIVITY_FRAME_COUNT];
   const poseTransform = "translate(0 " + motion.y + ") rotate(" + motion.tilt + " 60 69) translate(60 69) scale(" + motion.scaleX + " " + motion.scaleY + ") translate(-60 -69)";
-  return <span className={"inline-grid shrink-0 place-items-center " + className} style={{ width: size, height: size }} title={title} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true} data-cat={cat.id} data-detail={compact ? "compact" : "full"} data-direction={direction} data-view={view} data-frame={activeFrame} data-mood={mood} data-performance={performance}>
+  return <span className={"inline-grid shrink-0 place-items-center " + className} style={{ width: size, height: size }} title={title} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true} data-cat={cat.id} data-detail={compact ? "compact" : "full"} data-direction={direction} data-view={view} data-frame={activeFrame} data-mood={mood} data-performance={performance} data-activity={activity}>
     <svg viewBox="0 0 120 116" width="100%" height="100%" fill="none" aria-hidden="true" className="overflow-visible">
       <defs>
         <linearGradient id={gradientId} x1="26" y1="30" x2="100" y2="102" gradientUnits="userSpaceOnUse"><stop stopColor={furLight} /><stop offset=".62" stopColor={cat.fur} /><stop offset="1" stopColor={furDark} /></linearGradient>
@@ -490,12 +544,23 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
             <Outfit cat={cat} view={view} path={shape.clothes} compact={compact} />
             {!compact && <path d={view === "side" ? "M45 45q-6 17-2 32" : "M28 54q-5 15 0 25"} stroke="#FFFFFF" strokeWidth="2.3" strokeLinecap="round" opacity=".22" />}
           </g>
-          <Face mood={mood} view={view} blink={blink} compact={compact} gaze={motion.gaze} />
+          <Face mood={mood} view={view} blink={blink} compact={compact} gaze={thinking ? thinkingPose.gaze : motion.gaze} />
           <Glasses cat={cat} view={view} />
           <Hat cat={cat} view={view} />
           <CharacterAccent cat={cat} view={view} compact={compact} />
+          {drawing && <g>
+            <path d="M79 88q0-3 3-4l31-3q3 0 4 3l3 22q0 3-3 4l-31 3q-3 0-4-3Z" fill="#FFFDF8" stroke="#88AECB" strokeWidth="2" />
+            <path d="m86 94 7-1m-6 6 8-1" stroke="#C7DDEA" strokeWidth="1.3" strokeLinecap="round" />
+            {drawingPose.ink > 0 && <path d="M100 100q1-4 3-2t4-1q2-1 3 2t2-2" pathLength={100} stroke="#4A80AF" strokeWidth="2.2" strokeLinecap="round" strokeDasharray={`${drawingPose.ink} 100`} opacity={drawingPose.fade} />}
+          </g>}
+          {drawing && <g>
+            <path d={`M${drawingPose.x - 11} ${drawingPose.y - 25} ${drawingPose.x} ${drawingPose.y}`} stroke={INK} strokeWidth="5" strokeLinecap="round" />
+            <path d={`M${drawingPose.x - 11} ${drawingPose.y - 25} ${drawingPose.x - 1} ${drawingPose.y - 3}`} stroke="#F5B851" strokeWidth="3.2" strokeLinecap="round" />
+            <path d={`m${drawingPose.x - 2} ${drawingPose.y - 5} 2 5 2-5`} fill="#EBC89A" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+            <path d={`m${drawingPose.x - 12} ${drawingPose.y - 26} -1-3 3-1 2 4`} fill="#DF8A8B" stroke={INK} strokeWidth="1.2" />
+          </g>}
           {(view === "front" || view === "back") && <ellipse cx={27 + motion.handsIn} cy={86 - motion.leftLift} rx="8.5" ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />}
-          {view === "side" ? <g transform={"rotate(" + -motion.rightLift * 3 + " 82 78)"}><path d="M82 77Q90 74 95 78Q99 83 96 88Q92 92 87 90Q82 87 82 82Z" fill={cat.fur} /><path d="M84 77Q91 74 95 78Q99 83 96 88Q92 92 87 90" stroke={INK} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" fill="none" />{!compact && <path d="M89 87q3 2 6-1" stroke={furDark} strokeWidth="1.2" strokeLinecap="round" />}</g> : <ellipse cx={(view === "front" || view === "back" ? 93 : view === "backQuarter" ? 89 : 91) - motion.handsIn + motion.rightOut} cy={86 - motion.rightLift} rx="8.5" ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />}
+          {view === "side" ? <g transform={"rotate(" + -motion.rightLift * 3 + " 82 78)"}><path d="M82 77Q90 74 95 78Q99 83 96 88Q92 92 87 90Q82 87 82 82Z" fill={cat.fur} /><path d="M84 77Q91 74 95 78Q99 83 96 88Q92 92 87 90" stroke={INK} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" fill="none" />{!compact && <path d="M89 87q3 2 6-1" stroke={furDark} strokeWidth="1.2" strokeLinecap="round" />}</g> : <ellipse cx={drawing ? drawingPose.x - 12 : thinking ? thinkingPose.x : (view === "front" || view === "back" ? 93 : view === "backQuarter" ? 89 : 91) - motion.handsIn + motion.rightOut} cy={drawing ? drawingPose.y - 18 : thinking ? thinkingPose.y : 86 - motion.rightLift} rx="8.5" ry="7" fill={cat.fur} stroke={INK} strokeWidth="2.4" />}
           {view !== "side" && view !== "backQuarter" && <ellipse cx={43 + motion.footStep} cy="102" rx="11" ry="5" fill={furDark} stroke={INK} strokeWidth="2.3" />}
           <ellipse cx={(view === "front" || view === "back" ? 78 : 80) - motion.footStep} cy="102" rx={view === "side" ? 12 : 11} ry="5" fill={furDark} stroke={INK} strokeWidth="2.3" />
           {!compact && view !== "side" && view !== "backQuarter" && <path d={"M" + (38 + motion.footStep) + " 101q5-2 10 0M" + (73 - motion.footStep) + " 101q5-2 10 0"} stroke={furLight} strokeWidth="1.6" strokeLinecap="round" />}
@@ -505,6 +570,11 @@ export function DrawGuessCatSprite({ animated = false, catId, className = "", di
           {cat.id === "inventor" && !back && <path d="M42 28q18-6 36 0" stroke="#D6E0D2" strokeWidth="2" strokeLinecap="round" />}
         </g>
       </g>
+      {thinking && thinkingPose.bubble > 0 && <g transform={`translate(0 ${[0, 0, 0, 0, -1, -1, -2, -3, -3, -2, -1, 0, 0, 1, 0, 0, 0, 0][activeFrame]})`}>
+        <circle cx="91" cy="45" r="2" fill="#FFFDF8" stroke="#8CAFCB" strokeWidth="1.2" />
+        {thinkingPose.bubble >= 2 && <circle cx="97" cy="37" r="3.5" fill="#FFFDF8" stroke="#8CAFCB" strokeWidth="1.4" />}
+        {thinkingPose.bubble >= 3 && <><circle cx="108" cy="25" r="10" fill="#FFFDF8" stroke="#8CAFCB" strokeWidth="2" /><path d="M104 23q0-4 4-4 4 0 4 4 0 2-3 4v2" stroke="#4A719D" strokeWidth="2" strokeLinecap="round" fill="none" /><circle cx="109" cy="32" r="1.2" fill="#4A719D" /></>}
+      </g>}
     </svg>
   </span>;
 }

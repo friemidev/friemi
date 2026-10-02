@@ -25,7 +25,7 @@ export async function reportDrawGuessContent(input: {
   }
   const current = room.state as unknown as DrawGuessState | null;
   let state: DrawGuessState | null = null;
-  if (current?.gameNumber === input.roundNumber && ["REVEAL_VOTE", "AUTHOR_PICK", "FINISHED"].includes(current.phase)) {
+  if (current?.gameNumber === input.roundNumber && ["ARTWORK_VOTE", "ARTWORK_RESULT", "FINISHED"].includes(current.phase)) {
     state = current;
   } else {
     const archived = await prisma.drawGuessRound.findUnique({

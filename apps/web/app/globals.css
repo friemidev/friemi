@@ -2023,6 +2023,42 @@ html[data-home-motion-ready="true"]
 .draw-guess-phase-toast { animation: draw-guess-toast-in 1500ms ease-out both; }
 .draw-guess-chat-bubble { animation: draw-guess-chat-bubble-in 220ms cubic-bezier(.16, 1, .3, 1) both; }
 
+@keyframes draw-guess-chain-step-in {
+  from { opacity: 0; transform: translateX(14px) scale(.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes draw-guess-chain-pass {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
+}
+@keyframes draw-guess-chain-orbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes draw-guess-chain-send {
+  0%, 75%, 100% { transform: translateX(0) rotate(-8deg); }
+  86% { transform: translateX(5px) rotate(9deg); }
+}
+@keyframes draw-guess-chain-ready {
+  0% { transform: scale(.72) rotate(-12deg); }
+  65% { transform: scale(1.15) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes draw-guess-chain-reaction-in {
+  0% { opacity: 0; transform: translateY(8px) scale(.7); }
+  65% { opacity: 1; transform: translateY(-3px) scale(1.08); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.draw-guess-chain-step { animation: draw-guess-chain-step-in 320ms cubic-bezier(.16, 1, .3, 1) both; }
+.draw-guess-chain-pass { animation: draw-guess-chain-pass 2.5s ease-in-out infinite; }
+.draw-guess-chain-orbit { animation: draw-guess-chain-orbit 19s linear infinite; }
+.draw-guess-chain-orbit--inner { animation-direction: reverse; animation-duration: 14s; }
+.draw-guess-chain-send { animation: draw-guess-chain-send 2.5s ease-in-out infinite; }
+.draw-guess-chain-ready { animation: draw-guess-chain-ready 430ms cubic-bezier(.16, 1, .3, 1) both; }
+.draw-guess-chain-reaction-in { animation: draw-guess-chain-reaction-in 350ms cubic-bezier(.16, 1, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .draw-guess-chain-step, .draw-guess-chain-pass, .draw-guess-chain-orbit, .draw-guess-chain-send, .draw-guess-chain-ready, .draw-guess-chain-reaction-in { animation: none; }
+}
+
 /* One small set of tactile controls across the lobby, canvas, and review screens. */
 .draw-guess-btn {
   --dg-button-face: #fff2d9;
