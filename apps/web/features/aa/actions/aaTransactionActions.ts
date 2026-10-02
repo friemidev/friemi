@@ -1,5 +1,6 @@
 "use server";
 
+import { AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT } from "../domain/simpleLedger";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
@@ -277,7 +278,7 @@ export async function createAaTransactionAction(
 
       if (
         ledger.status === "ARCHIVED" ||
-        (ledger.status === "FROZEN" && parsed.data.type !== "TRANSFER")
+        (ledger.status === "FROZEN" && (parsed.data.type !== "TRANSFER" || Boolean(ledger.settlementStartedAt)))
       ) {
         throw new Error("LOCKED");
       }
@@ -726,7 +727,7 @@ export async function markAaSettlementPaidAction(formData: FormData) {
         },
       });
 
-      if (!ledger || ledger.status === "ARCHIVED") {
+      if (!ledger || ledger.status === "ARCHIVED" || ledger.transactions.some(t => t.importSource === AA_SETTLEMENT)) {
         throw new Error("SETTLEMENT_UNAVAILABLE");
       }
 
@@ -921,6 +922,8 @@ async function getOperationContext(
   });
 
   if (!transaction) throw new Error("FORBIDDEN");
+  if ([AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT].includes(transaction.importSource ?? "") ||
+      (transaction.ledger.status === "FROZEN" && transaction.ledger.settlementStartedAt)) throw new Error("USE_SIMPLE_AA_FLOW");
   const viewer = transaction.ledger.participants.find(
     (participant) => participant.userProfileId === profileId,
   );

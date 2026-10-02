@@ -1,5 +1,6 @@
 "use server";
 
+import { AA_SETTLEMENT } from "../domain/simpleLedger";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -45,6 +46,8 @@ export async function updateAaLedgerStatusAction(formData: FormData) {
     if (!ledger || !viewer || !access?.canManage) {
       throw new Error("FORBIDDEN");
     }
+
+    if (await tx.aaTransaction.count({ where: { ledgerId: ledger.id, importSource: AA_SETTLEMENT } })) throw new Error("USE_SIMPLE_AA_FLOW");
 
     const nextStatus =
       input.intent === "reopen"
@@ -129,6 +132,7 @@ export async function updateAaLedgerRulesAction(formData: FormData) {
       (participant) => participant.userProfileId === profile.id,
     );
     if (!ledger || !access?.canManage || !viewer) throw new Error("FORBIDDEN");
+    if (await tx.aaTransaction.count({ where: { ledgerId: ledger.id, importSource: AA_SETTLEMENT } })) throw new Error("USE_SIMPLE_AA_FLOW");
 
     if (input.baseCurrency !== ledger.baseCurrency) {
       const transactionCount = await tx.aaTransaction.count({

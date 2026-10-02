@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getSimpleAaState } from "@/features/aa/server/simpleLedgerService";
+import { AaSimpleSurface } from "@/features/aa/components/AaSimpleSurface";
 import {
   AlertCircle,
   ArrowLeft,
@@ -189,6 +191,8 @@ export default async function AaSettlementProgressPage({ params }: PageProps) {
     locale,
     `/lobby/${activityId}/aa/progress`,
   );
+  const simpleState = await getSimpleAaState(activityId, profile.id);
+  if (simpleState.currency === "EUR") return <AaSimpleSurface state={simpleState} locale={locale} screen="progress" />;
   const snapshot = await getActivityAaSnapshot(activityId, profile.id);
   const copy = getCopy(locale);
   const backHref = withLocale(locale, `/lobby/${activityId}/aa`);

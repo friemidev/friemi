@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { getSimpleAaState } from "@/features/aa/server/simpleLedgerService";
+import { AaSimpleSurface } from "@/features/aa/components/AaSimpleSurface";
+import { AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT } from "@/features/aa/domain/simpleLedger";
 import { redirect } from "next/navigation";
 import {
   ArrowLeft,
@@ -59,6 +62,11 @@ export default async function AaTransactionDetailPage({ params }: PageProps) {
     locale,
     `/lobby/${activityId}/aa/transactions/${transactionId}`,
   );
+  const simpleState = await getSimpleAaState(activityId, profile.id);
+  const simpleRecord = simpleState.records.find(record => record.id === transactionId);
+  if (simpleState.currency === "EUR" && simpleRecord && [AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT].includes(simpleRecord.source ?? "")) {
+    return <AaSimpleSurface state={simpleState} locale={locale} screen={simpleRecord.source === AA_SETTLEMENT ? "payment" : "record"} recordId={transactionId} />;
+  }
   let snapshot: ActivityAaSnapshot;
   try {
     snapshot = await getActivityAaSnapshot(activityId, profile.id);
