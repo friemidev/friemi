@@ -27,6 +27,7 @@ import {
   RotateCcw,
   Skull,
   Ticket,
+  UserRoundCog,
   X,
 } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ import {
   finishWerewolfRoomAction,
   leaveWerewolfSeatAction,
   startWerewolfRoomAction,
+  transferWerewolfJudgeAction,
   updateWerewolfPlayerLifeAction,
   updateWerewolfReadyAction,
   updateWerewolfSheriffAction,
@@ -55,8 +57,8 @@ import {
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
 import {
+  getActiveWerewolfVoteResultNotice,
   getVisibleWerewolfSheriffCandidateSeatNumbers,
-  groupWerewolfVotesByTarget,
 } from "@/features/game-tools/werewolfFlow";
 import {
   getWerewolfAtmosphereById,
@@ -321,6 +323,11 @@ function getCopy(locale: string) {
       joinName: "Nom",
       judge: "Maître",
       judgeControls: "Commandes du maître",
+      judgeTransfer: "Changer de maître",
+      judgeTransferDescription:
+        "Choisissez un spectateur présent. Vous resterez dans la salle comme spectateur.",
+      judgeTransferSelect: "Choisir un spectateur",
+      judgeTransferTitle: "Transférer le rôle de maître ?",
       leaveRoom: "Quitter la table",
       leaveRoomConfirm: "Quitter cette partie en cours ?",
       leaveSeat: "Quitter",
@@ -434,6 +441,11 @@ function getCopy(locale: string) {
       joinName: "Name",
       judge: "Judge",
       judgeControls: "Judge controls",
+      judgeTransfer: "Change judge",
+      judgeTransferDescription:
+        "Choose a spectator in the room. You will remain in the room as a spectator.",
+      judgeTransferSelect: "Choose a spectator",
+      judgeTransferTitle: "Transfer judge controls?",
       leaveRoom: "Leave room",
       leaveRoomConfirm: "Leave this running game?",
       leaveSeat: "Leave",
@@ -542,6 +554,11 @@ function getCopy(locale: string) {
     joinName: "昵称",
     judge: "法官",
     judgeControls: "法官操作",
+    judgeTransfer: "更换法官",
+    judgeTransferDescription:
+      "选择一名正在观战的成员接任法官。交接后你会留在房间内观战。",
+    judgeTransferSelect: "选择观战成员",
+    judgeTransferTitle: "确认交接法官？",
     leaveRoom: "退出房间",
     leaveRoomConfirm: "退出这局进行中的房间？",
     leaveSeat: "离座",
@@ -874,8 +891,13 @@ export function WerewolfRoomOverview({
     finishWerewolfRoomAction,
     initialState,
   );
+  const [judgeTransferState, judgeTransferAction] = useActionState(
+    transferWerewolfJudgeAction,
+    initialState,
+  );
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [finishDialogOpen, setFinishDialogOpen] = useState(false);
+  const [judgeTransferDialogOpen, setJudgeTransferDialogOpen] = useState(false);
   const [showRoundTransition, setShowRoundTransition] = useState(false);
   const [pendingDeathSeatNumber, setPendingDeathSeatNumber] = useState<
     number | null
@@ -934,25 +956,18 @@ export function WerewolfRoomOverview({
           : null;
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
-  const activeVoteKind =
-    room.state.flow.stage === "SHERIFF_VOTE" ||
-    room.state.flow.stage === "SHERIFF_RUNOFF_VOTE"
-      ? ("WEREWOLF_SHERIFF_VOTE" as const)
-      : room.state.flow.stage === "EXILE_VOTE" ||
-          room.state.flow.stage === "EXILE_RUNOFF_VOTE"
-        ? ("WEREWOLF_EXILE_VOTE" as const)
-        : null;
-  const votersByTargetSeat = useMemo(
-    () =>
-      activeVoteKind
-        ? groupWerewolfVotesByTarget({
-            kind: activeVoteKind,
-            roundIndex: room.state.flow.sessionIndex,
-            submissions: room.flowSubmissions,
-          })
-        : {},
-    [activeVoteKind, room.flowSubmissions, room.state.flow.sessionIndex],
+  const judgeTransferCandidates = room.members.filter(
+    (member) => !member.seatedSeatId && !member.isCurrentMember,
   );
+  const publishedVoteResult = useMemo(
+    () =>
+      getActiveWerewolfVoteResultNotice({
+        events: room.events,
+        flow: room.state.flow,
+      }),
+    [room.events, room.state.flow],
+  );
+  const votersByTargetSeat = publishedVoteResult?.votersByTarget ?? {};
   const getVoteMarkerLabel = (voterSeatNumber: number) =>
     locale === "zh-CN"
       ? `${voterSeatNumber}号投票`
@@ -1280,6 +1295,7 @@ export function WerewolfRoomOverview({
       startState.formError ||
       lifeState.formError ||
       sheriffState.formError ||
+      judgeTransferState.formError ||
       finishState.formError
     ) {
       lastOptimisticMutationAtRef.current = 0;
@@ -1289,6 +1305,7 @@ export function WerewolfRoomOverview({
     leaveState.formError,
     finishState.formError,
     lifeState.formError,
+    judgeTransferState.formError,
     readyState.formError,
     refreshRoom,
     sheriffState.formError,
@@ -1301,6 +1318,7 @@ export function WerewolfRoomOverview({
       seatState.formNotice ||
       readyState.formNotice ||
       sheriffState.formNotice ||
+      judgeTransferState.formNotice ||
       finishState.formNotice
     ) {
       lastOptimisticMutationAtRef.current = 0;
@@ -1310,11 +1328,18 @@ export function WerewolfRoomOverview({
   }, [
     broadcastRoomChange,
     finishState.formNotice,
+    judgeTransferState.formNotice,
     readyState.formNotice,
     refreshRoom,
     sheriffState.formNotice,
     seatState.formNotice,
   ]);
+
+  useEffect(() => {
+    if (judgeTransferState.formNotice) {
+      setJudgeTransferDialogOpen(false);
+    }
+  }, [judgeTransferState.formNotice]);
 
   useEffect(() => {
     if (!lifeState.formNotice) {
@@ -2698,6 +2723,19 @@ export function WerewolfRoomOverview({
                   </div>
                 ) : null}
 
+                {judgeIsViewer &&
+                room.status === "IN_PROGRESS" &&
+                judgeTransferCandidates.length ? (
+                  <button
+                    className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#F1F2E3]/55 bg-transparent px-4 text-sm font-semibold text-[#F1F2E3] transition hover:bg-[#F1F2E3]/10 active:scale-[0.98]"
+                    onClick={() => setJudgeTransferDialogOpen(true)}
+                    type="button"
+                  >
+                    <UserRoundCog className="h-4 w-4" />
+                    {t.judgeTransfer}
+                  </button>
+                ) : null}
+
                 {judgeIsViewer && judgeSeat?.privateToken && isSeatingOpen ? (
                   <form
                     action={startAction}
@@ -2747,9 +2785,7 @@ export function WerewolfRoomOverview({
               </div>
             ) : null}
 
-            {canExitRoom &&
-            !currentViewerSeat &&
-            room.status === "FINISHED" ? (
+            {canExitRoom && !currentViewerSeat ? (
               <form
                 action={leaveAction}
                 onSubmit={(event) => {
@@ -2787,6 +2823,7 @@ export function WerewolfRoomOverview({
             startState.formError ||
             lifeState.formError ||
             sheriffState.formError ||
+            judgeTransferState.formError ||
             finishState.formError ? (
               <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
                 {localFormError ||
@@ -2796,6 +2833,7 @@ export function WerewolfRoomOverview({
                   startState.formError ||
                   lifeState.formError ||
                   sheriffState.formError ||
+                  judgeTransferState.formError ||
                   finishState.formError ||
                   t.claimError}
               </p>
@@ -2803,6 +2841,81 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
+      {judgeTransferDialogOpen &&
+      judgePrivateToken &&
+      judgeTransferCandidates.length ? (
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/58 p-4"
+          onMouseDown={() => setJudgeTransferDialogOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="werewolf-judge-transfer-title"
+            aria-modal="true"
+            className="w-full max-w-[22rem] rounded-[1.2rem] bg-[#FFFDF7] p-5 text-[#18221F] shadow-[0_24px_70px_rgba(0,0,0,0.4)]"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F1EA] text-[#1F6E4C]">
+                <UserRoundCog className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2
+                  className="text-base font-bold"
+                  id="werewolf-judge-transfer-title"
+                >
+                  {t.judgeTransferTitle}
+                </h2>
+                <p className="mt-1 text-sm font-semibold leading-6 text-[#66706C]">
+                  {t.judgeTransferDescription}
+                </p>
+              </div>
+              <button
+                aria-label={t.deathConfirmCancel}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D6D5B2] text-[#59635F]"
+                onClick={() => setJudgeTransferDialogOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form action={judgeTransferAction} className="mt-5 space-y-3">
+              <input name="locale" type="hidden" value={locale} />
+              <input
+                name="privateToken"
+                type="hidden"
+                value={judgePrivateToken}
+              />
+              <select
+                className="h-12 w-full rounded-xl border border-[#D6D5B2] bg-white px-3 text-sm font-semibold outline-none focus:border-[#2F7757]"
+                defaultValue=""
+                name="targetMemberId"
+                required
+              >
+                <option disabled value="">
+                  {t.judgeTransferSelect}
+                </option>
+                {judgeTransferCandidates.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+              {judgeTransferState.formError ? (
+                <p className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm font-bold text-[#9B2433]">
+                  {judgeTransferState.formError}
+                </p>
+              ) : null}
+              <SubmitButton
+                className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1F6E4C] px-4 text-sm font-bold text-white disabled:opacity-55"
+                label={t.judgeTransfer}
+              />
+            </form>
+          </section>
+        </div>
+      ) : null}
       {managedSeat && judgePrivateToken && canJudgeControlPlayers ? (
         <div
           className="fixed inset-0 z-[90] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"

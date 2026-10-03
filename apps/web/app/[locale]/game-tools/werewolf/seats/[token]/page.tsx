@@ -19,6 +19,7 @@ import {
   type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 import {
+  canViewWerewolfVoteSubmission,
   getWerewolfRoomStateForViewer,
   isWerewolfEventVisibleToViewer,
   normalizeWerewolfRoomState,
@@ -207,13 +208,21 @@ export default async function WerewolfSeatPage({
               metadata?.actionKind === "WOLF_KILL";
             const isCurrentFlowSession =
               submission.roundIndex === roomState.flow.sessionIndex;
+            const canViewVote =
+              isVote &&
+              canViewWerewolfVoteSubmission({
+                isJudge: isCurrentSeatJudge,
+                viewerSeatNumber: seat.seatNumber,
+                voterSeatNumber: submission.seat?.seatNumber,
+              });
 
             if (
-              !isVote &&
-              (!isCurrentFlowSession ||
-                (!isOwnNightAction &&
-                  !isWitchKillContext &&
-                  !isWolfPackKillContext))
+              (isVote && !canViewVote) ||
+              (!isVote &&
+                (!isCurrentFlowSession ||
+                  (!isOwnNightAction &&
+                    !isWitchKillContext &&
+                    !isWolfPackKillContext)))
             ) {
               return [];
             }

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canJoinWerewolfRoom,
+  canViewWerewolfVoteSubmission,
   createInitialWerewolfRoomState,
   getWerewolfDepartureBehavior,
   getWerewolfRoomStateForViewer,
@@ -35,7 +37,7 @@ test("leaving a lobby seat keeps the member in the room", () => {
   );
 });
 
-test("hides night-action events from players until the game is finished", () => {
+test("hides private actions and in-progress vote choices from players", () => {
   assert.equal(
     isWerewolfEventVisibleToViewer({
       isFinished: false,
@@ -58,8 +60,50 @@ test("hides night-action events from players until the game is finished", () => 
       isJudge: false,
       type: "werewolf_exile_vote_submitted",
     }),
+    false,
+  );
+  assert.equal(
+    isWerewolfEventVisibleToViewer({
+      isFinished: false,
+      isJudge: false,
+      type: "werewolf_exile_vote_resolved",
+    }),
     true,
   );
+});
+
+test("a player sees only their own pending vote while the judge sees every vote", () => {
+  assert.equal(
+    canViewWerewolfVoteSubmission({
+      isJudge: false,
+      viewerSeatNumber: 3,
+      voterSeatNumber: 3,
+    }),
+    true,
+  );
+  assert.equal(
+    canViewWerewolfVoteSubmission({
+      isJudge: false,
+      viewerSeatNumber: 3,
+      voterSeatNumber: 5,
+    }),
+    false,
+  );
+  assert.equal(
+    canViewWerewolfVoteSubmission({
+      isJudge: true,
+      viewerSeatNumber: 13,
+      voterSeatNumber: 5,
+    }),
+    true,
+  );
+});
+
+test("allows late members to join a running room as spectators", () => {
+  assert.equal(canJoinWerewolfRoom("LOBBY"), true);
+  assert.equal(canJoinWerewolfRoom("IN_PROGRESS"), true);
+  assert.equal(canJoinWerewolfRoom("FINISHED"), true);
+  assert.equal(canJoinWerewolfRoom("CANCELLED"), false);
 });
 
 test("hides private Werewolf flow state from unrelated players", () => {

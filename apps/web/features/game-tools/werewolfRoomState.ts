@@ -164,6 +164,29 @@ export function isWerewolfRoomLocked(state: WerewolfRoomState) {
   );
 }
 
+export function canJoinWerewolfRoom(status: string) {
+  return (
+    status === "LOBBY" || status === "IN_PROGRESS" || status === "FINISHED"
+  );
+}
+
+export function canViewWerewolfVoteSubmission({
+  isJudge,
+  viewerSeatNumber,
+  voterSeatNumber,
+}: {
+  isJudge: boolean;
+  viewerSeatNumber: number | null | undefined;
+  voterSeatNumber: number | null | undefined;
+}) {
+  return Boolean(
+    isJudge ||
+    (viewerSeatNumber &&
+      voterSeatNumber &&
+      viewerSeatNumber === voterSeatNumber),
+  );
+}
+
 export function isWerewolfEventVisibleToViewer({
   isFinished,
   isJudge,
@@ -173,6 +196,10 @@ export function isWerewolfEventVisibleToViewer({
   isJudge: boolean;
   type: string;
 }) {
+  if (type.endsWith("vote_submitted")) {
+    return isJudge;
+  }
+
   return (
     isJudge ||
     isFinished ||

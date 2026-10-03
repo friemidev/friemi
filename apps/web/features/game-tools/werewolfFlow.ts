@@ -100,11 +100,13 @@ export type WerewolfVoteResultEvent = WerewolfFlowRecordEvent & {
 };
 
 export type WerewolfVoteResultNotice = {
+  abstainVoterSeatNumbers: number[];
   id: string;
   kind: "EXILE" | "SHERIFF";
   leaders: number[];
   totals: Array<{ seatNumber: number; voteCount: number }>;
   voteRound: 1 | 2;
+  votersByTarget: Record<number, number[]>;
 };
 
 const WEREWOLF_SHERIFF_ELECTION_STAGES = new Set<WerewolfFlowStage>([
@@ -250,44 +252,14 @@ export function getWerewolfFlowRecordLabel(
       ? (event.payload as Record<string, unknown>)
       : {};
   const seatNumber = Number(payload.seatNumber);
-  const voterSeatNumber = Number(payload.voterSeatNumber);
-  const targetSeatNumber = Number(payload.targetSeatNumber);
-  const voterLabel = localizeWerewolfFlowText(locale, {
-    "zh-CN": formatWerewolfSeatLabel(voterSeatNumber, locale),
-    en: `Seat ${voterSeatNumber}`,
-    fr: `Le siège ${voterSeatNumber}`,
-  });
-  const targetLabel =
-    Number.isInteger(targetSeatNumber) && targetSeatNumber > 0
-      ? formatWerewolfSeatLabel(targetSeatNumber, locale)
-      : localizeWerewolfFlowText(locale, {
-          "zh-CN": "弃票",
-          en: "abstained",
-          fr: "s'est abstenu",
-        });
   const seatLabel = localizeWerewolfFlowText(locale, {
     "zh-CN": formatWerewolfSeatLabel(seatNumber, locale),
     en: `Seat ${seatNumber}`,
     fr: `Le siège ${seatNumber}`,
   });
 
-  if (
-    event.type.endsWith("vote_submitted") &&
-    Number.isInteger(voterSeatNumber)
-  ) {
-    if (!(Number.isInteger(targetSeatNumber) && targetSeatNumber > 0)) {
-      return localizeWerewolfFlowText(locale, {
-        "zh-CN": `${voterLabel} 弃票`,
-        en: `${voterLabel} abstained`,
-        fr: `${voterLabel} s'est abstenu`,
-      });
-    }
-
-    return localizeWerewolfFlowText(locale, {
-      "zh-CN": `${voterLabel} 投给 ${targetLabel}`,
-      en: `${voterLabel} voted for ${targetLabel}`,
-      fr: `${voterLabel} a voté pour le ${targetLabel}`,
-    });
+  if (event.type.endsWith("vote_submitted")) {
+    return null;
   }
 
   if (event.type === "werewolf_sheriff_candidate_joined") {
@@ -346,7 +318,56 @@ export function getWerewolfFlowRecordLabel(
     });
   }
 
+  if (event.type === "werewolf_judge_transferred") {
+    const displayName =
+      typeof payload.displayName === "string" ? payload.displayName.trim() : "";
+
+    return localizeWerewolfFlowText(locale, {
+      "zh-CN": displayName ? `法官已交接给 ${displayName}` : "法官已完成交接",
+      en: displayName
+        ? `Judge controls transferred to ${displayName}`
+        : "Judge controls were transferred",
+      fr: displayName
+        ? `Les commandes du maître ont été transférées à ${displayName}`
+        : "Les commandes du maître ont été transférées",
+    });
+  }
+
   if (event.type.endsWith("vote_resolved")) {
+    const votersByTarget = normalizeWerewolfVoteGroups(payload.votersByTarget);
+    const abstainVoterSeatNumbers = normalizeSeatNumbers(
+      payload.abstainVoterSeatNumbers,
+    );
+    const groupedVotes = Object.entries(votersByTarget).map(
+      ([rawTargetSeatNumber, voterSeatNumbers]) => {
+        const targetSeatNumber = Number(rawTargetSeatNumber);
+        const voters = voterSeatNumbers.join(locale === "zh-CN" ? "、" : ", ");
+
+        return localizeWerewolfFlowText(locale, {
+          "zh-CN": `投${targetSeatNumber}号：${voters}号`,
+          en: `Voted for seat ${targetSeatNumber}: ${voters}`,
+          fr: `Vote pour le siège ${targetSeatNumber} : ${voters}`,
+        });
+      },
+    );
+
+    if (abstainVoterSeatNumbers.length) {
+      const abstentions = abstainVoterSeatNumbers.join(
+        locale === "zh-CN" ? "、" : ", ",
+      );
+      groupedVotes.push(
+        localizeWerewolfFlowText(locale, {
+          "zh-CN": `弃票：${abstentions}号`,
+          en: `Abstained: ${abstentions}`,
+          fr: `Abstention : ${abstentions}`,
+        }),
+      );
+    }
+
+    if (groupedVotes.length) {
+      return groupedVotes.join(locale === "zh-CN" ? "；" : " · ");
+    }
+
     const leaders = Array.isArray(payload.leaders)
       ? payload.leaders
           .map(Number)
@@ -440,13 +461,19 @@ export function getActiveWerewolfVoteResultNotice({
         : [];
     })
     .sort((first, second) => first.seatNumber - second.seatNumber);
+  const votersByTarget = normalizeWerewolfVoteGroups(payload.votersByTarget);
+  const abstainVoterSeatNumbers = normalizeSeatNumbers(
+    payload.abstainVoterSeatNumbers,
+  );
 
   return {
+    abstainVoterSeatNumbers,
     id: event.id,
     kind: event.type === "werewolf_sheriff_vote_resolved" ? "SHERIFF" : "EXILE",
     leaders,
     totals,
     voteRound: Number(payload.voteRound) === 2 ? 2 : 1,
+    votersByTarget,
   };
 }
 
@@ -483,6 +510,27 @@ function normalizeSeatNumbers(value: unknown) {
         .filter((item) => Number.isInteger(item) && item > 0 && item <= 20),
     ),
   ).sort((first, second) => first - second);
+}
+
+function normalizeWerewolfVoteGroups(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).flatMap(
+      ([rawTargetSeatNumber, rawVoterSeatNumbers]) => {
+        const targetSeatNumber = Number(rawTargetSeatNumber);
+        const voterSeatNumbers = normalizeSeatNumbers(rawVoterSeatNumbers);
+
+        return Number.isInteger(targetSeatNumber) &&
+          targetSeatNumber > 0 &&
+          voterSeatNumbers.length
+          ? [[targetSeatNumber, voterSeatNumbers]]
+          : [];
+      },
+    ),
+  ) as Record<number, number[]>;
 }
 
 function optionalSeatNumber(value: unknown) {
@@ -786,6 +834,29 @@ export function getWerewolfNightCues(
         ],
         "WITCH",
         "witch",
+      ),
+    );
+  }
+
+  if (roles.has("hunter")) {
+    cues.push(
+      cue(
+        "hunter",
+        localized("猎人确认", "Hunter confirms", "Le chasseur confirme"),
+        [
+          localized(
+            "猎人请睁眼。",
+            "Hunter, open your eyes.",
+            "Chasseur, ouvrez les yeux.",
+          ),
+          localized(
+            "猎人请闭眼。",
+            "Hunter, close your eyes.",
+            "Chasseur, fermez les yeux.",
+          ),
+        ],
+        "NONE",
+        "hunter",
       ),
     );
   }

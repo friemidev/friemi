@@ -35,12 +35,14 @@ test("shows the latest vote result only during its matching flow step", () => {
   const event = {
     id: "vote-result-1",
     payload: {
+      abstainVoterSeatNumbers: [6],
       leaders: [2, 4],
       resultCueIndex: 0,
       resultSessionIndex: 8,
       resultStage: "EXILE_RUNOFF_SPEECH",
       totals: { 2: 2.5, 4: 2.5, invalid: "ignored" },
       voteRound: 1,
+      votersByTarget: { 2: [1, 3], 4: [2, 5] },
     },
     type: "werewolf_exile_vote_resolved",
   };
@@ -55,6 +57,7 @@ test("shows the latest vote result only during its matching flow step", () => {
       },
     }),
     {
+      abstainVoterSeatNumbers: [6],
       id: "vote-result-1",
       kind: "EXILE",
       leaders: [2, 4],
@@ -63,6 +66,7 @@ test("shows the latest vote result only during its matching flow step", () => {
         { seatNumber: 4, voteCount: 2.5 },
       ],
       voteRound: 1,
+      votersByTarget: { 2: [1, 3], 4: [2, 5] },
     },
   );
 
@@ -175,18 +179,33 @@ test("localizes vote records and seat labels", () => {
   assert.equal(formatWerewolfSeatLabel(3, "zh-CN"), "3号");
   assert.equal(formatWerewolfSeatLabel(3, "en"), "seat 3");
   assert.equal(formatWerewolfSeatLabel(3, "fr"), "siège 3");
-  assert.equal(getWerewolfFlowRecordLabel(voteEvent, "zh-CN"), "2号 投给 5号");
+  assert.equal(getWerewolfFlowRecordLabel(voteEvent, "zh-CN"), null);
+  assert.equal(getWerewolfFlowRecordLabel(abstainEvent, "fr"), null);
   assert.equal(
-    getWerewolfFlowRecordLabel(voteEvent, "en"),
-    "Seat 2 voted for seat 5",
+    getWerewolfFlowRecordLabel(
+      {
+        payload: {
+          abstainVoterSeatNumbers: [8],
+          votersByTarget: { 1: [3, 4, 5, 6, 7], 2: [9] },
+        },
+        type: "werewolf_exile_vote_resolved",
+      },
+      "zh-CN",
+    ),
+    "投1号：3、4、5、6、7号；投2号：9号；弃票：8号",
   );
+});
+
+test("records a judge handoff", () => {
   assert.equal(
-    getWerewolfFlowRecordLabel(voteEvent, "fr"),
-    "Le siège 2 a voté pour le siège 5",
-  );
-  assert.equal(
-    getWerewolfFlowRecordLabel(abstainEvent, "fr"),
-    "Le siège 2 s'est abstenu",
+    getWerewolfFlowRecordLabel(
+      {
+        payload: { displayName: "新法官", targetMemberId: "member-2" },
+        type: "werewolf_judge_transferred",
+      },
+      "zh-CN",
+    ),
+    "法官已交接给 新法官",
   );
 });
 
@@ -220,6 +239,15 @@ test("omits Cupid and lovers after the first night", () => {
     cues.some((cue) => cue.actionKind === "LOVERS"),
     false,
   );
+});
+
+test("adds a localized hunter wake cue before dawn", () => {
+  const cues = getWerewolfNightCues(["werewolf", "hunter"], 1, "zh-CN");
+  const hunterCue = cues.find((cue) => cue.key === "hunter");
+
+  assert.deepEqual(hunterCue?.lines, ["猎人请睁眼。", "猎人请闭眼。"]);
+  assert.equal(cues.at(-2)?.key, "hunter");
+  assert.equal(cues.at(-1)?.key, "dawn");
 });
 
 test("counts the sheriff vote as one and a half votes", () => {

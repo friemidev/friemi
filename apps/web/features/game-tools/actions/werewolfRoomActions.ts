@@ -23,6 +23,7 @@ import {
   werewolfToolPath,
 } from "@/features/game-tools/werewolfConfig";
 import {
+  canJoinWerewolfRoom,
   createInitialWerewolfRoomState,
   getWerewolfDepartureBehavior,
   getWerewolfWinnerFromFinishSelection,
@@ -130,6 +131,12 @@ const updateWerewolfSheriffSchema = z.object({
   operation: z.enum(["clear", "set"]),
   privateToken: z.string().min(16).max(40),
   seatNumber: z.coerce.number().int().min(1).max(20),
+});
+
+const transferWerewolfJudgeSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  privateToken: z.string().min(16).max(40),
+  targetMemberId: z.string().min(1),
 });
 
 const finishWerewolfRoomSchema = z.object({
@@ -1027,7 +1034,7 @@ export async function joinWerewolfRoomAction(
       return { formError: t.activeRoomConflict };
     }
 
-    if (room.status !== "LOBBY" && room.status !== "FINISHED") {
+    if (!canJoinWerewolfRoom(room.status)) {
       return { formError: t.notLobby };
     }
 
@@ -2751,6 +2758,157 @@ export async function updateWerewolfSheriffAction(
   );
 }
 
+export async function transferWerewolfJudgeAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    privateToken: getString(formData, "privateToken"),
+    targetMemberId: getString(formData, "targetMemberId"),
+  };
+  const result = transferWerewolfJudgeSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  try {
+    const judgeSeat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      include: {
+        roomMember: {
+          select: { id: true },
+        },
+        room: {
+          include: {
+            members: {
+              where: { leftAt: null },
+              select: {
+                guestName: true,
+                id: true,
+                profile: { select: { nickname: true } },
+                profileId: true,
+                seatedSeatId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!judgeSeat || judgeSeat.room.kind !== "WEREWOLF") {
+      return { formError: t.statusFailed };
+    }
+
+    const room = judgeSeat.room;
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
+    const targetMember = room.members.find(
+      (member) =>
+        member.id === result.data.targetMemberId && !member.seatedSeatId,
+    );
+
+    if (
+      room.status !== "IN_PROGRESS" ||
+      !isActiveWerewolfJudgeSeat(judgeSeat, variant) ||
+      !judgeSeat.roomMember ||
+      !targetMember
+    ) {
+      return { formError: t.statusFailed };
+    }
+
+    const now = new Date();
+    const nextPrivateToken = createGameToolPrivateToken();
+    const targetDisplayName = getClaimedDisplayName({
+      displayName: targetMember.profile?.nickname ?? targetMember.guestName,
+      fallback: getWerewolfSeatName({
+        locale: room.locale,
+        seatNumber: judgeSeat.seatNumber,
+        variant,
+      }),
+    });
+
+    await prisma.$transaction(async (tx) => {
+      const releasedJudge = await tx.gameToolRoomMember.updateMany({
+        where: {
+          id: judgeSeat.roomMember!.id,
+          roomId: room.id,
+          seatedSeatId: judgeSeat.id,
+        },
+        data: { readyAt: null, seatedSeatId: null },
+      });
+      const assignedJudge = await tx.gameToolRoomMember.updateMany({
+        where: {
+          id: targetMember.id,
+          leftAt: null,
+          roomId: room.id,
+          seatedSeatId: null,
+        },
+        data: {
+          lastSeenAt: now,
+          readyAt: judgeSeat.readyAt ?? now,
+          seatedSeatId: judgeSeat.id,
+        },
+      });
+      const updatedRoom = await tx.gameToolRoom.updateMany({
+        where: {
+          id: room.id,
+          revision: room.revision,
+          status: "IN_PROGRESS",
+        },
+        data: { revision: { increment: 1 } },
+      });
+
+      if (
+        releasedJudge.count !== 1 ||
+        assignedJudge.count !== 1 ||
+        updatedRoom.count !== 1
+      ) {
+        throw new Error("Werewolf judge transfer raced with another update");
+      }
+
+      await tx.gameToolSeat.update({
+        where: { id: judgeSeat.id },
+        data: {
+          displayName: targetDisplayName,
+          guestName: targetMember.profileId ? null : targetDisplayName,
+          joinedAt: now,
+          leftAt: null,
+          privateToken: nextPrivateToken,
+          profileId: targetMember.profileId,
+          readyAt: judgeSeat.readyAt ?? now,
+        },
+      });
+      await tx.gameToolEvent.create({
+        data: {
+          actorId: judgeSeat.profileId,
+          payload: {
+            displayName: targetDisplayName,
+            previousJudgeMemberId: judgeSeat.roomMember!.id,
+            targetMemberId: targetMember.id,
+          },
+          roomId: room.id,
+          type: "werewolf_judge_transferred",
+        },
+      });
+    });
+
+    await revalidateWerewolfRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+    revalidateWerewolfSeatPath(result.data.locale, judgeSeat.privateToken);
+    revalidateWerewolfSeatPath(result.data.locale, nextPrivateToken);
+
+    return { formNotice: "judge:transferred" };
+  } catch (error) {
+    console.error("Failed to transfer Werewolf judge", error);
+    return { formError: t.statusFailed };
+  }
+}
+
 function getWerewolfFlowActionCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -2838,6 +2996,42 @@ function getNextWerewolfFlowAfterVote({
     stage: "EXILE_RESULT" as const,
     suggestedSeatNumber: leaders.length === 1 ? leaders[0]! : null,
     voteRound: 1 as const,
+  };
+}
+
+function getWerewolfVotePublication(
+  votes: Array<{
+    targetSeatNumber: number | null;
+    voterSeatNumber: number;
+  }>,
+) {
+  const votersByTarget = new Map<number, number[]>();
+  const abstainVoterSeatNumbers: number[] = [];
+
+  votes.forEach(({ targetSeatNumber, voterSeatNumber }) => {
+    if (targetSeatNumber === null) {
+      abstainVoterSeatNumbers.push(voterSeatNumber);
+      return;
+    }
+
+    votersByTarget.set(targetSeatNumber, [
+      ...(votersByTarget.get(targetSeatNumber) ?? []),
+      voterSeatNumber,
+    ]);
+  });
+
+  return {
+    abstainVoterSeatNumbers: abstainVoterSeatNumbers.sort(
+      (first, second) => first - second,
+    ),
+    votersByTarget: Object.fromEntries(
+      [...votersByTarget.entries()]
+        .sort(([first], [second]) => first - second)
+        .map(([targetSeatNumber, voterSeatNumbers]) => [
+          targetSeatNumber,
+          voterSeatNumbers.sort((first, second) => first - second),
+        ]),
+    ),
   };
 }
 
@@ -3031,12 +3225,14 @@ export async function updateWerewolfFlowAction(
           : (currentState.sheriffSeatNumber ?? null),
         votes,
       });
+      const votePublication = getWerewolfVotePublication(votes);
 
       nextFlow = getNextWerewolfFlowAfterVote({
         flow: currentFlow,
         leaders: voteResult.leaders,
       });
       eventPayload = {
+        ...votePublication,
         leaders: voteResult.leaders,
         resultCueIndex: nextFlow.cueIndex,
         resultSessionIndex: nextFlow.sessionIndex,
@@ -4323,12 +4519,14 @@ export async function runWerewolfTestBotAction(
             : (currentState.sheriffSeatNumber ?? null),
           votes,
         });
+        const votePublication = getWerewolfVotePublication(votes);
 
         nextFlow = getNextWerewolfFlowAfterVote({
           flow: currentFlow,
           leaders: voteResult.leaders,
         });
         eventPayload = {
+          ...votePublication,
           leaders: voteResult.leaders,
           resultCueIndex: nextFlow.cueIndex,
           resultSessionIndex: nextFlow.sessionIndex,
