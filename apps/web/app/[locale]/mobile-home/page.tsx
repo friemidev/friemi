@@ -38,6 +38,12 @@ import {
   getMobileHomeTopNewsItems,
   type MobileHomeTopNewsItem,
 } from "@/features/home/queries/getMobileHomeTopNews";
+import {
+  NowBubbleField,
+  type NowBubbleItem,
+} from "@/features/now/NowBubbleField";
+import { getNowHomeFeed } from "@/features/now/queries";
+import { nowOpenCity } from "@/features/now/now";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
@@ -99,6 +105,8 @@ type MobileHomeCopy = {
 type MobileHomeExperienceProps = {
   locale: string;
   swipeActivities: ActivityCardViewModel[];
+  nowInvites: NowBubbleItem[];
+  nowInitialTime: number;
 };
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
@@ -490,6 +498,34 @@ export default async function MobileHomePage({
     trendingCount: trendingActivitiesResult.trendingActivities.length,
   });
 
+  const nowInitialTime = Date.now();
+  const nowInvites: NowBubbleItem[] = await getNowHomeFeed(
+    nowOpenCity,
+    new Date(nowInitialTime),
+  )
+    .then((items) =>
+      items.map((invite) => ({
+        id: invite.id,
+        category: invite.category,
+        title: invite.title,
+        area: invite.area,
+        createdAt: invite.createdAt.toISOString(),
+        expiresAt: invite.expiresAt.toISOString(),
+        interestCount: invite._count.interests,
+        size: invite.priority.size,
+        avatars: [
+          invite.organizer,
+          ...invite.interests.map((interest) => interest.profile),
+        ]
+          .slice(0, 3)
+          .map((person) => ({ name: person.nickname, url: person.avatarUrl })),
+      })),
+    )
+    .catch((error: unknown) => {
+      console.error("Failed to load home now invites", error);
+      return [];
+    });
+
   return (
     <>
       <ImageResourcePreloader
@@ -510,11 +546,15 @@ export default async function MobileHomePage({
           topNewsItems={topNewsItems}
           trendingActivities={trendingActivitiesResult.trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
+          nowInvites={nowInvites}
+          nowInitialTime={nowInitialTime}
         />
         <div className="friemi-native-app-desktop-only hidden md:block">
           <MobileHomeExperience
             locale={locale}
             swipeActivities={activitiesResult.swipeActivities}
+            nowInvites={nowInvites}
+            nowInitialTime={nowInitialTime}
           />
         </div>
       </main>
@@ -542,6 +582,8 @@ function MobileHomeV23Experience({
   topNewsItems,
   trendingActivities,
   viewerName,
+  nowInvites,
+  nowInitialTime,
 }: MobileHomeV23ExperienceProps) {
   const copy = getMobileHomeV23Copy(locale, viewerName);
   const categories = getMobileHomeCopy(locale).categories;
@@ -585,7 +627,15 @@ function MobileHomeV23Experience({
           <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
             {copy.subtitle}
           </p>
+        </section>
 
+        <NowBubbleField
+          initialNow={nowInitialTime}
+          invites={nowInvites}
+          locale={locale}
+        />
+
+        <section className="mt-4 pr-5">
           <GlobalSearchForm
             inputId="mobile-home-v23-search"
             locale={locale}
@@ -822,6 +872,8 @@ function MobileHomeV23FallbackCard({
 function MobileHomeExperience({
   locale,
   swipeActivities,
+  nowInvites,
+  nowInitialTime,
 }: MobileHomeExperienceProps) {
   const mobile = getMobileHomeCopy(locale);
 
@@ -878,6 +930,17 @@ function MobileHomeExperience({
                 {mobile.createPlanLabel}
               </span>
             </Link>
+          </div>
+
+          <div
+            className="order-3 w-full max-w-[430px] md:order-none"
+            data-home-reveal="up"
+          >
+            <NowBubbleField
+              initialNow={nowInitialTime}
+              invites={nowInvites}
+              locale={locale}
+            />
           </div>
 
           <section

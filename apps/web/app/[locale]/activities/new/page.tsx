@@ -10,6 +10,7 @@ import { ActivityCreateCancelControl } from "@/features/activities/components/Ac
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
 import { MobileNewActivityEntryView } from "@/features/activities/components/MobileNewActivityEntryView";
 import { getActivityList } from "@/features/activities/queries/getActivities";
+import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { prisma } from "@/lib/prisma";
@@ -28,6 +29,7 @@ type NewActivityPageProps = {
   }>;
   searchParams: Promise<{
     copyActivityId?: string | string[];
+    fromNow?: string | string[];
     mode?: string | string[];
     return?: string | string[];
   }>;
@@ -76,6 +78,9 @@ export default async function NewActivityPage({
   const copyActivityId = Array.isArray(resolvedSearchParams.copyActivityId)
     ? resolvedSearchParams.copyActivityId[0]
     : resolvedSearchParams.copyActivityId;
+  const fromNow = Array.isArray(resolvedSearchParams.fromNow)
+    ? resolvedSearchParams.fromNow[0]
+    : resolvedSearchParams.fromNow;
   const mode = Array.isArray(resolvedSearchParams.mode)
     ? resolvedSearchParams.mode[0]
     : resolvedSearchParams.mode;
@@ -83,7 +88,8 @@ export default async function NewActivityPage({
     ? resolvedSearchParams.return[0]
     : resolvedSearchParams.return;
   const cancelReturnMode = returnModeParam === "history" ? "history" : "path";
-  const showForm = mode === "form" || Boolean(copyActivityId);
+  const showForm =
+    mode === "form" || Boolean(copyActivityId) || Boolean(fromNow);
   const profile = await (copyActivityId
     ? ensureCurrentUserProfile(
         locale,
@@ -91,14 +97,75 @@ export default async function NewActivityPage({
           cancelReturnMode === "history" ? "&return=history" : ""
         }`,
       )
-    : getOptionalCurrentUserProfileSnapshot());
+    : fromNow
+      ? ensureCurrentUserProfile(
+          locale,
+          `/activities/new?mode=form&fromNow=${encodeURIComponent(fromNow)}`,
+        )
+      : getOptionalCurrentUserProfileSnapshot());
+  const nowInvite =
+    fromNow && profile
+      ? await prisma.nowInvite.findFirst({
+          where: {
+            id: fromNow,
+            organizerId: profile.id,
+            linkedActivityId: null,
+          },
+          select: {
+            id: true,
+            title: true,
+            note: true,
+            category: true,
+            city: true,
+            area: true,
+          },
+        })
+      : null;
+  const nowPrefill: ActivityFormValues | undefined = nowInvite
+    ? {
+        title: nowInvite.title,
+        description: nowInvite.note || nowInvite.title,
+        itinerary: "",
+        coverImageUrl: "",
+        type: "LOCAL",
+        category: ["COFFEE", "FOOD", "DRINK", "TEA"].includes(
+          nowInvite.category,
+        )
+          ? "FOOD"
+          : ["PARK", "WALK", "SHOP", "ADVENTURE"].includes(nowInvite.category)
+            ? "WANDER"
+            : ["MOVIE", "SHOW"].includes(nowInvite.category)
+              ? "AUDIO_VISUAL"
+              : nowInvite.category === "GAME"
+                ? "BOARD_GAME"
+                : nowInvite.category === "SPORT"
+                  ? "SPORTS"
+                  : "OTHER",
+        visibility: "PUBLIC",
+        otherCategoryText: "",
+        city: nowInvite.city,
+        destination: "",
+        address: nowInvite.area,
+        hideAddressFromNonParticipants: false,
+        latitude: "",
+        longitude: "",
+        startAt: "",
+        endAt: "",
+        capacity: "",
+        capacityLimitEnabled: false,
+        minParticipants: "",
+        requiresApproval: false,
+        priceType: "FREE",
+        priceText: "",
+        ticketUrl: "",
+        ticketLabel: "",
+      }
+    : undefined;
   const initialValues =
     copyActivityId && profile
       ? await getActivityCopyValuesById(copyActivityId, profile.id)
-      : undefined;
-  const trustScore = profile
-    ? await getTrustScore(prisma, profile.id)
-    : null;
+      : nowPrefill;
+  const trustScore = profile ? await getTrustScore(prisma, profile.id) : null;
   const creationRestricted =
     trustScore !== null && !canCreateActivityWithTrustScore(trustScore);
   const creationRestrictionMessage = creationRestricted
@@ -168,6 +235,7 @@ export default async function NewActivityPage({
       ) : null}
 
       <NewActivityForm
+        nowInviteId={nowInvite?.id}
         formId={formId}
         isAuthenticated={Boolean(profile)}
         locale={locale}
