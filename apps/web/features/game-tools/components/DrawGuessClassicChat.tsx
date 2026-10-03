@@ -87,7 +87,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
     };
   }, []);
 
-  return <section aria-label={t.title} className="draw-guess-stage-card flex h-[clamp(11rem,33dvh,18rem)] min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.5rem] bg-[#F7FAFE] text-[#30425C] shadow-[0_8px_24px_rgba(48,66,92,0.1)]">
+  return <section aria-label={t.title} className="draw-guess-classic-chat draw-guess-stage-card flex h-[clamp(11rem,33dvh,18rem)] min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.5rem] bg-[#F7FAFE] text-[#30425C] shadow-[0_8px_24px_rgba(48,66,92,0.1)]">
     <header className="flex shrink-0 items-center gap-2 px-3 pb-1.5 pt-2.5 sm:px-4">
       <DrawGuessPet bubbleSide="compact" catId={room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.catId} locale={locale} mood={mood} reactionKey={isArtist && lastReaction ? `${lastReaction.seat}:${lastReaction.kind}:${lastReaction.at}` : lastOwnMessage?.id} reactionKind={isArtist && lastReaction ? "cheer" : lastOwnMessage?.correct ? "cheer" : "oops"} size={39} />
       <div className="min-w-0 flex-1"><h2 className="text-sm font-black leading-tight">{t.title}</h2><p className="text-[11px] font-semibold text-[#65748A]">{room.viewerSeat < 0 ? t.spectator : isArtist ? t.empty : t.hint}</p></div>

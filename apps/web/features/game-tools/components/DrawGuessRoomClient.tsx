@@ -556,8 +556,11 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     const updateViewport = () => {
       const stage = playStageRef.current;
       if (!stage) return;
-      stage.style.setProperty("--draw-guess-visual-height", `${viewport?.height ?? window.innerHeight}px`);
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      stage.style.setProperty("--draw-guess-visual-height", `${visibleHeight}px`);
       stage.style.setProperty("--draw-guess-visual-top", `${viewport?.offsetTop ?? 0}px`);
+      stage.style.setProperty("--draw-guess-short-chat-height", `${Math.max(136, Math.min(160, visibleHeight * .25))}px`);
+      stage.dataset.shortViewport = visibleHeight < 680 ? "true" : "false";
     };
     updateViewport();
     viewport?.addEventListener("resize", updateViewport);
@@ -718,12 +721,12 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
     return <div ref={playStageRef} className="draw-guess-theme draw-guess-game-shell draw-guess-play-stage fixed inset-x-0 top-0 z-[80] flex h-dvh flex-col overflow-hidden" style={{ top: "var(--draw-guess-visual-top, 0px)", height: "var(--draw-guess-visual-height, 100dvh)" }}>
       <span aria-hidden="true" className="pointer-events-none absolute -left-16 top-16 h-48 w-48 rounded-full bg-[#BED6EC]/20 blur-3xl" />
       <span aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-10 h-56 w-56 rounded-full bg-[#DADAF0]/20 blur-3xl" />
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-3 sm:px-5 sm:pt-4">
+      <header className="draw-guess-game-header relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-3 sm:px-5 sm:pt-4">
         <button aria-label={locale === "zh-CN" ? "退出游戏，进入托管" : "Leave game"} type="button" onClick={() => setConfirmLeave(true)} className="draw-guess-btn draw-guess-btn--milk grid h-10 min-h-10 w-10 shrink-0 place-items-center"><ArrowLeft className="h-4 w-4" /></button>
         <div className="min-w-0 flex-1"><p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-[#3E70AA]">{isClassic ? t.modeClassic : t.modeChain} <span aria-hidden="true">·</span> {roundLabel} <span aria-hidden="true">·</span> {stageProgress}</p><h1 className="line-clamp-2 text-lg font-bold leading-tight sm:truncate sm:text-2xl">{stageTitle}</h1></div>
-        <DrawGuessMusicToggle locale={locale} />
+        <span className="draw-guess-header-music"><DrawGuessMusicToggle locale={locale} /></span>
         {stageTimer ? <span className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-sm font-black tabular-nums shadow-[0_3px_0_#DFE8F0] sm:px-3 sm:text-base ${secondsLeft !== null && secondsLeft <= 10 ? "bg-[#DFECF8] text-[#506E9E] motion-safe:animate-pulse" : "bg-white text-[#3E6FA8]"}`}><Clock3 className="h-4 w-4" />{stageTimer}</span> : null}
-        <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="draw-guess-btn draw-guess-btn--milk h-10 min-h-10 shrink-0 gap-1 px-2.5 text-xs"><UsersRound className="h-4 w-4" /><span>{humanCount}/{humanCapacity}</span></button>
+        <button aria-label={`${t.players} ${humanCount}/${humanCapacity}`} aria-haspopup="dialog" aria-expanded={showPlayers} type="button" onClick={() => setShowPlayers(true)} className="draw-guess-btn draw-guess-btn--milk h-10 min-h-10 shrink-0 gap-1 px-2.5 text-xs"><UsersRound className="h-4 w-4" /><span className="max-[359px]:sr-only">{humanCount}/{humanCapacity}</span></button>
       </header>
 
       {isClassic ? <div role="region" aria-label={t.liveScore} className="relative z-10 mx-auto flex w-full max-w-5xl shrink-0 items-center gap-2 px-3 pb-2 sm:px-5">
@@ -739,7 +742,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
         </ol>
       </div> : null}
 
-      <main className="relative mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:gap-3 sm:px-5 sm:pb-4">
+      <main className={`draw-guess-main ${isClassicRound ? "draw-guess-main--classic" : ""} relative mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:gap-3 sm:px-5 sm:pb-4`}>
         <section key={phaseKey} aria-label={stageTitle} className="draw-guess-stage-card relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-[#FFFCF5] p-2 shadow-[0_16px_45px_rgba(48,66,92,0.1)] sm:rounded-[2rem] sm:p-4">
           {((isClassicRound && room.view.answer && !showAnswerCelebration) || isChainDrawing && chainTask?.previous?.kind === "WORD") ? <div className="mb-2 flex shrink-0 items-center gap-2 rounded-2xl bg-[#E8F2FB] px-3 py-2 sm:px-4"><Sparkles className="h-4 w-4 shrink-0 text-[#3C70A9]" /><span className="text-xs font-semibold text-[#405875]">{isClassicRound ? t.answer : t.previousWord}</span><strong className="min-w-0 truncate text-base text-[#30425C] sm:text-lg">{isClassicRound ? room.view.answer : chainTask?.previous?.kind === "WORD" ? chainTask.previous.value : ""}</strong></div> : null}
 
