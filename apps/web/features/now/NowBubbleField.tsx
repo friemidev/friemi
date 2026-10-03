@@ -6,7 +6,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { RetainedImage } from "@/components/media/RetainedImage";
-import { getNowCopy, getNowKind, getNowKindLabel } from "./now";
+import { getNowCopy, getNowKind, getNowKindLabel, nowKinds } from "./now";
 import styles from "./NowBubbleField.module.css";
 
 export type NowBubbleItem = {
@@ -19,6 +19,16 @@ export type NowBubbleItem = {
   interestCount: number;
   size: "small" | "medium" | "large";
   avatars: { name: string; url: string | null }[];
+};
+
+const bubbleSlots: Record<number, number[]> = {
+  1: [4],
+  2: [1, 3],
+  3: [1, 4, 3],
+  4: [1, 3, 5, 7],
+  5: [1, 3, 4, 5, 7],
+  6: [1, 2, 3, 4, 5, 7],
+  7: [1, 2, 3, 4, 5, 6, 7],
 };
 
 function remainingLabel(expiresAt: string, now: number, locale: string) {
@@ -38,20 +48,19 @@ export function NowBubbleField({
   initialNow,
   invites,
   locale,
-  preview = false,
 }: {
   initialNow: number;
   invites: NowBubbleItem[];
   locale: string;
-  preview?: boolean;
 }) {
   const copy = getNowCopy(locale);
   const router = useRouter();
   const [now, setNow] = useState(initialNow);
   const [popping, setPopping] = useState<string | null>(null);
-  const visible = invites.filter(
-    (invite) => Date.parse(invite.expiresAt) > now,
-  );
+  const visible = invites
+    .filter((invite) => Date.parse(invite.expiresAt) > now)
+    .slice(0, 7);
+  const slots = bubbleSlots[visible.length] ?? bubbleSlots[7];
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -61,17 +70,13 @@ export function NowBubbleField({
   function openInvite(id: string) {
     if (popping) return;
     const destination = withLocale(locale, `/now/${id}`);
-    if (preview) {
-      setPopping(id);
-      window.setTimeout(() => setPopping(null), 260);
-      return;
-    }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       router.push(destination);
       return;
     }
     setPopping(id);
     window.setTimeout(() => router.push(destination), 260);
+    window.setTimeout(() => setPopping(null), 700);
   }
 
   return (
@@ -90,7 +95,7 @@ export function NowBubbleField({
       </div>
 
       {visible.length ? (
-        <div className={styles.field}>
+        <div className={styles.field} data-count={visible.length}>
           <div
             className={`${styles.sparkle} ${styles.sparkleOne}`}
             aria-hidden="true"
@@ -103,7 +108,7 @@ export function NowBubbleField({
             className={`${styles.sparkle} ${styles.sparkleThree}`}
             aria-hidden="true"
           />
-          {visible.slice(0, 6).map((invite, index) => {
+          {visible.map((invite, index) => {
             const kind = getNowKind(invite.category);
             const total =
               Date.parse(invite.expiresAt) - Date.parse(invite.createdAt);
@@ -116,10 +121,9 @@ export function NowBubbleField({
               <button
                 key={invite.id}
                 type="button"
-                className={`${styles.item} ${styles[kind.tone]} ${styles[invite.size]} ${popping === invite.id ? styles.popping : ""}`}
+                className={`${styles.item} ${styles[`slot${slots[index]}`]} ${styles[kind.tone]} ${styles[invite.size]} ${popping === invite.id ? styles.popping : ""}`}
                 style={
                   {
-                    "--position": index,
                     "--progress": `${progress}%`,
                     "--delay": `${index * 76}ms`,
                   } as CSSProperties
@@ -156,9 +160,7 @@ export function NowBubbleField({
                 <span className={styles.meta}>
                   {remainingLabel(invite.expiresAt, now, locale)}
                 </span>
-                <span className={styles.count}>
-                  {invite.interestCount} {copy.people}
-                </span>
+                <span className={styles.area}>{invite.area}</span>
                 <span className={styles.srOnly}>
                   {getNowKindLabel(invite.category, locale)}
                 </span>
@@ -182,7 +184,7 @@ export function NowBubbleField({
         <Link href={withLocale(locale, "/now/mine")} className={styles.mine}>
           {copy.mine}
         </Link>
-        {(["COFFEE", "DRINK", "PARK", "GAME"] as const).map((kind) => (
+        {nowKinds.map((kind) => (
           <Link
             key={kind}
             href={withLocale(locale, `/now/new?kind=${kind}`)}

@@ -15,7 +15,11 @@ const nowInviteListInclude = {
   _count: { select: { interests: { where: { withdrawnAt: null } } } },
 } as const;
 
-export async function getNowBrowseFeed(city: string, now = new Date()) {
+export async function getNowBrowseFeed(
+  city: string,
+  now = new Date(),
+  viewerId?: string,
+) {
   const invites = await prisma.nowInvite.findMany({
     where: {
       city: { equals: city, mode: "insensitive" },
@@ -25,10 +29,26 @@ export async function getNowBrowseFeed(city: string, now = new Date()) {
     orderBy: { createdAt: "desc" },
     take: 80,
   });
+  const interestedInviteIds =
+    viewerId && invites.length
+      ? new Set(
+          (
+            await prisma.nowInterest.findMany({
+              where: {
+                profileId: viewerId,
+                withdrawnAt: null,
+                inviteId: { in: invites.map((invite) => invite.id) },
+              },
+              select: { inviteId: true },
+            })
+          ).map((interest) => interest.inviteId),
+        )
+      : new Set<string>();
 
   return invites
     .map((invite) => ({
       ...invite,
+      viewerInterested: interestedInviteIds.has(invite.id),
       priority: getNowPriority({
         id: invite.id,
         interestCount: invite._count.interests,
@@ -54,7 +74,7 @@ export async function getNowHomeFeed(city: string, now = new Date()) {
         a.priority.score -
         getNowVisitJitter(a.id, visitSeed),
     );
-  while (selected.length < 6 && remaining.length) {
+  while (selected.length < 7 && remaining.length) {
     const next = remaining.findIndex(
       (item) => !selected.some((shown) => shown.category === item.category),
     );
@@ -78,6 +98,7 @@ export async function getNowInviteDetail(
           profileId: true,
           note: true,
           selectedAt: true,
+          createdAt: true,
           profile: { select: { id: true, nickname: true, avatarUrl: true } },
         },
       },

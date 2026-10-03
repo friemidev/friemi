@@ -3,19 +3,39 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, MapPin, UsersRound } from "lucide-react";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import {
+  NowCountdownOrb,
   NowInterestForm,
-  NowLiveCountdown,
   NowMessageForm,
 } from "@/features/now/NowDetailActions";
 import { getNowCopy, getNowKind, isNowVisible } from "@/features/now/now";
 import { selectNowInterestAction } from "@/features/now/actions";
 import { getNowInviteDetail } from "@/features/now/queries";
+import { getNowPreviewDetail } from "@/features/now/nowPreview";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 
-type PageProps = { params: Promise<{ locale: string; inviteId: string }> };
+type PageProps = {
+  params: Promise<{ locale: string; inviteId: string }>;
+  searchParams?: Promise<{ as?: string }>;
+};
 export const dynamic = "force-dynamic";
+
+function interestAgeLabel(createdAt: Date, now: number, locale: string) {
+  const minutes = Math.max(1, Math.floor((now - createdAt.getTime()) / 60_000));
+  if (minutes < 60)
+    return locale === "zh-CN"
+      ? `${minutes} 分钟前`
+      : locale === "fr"
+        ? `il y a ${minutes} min`
+        : `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  return locale === "zh-CN"
+    ? `${hours} 小时前`
+    : locale === "fr"
+      ? `il y a ${hours} h`
+      : `${hours}h ago`;
+}
 
 export async function generateMetadata({ params }: PageProps) {
   const { locale, inviteId } = await params;
@@ -24,22 +44,34 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function NowInvitePage({ params }: PageProps) {
+export default async function NowInvitePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale, inviteId } = await params;
-  const viewer = await getOptionalCurrentUserProfileSnapshot();
-  const invite = await getNowInviteDetail(inviteId, viewer?.id);
+  const query = (await searchParams) ?? {};
+  const preview =
+    process.env.NODE_ENV === "development" && inviteId.startsWith("preview-");
+  const previewRole =
+    query.as === "host" || query.as === "interested" ? query.as : "viewer";
+  const viewer = preview ? null : await getOptionalCurrentUserProfileSnapshot();
+  const initialNow = Date.now();
+  const invite = preview
+    ? getNowPreviewDetail(inviteId, initialNow, previewRole)
+    : await getNowInviteDetail(inviteId, viewer?.id);
   if (!invite) notFound();
   const copy = getNowCopy(locale);
   const kind = getNowKind(invite.category);
   const active = isNowVisible(invite.expiresAt);
   const canTalk = invite.isOrganizer || invite.isInterested;
+  const viewerId =
+    preview && previewRole === "interested" ? "preview-viewer" : viewer?.id;
   const viewerSelection = invite.interests.find(
-    (interest) => interest.profileId === viewer?.id,
+    (interest) => interest.profileId === viewerId,
   )?.selectedAt;
-  const initialNow = Date.now();
 
   return (
-    <main className="app-mobile-page-shell min-h-svh bg-[#FBFCFA] px-5 pb-28 pt-5 text-[#173D32]">
+    <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FBFCFA] px-5 pb-28 pt-5 text-[#173D32]">
       <div className="mx-auto max-w-[620px]">
         <div className="flex items-center justify-between">
           <Link
@@ -57,27 +89,42 @@ export default async function NowInvitePage({ params }: PageProps) {
           </Link>
         </div>
 
-        <div className="relative mt-5 overflow-hidden rounded-[1.8rem] bg-white px-5 pb-6 pt-8 text-center shadow-[0_12px_34px_rgba(29,80,48,.07)]">
+        {preview ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#678573]">
+            <span>开发预览 · 示例内容</span>
+            {(["viewer", "interested", "host"] as const).map((role) => (
+              <Link
+                key={role}
+                href={withLocale(
+                  locale,
+                  `/now/${invite.id}${role === "viewer" ? "" : `?as=${role}`}`,
+                )}
+                className={`rounded-full px-2.5 py-1 ${previewRole === role ? "bg-[#E7F6EC] text-[#126A4A]" : "bg-white text-[#6D8173]"}`}
+              >
+                {role === "host"
+                  ? "发起者"
+                  : role === "interested"
+                    ? "已举手"
+                    : "参与者"}
+              </Link>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="relative mt-2 overflow-hidden rounded-[1.8rem] bg-white px-5 pb-4 pt-3 text-center shadow-[0_12px_34px_rgba(29,80,48,.07)]">
           <div
             className="pointer-events-none absolute left-1/2 top-2 h-[14rem] w-[14rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,#F1F9F0,transparent_70%)]"
             aria-hidden="true"
           />
-          <div className="relative mx-auto grid h-[9rem] w-[9rem] place-items-center rounded-full bg-[conic-gradient(#F46F82_0_78%,#FBE4E8_78%_100%)] p-[9px] shadow-[0_18px_38px_rgba(244,111,130,.16)]">
-            <div
-              className="grid h-full w-full place-items-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#fff,#FFF1F3_65%,#FBE0E5)] text-[3.5rem]"
-              aria-hidden="true"
-            >
-              {kind.emoji}
-            </div>
-          </div>
-          <p className="relative mt-4 text-[13px] font-bold text-[#EC667B]">
-            <NowLiveCountdown
-              expiresAt={invite.expiresAt.toISOString()}
-              initialNow={initialNow}
-              locale={locale}
-            />
-          </p>
-          <h1 className="relative mt-3 text-[23px] font-bold leading-8">
+          <NowCountdownOrb
+            createdAt={invite.createdAt.toISOString()}
+            emoji={kind.emoji}
+            expiresAt={invite.expiresAt.toISOString()}
+            initialNow={initialNow}
+            locale={locale}
+            tone={kind.tone}
+          />
+          <h1 className="relative mt-2 text-[23px] font-bold leading-8">
             {invite.title}
           </h1>
           <p className="relative mt-2 flex items-center justify-center gap-1.5 text-[13px] text-[#5E786A]">
@@ -85,11 +132,11 @@ export default async function NowInvitePage({ params }: PageProps) {
             {invite.area} · {invite.city}
           </p>
           {invite.note ? (
-            <p className="relative mt-4 rounded-2xl bg-[#F7FAF6] px-4 py-3 text-left text-[14px] leading-6 text-[#4D6759]">
+            <p className="relative mt-3 rounded-2xl bg-[#F7FAF6] px-4 py-3 text-left text-[14px] leading-6 text-[#4D6759]">
               {invite.note}
             </p>
           ) : null}
-          <div className="relative mt-5 flex items-center justify-center gap-2 border-t border-[#EFF2EC] pt-4">
+          <div className="relative mt-4 flex items-center justify-center gap-2 border-t border-[#EFF2EC] pt-3">
             <MessageAvatar
               avatarUrl={invite.organizer.avatarUrl}
               name={invite.organizer.nickname}
@@ -110,17 +157,44 @@ export default async function NowInvitePage({ params }: PageProps) {
           </div>
         </div>
 
-        {!invite.isOrganizer && active ? (
-          <NowInterestForm
-            inviteId={invite.id}
-            isInterested={invite.isInterested}
-            locale={locale}
-          />
+        {!invite.isOrganizer && (active || invite.isInterested) ? (
+          preview ? (
+            <div className="mt-3">
+              {!invite.isInterested ? (
+                <input
+                  disabled
+                  placeholder="留一句话（选填）"
+                  className="mb-3 min-h-11 w-full rounded-xl border border-[#DDE9E0] bg-white px-3 text-[13px]"
+                />
+              ) : null}
+              <button
+                type="button"
+                disabled
+                className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#F66F81] text-[15px] font-bold text-white opacity-75"
+              >
+                {invite.isInterested ? copy.interestedAlready : copy.interested}
+              </button>
+            </div>
+          ) : (
+            <NowInterestForm
+              expiresAt={invite.expiresAt.toISOString()}
+              initialNow={initialNow}
+              inviteId={invite.id}
+              isInterested={invite.isInterested}
+              locale={locale}
+            />
+          )
         ) : null}
 
         {invite.interests.length ? (
           <section className="mt-7">
-            <h2 className="mb-3 text-[16px] font-bold">{copy.people}</h2>
+            <h2 className="mb-3 text-[16px] font-bold">
+              {locale === "zh-CN"
+                ? "举手的人"
+                : locale === "fr"
+                  ? "Personnes intéressées"
+                  : "People interested"}
+            </h2>
             <div className="grid gap-2.5">
               {invite.interests.map((interest) => (
                 <div
@@ -133,16 +207,29 @@ export default async function NowInvitePage({ params }: PageProps) {
                     size="sm"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold">
-                      {interest.profile.nickname}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13px] font-bold">
+                        {interest.profile.nickname}
+                      </p>
+                      <span className="text-[10px] text-[#9AA99C]">
+                        {interestAgeLabel(
+                          interest.createdAt,
+                          initialNow,
+                          locale,
+                        )}
+                      </span>
+                    </div>
                     {interest.note ? (
                       <p className="mt-0.5 text-[12px] text-[#6A7D70]">
                         {interest.note}
                       </p>
                     ) : null}
                   </div>
-                  {invite.isOrganizer && !invite.linkedActivity ? (
+                  {preview && invite.isOrganizer ? (
+                    <span className="rounded-xl bg-[#E9F7EE] px-3 py-2 text-[12px] font-bold text-[#126A4A]">
+                      {interest.selectedAt ? "已选择" : "选入组局"}
+                    </span>
+                  ) : invite.isOrganizer && !invite.linkedActivity ? (
                     <form action={selectNowInterestAction}>
                       <input type="hidden" name="locale" value={locale} />
                       <input type="hidden" name="inviteId" value={invite.id} />
@@ -215,6 +302,11 @@ export default async function NowInvitePage({ params }: PageProps) {
                 {invite.linkedActivity.title}
                 <ArrowUpRight size={15} />
               </Link>
+            ) : preview ? (
+              <span className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[13px] font-bold text-white opacity-75">
+                {copy.organize}
+                <ArrowUpRight size={15} />
+              </span>
             ) : (
               <Link
                 href={withLocale(
@@ -281,7 +373,13 @@ export default async function NowInvitePage({ params }: PageProps) {
                 </div>
               ))}
             </div>
-            <NowMessageForm inviteId={invite.id} locale={locale} />
+            {preview ? (
+              <div className="mt-4 rounded-2xl border border-[#DDE9E0] bg-white px-3 py-3 text-[12px] text-[#94A498]">
+                {copy.message} · 示例预览
+              </div>
+            ) : (
+              <NowMessageForm inviteId={invite.id} locale={locale} />
+            )}
           </section>
         ) : null}
       </div>

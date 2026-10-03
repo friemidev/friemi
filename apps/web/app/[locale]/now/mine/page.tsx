@@ -23,7 +23,7 @@ export default async function MyNowPage({ params }: PageProps) {
   const { created, interested } = await getMyNowInvites(profile.id);
   const copy = getNowCopy(locale);
   return (
-    <main className="app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
+    <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
       <div className="mx-auto max-w-[640px]">
         <div className="flex items-center justify-between">
           <Link

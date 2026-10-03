@@ -32,7 +32,7 @@ const createSchema = z.object({
   area: z.string().trim().min(2).max(80),
   category: z.string().refine(isNowKind),
   title: z.string().trim().min(2).max(48),
-  note: z.string().trim().max(280),
+  note: z.string().trim().max(50),
   visibilityHours: z.coerce.number().refine(isNowVisibilityHours),
 });
 
@@ -73,7 +73,7 @@ export async function createNowInviteAction(
 const interestSchema = z.object({
   inviteId: z.string().min(1).max(100),
   intent: z.enum(["join", "withdraw"]),
-  note: z.string().trim().max(100),
+  note: z.string().trim().max(50),
 });
 
 export async function changeNowInterestAction(

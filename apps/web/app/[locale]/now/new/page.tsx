@@ -8,7 +8,7 @@ import { getNowCopy, isNowKind } from "@/features/now/now";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; previewNow?: string }>;
 };
 
 export async function generateMetadata({ params }: PageProps) {
@@ -20,11 +20,12 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function NewNowPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const { kind } = await searchParams;
-  await ensureCurrentUserProfile(locale, "/now/new");
+  const { kind, previewNow } = await searchParams;
+  const preview = process.env.NODE_ENV === "development" && previewNow === "1";
+  if (!preview) await ensureCurrentUserProfile(locale, "/now/new");
   const copy = getNowCopy(locale);
   return (
-    <main className="app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
+    <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
       <div className="mx-auto max-w-[540px]">
         <Link
           href={withLocale(locale, "/mobile-home")}
@@ -36,6 +37,11 @@ export default async function NewNowPage({ params, searchParams }: PageProps) {
         <h1 className="mb-1 text-[27px] font-bold tracking-tight">
           {copy.create}
         </h1>
+        {preview ? (
+          <p className="mb-1 text-[11px] font-semibold text-[#778A7D]">
+            开发预览 · 示例内容
+          </p>
+        ) : null}
         <p className="mb-7 text-[13px] text-[#708276]">
           {locale === "zh-CN"
             ? "把当下的想法放出来，看看谁想一起。"
@@ -46,6 +52,7 @@ export default async function NewNowPage({ params, searchParams }: PageProps) {
         <NowCreateForm
           locale={locale}
           initialKind={kind && isNowKind(kind) ? kind : "COFFEE"}
+          preview={preview}
         />
       </div>
     </main>

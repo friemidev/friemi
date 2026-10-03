@@ -5,8 +5,13 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 import { getNowCopy, nowOpenCity } from "@/features/now/now";
 import { getNowBrowseFeed } from "@/features/now/queries";
 import { NowInviteRow } from "@/features/now/NowInviteRow";
+import { getNowPreviewRows } from "@/features/now/nowPreview";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 
-type PageProps = { params: Promise<{ locale: string }> };
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ previewNow?: string }>;
+};
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps) {
@@ -14,12 +19,21 @@ export async function generateMetadata({ params }: PageProps) {
   return buildNoIndexMetadata({ canonicalPath: withLocale(locale, "/now") });
 }
 
-export default async function NowBrowsePage({ params }: PageProps) {
+export default async function NowBrowsePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale } = await params;
-  const invites = await getNowBrowseFeed(nowOpenCity);
+  const query = (await searchParams) ?? {};
+  const preview =
+    process.env.NODE_ENV === "development" && query.previewNow === "1";
+  const viewer = preview ? null : await getOptionalCurrentUserProfileSnapshot();
+  const invites = preview
+    ? getNowPreviewRows(Date.now())
+    : await getNowBrowseFeed(nowOpenCity, new Date(), viewer?.id);
   const copy = getNowCopy(locale);
   return (
-    <main className="app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5">
+    <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5">
       <div className="mx-auto max-w-[640px]">
         <div className="flex items-center justify-between">
           <Link
@@ -39,11 +53,23 @@ export default async function NowBrowsePage({ params }: PageProps) {
         <h1 className="mt-4 text-[27px] font-bold text-[#143D32]">
           {copy.heading}
         </h1>
+        {preview ? (
+          <p className="mt-1 text-[11px] font-semibold text-[#778A7D]">
+            开发预览 · 示例内容
+          </p>
+        ) : null}
         <p className="mt-1 text-[13px] text-[#61736A]">{copy.subtitle}</p>
         {invites.length ? (
           <div className="mt-6 grid gap-3">
             {invites.map((invite) => (
-              <NowInviteRow invite={invite} key={invite.id} locale={locale} />
+              <NowInviteRow
+                invite={invite}
+                key={invite.id}
+                locale={locale}
+                viewerId={viewer?.id}
+                showInterestAction
+                preview={preview}
+              />
             ))}
           </div>
         ) : (
