@@ -1776,6 +1776,7 @@ model AaParticipant {
   guestActivityParticipant   GuestActivityParticipant? @relation("AaParticipantGuest", fields: [guestActivityParticipantId], references: [id], onDelete: SetNull)
   displayNameSnapshot        String                    @db.VarChar(80)
   avatarUrlSnapshot          String?
+  paymentMethod              String?                   @db.VarChar(160)
   role                       AaParticipantRole         @default(MEMBER)
   status                     AaParticipantStatus       @default(ACTIVE)
   joinedAt                   DateTime                  @default(now())

@@ -19,11 +19,17 @@ export function projectSimpleLedger(
 ): AaSimpleState {
   const viewer = ledger.participants.find(person => person.userProfileId === profileId);
   if (!viewer) throw new Error("FORBIDDEN");
+  const payableRecipients = new Set(ledger.transactions
+    .filter(transaction => transaction.importSource === AA_SETTLEMENT && transaction.status === "PENDING_CONFIRMATION" && transaction.transferFromParticipantId === viewer.id)
+    .map(transaction => transaction.transferToParticipantId));
   return {
     id: ledger.id, activityId: ledger.activityId!, title: ledger.titleSnapshot, currency: ledger.baseCurrency,
     status: ledger.status, version: ledger.version, startedAt: ledger.settlementStartedAt?.toISOString() ?? null,
     viewerId: viewer.id, canManage: access.canManage, canSettle: access.role === "OWNER" && viewer.status === "ACTIVE",
-    participants: ledger.participants.map(person => ({ id: person.id, name: person.displayNameSnapshot, active: person.status === "ACTIVE" })),
+    participants: ledger.participants.map(person => ({
+      id: person.id, name: person.displayNameSnapshot, active: person.status === "ACTIVE",
+      paymentMethod: person.id === viewer.id || (ledger.status !== "ARCHIVED" && payableRecipients.has(person.id)) ? person.paymentMethod : null,
+    })),
     legacyBlocked: ledger.transactions.some(t => t.conflicts.length || t.changeRequests.length ||
       (t.importSource !== AA_SETTLEMENT && ["PENDING_CONFIRMATION", "PENDING_REVIEW", "DISPUTED"].includes(t.status))),
     records: ledger.transactions.map(t => ({
