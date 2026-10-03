@@ -512,6 +512,7 @@ export default async function MobileHomePage({
           items.map((invite) => ({
             id: invite.id,
             category: invite.category,
+            intentWindow: invite.intentWindow,
             title: invite.title,
             area: invite.area,
             createdAt: invite.createdAt.toISOString(),
@@ -669,6 +670,7 @@ function MobileHomeV23Experience({
           initialNow={nowInitialTime}
           invites={nowInvites}
           locale={locale}
+          preview={isNowPreview}
         />
 
         <section className="mt-3 pr-5">
@@ -951,6 +953,7 @@ function MobileHomeExperience({
               initialNow={nowInitialTime}
               invites={nowInvites}
               locale={locale}
+              preview={isNowPreview}
             />
           </div>
 

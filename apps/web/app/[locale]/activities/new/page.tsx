@@ -15,6 +15,11 @@ import { normalizeActivityFilterValues } from "@/features/activities/utils/activ
 import { getSignInHref } from "@/lib/auth-redirect";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import {
+  getNowActivityCategory,
+  getNowIntentWindowLabel,
+  getNowKindLabel,
+} from "@/features/now/now";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import {
   canCreateActivityWithTrustScore,
@@ -116,8 +121,10 @@ export default async function NewActivityPage({
             title: true,
             note: true,
             category: true,
+            intentWindow: true,
             city: true,
             area: true,
+            _count: { select: { interests: { where: { withdrawnAt: null } } } },
           },
         })
       : null;
@@ -128,24 +135,15 @@ export default async function NewActivityPage({
         itinerary: "",
         coverImageUrl: "",
         type: "LOCAL",
-        category: ["COFFEE", "FOOD", "DRINK", "TEA"].includes(
-          nowInvite.category,
-        )
-          ? "FOOD"
-          : ["PARK", "WALK", "SHOP", "ADVENTURE"].includes(nowInvite.category)
-            ? "WANDER"
-            : ["MOVIE", "SHOW"].includes(nowInvite.category)
-              ? "AUDIO_VISUAL"
-              : nowInvite.category === "GAME"
-                ? "BOARD_GAME"
-                : nowInvite.category === "SPORT"
-                  ? "SPORTS"
-                  : "OTHER",
+        category: getNowActivityCategory(nowInvite.category),
         visibility: "PUBLIC",
-        otherCategoryText: "",
+        otherCategoryText:
+          getNowActivityCategory(nowInvite.category) === "OTHER"
+            ? getNowKindLabel(nowInvite.category, locale)
+            : "",
         city: nowInvite.city,
-        destination: "",
-        address: nowInvite.area,
+        destination: nowInvite.area,
+        address: "",
         hideAddressFromNonParticipants: false,
         latitude: "",
         longitude: "",
@@ -232,6 +230,34 @@ export default async function NewActivityPage({
         >
           {creationRestrictionMessage}
         </div>
+      ) : null}
+
+      {nowInvite ? (
+        <section className="rounded-[1.25rem] border border-[#CDEBD6] bg-[linear-gradient(120deg,#EFF9F1,#FFF4F5)] px-4 py-3 text-[#204D38]">
+          <p className="text-[14px] font-bold">
+            ✨{" "}
+            {locale === "zh-CN"
+              ? "由此刻变成聚吧"
+              : locale === "fr"
+                ? "Transformer cette envie en sortie"
+                : "Turn this NOW into a hangout"}
+          </p>
+          <p className="mt-1 text-[12px] leading-5 text-[#587263]">
+            {nowInvite._count.interests}{" "}
+            {locale === "zh-CN"
+              ? `人已表达兴趣 · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`
+              : locale === "fr"
+                ? `personnes intéressées · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`
+                : `interested · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`}
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-[#647B69]">
+            {locale === "zh-CN"
+              ? "标题、类型和区域已带入；请确认具体时间与地点。感兴趣的人仍需正式报名。"
+              : locale === "fr"
+                ? "Le sujet et le quartier sont repris. Confirmez l'heure et le lieu ; chacun doit encore s'inscrire."
+                : "The idea and area are carried over. Confirm the exact time and place; everyone still signs up separately."}
+          </p>
+        </section>
       ) : null}
 
       <NewActivityForm

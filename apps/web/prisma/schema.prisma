@@ -774,6 +774,7 @@ model NowInvite {
   organizerId      String
   organizer        UserProfile        @relation("NowInviteOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
   category         String
+  intentWindow     String             @default("NOW")
   title            String
   city             String             @default("Paris")
   area             String

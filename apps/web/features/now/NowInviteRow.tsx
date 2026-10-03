@@ -6,14 +6,21 @@ import {
   NowCountdownOrb,
   NowInlineInterestForm,
   NowLiveCountdown,
+  NowStageBadge,
 } from "./NowDetailActions";
-import { getNowCopy, getNowKind, isNowVisible } from "./now";
+import {
+  getNowCopy,
+  getNowIntentWindowLabel,
+  getNowKind,
+  isNowVisible,
+} from "./now";
 
 type NowInviteRowProps = {
   invite: {
     id: string;
     organizerId: string;
     category: string;
+    intentWindow: string;
     title: string;
     area: string;
     createdAt: Date;
@@ -45,7 +52,7 @@ export function NowInviteRow({
     showInterestAction && active && invite.organizerId !== viewerId;
 
   return (
-    <article className="flex min-h-[7.4rem] w-full min-w-0 max-w-full items-center gap-2 rounded-[1.4rem] border border-[#E7EEE8] bg-white px-2.5 py-3 shadow-[0_7px_22px_rgba(19,75,50,.055)] min-[390px]:gap-3 min-[390px]:px-3">
+    <article className="relative flex min-h-[7.4rem] w-full min-w-0 max-w-full items-center gap-2 border-b border-dashed border-[#D9E7DD] px-1 py-4 last:border-b-0 min-[390px]:gap-3 min-[390px]:px-2">
       <Link
         href={href}
         aria-label={`${invite.title}，${invite._count.interests} ${copy.people}`}
@@ -67,6 +74,8 @@ export function NowInviteRow({
           <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-[#60746A]">
             <MapPin size={11} aria-hidden="true" />
             {invite.area}
+            <span aria-hidden="true">·</span>
+            {getNowIntentWindowLabel(invite.intentWindow, locale)}
             <span aria-hidden="true">·</span>
             <NowLiveCountdown
               expiresAt={invite.expiresAt.toISOString()}
@@ -101,6 +110,14 @@ export function NowInviteRow({
               {invite._count.interests}
               <span className="max-[355px]:hidden"> {copy.people}</span>
             </span>
+          </span>
+          <span className="mt-1.5 block">
+            <NowStageBadge
+              expiresAt={invite.expiresAt.toISOString()}
+              interestCount={invite._count.interests}
+              initialNow={Date.now()}
+              locale={locale}
+            />
           </span>
         </span>
       </Link>

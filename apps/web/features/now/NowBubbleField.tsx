@@ -6,12 +6,19 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { RetainedImage } from "@/components/media/RetainedImage";
-import { getNowCopy, getNowKind, getNowKindLabel, nowKinds } from "./now";
+import {
+  getNowCopy,
+  getNowIntentWindowLabel,
+  getNowKind,
+  getNowKindLabel,
+  nowKinds,
+} from "./now";
 import styles from "./NowBubbleField.module.css";
 
 export type NowBubbleItem = {
   id: string;
   category: string;
+  intentWindow: string;
   title: string;
   area: string;
   createdAt: string;
@@ -48,10 +55,12 @@ export function NowBubbleField({
   initialNow,
   invites,
   locale,
+  preview = false,
 }: {
   initialNow: number;
   invites: NowBubbleItem[];
   locale: string;
+  preview?: boolean;
 }) {
   const copy = getNowCopy(locale);
   const router = useRouter();
@@ -88,7 +97,10 @@ export function NowBubbleField({
           </h2>
           <p className={styles.subtitle}>{copy.subtitle}</p>
         </div>
-        <Link className={styles.seeAll} href={withLocale(locale, "/now")}>
+        <Link
+          className={styles.seeAll}
+          href={withLocale(locale, preview ? "/now?previewNow=1" : "/now")}
+        >
           {copy.seeAll}
           <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
@@ -160,7 +172,10 @@ export function NowBubbleField({
                 <span className={styles.meta}>
                   {remainingLabel(invite.expiresAt, now, locale)}
                 </span>
-                <span className={styles.area}>{invite.area}</span>
+                <span className={styles.area}>
+                  {getNowIntentWindowLabel(invite.intentWindow, locale)} ·{" "}
+                  {invite.area}
+                </span>
                 <span className={styles.srOnly}>
                   {getNowKindLabel(invite.category, locale)}
                 </span>
@@ -177,17 +192,31 @@ export function NowBubbleField({
         </div>
       )}
       <div className={styles.actions}>
-        <Link href={withLocale(locale, "/now/new")} className={styles.create}>
+        <Link
+          href={withLocale(
+            locale,
+            preview ? "/now/new?previewNow=1" : "/now/new",
+          )}
+          className={styles.create}
+        >
           <Plus size={17} strokeWidth={2.4} aria-hidden="true" />
           {copy.create}
         </Link>
         <Link href={withLocale(locale, "/now/mine")} className={styles.mine}>
           {copy.mine}
         </Link>
-        {nowKinds.map((kind) => (
+        {(
+          [
+            "OTHER",
+            ...nowKinds.filter((kind) => kind !== "OTHER"),
+          ] as (typeof nowKinds)[number][]
+        ).map((kind) => (
           <Link
             key={kind}
-            href={withLocale(locale, `/now/new?kind=${kind}`)}
+            href={withLocale(
+              locale,
+              `/now/new?kind=${kind}${preview ? "&previewNow=1" : ""}`,
+            )}
             className={styles.quickKind}
           >
             <span aria-hidden="true">{getNowKind(kind).emoji}</span>

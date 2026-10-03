@@ -1,7 +1,14 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, LoaderCircle, MapPin, Trash2, X } from "lucide-react";
+import {
+  CalendarDays,
+  LoaderCircle,
+  MapPin,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
@@ -11,6 +18,11 @@ import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import {
+  getNowIntentWindowLabel,
+  getNowKind,
+  type NowConversationContext,
+} from "@/features/now/now";
 import {
   formatChatDateSeparator,
   formatChatMessageTime,
@@ -41,6 +53,7 @@ import type { ChatReplyTarget } from "@/features/chat/types";
 
 type MessageThreadClientProps = {
   activityContext?: DirectConversationActivityContextViewModel | null;
+  nowContext?: NowConversationContext | null;
   canSend: boolean;
   conversationId: string;
   currentUser: DirectMessageUserViewModel;
@@ -106,6 +119,7 @@ function SystemThreadNotice({ label }: { label: string }) {
 
 export function MessageThreadClient({
   activityContext,
+  nowContext,
   canSend,
   conversationId,
   currentUser,
@@ -531,6 +545,9 @@ export function MessageThreadClient({
             locale={locale}
           />
         ) : null}
+        {nowContext ? (
+          <NowContextCard context={nowContext} locale={locale} />
+        ) : null}
         {policyNotice ? <SendPolicyNotice label={policyNotice} /> : null}
         {showMutualFollowNotice ? (
           <SystemThreadNotice label={t.mutualFollowSystemNotice} />
@@ -539,7 +556,10 @@ export function MessageThreadClient({
           <div
             className={cn(
               "grid gap-3",
-              activityContext || policyNotice || showMutualFollowNotice
+              activityContext ||
+                nowContext ||
+                policyNotice ||
+                showMutualFollowNotice
                 ? "mt-4"
                 : "",
             )}
@@ -665,6 +685,51 @@ export function MessageThreadClient({
         />
       )}
     </>
+  );
+}
+
+function NowContextCard({
+  context,
+  locale,
+}: {
+  context: NowConversationContext;
+  locale: string;
+}) {
+  const kind = getNowKind(context.category);
+  return (
+    <section className="rounded-[1.1rem] border border-[#F5CBD3] bg-[linear-gradient(120deg,#FFF2F4,#F1FAF2)] p-3 shadow-[0_10px_22px_rgba(202,86,113,.08)]">
+      <div className="flex items-start gap-3">
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-xl"
+          aria-hidden="true"
+        >
+          {kind.emoji}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1 text-[11px] font-bold text-[#B64E65]">
+            <Sparkles size={12} />
+            {locale === "zh-CN"
+              ? "你们同频了"
+              : locale === "fr"
+                ? "Même envie"
+                : "You're on the same wavelength"}
+          </p>
+          <p className="mt-1 truncate text-[14px] font-bold text-[#173D32]">
+            {context.title}
+          </p>
+          <p className="mt-0.5 text-[11px] text-[#667F6E]">
+            {context.area} ·{" "}
+            {getNowIntentWindowLabel(context.intentWindow, locale)}
+          </p>
+        </div>
+        <a
+          href={withLocale(locale, `/now/${context.id}`)}
+          className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#126A4A]"
+        >
+          {locale === "zh-CN" ? "看此刻" : locale === "fr" ? "Voir" : "View"}
+        </a>
+      </div>
+    </section>
   );
 }
 

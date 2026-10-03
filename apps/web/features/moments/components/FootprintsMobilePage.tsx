@@ -256,6 +256,7 @@ const copyByLocale = {
     settings: "设置",
     tabs: {
       message: "聊聊",
+      now: "此刻",
       moment: "晒晒",
       planet: "星球",
     },
@@ -358,6 +359,7 @@ const copyByLocale = {
     settings: "Settings",
     tabs: {
       message: "Message",
+      now: "Right now",
       moment: "Moments",
       planet: "Planet",
     },
@@ -466,6 +468,7 @@ const copyByLocale = {
     settings: "Réglages",
     tabs: {
       message: "Message",
+      now: "Sur le moment",
       moment: "Moments",
       planet: "Planète",
     },
@@ -4331,7 +4334,7 @@ export function FootprintsMobilePage({
             <h1 className="min-h-[31px] pb-3 text-[31px] font-bold leading-none tracking-normal text-[#111210] lg:pb-5 lg:text-[36px]">
               {copy.title}
             </h1>
-            <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center lg:flex lg:w-[30rem] lg:self-stretch lg:translate-y-0">
+            <nav className="grid min-w-0 translate-y-4 grid-cols-4 text-center lg:flex lg:w-[34rem] lg:self-stretch lg:translate-y-0">
               {tabs.map((tab) => {
                 const active = activeTab === tab.key;
 
@@ -4341,6 +4344,11 @@ export function FootprintsMobilePage({
                     type="button"
                     className={cn(
                       "relative min-w-0 px-1 pb-3 text-[13px] font-bold tracking-normal transition lg:flex lg:flex-1 lg:items-end lg:justify-center lg:px-5 lg:pb-5 lg:pt-3 lg:text-sm",
+                      tab.key === "message"
+                        ? "order-1"
+                        : tab.key === "moment"
+                          ? "order-3"
+                          : "order-4",
                       active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                     )}
                     onClick={() => handleTopTabChange(tab.key)}
@@ -4366,6 +4374,12 @@ export function FootprintsMobilePage({
                   </button>
                 );
               })}
+              <Link
+                href={withLocale(locale, "/now")}
+                className="order-2 relative min-w-0 px-1 pb-3 text-[13px] font-bold text-[#1D1D1B]/58 transition hover:text-[#156240] lg:flex lg:flex-1 lg:items-end lg:justify-center lg:px-5 lg:pb-5 lg:pt-3 lg:text-sm"
+              >
+                {copy.tabs.now}
+              </Link>
             </nav>
           </header>
 

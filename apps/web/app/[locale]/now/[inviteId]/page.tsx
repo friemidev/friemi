@@ -1,13 +1,27 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, MapPin, UsersRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  MapPin,
+  MessageCircle,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import {
   NowCountdownOrb,
   NowInterestForm,
   NowMessageForm,
+  NowStageBadge,
 } from "@/features/now/NowDetailActions";
-import { getNowCopy, getNowKind, isNowVisible } from "@/features/now/now";
+import {
+  getNowCopy,
+  getNowIntentWindowLabel,
+  getNowKind,
+  isNowVisible,
+} from "@/features/now/now";
 import { selectNowInterestAction } from "@/features/now/actions";
 import { getNowInviteDetail } from "@/features/now/queries";
 import { getNowPreviewDetail } from "@/features/now/nowPreview";
@@ -17,7 +31,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ locale: string; inviteId: string }>;
-  searchParams?: Promise<{ as?: string }>;
+  searchParams?: Promise<{ as?: string; justPublished?: string }>;
 };
 export const dynamic = "force-dynamic";
 
@@ -111,6 +125,31 @@ export default async function NowInvitePage({
           </div>
         ) : null}
 
+        {query.justPublished === "1" &&
+        invite.isOrganizer &&
+        (preview || initialNow - invite.createdAt.getTime() < 5 * 60_000) ? (
+          <section
+            className="mt-3 rounded-[1.4rem] border border-[#CDECD8] bg-[linear-gradient(120deg,#ECF9EF,#FFF6F2)] px-4 py-3 shadow-[0_10px_25px_rgba(39,117,76,.08)]"
+            role="status"
+          >
+            <p className="text-[15px] font-bold text-[#126A4A]">
+              ✨{" "}
+              {locale === "zh-CN"
+                ? "你的此刻已发布"
+                : locale === "fr"
+                  ? "Votre envie est en ligne"
+                  : "Your NOW is live"}
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-[#567261]">
+              {locale === "zh-CN"
+                ? `${invite.interests.length} 人感兴趣 · 等待同频的人出现。`
+                : locale === "fr"
+                  ? `${invite.interests.length} personnes intéressées · En attente de rencontres.`
+                  : `${invite.interests.length} interested · Waiting for people who feel the same.`}
+            </p>
+          </section>
+        ) : null}
+
         <div className="relative mt-2 overflow-hidden rounded-[1.8rem] bg-white px-5 pb-4 pt-3 text-center shadow-[0_12px_34px_rgba(29,80,48,.07)]">
           <div
             className="pointer-events-none absolute left-1/2 top-2 h-[14rem] w-[14rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,#F1F9F0,transparent_70%)]"
@@ -124,12 +163,21 @@ export default async function NowInvitePage({
             locale={locale}
             tone={kind.tone}
           />
+          <div className="relative mt-1">
+            <NowStageBadge
+              expiresAt={invite.expiresAt.toISOString()}
+              interestCount={invite.interests.length}
+              initialNow={initialNow}
+              locale={locale}
+            />
+          </div>
           <h1 className="relative mt-2 text-[23px] font-bold leading-8">
             {invite.title}
           </h1>
           <p className="relative mt-2 flex items-center justify-center gap-1.5 text-[13px] text-[#5E786A]">
             <MapPin size={15} aria-hidden="true" />
-            {invite.area} · {invite.city}
+            {invite.area} ·{" "}
+            {getNowIntentWindowLabel(invite.intentWindow, locale)}
           </p>
           {invite.note ? (
             <p className="relative mt-3 rounded-2xl bg-[#F7FAF6] px-4 py-3 text-left text-[14px] leading-6 text-[#4D6759]">
@@ -186,6 +234,48 @@ export default async function NowInvitePage({
           )
         ) : null}
 
+        {invite.isInterested && !invite.isOrganizer ? (
+          <section className="mt-4 rounded-[1.5rem] border border-[#CDEBD6] bg-[linear-gradient(125deg,#ECF9EF,#FFF4F5)] px-4 py-4 shadow-[0_12px_28px_rgba(37,112,68,.08)]">
+            <p className="flex items-center gap-1.5 text-[12px] font-bold text-[#157250]">
+              <Sparkles size={15} aria-hidden="true" />
+              {locale === "zh-CN"
+                ? `你和 ${invite.organizer.nickname} 同频了`
+                : locale === "fr"
+                  ? `Vous et ${invite.organizer.nickname} avez la même envie`
+                  : `You and ${invite.organizer.nickname} want the same thing`}
+            </p>
+            <p className="mt-1.5 text-[12px] leading-5 text-[#587361]">
+              {locale === "zh-CN"
+                ? "聊聊具体时间和地点，再决定要不要一起。"
+                : locale === "fr"
+                  ? "Parlez de l'heure et du lieu avant de vous décider."
+                  : "Chat about the time and place, then decide together."}
+            </p>
+            {preview ? (
+              <span className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#126A4A] px-4 text-[12px] font-bold text-white opacity-65">
+                <MessageCircle size={15} />
+                {locale === "zh-CN" ? "聊聊 · 预览" : "Chat · preview"}
+              </span>
+            ) : (
+              <StartDirectConversationButton
+                className="mt-3"
+                buttonClassName="min-h-10 bg-[#126A4A] text-[12px]"
+                label={
+                  locale === "zh-CN"
+                    ? "和发起者聊聊"
+                    : locale === "fr"
+                      ? "Discuter"
+                      : "Chat with the host"
+                }
+                locale={locale}
+                nowInviteId={invite.id}
+                peerProfileId={invite.organizer.id}
+                redirectPath={`/now/${invite.id}`}
+              />
+            )}
+          </section>
+        ) : null}
+
         {invite.interests.length ? (
           <section className="mt-7">
             <h2 className="mb-3 text-[16px] font-bold">
@@ -199,19 +289,19 @@ export default async function NowInvitePage({
               {invite.interests.map((interest) => (
                 <div
                   key={interest.profileId}
-                  className="flex items-center gap-3 rounded-2xl bg-white px-3.5 py-3 shadow-sm"
+                  className="flex items-center gap-3 rounded-2xl bg-white px-3.5 py-3 shadow-sm max-[359px]:flex-wrap max-[359px]:gap-y-2"
                 >
                   <MessageAvatar
                     avatarUrl={interest.profile.avatarUrl}
                     name={interest.profile.nickname}
                     size="sm"
                   />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 max-[359px]:min-w-[calc(100%-3.25rem)]">
                     <div className="flex items-center gap-2">
                       <p className="text-[13px] font-bold">
                         {interest.profile.nickname}
                       </p>
-                      <span className="text-[10px] text-[#9AA99C]">
+                      <span className="whitespace-nowrap text-[10px] text-[#9AA99C]">
                         {interestAgeLabel(
                           interest.createdAt,
                           initialNow,
@@ -225,6 +315,31 @@ export default async function NowInvitePage({
                       </p>
                     ) : null}
                   </div>
+                  {invite.isOrganizer ? (
+                    preview ? (
+                      <span className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full bg-[#EFF8F0] px-2.5 text-[11px] font-bold text-[#126A4A] opacity-65 max-[359px]:ml-auto">
+                        <MessageCircle size={13} />
+                        聊聊
+                      </span>
+                    ) : (
+                      <StartDirectConversationButton
+                        className="max-[359px]:ml-auto"
+                        buttonClassName="min-h-10 px-2.5 text-[11px]"
+                        hideIcon
+                        label={
+                          locale === "zh-CN"
+                            ? "聊聊"
+                            : locale === "fr"
+                              ? "Discuter"
+                              : "Chat"
+                        }
+                        locale={locale}
+                        nowInviteId={invite.id}
+                        peerProfileId={interest.profileId}
+                        redirectPath={`/now/${invite.id}`}
+                      />
+                    )
+                  ) : null}
                   {preview && invite.isOrganizer ? (
                     <span className="rounded-xl bg-[#E9F7EE] px-3 py-2 text-[12px] font-bold text-[#126A4A]">
                       {interest.selectedAt ? "已选择" : "选入组局"}
@@ -277,10 +392,18 @@ export default async function NowInvitePage({
 
         {invite.isOrganizer ? (
           <section className="mt-7 rounded-[1.4rem] bg-[#EAF7EE] px-4 py-4">
-            <h2 className="text-[15px] font-bold">{copy.organize}</h2>
+            <h2 className="text-[15px] font-bold">
+              {invite.interests.length >= 5
+                ? locale === "zh-CN"
+                  ? `${invite.interests.length} 人同频了，变成聚吧？`
+                  : locale === "fr"
+                    ? `${invite.interests.length} personnes intéressées · Une sortie ?`
+                    : `${invite.interests.length} interested · Make it a hangout?`
+                : copy.organize}
+            </h2>
             <p className="mt-1 text-[12px] leading-5 text-[#53705D]">
               {locale === "zh-CN"
-                ? "有了同伴，就把时间、地点和人数确定下来。"
+                ? "把同频的人聚在一起：确认具体时间和地点，再正式发布。"
                 : locale === "fr"
                   ? "Choisissez un horaire et un lieu pour réunir le groupe."
                   : "Set a time and place to make the plan real."}
@@ -303,19 +426,31 @@ export default async function NowInvitePage({
                 <ArrowUpRight size={15} />
               </Link>
             ) : preview ? (
-              <span className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[13px] font-bold text-white opacity-75">
-                {copy.organize}
+              <Link
+                href={withLocale(locale, `/now/${invite.id}/convert`)}
+                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[13px] font-bold text-white opacity-75"
+              >
+                {invite.interests.length >= 5
+                  ? locale === "zh-CN"
+                    ? "一起聚聚"
+                    : locale === "fr"
+                      ? "Organiser"
+                      : "Make a hangout"
+                  : copy.organize}
                 <ArrowUpRight size={15} />
-              </span>
+              </Link>
             ) : (
               <Link
-                href={withLocale(
-                  locale,
-                  `/activities/new?mode=form&fromNow=${encodeURIComponent(invite.id)}`,
-                )}
+                href={withLocale(locale, `/now/${invite.id}/convert`)}
                 className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[13px] font-bold text-white"
               >
-                {copy.organize}
+                {invite.interests.length >= 5
+                  ? locale === "zh-CN"
+                    ? "一起聚聚"
+                    : locale === "fr"
+                      ? "Organiser"
+                      : "Make a hangout"
+                  : copy.organize}
                 <ArrowUpRight size={15} />
               </Link>
             )}
@@ -351,6 +486,13 @@ export default async function NowInvitePage({
         {canTalk ? (
           <section className="mt-7">
             <h2 className="text-[16px] font-bold">{copy.discussion}</h2>
+            <p className="mt-1 text-[11px] text-[#7B8C7F]">
+              {locale === "zh-CN"
+                ? "这里的内容会被这条此刻的发起者和所有已举手者看到；一对一商量请使用上方私聊。"
+                : locale === "fr"
+                  ? "Visible par l'hôte et toutes les personnes intéressées. Pour parler à deux, utilisez la discussion privée."
+                  : "Visible to the host and everyone interested. Use private chat above to make plans one to one."}
+            </p>
             <div className="mt-3 grid gap-3">
               {invite.messages.map((message) => (
                 <div

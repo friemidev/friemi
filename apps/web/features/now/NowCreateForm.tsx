@@ -8,6 +8,7 @@ import {
   getNowCopy,
   getNowKind,
   getNowKindLabel,
+  nowIntentWindows,
   nowKinds,
   nowVisibilityHours,
   type NowKind,
@@ -82,7 +83,7 @@ export function NowCreateForm({
   function chooseCategory(kind: NowKind) {
     const previousDefault = getNowKindLabel(category, locale);
     if (!title || title === previousDefault)
-      setTitle(getNowKindLabel(kind, locale));
+      setTitle(kind === "OTHER" ? "" : getNowKindLabel(kind, locale));
     setCategory(kind);
   }
 
@@ -133,30 +134,54 @@ export function NowCreateForm({
 
       <fieldset className="min-w-0 w-full">
         <legend className="mb-3">
-          <StepHeading number={2}>{copy.duration}</StepHeading>
+          <StepHeading number={2}>
+            {locale === "zh-CN"
+              ? "什么时候？"
+              : locale === "fr"
+                ? "Quand ?"
+                : "When?"}
+          </StepHeading>
         </legend>
         <div className="grid grid-cols-4 gap-2">
-          {nowVisibilityHours.map((hours) => (
-            <label key={hours} className="cursor-pointer">
-              <input
-                className="peer sr-only"
-                type="radio"
-                name="visibilityHours"
-                value={hours}
-                defaultChecked={hours === 12}
-              />
-              <span className="flex min-h-11 items-center justify-center rounded-xl border border-[#D7E5D9] bg-white text-[13px] font-semibold text-[#305346] peer-checked:border-[#F68188] peer-checked:bg-[#FFF0F1] peer-checked:text-[#A13E55] peer-focus-visible:ring-2 peer-focus-visible:ring-[#126A4A]">
-                {hours}h
-              </span>
-            </label>
-          ))}
+          {nowIntentWindows.map((window) => {
+            const labels = {
+              NOW: ["现在", "Now", "Maintenant"],
+              LATER: ["稍后", "Soon", "Bientôt"],
+              TODAY: ["今天", "Today", "Aujourd'hui"],
+              TONIGHT: ["今晚", "Tonight", "Ce soir"],
+            }[window];
+            const captions = {
+              NOW: ["0–1h", "0–1h", "0–1h"],
+              LATER: ["1–3h", "1–3h", "1–3h"],
+              TODAY: ["今日内", "Today", "Aujourd'hui"],
+              TONIGHT: ["今晚", "Evening", "Ce soir"],
+            }[window];
+            const index = locale === "en" ? 1 : locale === "fr" ? 2 : 0;
+            return (
+              <label key={window} className="cursor-pointer">
+                <input
+                  className="peer sr-only"
+                  type="radio"
+                  name="intentWindow"
+                  value={window}
+                  defaultChecked={window === "NOW"}
+                />
+                <span className="flex min-h-16 flex-col items-center justify-center rounded-2xl border border-[#D7E5D9] bg-white text-[13px] font-bold text-[#305346] peer-checked:border-[#F68188] peer-checked:bg-[#FFF0F1] peer-checked:text-[#A13E55] peer-focus-visible:ring-2 peer-focus-visible:ring-[#126A4A]">
+                  {labels[index]}
+                  <span className="mt-0.5 text-[10px] font-medium opacity-65">
+                    {captions[index]}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
         </div>
         <p className="mt-2 text-[11px] leading-5 text-[#77877B]">
           {locale === "zh-CN"
-            ? "只决定泡泡在首页展示多久；默认 12 小时，到期后仍可在「我的此刻」继续交流。"
+            ? "这是想一起做的时间，具体几点可以在同频后聊。"
             : locale === "fr"
-              ? "Ce délai concerne l'accueil. Après, les personnes intéressées peuvent continuer à échanger."
-              : "This controls home visibility only. People who raised a hand can keep talking after it ends."}
+              ? "L'heure exacte se décide ensemble après la rencontre."
+              : "Choose when you feel like going; agree on an exact time together."}
         </p>
       </fieldset>
 
@@ -200,10 +225,8 @@ export function NowCreateForm({
             maxLength={80}
             value={area}
             onChange={(event) => setArea(event.target.value)}
-            placeholder={
-              locale === "zh-CN" ? "或输入具体区域／地点" : copy.area
-            }
-            className="min-h-11 w-full rounded-xl border border-[#D7E5D9] bg-white pl-10 pr-3 text-[14px] text-[#18382C] outline-none focus:border-[#3C9D6B] focus:ring-2 focus:ring-[#3C9D6B]/20"
+            placeholder={locale === "zh-CN" ? "或输入附近街区" : copy.area}
+            className="min-h-11 w-full rounded-xl border border-[#D7E5D9] bg-white pl-10 pr-3 text-[14px] text-[#18382C] outline-none focus:border-[#3C9D6B] focus:ring-2 focus-visible:ring-[#3C9D6B]/20"
           />
         </div>
       </fieldset>
@@ -230,6 +253,36 @@ export function NowCreateForm({
           {note.length}/50
         </span>
       </section>
+
+      <details className="rounded-2xl border border-[#E2EBE4] bg-white px-4 py-3">
+        <summary className="cursor-pointer text-[12px] font-semibold text-[#52715F]">
+          {copy.duration} ·{" "}
+          {locale === "zh-CN" ? "默认 12 小时" : "12h default"}
+        </summary>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {nowVisibilityHours.map((hours) => (
+            <label key={hours} className="cursor-pointer">
+              <input
+                className="peer sr-only"
+                type="radio"
+                name="visibilityHours"
+                value={hours}
+                defaultChecked={hours === 12}
+              />
+              <span className="flex min-h-11 items-center justify-center rounded-xl border border-[#D7E5D9] bg-white text-[13px] font-semibold text-[#305346] peer-checked:border-[#F68188] peer-checked:bg-[#FFF0F1] peer-checked:text-[#A13E55] peer-focus-visible:ring-2 peer-focus-visible:ring-[#126A4A]">
+                {hours}h
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-[#77877B]">
+          {locale === "zh-CN"
+            ? "只决定泡泡在首页展示多久；默认 12 小时，到期后仍可在「我的此刻」继续交流。"
+            : locale === "fr"
+              ? "Ce délai concerne l'accueil. Après, les personnes intéressées peuvent continuer à échanger."
+              : "This controls home visibility only. People who raised a hand can keep talking after it ends."}
+        </p>
+      </details>
 
       {state.error ? (
         <p role="alert" className="text-[13px] font-semibold text-[#A73955]">

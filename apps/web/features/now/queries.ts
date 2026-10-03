@@ -152,3 +152,38 @@ export async function getMyNowInvites(profileId: string) {
   ]);
   return { created, interested };
 }
+
+export async function getNowConversationContext({
+  inviteId,
+  currentUserProfileId,
+  peerProfileId,
+}: {
+  inviteId: string;
+  currentUserProfileId: string;
+  peerProfileId: string;
+}) {
+  return prisma.nowInvite.findFirst({
+    where: {
+      id: inviteId,
+      OR: [
+        {
+          organizerId: currentUserProfileId,
+          interests: { some: { profileId: peerProfileId, withdrawnAt: null } },
+        },
+        {
+          organizerId: peerProfileId,
+          interests: {
+            some: { profileId: currentUserProfileId, withdrawnAt: null },
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      category: true,
+      title: true,
+      area: true,
+      intentWindow: true,
+    },
+  });
+}

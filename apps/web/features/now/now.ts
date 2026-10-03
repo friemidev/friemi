@@ -13,6 +13,7 @@ export const nowKinds = [
   "SPORT",
   "CHAT",
   "ADVENTURE",
+  "SOCIAL",
   "OTHER",
 ] as const;
 
@@ -21,6 +22,13 @@ export const nowKinds = [
 export const nowOpenCity = "Paris";
 
 export type NowKind = (typeof nowKinds)[number];
+export type NowConversationContext = {
+  id: string;
+  category: string;
+  title: string;
+  area: string;
+  intentWindow: string;
+};
 
 const kindDetails: Record<
   NowKind,
@@ -72,7 +80,13 @@ const kindDetails: Record<
     fr: "Spectacle",
     tone: "rose",
   },
-  GAME: { emoji: "🎮", zh: "玩桌游", en: "Games", fr: "Jeux", tone: "blue" },
+  GAME: {
+    emoji: "🎲",
+    zh: "玩桌游",
+    en: "Board games",
+    fr: "Jeux",
+    tone: "blue",
+  },
   SPORT: { emoji: "🏃", zh: "运动", en: "Sport", fr: "Sport", tone: "green" },
   CHAT: {
     emoji: "💬",
@@ -83,16 +97,23 @@ const kindDetails: Record<
   },
   ADVENTURE: {
     emoji: "✨",
-    zh: "想出走走",
+    zh: "想出去走走",
     en: "Explore",
     fr: "Explorer",
     tone: "amber",
   },
+  SOCIAL: {
+    emoji: "🎉",
+    zh: "想热闹一下",
+    en: "Something social",
+    fr: "Voir du monde",
+    tone: "coral",
+  },
   OTHER: {
     emoji: "🎈",
-    zh: "其他",
-    en: "Something else",
-    fr: "Autre",
+    zh: "随便说说",
+    en: "Say anything",
+    fr: "Dire quelque chose",
     tone: "rose",
   },
 };
@@ -112,6 +133,109 @@ export function isNowKind(value: string): value is NowKind {
 
 export const nowVisibilityHours = [3, 6, 12, 24] as const;
 
+export const nowIntentWindows = ["NOW", "LATER", "TODAY", "TONIGHT"] as const;
+export type NowIntentWindow = (typeof nowIntentWindows)[number];
+
+export function isNowIntentWindow(value: string): value is NowIntentWindow {
+  return nowIntentWindows.includes(value as NowIntentWindow);
+}
+
+export function getNowIntentWindowLabel(value: string, locale: string) {
+  const labels: Record<
+    NowIntentWindow,
+    { zh: string; en: string; fr: string }
+  > = {
+    NOW: { zh: "现在", en: "Now", fr: "Maintenant" },
+    LATER: { zh: "稍后", en: "Soon", fr: "Bientôt" },
+    TODAY: { zh: "今天", en: "Today", fr: "Aujourd'hui" },
+    TONIGHT: { zh: "今晚", en: "Tonight", fr: "Ce soir" },
+  };
+  const label = labels[isNowIntentWindow(value) ? value : "NOW"];
+  return locale === "en" ? label.en : locale === "fr" ? label.fr : label.zh;
+}
+
+export function getNowActivityCategory(kind: string) {
+  if (["COFFEE", "FOOD", "DRINK", "TEA"].includes(kind)) return "FOOD";
+  if (["PARK", "WALK", "SHOP", "ADVENTURE"].includes(kind)) return "WANDER";
+  if (["MOVIE", "SHOW"].includes(kind)) return "AUDIO_VISUAL";
+  if (kind === "GAME") return "BOARD_GAME";
+  if (kind === "SPORT") return "SPORTS";
+  return "OTHER";
+}
+
+export function getNowActivityDraftFields({
+  area,
+  category,
+  city,
+  inviteId,
+  locale,
+  note,
+  title,
+}: {
+  area: string;
+  category: string;
+  city: string;
+  inviteId: string;
+  locale: string;
+  note: string | null;
+  title: string;
+}) {
+  const activityCategory = getNowActivityCategory(category);
+  return {
+    locale,
+    nowInviteId: inviteId,
+    title,
+    description: note || title,
+    itinerary: "",
+    coverImageUrl: "",
+    type: "LOCAL",
+    category: activityCategory,
+    visibility: "PUBLIC",
+    otherCategoryText:
+      activityCategory === "OTHER" ? getNowKindLabel(category, locale) : "",
+    city,
+    destination: area,
+    latitude: "",
+    longitude: "",
+    endAt: "",
+    capacity: "0",
+    minParticipants: "",
+    priceType: "FREE",
+    priceText: "",
+    ticketUrl: "",
+    ticketLabel: "",
+  };
+}
+
+export function getNowSuggestedStartAt(intentWindow: string, now = new Date()) {
+  const paris = (date: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Paris",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+    const part = (type: string) =>
+      parts.find((item) => item.type === type)?.value ?? "";
+    return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+  };
+  const rounded = (delayMinutes: number) =>
+    paris(
+      new Date(
+        Math.ceil((now.getTime() + delayMinutes * 60_000) / 900_000) * 900_000,
+      ),
+    );
+  if (intentWindow === "NOW") return rounded(30);
+  if (intentWindow === "LATER") return rounded(120);
+  const currentLocal = paris(now);
+  const targetHour = intentWindow === "TONIGHT" ? 20 : 18;
+  const target = `${currentLocal.slice(0, 10)}T${targetHour}:00`;
+  return currentLocal < target ? target : rounded(60);
+}
+
 export function isNowVisibilityHours(
   value: number,
 ): value is (typeof nowVisibilityHours)[number] {
@@ -122,6 +246,38 @@ export function isNowVisibilityHours(
 
 export function isNowVisible(expiresAt: Date, now = new Date()) {
   return expiresAt.getTime() > now.getTime();
+}
+
+export function getNowStage(
+  expiresAt: Date,
+  interestCount: number,
+  now = new Date(),
+) {
+  if (!isNowVisible(expiresAt, now)) return "EXPIRED" as const;
+  return interestCount > 0 ? ("ALMOST_THERE" as const) : ("ACTIVE" as const);
+}
+
+export function getNowStageLabel(
+  stage: ReturnType<typeof getNowStage>,
+  locale: string,
+) {
+  if (locale === "fr")
+    return stage === "EXPIRED"
+      ? "Terminé"
+      : stage === "ALMOST_THERE"
+        ? "Ça se prépare"
+        : "En cours";
+  if (locale === "en")
+    return stage === "EXPIRED"
+      ? "Ended"
+      : stage === "ALMOST_THERE"
+        ? "People are interested"
+        : "Looking for company";
+  return stage === "EXPIRED"
+    ? "已结束"
+    : stage === "ALMOST_THERE"
+      ? "有人同频"
+      : "寻找同频";
 }
 
 export function getNowExpiry(publishedAt: Date, visibilityHours: number) {
@@ -187,7 +343,7 @@ export function getNowCopy(locale: string) {
       note: "Une phrase pour inviter les autres (facultatif)",
       duration: "Visible à l'accueil pendant",
       title: "Votre invitation",
-      discussion: "Discussion",
+      discussion: "Messages de groupe",
       message: "Écrire un message",
       send: "Envoyer",
       myCreated: "Mes invitations",
@@ -219,7 +375,7 @@ export function getNowCopy(locale: string) {
       note: "Add a little context (optional)",
       duration: "Show on home for",
       title: "Your invitation",
-      discussion: "Conversation",
+      discussion: "Group notes",
       message: "Write a message",
       send: "Send",
       myCreated: "Invites I started",
@@ -250,7 +406,7 @@ export function getNowCopy(locale: string) {
     note: "想说点什么？（选填）",
     duration: "首页展示时间",
     title: "邀约内容",
-    discussion: "聊一聊",
+    discussion: "同频留言",
     message: "说一句话",
     send: "发送",
     myCreated: "我发起的",

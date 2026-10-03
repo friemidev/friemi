@@ -2,11 +2,18 @@ import type { NowBubbleItem } from "./NowBubbleField";
 
 const samples: Pick<
   NowBubbleItem,
-  "id" | "category" | "title" | "area" | "interestCount" | "size"
+  | "id"
+  | "category"
+  | "intentWindow"
+  | "title"
+  | "area"
+  | "interestCount"
+  | "size"
 >[] = [
   {
     id: "preview-coffee",
     category: "COFFEE",
+    intentWindow: "NOW",
     title: "喝杯咖啡",
     area: "Bastille",
     interestCount: 2,
@@ -15,6 +22,7 @@ const samples: Pick<
   {
     id: "preview-movie",
     category: "MOVIE",
+    intentWindow: "TONIGHT",
     title: "看电影",
     area: "Opéra",
     interestCount: 1,
@@ -23,6 +31,7 @@ const samples: Pick<
   {
     id: "preview-tea",
     category: "TEA",
+    intentWindow: "LATER",
     title: "下午茶",
     area: "Canal",
     interestCount: 1,
@@ -31,6 +40,7 @@ const samples: Pick<
   {
     id: "preview-drink",
     category: "DRINK",
+    intentWindow: "TONIGHT",
     title: "喝一杯",
     area: "Le Marais",
     interestCount: 3,
@@ -39,14 +49,16 @@ const samples: Pick<
   {
     id: "preview-game",
     category: "GAME",
+    intentWindow: "TODAY",
     title: "来局桌游",
     area: "République",
-    interestCount: 2,
-    size: "small",
+    interestCount: 5,
+    size: "large",
   },
   {
     id: "preview-park",
     category: "PARK",
+    intentWindow: "LATER",
     title: "逛公园",
     area: "Luxembourg",
     interestCount: 2,
@@ -55,6 +67,7 @@ const samples: Pick<
   {
     id: "preview-walk",
     category: "WALK",
+    intentWindow: "NOW",
     title: "City walk",
     area: "Saint-Michel",
     interestCount: 0,
@@ -83,6 +96,7 @@ export function getNowPreviewRows(now: number) {
     id: invite.id,
     organizerId: "preview-organizer",
     category: invite.category,
+    intentWindow: invite.intentWindow,
     title: invite.title,
     area: invite.area,
     createdAt: new Date(invite.createdAt),
@@ -123,12 +137,25 @@ export function getNowPreviewDetail(
       avatarUrl: null,
       note: "晚一点到也可以吗？",
     },
+    {
+      id: "preview-jules",
+      nickname: "Jules",
+      avatarUrl: null,
+      note: "我也在附近。",
+    },
+    {
+      id: "preview-nina",
+      nickname: "Nina",
+      avatarUrl: null,
+      note: "算我一个！",
+    },
   ];
   return {
     id: sample.id,
     organizerId: organizer.id,
     organizer,
     category: sample.category,
+    intentWindow: sample.intentWindow,
     title: sample.title,
     city: "Paris",
     area: sample.area,

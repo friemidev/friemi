@@ -9,6 +9,7 @@ import { withLocale } from "@/lib/routes";
 import {
   getNowCopy,
   getNowExpiry,
+  isNowIntentWindow,
   isNowKind,
   isNowVisibilityHours,
   nowOpenCity,
@@ -31,6 +32,7 @@ function refreshNow(locale: string, inviteId?: string) {
 const createSchema = z.object({
   area: z.string().trim().min(2).max(80),
   category: z.string().refine(isNowKind),
+  intentWindow: z.string().refine(isNowIntentWindow),
   title: z.string().trim().min(2).max(48),
   note: z.string().trim().max(50),
   visibilityHours: z.coerce.number().refine(isNowVisibilityHours),
@@ -45,6 +47,7 @@ export async function createNowInviteAction(
   const parsed = createSchema.safeParse({
     area: field(form, "area"),
     category: field(form, "category"),
+    intentWindow: field(form, "intentWindow"),
     title: field(form, "title"),
     note: field(form, "note"),
     visibilityHours: field(form, "visibilityHours"),
@@ -57,6 +60,7 @@ export async function createNowInviteAction(
     data: {
       organizerId: profile.id,
       category: parsed.data.category,
+      intentWindow: parsed.data.intentWindow,
       title: parsed.data.title,
       city: nowOpenCity,
       area: parsed.data.area,
@@ -67,7 +71,7 @@ export async function createNowInviteAction(
     select: { id: true },
   });
   refreshNow(locale, invite.id);
-  redirect(withLocale(locale, `/now/${invite.id}`));
+  redirect(withLocale(locale, `/now/${invite.id}?justPublished=1`));
 }
 
 const interestSchema = z.object({

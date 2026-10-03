@@ -19,6 +19,7 @@ import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { noIndexMetadata } from "@/lib/seo";
+import { getNowConversationContext } from "@/features/now/queries";
 
 type MessageThreadPageProps = {
   params: Promise<{
@@ -29,6 +30,7 @@ type MessageThreadPageProps = {
     access?: string;
     activityId?: string;
     mutual?: string;
+    nowId?: string;
   }>;
 };
 
@@ -40,7 +42,7 @@ export default async function MessageThreadPage({
   searchParams,
 }: MessageThreadPageProps) {
   const { locale, conversationId } = await params;
-  const { access: accessToken, activityId, mutual } = await searchParams;
+  const { access: accessToken, activityId, mutual, nowId } = await searchParams;
   const requestHeaders = await headers();
   const userAgent = requestHeaders.get("user-agent");
   const isMobileRequest = isMobileUserAgent(userAgent);
@@ -116,6 +118,13 @@ export default async function MessageThreadPage({
           return null;
         })
     : null;
+  const nowContext = nowId
+    ? await getNowConversationContext({
+        inviteId: nowId,
+        currentUserProfileId: profile.id,
+        peerProfileId: conversation.peer.id,
+      })
+    : null;
   perf.finish(
     {
       hasActivityContext: Boolean(activityContext),
@@ -137,9 +146,12 @@ export default async function MessageThreadPage({
       <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
         <MessageThread
           activityContext={activityContext}
-          backHref="/footprints?tab=message"
+          backHref={
+            nowContext ? `/now/${nowContext.id}` : "/footprints?tab=message"
+          }
           conversation={conversation}
           locale={locale}
+          nowContext={nowContext}
           showMutualFollowNotice={mutual === "1"}
         />
       </div>

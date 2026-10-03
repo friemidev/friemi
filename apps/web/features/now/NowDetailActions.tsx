@@ -5,7 +5,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Heart, Send } from "lucide-react";
 import { changeNowInterestAction, sendNowMessageAction } from "./actions";
-import { getNowCopy } from "./now";
+import { getNowCopy, getNowStage, getNowStageLabel } from "./now";
+import { withLocale } from "@/lib/routes";
 
 function ActionButton({
   children,
@@ -37,8 +38,8 @@ export function NowInlineInterestForm({
   const router = useRouter();
   const [state, action] = useActionState(changeNowInterestAction, {});
   useEffect(() => {
-    if (state.ok) router.refresh();
-  }, [state, router]);
+    if (state.ok) router.push(withLocale(locale, `/now/${inviteId}?matched=1`));
+  }, [inviteId, locale, state, router]);
   return (
     <form action={action} className="shrink-0">
       <input type="hidden" name="inviteId" value={inviteId} />
@@ -216,6 +217,36 @@ export function NowLiveCountdown({
     <span>
       {copy.remaining} {hours > 0 ? `${hours}h ` : ""}
       {minutes}m
+    </span>
+  );
+}
+
+export function NowStageBadge({
+  expiresAt,
+  interestCount,
+  initialNow,
+  locale,
+}: {
+  expiresAt: string;
+  interestCount: number;
+  initialNow: number;
+  locale: string;
+}) {
+  const [now, setNow] = useState(initialNow);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const stage = getNowStage(new Date(expiresAt), interestCount, new Date(now));
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${stage === "EXPIRED" ? "bg-[#F2F3F0] text-[#788177]" : stage === "ALMOST_THERE" ? "bg-[#FFF1E0] text-[#A66A2A]" : "bg-[#E8F7ED] text-[#207551]"}`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${stage === "EXPIRED" ? "bg-[#A6AEA6]" : stage === "ALMOST_THERE" ? "bg-[#E7A958]" : "bg-[#48B77B]"}`}
+        aria-hidden="true"
+      />
+      {getNowStageLabel(stage, locale)}
     </span>
   );
 }
