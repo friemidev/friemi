@@ -757,7 +757,7 @@ export function WerewolfFlowPanel({
       ) : null}
 
       {visibleVoteResultNotice ? (
-        <div className="pointer-events-none fixed inset-0 z-[125] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+        <div className="pointer-events-none fixed inset-0 z-[140] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
           <section
             aria-labelledby={`werewolf-vote-result-${visibleVoteResultNotice.id}`}
             className="pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/55 bg-[#FFFDF7] p-5 text-[#18362D] shadow-[0_24px_80px_rgba(0,0,0,0.46)]"

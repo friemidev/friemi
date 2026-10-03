@@ -61,6 +61,9 @@ import {
   getVisibleWerewolfSheriffCandidateSeatNumbers,
 } from "@/features/game-tools/werewolfFlow";
 import {
+  getWerewolfViewerAccessScope,
+} from "@/features/game-tools/werewolfViewerAccess";
+import {
   getWerewolfAtmosphereById,
   werewolfUiAssets,
 } from "@/features/game-tools/werewolfCardAssets";
@@ -75,6 +78,7 @@ import {
 import { WEREWOLF_REALTIME_INTEGRITY_POLL_MS } from "@/features/game-tools/werewolfRealtime";
 import {
   didWerewolfRoomStartNextRound,
+  isWerewolfEventVisibleToViewer,
   type WerewolfRoomState,
 } from "@/features/game-tools/werewolfRoomState";
 import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
@@ -189,6 +193,23 @@ function mergeWerewolfRoomSync(
   current: WerewolfRoomView,
   incoming: WerewolfRoomView,
 ): WerewolfRoomView {
+  const viewerAccessChanged =
+    getWerewolfViewerAccessScope(current) !==
+    getWerewolfViewerAccessScope(incoming);
+  const incomingViewerSeat = incoming.seats.find((seat) => seat.isViewerSeat);
+  const currentEvents = viewerAccessChanged
+    ? current.events.filter((event) =>
+        isWerewolfEventVisibleToViewer({
+          isFinished: incoming.status === "FINISHED",
+          isJudge: Boolean(incomingViewerSeat?.isJudgeSeat),
+          type: event.type,
+        }),
+      )
+    : current.events;
+  const currentSubmissions = viewerAccessChanged
+    ? []
+    : current.flowSubmissions;
+
   const incomingEventIds = new Set(incoming.events.map((event) => event.id));
   const incomingSubmissionIds = new Set(
     incoming.flowSubmissions.map((submission) => submission.id),
@@ -198,11 +219,11 @@ function mergeWerewolfRoomSync(
     ...incoming,
     events: [
       ...incoming.events,
-      ...current.events.filter((event) => !incomingEventIds.has(event.id)),
+      ...currentEvents.filter((event) => !incomingEventIds.has(event.id)),
     ].sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
     flowSubmissions: [
       ...incoming.flowSubmissions,
-      ...current.flowSubmissions.filter(
+      ...currentSubmissions.filter(
         (submission) => !incomingSubmissionIds.has(submission.id),
       ),
     ].sort((first, second) =>
