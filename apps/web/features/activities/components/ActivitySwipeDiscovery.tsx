@@ -27,6 +27,7 @@ import { getCategoryLabel, getStatusLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
+import { getActivityCategoryPreviewSrc } from "../utils/activityCategoryVisuals";
 import { isPublicEventCard } from "../utils/activityCardKind";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 import {
@@ -780,6 +781,9 @@ export function ActivitySwipeDiscovery({
                 >
                   <ActivityCoverImage
                     src={isTopCard ? activity.coverImageUrl : null}
+                    fallbackSrc={getActivityCategoryPreviewSrc(
+                      activity.category,
+                    )}
                     overlayClassName={cn(
                       "bg-gradient-to-t from-black/58 via-black/12 to-transparent",
                       !isHomeVariant
