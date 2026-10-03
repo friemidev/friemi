@@ -32,7 +32,7 @@
 ## 数据库迁移与部署状态（2026-10-03）
 
 - 当前本地配置连接 Preview Supabase 项目 `dryhbxognbrljslzciuh`。`prisma migrate status` 显示仓库的 83 个迁移全部生效；直接查询确认 `AaParticipant.paymentMethod` 是可空的 `varchar(160)`，`20261003100000_aa_participant_payment_method` 的迁移记录已完成、未回滚，且没有未解决的失败迁移。隔离本机 PostgreSQL 17 也完整应用了 83 个迁移并通过写入与读取冒烟测试。
-- 本轮 AA 提交 `b7b7d2c` 已推送到 `dev`，对应 GitHub CI 成功。但检查时 GitHub/Vercel 的最新 Preview 部署仍是上一提交 `00c2bc1`；`friemi-git-dev-friemi.vercel.app` 仍显示旧结算布局。因此 **Preview 数据库已经就绪，在线 dev 页面尚未验证为本轮代码**。Vercel CLI 当前登录的账号没有该项目的访问权限，不能在本工作区直接发起或检查项目设置中的重新部署。
+- 本轮 AA 提交 `b7b7d2c` 已推送到 `dev`，对应 GitHub CI 成功。直接推送后，Vercel Preview 一度停留在上一提交 `00c2bc1`；创建 `dev` → `main` 的[草稿 PR #273](https://github.com/friemidev/friemi/pull/273) 后，Vercel Preview 进入 Ready。重新打开在线 `dev` 活动账本，结算页已显示“我的待收款 / 我的待付款”新布局，且服务端读取正常。草稿 PR 未合并，Production 没有发布。Vercel CLI 当前账号无该项目权限，部署状态以 GitHub PR 的 Vercel 检查和在线页面为准。
 - 仓库 CI 与 Web 构建只生成 Prisma Client，不自动运行 `prisma migrate deploy`。以后每次新增迁移，必须先核对目标环境的数据库项目，再显式执行迁移与 `prisma migrate status`，确认字段和迁移记录，最后检查该环境部署的 Git SHA 与页面行为。`dev` 的迁移不能代替 Production 迁移；本轮没有访问或修改 Production 数据库。
 
 产品经理文档中的两条“后台自检”条件并非普遍成立：已经付款金额加新结算金额，不一定等于一次性结算总额（可能产生反向退款）；有预付款或退款时，个人应收也可能高于其自身开支。本实现以逐人净额之和为零、所有份额之和等于开支，以及固定安排全部执行后余额归零为校验依据。
