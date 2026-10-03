@@ -85,7 +85,8 @@ export function NowBubbleField({
     }
     setPopping(id);
     window.setTimeout(() => router.push(destination), 260);
-    window.setTimeout(() => setPopping(null), 700);
+    // Keep the burst complete while a slower route transition is still loading.
+    window.setTimeout(() => setPopping(null), 5_000);
   }
 
   return (

@@ -44,7 +44,7 @@ import {
   type NowBubbleItem,
 } from "@/features/now/NowBubbleField";
 import { getNowHomeFeed } from "@/features/now/queries";
-import { nowOpenCity } from "@/features/now/now";
+import { getNowPreviewLabel, nowOpenCity } from "@/features/now/now";
 import { getNowPreviewInvites } from "@/features/now/nowPreview";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
@@ -655,7 +655,7 @@ function MobileHomeV23Experience({
         <section className="pr-5">
           {isNowPreview ? (
             <p className="mb-1 text-[10px] font-semibold text-[#778A7D]">
-              开发预览 · 示例内容
+              {getNowPreviewLabel(locale)}
             </p>
           ) : null}
           <h1 className="text-[24px] font-bold leading-tight tracking-normal text-[#111210]">
@@ -946,7 +946,7 @@ function MobileHomeExperience({
           >
             {isNowPreview ? (
               <p className="ml-5 text-[11px] font-semibold text-[#778A7D]">
-                开发预览 · 示例内容
+                {getNowPreviewLabel(locale)}
               </p>
             ) : null}
             <NowBubbleField

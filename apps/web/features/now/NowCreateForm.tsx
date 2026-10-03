@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, MapPin } from "lucide-react";
 import { createNowInviteAction } from "./actions";
@@ -8,6 +8,7 @@ import {
   getNowCopy,
   getNowKind,
   getNowKindLabel,
+  getNowPreviewDisabledLabel,
   nowIntentWindows,
   nowKinds,
   nowVisibilityHours,
@@ -31,7 +32,15 @@ function StepHeading({
   );
 }
 
-function SubmitButton({ label, preview }: { label: string; preview: boolean }) {
+function SubmitButton({
+  label,
+  locale,
+  preview,
+}: {
+  label: string;
+  locale: string;
+  preview: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -39,7 +48,7 @@ function SubmitButton({ label, preview }: { label: string; preview: boolean }) {
       disabled={pending || preview}
       className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#126A4A] px-5 text-[15px] font-bold text-white shadow-[0_12px_25px_rgba(18,106,74,.2)] transition active:scale-[.98] disabled:opacity-60"
     >
-      {preview ? "开发预览 · 不会发布" : pending ? "…" : label}
+      {preview ? getNowPreviewDisabledLabel(locale) : pending ? "…" : label}
       <ArrowRight size={18} aria-hidden="true" />
     </button>
   );
@@ -56,10 +65,19 @@ export function NowCreateForm({
 }) {
   const copy = getNowCopy(locale);
   const [category, setCategory] = useState<NowKind>(initialKind);
-  const [title, setTitle] = useState(getNowKindLabel(initialKind, locale));
+  const [title, setTitle] = useState(
+    initialKind === "OTHER" ? "" : getNowKindLabel(initialKind, locale),
+  );
+  const initialKindRef = useRef<HTMLButtonElement>(null);
   const [area, setArea] = useState("");
   const [note, setNote] = useState("");
   const [state, action] = useActionState(createNowInviteAction, {});
+  useEffect(() => {
+    initialKindRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, []);
   const areaSuggestions = [
     {
       label:
@@ -102,6 +120,7 @@ export function NowCreateForm({
             return (
               <button
                 key={kind}
+                ref={kind === initialKind ? initialKindRef : null}
                 type="button"
                 onClick={() => chooseCategory(kind)}
                 aria-pressed={selected}
@@ -126,6 +145,13 @@ export function NowCreateForm({
           name="title"
           required
           maxLength={48}
+          placeholder={
+            locale === "zh-CN"
+              ? "用一句话说说此刻想做什么"
+              : locale === "fr"
+                ? "Dites votre envie en une phrase"
+                : "Say what you feel like doing"
+          }
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="mt-1.5 min-h-11 w-full rounded-xl border border-[#D7E5D9] bg-white px-3.5 text-[14px] text-[#18382C] outline-none focus:border-[#3C9D6B] focus:ring-2 focus:ring-[#3C9D6B]/20"
@@ -142,7 +168,13 @@ export function NowCreateForm({
                 : "When?"}
           </StepHeading>
         </legend>
-        <div className="grid grid-cols-4 gap-2">
+        <div
+          className={
+            locale === "fr"
+              ? "grid grid-cols-2 gap-2 min-[430px]:grid-cols-4"
+              : "grid grid-cols-4 gap-2"
+          }
+        >
           {nowIntentWindows.map((window) => {
             const labels = {
               NOW: ["现在", "Now", "Maintenant"],
@@ -153,7 +185,7 @@ export function NowCreateForm({
             const captions = {
               NOW: ["0–1h", "0–1h", "0–1h"],
               LATER: ["1–3h", "1–3h", "1–3h"],
-              TODAY: ["今日内", "Today", "Aujourd'hui"],
+              TODAY: ["今日内", "By midnight", "Avant minuit"],
               TONIGHT: ["今晚", "Evening", "Ce soir"],
             }[window];
             const index = locale === "en" ? 1 : locale === "fr" ? 2 : 0;
@@ -245,7 +277,9 @@ export function NowCreateForm({
           placeholder={
             locale === "zh-CN"
               ? "下班后，突然想喝一杯，有人一起吗？"
-              : "A little more about your idea…"
+              : locale === "fr"
+                ? "Une envie, un petit mot…"
+                : "A little more about your idea…"
           }
           className="w-full resize-none rounded-xl border border-[#D7E5D9] bg-white px-3.5 py-3 text-[14px] leading-6 text-[#18382C] outline-none focus:border-[#3C9D6B] focus:ring-2 focus:ring-[#3C9D6B]/20"
         />
@@ -289,7 +323,7 @@ export function NowCreateForm({
           {state.error}
         </p>
       ) : null}
-      <SubmitButton label={copy.publish} preview={preview} />
+      <SubmitButton label={copy.publish} locale={locale} preview={preview} />
     </form>
   );
 }

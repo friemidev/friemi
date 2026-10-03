@@ -6,7 +6,7 @@ import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { getNowInviteDetail } from "@/features/now/queries";
 import { getNowPreviewDetail } from "@/features/now/nowPreview";
-import { getNowSuggestedStartAt } from "@/features/now/now";
+import { getNowPreviewLabel, getNowSuggestedStartAt } from "@/features/now/now";
 import { NowConvertForm } from "@/features/now/NowConvertForm";
 
 type PageProps = { params: Promise<{ locale: string; inviteId: string }> };
@@ -61,7 +61,7 @@ export default async function NowConvertPage({ params }: PageProps) {
         </p>
         {preview ? (
           <p className="mb-3 text-[11px] font-semibold text-[#778A7D]">
-            开发预览 · 示例内容
+            {getNowPreviewLabel(locale)}
           </p>
         ) : null}
         <NowConvertForm

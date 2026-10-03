@@ -20,6 +20,7 @@ import {
   getNowCopy,
   getNowIntentWindowLabel,
   getNowKind,
+  getNowPreviewLabel,
   isNowVisible,
 } from "@/features/now/now";
 import { selectNowInterestAction } from "@/features/now/actions";
@@ -31,7 +32,12 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ locale: string; inviteId: string }>;
-  searchParams?: Promise<{ as?: string; justPublished?: string }>;
+  searchParams?: Promise<{
+    as?: string;
+    converted?: string;
+    expired?: string;
+    justPublished?: string;
+  }>;
 };
 export const dynamic = "force-dynamic";
 
@@ -68,12 +74,32 @@ export default async function NowInvitePage({
     process.env.NODE_ENV === "development" && inviteId.startsWith("preview-");
   const previewRole =
     query.as === "host" || query.as === "interested" ? query.as : "viewer";
+  const previewExpired = preview && query.expired === "1";
+  const previewConverted = preview && query.converted === "1";
   const viewer = preview ? null : await getOptionalCurrentUserProfileSnapshot();
   const initialNow = Date.now();
-  const invite = preview
+  const loadedInvite = preview
     ? getNowPreviewDetail(inviteId, initialNow, previewRole)
     : await getNowInviteDetail(inviteId, viewer?.id);
-  if (!invite) notFound();
+  if (
+    !loadedInvite ||
+    ((previewExpired || previewConverted) && previewRole === "viewer")
+  )
+    notFound();
+  const invite =
+    previewExpired || previewConverted
+      ? {
+          ...loadedInvite,
+          expiresAt: new Date(initialNow - 60_000),
+          linkedActivity: previewConverted
+            ? {
+                id: "preview-hangout",
+                title:
+                  locale === "zh-CN" ? "Le Marais 小酒局" : "Le Marais hangout",
+              }
+            : null,
+        }
+      : loadedInvite;
   const copy = getNowCopy(locale);
   const kind = getNowKind(invite.category);
   const active = isNowVisible(invite.expiresAt);
@@ -83,6 +109,10 @@ export default async function NowInvitePage({
   const viewerSelection = invite.interests.find(
     (interest) => interest.profileId === viewerId,
   )?.selectedAt;
+  const previewRoles =
+    previewExpired || previewConverted
+      ? (["interested", "host"] as const)
+      : (["viewer", "interested", "host"] as const);
 
   return (
     <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FBFCFA] px-5 pb-28 pt-5 text-[#173D32]">
@@ -105,21 +135,48 @@ export default async function NowInvitePage({
 
         {preview ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#678573]">
-            <span>开发预览 · 示例内容</span>
-            {(["viewer", "interested", "host"] as const).map((role) => (
+            <span>
+              {getNowPreviewLabel(locale)}
+              {previewConverted
+                ? locale === "zh-CN"
+                  ? " · 已转聚吧"
+                  : locale === "fr"
+                    ? " · transformée"
+                    : " · converted"
+                : previewExpired
+                  ? locale === "zh-CN"
+                    ? " · 已到期"
+                    : locale === "fr"
+                      ? " · terminée"
+                      : " · expired"
+                  : ""}
+            </span>
+            {previewRoles.map((role) => (
               <Link
                 key={role}
                 href={withLocale(
                   locale,
-                  `/now/${invite.id}${role === "viewer" ? "" : `?as=${role}`}`,
+                  `/now/${invite.id}${role === "viewer" && !previewExpired && !previewConverted ? "" : `?as=${role}${previewConverted ? "&converted=1" : previewExpired ? "&expired=1" : ""}`}`,
                 )}
                 className={`rounded-full px-2.5 py-1 ${previewRole === role ? "bg-[#E7F6EC] text-[#126A4A]" : "bg-white text-[#6D8173]"}`}
               >
                 {role === "host"
-                  ? "发起者"
+                  ? locale === "zh-CN"
+                    ? "发起者"
+                    : locale === "fr"
+                      ? "Hôte"
+                      : "Host"
                   : role === "interested"
-                    ? "已举手"
-                    : "参与者"}
+                    ? locale === "zh-CN"
+                      ? "已举手"
+                      : locale === "fr"
+                        ? "Intéressé·e"
+                        : "Interested"
+                    : locale === "zh-CN"
+                      ? "参与者"
+                      : locale === "fr"
+                        ? "Visiteur"
+                        : "Viewer"}
               </Link>
             ))}
           </div>
@@ -211,7 +268,13 @@ export default async function NowInvitePage({
               {!invite.isInterested ? (
                 <input
                   disabled
-                  placeholder="留一句话（选填）"
+                  placeholder={
+                    locale === "zh-CN"
+                      ? "留一句话（选填）"
+                      : locale === "fr"
+                        ? "Laissez un mot (facultatif)"
+                        : "Add a note (optional)"
+                  }
                   className="mb-3 min-h-11 w-full rounded-xl border border-[#DDE9E0] bg-white px-3 text-[13px]"
                 />
               ) : null}
@@ -245,16 +308,26 @@ export default async function NowInvitePage({
                   : `You and ${invite.organizer.nickname} want the same thing`}
             </p>
             <p className="mt-1.5 text-[12px] leading-5 text-[#587361]">
-              {locale === "zh-CN"
-                ? "聊聊具体时间和地点，再决定要不要一起。"
-                : locale === "fr"
-                  ? "Parlez de l'heure et du lieu avant de vous décider."
-                  : "Chat about the time and place, then decide together."}
+              {invite.linkedActivity
+                ? locale === "zh-CN"
+                  ? "聚吧已经发布，先看看确定的时间和地点，再决定是否报名。"
+                  : locale === "fr"
+                    ? "La sortie est publiée. Vérifiez l'heure et le lieu avant de vous inscrire."
+                    : "The hangout is live. Check the time and place before signing up."
+                : locale === "zh-CN"
+                  ? "聊聊具体时间和地点，再决定要不要一起。"
+                  : locale === "fr"
+                    ? "Parlez de l'heure et du lieu avant de vous décider."
+                    : "Chat about the time and place, then decide together."}
             </p>
             {preview ? (
               <span className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#126A4A] px-4 text-[12px] font-bold text-white opacity-65">
                 <MessageCircle size={15} />
-                {locale === "zh-CN" ? "聊聊 · 预览" : "Chat · preview"}
+                {locale === "zh-CN"
+                  ? "聊聊 · 预览"
+                  : locale === "fr"
+                    ? "Discuter · aperçu"
+                    : "Chat · preview"}
               </span>
             ) : (
               <StartDirectConversationButton
@@ -272,6 +345,46 @@ export default async function NowInvitePage({
                 peerProfileId={invite.organizer.id}
                 redirectPath={`/now/${invite.id}`}
               />
+            )}
+          </section>
+        ) : null}
+
+        {invite.linkedActivity && invite.isInterested && !invite.isOrganizer ? (
+          <section className="mt-4 rounded-[1.5rem] border border-[#D4E9DC] bg-[#F0F8F2] px-4 py-4">
+            <p className="text-[14px] font-bold text-[#126A4A]">
+              {locale === "zh-CN"
+                ? "这个此刻已变成聚吧"
+                : locale === "fr"
+                  ? "Cette envie est devenue une sortie"
+                  : "This NOW became a hangout"}
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-[#587361]">
+              {locale === "zh-CN"
+                ? "你已举手，但还没有报名。去聚吧确认时间、地点并正式参加。"
+                : locale === "fr"
+                  ? "Votre intérêt ne vaut pas inscription. Vérifiez l'heure et le lieu, puis confirmez votre place."
+                  : "Raising your hand did not sign you up. Check the time and place, then confirm your spot."}
+            </p>
+            {previewConverted ? (
+              <span className="mt-3 inline-flex min-h-10 items-center rounded-xl bg-[#126A4A] px-4 text-[12px] font-bold text-white opacity-65">
+                {locale === "zh-CN"
+                  ? "查看聚吧 · 预览"
+                  : locale === "fr"
+                    ? "Sortie · aperçu"
+                    : "Hangout · preview"}
+              </span>
+            ) : (
+              <Link
+                href={withLocale(locale, `/lobby/${invite.linkedActivity.id}`)}
+                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[12px] font-bold text-white"
+              >
+                {locale === "zh-CN"
+                  ? "查看聚吧 · 正式报名"
+                  : locale === "fr"
+                    ? "Voir et rejoindre la sortie"
+                    : "View and join the hangout"}
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </Link>
             )}
           </section>
         ) : null}
@@ -340,9 +453,19 @@ export default async function NowInvitePage({
                       />
                     )
                   ) : null}
-                  {preview && invite.isOrganizer ? (
+                  {preview && invite.isOrganizer && !invite.linkedActivity ? (
                     <span className="rounded-xl bg-[#E9F7EE] px-3 py-2 text-[12px] font-bold text-[#126A4A]">
-                      {interest.selectedAt ? "已选择" : "选入组局"}
+                      {interest.selectedAt
+                        ? locale === "zh-CN"
+                          ? "已选择"
+                          : locale === "fr"
+                            ? "Choisi·e"
+                            : "Selected"
+                        : locale === "zh-CN"
+                          ? "选入组局"
+                          : locale === "fr"
+                            ? "Choisir"
+                            : "Select"}
                     </span>
                   ) : invite.isOrganizer && !invite.linkedActivity ? (
                     <form action={selectNowInterestAction}>
@@ -393,20 +516,32 @@ export default async function NowInvitePage({
         {invite.isOrganizer ? (
           <section className="mt-7 rounded-[1.4rem] bg-[#EAF7EE] px-4 py-4">
             <h2 className="text-[15px] font-bold">
-              {invite.interests.length >= 5
+              {invite.linkedActivity
                 ? locale === "zh-CN"
-                  ? `${invite.interests.length} 人同频了，变成聚吧？`
+                  ? "已转为聚吧"
                   : locale === "fr"
-                    ? `${invite.interests.length} personnes intéressées · Une sortie ?`
-                    : `${invite.interests.length} interested · Make it a hangout?`
-                : copy.organize}
+                    ? "Sortie publiée"
+                    : "Hangout published"
+                : invite.interests.length >= 5
+                  ? locale === "zh-CN"
+                    ? `${invite.interests.length} 人同频了，变成聚吧？`
+                    : locale === "fr"
+                      ? `${invite.interests.length} personnes intéressées · Une sortie ?`
+                      : `${invite.interests.length} interested · Make it a hangout?`
+                  : copy.organize}
             </h2>
             <p className="mt-1 text-[12px] leading-5 text-[#53705D]">
-              {locale === "zh-CN"
-                ? "把同频的人聚在一起：确认具体时间和地点，再正式发布。"
-                : locale === "fr"
-                  ? "Choisissez un horaire et un lieu pour réunir le groupe."
-                  : "Set a time and place to make the plan real."}
+              {invite.linkedActivity
+                ? locale === "zh-CN"
+                  ? "此刻已从首页退出。举手者可以在聚吧页面正式报名。"
+                  : locale === "fr"
+                    ? "Cette envie n'apparaît plus à l'accueil. Les personnes intéressées peuvent rejoindre la sortie."
+                    : "This NOW has left the home feed. Interested people can join on the hangout page."
+                : locale === "zh-CN"
+                  ? "把同频的人聚在一起：确认具体时间和地点，再正式发布。"
+                  : locale === "fr"
+                    ? "Choisissez un horaire et un lieu pour réunir le groupe."
+                    : "Set a time and place to make the plan real."}
             </p>
             {invite.interests.some((interest) => interest.selectedAt) ? (
               <p className="mt-2 text-[12px] font-semibold text-[#126A4A]">
@@ -418,13 +553,27 @@ export default async function NowInvitePage({
               </p>
             ) : null}
             {invite.linkedActivity ? (
-              <Link
-                href={withLocale(locale, `/lobby/${invite.linkedActivity.id}`)}
-                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-white px-4 text-[13px] font-bold text-[#126A4A]"
-              >
-                {invite.linkedActivity.title}
-                <ArrowUpRight size={15} />
-              </Link>
+              previewConverted ? (
+                <span className="mt-3 inline-flex min-h-10 items-center rounded-xl bg-white px-4 text-[13px] font-bold text-[#126A4A] opacity-65">
+                  {invite.linkedActivity.title} ·{" "}
+                  {locale === "zh-CN"
+                    ? "预览"
+                    : locale === "fr"
+                      ? "aperçu"
+                      : "preview"}
+                </span>
+              ) : (
+                <Link
+                  href={withLocale(
+                    locale,
+                    `/lobby/${invite.linkedActivity.id}`,
+                  )}
+                  className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-white px-4 text-[13px] font-bold text-[#126A4A]"
+                >
+                  {invite.linkedActivity.title}
+                  <ArrowUpRight size={15} />
+                </Link>
+              )
             ) : preview ? (
               <Link
                 href={withLocale(locale, `/now/${invite.id}/convert`)}
@@ -471,15 +620,6 @@ export default async function NowInvitePage({
                 ? "这只是组局邀请意向，正式参加请到聚吧页面报名。"
                 : "Confirm your place on the hangout page when it is ready."}
             </p>
-            {invite.linkedActivity ? (
-              <Link
-                href={withLocale(locale, `/lobby/${invite.linkedActivity.id}`)}
-                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl bg-[#126A4A] px-4 text-[13px] font-bold text-white"
-              >
-                {invite.linkedActivity.title}
-                <ArrowUpRight size={15} />
-              </Link>
-            ) : null}
           </section>
         ) : null}
 
@@ -517,7 +657,12 @@ export default async function NowInvitePage({
             </div>
             {preview ? (
               <div className="mt-4 rounded-2xl border border-[#DDE9E0] bg-white px-3 py-3 text-[12px] text-[#94A498]">
-                {copy.message} · 示例预览
+                {copy.message} ·{" "}
+                {locale === "zh-CN"
+                  ? "示例预览"
+                  : locale === "fr"
+                    ? "aperçu"
+                    : "preview"}
               </div>
             ) : (
               <NowMessageForm inviteId={invite.id} locale={locale} />

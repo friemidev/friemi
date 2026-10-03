@@ -71,17 +71,20 @@ export function NowInviteRow({
           <span className="block line-clamp-2 text-[14px] font-bold leading-5 text-[#173D32]">
             {invite.title}
           </span>
-          <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-[#60746A]">
-            <MapPin size={11} aria-hidden="true" />
-            {invite.area}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] leading-4 text-[#60746A]">
+            <MapPin size={11} className="shrink-0" aria-hidden="true" />
+            <span className="min-w-0 truncate">{invite.area}</span>
             <span aria-hidden="true">·</span>
-            {getNowIntentWindowLabel(invite.intentWindow, locale)}
-            <span aria-hidden="true">·</span>
-            <NowLiveCountdown
-              expiresAt={invite.expiresAt.toISOString()}
-              initialNow={Date.now()}
-              locale={locale}
-            />
+            <span className="whitespace-nowrap">
+              {getNowIntentWindowLabel(invite.intentWindow, locale)}
+            </span>
+            <span className="whitespace-nowrap font-semibold text-[#BA6171]">
+              <NowLiveCountdown
+                expiresAt={invite.expiresAt.toISOString()}
+                initialNow={Date.now()}
+                locale={locale}
+              />
+            </span>
           </span>
           <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#24815D]">
             {invite.interests?.length ? (

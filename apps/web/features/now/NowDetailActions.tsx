@@ -41,7 +41,7 @@ export function NowInlineInterestForm({
     if (state.ok) router.push(withLocale(locale, `/now/${inviteId}?matched=1`));
   }, [inviteId, locale, state, router]);
   return (
-    <form action={action} className="shrink-0">
+    <form action={action} className="grid shrink-0 justify-items-end">
       <input type="hidden" name="inviteId" value={inviteId} />
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="intent" value="join" />
@@ -49,7 +49,10 @@ export function NowInlineInterestForm({
         {copy.interested}
       </ActionButton>
       {state.error ? (
-        <span role="alert" className="sr-only">
+        <span
+          role="alert"
+          className="mt-1 max-w-24 text-right text-[10px] leading-4 text-[#A53955]"
+        >
           {state.error}
         </span>
       ) : null}
@@ -163,26 +166,28 @@ export function NowMessageForm({
     }
   }, [state, router]);
   return (
-    <form action={action} ref={formRef} className="mt-4 flex items-end gap-2">
+    <form action={action} ref={formRef} className="mt-4">
       <input type="hidden" name="inviteId" value={inviteId} />
       <input type="hidden" name="locale" value={locale} />
-      <label htmlFor="now-message-body" className="sr-only">
-        {copy.message}
-      </label>
-      <textarea
-        id="now-message-body"
-        name="body"
-        required
-        maxLength={280}
-        rows={2}
-        placeholder={copy.message}
-        className="min-h-12 min-w-0 flex-1 resize-none rounded-2xl border border-[#DDE9E0] bg-white px-3 py-2.5 text-[13px] outline-none focus:border-[#54B581]"
-      />
-      <ActionButton className="flex min-h-12 min-w-12 items-center justify-center rounded-2xl bg-[#126A4A] text-white">
-        <Send size={18} aria-label={copy.send} />
-      </ActionButton>
+      <div className="flex items-end gap-2">
+        <label htmlFor="now-message-body" className="sr-only">
+          {copy.message}
+        </label>
+        <textarea
+          id="now-message-body"
+          name="body"
+          required
+          maxLength={280}
+          rows={2}
+          placeholder={copy.message}
+          className="min-h-12 min-w-0 flex-1 resize-none rounded-2xl border border-[#DDE9E0] bg-white px-3 py-2.5 text-[13px] outline-none focus:border-[#54B581]"
+        />
+        <ActionButton className="flex min-h-12 min-w-12 items-center justify-center rounded-2xl bg-[#126A4A] text-white">
+          <Send size={18} aria-label={copy.send} />
+        </ActionButton>
+      </div>
       {state.error ? (
-        <p role="alert" className="text-[12px] text-[#A53955]">
+        <p role="alert" className="mt-2 text-[12px] text-[#A53955]">
           {state.error}
         </p>
       ) : null}

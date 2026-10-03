@@ -2,7 +2,11 @@ import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
-import { getNowCopy, nowOpenCity } from "@/features/now/now";
+import {
+  getNowCopy,
+  getNowPreviewLabel,
+  nowOpenCity,
+} from "@/features/now/now";
 import { getNowBrowseFeed } from "@/features/now/queries";
 import { NowInviteRow } from "@/features/now/NowInviteRow";
 import { getNowPreviewRows } from "@/features/now/nowPreview";
@@ -55,7 +59,7 @@ export default async function NowBrowsePage({
         </h1>
         {preview ? (
           <p className="mt-1 text-[11px] font-semibold text-[#778A7D]">
-            开发预览 · 示例内容
+            {getNowPreviewLabel(locale)}
           </p>
         ) : null}
         <p className="mt-1 text-[13px] text-[#61736A]">{copy.subtitle}</p>

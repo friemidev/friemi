@@ -10,6 +10,7 @@ import {
   getNowActivityDraftFields,
   getNowIntentWindowLabel,
   getNowKind,
+  getNowPreviewDisabledLabel,
 } from "./now";
 
 type NowConvertFormProps = {
@@ -41,9 +42,7 @@ function PublishButton({
       className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#126A4A] px-5 text-[14px] font-bold text-white shadow-[0_12px_26px_rgba(18,106,74,.18)] disabled:opacity-60"
     >
       {preview
-        ? locale === "zh-CN"
-          ? "开发预览 · 不会发布"
-          : "Preview · no publishing"
+        ? getNowPreviewDisabledLabel(locale)
         : pending
           ? "…"
           : locale === "zh-CN"

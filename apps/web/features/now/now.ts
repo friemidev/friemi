@@ -322,6 +322,22 @@ export function getNowPriority({
   return { score, size } as const;
 }
 
+export function getNowPreviewLabel(locale: string) {
+  return locale === "zh-CN"
+    ? "开发预览 · 示例内容"
+    : locale === "fr"
+      ? "Aperçu · contenu d'exemple"
+      : "Preview · sample content";
+}
+
+export function getNowPreviewDisabledLabel(locale: string) {
+  return locale === "zh-CN"
+    ? "开发预览 · 不会发布"
+    : locale === "fr"
+      ? "Aperçu · aucune publication"
+      : "Preview · no publishing";
+}
+
 export function getNowCopy(locale: string) {
   if (locale === "fr")
     return {
@@ -339,7 +355,7 @@ export function getNowCopy(locale: string) {
       expired: "N'apparaît plus à l'accueil",
       publish: "Publier",
       createTitle: "Qu'avez-vous envie de faire ?",
-      area: "Quartier ou lieu",
+      area: "Quartier ou zone",
       note: "Une phrase pour inviter les autres (facultatif)",
       duration: "Visible à l'accueil pendant",
       title: "Votre invitation",
@@ -363,7 +379,7 @@ export function getNowCopy(locale: string) {
       create: "Start an invite",
       mine: "My invites",
       empty: "Your idea could be the first one here.",
-      interested: "I'm in",
+      interested: "Me too",
       withdrawn: "Withdraw interest",
       interestedAlready: "You're interested",
       people: "interested",
@@ -371,7 +387,7 @@ export function getNowCopy(locale: string) {
       expired: "No longer on the home feed",
       publish: "Post invite",
       createTitle: "What do you feel like doing?",
-      area: "Area or meeting place",
+      area: "Neighborhood or area",
       note: "Add a little context (optional)",
       duration: "Show on home for",
       title: "Your invitation",
@@ -402,7 +418,7 @@ export function getNowCopy(locale: string) {
     expired: "已退出首页展示",
     publish: "发布此刻",
     createTitle: "现在想做什么？",
-    area: "附近区域或见面地点",
+    area: "附近街区或区域",
     note: "想说点什么？（选填）",
     duration: "首页展示时间",
     title: "邀约内容",

@@ -4,7 +4,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { NowCreateForm } from "@/features/now/NowCreateForm";
-import { getNowCopy, isNowKind } from "@/features/now/now";
+import { getNowCopy, getNowPreviewLabel, isNowKind } from "@/features/now/now";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -39,7 +39,7 @@ export default async function NewNowPage({ params, searchParams }: PageProps) {
         </h1>
         {preview ? (
           <p className="mb-1 text-[11px] font-semibold text-[#778A7D]">
-            开发预览 · 示例内容
+            {getNowPreviewLabel(locale)}
           </p>
         ) : null}
         <p className="mb-7 text-[13px] text-[#708276]">

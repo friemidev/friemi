@@ -76,6 +76,7 @@ const samples: Pick<
 ];
 
 export function getNowPreviewInvites(now: number): NowBubbleItem[] {
+  const remainingMinutes = [38, 76, 114, 152, 190, 228, 682];
   return samples.map((sample, index) => ({
     ...sample,
     avatars: [
@@ -86,8 +87,10 @@ export function getNowPreviewInvites(now: number): NowBubbleItem[] {
         { name: "Mika", url: null },
       ].slice(0, sample.interestCount),
     ],
-    createdAt: new Date(now - 2 * 3_600_000).toISOString(),
-    expiresAt: new Date(now + (index + 1) * 38 * 60_000).toISOString(),
+    createdAt: new Date(
+      now - (720 - remainingMinutes[index]) * 60_000,
+    ).toISOString(),
+    expiresAt: new Date(now + remainingMinutes[index] * 60_000).toISOString(),
   }));
 }
 
