@@ -24,6 +24,7 @@ export async function getNowBrowseFeed(
     where: {
       city: { equals: city, mode: "insensitive" },
       expiresAt: { gt: now },
+      linkedActivityId: null,
     },
     include: nowInviteListInclude,
     orderBy: { createdAt: "desc" },

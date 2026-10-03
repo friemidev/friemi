@@ -227,11 +227,13 @@ export function NowLiveCountdown({
 }
 
 export function NowStageBadge({
+  converted = false,
   expiresAt,
   interestCount,
   initialNow,
   locale,
 }: {
+  converted?: boolean;
   expiresAt: string;
   interestCount: number;
   initialNow: number;
@@ -245,13 +247,19 @@ export function NowStageBadge({
   const stage = getNowStage(new Date(expiresAt), interestCount, new Date(now));
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${stage === "EXPIRED" ? "bg-[#F2F3F0] text-[#788177]" : stage === "ALMOST_THERE" ? "bg-[#FFF1E0] text-[#A66A2A]" : "bg-[#E8F7ED] text-[#207551]"}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${converted ? "bg-[#E7F6EC] text-[#126A4A]" : stage === "EXPIRED" ? "bg-[#F2F3F0] text-[#788177]" : stage === "ALMOST_THERE" ? "bg-[#FFF1E0] text-[#A66A2A]" : "bg-[#E8F7ED] text-[#207551]"}`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${stage === "EXPIRED" ? "bg-[#A6AEA6]" : stage === "ALMOST_THERE" ? "bg-[#E7A958]" : "bg-[#48B77B]"}`}
+        className={`h-1.5 w-1.5 rounded-full ${converted ? "bg-[#48B77B]" : stage === "EXPIRED" ? "bg-[#A6AEA6]" : stage === "ALMOST_THERE" ? "bg-[#E7A958]" : "bg-[#48B77B]"}`}
         aria-hidden="true"
       />
-      {getNowStageLabel(stage, locale)}
+      {converted
+        ? locale === "zh-CN"
+          ? "已转聚吧"
+          : locale === "fr"
+            ? "Devenue une sortie"
+            : "Now a hangout"
+        : getNowStageLabel(stage, locale)}
     </span>
   );
 }

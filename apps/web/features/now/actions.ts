@@ -97,11 +97,14 @@ export async function changeNowInterestAction(
   );
   const invite = await prisma.nowInvite.findUnique({
     where: { id: parsed.data.inviteId },
-    select: { organizerId: true, expiresAt: true },
+    select: { organizerId: true, expiresAt: true, linkedActivityId: true },
   });
   if (!invite || invite.organizerId === profile.id)
     return { error: getNowCopy(locale).formError };
-  if (parsed.data.intent === "join" && invite.expiresAt <= new Date()) {
+  if (
+    parsed.data.intent === "join" &&
+    (invite.expiresAt <= new Date() || invite.linkedActivityId)
+  ) {
     return { error: getNowCopy(locale).closed };
   }
   if (parsed.data.intent === "join") {

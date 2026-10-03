@@ -25,6 +25,7 @@ type NowInviteRowProps = {
     area: string;
     createdAt: Date;
     expiresAt: Date;
+    linkedActivityId?: string | null;
     _count: { interests: number };
     viewerInterested?: boolean;
     interests?: {
@@ -49,7 +50,10 @@ export function NowInviteRow({
   const active = isNowVisible(invite.expiresAt);
   const href = withLocale(locale, `/now/${invite.id}`);
   const canRaiseHand =
-    showInterestAction && active && invite.organizerId !== viewerId;
+    showInterestAction &&
+    active &&
+    !invite.linkedActivityId &&
+    invite.organizerId !== viewerId;
 
   return (
     <article className="relative flex min-h-[7.4rem] w-full min-w-0 max-w-full items-center gap-2 border-b border-dashed border-[#D9E7DD] px-1 py-4 last:border-b-0 min-[390px]:gap-3 min-[390px]:px-2">
@@ -116,6 +120,7 @@ export function NowInviteRow({
           </span>
           <span className="mt-1.5 block">
             <NowStageBadge
+              converted={Boolean(invite.linkedActivityId)}
               expiresAt={invite.expiresAt.toISOString()}
               interestCount={invite._count.interests}
               initialNow={Date.now()}

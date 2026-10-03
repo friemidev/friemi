@@ -222,6 +222,7 @@ export default async function NowInvitePage({
           />
           <div className="relative mt-1">
             <NowStageBadge
+              converted={Boolean(invite.linkedActivity)}
               expiresAt={invite.expiresAt.toISOString()}
               interestCount={invite.interests.length}
               initialNow={initialNow}
