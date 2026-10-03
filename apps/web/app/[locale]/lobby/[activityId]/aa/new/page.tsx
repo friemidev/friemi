@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
+import { getSimpleAaState } from "@/features/aa/server/simpleLedgerService";
+import { AaSimpleSurface } from "@/features/aa/components/AaSimpleSurface";
 import { ArrowLeft, Snowflake } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { MobileNavSectionOverride } from "@/components/navigation/MobileNavSectionOverride";
@@ -31,6 +33,8 @@ export default async function NewAaTransactionPage({
     locale,
     `/lobby/${activityId}/aa/new`,
   );
+  const simpleState = await getSimpleAaState(activityId, profile.id);
+  if (simpleState.currency === "EUR") return <AaSimpleSurface state={simpleState} locale={locale} screen={simpleState.status === "ACTIVE" && query.type !== "TRANSFER" ? "choose" : "progress"} />;
   const snapshot = await getActivityAaSnapshot(activityId, profile.id);
   const copy = getAaCopy(locale);
   const initialType =

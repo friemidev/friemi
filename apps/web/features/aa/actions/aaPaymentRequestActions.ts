@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { AA_SETTLEMENT } from "../domain/simpleLedger";
 import {
   buildSettlementSuggestions,
   calculateBalances,
@@ -53,6 +54,7 @@ export async function createAaPaymentRequestAction(formData: FormData) {
     if (!access || !ledger || ledger.status === "ARCHIVED") {
       throw new Error("FORBIDDEN");
     }
+    if (ledger.transactions.some(transaction => transaction.importSource === AA_SETTLEMENT)) throw new Error("USE_SIMPLE_AA_FLOW");
     const viewer = ledger.participants.find(
       (participant) => participant.userProfileId === profile.id,
     );

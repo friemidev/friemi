@@ -9,6 +9,7 @@ import {
   getGameToolRoomPath,
 } from "@/features/game-tools/gameToolRooms";
 import { getWerewolfRoomByCode } from "@/features/game-tools/queries/getWerewolfRoom";
+import { canJoinWerewolfRoom } from "@/features/game-tools/werewolfRoomState";
 import { getWerewolfRoomCodeFromScan } from "@/features/scan/globalQrScanner";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -134,7 +135,7 @@ export default async function WerewolfJoinPage({
     redirect(withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`));
   }
 
-  if (room.status !== "LOBBY" && room.status !== "FINISHED") {
+  if (!canJoinWerewolfRoom(room.status)) {
     return (
       <JoinStatusPage
         body={t.runningBody}

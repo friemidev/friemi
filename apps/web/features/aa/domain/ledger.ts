@@ -37,6 +37,7 @@ function addToBalance(
   participantId: string,
   amountMinor: bigint,
 ) {
+  if (!balances.has(participantId)) throw new Error("UNKNOWN_PARTICIPANT");
   balances.set(
     participantId,
     (balances.get(participantId) ?? 0n) + amountMinor,
@@ -78,6 +79,11 @@ export function assertTransactionInvariant(
     throw new Error("MISSING_TRANSACTION_SPLITS");
   }
 
+  for (const allocations of [transaction.contributions, transaction.shares]) {
+    if (allocations.some(item => item.amountMinor < 0n)) throw new Error("NEGATIVE_ALLOCATION");
+    if (new Set(allocations.map(item => item.participantId)).size !== allocations.length) throw new Error("DUPLICATE_PARTICIPANT");
+  }
+
   if (sumAmounts(transaction.contributions) !== transaction.baseAmountMinor) {
     throw new Error("CONTRIBUTION_TOTAL_MISMATCH");
   }
@@ -91,6 +97,7 @@ export function calculateBalances(
   participantIds: string[],
   transactions: LedgerTransactionInput[],
 ): ParticipantBalance[] {
+  if (new Set(participantIds).size !== participantIds.length) throw new Error("DUPLICATE_PARTICIPANT");
   const balances = new Map(
     participantIds.map((participantId) => [participantId, 0n] as const),
   );

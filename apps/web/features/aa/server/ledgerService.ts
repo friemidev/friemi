@@ -1,3 +1,4 @@
+import { AA_SETTLEMENT } from "../domain/simpleLedger";
 import type {
   AaParticipantRole,
   AaTransactionStatus,
@@ -33,14 +34,6 @@ const defaultCategories = [
   ["购物", "shopping-bag"],
   ["其他", "receipt"],
 ] as const;
-
-function isActivityFinished(activity: { status: string; endAt: Date | null }) {
-  return (
-    activity.status === "CANCELLED" ||
-    activity.status === "ENDED" ||
-    Boolean(activity.endAt && activity.endAt <= new Date())
-  );
-}
 
 type DesiredParticipant = {
   userProfileId?: string;
@@ -187,7 +180,9 @@ export async function ensureActivityAaLedger(
         creatorId: activity.organizer.id,
         titleSnapshot: activity.title,
         coverImageUrlSnapshot: activity.coverImageUrl,
-        status: isActivityFinished(activity) ? "FROZEN" : "ACTIVE",
+        status: "ACTIVE",
+        requireMemberReview: false,
+        requireTransferConfirmation: false,
         categories: {
           create: defaultCategories.map(([name, iconKey], sortOrder) => ({
             name,
@@ -326,7 +321,7 @@ function toLedgerInput(
   return {
     id: transaction.id,
     type: transaction.type,
-    status: transaction.status,
+    status: transaction.importSource === AA_SETTLEMENT && transaction.status === "DISPUTED" && transaction.payerConfirmedAt ? "POSTED" : transaction.status,
     baseAmountMinor: transaction.baseAmountMinor,
     contributions: transaction.contributions.map((contribution) => ({
       participantId: contribution.participantId,
@@ -617,6 +612,7 @@ export async function getActivityAaSnapshot(
             transaction.status !== "POSTED")),
       canDispute:
         transaction.status === "POSTED" &&
+        !(ledger.status === "FROZEN" && Boolean(ledger.settlementStartedAt)) &&
         (transaction.creatorParticipantId === viewer.id ||
           transaction.contributions.some(
             (item) => item.participantId === viewer.id,

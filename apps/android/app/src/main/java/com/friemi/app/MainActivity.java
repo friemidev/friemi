@@ -2,7 +2,6 @@ package com.friemi.app;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -44,6 +43,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.graphics.Insets;
@@ -63,7 +64,7 @@ import org.json.JSONObject;
 import java.util.Locale;
 
 @SuppressWarnings("deprecation")
-public final class MainActivity extends Activity {
+public final class MainActivity extends ComponentActivity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 4821;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4822;
     private static final int GALLERY_PERMISSION_REQUEST_CODE = 4823;
@@ -73,7 +74,6 @@ public final class MainActivity extends Activity {
     private static final String LOCALE_ZH = "zh-CN";
     private static final String LOCALE_EN = "en";
     private static final String LOCALE_FR = "fr";
-    private static final long EXIT_CONFIRM_MS = 1800L;
     private static final long SLOW_LOAD_NOTICE_MS = 8500L;
     private static final String AUTH_COMPLETE_HOST = "auth-complete";
     private static final String ANDROID_AUTH_RETURN_PARAM = "__friemi_android_auth_return";
@@ -99,7 +99,6 @@ public final class MainActivity extends Activity {
     private String pendingGalleryImageUrl;
     private boolean webBackRequested;
     private boolean pageLoading;
-    private long lastBackPressedAt;
     private final Runnable slowLoadNoticeRunnable = () -> {
         if (!pageLoading || loadingOverlay.getVisibility() != View.VISIBLE) {
             return;
@@ -111,6 +110,12 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleSystemBack();
+            }
+        });
         preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         configureWindow();
         setupViews();
@@ -771,14 +776,13 @@ public final class MainActivity extends Activity {
         errorOverlay.setVisibility(View.GONE);
     }
 
-    @Override
-    public void onBackPressed() {
-        if (errorOverlay.getVisibility() == View.VISIBLE) {
+    private void handleSystemBack() {
+        if (errorOverlay != null && errorOverlay.getVisibility() == View.VISIBLE) {
             hideError();
             return;
         }
 
-        if (webBackRequested) {
+        if (webBackRequested && webView != null) {
             webView.evaluateJavascript(
                 "window.dispatchEvent(new CustomEvent('friemi:android-back'))",
                 null
@@ -787,22 +791,16 @@ public final class MainActivity extends Activity {
         }
 
         if (isAtHomeRoute()) {
-            long now = System.currentTimeMillis();
-            if (now - lastBackPressedAt < EXIT_CONFIRM_MS) {
-                finish();
-            } else {
-                lastBackPressedAt = now;
-                Toast.makeText(this, R.string.exit_hint, Toast.LENGTH_SHORT).show();
-            }
+            finish();
             return;
         }
 
-        if (webView.canGoBack()) {
+        if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
 
-        super.onBackPressed();
+        loadUrl(buildDefaultHomeUrl());
     }
 
     private boolean isAtHomeRoute() {

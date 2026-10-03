@@ -231,7 +231,7 @@ function getNotificationText(
               title: "Désaccord de compte",
             },
             AA_ENTRY_UPDATED: {
-              body: `${by} a modifié une opération de « ${activityTitle} ».`,
+              body: notification.aaTransactionId ? `${by} a modifié une opération de « ${activityTitle} ».` : `${by} a mis à jour le partage des frais de « ${activityTitle} ».`,
               title: "Compte AA mis à jour",
             },
             AA_PAYMENT_REQUEST: {
@@ -254,7 +254,7 @@ function getNotificationText(
                 title: "Ledger dispute",
               },
               AA_ENTRY_UPDATED: {
-                body: `${by} changed an entry in “${activityTitle}”.`,
+                body: notification.aaTransactionId ? `${by} changed an entry in “${activityTitle}”.` : `${by} updated the split bill for “${activityTitle}”.`,
                 title: "AA ledger updated",
               },
               AA_PAYMENT_REQUEST: {
@@ -276,7 +276,7 @@ function getNotificationText(
                 title: "核算争议待处理",
               },
               AA_ENTRY_UPDATED: {
-                body: `${by}更新了「${activityTitle}」的一笔核算记录。`,
+                body: notification.aaTransactionId ? `${by}更新了「${activityTitle}」的一笔核算记录。` : `${by}更新了「${activityTitle}」的 AA 账单。`,
                 title: "AA 记录有变更",
               },
               AA_PAYMENT_REQUEST: {

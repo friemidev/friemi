@@ -6,8 +6,10 @@ import { changedDrawGuessArtworks, compactDrawGuessState, hydrateDrawGuessState,
 import {
   advanceDrawGuessGame,
   applyDrawGuessAction,
+  canResetDrawGuessPostgame,
   createDrawGuessState,
   getDrawGuessClassicHighlight,
+  getDrawGuessVoteCounts,
   getDrawGuessViewerState,
   isDrawGuessRoundCount,
   isDrawGuessTiming,
@@ -31,6 +33,7 @@ import { prisma } from "@/lib/prisma";
 
 type RoomWithSeats = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
 const DRAW_GUESS_STALE_MS = 35_000;
+const DRAW_GUESS_FINISHED_STALE_MS = 180_000;
 const DRAW_GUESS_DEPART_GRACE_MS = 8_000;
 
 async function markDrawGuessAbandonedIfEmpty(roomId: string) {
@@ -87,7 +90,7 @@ function asState(value: Prisma.JsonValue | null): DrawGuessState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as DrawGuessState;
   return state.phase && state.mode && Array.isArray(state.scores)
-    ? { ...state, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], classicChats: state.classicChats ?? [], classicReactionCounts: state.classicReactionCounts ?? {}, reactions: state.reactions ?? [], reactionUsed: state.reactionUsed ?? {}, reactionLastAt: state.reactionLastAt ?? {}, gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0, roundCount: state.roundCount ?? 1, roundIndex: state.roundIndex ?? 1 }
+    ? { ...state, artworkVotes: state.artworkVotes ?? {}, classicAnswers: state.classicAnswers ?? [], classicChat: state.classicChat ?? [], classicChats: state.classicChats ?? [], classicReactionCounts: state.classicReactionCounts ?? {}, reactions: state.reactions ?? [], reactionUsed: state.reactionUsed ?? {}, reactionLastAt: state.reactionLastAt ?? {}, gameNumber: state.gameNumber ?? 1, inkSeq: state.inkSeq ?? 0, roundCount: state.roundCount ?? 1, roundIndex: state.roundIndex ?? 1 }
     : null;
 }
 
@@ -128,7 +131,7 @@ async function updateState(
       data: {
         drawGuessDeadlineAt: state.deadlineAt ? new Date(state.deadlineAt) : null,
         finishedAt,
-        startedAt: (room.status === "LOBBY" || room.status === "FINISHED") && state.phase !== "LOBBY" ? new Date() : undefined,
+        startedAt: room.status === "LOBBY" && state.phase !== "LOBBY" ? new Date() : undefined,
         revision: { increment: 1 },
         state: compactDrawGuessState(state),
         status: state.phase === "FINISHED" ? "FINISHED" : state.phase === "LOBBY" ? "LOBBY" : "IN_PROGRESS",
@@ -215,7 +218,7 @@ async function updateState(
   });
   if (updated) {
     if (previousState.phase !== state.phase) console.info("[draw-guess] phase changed", { roomId: room.id, roundNumber: state.gameNumber, from: previousState.phase, to: state.phase, automatic: eventType === "DRAW_GUESS_PHASE_ADVANCED" });
-    await broadcastDrawGuessRoomChange(room.id);
+    if (eventType) await broadcastDrawGuessRoomChange(room.id);
   }
   return updated;
 }
@@ -500,7 +503,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
     if (kickedDrawGuessProfiles(room.config).includes(profileId)) return { error: "KICKED" } as const;
     if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_PLAYER" } as const;
     if (room.config && typeof room.config === "object" && !Array.isArray(room.config) && "drawGuessAbandonedAt" in room.config) await clearDrawGuessAbandoned(room.id);
-    const staleBefore = new Date(Date.now() - DRAW_GUESS_STALE_MS);
+    const staleBefore = new Date(Date.now() - (room.status === "FINISHED" ? DRAW_GUESS_FINISHED_STALE_MS : DRAW_GUESS_STALE_MS));
     const staleMembers = room.members.filter((member) => member.profileId !== profileId && member.lastSeenAt <= staleBefore);
     if (staleMembers.length) {
       for (const member of staleMembers) if (member.profileId) await leaveDrawGuessRoom(roomId, member.profileId, staleBefore);
@@ -510,7 +513,11 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
     if (await transferHostIfNeeded(room, Date.now())) continue;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
-    if (knownRevision === room.revision &&
+    if (state.phase === "FINISHED" && canResetDrawGuessPostgame(state.returnedProfileIds, room.members.flatMap((member) => member.profileId ? [member.profileId] : []))) {
+      const reset = await resetDrawGuessRoomToLobby(roomId, profileId);
+      if ("ok" in reset) continue;
+    }
+    if (knownRevision === room.revision && !["REVEAL_VOTE", "AUTHOR_PICK"].includes(state.phase) &&
       (!room.drawGuessDeadlineAt || room.drawGuessDeadlineAt.getTime() > Date.now())) {
       return { notModified: true } as const;
     }
@@ -537,13 +544,15 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         playerCount: room.playerCount,
         practiceBotSeat: state.practiceBotSeat,
         revision: room.revision,
-        seats: room.seats.map((seat) => ({ id: seat.id, name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat, managed: Boolean(state.managedSeats?.includes(seat.seatNumber - 1)) })),
+        returnedToLobby: state.phase === "FINISHED" && (state.returnedProfileIds ?? []).includes(profileId),
+        postgameReturnProgress: state.phase === "FINISHED" ? { done: room.members.filter((member) => member.profileId && state.returnedProfileIds?.includes(member.profileId)).length, total: room.members.length } : undefined,
+        seats: room.seats.map((seat) => ({ id: seat.id, name: seat.displayName, number: seat.seatNumber, avatarUrl: seat.profile?.avatarUrl ?? null, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(`${room.id}:${seat.seatNumber}`), ready: Boolean(seat.readyAt), returned: Boolean(seat.profileId && state.returnedProfileIds?.includes(seat.profileId)), present: Boolean(seat.profileId && room.members.some((member) => member.profileId === seat.profileId)), isHost: seat.profileId === room.hostId, isSystem: seat.seatNumber - 1 === state.practiceBotSeat, managed: Boolean(state.managedSeats?.includes(seat.seatNumber - 1)) })),
         status: room.status,
         viewerSeat: viewer ? viewer.seatNumber - 1 : -1,
         wordBank: state.wordBank
           ? { ...state.wordBank, words: viewer ? [...state.wordBank.words].sort((a, b) => a.localeCompare(b, room.locale)) : [] }
           : null,
-        view: getDrawGuessViewerState(state, viewer ? viewer.seatNumber - 1 : -1, room.playerCount),
+        view: { ...getDrawGuessViewerState(state, viewer ? viewer.seatNumber - 1 : -1, room.playerCount), serverNow: new Date().toISOString() },
       },
     } as const;
   }
@@ -693,6 +702,27 @@ export async function returnDrawGuessRoomToLobby(roomId: string, profileId: stri
     if (room.status === "LOBBY") return { ok: true } as const;
     const state = asState(room.state);
     if (!state || room.status !== "FINISHED" || state.phase !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
+    const returned = new Set(state.returnedProfileIds ?? []);
+    if (!returned.has(profileId)) {
+      returned.add(profileId);
+      const next = { ...state, returnedProfileIds: [...returned] };
+      if (!(await updateState(room, state, next, "DRAW_GUESS_PLAYER_RETURNED", profileId))) continue;
+    }
+    const everyoneReturned = canResetDrawGuessPostgame([...returned], room.members.flatMap((member) => member.profileId ? [member.profileId] : []));
+    return everyoneReturned ? resetDrawGuessRoomToLobby(roomId, profileId) : { ok: true } as const;
+  }
+  return { error: "TRY_AGAIN" } as const;
+}
+
+async function resetDrawGuessRoomToLobby(roomId: string, profileId: string) {
+  await touchPresence(roomId, profileId);
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const room = await readRoom(roomId);
+    if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
+    if (!room.members.some((member) => member.profileId === profileId)) return { error: "NOT_A_MEMBER" } as const;
+    if (room.status === "LOBBY") return { ok: true } as const;
+    const state = asState(room.state);
+    if (!state || room.status !== "FINISHED" || state.phase !== "FINISHED") return { error: "GAME_NOT_FINISHED" } as const;
     const activeProfiles = new Set(room.members.map((member) => member.profileId));
     const departedSeats = room.seats.filter((seat) => seat.profileId && !activeProfiles.has(seat.profileId));
     const seatRoster = room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }));
@@ -763,16 +793,15 @@ export async function getDrawGuessHistory(roomId: string, profileId: string) {
       })) : null,
       finishedAt: round.finishedAt.toISOString(),
       matchResults: state.mode === "CHAIN" ? state.matchResults : null,
+      matchVoterSeats: state.mode === "CHAIN" ? state.matchVoterSeats ?? null : null,
+      matchVotes: state.mode === "CHAIN" ? state.votes : null,
       mode: state.mode,
       picks: state.mode === "CHAIN" ? state.picks : null,
       practiceBotSeat: state.practiceBotSeat,
       roundNumber: round.roundNumber,
       scores: state.scores,
       seats: (storedDrawGuessSeats(round.state) ?? room.seats.map((seat) => ({ name: seat.displayName, number: seat.seatNumber, profileId: seat.profileId }))).map((seat) => ({ name: seat.name, number: seat.number })),
-      voteCounts: state.mode === "CHAIN" ? state.chains.map((_, owner) => {
-        const votes = Object.values(state.votes[String(owner)] ?? {});
-        return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: room.playerCount - votes.length };
-      }) : null,
+      voteCounts: state.mode === "CHAIN" ? getDrawGuessVoteCounts(state) : null,
     };
   }));
   return {
@@ -804,23 +833,27 @@ export async function advanceDrawGuessRoom(roomId: string, now = Date.now()) {
 
 export async function sweepDueDrawGuessRooms(now = Date.now()) {
   const staleBefore = new Date(now - DRAW_GUESS_STALE_MS);
+  const finishedStaleBefore = new Date(now - DRAW_GUESS_FINISHED_STALE_MS);
   const staleMembers = await prisma.gameToolRoomMember.findMany({
-    where: { lastSeenAt: { lte: staleBefore }, leftAt: null, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS", "FINISHED"] } } },
-    select: { profileId: true, roomId: true },
+    where: { leftAt: null, OR: [
+      { lastSeenAt: { lte: staleBefore }, room: { kind: "DRAW_GUESS", status: { in: ["LOBBY", "IN_PROGRESS"] } } },
+      { lastSeenAt: { lte: finishedStaleBefore }, room: { kind: "DRAW_GUESS", status: "FINISHED" } },
+    ] },
+    select: { profileId: true, roomId: true, room: { select: { status: true } } },
     take: 100,
   });
-  const staleRooms = new Map<string, string[]>();
+  const staleRooms = new Map<string, { profileId: string; deadline: Date }[]>();
   for (const member of staleMembers) {
     if (!member.profileId) continue;
-    staleRooms.set(member.roomId, [...(staleRooms.get(member.roomId) ?? []), member.profileId]);
+    staleRooms.set(member.roomId, [...(staleRooms.get(member.roomId) ?? []), { profileId: member.profileId, deadline: member.room.status === "FINISHED" ? finishedStaleBefore : staleBefore }]);
   }
   const staleResults: PromiseSettledResult<Awaited<ReturnType<typeof leaveDrawGuessRoom>>>[] = [];
   const staleEntries = [...staleRooms];
   for (let index = 0; index < staleEntries.length; index += 5) {
-    const batches = await Promise.all(staleEntries.slice(index, index + 5).map(async ([roomId, profileIds]) => {
+    const batches = await Promise.all(staleEntries.slice(index, index + 5).map(async ([roomId, profiles]) => {
       const results: typeof staleResults = [];
-      for (const profileId of profileIds) {
-        try { results.push({ status: "fulfilled", value: await leaveDrawGuessRoom(roomId, profileId, staleBefore) }); }
+      for (const { profileId, deadline } of profiles) {
+        try { results.push({ status: "fulfilled", value: await leaveDrawGuessRoom(roomId, profileId, deadline) }); }
         catch (reason) { results.push({ status: "rejected", reason }); }
       }
       return results;
@@ -865,6 +898,7 @@ export async function commandDrawGuessRoom(input: {
     if (!room || room.kind !== "DRAW_GUESS") return { error: "ROOM_NOT_FOUND" } as const;
     const viewer = room.seats.find((seat) => seat.profileId === input.profileId);
     if (!viewer || !room.members.some((member) => member.profileId === input.profileId)) return { error: "NOT_A_PLAYER" } as const;
+    if (input.action.type === "REVEAL_CONTROL" && room.hostId !== input.profileId) return { error: "HOST_ONLY" } as const;
     const state = asState(room.state);
     if (!state) return { error: "INVALID_STATE" } as const;
     const previous = await prisma.drawGuessCommand.findUnique({
@@ -909,7 +943,7 @@ export async function commandDrawGuessRoom(input: {
       ...("correct" in result ? { correct: result.correct } : {}),
       ...("points" in result ? { points: result.points } : {}),
     };
-    if (!(await updateState(room, state, next, input.action.type, input.profileId, { id: input.commandId, result: commandResult }))) {
+    if (!(await updateState(room, state, next, input.action.type === "SAVE_DRAFT" ? undefined : input.action.type, input.profileId, { id: input.commandId, result: commandResult }))) {
       await new Promise((resolve) => setTimeout(resolve, Math.min(30, 3 * (attempt + 1))));
       continue;
     }

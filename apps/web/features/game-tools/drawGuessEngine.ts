@@ -6,6 +6,11 @@ export type DrawGuessPhase =
   | "TURN_REVEAL"
   | "CHAIN_WORD"
   | "CHAIN_STEP"
+  | "MATCH_VOTE"
+  | "MATCH_RESULT"
+  | "CHAIN_REVEAL"
+  | "ARTWORK_VOTE"
+  | "ARTWORK_RESULT"
   | "REVEAL_VOTE"
   | "AUTHOR_PICK"
   | "ROUND_BREAK"
@@ -41,6 +46,9 @@ export type DrawGuessChatMessage = {
 export const DRAW_GUESS_REACTIONS = ["😂", "👏", "👀"] as const;
 export type DrawGuessReactionKind = (typeof DRAW_GUESS_REACTIONS)[number];
 export type DrawGuessReaction = { seat: number; kind: DrawGuessReactionKind; at: string };
+export const DRAW_GUESS_CHAIN_REACTIONS = ["😂", "👏", "😮"] as const;
+export type DrawGuessChainReactionKind = (typeof DRAW_GUESS_CHAIN_REACTIONS)[number];
+export type DrawGuessChainReaction = { seat: number; kind: DrawGuessChainReactionKind; owner: number; step: number; stage: number; at: string };
 export type DrawGuessClassicHighlight = {
   answer: string;
   artistSeat: number;
@@ -76,6 +84,10 @@ export type DrawGuessState = {
   forfeitedChainSeats?: number[];
   answer: string;
   chainStage: number;
+  chainReveal?: { elapsedMs: number; startedAt: string | null; pausedUntil: string | null };
+  chainReactions?: DrawGuessChainReaction[];
+  chainReactionLastAt?: Record<string, number>;
+  chainReactionUsed?: Record<string, boolean>;
   chains: ChainStep[][];
   classicAnswers: string[];
   classicChat: DrawGuessChatMessage[];
@@ -91,6 +103,9 @@ export type DrawGuessState = {
   guesses: Record<string, Record<string, { at: string; points: number }>>;
   inkSeq: number;
   matchResults: Record<string, boolean>;
+  matchVoterSeats?: number[];
+  artworkVotes?: Record<string, Record<string, number>>;
+  artworkVoterSeats?: number[];
   mode: DrawGuessMode;
   options: string[];
   phase: DrawGuessPhase;
@@ -99,6 +114,7 @@ export type DrawGuessState = {
   roundCount?: DrawGuessRoundCount;
   roundIndex?: number;
   reactions: DrawGuessReaction[];
+  returnedProfileIds?: string[];
   reactionUsed: Record<string, DrawGuessReactionKind[]>;
   reactionLastAt: Record<string, number>;
   scores: number[];
@@ -113,6 +129,8 @@ export type DrawGuessAction =
   | { type: "CHOOSE_WORD"; value: string }
   | { type: "GUESS"; value: string }
   | { type: "REACT"; kind: DrawGuessReactionKind }
+  | { type: "CHAIN_REACT"; kind: DrawGuessChainReactionKind; owner: number; step: number }
+  | { type: "REVEAL_CONTROL"; command: "PAUSE" | "RESUME" | "NEXT" }
   | { type: "LAUGH_GUESS"; messageId: string }
   | { type: "ADD_STROKE"; stroke: DrawStroke }
   | { type: "UNDO_STROKE" }
@@ -120,6 +138,7 @@ export type DrawGuessAction =
   | { type: "SAVE_CLASSIC_DRAFT"; strokes: DrawStroke[]; inkSeq?: number }
   | { type: "SAVE_DRAFT"; strokes: DrawStroke[] }
   | { type: "SUBMIT_STEP"; value?: string; strokes?: DrawStroke[] }
+  | { type: "VOTE_ARTWORK"; owner: number; step: number }
   | { type: "VOTE"; owner: number; value: boolean }
   | { type: "PICK"; owner: number; step: number };
 
@@ -137,15 +156,59 @@ const DURATION = {
   CHAIN_WORD: 20_000,
   CHAIN_DRAW: 60_000,
   CHAIN_GUESS: 20_000,
-  REVEAL_VOTE: 90_000,
-  AUTHOR_PICK: 30_000,
+  MATCH_RESULT: 12_000,
+  ARTWORK_VOTE: 60_000,
+  ARTWORK_RESULT: 12_000,
   ROUND_BREAK: 5_000,
 } as const;
+
+function revealStepDuration(_step: ChainStep, last: boolean) {
+  return last ? 10_000 : 4_000;
+}
+
+export function getChainRevealTotalMs(chains: ChainStep[][]) {
+  return chains.reduce((sum, chain) => sum + chain.slice(1).reduce((duration, step, index) => duration + revealStepDuration(step, index === chain.length - 2), 0), 0);
+}
+
+export function getChainRevealPosition(state: Pick<DrawGuessState, "chains" | "chainReveal">, now: number) {
+  const clock = state.chainReveal;
+  const totalMs = getChainRevealTotalMs(state.chains);
+  const elapsedMs = Math.min(totalMs, Math.max(0, (clock?.elapsedMs ?? 0) + (clock?.startedAt ? Math.max(0, now - Date.parse(clock.startedAt)) : 0)));
+  let boundaryMs = 0;
+  for (let owner = 0; owner < state.chains.length; owner += 1) {
+    for (let step = 1; step < state.chains[owner].length; step += 1) {
+      boundaryMs += revealStepDuration(state.chains[owner][step], step === state.chains[owner].length - 1);
+      if (elapsedMs < boundaryMs) return { owner, step, elapsedMs, nextBoundaryMs: boundaryMs, totalMs };
+    }
+  }
+  const owner = Math.max(0, state.chains.length - 1);
+  return { owner, step: Math.max(0, (state.chains[owner]?.length ?? 1) - 1), elapsedMs, nextBoundaryMs: totalMs, totalMs };
+}
+
+function estimateChainRevealMs(playerCount: number) {
+  return playerCount * ((getChainStageCount(playerCount) - 1) * 4_000 + 10_000);
+}
+
+function artworkVoteDuration(playerCount: number) {
+  return Math.max(DURATION.ARTWORK_VOTE, playerCount * 12_000);
+}
+
+function matchVoteDuration(playerCount: number) {
+  return Math.max(60_000, playerCount * 12_000);
+}
+
+function matchResultDuration(playerCount: number) {
+  return Math.max(DURATION.MATCH_RESULT, playerCount * 3_000);
+}
+
+function artworkResultDuration(playerCount: number) {
+  return Math.max(DURATION.ARTWORK_RESULT, playerCount * 2_000);
+}
 
 export function estimateDrawGuessDurationSeconds(mode: DrawGuessMode, playerCount: number, timing: DrawGuessTiming, roundCount: DrawGuessRoundCount) {
   const oneRound = mode === "CLASSIC"
     ? playerCount * (DURATION.WORD_SELECT + (timing.drawSeconds + timing.guessSeconds) * 1_000 + DURATION.TURN_REVEAL)
-    : DURATION.CHAIN_WORD + Math.floor(getChainStageCount(playerCount) / 2) * (timing.drawSeconds + timing.guessSeconds) * 1_000 + DURATION.REVEAL_VOTE + DURATION.AUTHOR_PICK;
+    : DURATION.CHAIN_WORD + Math.floor(getChainStageCount(playerCount) / 2) * (timing.drawSeconds + timing.guessSeconds) * 1_000 + matchVoteDuration(playerCount) + matchResultDuration(playerCount) + artworkVoteDuration(playerCount) + artworkResultDuration(playerCount);
   return Math.ceil((oneRound * roundCount + DURATION.ROUND_BREAK * (roundCount - 1)) / 1_000);
 }
 
@@ -225,6 +288,10 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, w
   return {
     answer: "",
     chainStage: 0,
+    chainReveal: undefined,
+    chainReactions: [],
+    chainReactionLastAt: {},
+    chainReactionUsed: {},
     chains: Array.from({ length: playerCount }, () => []),
     classicAnswers: [],
     classicChat: [],
@@ -240,6 +307,7 @@ export function createDrawGuessState(mode: DrawGuessMode, playerCount: number, w
     guesses: {},
     inkSeq: 0,
     matchResults: {},
+    artworkVotes: {},
     mode,
     options: [],
     phase: "LOBBY",
@@ -324,17 +392,45 @@ function allChainStepsDone(state: DrawGuessState) {
   return state.chains.every((chain) => Boolean(chain[state.chainStage]));
 }
 
-function allVotesDone(state: DrawGuessState, count: number) {
+function allArtworkVotesDone(state: DrawGuessState, count: number) {
+  const voters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
+  if (!state.chains.some((chain) => chain.some((step) => step.kind === "DRAWING" && !step.system))) return true;
+  return voters.every((seat) => Object.values(state.artworkVotes ?? {}).some((choices) => choices[String(seat)] !== undefined));
+}
+
+function allMatchVotesDone(state: DrawGuessState, count: number) {
   const voters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
   return state.chains.every((_, owner) => voters.every((seat) => state.votes[String(owner)]?.[String(seat)] !== undefined));
 }
 
-function allPicksDone(state: DrawGuessState) {
-  return state.chains.every((chain, owner) => {
-    if (owner === state.practiceBotSeat || state.managedSeats?.includes(owner)) return true;
-    const hasArtwork = chain.some((step) => step.kind === "DRAWING" && !step.system);
-    return !hasArtwork || state.picks[String(owner)] !== undefined;
+function settleMatchVotes(state: DrawGuessState, count: number) {
+  const voters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
+  state.matchVoterSeats = voters;
+  for (let owner = 0; owner < count; owner += 1) {
+    const yes = voters.filter((seat) => state.votes[String(owner)]?.[String(seat)] === true).length;
+    state.matchResults[String(owner)] = yes > voters.length / 2;
+  }
+}
+
+export function getDrawGuessVoteCounts(state: DrawGuessState) {
+  const voters = state.matchVoterSeats ?? state.chains.map((_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
+  return state.chains.map((_, owner) => {
+    const votes = voters.flatMap((voter) => state.votes[String(owner)]?.[String(voter)] === undefined ? [] : [state.votes[String(owner)][String(voter)]]);
+    return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: voters.length - votes.length };
   });
+}
+
+export function canResetDrawGuessPostgame(returnedProfileIds: string[] | undefined, activeProfileIds: string[]) {
+  return activeProfileIds.length > 0 && activeProfileIds.every((profileId) => returnedProfileIds?.includes(profileId));
+}
+
+function settleArtworkVotes(state: DrawGuessState, count: number) {
+  const voters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== state.practiceBotSeat && !state.managedSeats?.includes(seat));
+  state.artworkVoterSeats = voters;
+  const counts = state.chains.flatMap((chain, owner) => chain.flatMap((step, index) => step.kind === "DRAWING" && !step.system
+    ? [{ owner, step: index, count: voters.filter((seat) => state.artworkVotes?.[String(owner)]?.[String(seat)] === index).length }] : []));
+  counts.sort((a, b) => b.count - a.count || a.owner - b.owner || a.step - b.step);
+  if (counts[0]?.count > 0) state.picks[String(counts[0].owner)] = counts[0].step;
 }
 
 function fillPracticeBotStep(state: DrawGuessState, count: number, locale: string) {
@@ -375,8 +471,6 @@ function settleChainScores(state: DrawGuessState, count: number) {
       for (const step of chain.slice(1)) {
         if (!step.system && !state.forfeitedChainSeats?.includes(step.seat)) state.scores[step.seat] += 40;
       }
-      const last = chain.at(-1);
-      if (last?.kind === "WORD" && !last.system && !state.forfeitedChainSeats?.includes(last.seat)) state.scores[last.seat] += 40;
     }
     const picked = state.picks[String(owner)];
     const artwork = picked === undefined ? null : chain[picked];
@@ -396,8 +490,9 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
       : next.phase === "DRAW_GUESS" ? Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== next.turnIndex && !next.managedSeats?.includes(seat)).every((seat) => Boolean(next.guesses[String(next.turnIndex)]?.[String(seat)]))
         || Boolean(next.managedSeats?.includes(next.turnIndex))
       : next.phase === "CHAIN_WORD" || next.phase === "CHAIN_STEP" ? allChainStepsDone(next)
-      : next.phase === "REVEAL_VOTE" ? allVotesDone(next, count)
-      : next.phase === "AUTHOR_PICK" ? allPicksDone(next)
+      : next.phase === "MATCH_VOTE" ? allMatchVotesDone(next, count)
+      : next.phase === "ARTWORK_VOTE" ? allArtworkVotesDone(next, count)
+      : next.phase === "REVEAL_VOTE" || next.phase === "AUTHOR_PICK" ? true
       : false;
     if (!timedOut && !allDone) break;
     const base = timedOut ? deadline : now;
@@ -450,27 +545,53 @@ export function advanceDrawGuessGame(state: DrawGuessState, count: number, now: 
     } else if (next.phase === "CHAIN_STEP") {
       for (let owner = 0; owner < count; owner += 1) {
         const seat = getChainActor(owner, next.chainStage, count);
-        next.chains[owner][next.chainStage] ??= next.chainStage % 2
-          ? { kind: "DRAWING", seat, system: true, value: next.drafts[`${owner}:${next.chainStage}`] ?? [] }
-          : { kind: "WORD", seat, system: true, value: "未猜出" };
+        if (next.chains[owner][next.chainStage]) continue;
+        if (next.chainStage % 2) {
+          const draft = next.drafts[`${owner}:${next.chainStage}`] ?? [];
+          next.chains[owner][next.chainStage] = { kind: "DRAWING", seat, system: draft.length === 0, value: draft };
+        } else next.chains[owner][next.chainStage] = { kind: "WORD", seat, system: true, value: "未猜出" };
       }
       if (next.chainStage >= getChainStageCount(count)) {
-        setDeadline(next, "REVEAL_VOTE", base, DURATION.REVEAL_VOTE);
+        setDeadline(next, "MATCH_VOTE", base, matchVoteDuration(count));
       } else {
         next.chainStage += 1;
         setDeadline(next, "CHAIN_STEP", base, (next.chainStage % 2
           ? next.timing?.drawSeconds ?? DURATION.CHAIN_DRAW / 1_000
           : next.timing?.guessSeconds ?? DURATION.CHAIN_GUESS / 1_000) * 1_000);
       }
-    } else if (next.phase === "REVEAL_VOTE") {
-      const eligibleVoters = Array.from({ length: count }, (_, seat) => seat).filter((seat) => seat !== next.practiceBotSeat && !next.managedSeats?.includes(seat));
-      for (let owner = 0; owner < count; owner += 1) {
-        const yes = eligibleVoters.filter((seat) => next.votes[String(owner)]?.[String(seat)] === true).length;
-        next.matchResults[String(owner)] = yes > eligibleVoters.length / 2;
+    } else if (next.phase === "MATCH_VOTE") {
+      settleMatchVotes(next, count);
+      setDeadline(next, "MATCH_RESULT", base, matchResultDuration(count));
+    } else if (next.phase === "MATCH_RESULT") {
+      setDeadline(next, "ARTWORK_VOTE", base, artworkVoteDuration(count));
+    } else if (next.phase === "CHAIN_REVEAL") {
+      if (next.chainReveal?.pausedUntil) {
+        next.chainReveal.startedAt = new Date(base).toISOString();
+        next.chainReveal.pausedUntil = null;
+        next.deadlineAt = new Date(base + Math.max(0, getChainRevealTotalMs(next.chains) - next.chainReveal.elapsedMs)).toISOString();
+      } else {
+        next.chainReveal = undefined;
+        next.votes = {};
+        next.matchResults = {};
+        next.matchVoterSeats = undefined;
+        next.artworkVotes = {};
+        next.artworkVoterSeats = undefined;
+        next.picks = {};
+        setDeadline(next, "MATCH_VOTE", base, matchVoteDuration(count));
       }
-      setDeadline(next, "AUTHOR_PICK", base, DURATION.AUTHOR_PICK);
-    } else if (next.phase === "AUTHOR_PICK") {
+    } else if (next.phase === "REVEAL_VOTE" || next.phase === "AUTHOR_PICK") {
+      next.votes = {};
+      next.matchResults = {};
+      next.matchVoterSeats = undefined;
+      next.artworkVotes = {};
+      next.artworkVoterSeats = undefined;
+      next.picks = {};
+      setDeadline(next, "MATCH_VOTE", base, matchVoteDuration(count));
+    } else if (next.phase === "ARTWORK_VOTE") {
+      settleArtworkVotes(next, count);
       settleChainScores(next, count);
+      setDeadline(next, "ARTWORK_RESULT", base, artworkResultDuration(count));
+    } else if (next.phase === "ARTWORK_RESULT") {
       if ((next.roundIndex ?? 1) < (next.roundCount ?? 1)) {
         setDeadline(next, "ROUND_BREAK", base, DURATION.ROUND_BREAK);
         break;
@@ -598,14 +719,58 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
         next.chains[owner][next.chainStage] = { kind: "WORD", seat, system: false, value: word };
       }
     } else return invalid("NOT_ALLOWED");
+  } else if (action.type === "CHAIN_REACT") {
+    if (next.mode !== "CHAIN" || !DRAW_GUESS_CHAIN_REACTIONS.includes(action.kind)) return invalid("NOT_ALLOWED");
+    const waiting = next.phase === "CHAIN_WORD" || next.phase === "CHAIN_STEP";
+    const reviewing = next.phase === "CHAIN_REVEAL" || next.phase === "ARTWORK_VOTE";
+    if (!waiting && !reviewing) return invalid("NOT_ALLOWED");
+    if (waiting) {
+      const actorOwner = next.phase === "CHAIN_WORD" ? seat : Array.from({ length: count }, (_, owner) => owner).find((owner) => getChainActor(owner, next.chainStage, count) === seat);
+      if (actorOwner === undefined || !next.chains[actorOwner][next.chainStage] || action.owner !== -1 || action.step !== -1) return invalid("NOT_ALLOWED");
+    } else if (action.owner < 0 || action.owner >= count || action.step < 0 || action.step >= next.chains[action.owner].length) return invalid("NOT_ALLOWED");
+    if (next.phase === "CHAIN_REVEAL") {
+      const current = getChainRevealPosition(next, now);
+      if (action.owner !== current.owner || action.step !== current.step) return invalid("NOT_ALLOWED");
+    }
+    const target = waiting ? `wait:${next.chainStage}` : `${action.owner}:${action.step}`;
+    const usedKey = `${seat}:${target}`;
+    if (next.chainReactionUsed?.[usedKey]) return invalid("REACTION_USED");
+    if (now - (next.chainReactionLastAt?.[String(seat)] ?? -Infinity) < 900) return invalid("TOO_FAST");
+    (next.chainReactionUsed ??= {})[usedKey] = true;
+    (next.chainReactionLastAt ??= {})[String(seat)] = now;
+    next.chainReactions = [...(next.chainReactions ?? []), { seat, kind: action.kind, owner: action.owner, step: action.step, stage: next.chainStage, at: new Date(now).toISOString() }].slice(-100);
+  } else if (action.type === "REVEAL_CONTROL") {
+    if (next.phase !== "CHAIN_REVEAL" || !next.chainReveal) return invalid("NOT_ALLOWED");
+    const clock = next.chainReveal;
+    const position = getChainRevealPosition(next, now);
+    if (action.command === "PAUSE") {
+      if (clock.pausedUntil) return invalid("NOT_ALLOWED");
+      clock.elapsedMs = position.elapsedMs;
+      clock.startedAt = null;
+      clock.pausedUntil = new Date(now + 60_000).toISOString();
+      next.deadlineAt = clock.pausedUntil;
+    } else if (action.command === "RESUME") {
+      if (!clock.pausedUntil) return invalid("NOT_ALLOWED");
+      clock.startedAt = new Date(now).toISOString();
+      clock.pausedUntil = null;
+      next.deadlineAt = new Date(now + position.totalMs - clock.elapsedMs).toISOString();
+    } else if (action.command === "NEXT") {
+      clock.elapsedMs = position.nextBoundaryMs;
+      clock.startedAt = new Date(now).toISOString();
+      clock.pausedUntil = null;
+      next.deadlineAt = new Date(now + position.totalMs - clock.elapsedMs).toISOString();
+    }
   } else if (action.type === "VOTE") {
-    if (next.phase !== "REVEAL_VOTE" || action.owner < 0 || action.owner >= count) return invalid("NOT_ALLOWED");
+    if (next.phase !== "MATCH_VOTE" || action.owner < 0 || action.owner >= count) return invalid("NOT_ALLOWED");
     (next.votes[String(action.owner)] ??= {})[String(seat)] = action.value;
-  } else if (action.type === "PICK") {
-    if (next.phase !== "AUTHOR_PICK" || action.owner !== seat) return invalid("NOT_ALLOWED");
-    const step = next.chains[seat][action.step];
+  } else if (action.type === "VOTE_ARTWORK") {
+    if (next.phase !== "ARTWORK_VOTE" || action.owner < 0 || action.owner >= count) return invalid("NOT_ALLOWED");
+    const step = next.chains[action.owner][action.step];
     if (step?.kind !== "DRAWING" || step.system) return invalid("INVALID_ARTWORK");
-    next.picks[String(seat)] = action.step;
+    for (const choices of Object.values(next.artworkVotes ?? {})) delete choices[String(seat)];
+    ((next.artworkVotes ??= {})[String(action.owner)] ??= {})[String(seat)] = action.step;
+  } else if (action.type === "PICK") {
+    return invalid("NOT_ALLOWED");
   }
   return { state: advanceDrawGuessGame(next, count, now, locale) };
 }
@@ -613,15 +778,27 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
 export function getDrawGuessViewerState(state: DrawGuessState, seat: number, count: number) {
   const shared = {
     chainStage: state.chainStage,
+    chainFinishedSeats: state.mode === "CHAIN" && (state.phase === "CHAIN_WORD" || state.phase === "CHAIN_STEP")
+      ? state.chains.flatMap((chain, owner) => chain[state.phase === "CHAIN_WORD" ? 0 : state.chainStage]
+        ? [state.phase === "CHAIN_WORD" ? owner : getChainActor(owner, state.chainStage, count)] : [])
+      : undefined,
     drawDeadlineAt: state.drawDeadlineAt ?? null,
     chainSubmittedCount: state.mode === "CHAIN" && (state.phase === "CHAIN_WORD" || state.phase === "CHAIN_STEP")
       ? state.chains.filter((chain) => Boolean(chain[state.phase === "CHAIN_WORD" ? 0 : state.chainStage])).length
       : undefined,
     deadlineAt: state.deadlineAt,
+    chainReveal: state.phase === "CHAIN_REVEAL" ? state.chainReveal : undefined,
     gameNumber: state.gameNumber,
     roundCount: state.roundCount ?? 1,
     roundIndex: state.roundIndex ?? 1,
     mode: state.mode,
+    chainReactions: state.mode === "CHAIN" && (state.phase === "CHAIN_WORD" || state.phase === "CHAIN_STEP")
+      ? (state.chainReactions ?? []).filter((reaction) => reaction.owner === -1 && reaction.stage === state.chainStage).slice(-12)
+      : state.mode === "CHAIN" && (state.phase === "CHAIN_REVEAL" || state.phase === "ARTWORK_VOTE")
+        ? (state.chainReactions ?? []).filter((reaction) => reaction.owner >= 0).slice(-100) : undefined,
+    myChainReactionTargets: state.mode === "CHAIN" && seat >= 0
+      ? Object.keys(state.chainReactionUsed ?? {}).filter((key) => key.startsWith(`${seat}:`)).map((key) => key.slice(`${seat}:`.length))
+      : undefined,
     phase: state.phase,
     scores: state.scores,
     managedSeats: state.managedSeats ?? [],
@@ -643,19 +820,19 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       options: seat === state.turnIndex && state.phase === "WORD_SELECT" ? state.options : [],
     };
   }
-  if (seat < 0 && state.phase !== "REVEAL_VOTE" && state.phase !== "AUTHOR_PICK" && state.phase !== "ROUND_BREAK" && state.phase !== "FINISHED") return { ...shared, task: null };
-  if (state.phase === "REVEAL_VOTE" || state.phase === "AUTHOR_PICK" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED") {
+  if (seat < 0 && state.phase !== "MATCH_VOTE" && state.phase !== "MATCH_RESULT" && state.phase !== "CHAIN_REVEAL" && state.phase !== "ARTWORK_VOTE" && state.phase !== "ARTWORK_RESULT" && state.phase !== "ROUND_BREAK" && state.phase !== "FINISHED") return { ...shared, task: null };
+  if (state.phase === "MATCH_VOTE" || state.phase === "MATCH_RESULT" || state.phase === "CHAIN_REVEAL" || state.phase === "ARTWORK_VOTE" || state.phase === "ARTWORK_RESULT" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED") {
     return {
       ...shared,
-      chains: state.chains,
-      matchResults: state.phase === "REVEAL_VOTE" ? null : state.matchResults,
-      picks: state.phase === "FINISHED" || state.phase === "ROUND_BREAK" ? state.picks
-        : state.picks[String(seat)] === undefined ? {} : { [String(seat)]: state.picks[String(seat)] },
-      voteCounts: state.phase === "REVEAL_VOTE" ? null : state.chains.map((_, owner) => {
-        const votes = Object.values(state.votes[String(owner)] ?? {});
-        return { yes: votes.filter(Boolean).length, no: votes.filter((vote) => !vote).length, abstain: count - votes.length };
-      }),
-      votedOwners: Object.keys(state.votes).filter((owner) => state.votes[owner][String(seat)] !== undefined).map(Number),
+      chains: state.phase === "MATCH_VOTE" || state.phase === "MATCH_RESULT" ? state.chains.map((chain) => [chain[0], chain.at(-1)].filter((step): step is ChainStep => Boolean(step))) : state.chains,
+      matchResults: state.phase === "MATCH_VOTE" || state.phase === "CHAIN_REVEAL" ? null : state.matchResults,
+      matchVoterSeats: state.phase === "MATCH_VOTE" ? undefined : state.matchVoterSeats,
+      picks: state.phase === "ARTWORK_RESULT" || state.phase === "FINISHED" || state.phase === "ROUND_BREAK" ? state.picks : {},
+      voteCounts: state.phase === "MATCH_VOTE" || state.phase === "MATCH_RESULT" || state.phase === "ARTWORK_VOTE" || state.phase === "ARTWORK_RESULT" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED" ? getDrawGuessVoteCounts(state) : null,
+      matchVotes: state.phase === "MATCH_VOTE" || state.phase === "MATCH_RESULT" || state.phase === "ARTWORK_VOTE" || state.phase === "ARTWORK_RESULT" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED" ? state.votes : {},
+      myArtworkVotes: seat < 0 ? {} : Object.fromEntries(Object.entries(state.artworkVotes ?? {}).flatMap(([owner, votes]) => votes[String(seat)] === undefined ? [] : [[owner, votes[String(seat)]]])),
+      artworkVotes: state.phase === "ARTWORK_VOTE" || state.phase === "ARTWORK_RESULT" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED" ? state.artworkVotes ?? {} : {},
+      artworkVoterSeats: state.phase === "ARTWORK_RESULT" || state.phase === "ROUND_BREAK" || state.phase === "FINISHED" ? state.artworkVoterSeats : undefined,
     };
   }
   const owner = state.phase === "CHAIN_STEP"

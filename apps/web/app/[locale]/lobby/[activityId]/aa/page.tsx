@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getSimpleAaState } from "@/features/aa/server/simpleLedgerService";
+import { AaSimpleSurface } from "@/features/aa/components/AaSimpleSurface";
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -467,6 +469,8 @@ export default async function AaLedgerPage({
   let snapshot: ActivityAaSnapshot;
 
   try {
+    const simpleState = await getSimpleAaState(activityId, profile.id);
+    if (simpleState.currency === "EUR") return <AaSimpleSurface state={simpleState} locale={locale} />;
     snapshot = await getActivityAaSnapshot(activityId, profile.id);
   } catch (error) {
     return (

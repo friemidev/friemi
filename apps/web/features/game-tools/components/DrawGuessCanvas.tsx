@@ -149,7 +149,7 @@ export function DrawGuessCanvas({ catId, compact = false, disabled = false, full
       <button type="button" aria-label={copy.exit} onClick={closeFullscreen} className="draw-guess-btn draw-guess-btn--milk grid h-9 min-h-9 w-9 place-items-center"><Minimize2 className="h-4 w-4" /></button>
     </div> : null}
     <div className={fullscreen ? "draw-guess-landscape-body" : compact ? "contents" : "space-y-3"}>
-    <div ref={frameRef} className={`relative overflow-hidden rounded-[1.4rem] ${compact ? "draw-guess-paper-stage grid min-h-0 flex-1 place-items-center bg-[#F3F8FC] p-2" : "border-2 border-[#C9DCEC] bg-white shadow-[0_16px_38px_rgba(48,66,92,0.1)]"}`}>
+    <div ref={frameRef} className={`relative min-w-0 overflow-hidden rounded-[1.4rem] ${compact ? "draw-guess-paper-stage grid min-h-0 flex-1 place-items-center bg-[#F3F8FC] p-2" : "border-2 border-[#C9DCEC] bg-white shadow-[0_16px_38px_rgba(48,66,92,0.1)]"}`}>
       {compact ? <svg aria-hidden="true" className="pointer-events-none absolute right-5 top-5 h-9 w-9 rotate-12 text-[#B7D0E8]/65" viewBox="0 0 40 40" fill="currentColor"><ellipse cx="20" cy="27" rx="10" ry="8" /><ellipse cx="8" cy="18" rx="3" ry="4" transform="rotate(-20 8 18)" /><ellipse cx="16" cy="10" rx="3" ry="4" transform="rotate(-8 16 10)" /><ellipse cx="25" cy="10" rx="3" ry="4" transform="rotate(8 25 10)" /><ellipse cx="33" cy="18" rx="3" ry="4" transform="rotate(20 33 18)" /></svg> : null}
       {compact && catId ? <span aria-hidden="true" className="pointer-events-none absolute left-3 top-2"><DrawGuessCatSprite catId={catId} size={52} /></span> : null}
       <svg ref={surfaceRef} aria-label="Drawing canvas" className={`${compact ? "relative aspect-[10/7] max-h-full max-w-full rounded-[1.2rem] border-[3px] border-[#C6DBEC] shadow-[0_7px_0_#DFE9F2,0_18px_30px_rgba(48,66,92,0.12)]" : "aspect-[10/7] w-full"} touch-none select-none bg-white`} style={compact && compactSize ? compactSize : undefined} viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"
@@ -172,7 +172,7 @@ export function DrawGuessCanvas({ catId, compact = false, disabled = false, full
         <div className="flex items-center gap-1.5">
           {onUndo ? <button type="button" disabled={!strokes.length || Boolean(current)} onClick={onUndo} className="draw-guess-btn draw-guess-btn--milk grid h-9 min-h-9 w-9 place-items-center disabled:opacity-60" aria-label="Undo last stroke"><RotateCcw className="h-4 w-4" /></button> : null}
           {onClear ? <button type="button" disabled={!strokes.length || Boolean(current)} onClick={() => { if (fullscreen) closeFullscreen(); onClear(); }} className="draw-guess-btn draw-guess-btn--blush grid h-9 min-h-9 w-9 place-items-center disabled:opacity-60" aria-label="Clear drawing"><Trash2 className="h-4 w-4" /></button> : null}
-          {!fullscreen && compact ? <button type="button" onClick={() => void openFullscreen()} className="draw-guess-btn draw-guess-btn--milk h-9 min-h-9 gap-1 px-2.5 text-[11px]" aria-label={copy.enter} title={copy.enter}><Maximize2 className="h-4 w-4" />{copy.enterShort}</button> : null}
+          {!fullscreen && compact ? <button type="button" onClick={() => void openFullscreen()} className="draw-guess-btn draw-guess-btn--milk draw-guess-fullscreen-button h-9 min-h-9 gap-1 px-2.5 text-[11px]" aria-label={copy.enter} title={copy.enter}><Maximize2 className="h-4 w-4" /><span className="max-[359px]:sr-only">{copy.enterShort}</span></button> : null}
         </div>
       </div>
     </div> : null}

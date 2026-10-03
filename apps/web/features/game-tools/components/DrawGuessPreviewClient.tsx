@@ -40,8 +40,19 @@ export function DrawGuessPreviewClient({ locale }: { locale: string }) {
 
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(() => setFrame((current) => (current + 1) % DRAW_GUESS_CAT_FRAME_COUNT), mood === "happy" ? 75 : mood === "sad" ? 120 : 165);
-    return () => window.clearInterval(timer);
+    const frameDuration = mood === "happy" ? 75 : mood === "sad" ? 120 : 165;
+    let animationFrame: number;
+    let lastPaint = window.performance.now();
+    const tick = (now: number) => {
+      if (now - lastPaint >= 32) {
+        const elapsed = Math.min(now - lastPaint, 96);
+        setFrame((current) => (current + elapsed / frameDuration) % DRAW_GUESS_CAT_FRAME_COUNT);
+        lastPaint = now;
+      }
+      animationFrame = window.requestAnimationFrame(tick);
+    };
+    animationFrame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(animationFrame);
   }, [mood, playing]);
 
   return <div className="draw-guess-theme mx-auto max-w-6xl pb-8">
@@ -59,7 +70,7 @@ export function DrawGuessPreviewClient({ locale }: { locale: string }) {
         <div className="draw-guess-paper-stage absolute inset-0 opacity-60" aria-hidden="true" />
         <div className="relative flex items-center justify-between gap-2 px-5 pt-5 sm:px-7">
           <div className="min-w-0"><p className="text-[11px] font-extrabold uppercase tracking-[.16em] text-[#6B86A4]">{t.mood} · {t.names[directionIndex]}</p><h2 aria-live="polite" className="mt-1 truncate text-2xl font-black">{getDrawGuessCatName(catId, locale)}</h2></div>
-          <span className="rounded-full bg-white px-3 py-1 font-mono text-sm font-black tabular-nums text-[#3E70AA] shadow-[0_3px_0_#D7E6F3]">{String(frame + 1).padStart(2, "0")} / {DRAW_GUESS_CAT_FRAME_COUNT}</span>
+          <span className="rounded-full bg-white px-3 py-1 font-mono text-sm font-black tabular-nums text-[#3E70AA] shadow-[0_3px_0_#D7E6F3]">{String(Math.floor(frame) + 1).padStart(2, "0")} / {DRAW_GUESS_CAT_FRAME_COUNT}</span>
         </div>
         <div className="relative flex min-h-[260px] flex-1 items-center justify-center py-2 sm:min-h-[320px]">
           <span aria-hidden="true" className="absolute h-52 w-52 rounded-full bg-white/75 blur-[2px] sm:h-64 sm:w-64" />

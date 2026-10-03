@@ -8,6 +8,7 @@ import {
   isWerewolfPlayerSeat,
 } from "@/features/game-tools/werewolfConfig";
 import {
+  canViewWerewolfVoteSubmission,
   getWerewolfRoomStateForViewer,
   isWerewolfEventVisibleToViewer,
   normalizeWerewolfRoomState,
@@ -215,8 +216,15 @@ export const getWerewolfRoomById = cache(
               (submission.seat?.seatNumber === viewerSeat?.seatNumber ||
                 isWitchKillContext ||
                 isWolfPackKillContext)));
+        const canViewVote =
+          isVote &&
+          canViewWerewolfVoteSubmission({
+            isJudge: viewerIsJudge,
+            viewerSeatNumber: viewerSeat?.seatNumber,
+            voterSeatNumber: submission.seat?.seatNumber,
+          });
 
-        if (!isVote && !canViewNightAction) {
+        if ((isVote && !canViewVote) || (!isVote && !canViewNightAction)) {
           return [];
         }
 

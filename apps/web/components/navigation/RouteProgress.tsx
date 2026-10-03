@@ -62,10 +62,16 @@ function hasStandardMobileNavOffset(pathname: string) {
   if (
     firstRouteSegment === "game-tools" ||
     (firstRouteSegment === "planets" && segments.length >= 2) ||
+    (firstRouteSegment === "lobby" &&
+      segments.length >= 3 &&
+      segments[2] === "aa") ||
     firstRouteSegment === "sign-in" ||
     firstRouteSegment === "sign-up" ||
     localizedRouteSegment === "game-tools" ||
     (localizedRouteSegment === "planets" && segments.length >= 3) ||
+    (localizedRouteSegment === "lobby" &&
+      segments.length >= 4 &&
+      segments[3] === "aa") ||
     localizedRouteSegment === "sign-in" ||
     localizedRouteSegment === "sign-up"
   ) {

@@ -133,6 +133,7 @@ function getCopy(locale: string) {
       abstain: "S'abstenir",
       actionSaved: "Action confirmée",
       antidote: "Utiliser l'antidote",
+      cancel: "Annuler",
       candidate: "Se présenter",
       close: "Fermer",
       confirm: "Confirmer",
@@ -150,8 +151,11 @@ function getCopy(locale: string) {
       poison: "Utiliser le poison",
       previous: "Retour",
       records: "Historique",
-      playerRecords: "Historique des votes",
-      resolveVote: "Clore et compter",
+      playerRecords: "Historique de la partie",
+      publishVoteDescription:
+        "Après confirmation, le résultat sera affiché immédiatement à toute la table.",
+      publishVoteTitle: "Publier le résultat du vote ?",
+      resolveVote: "Publier le résultat",
       selectTarget: "Choisir un joueur",
       stages: {
         DAY_ANNOUNCEMENT: "Annonce du matin",
@@ -182,6 +186,7 @@ function getCopy(locale: string) {
       abstain: "Abstain",
       actionSaved: "Action confirmed",
       antidote: "Use antidote",
+      cancel: "Cancel",
       candidate: "Run for sheriff",
       close: "Close",
       confirm: "Confirm",
@@ -199,8 +204,11 @@ function getCopy(locale: string) {
       poison: "Use poison",
       previous: "Previous",
       records: "Records",
-      playerRecords: "Vote records",
-      resolveVote: "Close and tally",
+      playerRecords: "Game records",
+      publishVoteDescription:
+        "After confirmation, the result will appear immediately for everyone in the room.",
+      publishVoteTitle: "Publish this vote result?",
+      resolveVote: "Publish result",
       selectTarget: "Choose a player",
       stages: {
         DAY_ANNOUNCEMENT: "Morning announcement",
@@ -230,6 +238,7 @@ function getCopy(locale: string) {
     abstain: "弃票",
     actionSaved: "操作已确认",
     antidote: "使用解药",
+    cancel: "取消",
     candidate: "上警竞选",
     close: "收起",
     confirm: "确认行动",
@@ -247,8 +256,10 @@ function getCopy(locale: string) {
     poison: "使用毒药",
     previous: "上一步",
     records: "本局记录",
-    playerRecords: "投票记录",
-    resolveVote: "结束投票并计票",
+    playerRecords: "本局记录",
+    publishVoteDescription: "确认后，投票结果会立即向房间内所有人公布。",
+    publishVoteTitle: "确认公布投票结果？",
+    resolveVote: "公布投票结果",
     selectTarget: "选择玩家",
     stages: {
       DAY_ANNOUNCEMENT: "白天宣布死讯",
@@ -313,6 +324,7 @@ export function WerewolfFlowPanel({
   const [voteActionScope, setVoteActionScope] = useState<string | null>(null);
   const [nightActionScope, setNightActionScope] = useState<string | null>(null);
   const [seerNotice, setSeerNotice] = useState<string | null>(null);
+  const [publishVoteConfirmOpen, setPublishVoteConfirmOpen] = useState(false);
   const [dismissedFactionAlertId, setDismissedFactionAlertId] = useState<
     string | null
   >(null);
@@ -535,6 +547,7 @@ export function WerewolfFlowPanel({
 
   useEffect(() => {
     setSeerNotice(null);
+    setPublishVoteConfirmOpen(false);
   }, [flow.cueIndex, flow.sessionIndex]);
 
   useEffect(() => {
@@ -705,8 +718,46 @@ export function WerewolfFlowPanel({
         </div>
       ) : null}
 
+      {publishVoteConfirmOpen && isJudge && isVoteStage ? (
+        <div className="fixed inset-0 z-[124] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+          <section
+            aria-labelledby="werewolf-publish-vote-title"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl border border-white/55 bg-[#FFFDF7] p-5 text-[#18362D] shadow-[0_24px_80px_rgba(0,0,0,0.46)]"
+            role="dialog"
+          >
+            <h2 className="text-lg font-bold" id="werewolf-publish-vote-title">
+              {t.publishVoteTitle}
+            </h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#66706C]">
+              {t.publishVoteDescription}
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="h-11 rounded-full border border-[#C8C9B4] bg-white text-sm font-bold"
+                onClick={() => setPublishVoteConfirmOpen(false)}
+                type="button"
+              >
+                {t.cancel}
+              </button>
+              <form
+                action={flowAction}
+                onSubmit={() => setPublishVoteConfirmOpen(false)}
+              >
+                <input name="locale" type="hidden" value={locale} />
+                <input name="privateToken" type="hidden" value={privateToken} />
+                <input name="operation" type="hidden" value="resolve_vote" />
+                <SubmitButton className="h-11 w-full rounded-full bg-[#1F6E4C] px-3 text-sm font-bold text-white">
+                  {t.resolveVote}
+                </SubmitButton>
+              </form>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {visibleVoteResultNotice ? (
-        <div className="pointer-events-none fixed inset-0 z-[125] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+        <div className="pointer-events-none fixed inset-0 z-[140] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
           <section
             aria-labelledby={`werewolf-vote-result-${visibleVoteResultNotice.id}`}
             className="pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/55 bg-[#FFFDF7] p-5 text-[#18362D] shadow-[0_24px_80px_rgba(0,0,0,0.46)]"
@@ -805,9 +856,25 @@ export function WerewolfFlowPanel({
                         className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E2E0D2] bg-white px-3 py-2.5"
                         key={targetSeatNumber}
                       >
-                        <span className="min-w-0 truncate text-sm font-semibold">
-                          {formatWerewolfSeatLabel(targetSeatNumber, locale)}
-                          {targetSeat ? ` ${targetSeat.displayName}` : ""}
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {formatWerewolfSeatLabel(targetSeatNumber, locale)}
+                            {targetSeat ? ` ${targetSeat.displayName}` : ""}
+                          </span>
+                          {visibleVoteResultNotice.votersByTarget[
+                            targetSeatNumber
+                          ]?.length ? (
+                            <span className="mt-0.5 block text-[11px] font-semibold text-[#76807C]">
+                              {localizeWerewolfFlowText(locale, {
+                                "zh-CN": "投票人：",
+                                en: "Voters: ",
+                                fr: "Votants : ",
+                              })}
+                              {visibleVoteResultNotice.votersByTarget[
+                                targetSeatNumber
+                              ].join(locale === "zh-CN" ? "、" : ", ")}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="shrink-0 text-sm font-bold text-[#9B2433]">
                           {localizeWerewolfFlowText(locale, {
@@ -821,6 +888,19 @@ export function WerewolfFlowPanel({
                   },
                 )}
               </div>
+            ) : null}
+
+            {visibleVoteResultNotice.abstainVoterSeatNumbers.length ? (
+              <p className="mt-3 rounded-lg border border-[#E2E0D2] bg-white px-3 py-2 text-xs font-semibold text-[#68736E]">
+                {localizeWerewolfFlowText(locale, {
+                  "zh-CN": "弃票：",
+                  en: "Abstained: ",
+                  fr: "Abstention : ",
+                })}
+                {visibleVoteResultNotice.abstainVoterSeatNumbers.join(
+                  locale === "zh-CN" ? "、" : ", ",
+                )}
+              </p>
             ) : null}
           </section>
         </div>
@@ -1089,22 +1169,13 @@ export function WerewolfFlowPanel({
                           <span />
                         )}
                         {isVoteStage ? (
-                          <form action={flowAction}>
-                            <input name="locale" type="hidden" value={locale} />
-                            <input
-                              name="privateToken"
-                              type="hidden"
-                              value={privateToken}
-                            />
-                            <input
-                              name="operation"
-                              type="hidden"
-                              value="resolve_vote"
-                            />
-                            <SubmitButton className="inline-flex h-11 w-full items-center justify-center gap-1 rounded-full bg-[#1F6E4C] px-3 text-sm font-bold text-white">
-                              {t.resolveVote}
-                            </SubmitButton>
-                          </form>
+                          <button
+                            className="inline-flex h-11 w-full items-center justify-center gap-1 rounded-full bg-[#1F6E4C] px-3 text-sm font-bold text-white"
+                            onClick={() => setPublishVoteConfirmOpen(true)}
+                            type="button"
+                          >
+                            {t.resolveVote}
+                          </button>
                         ) : (
                           <form action={flowAction}>
                             <input name="locale" type="hidden" value={locale} />

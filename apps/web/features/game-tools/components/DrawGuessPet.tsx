@@ -39,12 +39,24 @@ export function DrawGuessPet({ ambientSeed = 0, autoCelebrate = false, catId, cl
   const clearTimer = useRef<number | null>(null);
   const pressTimer = useRef<number | null>(null);
   const previousReaction = useRef(reactionKey);
+  const figureRef = useRef<HTMLSpanElement>(null);
+  const previousTrick = useRef<Trick | null>(null);
 
   const play = useCallback((kind: Trick) => {
     if (clearTimer.current !== null) window.clearTimeout(clearTimer.current);
     setActive({ kind, id: ++sequence.current });
     clearTimer.current = window.setTimeout(() => setActive(null), kind === "cheer" || kind === "party" ? 1_650 : 1_350);
   }, []);
+
+  useEffect(() => {
+    const repeated = active !== null && previousTrick.current === active.kind;
+    previousTrick.current = active?.kind ?? null;
+    if (!repeated || !figureRef.current) return;
+    // Replay the same trick without remounting the sprite or resetting its idle frame.
+    figureRef.current.style.animation = "none";
+    void figureRef.current.offsetWidth;
+    figureRef.current.style.removeProperty("animation");
+  }, [active]);
 
   useEffect(() => {
     if (reactionKey === undefined || previousReaction.current === reactionKey) return;
@@ -114,7 +126,7 @@ export function DrawGuessPet({ ambientSeed = 0, autoCelebrate = false, catId, cl
     playDrawGuessSound(trick === "secret" || trick === "party" ? "secret" : "cat");
     if (trick === "party" && socialKey) window.dispatchEvent(new CustomEvent(PARTY_EVENT, { detail: { source: socialKey } }));
   }} className={`draw-guess-pet relative inline-grid shrink-0 place-items-center rounded-full align-middle outline-none focus-visible:ring-2 focus-visible:ring-[#3E70AA] ${className}`} style={{ width: size, height: size, "--pet-idle-duration": `${3.4 + ambientSeed * .31}s`, "--pet-idle-delay": `${-ambientSeed * .62}s` } as CSSProperties} data-pet-trick={active?.kind ?? "idle"}>
-    <span key={active?.id ?? 0} className={`draw-guess-pet-figure ${active ? `draw-guess-pet-figure--${active.kind}` : idleSurprise ? "draw-guess-pet-figure--ambient" : ""}`}><DrawGuessCatSprite animated catId={catId} direction={direction} mood={visibleMood} performance={visiblePerformance} size={size} /></span>
+    <span ref={figureRef} className={`draw-guess-pet-figure ${active ? `draw-guess-pet-figure--${active.kind}` : idleSurprise ? "draw-guess-pet-figure--ambient" : ""}`}><DrawGuessCatSprite animated catId={catId} direction={direction} mood={visibleMood} performance={visiblePerformance} size={size} /></span>
     {active ? <span key={`bubble-${active.id}`} aria-hidden="true" className={`draw-guess-pet-bubble draw-guess-pet-bubble--${bubbleSide} ${active.kind === "secret" || active.kind === "party" ? "draw-guess-pet-bubble--secret" : ""}`}>{bubble}</span> : null}
     {active && (active.kind === "cheer" || active.kind === "secret" || active.kind === "party") ? <span key={`sparks-${active.id}`} aria-hidden="true" className="draw-guess-pet-sparks"><i>✦</i><i>✧</i><i>✦</i></span> : null}
   </button>;
