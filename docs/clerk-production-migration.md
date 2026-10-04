@@ -22,16 +22,54 @@ publishable key on its own.
 Vercel's Production and Preview publishable key points to
 `simple-ewe-14.clerk.accounts.dev`. The local `apps/web/.env` points to
 `tolerant-mayfly-67.clerk.accounts.dev` and its secret key returned 35 users, not
-the 100-user source instance. Do not use it for this migration. The saved production database password
-failed authentication via the verified session pooler. The current Vercel CLI
-account also does not have access to the Friemi team. Dashboard access works.
-Refresh task-specific credentials locally without placing secrets in this file,
-Git, command arguments, or chat.
+the 100-user source instance. Do not use it for this migration. The old saved
+production database password failed authentication via the verified session
+pooler. The current Production configuration has now been retrieved through the
+isolated Friemi CLI login described below; a read-only connection to the correct
+Production database succeeded. The default CLI login was not changed.
 
-The Development dashboard export has been generated. Chrome blocked its download
-with `ERR_BLOCKED_BY_CLIENT`; the user must complete that download. This export
-contains sensitive user data and password hashes. Keep it outside Git with mode
-`0600` in a directory with mode `0700`.
+The user supplied the downloaded Development export at
+`/home/ubuntu23/Bureau/ins_3FX8OCpOcSbXp7CemiePLNOj3sL.csv`. Its permissions were
+restricted to `0600`. A private copy, current source API snapshot, Production
+configuration and read-only profile snapshot are stored outside Git under
+`/home/ubuntu23/.local/share/friemi/clerk-migration/20261004/` (directory `0700`,
+files `0600`). These are sensitive local artifacts, not committed files.
+
+Verified results:
+
+- CSV: 100 unique user IDs, no duplicate primary emails, 21 bcrypt password
+  digests, no TOTP secrets, 10 primary Apple relay addresses.
+- Current source API: exactly the same 100 IDs; 21 password-enabled users,
+  53 native Apple/Google `external_id` values, no banned/locked/MFA-enabled users.
+- Production database: all 100 source IDs have exact existing profile matches.
+  Twenty other ACTIVE Clerk-style IDs are absent from the current instance.
+  Preserve and investigate these historical profiles; do not merge by email or
+  remove them. All original 127 profiles remain unchanged.
+- PostgreSQL version is 17.6. A fresh full dump/restore rehearsal is still pending;
+  a read-only identity snapshot is not a replacement for that backup.
+
+## Isolated Vercel CLI
+
+Friemi credentials are in `/home/ubuntu23/.config/friemi/vercel`, not the default
+Vercel CLI configuration. The directory is `0700` and its `auth.json` is `0600`.
+The isolated login was verified as `friemidev-9294`; the default `vercel whoami`
+still returns `dandelion-technologie`. No logout, global account switch or shell
+profile change was performed.
+
+Every Friemi CLI command must explicitly use this configuration. Changing the
+working directory alone does not switch authentication, and `--scope` selects a
+team, not a different login. This is configuration isolation, not a restriction
+of the account's actual Vercel permissions.
+
+```bash
+vercel --global-config "$HOME/.config/friemi/vercel" --scope friemi whoami
+vercel --global-config "$HOME/.config/friemi/vercel" --scope friemi project inspect friemi
+```
+
+Only the migration worktree's ignored `.vercel` directory was linked to
+`friemi/friemi` (`prj_3uVe9Gg1U6QD4H4ZJoB5xigCsISS`, root `apps/web`). Other projects'
+local links were not changed. Production environment variables were downloaded
+for migration checks only; no environment values or deployments were updated.
 
 ## Invariants
 
@@ -52,7 +90,7 @@ contains sensitive user data and password hashes. Keep it outside Git with mode
 
 ## Release Gates
 
-- [ ] Download, secure and validate the complete source CSV, including password
+- [x] Download, secure and validate the complete source CSV, including password
       hash/hasher for users with passwords. Obtain complete source Backend API JSON
       for verification states, native external IDs, metadata and account restrictions.
 - [ ] Verify key-to-instance identity and user count for both instances. A key
