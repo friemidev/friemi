@@ -63,6 +63,9 @@ export default async function NowBrowsePage({
           </p>
         ) : null}
         <p className="mt-1 text-[13px] text-[#61736A]">{copy.subtitle}</p>
+        <p className="mt-2 text-[12px] leading-5 text-[#658071]">
+          {copy.interestHint}
+        </p>
         {invites.length ? (
           <div className="mt-6 rounded-[1.7rem] bg-[radial-gradient(circle_at_12%_8%,#FDEDF0_0,transparent_34%),radial-gradient(circle_at_85%_75%,#EAF8EE_0,transparent_40%),#FFFFFF] px-3 shadow-[0_12px_35px_rgba(31,104,63,.055)]">
             {invites.map((invite) => (

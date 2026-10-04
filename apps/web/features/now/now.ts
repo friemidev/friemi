@@ -350,6 +350,8 @@ export function getNowCopy(locale: string) {
       interested: "Ça me tente",
       withdrawn: "Retirer mon intérêt",
       interestedAlready: "Vous êtes intéressé·e",
+      interestHint:
+        "Lever la main signale seulement votre intérêt. L'hôte verra votre nom et votre mot ; vous pourrez discuter avant de décider. Ce n'est pas une inscription.",
       people: "personnes intéressées",
       remaining: "restant",
       expired: "N'apparaît plus à l'accueil",
@@ -382,6 +384,8 @@ export function getNowCopy(locale: string) {
       interested: "Me too",
       withdrawn: "Withdraw interest",
       interestedAlready: "You're interested",
+      interestHint:
+        "Raising your hand only shows interest. The host can see your name and note; you can chat before deciding. It is not a signup.",
       people: "interested",
       remaining: "left",
       expired: "No longer on the home feed",
@@ -413,6 +417,8 @@ export function getNowCopy(locale: string) {
     interested: "我也想",
     withdrawn: "取消举手",
     interestedAlready: "已举手",
+    interestHint:
+      "举手只表示感兴趣；发起者会看到你的名字和留言。可以先聊聊，不等于报名聚吧。",
     people: "人想一起",
     remaining: "剩余",
     expired: "已退出首页展示",

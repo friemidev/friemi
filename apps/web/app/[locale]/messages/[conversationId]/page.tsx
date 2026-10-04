@@ -118,9 +118,10 @@ export default async function MessageThreadPage({
           return null;
         })
     : null;
-  const nowContext = nowId
+  const effectiveNowId = nowId || conversation.nowInviteId;
+  const nowContext = effectiveNowId
     ? await getNowConversationContext({
-        inviteId: nowId,
+        inviteId: effectiveNowId,
         currentUserProfileId: profile.id,
         peerProfileId: conversation.peer.id,
       })

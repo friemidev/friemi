@@ -62,6 +62,7 @@ type NotificationBulkAction =
 function getNotificationCategory(
   type: NotificationType | string,
 ): NotificationCategory {
+  if (type.startsWith("NOW_")) return "activity";
   if (
     type === "PARTICIPATION_PENDING" ||
     type === "PARTICIPATION_CONFIRMED" ||
@@ -145,6 +146,72 @@ function getNotificationText(
     notification.couponWalletItem?.coupon.merchant.name ??
     actorName ??
     "Friemi";
+
+  if (notification.type.startsWith("NOW_")) {
+    const title =
+      notification.nowInvite?.title ?? (locale === "zh-CN" ? "此刻" : "NOW");
+    const by =
+      actorName ??
+      (locale === "zh-CN" ? "有人" : locale === "fr" ? "Quelqu'un" : "Someone");
+    if (locale === "fr") {
+      if (notification.type === "NOW_INTERESTED")
+        return {
+          title: "Quelqu'un partage votre envie",
+          body: `${by} a levé la main pour « ${title} ». Vous pouvez en discuter.`,
+        };
+      if (notification.type === "NOW_SELECTED")
+        return {
+          title: "L'hôte vous a choisi·e",
+          body: `Pour « ${title} », c'est une invitation à discuter, pas encore une inscription.`,
+        };
+      if (notification.type === "NOW_MESSAGE")
+        return {
+          title: "Nouveau message dans NOW",
+          body: `${by} a écrit dans « ${title} ».`,
+        };
+      return {
+        title: "Votre NOW est devenue une sortie",
+        body: `Consultez l'heure et le lieu de « ${title} », puis inscrivez-vous à la sortie.`,
+      };
+    }
+    if (locale === "en") {
+      if (notification.type === "NOW_INTERESTED")
+        return {
+          title: "Someone shares your idea",
+          body: `${by} raised a hand for “${title}”. You can chat first.`,
+        };
+      if (notification.type === "NOW_SELECTED")
+        return {
+          title: "The host picked you",
+          body: `For “${title}”, this is an invitation to talk, not a signup.`,
+        };
+      if (notification.type === "NOW_MESSAGE")
+        return {
+          title: "New NOW message",
+          body: `${by} left a note on “${title}”.`,
+        };
+      return {
+        title: "Your NOW became a hangout",
+        body: `Check the time and place for “${title}”, then sign up on the hangout page.`,
+      };
+    }
+    if (notification.type === "NOW_INTERESTED")
+      return {
+        title: "有人回应了你的此刻",
+        body: `${by}对「${title}」举手了，可以先聊聊。`,
+      };
+    if (notification.type === "NOW_SELECTED")
+      return {
+        title: "发起者选中了你",
+        body: `「${title}」的发起者想与你组局。这不是正式报名，可以先聊聊。`,
+      };
+    if (notification.type === "NOW_MESSAGE")
+      return { title: "此刻有新留言", body: `${by}在「${title}」留了一句话。` };
+    return {
+      title: "此刻已转为聚吧",
+      body: `查看「${title}」的时间地点，再到聚吧正式报名。`,
+    };
+  }
 
   if (
     notification.type === "COUPON_RECEIVED" ||
@@ -231,7 +298,9 @@ function getNotificationText(
               title: "Désaccord de compte",
             },
             AA_ENTRY_UPDATED: {
-              body: notification.aaTransactionId ? `${by} a modifié une opération de « ${activityTitle} ».` : `${by} a mis à jour le partage des frais de « ${activityTitle} ».`,
+              body: notification.aaTransactionId
+                ? `${by} a modifié une opération de « ${activityTitle} ».`
+                : `${by} a mis à jour le partage des frais de « ${activityTitle} ».`,
               title: "Compte AA mis à jour",
             },
             AA_PAYMENT_REQUEST: {
@@ -254,7 +323,9 @@ function getNotificationText(
                 title: "Ledger dispute",
               },
               AA_ENTRY_UPDATED: {
-                body: notification.aaTransactionId ? `${by} changed an entry in “${activityTitle}”.` : `${by} updated the split bill for “${activityTitle}”.`,
+                body: notification.aaTransactionId
+                  ? `${by} changed an entry in “${activityTitle}”.`
+                  : `${by} updated the split bill for “${activityTitle}”.`,
                 title: "AA ledger updated",
               },
               AA_PAYMENT_REQUEST: {
@@ -276,7 +347,9 @@ function getNotificationText(
                 title: "核算争议待处理",
               },
               AA_ENTRY_UPDATED: {
-                body: notification.aaTransactionId ? `${by}更新了「${activityTitle}」的一笔核算记录。` : `${by}更新了「${activityTitle}」的 AA 账单。`,
+                body: notification.aaTransactionId
+                  ? `${by}更新了「${activityTitle}」的一笔核算记录。`
+                  : `${by}更新了「${activityTitle}」的 AA 账单。`,
                 title: "AA 记录有变更",
               },
               AA_PAYMENT_REQUEST: {
@@ -419,6 +492,13 @@ function getNotificationActionLabel(
   locale: string,
 ) {
   const t = getCopy(locale).notifications;
+
+  if (notification.type.startsWith("NOW_"))
+    return locale === "fr"
+      ? "Voir NOW"
+      : locale === "en"
+        ? "View NOW"
+        : "查看此刻";
 
   if (
     notification.type === "MOMENT_LIKED" ||
@@ -928,6 +1008,17 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
+  if (type.startsWith("NOW_")) {
+    return {
+      icon: type === "NOW_MESSAGE" ? MessageCircle : Heart,
+      iconClassName: isUnread
+        ? "bg-[#E7F6EC] text-[#126A4A]"
+        : "bg-fog text-outline",
+      cardClassName: isUnread
+        ? "border-[#CDEBD6] bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
   if (type.startsWith("COUPON_")) {
     return {
       icon: TicketCheck,
@@ -1123,6 +1214,7 @@ function NotificationCard({
     notification.type === "FRIEND_REQUEST"
       ? Boolean(notification.actor)
       : Boolean(notification.activity) ||
+        Boolean(notification.nowInvite) ||
         notification.type === "REPORT_CREATED" ||
         notification.type === "DIRECT_MESSAGE" ||
         notification.type === "PLANET_JOIN_REQUEST" ||

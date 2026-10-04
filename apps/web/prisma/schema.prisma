@@ -222,6 +222,10 @@ enum CommentType {
 }
 
 enum NotificationType {
+  NOW_INTERESTED
+  NOW_SELECTED
+  NOW_MESSAGE
+  NOW_CONVERTED
   PARTICIPATION_PENDING
   PARTICIPATION_CONFIRMED
   PARTICIPATION_CANCELLED
@@ -785,6 +789,8 @@ model NowInvite {
   linkedActivity   Activity?          @relation(fields: [linkedActivityId], references: [id], onDelete: SetNull)
   interests        NowInterest[]
   messages         NowInviteMessage[]
+  notifications    Notification[]
+  conversations    Conversation[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -1573,6 +1579,8 @@ model Notification {
   actorDisplayName       String?               @db.VarChar(80)
   activityId             String?
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  nowInviteId            String?
+  nowInvite              NowInvite?            @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
   charmGiftEventId       String?
@@ -1594,6 +1602,7 @@ model Notification {
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
+  @@index([nowInviteId])
   @@index([activityAnnouncementId])
   @@index([charmGiftEventId])
   @@index([momentId])
@@ -2155,6 +2164,8 @@ model Conversation {
   preferences      ConversationPreference[]
   lastMessageAt    DateTime?
   nonFriendResetAt DateTime?
+  nowInviteId      String?
+  nowInvite        NowInvite?               @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
@@ -2162,6 +2173,7 @@ model Conversation {
   @@index([userAId, lastMessageAt])
   @@index([userBId, lastMessageAt])
   @@index([lastMessageAt])
+  @@index([nowInviteId])
 }
 
 model ConversationPreference {

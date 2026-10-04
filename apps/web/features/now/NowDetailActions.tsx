@@ -120,13 +120,20 @@ export function NowInterestForm({
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder={
-              locale === "zh-CN" ? "我也想一起！" : "I'd love to join!"
+              locale === "zh-CN"
+                ? "我也想一起！"
+                : locale === "fr"
+                  ? "Ça me tente aussi !"
+                  : "I'd like to join you!"
             }
             className="min-h-11 w-full rounded-xl border border-[#DDE9E0] bg-white px-3 text-[13px] outline-none focus:border-[#54B581]"
           />
           <span className="mt-1 block text-right text-[10px] text-[#9CAB9F]">
             {note.length}/50
           </span>
+          <p className="mt-2 rounded-xl bg-[#F0F8F2] px-3 py-2 text-[12px] leading-[1.55] text-[#426A54]">
+            {copy.interestHint}
+          </p>
         </div>
       ) : null}
       <ActionButton

@@ -30,6 +30,10 @@ test("notification dedupe keys cover the business identity", () => {
     getNotificationDedupeKey({ ...base, activityId: "activity-a" }),
     getNotificationDedupeKey({ ...base, activityId: "activity-b" }),
   );
+  assert.notEqual(
+    getNotificationDedupeKey({ ...base, nowInviteId: "now-a" }),
+    getNotificationDedupeKey({ ...base, nowInviteId: "now-b" }),
+  );
 });
 
 test("notification dedupe keys require an explicit occurrence", () => {

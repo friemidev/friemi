@@ -8,11 +8,13 @@ import {
   getNowCopy,
   getNowKind,
   getNowKindLabel,
+  getNowIntentWindowLabel,
   getNowPreviewDisabledLabel,
   nowIntentWindows,
   nowKinds,
   nowVisibilityHours,
   type NowKind,
+  type NowIntentWindow,
 } from "./now";
 
 function StepHeading({
@@ -71,6 +73,9 @@ export function NowCreateForm({
   const initialKindRef = useRef<HTMLButtonElement>(null);
   const [area, setArea] = useState("");
   const [note, setNote] = useState("");
+  const [intentWindow, setIntentWindow] = useState<NowIntentWindow>("NOW");
+  const [visibilityHours, setVisibilityHours] =
+    useState<(typeof nowVisibilityHours)[number]>(12);
   const [state, action] = useActionState(createNowInviteAction, {});
   useEffect(() => {
     initialKindRef.current?.scrollIntoView({
@@ -82,16 +87,16 @@ export function NowCreateForm({
     {
       label:
         locale === "zh-CN"
-          ? "附近"
+          ? "巴黎市内"
           : locale === "fr"
-            ? "À proximité"
-            : "Nearby",
+            ? "Dans Paris"
+            : "Across Paris",
       value:
         locale === "zh-CN"
-          ? "巴黎附近"
+          ? "巴黎市内"
           : locale === "fr"
-            ? "Près de moi, Paris"
-            : "Near me, Paris",
+            ? "Paris intra-muros"
+            : "Paris citywide",
     },
     { label: "Le Marais", value: "Le Marais" },
     { label: "Bastille", value: "Bastille" },
@@ -196,7 +201,8 @@ export function NowCreateForm({
                   type="radio"
                   name="intentWindow"
                   value={window}
-                  defaultChecked={window === "NOW"}
+                  checked={intentWindow === window}
+                  onChange={() => setIntentWindow(window)}
                 />
                 <span className="flex min-h-16 flex-col items-center justify-center rounded-2xl border border-[#D7E5D9] bg-white text-[13px] font-bold text-[#305346] peer-checked:border-[#F68188] peer-checked:bg-[#FFF0F1] peer-checked:text-[#A13E55] peer-focus-visible:ring-2 peer-focus-visible:ring-[#126A4A]">
                   {labels[index]}
@@ -261,6 +267,13 @@ export function NowCreateForm({
             className="min-h-11 w-full rounded-xl border border-[#D7E5D9] bg-white pl-10 pr-3 text-[14px] text-[#18382C] outline-none focus:border-[#3C9D6B] focus:ring-2 focus-visible:ring-[#3C9D6B]/20"
           />
         </div>
+        <p className="mt-2 text-[11px] leading-5 text-[#77877B]">
+          {locale === "zh-CN"
+            ? "不会读取你的定位；请选你愿意前往的街区或范围，具体地点可以同频后再定。"
+            : locale === "fr"
+              ? "Nous n'utilisons pas votre position. Choisissez un quartier ou une zone où vous pourriez aller ; le lieu exact se décide ensemble."
+              : "We don't use your location here. Choose an area you'd travel to; agree on the exact place together."}
+        </p>
       </fieldset>
 
       <section>
@@ -290,8 +303,7 @@ export function NowCreateForm({
 
       <details className="rounded-2xl border border-[#E2EBE4] bg-white px-4 py-3">
         <summary className="cursor-pointer text-[12px] font-semibold text-[#52715F]">
-          {copy.duration} ·{" "}
-          {locale === "zh-CN" ? "默认 12 小时" : "12h default"}
+          {copy.duration} · {visibilityHours}h
         </summary>
         <div className="mt-3 grid grid-cols-4 gap-2">
           {nowVisibilityHours.map((hours) => (
@@ -301,7 +313,8 @@ export function NowCreateForm({
                 type="radio"
                 name="visibilityHours"
                 value={hours}
-                defaultChecked={hours === 12}
+                checked={visibilityHours === hours}
+                onChange={() => setVisibilityHours(hours)}
               />
               <span className="flex min-h-11 items-center justify-center rounded-xl border border-[#D7E5D9] bg-white text-[13px] font-semibold text-[#305346] peer-checked:border-[#F68188] peer-checked:bg-[#FFF0F1] peer-checked:text-[#A13E55] peer-focus-visible:ring-2 peer-focus-visible:ring-[#126A4A]">
                 {hours}h
@@ -317,6 +330,23 @@ export function NowCreateForm({
               : "This controls home visibility only. People who raised a hand can keep talking after it ends."}
         </p>
       </details>
+
+      <div className="rounded-2xl border border-[#D8E9DD] bg-[#F0F8F2] px-4 py-3 text-[12px] leading-5 text-[#426A54]">
+        <p className="font-bold text-[#176347]">
+          {locale === "zh-CN"
+            ? `想做的时间：${getNowIntentWindowLabel(intentWindow, locale)} · 首页展示：${visibilityHours} 小时`
+            : locale === "fr"
+              ? `Quand : ${getNowIntentWindowLabel(intentWindow, locale)} · Visible à l'accueil : ${visibilityHours} h`
+              : `When: ${getNowIntentWindowLabel(intentWindow, locale)} · On home for: ${visibilityHours} hours`}
+        </p>
+        <p className="mt-1">
+          {locale === "zh-CN"
+            ? "倒计时只控制泡泡的首页曝光；到期后，你和已举手的人仍可继续交流。"
+            : locale === "fr"
+              ? "Le compte à rebours concerne seulement l'accueil. Vous pourrez encore discuter après."
+              : "The countdown only controls home visibility. You can keep talking after it ends."}
+        </p>
+      </div>
 
       {state.error ? (
         <p role="alert" className="text-[13px] font-semibold text-[#A73955]">

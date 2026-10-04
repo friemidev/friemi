@@ -54,6 +54,27 @@ test("getNotificationPath routes activity and message notifications correctly", 
     }),
     "/messages",
   );
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      nowInviteId: "now_1",
+      type: "NOW_CONVERTED",
+    }),
+    "/now/now_1",
+  );
+});
+
+test("NOW push copy says an interested user must still sign up for the hangout", () => {
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: "Camille",
+      locale: "zh-CN",
+      nowTitle: "今晚喝一杯",
+      type: "NOW_CONVERTED",
+    }),
+    { body: "「今晚喝一杯」已转为聚吧，记得正式报名", title: "Friemi" },
+  );
 });
 
 test("getNotificationCopy keeps localized fallback copy", () => {

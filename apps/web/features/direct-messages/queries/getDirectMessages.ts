@@ -92,6 +92,7 @@ function getConversationListSelect(currentUserProfileId: string) {
 function getConversationThreadSelect(currentUserProfileId: string) {
   return {
     ...getConversationListSelect(currentUserProfileId),
+    nowInviteId: true,
     messages: {
       where: {
         deletions: {
@@ -215,6 +216,7 @@ export type DirectConversationThreadViewModel =
     canSend: boolean;
     currentUser: DirectMessageUserViewModel;
     messages: DirectMessageThreadItemViewModel[];
+    nowInviteId: string | null;
     sendPolicy: DirectMessageSendPolicy;
   };
 
@@ -363,6 +365,7 @@ function mapConversationThread(
       peerRemarkName,
     ),
     canSend: sendPolicy.canSend,
+    nowInviteId: conversation.nowInviteId,
     currentUser: mapUserProfile(currentUser, { canViewPresence: true }),
     messages: [...conversation.messages].reverse().map((message) => ({
       id: message.id,

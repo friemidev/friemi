@@ -104,6 +104,9 @@ export function StartDirectConversationButton({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="friendProfileId" type="hidden" value={peerProfileId} />
+      {nowInviteId ? (
+        <input name="nowInviteId" type="hidden" value={nowInviteId} />
+      ) : null}
       <input name="redirectPath" type="hidden" value={redirectPath} />
       <SubmitButton
         buttonClassName={buttonClassName}

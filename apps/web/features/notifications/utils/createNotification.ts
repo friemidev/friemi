@@ -22,6 +22,7 @@ export type CreateNotificationInput = {
   dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
   momentId?: string | null;
+  nowInviteId?: string | null;
   occurrenceId?: string | null;
   planetId?: string | null;
   recipientId: string;
@@ -49,6 +50,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.couponWalletItemId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
+        input.nowInviteId ?? "",
         input.planetId ?? "",
       ].join("\n"),
     )
@@ -67,6 +69,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,
+    nowInviteId: input.nowInviteId ?? null,
     planetId: input.planetId ?? null,
     recipientId: input.recipientId,
     type: input.type,

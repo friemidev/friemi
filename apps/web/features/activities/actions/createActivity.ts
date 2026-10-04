@@ -39,6 +39,7 @@ import {
   DESKTOP_LOBBY_CANDIDATE_CONTEXT,
 } from "@/features/activities/utils/desktopLobbyCandidates";
 import { canLinkAllPlanets } from "@/features/activities/queries/getLinkablePlanets";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -545,6 +546,20 @@ export async function createActivityAction(
               },
             });
             if (linked.count !== 1) throw new Error("NOW_INVITE_UNAVAILABLE");
+            const interested = await transaction.nowInterest.findMany({
+              where: { inviteId: nowInviteId, withdrawnAt: null },
+              select: { profileId: true },
+            });
+            await createNotifications(
+              transaction,
+              interested.map(({ profileId }) => ({
+                actorId: profile.id,
+                nowInviteId,
+                occurrenceId: createdActivity.id,
+                recipientId: profileId,
+                type: "NOW_CONVERTED" as const,
+              })),
+            );
             return createdActivity;
           })
         : await prisma.activity.create({

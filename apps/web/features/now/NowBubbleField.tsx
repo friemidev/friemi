@@ -51,6 +51,16 @@ function remainingLabel(expiresAt: string, now: number, locale: string) {
     : `${hours}h ${minutes % 60}m`;
 }
 
+function compactRemainingLabel(expiresAt: string, now: number, locale: string) {
+  if (locale !== "zh-CN") return remainingLabel(expiresAt, now, locale);
+  const minutes = Math.max(
+    0,
+    Math.ceil((Date.parse(expiresAt) - now) / 60_000),
+  );
+  if (minutes < 60) return `${minutes}分钟`;
+  return `${Math.floor(minutes / 60)}时${minutes % 60}分`;
+}
+
 export function NowBubbleField({
   initialNow,
   invites,
@@ -171,7 +181,7 @@ export function NowBubbleField({
                 </span>
                 <span className={styles.itemTitle}>{invite.title}</span>
                 <span className={styles.meta}>
-                  {remainingLabel(invite.expiresAt, now, locale)}
+                  {compactRemainingLabel(invite.expiresAt, now, locale)}
                 </span>
                 <span className={styles.area}>
                   {getNowIntentWindowLabel(invite.intentWindow, locale)} ·{" "}

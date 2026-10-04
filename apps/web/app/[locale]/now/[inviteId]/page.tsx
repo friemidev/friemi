@@ -267,17 +267,22 @@ export default async function NowInvitePage({
           preview ? (
             <div className="mt-3">
               {!invite.isInterested ? (
-                <input
-                  disabled
-                  placeholder={
-                    locale === "zh-CN"
-                      ? "留一句话（选填）"
-                      : locale === "fr"
-                        ? "Laissez un mot (facultatif)"
-                        : "Add a note (optional)"
-                  }
-                  className="mb-3 min-h-11 w-full rounded-xl border border-[#DDE9E0] bg-white px-3 text-[13px]"
-                />
+                <>
+                  <input
+                    disabled
+                    placeholder={
+                      locale === "zh-CN"
+                        ? "留一句话（选填）"
+                        : locale === "fr"
+                          ? "Laissez un mot (facultatif)"
+                          : "Add a note (optional)"
+                    }
+                    className="min-h-11 w-full rounded-xl border border-[#DDE9E0] bg-white px-3 text-[13px]"
+                  />
+                  <p className="mb-3 mt-2 rounded-xl bg-[#F0F8F2] px-3 py-2 text-[12px] leading-[1.55] text-[#426A54]">
+                    {copy.interestHint}
+                  </p>
+                </>
               ) : null}
               <button
                 type="button"

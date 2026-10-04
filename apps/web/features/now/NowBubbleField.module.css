@@ -234,7 +234,7 @@
   margin-top: 0.38rem;
   overflow: hidden;
   color: #173d32;
-  font-size: 0.69rem;
+  font-size: 0.73rem;
   font-weight: 800;
   line-height: 1.24;
   -webkit-box-orient: vertical;
@@ -242,15 +242,16 @@
 }
 .meta {
   color: var(--ink);
-  font-size: 0.61rem;
+  font-size: 0.68rem;
   font-weight: 700;
   line-height: 1.3;
+  white-space: nowrap;
 }
 .area {
   max-width: 100%;
   overflow: hidden;
   color: #6b7e72;
-  font-size: 0.59rem;
+  font-size: 0.63rem;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;

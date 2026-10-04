@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  createNotification,
+  createNotifications,
+} from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -108,23 +112,34 @@ export async function changeNowInterestAction(
     return { error: getNowCopy(locale).closed };
   }
   if (parsed.data.intent === "join") {
-    await prisma.nowInterest.upsert({
-      where: {
-        inviteId_profileId: {
-          inviteId: parsed.data.inviteId,
-          profileId: profile.id,
-        },
-      },
-      create: {
+    await prisma.$transaction(async (tx) => {
+      const key = {
         inviteId: parsed.data.inviteId,
         profileId: profile.id,
-        note: parsed.data.note || null,
-      },
-      update: {
-        withdrawnAt: null,
-        selectedAt: null,
-        note: parsed.data.note || null,
-      },
+      };
+      const previous = await tx.nowInterest.findUnique({
+        where: { inviteId_profileId: key },
+        select: { withdrawnAt: true },
+      });
+      const interest = await tx.nowInterest.upsert({
+        where: { inviteId_profileId: key },
+        create: { ...key, note: parsed.data.note || null },
+        update: {
+          withdrawnAt: null,
+          selectedAt: null,
+          note: parsed.data.note || null,
+        },
+        select: { id: true, updatedAt: true },
+      });
+      if (!previous || previous.withdrawnAt) {
+        await createNotification(tx, {
+          actorId: profile.id,
+          nowInviteId: parsed.data.inviteId,
+          occurrenceId: `${interest.id}:${interest.updatedAt.toISOString()}`,
+          recipientId: invite.organizerId,
+          type: "NOW_INTERESTED",
+        });
+      }
     });
   } else {
     await prisma.nowInterest.updateMany({
@@ -163,11 +178,40 @@ export async function sendNowMessageAction(
         { interests: { some: { profileId: profile.id, withdrawnAt: null } } },
       ],
     },
-    select: { id: true },
+    select: {
+      id: true,
+      organizerId: true,
+      interests: {
+        where: { withdrawnAt: null },
+        select: { profileId: true },
+      },
+    },
   });
   if (!invite) return { error: getNowCopy(locale).formError };
-  await prisma.nowInviteMessage.create({
-    data: { inviteId: invite.id, authorId: profile.id, body: parsed.data.body },
+  await prisma.$transaction(async (tx) => {
+    const message = await tx.nowInviteMessage.create({
+      data: {
+        inviteId: invite.id,
+        authorId: profile.id,
+        body: parsed.data.body,
+      },
+      select: { id: true },
+    });
+    const recipients = new Set([
+      invite.organizerId,
+      ...invite.interests.map((interest) => interest.profileId),
+    ]);
+    recipients.delete(profile.id);
+    await createNotifications(
+      tx,
+      [...recipients].map((recipientId) => ({
+        actorId: profile.id,
+        nowInviteId: invite.id,
+        occurrenceId: message.id,
+        recipientId,
+        type: "NOW_MESSAGE" as const,
+      })),
+    );
   });
   refreshNow(locale, invite.id);
   return { ok: true };
@@ -184,9 +228,26 @@ export async function selectNowInterestAction(form: FormData): Promise<void> {
     select: { id: true },
   });
   if (!invite) return;
-  await prisma.nowInterest.updateMany({
-    where: { inviteId, profileId: interestProfileId, withdrawnAt: null },
-    data: { selectedAt: field(form, "selected") === "1" ? new Date() : null },
+  const selected = field(form, "selected") === "1";
+  await prisma.$transaction(async (tx) => {
+    const changed = await tx.nowInterest.updateMany({
+      where: {
+        inviteId,
+        profileId: interestProfileId,
+        withdrawnAt: null,
+        selectedAt: selected ? null : { not: null },
+      },
+      data: { selectedAt: selected ? new Date() : null },
+    });
+    if (selected && changed.count) {
+      await createNotification(tx, {
+        actorId: profile.id,
+        nowInviteId: inviteId,
+        occurrenceId: `${inviteId}:${interestProfileId}:${Date.now()}`,
+        recipientId: interestProfileId,
+        type: "NOW_SELECTED",
+      });
+    }
   });
   refreshNow(locale, inviteId);
 }

@@ -43,6 +43,7 @@ function trackNotificationOpened({
     | "activity"
     | "admin_reports"
     | "messages"
+    | "now"
     | "notifications"
     | "profile"
     | "bag"
@@ -410,6 +411,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       activityId: true,
       couponWalletItemId: true,
       momentId: true,
+      nowInviteId: true,
       planet: {
         select: {
           slug: true,
@@ -418,6 +420,29 @@ export async function openNotificationActivityAction(formData: FormData) {
       type: true,
     },
   });
+
+  if (notification?.type.startsWith("NOW_")) {
+    await prisma.notification.updateMany({
+      where: { id: notificationId, recipientId: profile.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    revalidatePath(withLocale(locale, "/notifications"));
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "now",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.nowInviteId
+          ? `/now/${notification.nowInviteId}`
+          : "/now/mine",
+      ),
+    );
+  }
 
   if (
     notification?.type === "COUPON_RECEIVED" ||

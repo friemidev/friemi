@@ -321,6 +321,8 @@ export async function sendMobilePushForNotification(notificationId: string) {
         },
       },
       momentId: true,
+      nowInviteId: true,
+      nowInvite: { select: { title: true } },
       planetId: true,
       planet: {
         select: {
@@ -416,6 +418,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       locale,
       messageBody,
       merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
+      nowTitle: notification.nowInvite?.title ?? null,
       planetName: notification.planet?.name ?? null,
       type: notification.type,
     });
@@ -425,6 +428,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       activityId: notification.activityId,
       conversationId: directMessageConversationId,
       momentId: notification.momentId,
+      nowInviteId: notification.nowInviteId,
       planetSlug: notification.planet?.slug ?? null,
       type: notification.type,
     });
