@@ -4,7 +4,7 @@ import { parseMoneyToMinor } from "./money";
 export const AA_EXPENSE = "aa-simple-expense";
 export const AA_PREPAYMENT = "aa-simple-prepayment";
 export const AA_SETTLEMENT = "aa-simple-settlement";
-export type AaPerson = { id: string; name: string; active: boolean };
+export type AaPerson = { id: string; name: string; active: boolean; paymentMethod?: string | null };
 export type AaRecord = {
   id: string; type: LedgerTransactionInput["type"]; status: LedgerTransactionInput["status"];
   title: string; note: string; amount: string; source: string | null; creatorId: string;
