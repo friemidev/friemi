@@ -1,0 +1,196 @@
+# Clerk Production Migration
+
+## Status (2026-10-04)
+
+Preparation only. No production Clerk key switch, user import, database identity
+update, or DNS save has been performed by this task. Do not deploy a new Clerk
+publishable key on its own.
+
+- Branch: `codex/clerk-production-migration`, based on `origin/dev` at `9aaf563`.
+- Source application: `app_3FX8OBLdQ6eEf8D0Zdv3ZOwgHve`.
+- Source instance: `ins_3FX8OCpOcSbXp7CemiePLNOj3sL` (Development, 100 exported users).
+- Target instance: `ins_3Fr1pCETGrgJFA9mdZ1iP5rx3lb` (Production, initially empty).
+- Production Supabase: `xyavgkupjnoumlzwkzoq`.
+- Preview Supabase: `dryhbxognbrljslzciuh`.
+- Production website: `https://www.friemi.com`.
+- Production read-only SQL preflight: 127 profiles, 126 ACTIVE, 1 DELETED,
+  121 Clerk-style user IDs and 6 duplicate-email groups. Reconcile these with the
+  complete 100-user export before importing or applying bindings. No automatic
+  email merge is safe. A legacy `_backup_userprofile_ghost_email_bindings_20260629`
+  table exists; leave this historical backup untouched.
+
+Vercel's Production and Preview publishable key points to
+`simple-ewe-14.clerk.accounts.dev`. The local `apps/web/.env` points to
+`tolerant-mayfly-67.clerk.accounts.dev` and its secret key returned 35 users, not
+the 100-user source instance. Do not use it for this migration. The saved production database password
+failed authentication via the verified session pooler. The current Vercel CLI
+account also does not have access to the Friemi team. Dashboard access works.
+Refresh task-specific credentials locally without placing secrets in this file,
+Git, command arguments, or chat.
+
+The Development dashboard export has been generated. Chrome blocked its download
+with `ERR_BLOCKED_BY_CLIENT`; the user must complete that download. This export
+contains sensitive user data and password hashes. Keep it outside Git with mode
+`0600` in a directory with mode `0700`.
+
+## Invariants
+
+1. Preserve `UserProfile.id`, friend code, nickname, role, status, wallet, referral
+   rewards, relationships, activities, messages, purchases and game history.
+2. Change only the verified `UserProfile.clerkUserId` bindings during cutover.
+3. Never merge users just because their email addresses look alike. Do not promote
+   an unverified address to verified. Deleted accounts must not be reactivated.
+4. Preserve Clerk `external_id`. Friemi's native OAuth route stores
+   `apple:<subject>` or `google:<subject>` there. The stock migration tool's use of
+   `external_id` for the old Clerk ID must not overwrite these values.
+5. Use server-only `private_metadata.friemiMigration` to record the exact source
+   instance, source user ID and target instance. Do not use public or unsafe
+   metadata as authority to attach business data.
+6. Clerk sessions cannot be transferred across instances. Plan for one sign-in;
+   do not promise invisible session continuation. A new Production key alone is
+   not a migration.
+
+## Release Gates
+
+- [ ] Download, secure and validate the complete source CSV, including password
+      hash/hasher for users with passwords. Obtain complete source Backend API JSON
+      for verification states, native external IDs, metadata and account restrictions.
+- [ ] Verify key-to-instance identity and user count for both instances. A key
+      prefix (`sk_test_` / `sk_live_`) by itself is not sufficient.
+- [ ] Take a fresh production dump; verify `pg_restore --list` and test recovery
+      in an isolated database. Do not rely on a dump made before other live changes.
+- [ ] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
+      Complete DNS and TLS verification in Clerk.
+- [ ] Configure Google Production web OAuth with matching consent/redirect URLs;
+      preserve the existing iOS OAuth client. Test actual Google account linking.
+- [ ] Verify native Apple sign-in and existing relay-email users. The Apple
+      Developer account is held by another programmer: web Apple Services ID, key,
+      Team ID and relay sender configuration require that person's cooperation.
+      Do not assume email fallback preserves access for every Apple user.
+- [ ] Match all enabled login methods, signup restrictions, metadata, administrator
+      access and redirect allowlists. Handle MFA/passkeys or other unsupported factors
+      separately; do not silently remove them.
+- [ ] Import users into Production idempotently, preserving password hashes,
+      primary/verified identifiers, native external IDs and ban/lock states. Recover
+      interrupted imports using exact migration markers, not email-only matching.
+      Keep Production webhook delivery disabled during import to avoid duplicate
+      `UserProfile` rows and welcome rewards.
+- [ ] Compare imported accounts against source. Password-enabled flags are only a
+      sanity check, not proof that a password works. Test a consenting test account
+      with its original password and test native/web OAuth on real devices.
+- [ ] Inspect actual database policies and column types before updating any
+      non-Prisma auth references. The private drawing Realtime policy compares JWT
+      `sub` with `UserProfile.clerkUserId`. Configure Supabase to trust the Production
+      Clerk issuer and ensure `role: authenticated`; test private Realtime access.
+- [ ] Inventory `ADMIN_CLERK_USER_IDS`, webhooks, signing secrets, mobile embedded
+      keys and any other user-ID allowlists. Do not copy Development secrets to live.
+- [ ] Rehearse mapping and rollback on an isolated production restore. Run the
+      generated SQL with its default `ROLLBACK` on production as a final check.
+- [ ] Arrange a short controlled cutover. Stop signups, profile writes and old/new
+      webhook delivery, drain in-flight requests and reconcile source changes since
+      export. Take a final snapshot. Old deployments must not write old Clerk IDs
+      after remapping, or the current profile upsert code can create duplicates.
+- [ ] Apply mapping, deploy matching Production keys, activate the Production
+      webhook secret and issuer, then reopen traffic only after smoke tests. A rolling
+      key-only deployment without gating writes is unsafe.
+- [ ] Verify old user profile IDs, balances, chats, join history and native login;
+      test a new signup. Compare profile counts and business-table integrity.
+- [ ] Keep the original instance and private audit artifacts for rollback. Do not
+      delete source users. Rollback requires the same write gate and restoration of
+      environment/webhook/issuer configuration as well as identity SQL.
+
+Code follows the existing release rule: dev first; the user promotes main.
+Preview and Production must be decided separately. Do not remap Preview while it
+still uses Development authentication. There is no business-schema migration in
+this preparatory change.
+
+## Offline Planner
+
+The planner performs no API requests and executes no SQL. It uses explicit
+instance/project IDs and rejects partial exports, identity collisions, changed
+native IDs, verification/password/ban/lock discrepancies, or missing mappings.
+Unresolved active profiles stop SQL generation. It never outputs addresses or
+credentials to stdout and never imports or deletes users.
+
+Input envelopes (private local files):
+
+```json
+{
+  "instanceId": "ins_source",
+  "totalCount": 100,
+  "users": ["complete raw Clerk Backend API user objects, not these strings"]
+}
+```
+
+The target envelope has the same structure. Each imported target user must retain
+its source identity and include:
+
+```json
+{
+  "private_metadata": {
+    "friemiMigration": {
+      "sourceInstanceId": "ins_source",
+      "sourceUserId": "user_original",
+      "targetInstanceId": "ins_target"
+    }
+  }
+}
+```
+
+Database envelope: `{ "projectRef": "<verified project ref>", "profiles": [...] }`.
+Use a complete read-only export with `id`, `clerkUserId` and `status` for every
+profile. The Supabase SQL Editor must be set to the correct project; its database
+name is `postgres` in both environments and cannot prove project identity.
+
+```sql
+BEGIN READ ONLY;
+SELECT jsonb_build_object(
+  'projectRef', 'xyavgkupjnoumlzwkzoq',
+  'profiles', coalesce(jsonb_agg(jsonb_build_object(
+    'id', id, 'clerkUserId', "clerkUserId", 'status', status
+  ) ORDER BY id), '[]'::jsonb)
+)
+FROM public."UserProfile";
+COMMIT;
+```
+
+```bash
+node scripts/clerk-migration.mjs \
+  --source /private/source.json --target /private/target.json \
+  --database /private/profiles.json \
+  --source-instance ins_SOURCE --target-instance ins_TARGET \
+  --database-project xyavgkupjnoumlzwkzoq \
+  --output /private/new-plan-directory
+node --test scripts/clerk-migration/plan.test.mjs
+CLERK_MIGRATION_LOCAL_SQL_TEST=1 node --test scripts/clerk-migration/sql.test.mjs
+```
+
+The optional SQL integration test creates and drops only its own randomly named
+database through the local PostgreSQL Unix socket. It checks rehearsal rollback,
+real commit, idempotent retries, reverse rollback, unchanged business data and
+foreign keys, identity collisions, newly deleted users, and concurrent signups.
+
+The output directory must be new, outside the checkout, and is created with
+private permissions. Outputs are `plan.json`, `forward.sql`, `rollback.sql`.
+Blocked plans produce only `plan.json` and exit code 2. Both SQL files default to
+`ROLLBACK`; `--commit --maintenance-confirmed` generates committing scripts but
+still does not execute them. SQL locks the profile table, checks counts and
+bindings, rejects deleted profiles/collisions, and verifies every changed binding
+within one transaction. Already-applied rows are accepted by the same saved SQL.
+
+The planner is not a substitute for login tests, source/target API authenticity,
+metadata comparison, key/issuer configuration, a verified backup or write gating.
+Its fingerprint is for audit comparison, not a signature or database identity
+proof. Do not hand-edit blockers out of a plan.
+
+Validation completed: 31 planner unit tests and one real local PostgreSQL
+integration test (32 passing). No real Production account import, password/OAuth
+login rehearsal, or production database write has been performed.
+
+## References
+
+- [Clerk migration overview](https://clerk.com/docs/guides/development/migrating/overview)
+- [Clerk migration tool](https://github.com/clerk/migration-tool)
+- [Create user API](https://clerk.com/docs/reference/backend/user/create-user)
+- [Production deployment](https://clerk.com/docs/guides/development/deployment/production)
+- [Clerk integration with Supabase](https://supabase.com/docs/guides/auth/third-party/clerk)
