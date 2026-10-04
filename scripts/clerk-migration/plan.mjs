@@ -33,7 +33,7 @@ function identifiers(user, key, valueKey, primaryKey) {
     .sort((a, b) => String(a.value).localeCompare(String(b.value)));
 }
 
-function sameIdentity(source, target) {
+export function sameIdentity(source, target) {
   for (const flag of [
     "password_enabled",
     "banned",
@@ -112,6 +112,8 @@ export function buildPlan({
   expectedSource,
   expectedTarget,
   expectedProject,
+  preservedHistory,
+  expectedHistoricalInstance,
 }) {
   check(
     instanceId.test(expectedSource) && instanceId.test(expectedTarget),
@@ -150,6 +152,54 @@ export function buildPlan({
   uniqueBy(target.users, "id", "target");
   uniqueBy(database.profiles, "id", "profiles");
   uniqueBy(database.profiles, "clerkUserId", "profiles");
+  const preservedById = new Map();
+  if (preservedHistory || expectedHistoricalInstance) {
+    check(
+      preservedHistory &&
+        instanceId.test(expectedHistoricalInstance) &&
+        ![expectedSource, expectedTarget].includes(
+          expectedHistoricalInstance,
+        ) &&
+        preservedHistory.instanceId === expectedHistoricalInstance,
+      "Historical instance mismatch",
+    );
+    check(
+      preservedHistory.projectRef === expectedProject &&
+        preservedHistory.sourceInstanceId === expectedSource &&
+        preservedHistory.targetInstanceId === expectedTarget,
+      "Historical preservation scope mismatch",
+    );
+    check(
+      Array.isArray(preservedHistory.users) &&
+        Number.isSafeInteger(preservedHistory.totalCount) &&
+        preservedHistory.totalCount === preservedHistory.users.length &&
+        Array.isArray(preservedHistory.preservedProfiles) &&
+        preservedHistory.preservedProfiles.length > 0,
+      "Incomplete historical preservation evidence",
+    );
+    const historicalById = uniqueBy(preservedHistory.users, "id", "history");
+    uniqueBy(preservedHistory.preservedProfiles, "id", "preserved profiles");
+    uniqueBy(
+      preservedHistory.preservedProfiles,
+      "clerkUserId",
+      "preserved profiles",
+    );
+    for (const row of preservedHistory.preservedProfiles) {
+      const profile = database.profiles.find((p) => p.id === row.id);
+      check(
+        profile &&
+          profile.clerkUserId === row.clerkUserId &&
+          profile.status === row.status &&
+          row.status !== "DELETED" &&
+          clerkId.test(row.clerkUserId) &&
+          historicalById.has(row.clerkUserId) &&
+          !sourceById.has(row.clerkUserId) &&
+          !target.users.some((u) => u.id === row.clerkUserId),
+        "Historical profile preservation evidence mismatch",
+      );
+      preservedById.set(row.id, row);
+    }
+  }
   const importedBySource = new Map();
   for (const user of target.users) {
     check(!sourceById.has(user.id), "Source/target user IDs overlap");
@@ -181,7 +231,18 @@ export function buildPlan({
     check(typeof profile.status === "string", "Profile status is missing");
     const sourceUser = sourceById.get(profile.clerkUserId);
     if (!sourceUser) {
-      if (clerkId.test(profile.clerkUserId) && profile.status !== "DELETED") {
+      if (preservedById.has(profile.id)) {
+        untouched.push({
+          profileId: profile.id,
+          clerkUserId: profile.clerkUserId,
+          status: profile.status,
+          historicalInstanceId: expectedHistoricalInstance,
+          reason: "verified_historical_account_preserved",
+        });
+      } else if (
+        clerkId.test(profile.clerkUserId) &&
+        profile.status !== "DELETED"
+      ) {
         blockers.push({
           profileId: profile.id,
           reason: "active_profile_missing_from_source",
@@ -234,6 +295,13 @@ export function buildPlan({
     targetCount: target.users.length,
     profileCount: database.profiles.length,
     profileFingerprint: profileFingerprint(database.profiles),
+    ...(preservedHistory
+      ? {
+          historicalEvidenceSha256: createHash("sha256")
+            .update(JSON.stringify(preservedHistory))
+            .digest("hex"),
+        }
+      : {}),
     mappings,
     blockers,
     untouched,

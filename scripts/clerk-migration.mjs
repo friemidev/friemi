@@ -12,6 +12,8 @@ const { values } = parseArgs({
     "source-instance": { type: "string" },
     "target-instance": { type: "string" },
     "database-project": { type: "string" },
+    "preserved-history": { type: "string" },
+    "historical-instance": { type: "string" },
     output: { type: "string" },
     commit: { type: "boolean", default: false },
     "maintenance-confirmed": { type: "boolean", default: false },
@@ -25,6 +27,7 @@ Required: --source source.json --target target.json --database profiles.json
   --source-instance ins_... --target-instance ins_... --database-project projectref
   --output /absolute/private/directory
 SQL defaults to ROLLBACK. --commit --maintenance-confirmed generates COMMIT SQL.
+Optional: --preserved-history evidence.json --historical-instance ins_...
 See docs/clerk-production-migration.md for export formats and release gates.`);
 } else {
   try {
@@ -58,6 +61,10 @@ See docs/clerk-production-migration.md for export formats and release gates.`);
       expectedSource: values["source-instance"],
       expectedTarget: values["target-instance"],
       expectedProject: values["database-project"],
+      preservedHistory: values["preserved-history"]
+        ? await readJson(values["preserved-history"])
+        : undefined,
+      expectedHistoricalInstance: values["historical-instance"],
     });
     process.umask(0o077);
     await mkdir(output, { recursive: false, mode: 0o700 });

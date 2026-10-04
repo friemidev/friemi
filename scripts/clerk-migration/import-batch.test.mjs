@@ -100,6 +100,16 @@ test("passwordless users stay passwordless", () => {
   assert.equal(payload.password_digest, undefined);
 });
 
+test("fresh API display names take precedence over the older password CSV", () => {
+  const input = fixture();
+  input.source.users[0].first_name = "Updated";
+  input.source.users[0].last_name = "Name";
+  const payload = buildImportBatch(input).users[0].payload;
+  assert.equal(payload.first_name, "Updated");
+  assert.equal(payload.last_name, "Name");
+  assert.equal(payload.password_digest, input.csvRows[0].password_digest);
+});
+
 for (const [name, mutate] of [
   ["wrong source", (i) => (i.expectedSource = "ins_other")],
   ["same instance", (i) => (i.expectedTarget = i.expectedSource)],
@@ -133,7 +143,7 @@ for (const [name, mutate] of [
     "inconsistent password",
     (i) => (i.source.users[0].password_enabled = false),
   ],
-  ["changed name", (i) => (i.csvRows[0].first_name = "Changed")],
+  ["changed login name", (i) => (i.csvRows[0].username = "Changed")],
   ["missing verification state", (i) => delete i.source.users[0].banned],
   ["ban", (i) => (i.source.users[0].banned = true)],
   ["lock", (i) => (i.source.users[0].locked = true)],

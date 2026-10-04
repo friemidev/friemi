@@ -196,6 +196,98 @@ test("active profile missing from export blocks release", () => {
   );
 });
 
+function historicalFixture() {
+  const input = fixture();
+  const profile = {
+    id: "legacy",
+    clerkUserId: "user_legacy",
+    status: "ACTIVE",
+  };
+  input.database.profiles.push(profile);
+  input.expectedHistoricalInstance = "ins_historical";
+  input.preservedHistory = {
+    projectRef: input.expectedProject,
+    sourceInstanceId: input.expectedSource,
+    targetInstanceId: input.expectedTarget,
+    instanceId: "ins_historical",
+    totalCount: 1,
+    users: [{ id: "user_legacy" }],
+    preservedProfiles: [structuredClone(profile)],
+  };
+  return input;
+}
+
+test("explicit historical evidence preserves an exact existing binding", () => {
+  const plan = buildPlan(historicalFixture());
+  assert.equal(plan.blockers.length, 0);
+  assert.equal(plan.mappings.length, 1);
+  assert.deepEqual(plan.untouched, [
+    {
+      profileId: "legacy",
+      clerkUserId: "user_legacy",
+      status: "ACTIVE",
+      historicalInstanceId: "ins_historical",
+      reason: "verified_historical_account_preserved",
+    },
+  ]);
+  assert.match(plan.historicalEvidenceSha256, /^[a-f0-9]{64}$/);
+  assert.doesNotMatch(buildSql(plan), /user_legacy/);
+});
+
+for (const [name, mutate] of [
+  ["missing instance confirmation", (i) => delete i.expectedHistoricalInstance],
+  ["missing evidence", (i) => delete i.preservedHistory],
+  ["wrong project", (i) => (i.preservedHistory.projectRef = "different")],
+  ["wrong source", (i) => (i.preservedHistory.sourceInstanceId = "ins_other")],
+  ["wrong target", (i) => (i.preservedHistory.targetInstanceId = "ins_other")],
+  [
+    "wrong historical instance",
+    (i) => (i.preservedHistory.instanceId = "ins_other"),
+  ],
+  ["partial history", (i) => i.preservedHistory.totalCount++],
+  [
+    "unknown historical identity",
+    (i) => (i.preservedHistory.users[0].id = "user_unknown"),
+  ],
+  [
+    "changed Clerk binding",
+    (i) => (i.database.profiles[1].clerkUserId = "user_changed"),
+  ],
+  ["changed status", (i) => (i.database.profiles[1].status = "DELETED")],
+  [
+    "duplicate preservation",
+    (i) =>
+      i.preservedHistory.preservedProfiles.push(
+        i.preservedHistory.preservedProfiles[0],
+      ),
+  ],
+  [
+    "current source exemption",
+    (i) => {
+      i.preservedHistory.preservedProfiles = [i.database.profiles[0]];
+      i.preservedHistory.users[0].id = i.source.users[0].id;
+    },
+  ],
+]) {
+  test(`rejects historical preservation with ${name}`, () => {
+    const input = historicalFixture();
+    mutate(input);
+    assert.throws(() => buildPlan(input));
+  });
+}
+
+test("historical evidence is not a blanket exemption for other missing users", () => {
+  const input = historicalFixture();
+  input.database.profiles.push({
+    id: "unknown",
+    clerkUserId: "user_unknown",
+    status: "ACTIVE",
+  });
+  assert.deepEqual(buildPlan(input).blockers, [
+    { profileId: "unknown", reason: "active_profile_missing_from_source" },
+  ]);
+});
+
 test("source user without a business profile cannot be silently dropped", () => {
   const input = fixture();
   const other = structuredClone(input.source.users[0]);

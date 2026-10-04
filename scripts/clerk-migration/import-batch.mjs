@@ -101,9 +101,9 @@ export function buildImportBatch({
     ]) {
       check(row[field] === "", `CSV ${field} requires separate review`);
     }
-    for (const field of ["first_name", "last_name", "username"]) {
-      check(row[field] === (user[field] ?? ""), `CSV ${field} changed`);
-    }
+    // Display names may change after the password export; use the fresh API names.
+    // Login identifiers must still match the credential export exactly.
+    check(row.username === (user.username ?? ""), "CSV username changed");
     const normalizedEmail = email.email_address.toLowerCase();
     check(!emails.has(normalizedEmail), "Duplicate email identity");
     emails.add(normalizedEmail);
@@ -144,6 +144,7 @@ export function buildImportBatch({
       username: user.username ?? undefined,
       external_id: user.external_id ?? undefined,
       locale: user.locale ?? undefined,
+      timezone: user.timezone ?? undefined,
       created_at: new Date(user.created_at).toISOString(),
       public_metadata: structuredClone(user.public_metadata),
       private_metadata: {

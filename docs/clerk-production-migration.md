@@ -2,10 +2,12 @@
 
 ## Status (2026-10-04)
 
-Preparation and authorized DNS setup only. No production Clerk key switch, user
-import or database identity update has been performed by this task. The five
-Production DNS records have now been saved and verified. Do not deploy a new Clerk
-publishable key on its own.
+Production account pre-import and isolated database rehearsal are complete.
+All 100 source accounts now exist in the verified Production Clerk instance.
+No live Vercel Clerk key switch or production database identity update has been
+performed. The five Production DNS records are verified and certificates issued.
+Do not deploy a new Clerk publishable key on its own: login configuration,
+real-device verification and controlled cutover gates remain open.
 
 - Branch: `codex/clerk-production-migration`, based on `origin/dev` at `9aaf563`.
 - Source application: `app_3FX8OBLdQ6eEf8D0Zdv3ZOwgHve`.
@@ -46,9 +48,12 @@ Verified results:
   Twenty other ACTIVE Clerk-style IDs are absent from the current instance.
   All twenty were subsequently matched by exact ID in the older 35-user instance
   used by the local environment. Preserve these historical profiles and their
-  bindings; do not merge by email or remove them. The planner intentionally still
-  blocks them pending an explicit audited preserve-only path. Do not edit blockers
-  out of its output. All original 127 profiles remain unchanged.
+  bindings; do not merge by email or remove them. An explicit preserve-only
+  manifest now checks exact profile ID, Clerk ID and status against a complete
+  historical instance export (`ins_3EAUJC22NU5eaaujYY3L1ISB6Hf`). The verified plan
+  maps 100 accounts, preserves 27 profiles and has zero mapping blockers. Other
+  missing active profiles still block SQL generation. All original 127 live
+  profile bindings and statuses were re-read and confirmed unchanged after import.
 - PostgreSQL version is 17.6. A fresh full custom-format dump was taken at
   `2026-10-04T20:27:17Z` (10,122,000 bytes). Its TOC has 1,320 entries. Restore
   succeeded with `--exit-on-error` into a disposable, network-isolated Supabase
@@ -56,31 +61,57 @@ Verified results:
   exact original profile IDs/Clerk bindings/statuses, and no unvalidated public
   constraints. The disposable container was then removed. The private archive,
   SHA-256 and restore report remain outside Git. This verifies database recovery,
-  not the as-yet-unavailable real Production identity remapping.
+  and the new real Production identity map was subsequently rehearsed separately.
 - Offline import preparation passed for all 100 users: 21 bcrypt digests,
   53 preserved native external IDs and 36 source Clerk avatar URLs. No create-user
-  API calls were made. The prepared batch contains sensitive data and is private.
+  API calls were initially made by preparation alone. The subsequent executable
+  import completed at `2026-10-04T21:22:42Z`: 100 target accounts, 21 password-enabled
+  accounts, 53 preserved native external IDs and all 36 source avatars uploaded to
+  new target image URLs. Primary/verified identifiers, native IDs, names, timezone,
+  metadata, restrictions and migration markers were checked against the fresh
+  source snapshot before and after import. Production webhook endpoints were
+  confirmed empty in the dashboard before any import writes.
+- The exact 100-account map was applied to a full production backup restored in a
+  network-isolated Supabase PostgreSQL 17 container. Default rollback, committed
+  forward migration, idempotent retry and reverse rollback all passed. Row counts
+  and hashes for all 96 public tables (excluding only `UserProfile.clerkUserId`)
+  stayed identical. All 27 unmapped profiles were untouched. The container was
+  removed; this did not execute migration SQL against production.
 - Production SSO connections still show `Setup required` for Google and Apple.
   Among three source web-Apple users, one uses a private relay email and does not
   have a native `apple:` binding. Native login alone is not adequate evidence that
-  this person's existing account will remain accessible after cutover.
+  this person's existing account will remain accessible after cutover. The source
+  dashboard confirms both providers use shared Development credentials. For the
+  relay-only Apple account, changing Apple developer credentials may change the
+  provider subject and relay address. Resolve this with an authenticated account
+  linking/recovery path and an actual login test; never guess by display name or
+  treat a newly supplied email address as proof of ownership.
+- Production Supabase's Third-Party Auth page currently has no providers. Adding
+  the Production Clerk issuer and enabling the corresponding Clerk integration
+  requires confirmation; the form is open but has not been submitted. Private
+  drawing Realtime uses the ordinary Clerk session token, not a legacy Supabase
+  JWT template. Existing public revision broadcasts are not proof of private
+  channel authorization.
+- Production environment inventory has no `ADMIN_CLERK_USER_IDS`, `ADMIN_EMAILS`
+  or Clerk webhook signing secret. Preserve database roles and copied metadata;
+  do not assume a webhook endpoint is configured just because its route exists.
 
 The user explicitly approved saving the existing Production key locally and
 adding the five Clerk CNAMEs. DNS setup is complete; do not ask for the same
 authorization again or create duplicate records.
 
-| DNS-only CNAME | Target |
-| --- | --- |
-| `clerk.friemi.com` | `frontend-api.clerk.services` |
-| `accounts.friemi.com` | `accounts.clerk.services` |
-| `clkmail.friemi.com` | `mail.o3nd9g81xzvg.clerk.services` |
-| `clk._domainkey.friemi.com` | `dkim1.o3nd9g81xzvg.clerk.services` |
+| DNS-only CNAME               | Target                              |
+| ---------------------------- | ----------------------------------- |
+| `clerk.friemi.com`           | `frontend-api.clerk.services`       |
+| `accounts.friemi.com`        | `accounts.clerk.services`           |
+| `clkmail.friemi.com`         | `mail.o3nd9g81xzvg.clerk.services`  |
+| `clk._domainkey.friemi.com`  | `dkim1.o3nd9g81xzvg.clerk.services` |
 | `clk2._domainkey.friemi.com` | `dkim2.o3nd9g81xzvg.clerk.services` |
 
 All five have Auto TTL and resolve correctly. Cloudflare now has nine records;
 the original apex, www and two Vercel verification records were left unchanged.
 Clerk reports Frontend API Verified, Account portal Verified and Email 3/3
-Verified. SSL certificates were still Issuing at this checkpoint. The public
+Verified. SSL certificates now show Issued. The public
 `https://clerk.friemi.com/.well-known/jwks.json` returned HTTP 200 with one public
 key and normal TLS verification. The account portal had valid TLS but still
 returned Cloudflare HTTP 403 (`DNS points to prohibited IP`) during provisioning.
@@ -88,15 +119,11 @@ Do not interpret DNS verification as a successful account-portal/login test;
 recheck provider provisioning before cutover, without disabling TLS checks or
 changing the approved DNS-only targets to work around the error.
 
-Key handoff remains: the existing Production secret was successfully read from
-the authorized dashboard without displaying it in tool output, but Chrome blocked
-submission to a one-time loopback-only private file receiver with
-`ERR_BLOCKED_BY_CLIENT`. The restriction was not bypassed. The receiver was stopped,
-its tab and temporary script removed, and the in-memory key cleared. The private
-`target-clerk.env` still has an empty secret; the user has been asked to paste the
-existing key into that local file, not chat. Do not claim it was saved or that the
-target Backend API was verified. Google web OAuth and Apple Developer configuration
-remain additional release gates, not optional follow-ups.
+The user saved the existing Production secret in the private `target-clerk.env`
+file (`0600`). Backend API `/instance` and domain checks verified the exact target
+instance, Production environment and `clerk.friemi.com` domain. The former local
+receiver was removed without bypassing Chrome's restriction. No key was logged or
+committed. Google web OAuth and Apple Developer configuration remain release gates.
 
 ## Isolated Vercel CLI
 
@@ -143,13 +170,14 @@ for migration checks only; no environment values or deployments were updated.
 - [x] Download, secure and validate the complete source CSV, including password
       hash/hasher for users with passwords. Obtain complete source Backend API JSON
       for verification states, native external IDs, metadata and account restrictions.
-- [ ] Verify key-to-instance identity and user count for both instances. A key
+- [x] Verify key-to-instance identity and user count for both instances. A key
       prefix (`sk_test_` / `sk_live_`) by itself is not sufficient.
 - [x] Take a fresh production dump; verify `pg_restore --list` and test recovery
       in an isolated database. Do not rely on a dump made before other live changes.
 - [x] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
       Complete DNS verification in Clerk.
-- [ ] Verify TLS certificates have finished issuing for both Clerk subdomains.
+- [x] Verify TLS certificates have finished issuing for both Clerk subdomains.
+- [ ] Resolve the Account Portal's HTTP 403 and verify actual sign-in rendering.
 - [ ] Configure Google Production web OAuth with matching consent/redirect URLs;
       preserve the existing iOS OAuth client. Test actual Google account linking.
 - [ ] Verify native Apple sign-in and existing relay-email users. The Apple
@@ -159,13 +187,14 @@ for migration checks only; no environment values or deployments were updated.
 - [ ] Match all enabled login methods, signup restrictions, metadata, administrator
       access and redirect allowlists. Handle MFA/passkeys or other unsupported factors
       separately; do not silently remove them.
-- [ ] Import users into Production idempotently, preserving password hashes,
+- [x] Import users into Production idempotently, preserving password hashes,
       primary/verified identifiers, native external IDs and ban/lock states. Recover
       interrupted imports using exact migration markers, not email-only matching.
       Keep Production webhook delivery disabled during import to avoid duplicate
       `UserProfile` rows and welcome rewards.
-- [ ] Compare imported accounts against source. Password-enabled flags are only a
-      sanity check, not proof that a password works. Test a consenting test account
+- [x] Compare imported accounts and uploaded avatars against the fresh source.
+- [ ] Password-enabled flags are only a sanity check, not proof that a password
+      works. Test a consenting test account
       with its original password and test native/web OAuth on real devices.
 - [ ] Inspect actual database policies and column types before updating any
       non-Prisma auth references. The private drawing Realtime policy compares JWT
@@ -173,8 +202,9 @@ for migration checks only; no environment values or deployments were updated.
       Clerk issuer and ensure `role: authenticated`; test private Realtime access.
 - [ ] Inventory `ADMIN_CLERK_USER_IDS`, webhooks, signing secrets, mobile embedded
       keys and any other user-ID allowlists. Do not copy Development secrets to live.
-- [ ] Rehearse mapping and rollback on an isolated production restore. Run the
-      generated SQL with its default `ROLLBACK` on production as a final check.
+- [x] Rehearse mapping and rollback on an isolated full production restore.
+- [ ] Run the generated SQL with its default `ROLLBACK` on production as a final
+      check during controlled cutover, not while login/profile writes are active.
 - [ ] Arrange a short controlled cutover. Stop signups, profile writes and old/new
       webhook delivery, drain in-flight requests and reconcile source changes since
       export. Take a final snapshot. Old deployments must not write old Clerk IDs
@@ -200,6 +230,15 @@ instance/project IDs and rejects partial exports, identity collisions, changed
 native IDs, verification/password/ban/lock discrepancies, or missing mappings.
 Unresolved active profiles stop SQL generation. It never outputs addresses or
 credentials to stdout and never imports or deletes users.
+
+Historical profiles can be explicitly preserved with `--preserved-history` and
+`--historical-instance`. The private evidence envelope includes the complete
+historical `instanceId`, `totalCount`, `users`, the expected `projectRef`,
+`sourceInstanceId`, `targetInstanceId`, and exact `preservedProfiles` rows
+(`id`, `clerkUserId`, `status`). This is a preserve-only exception, never a mapping
+authority. Current source accounts, changed bindings/statuses, incomplete exports,
+duplicate rows and mismatched scopes are rejected. Unlisted missing users still
+block the plan. The evidence SHA-256 is saved in the plan for audit traceability.
 
 Input envelopes (private local files):
 
@@ -299,16 +338,64 @@ upload the source images to the target before enabling profile synchronization,
 or Clerk-managed avatars could be overwritten with target defaults. OAuth external
 account connections and active sessions are not imported by these payloads.
 
-This is not an executable bulk-import client. Before actual import, verify the
-target key/instance, current target accounts and disabled target webhooks; add
-idempotent checkpointing and exact marker-based resumption. Refresh the exports
-before cutover, account for password changes since CSV export, and test all login
-methods. A payload passing validation is not proof of successful account migration.
+## Executable Import And Rehearsal
 
-Validation completed: 59 unit tests and one real local PostgreSQL integration test
-(60 passing), plus the separate full-production-dump recovery test. No real
-Production account import, password/OAuth login rehearsal, or production database
-write has been performed.
+`execute-import.mjs` defaults to read-only dry run. Actual import requires
+`--apply --webhooks-confirmed-empty`. It authenticates both instance identities,
+checks source drift, rejects unrelated target accounts and matches exact private
+markers for resumption. A private manifest, exclusive lock, per-account journal
+and verified target snapshots support recovery. It never automatically retries an
+ambiguous create call. Avatar requests cannot include the Clerk API credential.
+
+```bash
+node scripts/clerk-migration/execute-import.mjs \
+  --batch /private/import-batch.json --source /private/source-users-api.json \
+  --source-env /private/source.env --target-env /private/target.env \
+  --output /private/import-run --limit 1
+```
+
+`rehearse-restore.mjs` restores an explicit archive into its own disposable Docker
+container with `--network none`, no exposed ports and temporary storage. It uses
+the installed official Supabase PostgreSQL image, waits for bootstrap completion,
+then tests the actual map and reverse map. Only this isolated copy uses COMMIT.
+
+```bash
+node scripts/clerk-migration/rehearse-restore.mjs \
+  --archive /private/production.dump --plan /private/plan.json \
+  --database /private/profiles.json --report /private/rehearsal.json
+```
+
+Validation completed: 97 unit tests and one real local PostgreSQL integration test
+(98 passing), plus the separate full-production-dump restore and real 100-account
+mapping rehearsal. No password/OAuth end-to-end login test or production database
+identity write has been performed. Refresh source data again before cutover;
+password changes need a fresh CSV export, not a forced reuse of the old hash.
+
+## OAuth Handoff
+
+The Google Cloud `friemi` project currently has only the existing Friemi iOS
+client. Do not change or delete that client. A separate Web client must use
+`https://clerk.friemi.com/v1/oauth_callback`, with HTTPS origins for `friemi.com`
+and `www.friemi.com`, and only basic OpenID/email/profile scopes. Its consent
+configuration is incomplete and its audience is still Testing. Creation and
+credential transmission to Clerk are awaiting user confirmation; nothing has
+been submitted. Never leave the production release dependent on a test-user cap.
+
+The programmer who owns the existing Apple Developer team must configure the
+same app's Sign in with Apple capability and provide Services ID, Team ID, Key ID
+and its authorized private key securely, not through chat or Git. The exact
+Production dashboard values are:
+
+- Domain: `clerk.friemi.com`.
+- Return URL: `https://clerk.friemi.com/v1/oauth_callback`.
+- Private Relay email source: `bounces+110056354@clkmail.friemi.com`.
+- Existing native bundle: `com.friemi.app`; do not create a replacement app or
+  change developer team as part of this task.
+
+Registering a new relay sender does not prove old shared-credential relay
+addresses can receive mail. Verify the identified relay-only account separately
+before releasing, using authenticated ownership evidence rather than email/name
+matching. Keep the Development instance intact until these checks pass.
 
 ## References
 
