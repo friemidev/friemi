@@ -43,10 +43,32 @@ Verified results:
   53 native Apple/Google `external_id` values, no banned/locked/MFA-enabled users.
 - Production database: all 100 source IDs have exact existing profile matches.
   Twenty other ACTIVE Clerk-style IDs are absent from the current instance.
-  Preserve and investigate these historical profiles; do not merge by email or
-  remove them. All original 127 profiles remain unchanged.
-- PostgreSQL version is 17.6. A fresh full dump/restore rehearsal is still pending;
-  a read-only identity snapshot is not a replacement for that backup.
+  All twenty were subsequently matched by exact ID in the older 35-user instance
+  used by the local environment. Preserve these historical profiles and their
+  bindings; do not merge by email or remove them. The planner intentionally still
+  blocks them pending an explicit audited preserve-only path. Do not edit blockers
+  out of its output. All original 127 profiles remain unchanged.
+- PostgreSQL version is 17.6. A fresh full custom-format dump was taken at
+  `2026-10-04T20:27:17Z` (10,122,000 bytes). Its TOC has 1,320 entries. Restore
+  succeeded with `--exit-on-error` into a disposable, network-isolated Supabase
+  PostgreSQL 17 container. The restored database has 96 public tables, all 127
+  exact original profile IDs/Clerk bindings/statuses, and no unvalidated public
+  constraints. The disposable container was then removed. The private archive,
+  SHA-256 and restore report remain outside Git. This verifies database recovery,
+  not the as-yet-unavailable real Production identity remapping.
+- Offline import preparation passed for all 100 users: 21 bcrypt digests,
+  53 preserved native external IDs and 36 source Clerk avatar URLs. No create-user
+  API calls were made. The prepared batch contains sensitive data and is private.
+- Production SSO connections still show `Setup required` for Google and Apple.
+  Among three source web-Apple users, one uses a private relay email and does not
+  have a native `apple:` binding. Native login alone is not adequate evidence that
+  this person's existing account will remain accessible after cutover.
+
+Current user handoffs: save the existing Production secret key in the private
+`target-clerk.env` (not chat or Git), and confirm the five explicitly listed Clerk
+CNAME additions. Neither was completed as of this checkpoint. The target key file
+contains only the public key and an empty secret key. Google web OAuth and Apple
+Developer configuration are additional release gates, not optional follow-ups.
 
 ## Isolated Vercel CLI
 
@@ -95,7 +117,7 @@ for migration checks only; no environment values or deployments were updated.
       for verification states, native external IDs, metadata and account restrictions.
 - [ ] Verify key-to-instance identity and user count for both instances. A key
       prefix (`sk_test_` / `sk_live_`) by itself is not sufficient.
-- [ ] Take a fresh production dump; verify `pg_restore --list` and test recovery
+- [x] Take a fresh production dump; verify `pg_restore --list` and test recovery
       in an isolated database. Do not rely on a dump made before other live changes.
 - [ ] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
       Complete DNS and TLS verification in Clerk.
@@ -221,9 +243,43 @@ metadata comparison, key/issuer configuration, a verified backup or write gating
 Its fingerprint is for audit comparison, not a signature or database identity
 proof. Do not hand-edit blockers out of a plan.
 
-Validation completed: 31 planner unit tests and one real local PostgreSQL
-integration test (32 passing). No real Production account import, password/OAuth
-login rehearsal, or production database write has been performed.
+## Offline Import Preparation
+
+The preparation command is local only: it does not accept API keys, contact Clerk,
+create accounts, send email or execute database writes. It uses Python 3's standard
+CSV parser and checks the entire CSV against the raw source API snapshot before
+writing anything. It rejects duplicate/incomplete exports, changed identities,
+unverified/additional identifiers, unsupported MFA/passkeys/SSO, restricted
+accounts, inconsistent password state and reserved metadata marker collisions.
+This intentionally narrow importer supports the audited source (one verified email
+per account); other source shapes require separately reviewed migration logic.
+
+```bash
+node scripts/clerk-migration/prepare-import.mjs \
+  --source /private/source-users-api.json --csv /private/source-users.csv \
+  --source-instance ins_SOURCE --target-instance ins_TARGET \
+  --output /absolute/private/new-import-directory
+node --test scripts/clerk-migration/import-batch.test.mjs scripts/clerk-migration/plan.test.mjs
+```
+
+The new output directory is `0700`, and `import-batch.json` is `0600`. It contains
+password digests and user data; never commit, print or attach it to a task. Payloads
+preserve the native `external_id` and put the old identity in private metadata.
+Avatar URLs are a separate required follow-up, not create-user payload fields:
+upload the source images to the target before enabling profile synchronization,
+or Clerk-managed avatars could be overwritten with target defaults. OAuth external
+account connections and active sessions are not imported by these payloads.
+
+This is not an executable bulk-import client. Before actual import, verify the
+target key/instance, current target accounts and disabled target webhooks; add
+idempotent checkpointing and exact marker-based resumption. Refresh the exports
+before cutover, account for password changes since CSV export, and test all login
+methods. A payload passing validation is not proof of successful account migration.
+
+Validation completed: 59 unit tests and one real local PostgreSQL integration test
+(60 passing), plus the separate full-production-dump recovery test. No real
+Production account import, password/OAuth login rehearsal, or production database
+write has been performed.
 
 ## References
 
