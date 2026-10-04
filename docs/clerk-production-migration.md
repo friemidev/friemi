@@ -2,8 +2,9 @@
 
 ## Status (2026-10-04)
 
-Preparation only. No production Clerk key switch, user import, database identity
-update, or DNS save has been performed by this task. Do not deploy a new Clerk
+Preparation and authorized DNS setup only. No production Clerk key switch, user
+import or database identity update has been performed by this task. The five
+Production DNS records have now been saved and verified. Do not deploy a new Clerk
 publishable key on its own.
 
 - Branch: `codex/clerk-production-migration`, based on `origin/dev` at `9aaf563`.
@@ -64,11 +65,38 @@ Verified results:
   have a native `apple:` binding. Native login alone is not adequate evidence that
   this person's existing account will remain accessible after cutover.
 
-Current user handoffs: save the existing Production secret key in the private
-`target-clerk.env` (not chat or Git), and confirm the five explicitly listed Clerk
-CNAME additions. Neither was completed as of this checkpoint. The target key file
-contains only the public key and an empty secret key. Google web OAuth and Apple
-Developer configuration are additional release gates, not optional follow-ups.
+The user explicitly approved saving the existing Production key locally and
+adding the five Clerk CNAMEs. DNS setup is complete; do not ask for the same
+authorization again or create duplicate records.
+
+| DNS-only CNAME | Target |
+| --- | --- |
+| `clerk.friemi.com` | `frontend-api.clerk.services` |
+| `accounts.friemi.com` | `accounts.clerk.services` |
+| `clkmail.friemi.com` | `mail.o3nd9g81xzvg.clerk.services` |
+| `clk._domainkey.friemi.com` | `dkim1.o3nd9g81xzvg.clerk.services` |
+| `clk2._domainkey.friemi.com` | `dkim2.o3nd9g81xzvg.clerk.services` |
+
+All five have Auto TTL and resolve correctly. Cloudflare now has nine records;
+the original apex, www and two Vercel verification records were left unchanged.
+Clerk reports Frontend API Verified, Account portal Verified and Email 3/3
+Verified. SSL certificates were still Issuing at this checkpoint. The public
+`https://clerk.friemi.com/.well-known/jwks.json` returned HTTP 200 with one public
+key and normal TLS verification. The account portal had valid TLS but still
+returned Cloudflare HTTP 403 (`DNS points to prohibited IP`) during provisioning.
+Do not interpret DNS verification as a successful account-portal/login test;
+recheck provider provisioning before cutover, without disabling TLS checks or
+changing the approved DNS-only targets to work around the error.
+
+Key handoff remains: the existing Production secret was successfully read from
+the authorized dashboard without displaying it in tool output, but Chrome blocked
+submission to a one-time loopback-only private file receiver with
+`ERR_BLOCKED_BY_CLIENT`. The restriction was not bypassed. The receiver was stopped,
+its tab and temporary script removed, and the in-memory key cleared. The private
+`target-clerk.env` still has an empty secret; the user has been asked to paste the
+existing key into that local file, not chat. Do not claim it was saved or that the
+target Backend API was verified. Google web OAuth and Apple Developer configuration
+remain additional release gates, not optional follow-ups.
 
 ## Isolated Vercel CLI
 
@@ -119,8 +147,9 @@ for migration checks only; no environment values or deployments were updated.
       prefix (`sk_test_` / `sk_live_`) by itself is not sufficient.
 - [x] Take a fresh production dump; verify `pg_restore --list` and test recovery
       in an isolated database. Do not rely on a dump made before other live changes.
-- [ ] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
-      Complete DNS and TLS verification in Clerk.
+- [x] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
+      Complete DNS verification in Clerk.
+- [ ] Verify TLS certificates have finished issuing for both Clerk subdomains.
 - [ ] Configure Google Production web OAuth with matching consent/redirect URLs;
       preserve the existing iOS OAuth client. Test actual Google account linking.
 - [ ] Verify native Apple sign-in and existing relay-email users. The Apple
