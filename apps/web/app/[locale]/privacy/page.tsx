@@ -31,12 +31,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "隐私与数据说明",
     description:
       "Friemi 是面向海外中文用户的活动发现与组局工具。我们只在提供账号、活动、报名、消息、通知、安全和支持服务所需的范围内处理数据。",
-    updatedAt: "最后更新：2026-07-08",
+    updatedAt: "最后更新：2026-10-05",
     contactLabel: "隐私与账号删除联系邮箱",
-    safetyLabel: "查看社区安全说明",
+    safetyLabel: "儿童安全标准与社区准则",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "返回首页",
     sections: [
+      {
+        title: "儿童安全",
+        body: [
+          "Friemi 严格禁止儿童性虐待与性剥削（CSAE），以及创建、传播或分享儿童性虐待材料（CSAM）。举报方式、处置规则和联系人见本页链接的儿童安全标准与社区准则。",
+        ],
+      },
       {
         title: "我们收集的信息",
         body: [
@@ -93,12 +99,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "Privacy and data",
     description:
       "Friemi helps overseas Chinese-speaking users discover activities, start group plans, and communicate around events. We process data only to provide account, event, messaging, notification, safety, analytics, and support features.",
-    updatedAt: "Last updated: 2026-07-08",
+    updatedAt: "Last updated: 2026-10-05",
     contactLabel: "Privacy and account deletion contact",
-    safetyLabel: "View Community Safety",
+    safetyLabel: "Child Safety and Community Standards",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Back home",
     sections: [
+      {
+        title: "Child safety",
+        body: [
+          "Friemi strictly prohibits Child Sexual Abuse and Exploitation (CSAE) and the creation, distribution or sharing of Child Sexual Abuse Material (CSAM). Reporting channels, enforcement procedures and contact information are set out in the Child Safety and Community Standards linked on this page.",
+        ],
+      },
       {
         title: "Information we collect",
         body: [
@@ -136,12 +148,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "Confidentialite et donnees",
     description:
       "Friemi aide les utilisateurs sinophones a l'etranger a decouvrir des activites, creer des sorties et communiquer autour des evenements. Nous traitons les donnees necessaires au compte, aux activites, aux messages, aux notifications, a la securite, a l'analyse et au support.",
-    updatedAt: "Derniere mise a jour : 2026-07-08",
+    updatedAt: "Derniere mise a jour : 2026-10-05",
     contactLabel: "Contact confidentialite et suppression de compte",
-    safetyLabel: "Voir la securite communautaire",
+    safetyLabel: "Protection des enfants et règles communautaires",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Retour a l'accueil",
     sections: [
+      {
+        title: "Protection des enfants",
+        body: [
+          "Friemi interdit strictement les abus et l’exploitation sexuels des enfants (CSAE), ainsi que la création, la diffusion ou le partage de contenus d’abus sexuels sur enfants (CSAM). Les moyens de signalement, les mesures prises et les coordonnées du contact figurent dans les règles de protection des enfants et de la communauté accessibles depuis cette page.",
+        ],
+      },
       {
         title: "Informations collectees",
         body: [
@@ -231,7 +249,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
             </a>
             <Link
               className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
-              href={withLocale(locale, "/safety")}
+              href={withLocale(locale, "/safety#child-safety")}
             >
               <FileWarning className="h-4 w-4" aria-hidden="true" />
               {copy.safetyLabel}

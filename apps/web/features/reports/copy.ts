@@ -14,7 +14,8 @@ const reportCopy = {
     reasonLabel: "原因",
     descriptionLabel: "补充说明",
     descriptionPlaceholder: "可选，简单说明发生了什么",
-    descriptionHint: "请不要填写手机号、地址等隐私信息。",
+    descriptionHint:
+      "儿童安全问题请选择“安全风险”并补充说明。请勿转发疑似儿童性虐待材料或填写无关隐私信息。",
     submit: "提交举报",
     submitting: "提交中...",
     cancel: "取消",
@@ -41,7 +42,7 @@ const reportCopy = {
       HARASSMENT: "骚扰或攻击",
       INAPPROPRIATE_CONTENT: "不适当内容",
       MISLEADING_INFORMATION: "虚假或误导信息",
-      SAFETY_CONCERN: "安全风险",
+      SAFETY_CONCERN: "安全风险（含儿童安全）",
       OTHER: "其他",
     },
     statuses: {
@@ -111,7 +112,7 @@ const reportCopy = {
     descriptionLabel: "Détails",
     descriptionPlaceholder: "Optional. Briefly describe what happened",
     descriptionHint:
-      "Please do not include phone numbers, addresses, or private details.",
+      "For child safety issues, choose Safety concern and describe the issue. Do not forward suspected CSAM or include unrelated private details.",
     submit: "Submit report",
     submitting: "Submitting...",
     cancel: "Cancel",
@@ -138,7 +139,7 @@ const reportCopy = {
       HARASSMENT: "Harassment",
       INAPPROPRIATE_CONTENT: "Inappropriate content",
       MISLEADING_INFORMATION: "Misleading information",
-      SAFETY_CONCERN: "Safety concern",
+      SAFETY_CONCERN: "Safety concern (including child safety)",
       OTHER: "Other",
     },
     statuses: {
@@ -209,7 +210,7 @@ const reportCopy = {
     descriptionLabel: "Détails",
     descriptionPlaceholder: "Facultatif. Décrivez brièvement la situation",
     descriptionHint:
-      "N'ajoutez pas de téléphone, d'adresse ou d'informations privées.",
+      "Pour la sécurité des enfants, choisissez Risque de sécurité et décrivez le problème. Ne transmettez pas de CSAM présumés ni de données privées sans rapport.",
     submit: "Envoyer",
     submitting: "Envoi...",
     cancel: "Annuler",
@@ -236,7 +237,7 @@ const reportCopy = {
       HARASSMENT: "Harcèlement",
       INAPPROPRIATE_CONTENT: "Contenu inapproprié",
       MISLEADING_INFORMATION: "Information trompeuse",
-      SAFETY_CONCERN: "Risque de sécurité",
+      SAFETY_CONCERN: "Risque de sécurité (y compris des enfants)",
       OTHER: "Autre",
     },
     statuses: {
