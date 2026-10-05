@@ -29,6 +29,7 @@
     "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts"
   },
   "dependencies": {
+    "@capacitor/keyboard": "7.0.6",
     "@capacitor/push-notifications": "^7.0.7",
     "@capawesome/capacitor-badge": "^7.0.1",
     "@chill-club/shared": "file:../../packages/shared",

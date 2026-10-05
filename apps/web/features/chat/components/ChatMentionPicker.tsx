@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AtSign,
   Check,
   LoaderCircle,
   Search,
@@ -30,7 +29,6 @@ function getCopy(locale: string) {
       everyoneHint: "Réservé aux administrateurs et au créateur",
       failed: "Impossible de charger les membres.",
       loading: "Chargement des membres...",
-      open: "Mentionner un membre",
       search: "Rechercher un membre",
       title: "Mentionner",
     };
@@ -44,7 +42,6 @@ function getCopy(locale: string) {
       everyoneHint: "Admins and the creator only",
       failed: "Members could not be loaded.",
       loading: "Loading members...",
-      open: "Mention a member",
       search: "Search members",
       title: "Mention",
     };
@@ -57,7 +54,6 @@ function getCopy(locale: string) {
     everyoneHint: "仅创建者和管理员可用",
     failed: "成员加载失败，请稍后再试。",
     loading: "正在加载成员...",
-    open: "@群成员",
     search: "搜索群成员",
     title: "选择提醒的人",
   };
@@ -82,7 +78,6 @@ function MemberAvatar({ member }: { member: ChatMentionMember }) {
 }
 
 export function ChatMentionPicker({
-  disabled = false,
   locale,
   onOpenChange,
   onSelectEveryone,
@@ -92,7 +87,6 @@ export function ChatMentionPicker({
   scopeKind,
   selectedProfileIds,
 }: {
-  disabled?: boolean;
   locale: string;
   onOpenChange: (open: boolean) => void;
   onSelectEveryone: () => void;
@@ -196,22 +190,11 @@ export function ChatMentionPicker({
 
   return (
     <>
-      <button
-        aria-expanded={open}
-        aria-label={copy.open}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#156240] transition hover:bg-[#EEF5F0] active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
-        disabled={disabled}
-        onClick={() => onOpenChange(true)}
-        title={copy.open}
-        type="button"
-      >
-        <AtSign className="h-5 w-5" aria-hidden="true" />
-      </button>
-
       {open && mounted
         ? createPortal(
             <div
               aria-modal="true"
+              aria-label={copy.title}
               className="fixed inset-0 z-[130] flex items-end justify-center bg-[#111210]/38 px-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] sm:items-center sm:p-5"
               role="dialog"
             >
@@ -241,7 +224,7 @@ export function ChatMentionPicker({
                   <span className="sr-only">{copy.search}</span>
                   <input
                     autoFocus
-                    className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111210] outline-none placeholder:text-[#9A9E97]"
+                    className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[#111210] outline-none placeholder:text-[#9A9E97] sm:text-sm"
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={copy.search}
                     value={query}

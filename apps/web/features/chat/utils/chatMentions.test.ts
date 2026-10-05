@@ -5,6 +5,7 @@ import {
   getChatMentionMemberToken,
   hasChatMentionToken,
   normalizeChatMentionProfileIds,
+  shouldOpenChatMentionPicker,
 } from "./chatMentions";
 
 test("chat mention profile ids are trimmed and deduplicated", () => {
@@ -12,6 +13,21 @@ test("chat mention profile ids are trimmed and deduplicated", () => {
     normalizeChatMentionProfileIds([" alice ", "bob", "alice", ""]),
     ["alice", "bob"],
   );
+});
+
+test("typing @ opens the picker, including replacing selected text", () => {
+  assert.equal(shouldOpenChatMentionPicker("", "@", 1), true);
+  assert.equal(shouldOpenChatMentionPicker("Hi ", "Hi @", 4), true);
+  assert.equal(shouldOpenChatMentionPicker("Hi Alice", "Hi @", 4), true);
+  assert.equal(shouldOpenChatMentionPicker("Hello", "@Hello", 1), true);
+});
+
+test("editing around an existing @ does not reopen the picker", () => {
+  assert.equal(shouldOpenChatMentionPicker("@", "@", 1), false);
+  assert.equal(shouldOpenChatMentionPicker("@A", "@", 1), false);
+  assert.equal(shouldOpenChatMentionPicker("A@", "@", 0), false);
+  assert.equal(shouldOpenChatMentionPicker("@", "", 0), false);
+  assert.equal(shouldOpenChatMentionPicker("Hi", "Hi there", 8), false);
 });
 
 test("chat mention tokens preserve localized labels", () => {

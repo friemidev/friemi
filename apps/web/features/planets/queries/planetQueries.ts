@@ -182,8 +182,8 @@ export async function getPlanetChatPageData(
   const canManage =
     canViewChat &&
     (viewerMembership?.role === "OWNER" || viewerMembership?.role === "ADMIN");
-  const [messages, readState] = canViewChat
-    ? await Promise.all([
+  const messagesAndReadState = canViewChat
+    ? Promise.all([
         prisma.planetMessage.findMany({
           where: { planetId: planet.id },
           take: 40,
@@ -217,11 +217,11 @@ export async function getPlanetChatPageData(
           },
         }),
       ])
-    : [[], null];
+    : Promise.resolve([[], null] as const);
 
-  const [pendingMembers, approvedMembers] =
+  const members =
     canManage && viewerProfileId
-      ? await Promise.all([
+      ? Promise.all([
           prisma.planetMember.findMany({
             where: { planetId: planet.id, status: "PENDING" },
             orderBy: { joinedAt: "asc" },
@@ -241,7 +241,10 @@ export async function getPlanetChatPageData(
             },
           }),
         ])
-      : [[], []];
+      : Promise.resolve([[], []] as const);
+
+  const [[messages, readState], [pendingMembers, approvedMembers]] =
+    await Promise.all([messagesAndReadState, members]);
 
   return {
     ...planet,

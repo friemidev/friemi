@@ -307,7 +307,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "flex items-start gap-2",
+        "flex min-w-0 items-start gap-2",
         isMine ? "justify-end" : "justify-start",
       )}
     >
@@ -316,7 +316,7 @@ export function MessageBubble({
       <div
         aria-pressed={selectionMode && canDelete ? isSelected : undefined}
         className={cn(
-          "relative rounded-2xl text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+          "relative min-w-0 rounded-2xl text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
           actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
@@ -374,7 +374,7 @@ export function MessageBubble({
         {hasBody ? (
           <p
             className={cn(
-              "whitespace-pre-wrap break-words",
+              "whitespace-pre-wrap [overflow-wrap:anywhere]",
               hasImages && "px-1 pt-2",
             )}
           >

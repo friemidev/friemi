@@ -45,6 +45,8 @@ const config: CapacitorConfig = {
   webDir: "capacitor-www",
   plugins: {
     PushNotifications: pushNotifications,
+    // Resize the WebView once; the chat visualViewport guard uses that actual height.
+    Keyboard: { resize: "native" },
   },
   ...(isIOSCommand
     ? {
