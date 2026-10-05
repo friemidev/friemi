@@ -19,7 +19,7 @@
 
 ## 数据与审计
 
-上线前需依次执行 `20261003120000_add_now_invites`、`20261003180000_add_now_intent_window` 和 `20261004100000_now_connection_notifications` 迁移。当前连接的预览数据库尚无新表，因此正式首页在迁移前呈现真实空状态。开发环境可打开 `/zh-CN/dev/now-preview` 查看带示例泡泡的真实首页布局，并进入示例列表、详情；示例内容均有标记且不会写入数据库。该路由在非开发环境返回 404。
+2026-10-05 已在独立的预览数据库依次应用 `20261003120000_add_now_invites`、`20261003180000_add_now_intent_window` 和 `20261004100000_now_connection_notifications`，并将预览库里已执行的 `20261003100000_aa_participant_payment_method` 迁移及对应 Prisma 字段同步到 `codex/home-v2`。本次未对 Production 执行迁移。真实首页只展示数据库中的邀约；预览库没有邀约数据时，泡泡区呈真实空状态。本地开发和 `codex/home-v2` 的 Vercel Preview 可打开 `/zh-CN/dev/now-preview` 查看带示例泡泡的首页、列表和详情；示例内容有标记且不会写入数据库，其他部署环境不开放该入口。
 
 审计到期状态可打开 `/zh-CN/now/preview-drink?as=interested&expired=1`，转聚吧状态可打开 `/zh-CN/now/preview-game?as=interested&converted=1`；两种示例均可将 `as` 改为 `host`，未举手视角会显示 404 页面。开发预览中的倒计时示例均按默认 12 小时展示时长计算。
 
