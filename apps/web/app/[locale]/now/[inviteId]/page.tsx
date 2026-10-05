@@ -119,7 +119,10 @@ export default async function NowInvitePage({
       <div className="mx-auto max-w-[620px]">
         <div className="flex items-center justify-between">
           <Link
-            href={withLocale(locale, "/mobile-home")}
+            href={withLocale(
+              locale,
+              preview ? "/mobile-home?previewNow=1" : "/mobile-home",
+            )}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white shadow-sm"
             aria-label="Back"
           >

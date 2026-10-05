@@ -29,7 +29,10 @@ export default async function NewNowPage({ params, searchParams }: PageProps) {
     <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
       <div className="mx-auto max-w-[540px]">
         <Link
-          href={withLocale(locale, "/mobile-home")}
+          href={withLocale(
+            locale,
+            preview ? "/mobile-home?previewNow=1" : "/mobile-home",
+          )}
           aria-label={locale === "zh-CN" ? "返回首页" : "Back"}
           className="mb-5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white text-[#1E6248] shadow-sm"
         >

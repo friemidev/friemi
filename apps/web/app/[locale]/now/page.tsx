@@ -41,7 +41,10 @@ export default async function NowBrowsePage({
       <div className="mx-auto max-w-[640px]">
         <div className="flex items-center justify-between">
           <Link
-            href={withLocale(locale, "/mobile-home")}
+            href={withLocale(
+              locale,
+              preview ? "/mobile-home?previewNow=1" : "/mobile-home",
+            )}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white text-[#1E6248] shadow-sm"
             aria-label="Back"
           >
