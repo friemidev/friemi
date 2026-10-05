@@ -46,6 +46,7 @@ import {
 import { getNowHomeFeed } from "@/features/now/queries";
 import { getNowPreviewLabel, nowOpenCity } from "@/features/now/now";
 import { getNowPreviewInvites } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
@@ -452,8 +453,7 @@ export default async function MobileHomePage({
 }: MobileHomePageProps) {
   const [{ locale }, requestHeaders] = await Promise.all([params, headers()]);
   const query = (await searchParams) ?? {};
-  const isNowPreview =
-    process.env.NODE_ENV === "development" && query.previewNow === "1";
+  const isNowPreview = isNowPreviewEnabled() && query.previewNow === "1";
   const rawReferralCode = Array.isArray(query.ref) ? query.ref[0] : query.ref;
   const showIOSReferralBanner = Boolean(
     normalizeReferralCode(rawReferralCode) &&

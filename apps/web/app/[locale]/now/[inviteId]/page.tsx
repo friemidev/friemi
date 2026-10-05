@@ -26,6 +26,7 @@ import {
 import { selectNowInterestAction } from "@/features/now/actions";
 import { getNowInviteDetail } from "@/features/now/queries";
 import { getNowPreviewDetail } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
@@ -70,8 +71,7 @@ export default async function NowInvitePage({
 }: PageProps) {
   const { locale, inviteId } = await params;
   const query = (await searchParams) ?? {};
-  const preview =
-    process.env.NODE_ENV === "development" && inviteId.startsWith("preview-");
+  const preview = isNowPreviewEnabled() && inviteId.startsWith("preview-");
   const previewRole =
     query.as === "host" || query.as === "interested" ? query.as : "viewer";
   const previewExpired = preview && query.expired === "1";

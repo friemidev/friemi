@@ -6,6 +6,7 @@ import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { getNowInviteDetail } from "@/features/now/queries";
 import { getNowPreviewDetail } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { getNowPreviewLabel, getNowSuggestedStartAt } from "@/features/now/now";
 import { NowConvertForm } from "@/features/now/NowConvertForm";
 
@@ -22,8 +23,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function NowConvertPage({ params }: PageProps) {
   const { locale, inviteId } = await params;
-  const preview =
-    process.env.NODE_ENV === "development" && inviteId.startsWith("preview-");
+  const preview = isNowPreviewEnabled() && inviteId.startsWith("preview-");
   const profile = preview
     ? null
     : await ensureCurrentUserProfile(locale, `/now/${inviteId}/convert`);

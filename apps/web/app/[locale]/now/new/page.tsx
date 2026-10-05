@@ -5,6 +5,7 @@ import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { NowCreateForm } from "@/features/now/NowCreateForm";
 import { getNowCopy, getNowPreviewLabel, isNowKind } from "@/features/now/now";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function NewNowPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const { kind, previewNow } = await searchParams;
-  const preview = process.env.NODE_ENV === "development" && previewNow === "1";
+  const preview = isNowPreviewEnabled() && previewNow === "1";
   if (!preview) await ensureCurrentUserProfile(locale, "/now/new");
   const copy = getNowCopy(locale);
   return (

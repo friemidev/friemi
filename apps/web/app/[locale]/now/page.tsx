@@ -10,6 +10,7 @@ import {
 import { getNowBrowseFeed } from "@/features/now/queries";
 import { NowInviteRow } from "@/features/now/NowInviteRow";
 import { getNowPreviewRows } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 
 type PageProps = {
@@ -29,8 +30,7 @@ export default async function NowBrowsePage({
 }: PageProps) {
   const { locale } = await params;
   const query = (await searchParams) ?? {};
-  const preview =
-    process.env.NODE_ENV === "development" && query.previewNow === "1";
+  const preview = isNowPreviewEnabled() && query.previewNow === "1";
   const viewer = preview ? null : await getOptionalCurrentUserProfileSnapshot();
   const invites = preview
     ? getNowPreviewRows(Date.now())
