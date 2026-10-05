@@ -127,8 +127,12 @@ returned Cloudflare HTTP 403 (`DNS points to prohibited IP`) during provisioning
 Do not interpret DNS verification as a successful account-portal/login test;
 recheck provider provisioning before cutover, without disabling TLS checks or
 changing the approved DNS-only targets to work around the error.
-On October 5, `/sign-in` still returned HTTP 403 while the Frontend API JWKS
-returned HTTP 200. Google credential setup did not resolve this separate issue.
+On October 5, the command-line `/sign-in` check still returned HTTP 403 while the
+Frontend API JWKS returned HTTP 200. A subsequent real Chrome check successfully
+rendered `Sign in to Friemi`, Google/Apple buttons and the email input at the exact
+Production portal URL. Browser rendering is verified; do not treat the CLI-only
+403 as proof the portal is unavailable to users or disable security to bypass it.
+The precise reason for the CLI/browser difference has not been diagnosed.
 
 The user saved the existing Production secret in the private `target-clerk.env`
 file (`0600`). Backend API `/instance` and domain checks verified the exact target
@@ -188,7 +192,8 @@ for migration checks only; no environment values or deployments were updated.
 - [x] Add Clerk's five CNAMEs as DNS-only, leaving apex/www/Vercel records alone.
       Complete DNS verification in Clerk.
 - [x] Verify TLS certificates have finished issuing for both Clerk subdomains.
-- [ ] Resolve the Account Portal's HTTP 403 and verify actual sign-in rendering.
+- [x] Verify actual Production sign-in rendering in a real browser. The separate
+      command-line 403 persists; do not confuse it with a failed browser login.
 - [ ] Configure Google Production web OAuth with matching consent/redirect URLs;
       preserve the existing iOS OAuth client. Test actual Google account linking.
 - [ ] Verify native Apple sign-in and existing relay-email users. The Apple
@@ -391,17 +396,27 @@ and callback described above were then saved by this task with user approval.
 The enabled Clerk connection requests only basic OpenID/email/profile scopes.
 Do not change or delete the existing iOS client.
 
-The audience is still Testing and Publish app is disabled pending branding
-completion. The branding page has Friemi, its existing support/developer email
-and `friemi.com` populated, but its homepage, privacy-policy and optional terms
-links are blank. The existing public privacy page at
-`https://www.friemi.com/en/privacy` was checked and returned HTTP 200 with the
-expected policy title. No branding or audience changes have been submitted.
-Google documents an exception for requests limited to basic OpenID/email/profile:
-the test-user allowlist and seven-day authorization expiry do not apply. Do not
-confuse the generic Google Testing/user-cap banner with Clerk Development's
-100-account limit. Complete intended production configuration and actual login
-tests instead of declaring success from the Enabled badge alone.
+With a second explicit user confirmation, the existing Friemi name and support
+email were retained, homepage `https://www.friemi.com` and privacy policy
+`https://www.friemi.com/en/privacy` were saved, and Google OAuth was published.
+The audience page now shows Production / External with an option to return to
+Testing. The public privacy URL was checked and returned HTTP 200 with the
+expected policy title. A user-added logo appeared during this work and was
+preserved; no replacement logo or invented terms link was added.
+
+Google's verification center says the brand is not yet displayed to users and
+offers brand verification. Data access explicitly requires no verification
+because no sensitive or restricted scopes are requested. Brand review has not
+been submitted. Do not conflate the generic Google user-cap banner with Clerk
+Development's 100-account cap; basic OpenID/email/profile requests have a documented
+exception. Actual sign-in and account linking must still be tested.
+
+The Production account portal successfully rendered in Chrome on October 5.
+The user was asked to sign in there with a previously used Friemi Google account,
+not a new test identity. No account was selected or consent granted on the user's
+behalf. A fresh importer dry run still verified all 100 imported accounts with
+zero pending imports and no writes. Vercel keys and live database bindings remain
+unchanged by this task.
 
 The programmer who owns the existing Apple Developer team must configure the
 same app's Sign in with Apple capability and provide Services ID, Team ID, Key ID
