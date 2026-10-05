@@ -9,5 +9,5 @@ test("health endpoint responds", async ({ request }) => {
     timeout: 10_000,
   });
 
-  expect(response.status()).toBeLessThan(500);
+  expect(response.status(), "/api/health returned an HTTP error").toBeLessThan(400);
 });
