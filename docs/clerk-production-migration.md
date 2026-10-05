@@ -1,6 +1,6 @@
 # Clerk Production Migration
 
-## Status (2026-10-04)
+## Status (2026-10-05)
 
 Production account pre-import and isolated database rehearsal are complete.
 All 100 source accounts now exist in the verified Production Clerk instance.
@@ -77,7 +77,16 @@ Verified results:
   and hashes for all 96 public tables (excluding only `UserProfile.clerkUserId`)
   stayed identical. All 27 unmapped profiles were untouched. The container was
   removed; this did not execute migration SQL against production.
-- Production SSO connections still show `Setup required` for Google and Apple.
+- Google Production SSO now shows `Enabled` / `Used for sign-in` after the user
+  supplied credentials on October 5. Its client ID matches the new `Friemi Web`
+  Web application in the Google Cloud `friemi` project. With explicit user
+  confirmation, the missing JavaScript origins (`https://friemi.com` and
+  `https://www.friemi.com`) and redirect URI
+  (`https://clerk.friemi.com/v1/oauth_callback`) were added and saved. The console
+  displayed its saved confirmation, and reopening the client verified all three
+  values. The existing Friemi iOS client was not modified. No secret was printed,
+  copied to Git or rotated. Actual OAuth sign-in has not been tested.
+- Apple Production SSO still shows `Setup required`.
   Among three source web-Apple users, one uses a private relay email and does not
   have a native `apple:` binding. Native login alone is not adequate evidence that
   this person's existing account will remain accessible after cutover. The source
@@ -118,6 +127,8 @@ returned Cloudflare HTTP 403 (`DNS points to prohibited IP`) during provisioning
 Do not interpret DNS verification as a successful account-portal/login test;
 recheck provider provisioning before cutover, without disabling TLS checks or
 changing the approved DNS-only targets to work around the error.
+On October 5, `/sign-in` still returned HTTP 403 while the Frontend API JWKS
+returned HTTP 200. Google credential setup did not resolve this separate issue.
 
 The user saved the existing Production secret in the private `target-clerk.env`
 file (`0600`). Backend API `/instance` and domain checks verified the exact target
@@ -373,13 +384,24 @@ password changes need a fresh CSV export, not a forced reuse of the old hash.
 
 ## OAuth Handoff
 
-The Google Cloud `friemi` project currently has only the existing Friemi iOS
-client. Do not change or delete that client. A separate Web client must use
-`https://clerk.friemi.com/v1/oauth_callback`, with HTTPS origins for `friemi.com`
-and `www.friemi.com`, and only basic OpenID/email/profile scopes. Its consent
-configuration is incomplete and its audience is still Testing. Creation and
-credential transmission to Clerk are awaiting user confirmation; nothing has
-been submitted. Never leave the production release dependent on a test-user cap.
+The Google Cloud `friemi` project now has both `Friemi iOS` and `Friemi Web`.
+The latter client is `114440097515-j62s3ve9g86niafhf9esromau2u7vpr7.apps.googleusercontent.com`.
+The user entered its credentials into Clerk Production. The authorized origins
+and callback described above were then saved by this task with user approval.
+The enabled Clerk connection requests only basic OpenID/email/profile scopes.
+Do not change or delete the existing iOS client.
+
+The audience is still Testing and Publish app is disabled pending branding
+completion. The branding page has Friemi, its existing support/developer email
+and `friemi.com` populated, but its homepage, privacy-policy and optional terms
+links are blank. The existing public privacy page at
+`https://www.friemi.com/en/privacy` was checked and returned HTTP 200 with the
+expected policy title. No branding or audience changes have been submitted.
+Google documents an exception for requests limited to basic OpenID/email/profile:
+the test-user allowlist and seven-day authorization expiry do not apply. Do not
+confuse the generic Google Testing/user-cap banner with Clerk Development's
+100-account limit. Complete intended production configuration and actual login
+tests instead of declaring success from the Enabled badge alone.
 
 The programmer who owns the existing Apple Developer team must configure the
 same app's Sign in with Apple capability and provide Services ID, Team ID, Key ID
@@ -404,3 +426,4 @@ matching. Keep the Development instance intact until these checks pass.
 - [Create user API](https://clerk.com/docs/reference/backend/user/create-user)
 - [Production deployment](https://clerk.com/docs/guides/development/deployment/production)
 - [Clerk integration with Supabase](https://supabase.com/docs/guides/auth/third-party/clerk)
+- [Google OAuth audience and basic-profile exception](https://support.google.com/cloud/answer/15549945)
