@@ -6,6 +6,7 @@
     <string name="web_error_body">Check your connection and try again.</string>
     <string name="retry">Retry</string>
     <string name="open_in_browser">Open in browser</string>
+    <string name="auth_browser_unavailable">Cannot open a browser for sign-in. Check your default browser and try again.</string>
     <string name="copied">Copied</string>
     <string name="download_started">Download started</string>
     <string name="image_save_started">Saving image to Photos</string>
