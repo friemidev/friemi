@@ -739,7 +739,6 @@ function MobileHomeV23ActivityCard({
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
-          categoryArtworkClassName="h-[140%]"
           fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           src={getActivityCoverThumbnailUrl(
             getActivityListCoverSrc(activity.coverImageUrl, activity.category),

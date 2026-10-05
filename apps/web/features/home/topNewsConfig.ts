@@ -16,6 +16,7 @@ type MobileHomeTopNewsConfigItem = {
   id: string;
   image: string;
   title: LocalizedTopNewsTitle;
+  visible?: boolean;
 };
 
 const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
@@ -23,6 +24,7 @@ const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
     href: "/top-news/host-recruitment",
     id: "founding-host-recruitment",
     image: "/top_news/founding-host-recruitment-cover.png",
+    visible: false,
     title: {
       en: "Become a Friemi Founding Host",
       fr: "Devenez hôte fondateur Friemi",
@@ -68,10 +70,12 @@ function getLocalizedTopNewsTitle(
 }
 
 export function getMobileHomeTopNewsConfigItems(locale: string) {
-  return mobileHomeTopNewsConfig.map<MobileHomeTopNewsItem>((item) => ({
-    href: item.href,
-    id: item.id,
-    image: item.image,
-    title: getLocalizedTopNewsTitle(item.title, locale),
-  }));
+  return mobileHomeTopNewsConfig
+    .filter((item) => item.visible !== false)
+    .map<MobileHomeTopNewsItem>((item) => ({
+      href: item.href,
+      id: item.id,
+      image: item.image,
+      title: getLocalizedTopNewsTitle(item.title, locale),
+    }));
 }
