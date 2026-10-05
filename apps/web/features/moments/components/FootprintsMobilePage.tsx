@@ -3308,7 +3308,7 @@ function FootprintsRoomChatRow({
     >
       <Link
         aria-label={t.openRoomChat(room.title)}
-        className="relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
         <ChatNavigationPending />
@@ -3439,7 +3439,7 @@ function FootprintsPlanetChatRow({
     >
       <Link
         aria-label={`${planetLabel}: ${planet.name}`}
-        className="relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={href}
         onClick={() => {
           window.sessionStorage.setItem(
@@ -3648,7 +3648,7 @@ function FootprintsMessageRow({
         <div className="flex min-w-0 items-center gap-2">
           <Link
             aria-label={t.openConversation(friend.friend.nickname)}
-            className="relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+            className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
             href={withLocale(locale, `/messages/${friend.conversationId}`)}
             onClick={() => saveMessageThreadReturnHref(returnHref)}
           >

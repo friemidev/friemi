@@ -142,6 +142,103 @@
   --friemi-stable-viewport-height: 100vh;
   --friemi-visual-viewport-height: 100vh;
   --friemi-visual-viewport-width: 100vw;
+  --friemi-motion-press: 80ms;
+  --friemi-motion-release: 180ms;
+  --friemi-motion-enter: 220ms;
+  --friemi-motion-exit: 160ms;
+  --friemi-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Defaults stay below utility styles and the games' own interaction systems. */
+@layer base {
+  :where(.app-layout-shell, [data-friemi-modal-overlay])
+    :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: transform, background-color, border-color, color, opacity;
+    transition-duration: var(--friemi-motion-release);
+    transition-timing-function: var(--friemi-motion-ease);
+  }
+
+  :where(.app-layout-shell, [data-friemi-modal-overlay])
+    :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)):where(:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])) {
+    transform: scale(0.97);
+    transition-duration: var(--friemi-motion-press);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.app-layout-shell, [data-friemi-modal-overlay])
+      :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)) {
+      transition: none;
+    }
+
+    :where(.app-layout-shell, [data-friemi-modal-overlay])
+      :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)):active {
+      transform: none;
+    }
+  }
+}
+
+.friemi-pressable,
+.friemi-interactive-card {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition-property: transform, background-color, border-color, color, opacity;
+  transition-duration: var(--friemi-motion-release);
+  transition-timing-function: var(--friemi-motion-ease);
+}
+
+.friemi-pressable:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  transform: scale(0.97);
+  transition-duration: var(--friemi-motion-press);
+}
+
+.friemi-interactive-card:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.985);
+  transition-duration: var(--friemi-motion-press);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .friemi-interactive-card:hover:not(:active) {
+    transform: translateY(-2px);
+  }
+}
+
+/* Opacity only: fixed chat composers and safe-area geometry must never move. */
+@keyframes friemi-page-enter {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
+.app-layout-shell:not(:has(.mobile-chat-viewport, .draw-guess-theme, .werewolf-room-fullscreen, .avalon-tool, .auth-page-shell)) :where(main:not(main main)) {
+  animation: friemi-page-enter var(--friemi-motion-enter) var(--friemi-motion-ease);
+}
+
+.friemi-nav-pending {
+  animation: friemi-page-enter 120ms ease-out 120ms backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --friemi-motion-press: 0ms;
+    --friemi-motion-release: 0ms;
+    --friemi-motion-enter: 0ms;
+    --friemi-motion-exit: 0ms;
+  }
+
+  .friemi-pressable,
+  .friemi-interactive-card,
+  .friemi-nav-pending,
+  .app-layout-shell:not(:has(.mobile-chat-viewport, .draw-guess-theme, .werewolf-room-fullscreen, .avalon-tool, .auth-page-shell)) :where(main:not(main main)) {
+    animation: none;
+    transition: none;
+  }
+
+  .friemi-pressable:active:not(:disabled):not([aria-disabled="true"]),
+  .friemi-interactive-card:active:not(:disabled):not([aria-disabled="true"]),
+  .friemi-interactive-card:hover:not(:active) {
+    transform: none;
+  }
 }
 
 @supports (height: 100dvh) {
@@ -1295,7 +1392,7 @@ a {
 }
 
 .friemi-feed-reveal {
-  animation: friemi-feed-reveal 320ms ease-out both;
+  animation: friemi-feed-reveal var(--friemi-motion-enter) var(--friemi-motion-ease) backwards;
 }
 
 .friemi-shimmer {
@@ -1555,38 +1652,34 @@ html[data-home-motion-ready="true"]
   opacity: 0;
   transform: translate3d(
       var(--home-reveal-x, 0),
-      var(--home-reveal-y, 1.35rem),
+      var(--home-reveal-y, 0.5rem),
       0
     )
     scale(var(--home-reveal-scale, 1));
-  filter: blur(var(--home-reveal-blur, 0));
 }
 
 [data-home-reveal] {
   transition:
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 920ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 780ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--home-reveal-delay, 0ms);
-  will-change: opacity, transform, filter;
+    opacity var(--friemi-motion-enter) var(--friemi-motion-ease),
+    transform var(--friemi-motion-enter) var(--friemi-motion-ease);
+  transition-delay: min(var(--home-reveal-delay, 0ms), 60ms);
 }
 
 [data-home-reveal="left"] {
-  --home-reveal-x: -2rem;
+  --home-reveal-x: -0.5rem;
   --home-reveal-y: 0;
   --home-reveal-scale: 0.985;
 }
 
 [data-home-reveal="right"],
 [data-home-reveal="slide-right"] {
-  --home-reveal-x: 2rem;
+  --home-reveal-x: 0.5rem;
   --home-reveal-y: 0;
   --home-reveal-scale: 0.985;
 }
 
 [data-home-reveal="slide-right"] {
-  --home-reveal-x: 3.25rem;
-  --home-reveal-blur: 0.25rem;
+  --home-reveal-x: 0.75rem;
 }
 
 .home-activity-carousel {
@@ -1600,9 +1693,9 @@ html[data-home-motion-ready="true"]
 .home-carousel-card {
   transform: translateY(0) scale(1);
   transition:
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 360ms ease;
+    transform var(--friemi-motion-release) var(--friemi-motion-ease),
+    box-shadow var(--friemi-motion-release) ease,
+    border-color var(--friemi-motion-release) ease;
 }
 
 .home-carousel-card:hover,
@@ -1612,7 +1705,7 @@ html[data-home-motion-ready="true"]
 }
 
 .home-carousel-card__media img {
-  transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform var(--friemi-motion-enter) var(--friemi-motion-ease);
 }
 
 .home-carousel-card:hover .home-carousel-card__media img,
@@ -2059,6 +2152,49 @@ html[data-home-motion-ready="true"]
   }
   to {
     opacity: 0;
+  }
+}
+
+@keyframes friemi-sheet-overlay-in {
+  from { background-color: transparent; }
+  to { background-color: rgb(17 18 16 / 0.42); }
+}
+
+.friemi-sheet-overlay {
+  animation: friemi-sheet-overlay-in var(--friemi-motion-enter) ease-out;
+}
+
+.friemi-sheet-panel {
+  animation: activity-room-sheet-in var(--friemi-motion-enter) var(--friemi-motion-ease);
+  transition: height var(--friemi-motion-enter) var(--friemi-motion-ease),
+    border-radius var(--friemi-motion-enter) ease-out,
+    transform var(--friemi-motion-release) var(--friemi-motion-ease);
+}
+
+.friemi-sheet-overlay[data-state="closing"] {
+  animation: mobile-bottom-sheet-overlay-out var(--friemi-motion-exit) ease-in forwards;
+}
+
+.friemi-sheet-panel[data-entered="true"] {
+  animation: none;
+}
+
+.friemi-sheet-overlay[data-state="closing"] .friemi-sheet-panel {
+  animation: activity-room-sheet-out var(--friemi-motion-exit) ease-in forwards;
+}
+
+.friemi-sheet-panel[data-dragging="true"] {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friemi-sheet-overlay,
+  .friemi-sheet-panel,
+  .friemi-sheet-overlay[data-state="closing"],
+  .friemi-sheet-overlay[data-state="closing"] .friemi-sheet-panel {
+    animation: none;
+    transition: none;
   }
 }
 

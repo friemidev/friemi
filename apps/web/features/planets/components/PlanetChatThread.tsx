@@ -93,7 +93,12 @@ function PlanetMessageBubble({
   }
 
   return (
-    <div className="relative inline-block min-w-0 max-w-full">
+    <div
+      className={cn(
+        "relative flex min-w-0 max-w-full flex-col",
+        isViewer ? "items-end" : "items-start",
+      )}
+    >
       {actionOpen ? (
         <div
           className={cn(
@@ -171,13 +176,6 @@ function PlanetMessageBubble({
           pointerStartRef.current = null;
         }}
       >
-        {message.replyTo ? (
-          <ChatReplyBubblePreview
-            inverted={isViewer}
-            locale={locale}
-            replyTo={message.replyTo}
-          />
-        ) : null}
         {message.imageUrls.length ? (
           <ChatImagePreviewGrid
             imageLabel={imageCopy.image}
@@ -198,6 +196,9 @@ function PlanetMessageBubble({
           </p>
         ) : null}
       </div>
+      {message.replyTo ? (
+        <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
+      ) : null}
     </div>
   );
 }

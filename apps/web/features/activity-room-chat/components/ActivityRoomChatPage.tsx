@@ -1787,13 +1787,13 @@ function MessageRow({
       {message.isMine ? (actionMenu ?? selectionControl) : null}
       <div
         className={cn(
-          "grid min-w-0 gap-0.5",
+          "flex min-w-0 flex-col gap-0.5",
           actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
               ? "max-w-[65%] sm:max-w-[60%]"
               : "max-w-[76%] sm:max-w-[64%]",
-          message.isMine ? "justify-items-end" : "justify-items-start",
+          message.isMine ? "items-end" : "items-start",
         )}
       >
         {!message.isMine ? (
@@ -1835,13 +1835,6 @@ function MessageRow({
           role={canOpenActions ? "button" : undefined}
           tabIndex={canOpenActions ? 0 : undefined}
         >
-          {!message.isDeleted && message.replyTo ? (
-            <ChatReplyBubblePreview
-              inverted={message.isMine}
-              locale={locale}
-              replyTo={message.replyTo}
-            />
-          ) : null}
           {!message.isDeleted && message.imageUrls.length ? (
             <ChatImagePreviewGrid
               imageLabel={copy.imageMessage}
@@ -1874,6 +1867,9 @@ function MessageRow({
             </p>
           ) : null}
         </div>
+        {!message.isDeleted && message.replyTo ? (
+          <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
+        ) : null}
       </div>
       {!message.isMine ? (actionMenu ?? selectionControl) : null}
       {message.isMine ? (
