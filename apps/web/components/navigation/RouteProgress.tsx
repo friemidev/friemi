@@ -195,10 +195,10 @@ export function RouteProgress() {
       )}
     >
       <div
-        className="h-full rounded-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.18)]"
+        className="h-full w-full origin-left rounded-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.18)]"
         style={{
           opacity: isActive ? (isFinishing ? 0.55 : 1) : 0,
-          width: `${progress}%`,
+          transform: `scaleX(${progress / 100})`,
         }}
       />
     </div>

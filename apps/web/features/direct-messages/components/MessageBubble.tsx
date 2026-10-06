@@ -307,113 +307,117 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "flex items-start gap-2",
+        "flex min-w-0 items-start gap-2",
         isMine ? "justify-end" : "justify-start",
       )}
     >
       {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
       {isMine ? (actionMenu ?? selectionControl) : null}
       <div
-        aria-pressed={selectionMode && canDelete ? isSelected : undefined}
         className={cn(
-          "relative rounded-2xl text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+          "flex min-w-0 flex-col",
+          isMine ? "items-end" : "items-start",
           actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
               ? "max-w-[65%] sm:max-w-[60%]"
               : "max-w-[76%] sm:max-w-[64%]",
-          hasImages ? "p-1.5" : "px-3 py-2",
-          canOpenActionMenu && "select-none [-webkit-touch-callout:none]",
-          selectionMode && canDelete && "cursor-pointer",
-          isSelected && "outline outline-2 outline-offset-2 outline-[#36A15F]",
-          isMine
-            ? "rounded-tr-md bg-moss text-white before:-right-1 before:bg-moss"
-            : "rounded-tl-md bg-white text-ink ring-1 ring-sand before:-left-1 before:border-b before:border-l before:border-sand before:bg-white",
-          deliveryStatus === "failed" && "ring-2 ring-[#E98A8A]",
-          deliveryStatus === "sending" && "opacity-80",
         )}
-        data-direct-message-id={id}
-        onClick={handleMessageClick}
-        onContextMenu={(event) => {
-          if (
-            !canOpenActionMenu ||
-            isDeleting ||
-            isRecalling ||
-            selectionMode
-          ) {
-            return;
-          }
-
-          event.preventDefault();
-          onOpenActionMenu?.(id);
-        }}
-        onKeyDown={handleMessageKeyDown}
-        onPointerCancel={handlePointerEnd}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        role={canOpenActionMenu ? "button" : undefined}
-        tabIndex={canOpenActionMenu ? 0 : undefined}
       >
-        {replyTo ? (
-          <ChatReplyBubblePreview
-            inverted={isMine}
-            locale={locale}
-            replyTo={replyTo}
-          />
-        ) : null}
-        {hasImages ? (
-          <ChatImagePreviewGrid
-            imageLabel={t.imageMessage}
-            imageUrls={imageUrls}
-            resetLabel={t.resetImagePreview}
-            saveLabel={t.saveImage}
-            savedLabel={t.savingImage}
-          />
-        ) : null}
-        {hasBody ? (
-          <p
-            className={cn(
-              "whitespace-pre-wrap break-words",
-              hasImages && "px-1 pt-2",
-            )}
-          >
-            {body}
-          </p>
-        ) : null}
-        {deliveryStatus === "failed" && onRetry ? (
-          <button
-            type="button"
-            className={cn(
-              "mt-1 block px-1 text-left text-[11px] font-semibold underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-              isMine ? "text-[#FFE4E4]" : "text-[#9A2135]",
-            )}
-            onClick={() =>
-              onRetry({
-                id,
-                senderId,
-                body,
-                imageUrls,
-                recalledAt,
-                readAt,
-                replyTo,
-                createdAt,
-                isMine,
-                deliveryStatus,
-              })
+        <div
+          aria-pressed={selectionMode && canDelete ? isSelected : undefined}
+          className={cn(
+            "relative min-w-0 max-w-full rounded-2xl text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+            hasImages ? "p-1.5" : "px-3 py-2",
+            canOpenActionMenu && "select-none [-webkit-touch-callout:none]",
+            selectionMode && canDelete && "cursor-pointer",
+            isSelected &&
+              "outline outline-2 outline-offset-2 outline-[#36A15F]",
+            isMine
+              ? "rounded-tr-md bg-moss text-white before:-right-1 before:bg-moss"
+              : "rounded-tl-md bg-white text-ink ring-1 ring-sand before:-left-1 before:border-b before:border-l before:border-sand before:bg-white",
+            deliveryStatus === "failed" && "ring-2 ring-[#E98A8A]",
+            deliveryStatus === "sending" && "opacity-80",
+          )}
+          data-direct-message-id={id}
+          onClick={handleMessageClick}
+          onContextMenu={(event) => {
+            if (
+              !canOpenActionMenu ||
+              isDeleting ||
+              isRecalling ||
+              selectionMode
+            ) {
+              return;
             }
-          >
-            {statusLabel} · {t.retrySend}
-          </button>
-        ) : statusLabel ? (
-          <p
-            className={cn(
-              "mt-1 px-1 text-[11px]",
-              isMine ? "text-white/65" : "text-[#8E8383]",
-            )}
-          >
-            {statusLabel}
-          </p>
+
+            event.preventDefault();
+            onOpenActionMenu?.(id);
+          }}
+          onKeyDown={handleMessageKeyDown}
+          onPointerCancel={handlePointerEnd}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          role={canOpenActionMenu ? "button" : undefined}
+          tabIndex={canOpenActionMenu ? 0 : undefined}
+        >
+          {hasImages ? (
+            <ChatImagePreviewGrid
+              imageLabel={t.imageMessage}
+              imageUrls={imageUrls}
+              resetLabel={t.resetImagePreview}
+              saveLabel={t.saveImage}
+              savedLabel={t.savingImage}
+            />
+          ) : null}
+          {hasBody ? (
+            <p
+              className={cn(
+                "whitespace-pre-wrap [overflow-wrap:anywhere]",
+                hasImages && "px-1 pt-2",
+              )}
+            >
+              {body}
+            </p>
+          ) : null}
+          {deliveryStatus === "failed" && onRetry ? (
+            <button
+              type="button"
+              className={cn(
+                "mt-1 block px-1 text-left text-[11px] font-semibold underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                isMine ? "text-[#FFE4E4]" : "text-[#9A2135]",
+              )}
+              onClick={() =>
+                onRetry({
+                  id,
+                  senderId,
+                  body,
+                  imageUrls,
+                  recalledAt,
+                  readAt,
+                  replyTo,
+                  createdAt,
+                  isMine,
+                  deliveryStatus,
+                })
+              }
+            >
+              {statusLabel} · {t.retrySend}
+            </button>
+          ) : statusLabel ? (
+            <p
+              className={cn(
+                "mt-1 px-1 text-[11px]",
+                isMine ? "text-white/65" : "text-[#8E8383]",
+              )}
+            >
+              {statusLabel}
+            </p>
+          ) : null}
+        </div>
+        {replyTo ? (
+          <ChatReplyBubblePreview locale={locale} replyTo={replyTo} />
         ) : null}
       </div>
       {!isMine ? (actionMenu ?? selectionControl) : null}

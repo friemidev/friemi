@@ -2,8 +2,8 @@
 
 import { LoaderCircle, Send } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
+import { useChatTextareaAutosize } from "@/features/chat/useChatTextareaAutosize";
 import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
@@ -12,6 +12,7 @@ import type { ChatMentionMember } from "@/features/chat/types";
 import {
   getChatMentionEveryoneToken,
   getChatMentionMemberToken,
+  shouldOpenChatMentionPicker,
 } from "@/features/chat/utils/chatMentions";
 import {
   sendPlanetMessageAction,
@@ -85,7 +86,7 @@ export function PlanetChatComposer({
 }: PlanetChatComposerProps) {
   const copy = getCopy(locale);
   const formRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const mentionCursorRef = useRef(0);
   const [content, setContent] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -99,6 +100,8 @@ export function PlanetChatComposer({
   const [state, setState] = useState<PlanetChatActionState>(initialState);
   const [isPending, setIsPending] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
+
+  useChatTextareaAutosize(inputRef, content);
 
   useEffect(() => {
     function handleReplyRequest(event: Event) {
@@ -116,29 +119,6 @@ export function PlanetChatComposer({
     return () =>
       window.removeEventListener(chatReplyRequestEvent, handleReplyRequest);
   }, [planetId]);
-
-  function insertEmoji(emoji: string) {
-    const input = inputRef.current;
-    const start = input?.selectionStart ?? content.length;
-    const end = input?.selectionEnd ?? content.length;
-    const nextContent =
-      `${content.slice(0, start)}${emoji}${content.slice(end)}`.slice(0, 1000);
-    setContent(nextContent);
-    window.requestAnimationFrame(() => {
-      const cursor = Math.min(start + emoji.length, nextContent.length);
-      input?.focus();
-      input?.setSelectionRange(cursor, cursor);
-    });
-  }
-
-  function setMentionPicker(nextOpen: boolean) {
-    if (nextOpen) {
-      mentionCursorRef.current =
-        inputRef.current?.selectionStart ?? content.length;
-    }
-
-    setMentionPickerOpen(nextOpen);
-  }
 
   function insertMentionToken(token: string) {
     const input = inputRef.current;
@@ -199,12 +179,7 @@ export function PlanetChatComposer({
       setMentionsEveryone(false);
     }
 
-    const insertedAt =
-      nextContent.length > previousContent.length &&
-      cursor > 0 &&
-      nextContent[cursor - 1] === "@";
-
-    if (insertedAt) {
+    if (shouldOpenChatMentionPicker(previousContent, nextContent, cursor)) {
       mentionCursorRef.current = cursor;
       setMentionPickerOpen(true);
     }
@@ -324,16 +299,10 @@ export function PlanetChatComposer({
           onChange={setImageUrls}
           removeLabel={copy.removeImage}
         />
-        <div className="grid min-w-0 w-full grid-cols-[2.75rem_2.5rem_2.75rem_minmax(0,1fr)_2.5rem] items-center gap-1.5">
-          <ChatEmojiPicker
-            disabled={isPending}
-            label={copy.addEmoji}
-            onSelect={insertEmoji}
-          />
+        <div className="grid min-w-0 w-full grid-cols-[2.75rem_minmax(0,1fr)_2.5rem] items-end gap-1.5">
           <ChatMentionPicker
-            disabled={isPending}
             locale={locale}
-            onOpenChange={setMentionPicker}
+            onOpenChange={setMentionPickerOpen}
             onSelectEveryone={handleSelectEveryone}
             onSelectMember={handleSelectMember}
             open={mentionPickerOpen}
@@ -353,8 +322,8 @@ export function PlanetChatComposer({
             uploadFailedLabel={copy.uploadFailed}
             uploadingLabel={copy.uploading}
           />
-          <input
-            className="min-w-0 w-full rounded-full border border-[#E7E2D6] bg-white px-3.5 py-2.5 text-sm outline-none placeholder:text-[#A5A29A] focus:border-[#8AB68E] disabled:bg-[#F4F4F0]"
+          <textarea
+            className="chat-composer-input"
             disabled={isPending}
             maxLength={1000}
             name="content"
@@ -367,6 +336,7 @@ export function PlanetChatComposer({
             onFocus={keepMobileChatPageAnchored}
             placeholder={copy.placeholder}
             ref={inputRef}
+            rows={1}
             value={content}
           />
           <button

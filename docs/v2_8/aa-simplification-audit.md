@@ -32,7 +32,15 @@
 ## 数据库迁移与部署状态（2026-10-03）
 
 - 当前本地配置连接 Preview Supabase 项目 `dryhbxognbrljslzciuh`。`prisma migrate status` 显示仓库的 83 个迁移全部生效；直接查询确认 `AaParticipant.paymentMethod` 是可空的 `varchar(160)`，`20261003100000_aa_participant_payment_method` 的迁移记录已完成、未回滚，且没有未解决的失败迁移。隔离本机 PostgreSQL 17 也完整应用了 83 个迁移并通过写入与读取冒烟测试。
-- 本轮 AA 提交 `b7b7d2c` 已推送到 `dev`，对应 GitHub CI 成功。直接推送后，Vercel Preview 一度停留在上一提交 `00c2bc1`；创建 `dev` → `main` 的[草稿 PR #273](https://github.com/friemidev/friemi/pull/273) 后，Vercel Preview 进入 Ready。重新打开在线 `dev` 活动账本，结算页已显示“我的待收款 / 我的待付款”新布局，且服务端读取正常。草稿 PR 未合并，Production 没有发布。Vercel CLI 当前账号无该项目权限，部署状态以 GitHub PR 的 Vercel 检查和在线页面为准。
-- 仓库 CI 与 Web 构建只生成 Prisma Client，不自动运行 `prisma migrate deploy`。以后每次新增迁移，必须先核对目标环境的数据库项目，再显式执行迁移与 `prisma migrate status`，确认字段和迁移记录，最后检查该环境部署的 Git SHA 与页面行为。`dev` 的迁移不能代替 Production 迁移；本轮没有访问或修改 Production 数据库。
+- 本轮 AA 提交 `b7b7d2c` 已推送到 `dev`，对应 GitHub CI 成功。直接推送后，Vercel Preview 一度停留在上一提交 `00c2bc1`；创建 `dev` → `main` 的[草稿 PR #273](https://github.com/friemidev/friemi/pull/273) 后，Vercel Preview 进入 Ready。重新打开在线 `dev` 活动账本，结算页已显示“我的待收款 / 我的待付款”新布局，且服务端读取正常。截至 2026-10-03，草稿 PR 未合并，Production 没有发布。后续上线情况见下节。
+- 仓库 CI 与 Web 构建只生成 Prisma Client，不自动运行 `prisma migrate deploy`。以后每次新增迁移，必须先核对目标环境的数据库项目，再显式执行迁移与 `prisma migrate status`，确认字段和迁移记录，最后检查该环境部署的 Git SHA 与页面行为。`dev` 的迁移不能代替 Production 迁移；截至 2026-10-03 尚未访问或修改 Production 数据库。
 
 产品经理文档中的两条“后台自检”条件并非普遍成立：已经付款金额加新结算金额，不一定等于一次性结算总额（可能产生反向退款）；有预付款或退款时，个人应收也可能高于其自身开支。本实现以逐人净额之和为零、所有份额之和等于开支，以及固定安排全部执行后余额归零为校验依据。
+
+## Production 迁移与上线状态（2026-10-04）
+
+- [PR #273](https://github.com/friemidev/friemi/pull/273) 已合入 `main`，合并提交为 `d77db9c`。Vercel Production 部署 `friemi-codm5i6jr-friemi.vercel.app` 为 Ready，`friemi.com` 和 `www.friemi.com` 均指向该部署；正式站点的 `/zh-CN/lobby` 和 `/zh-CN/mobile-home` 返回 HTTP 200。
+- 核对 Vercel Production 的 `DATABASE_URL` 指向 Supabase 项目 `xyavgkupjnoumlzwkzoq`。迁移前直接查询显示 82 条已完成迁移，仓库的 83 条迁移中只有 `20261003100000_aa_participant_payment_method` 待应用，且无失败迁移。使用生产连接的 Session Pooler（5432 端口）执行 `prisma migrate deploy`，仅应用这一条迁移。
+- 迁移前已用 PostgreSQL 17 `pg_dump` 创建完整备份 `migration-backups/friemi-production-before-aa-payment-method-20261004-212009.dump`，约 10.1 MB、权限 `0600`，并用 `pg_restore --list` 验证文件可读取。此文件只保存在本机、由 Git 忽略。
+- 迁移后 `prisma migrate status` 显示全部 83 条迁移已应用；直接查询确认 `AaParticipant.paymentMethod` 为可空 `varchar(160)`，对应迁移记录已完成且未回滚。Vercel 的 `DIRECT_URL` 是 Sensitive 类型，CLI 拉取时会掩码，不能由拉取结果判断其原值；本轮未修改该变量。生产库迁移使用从已核验的 `DATABASE_URL` 派生并验证可连通的 Session Pooler 连接。
+- 生产数据库结构与公开页面已核验；需要登录并涉及真实活动成员的端到端收付款操作未在生产数据上执行。

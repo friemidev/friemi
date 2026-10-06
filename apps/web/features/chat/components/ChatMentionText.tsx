@@ -82,7 +82,7 @@ export function ChatMentionText({
   const segments = splitMentionText(content, mentionLabels, mentionsEveryone);
 
   return (
-    <span className={cn("whitespace-pre-wrap break-words", className)}>
+    <span className={cn("whitespace-pre-wrap [overflow-wrap:anywhere]", className)}>
       {segments.map((segment, index) => (
         <Fragment key={`${index}:${segment.text}`}>
           {segment.highlighted ? (

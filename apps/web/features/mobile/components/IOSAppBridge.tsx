@@ -1,12 +1,13 @@
 "use client";
 
 import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import {
   PushNotifications,
   type PushNotificationSchema,
 } from "@capacitor/push-notifications";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
   getStoredIOSPushToken,
@@ -14,6 +15,7 @@ import {
   registerIOSMobileDevice,
   storeIOSPushToken,
 } from "@/features/mobile/push/clientPush";
+import { isChatConversationPath } from "@/features/mobile/chatKeyboardAccessory";
 
 function getIOSDeviceContext() {
   return {
@@ -50,8 +52,20 @@ async function markPushNotificationRead(notificationId: string) {
 
 export function IOSAppBridge() {
   const router = useRouter();
+  const pathname = usePathname();
   const { isLoaded, isSignedIn } = useUser();
   const lastRegisteredTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Older installed app builds do not yet include the native Keyboard plugin.
+    if (!isFriemiIOSApp() || !Capacitor.isPluginAvailable("Keyboard")) return;
+
+    void Keyboard.setAccessoryBarVisible({
+      isVisible: !isChatConversationPath(pathname),
+    }).catch((error) => {
+      console.warn("Failed to update iOS keyboard accessory bar", error);
+    });
+  }, [pathname]);
 
   useEffect(() => {
     if (!isFriemiIOSApp()) {

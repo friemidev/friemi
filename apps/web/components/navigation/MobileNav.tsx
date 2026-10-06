@@ -1,10 +1,12 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
+import { useLinkStatus } from "next/link";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
   Compass,
+  LoaderCircle,
   MessageCircle,
   Plus,
   UserRound,
@@ -20,6 +22,23 @@ import { useMobileNavSection } from "./MobileNavSectionContext";
 type MobileNavProps = {
   locale: string;
 };
+
+function MobileNavPending({ primary }: { primary?: boolean }) {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "friemi-nav-pending absolute inset-0 grid place-items-center rounded-full",
+        primary ? "bg-[#156240] text-white" : "bg-white text-[#156240]",
+      )}
+    >
+      <LoaderCircle className="h-[18px] w-[18px] animate-spin motion-reduce:animate-none" />
+    </span>
+  );
+}
 
 function shouldHideMobileNav(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
@@ -145,13 +164,13 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-end gap-0 rounded-[0.85rem] px-1 pb-0.5 pt-0 text-[10px] font-semibold leading-[1.05] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                "friemi-pressable relative flex min-w-0 flex-col items-center justify-end gap-0 rounded-[0.85rem] px-1 pb-0.5 pt-0 text-[10px] font-semibold leading-[1.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
                     ? "h-10 w-10 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
                     : "h-10 w-10 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
                   : active
-                    ? "-translate-y-0.5 text-forest"
+                    ? "text-forest"
                     : "text-[#1D1D1B]/72",
               )}
             >
@@ -185,6 +204,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />
+                <MobileNavPending primary={item.isPrimary} />
                 {showUnreadBadge ? (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}

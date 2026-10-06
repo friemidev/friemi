@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, MessageCircle, Pause, Play, Sparkles } from "lucide-react";
 import { DrawGuessArtwork } from "@/features/game-tools/components/DrawGuessCanvas";
-import type { DrawGuessChatMessage, DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { DRAW_GUESS_REACTIONS, getDrawGuessMessageReactorSeats, type DrawGuessChatMessage, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 
 export type DrawGuessCarouselTurn = {
   answer: string;
   artistSeat: number;
   chat: DrawGuessChatMessage[];
   drawing: DrawStroke[];
+  roundNumber?: number;
 };
 
 export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
@@ -19,8 +20,6 @@ export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
 }) {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [hovered, setHovered] = useState(false);
-  const [readingComments, setReadingComments] = useState(false);
   const [showComments, setShowComments] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [inView, setInView] = useState(false);
@@ -45,15 +44,16 @@ export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
   }, []);
 
   useEffect(() => {
-    if (!playing || hovered || readingComments || !inView || reducedMotion || turns.length < 2) return;
+    if (!playing || !inView || reducedMotion || turns.length < 2) return;
     const timer = window.setInterval(() => {
       if (!document.hidden) setActive((index) => (index + 1) % turns.length);
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [active, hovered, inView, playing, readingComments, reducedMotion, turns.length]);
+  }, [active, inView, playing, reducedMotion, turns.length]);
 
   const index = Math.min(active, Math.max(0, turns.length - 1));
   const turn = turns[index];
+  const multiRound = turns.some((item) => (item.roundNumber ?? 1) > 1);
   const nameFor = (seat: number) => seats.find((player) => player.number === seat + 1)?.name ?? `#${seat + 1}`;
   const comments = useMemo(() => {
     if (!turn) return [];
@@ -67,7 +67,10 @@ export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
   if (!turn) return null;
   const commentText = (message: DrawGuessChatMessage) => message.correct
     ? zh ? `${nameFor(message.seat)} 已答对` : fr ? `${nameFor(message.seat)} a trouvé !` : `${nameFor(message.seat)} got it!`
-    : `${nameFor(message.seat)}：${message.text}`;
+    : `${nameFor(message.seat)}：${message.text}${DRAW_GUESS_REACTIONS.map((kind) => {
+      const count = getDrawGuessMessageReactorSeats(message, kind).length;
+      return count ? `  ${kind} ×${count}` : "";
+    }).join("")}`;
   const move = (direction: number) => setActive((current) => (current + direction + turns.length) % turns.length);
   const title = zh ? "全部作品" : fr ? "Tous les dessins" : "All artwork";
 
@@ -80,10 +83,10 @@ export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
       </div>
     </div>
 
-    <div className="relative touch-pan-y overflow-hidden rounded-[1.3rem] bg-white shadow-[0_4px_0_#D7E6F2]" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { if (touchStart.current !== null && turns.length > 1) { const distance = event.changedTouches[0]?.clientX - touchStart.current; if (distance && Math.abs(distance) > 45) move(distance < 0 ? 1 : -1); } touchStart.current = null; }} onTouchCancel={() => { touchStart.current = null; }}>
+    <div className="relative touch-pan-y overflow-hidden rounded-[1.3rem] bg-white shadow-[0_4px_0_#D7E6F2]" onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { if (touchStart.current !== null && turns.length > 1) { const distance = event.changedTouches[0]?.clientX - touchStart.current; if (distance && Math.abs(distance) > 45) move(distance < 0 ? 1 : -1); } touchStart.current = null; }} onTouchCancel={() => { touchStart.current = null; }}>
       <div key={index} className="relative aspect-[10/7] min-w-0 overflow-hidden bg-white">
         {turn.drawing.length ? <DrawGuessArtwork strokes={turn.drawing} /> : <div className="grid h-full place-items-center text-sm font-semibold text-[#63758D]">{zh ? "这一轮没有画作" : fr ? "Pas de dessin" : "No drawing this turn"}</div>}
-        {showComments && !reducedMotion ? <div aria-hidden="true" data-paused={!playing || hovered || readingComments || !inView} className="draw-guess-danmaku-layer pointer-events-none absolute inset-0 overflow-hidden">
+        {showComments && !reducedMotion ? <div aria-hidden="true" data-paused={!playing || !inView} className="draw-guess-danmaku-layer pointer-events-none absolute inset-0 overflow-hidden">
           {featured.map((message, position) => <span key={message.id} className={`draw-guess-danmaku-item absolute inline-block max-w-[72%] truncate rounded-full px-3 py-1.5 text-[11px] font-bold shadow-[0_2px_8px_rgba(48,66,92,.12)] sm:text-xs ${message.correct ? "bg-[#E2F5E7]/95 text-[#246847]" : "bg-white/95 text-[#30425C]"}`} style={{ top: `${9 + (position % 4) * 19}%`, animationDelay: `${position * 1.4}s`, animationDuration: "18s" }}>{commentText(message)}</span>)}
         </div> : null}
       </div>
@@ -91,9 +94,9 @@ export function DrawGuessArtworkCarousel({ locale, seats, turns }: {
     </div>
 
     <div className="flex min-w-0 items-center justify-between gap-3 px-1 pt-3">
-      <div className="min-w-0"><p className="text-xs font-bold text-[#63758D]">{zh ? `第 ${index + 1} 幅 · ${nameFor(turn.artistSeat)}` : fr ? `Dessin ${index + 1} · ${nameFor(turn.artistSeat)}` : `Drawing ${index + 1} · ${nameFor(turn.artistSeat)}`}</p><p className="mt-0.5 truncate text-base font-black" title={turn.answer}>{turn.answer || (zh ? "未选词" : fr ? "Sans mot" : "No word")}</p></div><span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black tabular-nums text-[#3E70AA]">{index + 1} / {turns.length}</span>
+      <div className="min-w-0"><p className="text-xs font-bold text-[#63758D]">{multiRound ? zh ? `第 ${turn.roundNumber ?? 1} 轮 · ` : fr ? `Manche ${turn.roundNumber ?? 1} · ` : `Round ${turn.roundNumber ?? 1} · ` : ""}{zh ? `第 ${index + 1} 幅 · ${nameFor(turn.artistSeat)}` : fr ? `Dessin ${index + 1} · ${nameFor(turn.artistSeat)}` : `Drawing ${index + 1} · ${nameFor(turn.artistSeat)}`}</p><p className="mt-0.5 truncate text-base font-black" title={turn.answer}>{turn.answer || (zh ? "未选词" : fr ? "Sans mot" : "No word")}</p></div><span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black tabular-nums text-[#3E70AA]">{index + 1} / {turns.length}</span>
     </div>
     {turns.length > 1 ? <div className="mt-3 flex justify-center gap-2" aria-label={zh ? "选择作品" : fr ? "Choisir un dessin" : "Choose drawing"}>{turns.map((_, item) => <button key={item} type="button" onClick={() => setActive(item)} aria-label={zh ? `第 ${item + 1} 幅` : fr ? `Dessin ${item + 1}` : `Drawing ${item + 1}`} aria-current={item === index ? "true" : undefined} className={`h-2.5 rounded-full transition-all ${item === index ? "w-6 bg-[#3E70AA]" : "w-2.5 bg-[#BED6EC] hover:bg-[#7DAAD2]"}`} />)}</div> : null}
-    {comments.length ? <details className="mt-3 rounded-xl bg-white/75 px-3 py-2 text-xs text-[#405875]" onToggle={(event) => setReadingComments(event.currentTarget.open)}><summary className="cursor-pointer font-bold">{zh ? `猜词 ${comments.length} 条` : fr ? `${comments.length} réponses` : `${comments.length} guesses`}</summary><ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">{comments.map((message) => <li key={message.id} className="break-words">{commentText(message)}{message.laughedBy?.length ? ` 😂 ${message.laughedBy.length}` : ""}</li>)}</ul></details> : null}
+    {comments.length ? <details className="mt-3 rounded-xl bg-white/75 px-3 py-2 text-xs text-[#405875]"><summary className="cursor-pointer font-bold">{zh ? `猜词 ${comments.length} 条` : fr ? `${comments.length} réponses` : `${comments.length} guesses`}</summary><ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">{comments.map((message) => <li key={message.id} className="break-words">{commentText(message)}</li>)}</ul></details> : null}
   </section>;
 }

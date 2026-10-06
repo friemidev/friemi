@@ -2,6 +2,18 @@ import type { ChatMentionMember } from "../types";
 
 export const chatMentionMaxProfileCount = 100;
 
+export function shouldOpenChatMentionPicker(
+  previousContent: string,
+  nextContent: string,
+  cursor: number,
+) {
+  return (
+    cursor > 0 &&
+    nextContent[cursor - 1] === "@" &&
+    previousContent.slice(0, cursor) !== nextContent.slice(0, cursor)
+  );
+}
+
 export function normalizeChatMentionProfileIds(
   profileIds: string[],
   maxCount = chatMentionMaxProfileCount,

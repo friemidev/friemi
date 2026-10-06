@@ -21,6 +21,8 @@ function artworkWarnBytes() {
 export async function GET() {
   if (isDrawGuessChainEnabled()) {
     try {
+      const production = process.env.VERCEL_ENV === "production";
+      const deadlineJobName = production ? "draw_guess_production_deadlines" : "draw_guess_preview_deadlines";
       const [overdueRooms, openReports, jobs, artworkSize] = await Promise.all([
         prisma.gameToolRoom.count({
           where: {
@@ -40,13 +42,13 @@ export async function GET() {
             ORDER BY runid DESC
             LIMIT 1
           ) d ON true
-          WHERE j.jobname IN ('draw_guess_preview_deadlines', 'draw_guess_preview_maintenance')
+          WHERE j.jobname IN (${deadlineJobName}, 'draw_guess_preview_maintenance')
         `,
         prisma.$queryRaw<{ bytes: bigint }[]>`
           SELECT pg_total_relation_size('"DrawGuessArtwork"')::bigint AS bytes
         `,
       ]);
-      const deadlineJob = jobs.find((job) => job.jobname === "draw_guess_preview_deadlines");
+      const deadlineJob = jobs.find((job) => job.jobname === deadlineJobName);
       const maintenanceJob = jobs.find((job) => job.jobname === "draw_guess_preview_maintenance");
       const deadlineHealthy = Boolean(
         deadlineJob?.active && deadlineJob.status === "succeeded" && deadlineJob.end_time &&
@@ -54,14 +56,15 @@ export async function GET() {
       );
       const artworkBytes = artworkSize[0]?.bytes ?? 0n;
       const artworkStorageHealthy = artworkBytes < BigInt(artworkWarnBytes());
+      const maintenanceHealthy = production || Boolean(maintenanceJob?.active);
       const healthy = overdueRooms === 0 && openReports < 10 && deadlineHealthy &&
-        Boolean(maintenanceJob?.active) && artworkStorageHealthy;
+        maintenanceHealthy && artworkStorageHealthy;
       if (!healthy) {
         console.warn("[draw-guess] health degraded", {
           artworkBytes: artworkBytes.toString(),
           artworkStorageHealthy,
           deadlineHealthy,
-          maintenanceActive: Boolean(maintenanceJob?.active),
+          maintenanceActive: maintenanceHealthy,
           openReports,
           overdueRooms,
         });

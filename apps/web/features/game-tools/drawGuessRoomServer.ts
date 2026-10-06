@@ -527,6 +527,33 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
       if (!(await updateState(room, state, next, "DRAW_GUESS_PHASE_ADVANCED"))) continue;
       continue;
     }
+    let finishedClassicTurns;
+    if (state.mode === "CLASSIC" && state.phase === "FINISHED" && (state.roundIndex ?? 1) > 1) {
+      const priorRounds = await prisma.drawGuessRound.findMany({
+        where: { roomId, roundNumber: { gte: state.gameNumber - (state.roundIndex ?? 1) + 1, lt: state.gameNumber } },
+        orderBy: { roundNumber: "asc" },
+        select: { state: true },
+      });
+      const previousTurns = await Promise.all(priorRounds.map(async (round) => {
+        const prior = asState(round.state);
+        if (!prior || prior.mode !== "CLASSIC") return [];
+        await hydrateDrawGuessState(room.id, prior);
+        return prior.drawings.map((drawing, artistSeat) => ({
+          answer: prior.classicAnswers?.[artistSeat] ?? "",
+          artistSeat,
+          chat: prior.classicChats?.[artistSeat] ?? [],
+          drawing,
+          roundNumber: prior.roundIndex ?? 1,
+        }));
+      }));
+      finishedClassicTurns = [...previousTurns.flat(), ...state.drawings.map((drawing, artistSeat) => ({
+        answer: state.classicAnswers?.[artistSeat] ?? "",
+        artistSeat,
+        chat: state.classicChats?.[artistSeat] ?? [],
+        drawing,
+        roundNumber: state.roundIndex ?? 1,
+      }))];
+    }
     return {
       room: {
         code: room.code,
@@ -552,7 +579,7 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         wordBank: state.wordBank
           ? { ...state.wordBank, words: viewer ? [...state.wordBank.words].sort((a, b) => a.localeCompare(b, room.locale)) : [] }
           : null,
-        view: { ...getDrawGuessViewerState(state, viewer ? viewer.seatNumber - 1 : -1, room.playerCount), serverNow: new Date().toISOString() },
+        view: { ...getDrawGuessViewerState(state, viewer ? viewer.seatNumber - 1 : -1, room.playerCount), ...(finishedClassicTurns ? { classicTurns: finishedClassicTurns } : {}), serverNow: new Date().toISOString() },
       },
     } as const;
   }

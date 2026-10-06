@@ -155,7 +155,7 @@ export function MobileActivityListRow({
   return (
     <MobileActivityDetailSheetLink
       className={cn(
-        "group grid w-full grid-cols-[5.5rem_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
+        "friemi-interactive-card group grid w-full grid-cols-[5.5rem_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5",
         isInactiveActivity ? "bg-zinc-50 text-zinc-500" : "bg-white",
         className,
       )}

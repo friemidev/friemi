@@ -17,7 +17,7 @@ import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { splitChatMessageSubmissions } from "@/features/chat/utils/chatMessageSubmissions";
 import { ChatReplyComposerPreview } from "@/features/chat/components/ChatReplyPreview";
-import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import { useChatTextareaAutosize } from "@/features/chat/useChatTextareaAutosize";
 import type { ChatReplyTarget } from "@/features/chat/types";
 import {
   sendDirectMessageAction,
@@ -119,25 +119,7 @@ export function MessageComposer({
     setBodyLength(initialBody?.length ?? 0);
   }, [initialBody]);
 
-  function insertEmoji(emoji: string) {
-    const textarea = textareaRef.current;
-
-    if (!textarea) {
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const nextValue =
-      textarea.value.slice(0, start) + emoji + textarea.value.slice(end);
-
-    textarea.value = nextValue.slice(0, messageMaxLength);
-    setBodyLength(textarea.value.length);
-    textarea.focus();
-    const nextCursor = Math.min(start + emoji.length, textarea.value.length);
-    textarea.setSelectionRange(nextCursor, nextCursor);
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  useChatTextareaAutosize(textareaRef, bodyLength);
 
   const showCounter = bodyLength >= messageCounterThreshold;
 
@@ -289,7 +271,7 @@ export function MessageComposer({
   return (
     <form
       ref={formRef}
-      className="relative z-20 w-full max-w-full shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
+      className="relative z-20 w-full max-w-full shrink-0 border-t border-sand bg-white px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] md:rounded-b-[1.45rem] md:pb-2 md:pl-3 md:pr-3"
       data-message-composer
       noValidate
       onFocusCapture={keepMobileChatPageAnchored}
@@ -361,11 +343,6 @@ export function MessageComposer({
         </div>
       ) : null}
       <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
-        <ChatEmojiPicker
-          disabled={disabled}
-          label={t.addEmoji}
-          onSelect={insertEmoji}
-        />
         <button
           type="button"
           aria-label={isImageUploading ? t.imageUploading : t.attachImage}
@@ -394,7 +371,7 @@ export function MessageComposer({
             defaultValue={initialBody}
             disabled={disabled}
             placeholder={t.messagePlaceholder}
-            className="max-h-28 min-h-11 w-full min-w-0 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] shadow-none outline-none placeholder:text-[#9BA08E] focus-visible:border-[#8AB68E] focus-visible:ring-2 focus-visible:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC] max-[360px]:min-h-10 max-[360px]:px-3 max-[360px]:py-2.5"
+            className="chat-composer-input block"
             onChange={(event) =>
               setBodyLength(event.currentTarget.value.length)
             }

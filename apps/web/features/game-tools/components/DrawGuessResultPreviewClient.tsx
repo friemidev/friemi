@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Copy, Crown, UsersRound } from "lucide-react";
+import { ArrowLeft, Copy } from "lucide-react";
 import { DrawGuessArtworkCarousel, type DrawGuessCarouselTurn } from "@/features/game-tools/components/DrawGuessArtworkCarousel";
 import { DrawGuessClassicRecap } from "@/features/game-tools/components/DrawGuessClassicRecap";
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
@@ -68,7 +68,7 @@ function previewTurns(count: number): DrawGuessCarouselTurn[] {
   ];
   return samples.slice(0, count).map((sample, artistSeat) => ({
     answer: sample.answer, artistSeat, drawing: sample.drawing,
-    chat: [...sample.guesses.map((guess, index) => ({ id: `preview-${artistSeat}-${index}`, seat: (artistSeat + index + 1) % count, text: guess, correct: false, at: new Date(2026, 0, 1, 12, index).toISOString(), laughedBy: index === 0 ? [0, 1] : [] })), { id: `preview-${artistSeat}-correct`, seat: (artistSeat + 1) % count, text: null, correct: true, at: new Date(2026, 0, 1, 12, 4).toISOString() }],
+    chat: [...sample.guesses.map((guess, index) => ({ id: `preview-${artistSeat}-${index}`, seat: (artistSeat + index + 1) % count, text: guess, correct: false, at: new Date(2026, 0, 1, 12, index).toISOString(), laughedBy: index === 0 ? [0, 1] : [], reactedBy: index === 0 ? { "❓": [(artistSeat + 2) % count], "👏": [(artistSeat + 3) % count] } : {} })), { id: `preview-${artistSeat}-correct`, seat: (artistSeat + 1) % count, text: null, correct: true, at: new Date(2026, 0, 1, 12, 4).toISOString() }],
   }));
 }
 
@@ -114,14 +114,13 @@ export function DrawGuessResultPreviewClient({ locale }: { locale: string }) {
       <a className="relative mt-2 inline-block text-xs font-bold text-[#3E6FA8] underline" href="#preview-artworks">{historyLabel}</a>
     </header>
 
-    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_250px]">
+    <div className="mx-auto mt-5 grid max-w-[820px] gap-5">
       <section className="min-w-0 space-y-5">
         <DrawGuessPodium busy={false} finishLabel={zh ? "本局排行榜" : fr ? "Classement" : "Leaderboard"} locale={locale} onReturn={() => router.push(withLocale(locale, "/game-tools/draw-guess/lobby-preview"))} returnLabel={returnLabel} room={room} scoreLabel={zh ? "分" : "pts"} showRecapLink />
+        <div id="preview-artworks" className="scroll-mt-24"><DrawGuessArtworkCarousel locale={locale} seats={room.seats} turns={previewTurns(count)} /></div>
         <DrawGuessClassicRecap code={room.code} highlight={highlight} historyHref="#preview-artworks" locale={locale} preview roomId={room.id} roundNumber={1} seats={room.seats} />
       </section>
-      <aside className="h-fit rounded-[1.6rem] border border-[#DCE8F2] bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-[#3E6FA8]" />{zh ? "玩家" : fr ? "Joueurs" : "Players"} <span className="ml-auto text-xs text-[#65748A]">{count}/{count}</span></h2><ol className="mt-4 space-y-2">{room.seats.map((seat, index) => <li key={seat.id} className={`flex items-center gap-3 rounded-xl p-2.5 ${index === 0 ? "bg-[#ECF4FB]" : "bg-[#FAFCFE]"}`}><span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3E6FA8]">{seat.number}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold">{seat.name}</span>{seat.isHost ? <Crown className="h-4 w-4 text-[#E1A451]" /> : null}<span className="text-xs font-bold tabular-nums text-[#63758D]">{room.view.scores[index]}</span></li>)}</ol></aside>
     </div>
 
-    <div id="preview-artworks" className="mt-6 scroll-mt-24"><DrawGuessArtworkCarousel locale={locale} seats={room.seats} turns={previewTurns(count)} /></div>
   </div>;
 }

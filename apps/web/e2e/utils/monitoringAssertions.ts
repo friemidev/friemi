@@ -76,7 +76,10 @@ export async function expectHealthyPage(
   const elapsedMs = Date.now() - startedAt;
 
   expect(response, `No HTTP response for ${path}`).not.toBeNull();
-  expect(response?.status(), `${path} returned a server error`).toBeLessThan(500);
+  expect(
+    response?.status(),
+    `${path} returned HTTP ${response?.status()} from ${page.url()}`,
+  ).toBeLessThan(400);
   expect(elapsedMs, `${path} exceeded ${maxLoadMs}ms`).toBeLessThanOrEqual(
     maxLoadMs,
   );

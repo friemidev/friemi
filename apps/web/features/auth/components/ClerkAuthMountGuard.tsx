@@ -5,6 +5,7 @@ import { SignIn, SignUp, useAuth, useSignIn } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
+import { AndroidBrowserSignIn } from "./AndroidBrowserSignIn";
 
 type NativeAuthProvider = "apple" | "google";
 
@@ -174,6 +175,19 @@ export function ClerkAuthMountGuard({
           label={getNativeCompletionLabel(locale)}
           showLabel
           size="md"
+        />
+      </div>
+    );
+  }
+
+  if (isFriemiNativeApp && !isFriemiIOSApp) {
+    return (
+      <div className="grid w-full min-w-0 gap-5">
+        <NativeAuthExitButton exitUrl={exitUrl} locale={locale} />
+        <AndroidBrowserSignIn
+          locale={locale}
+          mode={mode}
+          target={nativeDirectRedirectUrl}
         />
       </div>
     );

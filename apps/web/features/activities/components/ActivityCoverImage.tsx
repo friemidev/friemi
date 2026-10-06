@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 
 type ActivityCoverImageProps = {
   alt?: string;
-  categoryArtworkClassName?: string;
   fallbackSrc?: string | null;
   fetchPriority?: "auto" | "high" | "low";
   imageClassName?: string;
@@ -22,7 +21,6 @@ type ActivityCoverImageProps = {
 
 export function ActivityCoverImage({
   alt = "",
-  categoryArtworkClassName,
   fallbackSrc,
   fetchPriority = "auto",
   imageClassName,
@@ -38,10 +36,10 @@ export function ActivityCoverImage({
   const normalizedPrimarySrc = src?.trim() || null;
   const normalizedRecoverySrc = recoverySrc?.trim() || null;
   const activeSrc = usesRecovery ? normalizedRecoverySrc : normalizedPrimarySrc;
-  const usesCategoryArtworkCrop =
+  const usesCategoryArtwork =
     isActivityCategoryIllustrationSrc(activeSrc) &&
     activeSrc !== defaultActivityCategoryIllustrationSrc;
-  const fallbackUsesCategoryArtworkCrop =
+  const fallbackUsesCategoryArtwork =
     isActivityCategoryIllustrationSrc(normalizedFallbackSrc) &&
     normalizedFallbackSrc !== defaultActivityCategoryIllustrationSrc;
   const primarySrc =
@@ -114,13 +112,9 @@ export function ActivityCoverImage({
         <img
           alt=""
           className={cn(
-            "absolute w-full object-cover",
-            fallbackUsesCategoryArtworkCrop
-              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
-              : "inset-0 h-full",
-            fallbackUsesCategoryArtworkCrop
-              ? categoryArtworkClassName
-              : undefined,
+            fallbackUsesCategoryArtwork
+              ? "absolute left-1/2 top-1/2 h-[72%] w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              : "absolute inset-0 h-full w-full object-cover",
           )}
           decoding="sync"
           fetchPriority={fetchPriority}
@@ -135,11 +129,10 @@ export function ActivityCoverImage({
           src={primarySrc}
           alt={alt}
           className={cn(
-            "absolute w-full object-cover transition-[opacity,transform] duration-300 ease-out",
-            usesCategoryArtworkCrop
-              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
-              : "inset-0 h-full group-hover/card:scale-[1.035]",
-            usesCategoryArtworkCrop ? categoryArtworkClassName : undefined,
+            "absolute transition-[opacity,transform] duration-300 ease-out",
+            usesCategoryArtwork
+              ? "left-1/2 top-1/2 h-[72%] w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              : "inset-0 h-full w-full object-cover group-hover/card:scale-[1.035]",
             hasLoaded ? "opacity-100" : "opacity-0",
             imageClassName,
           )}

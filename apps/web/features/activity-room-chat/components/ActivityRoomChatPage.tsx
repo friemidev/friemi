@@ -37,7 +37,8 @@ import {
 import { createPortal, useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
-import { ChatEmojiPicker } from "@/features/chat/components/ChatEmojiPicker";
+import { ChatTimeSeparator } from "@/features/chat/components/ChatTimeSeparator";
+import { useChatTextareaAutosize } from "@/features/chat/useChatTextareaAutosize";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
 import {
@@ -55,10 +56,12 @@ import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
 import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
 import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
+import { useChatMessageMotion } from "@/features/chat/useChatMessageMotion";
 import type { ChatMentionMember, ChatReplyTarget } from "@/features/chat/types";
 import {
   getChatMentionEveryoneToken,
   getChatMentionMemberToken,
+  shouldOpenChatMentionPicker,
 } from "@/features/chat/utils/chatMentions";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
@@ -86,9 +89,7 @@ import {
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
-  formatChatDateSeparator,
   formatChatListTimestamp,
-  formatChatMessageTime,
   getChatDateKey,
   shouldShowChatTimeSeparator,
 } from "@/lib/chatDateSeparators";
@@ -960,34 +961,6 @@ function ScrollAnchor({ lastMessageId }: { lastMessageId?: string }) {
   return <div ref={anchorRef} aria-hidden="true" />;
 }
 
-function ChatTimeSeparator({
-  createdAt,
-  showDate,
-  locale,
-}: {
-  createdAt: string;
-  showDate: boolean;
-  locale: string;
-}) {
-  const dateLabel = showDate ? formatChatDateSeparator(createdAt, locale) : "";
-  const timeLabel = formatChatMessageTime(createdAt, locale);
-  const label = [dateLabel, timeLabel].filter(Boolean).join(" ");
-
-  if (!label) {
-    return null;
-  }
-
-  return (
-    <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
-      <span className="h-px flex-1 bg-[#E7E2D6]" />
-      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#8B907F] ring-1 ring-[#E7E2D6]">
-        {label}
-      </span>
-      <span className="h-px flex-1 bg-[#E7E2D6]" />
-    </div>
-  );
-}
-
 function getAnnouncementDeleteConfirmCopy(locale: string) {
   if (locale === "fr") {
     return "Supprimer cette annonce ?";
@@ -1796,14 +1769,14 @@ function MessageRow({
   return (
     <div
       className={cn(
-        "group flex items-start gap-2.5",
+        "group flex min-w-0 items-start gap-2.5",
         message.isMine ? "justify-end" : "justify-start",
       )}
     >
       {!message.isMine ? (
         <Link
           aria-label={sender.nickname}
-          className="rounded-full pt-[1.25rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
+          className="shrink-0 rounded-full pt-[1.25rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
           href={senderProfileHref}
           prefetch={false}
           title={sender.nickname}
@@ -1814,13 +1787,13 @@ function MessageRow({
       {message.isMine ? (actionMenu ?? selectionControl) : null}
       <div
         className={cn(
-          "grid gap-0.5",
+          "flex min-w-0 flex-col gap-0.5",
           actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
               ? "max-w-[65%] sm:max-w-[60%]"
               : "max-w-[76%] sm:max-w-[64%]",
-          message.isMine ? "justify-items-end" : "justify-items-start",
+          message.isMine ? "items-end" : "items-start",
         )}
       >
         {!message.isMine ? (
@@ -1831,7 +1804,7 @@ function MessageRow({
         <div
           aria-pressed={selectionMode && canDelete ? isSelected : undefined}
           className={cn(
-            "relative touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+            "relative min-w-0 max-w-full touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
             canOpenActions && "select-none [-webkit-touch-callout:none]",
             selectionMode && canDelete && "cursor-pointer",
             isSelected &&
@@ -1862,13 +1835,6 @@ function MessageRow({
           role={canOpenActions ? "button" : undefined}
           tabIndex={canOpenActions ? 0 : undefined}
         >
-          {!message.isDeleted && message.replyTo ? (
-            <ChatReplyBubblePreview
-              inverted={message.isMine}
-              locale={locale}
-              replyTo={message.replyTo}
-            />
-          ) : null}
           {!message.isDeleted && message.imageUrls.length ? (
             <ChatImagePreviewGrid
               imageLabel={copy.imageMessage}
@@ -1901,6 +1867,9 @@ function MessageRow({
             </p>
           ) : null}
         </div>
+        {!message.isDeleted && message.replyTo ? (
+          <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
+        ) : null}
       </div>
       {!message.isMine ? (actionMenu ?? selectionControl) : null}
       {message.isMine ? (
@@ -1930,6 +1899,39 @@ function ActivityRoomManageSheet({
 }: ActivityRoomManagePageProps & {
   onClose: () => void;
 }) {
+  const [loadedManagement, setLoadedManagement] = useState(management ?? null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  // Server-action refreshes replace the activity snapshot; reload the roster too.
+  useEffect(() => {
+    if (management) {
+      setLoadedManagement(management);
+      return;
+    }
+    const controller = new AbortController();
+    setLoadFailed(false);
+    void fetch(
+      `/api/activity-room/${encodeURIComponent(activityId)}/management`,
+      {
+        cache: "no-store",
+        credentials: "same-origin",
+        signal: controller.signal,
+      },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Management unavailable");
+        const payload = (await response.json()) as {
+          management: ActivityRoomManagementViewModel;
+        };
+        if (!controller.signal.aborted) setLoadedManagement(payload.management);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLoadFailed(true);
+      });
+    return () => controller.abort();
+  }, [activity, activityId, attempt, management]);
+
   return (
     <MobileBottomSheet
       ariaLabel={getRoomManagementCopy(locale).label}
@@ -1938,17 +1940,61 @@ function ActivityRoomManageSheet({
       onClose={onClose}
       open
     >
-      <ActivityRoomManagePage
-        activity={activity}
-        activityId={activityId}
-        locale={locale}
-        management={management}
-        onClose={onClose}
-        policy={policy}
-        presentation="sheet"
-        signInHref={signInHref}
-        viewer={viewer}
-      />
+      {loadedManagement && !loadFailed ? (
+        <ActivityRoomManagePage
+          activity={activity}
+          activityId={activityId}
+          locale={locale}
+          management={loadedManagement}
+          onClose={onClose}
+          policy={policy}
+          presentation="sheet"
+          signInHref={signInHref}
+          viewer={viewer}
+        />
+      ) : (
+        <div
+          className="flex min-h-48 flex-col items-center justify-center gap-4 p-6 text-sm text-[#69756C]"
+          role="status"
+        >
+          {loadFailed ? (
+            <>
+              <p>
+                {locale === "fr"
+                  ? "Chargement impossible."
+                  : locale === "en"
+                    ? "Could not load chat settings."
+                    : "群聊设置加载失败"}
+              </p>
+              <button
+                className="rounded-md border border-[#D8E8DC] px-4 py-2 font-semibold text-[#156240]"
+                onClick={() => setAttempt((value) => value + 1)}
+                type="button"
+              >
+                {locale === "fr"
+                  ? "Réessayer"
+                  : locale === "en"
+                    ? "Retry"
+                    : "重试"}
+              </button>
+            </>
+          ) : (
+            <>
+              <LoaderCircle
+                aria-hidden="true"
+                className="h-5 w-5 animate-spin motion-reduce:animate-none"
+              />
+              <span>
+                {locale === "fr"
+                  ? "Chargement..."
+                  : locale === "en"
+                    ? "Loading..."
+                    : "正在加载"}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </MobileBottomSheet>
   );
 }
@@ -1984,30 +2030,7 @@ function RoomComposer({
   const mentionCursorRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertEmoji(emoji: string) {
-    const textarea = textareaRef.current;
-    const start = textarea?.selectionStart ?? body.length;
-    const end = textarea?.selectionEnd ?? body.length;
-    const nextBody = `${body.slice(0, start)}${emoji}${body.slice(end)}`.slice(
-      0,
-      500,
-    );
-    setBody(nextBody);
-    window.requestAnimationFrame(() => {
-      const cursor = Math.min(start + emoji.length, nextBody.length);
-      textarea?.focus();
-      textarea?.setSelectionRange(cursor, cursor);
-    });
-  }
-
-  function setMentionPicker(nextOpen: boolean) {
-    if (nextOpen) {
-      mentionCursorRef.current =
-        textareaRef.current?.selectionStart ?? body.length;
-    }
-
-    setMentionPickerOpen(nextOpen);
-  }
+  useChatTextareaAutosize(textareaRef, body);
 
   function insertMentionToken(token: string) {
     const textarea = textareaRef.current;
@@ -2066,12 +2089,7 @@ function RoomComposer({
       setMentionsEveryone(false);
     }
 
-    const insertedAt =
-      nextBody.length > previousBody.length &&
-      cursor > 0 &&
-      nextBody[cursor - 1] === "@";
-
-    if (insertedAt) {
+    if (shouldOpenChatMentionPicker(previousBody, nextBody, cursor)) {
       mentionCursorRef.current = cursor;
       setMentionPickerOpen(true);
     }
@@ -2164,7 +2182,7 @@ function RoomComposer({
 
   return (
     <form
-      className="relative z-20 shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3 md:pl-3 md:pr-3"
+      className="relative z-20 shrink-0 border-t border-[#D6D5B2] bg-white px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[calc(0.75rem+env(safe-area-inset-right))] md:rounded-b-[1.45rem] md:pb-2 md:pl-3 md:pr-3"
       data-activity-room-composer
       noValidate
       onFocusCapture={keepMobileChatPageAnchored}
@@ -2184,15 +2202,9 @@ function RoomComposer({
         removeLabel={copy.removeImage}
       />
       <div className="flex w-full min-w-0 max-w-full items-end gap-2 max-[360px]:gap-1.5">
-        <ChatEmojiPicker
-          disabled={disabled || isSending}
-          label={copy.addEmoji}
-          onSelect={insertEmoji}
-        />
         <ChatMentionPicker
-          disabled={disabled || isSending}
           locale={locale}
-          onOpenChange={setMentionPicker}
+          onOpenChange={setMentionPickerOpen}
           onSelectEveryone={handleSelectEveryone}
           onSelectMember={handleSelectMember}
           open={mentionPickerOpen}
@@ -2213,7 +2225,7 @@ function RoomComposer({
           uploadingLabel={copy.imageUploading}
         />
         <textarea
-          className="max-h-28 min-h-11 w-full min-w-0 flex-1 resize-none rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-5 text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 disabled:bg-[#F1F2EC] max-[360px]:min-h-10 max-[360px]:px-3 max-[360px]:py-2.5"
+          className="chat-composer-input flex-1"
           disabled={disabled || isSending}
           maxLength={500}
           name="body"
@@ -2291,6 +2303,7 @@ export function ActivityRoomChatPage({
     setMessages,
   });
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
+  useChatMessageMotion(messages, chatHistory.scrollContainerRef);
   const lastMessageId = messages[messages.length - 1]?.id;
   const activityHref = withLocale(
     locale,
@@ -2433,8 +2446,8 @@ export function ActivityRoomChatPage({
   }
 
   return (
-    <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
-      <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 min-w-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
+      <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-black/[0.04] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <ActivityRoomChatBackButton
           activityId={activity?.id ?? activityId}
           fallbackHref={messagesHref}
@@ -2466,7 +2479,7 @@ export function ActivityRoomChatPage({
       ) : null}
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+        className="chat-message-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
         onScroll={chatHistory.onScroll}
         ref={chatHistory.scrollContainerRef}
       >
@@ -2508,21 +2521,23 @@ export function ActivityRoomChatPage({
                         locale={locale}
                       />
                     ) : null}
-                    <MessageRow
-                      actionMenuOpen={actionMenuMessageId === message.id}
-                      canManage={canManage}
-                      isDeleting={deletingMessageIds.includes(message.id)}
-                      isSelected={selectedMessageIds.includes(message.id)}
-                      locale={locale}
-                      message={message}
-                      onDelete={handleDelete}
-                      onOpenActionMenu={handleOpenActionMenu}
-                      onReply={handleReply}
-                      onStartSelection={handleStartSelection}
-                      onToggleSelection={handleToggleSelection}
-                      selectionMode={selectionMode}
-                      viewer={viewer}
-                    />
+                    <div className="min-w-0" data-chat-motion-id={message.id}>
+                      <MessageRow
+                        actionMenuOpen={actionMenuMessageId === message.id}
+                        canManage={canManage}
+                        isDeleting={deletingMessageIds.includes(message.id)}
+                        isSelected={selectedMessageIds.includes(message.id)}
+                        locale={locale}
+                        message={message}
+                        onDelete={handleDelete}
+                        onOpenActionMenu={handleOpenActionMenu}
+                        onReply={handleReply}
+                        onStartSelection={handleStartSelection}
+                        onToggleSelection={handleToggleSelection}
+                        selectionMode={selectionMode}
+                        viewer={viewer}
+                      />
+                    </div>
                   </Fragment>
                 );
               })}
