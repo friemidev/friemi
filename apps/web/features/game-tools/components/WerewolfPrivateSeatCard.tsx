@@ -204,7 +204,6 @@ const copies: Record<string, Copy> = {
       "女巫请睁眼",
       "天亮了",
       "进入发言",
-      "进入投票",
       "宣布出局",
     ],
     judgeStatus: "法官席",
@@ -266,7 +265,6 @@ const copies: Record<string, Copy> = {
       "Witch opens eyes",
       "Day breaks",
       "Start speeches",
-      "Start voting",
       "Announce deaths",
     ],
     judgeStatus: "Judge seat",
@@ -330,7 +328,6 @@ const copies: Record<string, Copy> = {
       "La sorcière ouvre les yeux",
       "Le jour se lève",
       "Début des paroles",
-      "Début du vote",
       "Annonce des morts",
     ],
     judgeStatus: "Place du maître",
@@ -1360,19 +1357,16 @@ export function WerewolfPrivateSeatCard({
           </div>
         </section>
       ) : null}
-      {showInGamePlayerCard ? (
+      {roomStatus === "IN_PROGRESS" ? (
         <WerewolfFlowPanel
           events={flowEvents}
           flow={roomState.flow}
-          isJudge={false}
+          inlineTrigger={isJudgeSeat}
+          isJudge={isJudgeSeat}
           locale={locale}
           privateToken={privateToken}
           roleDeck={roleDeck}
-          roleKey={currentRoleKey}
           roomStatus={roomStatus}
-          seatNumber={seatNumber}
-          seats={roomSeats}
-          sheriffSeatNumber={roomState.sheriffSeatNumber ?? null}
           submissions={flowSubmissions}
         />
       ) : null}
@@ -1911,21 +1905,23 @@ export function WerewolfPrivateSeatCard({
                   </div>
                 </div>
 
-                <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4">
-                  <span className="text-sm font-bold text-[#7A1F2B]">
-                    {t.judgeHelper}
-                  </span>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {t.judgePrompts.map((prompt) => (
-                      <span
-                        className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]"
-                        key={prompt}
-                      >
-                        {prompt}
-                      </span>
-                    ))}
+                {roomStatus === "LOBBY" ? (
+                  <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4">
+                    <span className="text-sm font-bold text-[#7A1F2B]">
+                      {t.judgeHelper}
+                    </span>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {t.judgePrompts.map((prompt) => (
+                        <span
+                          className="rounded-full border border-[#D9C7B4] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E1718]"
+                          key={prompt}
+                        >
+                          {prompt}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 {roomStatus === "IN_PROGRESS" ? (
                   <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
