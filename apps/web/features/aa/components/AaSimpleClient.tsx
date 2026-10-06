@@ -5,20 +5,21 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, CircleHelp, Coins, Copy, Plus, ReceiptText, RotateCcw, Users, Wallet } from "lucide-react";
 import { AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT, applyAaCommand, isPrepaymentRefund, simpleBalances, splitSimpleExpense, type AaCommand, type AaRecord, type AaSimpleState } from "../domain/simpleLedger";
 import { formatMinorAmount, parseMoneyToMinor } from "../domain/money";
+import { decodePaymentMethods, encodePaymentMethods, MAX_PAYMENT_METHOD_STORAGE_LENGTH } from "../domain/paymentMethods";
 import { getSimpleAaCopy, getSimpleAaError } from "../simpleCopy";
 import { brand } from "../../../lib/brand";
 import styles from "./AaSimpleClient.module.css";
 
 export type AaScreen = "overview" | "choose" | "expense" | "prepayment" | "details" | "progress" | "payment" | "record";
 const paymentCopy = {
-  "zh-CN": { incoming: "我的待收款", outgoing: "我的待付款", receipt: "收款", awaiting: "待收款", noneIncoming: "暂无待收款", noneOutgoing: "暂无待付款", add: "添加收款方式", change: "修改收款方式", label: "我的收款方式", placeholder: "例如 Revolut @name 或 IBAN FR…", save: "保存收款方式", remove: "移除", missing: "对方还没填写收款方式", copy: "复制收款方式", copied: "已复制", invalid: "请填写不超过 160 字的收款方式", copyFailed: "复制失败，请手动复制", from: "来自", to: "付给", payerMarked: "对方已标记付款", waitingRecipient: "已付款，等收款人确认", confirmReceipt: "我已收款", receiptHint: "确认钱已到账后点击", receiptConfirmHint: "确认收到这笔钱后，双方的账目会结清。", received: "收款人已确认", undoPaid: "撤销已付款", reopenBlocked: "有已付款待收款确认，请先核对这笔转账。" },
-  en: { incoming: "My incoming payments", outgoing: "My payments to make", receipt: "Receive payment", awaiting: "To receive", noneIncoming: "Nothing to receive", noneOutgoing: "Nothing to pay", add: "Add payment details", change: "Edit payment details", label: "My payment details", placeholder: "e.g. Revolut @name or IBAN FR…", save: "Save payment details", remove: "Remove", missing: "Recipient has not added payment details", copy: "Copy payment details", copied: "Copied", invalid: "Enter payment details (up to 160 characters)", copyFailed: "Could not copy. Please copy manually", from: "From", to: "Pay", payerMarked: "Payer marked as paid", waitingRecipient: "Paid · awaiting recipient", confirmReceipt: "I received it", receiptHint: "Tap once the money arrives", receiptConfirmHint: "Confirming receipt settles this payment for both people.", received: "Recipient confirmed", undoPaid: "Undo paid status", reopenBlocked: "A marked payment is awaiting receipt. Resolve it before reopening." },
-  fr: { incoming: "Mes paiements à recevoir", outgoing: "Mes paiements à faire", receipt: "Recevoir", awaiting: "À recevoir", noneIncoming: "Rien à recevoir", noneOutgoing: "Rien à payer", add: "Ajouter mes coordonnées", change: "Modifier mes coordonnées", label: "Mes coordonnées de paiement", placeholder: "Ex. Revolut @nom ou IBAN FR…", save: "Enregistrer", remove: "Supprimer", missing: "Le bénéficiaire n’a pas ajouté ses coordonnées", copy: "Copier les coordonnées", copied: "Copié", invalid: "Saisissez vos coordonnées (160 caractères max.)", copyFailed: "Copie impossible. Copiez manuellement", from: "De", to: "Payer", payerMarked: "Payeur : paiement indiqué", waitingRecipient: "Payé · en attente du bénéficiaire", confirmReceipt: "J’ai reçu l’argent", receiptHint: "Appuyez après réception", receiptConfirmHint: "Confirmer la réception solde ce paiement pour les deux personnes.", received: "Réception confirmée", undoPaid: "Annuler le paiement indiqué", reopenBlocked: "Un paiement indiqué attend confirmation. Vérifiez-le avant de rouvrir." },
+  "zh-CN": { incoming: "我的待收款", outgoing: "我的待付款", receipt: "收款", awaiting: "待收款", noneIncoming: "暂无待收款", noneOutgoing: "暂无待付款", add: "添加收款方式", change: "修改", label: "我的收款方式", placeholder: "例如 Revolut @name 或 IBAN FR…", save: "保存收款方式", remove: "移除", missing: "对方还没填写收款方式", copy: "复制", copied: "已复制", invalid: "收款方式合计最多 160 字，请检查输入", copyFailed: "复制失败，请手动复制", from: "来自", to: "付给", payerMarked: "对方已标记付款", waitingRecipient: "已付款，等收款人确认", confirmReceipt: "我已收款", receiptHint: "确认钱已到账后点击", receiptConfirmHint: "确认收到这笔钱后，双方的账目会结清。", received: "收款人已确认", undoPaid: "撤销已付款", reopenBlocked: "有已付款待收款确认，请先核对这笔转账。" },
+  en: { incoming: "My incoming payments", outgoing: "My payments to make", receipt: "Receive payment", awaiting: "To receive", noneIncoming: "Nothing to receive", noneOutgoing: "Nothing to pay", add: "Add payment details", change: "Edit", label: "My payment details", placeholder: "e.g. Revolut @name or IBAN FR…", save: "Save payment details", remove: "Remove", missing: "Recipient has not added payment details", copy: "Copy", copied: "Copied", invalid: "Payment details can use up to 160 characters in total", copyFailed: "Could not copy. Please copy manually", from: "From", to: "Pay", payerMarked: "Payer marked as paid", waitingRecipient: "Paid · awaiting recipient", confirmReceipt: "I received it", receiptHint: "Tap once the money arrives", receiptConfirmHint: "Confirming receipt settles this payment for both people.", received: "Recipient confirmed", undoPaid: "Undo paid status", reopenBlocked: "A marked payment is awaiting receipt. Resolve it before reopening." },
+  fr: { incoming: "Mes paiements à recevoir", outgoing: "Mes paiements à faire", receipt: "Recevoir", awaiting: "À recevoir", noneIncoming: "Rien à recevoir", noneOutgoing: "Rien à payer", add: "Ajouter mes coordonnées", change: "Modifier", label: "Mes coordonnées de paiement", placeholder: "Ex. Revolut @nom ou IBAN FR…", save: "Enregistrer", remove: "Supprimer", missing: "Le bénéficiaire n’a pas ajouté ses coordonnées", copy: "Copier", copied: "Copié", invalid: "Les coordonnées ne peuvent pas dépasser 160 caractères au total", copyFailed: "Copie impossible. Copiez manuellement", from: "De", to: "Payer", payerMarked: "Payeur : paiement indiqué", waitingRecipient: "Payé · en attente du bénéficiaire", confirmReceipt: "J’ai reçu l’argent", receiptHint: "Appuyez après réception", receiptConfirmHint: "Confirmer la réception solde ce paiement pour les deux personnes.", received: "Réception confirmée", undoPaid: "Annuler le paiement indiqué", reopenBlocked: "Un paiement indiqué attend confirmation. Vérifiez-le avant de rouvrir." },
 } as const;
 type Props = {
   initialState: AaSimpleState; locale: string; initialScreen?: AaScreen; initialRecordId?: string; preview?: boolean;
   onCommand?: (command: AaCommand) => Promise<{ state?: AaSimpleState; error?: string }>;
-  onSavePaymentMethod?: (value: string) => Promise<{ paymentMethod?: string | null; error?: string }>;
+  onSavePaymentMethod?: (values: string[]) => Promise<{ paymentMethod?: string | null; error?: string }>;
   onStateChange?: (state: AaSimpleState) => void;
 };
 
@@ -31,7 +32,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<"reopen" | "delete" | "receive" | "received" | "unpaid" | null>(null);
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState(false);
+  const [editingPaymentMethodIndex, setEditingPaymentMethodIndex] = useState<number | null>(null);
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("");
   const [paymentMethodBusy, setPaymentMethodBusy] = useState(false);
   const [paymentMethodError, setPaymentMethodError] = useState("");
@@ -71,6 +72,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const incomingAmount = incoming.reduce((sum, record) => sum + BigInt(record.amount), 0n);
   const outgoingAmount = outgoing.reduce((sum, record) => sum + BigInt(record.amount), 0n);
   const myPaymentMethod = state.participants.find(person => person.id === state.viewerId)?.paymentMethod ?? null;
+  const myPaymentMethods = decodePaymentMethods(myPaymentMethod);
   const unresolved = visible.some(r => r.status === "DISPUTED");
   const contestedForViewer = transfers.filter(r => r.status === "DISPUTED" && (r.from === state.viewerId || r.to === state.viewerId)).reduce((sum, r) => sum + BigInt(r.amount), 0n);
   const waitingForReceipt = !active && outgoing.length > 0 && outgoing.every(record => Boolean(record.paidAt));
@@ -83,7 +85,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const prepaid = prepayments.filter(r => r.status === "POSTED").reduce((sum, r) => sum + BigInt(r.amount), 0n);
   const completed = transfers.filter(r => r.status === "POSTED").length;
   const selected = state.records.find(r => r.id === selectedId);
-  const selectedPayeeMethod = state.participants.find(person => person.id === selected?.to)?.paymentMethod;
+  const selectedPayeeMethods = decodePaymentMethods(state.participants.find(person => person.id === selected?.to)?.paymentMethod);
   const viewerActive = state.participants.some(p => p.id === state.viewerId && p.active);
   const canEditPaymentMethod = viewerActive && state.status !== "ARCHIVED";
   const canRecord = active && !unresolved && (viewerActive || state.canManage);
@@ -103,28 +105,49 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
     } catch (cause) { setError(getSimpleAaError(cause instanceof Error ? cause.message : "FAILED", locale)); }
     finally { lock.current = false; setBusy(false); }
   }
-  async function savePaymentMethod(value: string) {
+  async function savePaymentMethods(values: string[]) {
     if (paymentMethodBusy) return;
-    if (value && (value.length > 160 || /[\u0000-\u001f\u007f]/.test(value))) { setPaymentMethodError(paymentText.invalid); return; }
+    let stored: string | null;
+    try { stored = encodePaymentMethods(values); }
+    catch { setPaymentMethodError(paymentText.invalid); return; }
     setPaymentMethodBusy(true); setPaymentMethodError("");
     try {
-      const result = preview ? { paymentMethod: value || null } : await onSavePaymentMethod!(value);
+      const result = preview ? { paymentMethod: stored } : await onSavePaymentMethod!(values);
+      if (result.error === "INVALID") { setPaymentMethodError(paymentText.invalid); return; }
       if (result.error) throw new Error(result.error);
       const next = { ...state, participants: state.participants.map(person => person.id === state.viewerId ? { ...person, paymentMethod: result.paymentMethod ?? null } : person) };
-      setState(next); onStateChange?.(next); setEditingPaymentMethod(false);
+      setState(next); onStateChange?.(next); setEditingPaymentMethodIndex(null);
     } catch { setPaymentMethodError(copy.error); }
     finally { setPaymentMethodBusy(false); }
   }
-  async function copyRecipientMethod(recipientId: string) {
-    const method = state.participants.find(person => person.id === recipientId)?.paymentMethod;
+  async function copyRecipientMethod(recipientId: string, index: number) {
+    const method = decodePaymentMethods(state.participants.find(person => person.id === recipientId)?.paymentMethod)[index];
     if (!method) return;
     try {
       await navigator.clipboard.writeText(method);
       setPaymentMethodError("");
-      setCopiedRecipient(recipientId);
-      window.setTimeout(() => setCopiedRecipient(current => current === recipientId ? null : current), 1800);
+      const key = `${recipientId}:${index}`;
+      setCopiedRecipient(key);
+      window.setTimeout(() => setCopiedRecipient(current => current === key ? null : current), 1800);
     } catch { setPaymentMethodError(paymentText.copyFailed); }
   }
+  function submitPaymentMethod(event: FormEvent) {
+    event.preventDefault();
+    const value = paymentMethodDraft.trim();
+    const next = editingPaymentMethodIndex === -1
+      ? [...myPaymentMethods, value]
+      : myPaymentMethods.map((method, index) => index === editingPaymentMethodIndex ? value : method);
+    void savePaymentMethods(next);
+  }
+  const copyableMethods = (recipientId: string, methods: string[]) => methods.map((method, index) => {
+    const key = `${recipientId}:${index}`;
+    return <div className={styles.recipientMethod} key={key}>
+      <span>{method}</span>
+      <button type="button" aria-label={`${paymentText.copy}: ${method}`} onClick={() => void copyRecipientMethod(recipientId, index)}>
+        <Copy size={14} />{copiedRecipient === key ? paymentText.copied : paymentText.copy}
+      </button>
+    </div>;
+  });
   const primary = (label: string, action: () => void, disabled = false, icon?: ReactNode) => <button type="button" className={styles.primary} onClick={action} disabled={busy || disabled}>{icon}{busy ? copy.working : label}</button>;
   const footer = (children: ReactNode) => <div className={styles.footer}>{children}</div>;
   const avatar = (id: string | null) => <span aria-hidden="true" className={styles.avatar} data-tone={Math.max(0, state.participants.findIndex(p => p.id === id)) % 4}>{name(id).slice(0, 1)}</span>;
@@ -209,22 +232,32 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
       <section className={styles.settlementCard} aria-labelledby="aa-incoming-title">
         <div className={styles.settlementHeading}><div><h2 id="aa-incoming-title">{paymentText.incoming}</h2><strong>{money(incomingAmount)}</strong></div><span>{incoming.length} {copy.transfers}</span></div>
         {incoming.length ? <div className={styles.settlementItems}>{incoming.map(record => <button className={styles.settlementRecord} key={record.id} type="button" onClick={() => openRecord(record)}>{avatar(record.from)}<span className={styles.grow}><strong>{paymentText.from} {name(record.from)}</strong><small>{record.paidAt ? paymentText.payerMarked : paymentText.awaiting}</small></span><b className={styles.number}>{money(record.amount)}</b><ChevronRight size={16} /></button>)}</div> : <p className={styles.settlementEmpty}>{paymentText.noneIncoming}</p>}
-        {(myPaymentMethod || (incoming.length > 0 && canEditPaymentMethod)) && <div className={styles.paymentMethodEditor}>
-          {myPaymentMethod && !editingPaymentMethod && <p><span>{paymentText.label}</span><strong>{myPaymentMethod}</strong></p>}
-          {editingPaymentMethod ? <form onSubmit={event => { event.preventDefault(); void savePaymentMethod(paymentMethodDraft.trim()); }}>
+        {(myPaymentMethods.length > 0 || (incoming.length > 0 && canEditPaymentMethod)) && <div className={styles.paymentMethodEditor}>
+          {myPaymentMethods.length > 0 && <p className={styles.methodListLabel}>{paymentText.label}</p>}
+          {myPaymentMethods.length > 0 && <div className={styles.methodManageList} role="list" aria-label={paymentText.label}>
+            {myPaymentMethods.map((method, index) => <div className={styles.methodManageRow} role="listitem" key={`${index}:${method}`}>
+              <span>{method}</span>
+              {canEditPaymentMethod && <button type="button" aria-label={`${paymentText.change}: ${method}`} disabled={paymentMethodBusy} onClick={() => { setPaymentMethodDraft(method); setPaymentMethodError(""); setEditingPaymentMethodIndex(index); }}>{paymentText.change}</button>}
+            </div>)}
+          </div>}
+          {editingPaymentMethodIndex !== null ? <form onSubmit={submitPaymentMethod}>
             <label htmlFor="aa-my-payment-method">{paymentText.label}</label>
-            <input autoComplete="off" id="aa-my-payment-method" maxLength={160} onChange={event => setPaymentMethodDraft(event.target.value)} placeholder={paymentText.placeholder} required value={paymentMethodDraft} />
-            <div className={styles.paymentMethodActions}><button disabled={paymentMethodBusy} type="submit">{paymentMethodBusy ? copy.working : paymentText.save}</button><button disabled={paymentMethodBusy} type="button" onClick={() => { setEditingPaymentMethod(false); setPaymentMethodError(""); }}>{copy.cancel}</button>{myPaymentMethod && <button disabled={paymentMethodBusy} type="button" onClick={() => void savePaymentMethod("")}>{paymentText.remove}</button>}</div>
-          </form> : canEditPaymentMethod ? <button className={styles.paymentMethodEditButton} type="button" onClick={() => { setPaymentMethodDraft(myPaymentMethod ?? ""); setPaymentMethodError(""); setEditingPaymentMethod(true); }}>{myPaymentMethod ? paymentText.change : paymentText.add}<ChevronRight size={15} /></button> : <button className={styles.paymentMethodEditButton} type="button" disabled={paymentMethodBusy} onClick={() => void savePaymentMethod("")}>{paymentText.remove}</button>}
+            <input autoComplete="off" id="aa-my-payment-method" maxLength={MAX_PAYMENT_METHOD_STORAGE_LENGTH} onChange={event => setPaymentMethodDraft(event.target.value)} placeholder={paymentText.placeholder} required value={paymentMethodDraft} />
+            <div className={styles.paymentMethodActions}>
+              <button disabled={paymentMethodBusy} type="submit">{paymentMethodBusy ? copy.working : paymentText.save}</button>
+              <button disabled={paymentMethodBusy} type="button" onClick={() => { setEditingPaymentMethodIndex(null); setPaymentMethodError(""); }}>{copy.cancel}</button>
+              {editingPaymentMethodIndex >= 0 && <button disabled={paymentMethodBusy} type="button" onClick={() => void savePaymentMethods(myPaymentMethods.filter((_, index) => index !== editingPaymentMethodIndex))}>{paymentText.remove}</button>}
+            </div>
+          </form> : canEditPaymentMethod && myPaymentMethods.length < 8 ? <button className={styles.paymentMethodEditButton} type="button" onClick={() => { setPaymentMethodDraft(""); setPaymentMethodError(""); setEditingPaymentMethodIndex(-1); }}><Plus size={15} />{paymentText.add}</button> : !canEditPaymentMethod && myPaymentMethods.length > 0 ? <button className={styles.paymentMethodEditButton} type="button" disabled={paymentMethodBusy} onClick={() => void savePaymentMethods([])}>{paymentText.remove}</button> : null}
         </div>}
       </section>
       <section className={styles.settlementCard} aria-labelledby="aa-outgoing-title">
         <div className={styles.settlementHeading}><div><h2 id="aa-outgoing-title">{paymentText.outgoing}</h2><strong>{money(outgoingAmount)}</strong></div><span>{outgoing.length} {copy.transfers}</span></div>
         {outgoing.length ? <div className={styles.settlementItems}>{outgoing.map(record => {
-          const method = state.participants.find(person => person.id === record.to)?.paymentMethod;
+          const methods = decodePaymentMethods(state.participants.find(person => person.id === record.to)?.paymentMethod);
           return <div className={styles.outgoingRecord} key={record.id}>
             <button className={styles.settlementRecord} type="button" onClick={() => openRecord(record)}>{avatar(record.to)}<span className={styles.grow}><strong>{paymentText.to} {name(record.to)}</strong><small>{statusText(record)}</small></span><b className={styles.number}>{money(record.amount)}</b><ChevronRight size={16} /></button>
-            {record.status === "PENDING_CONFIRMATION" && <div className={styles.recipientMethod}>{method ? <><span>{method}</span><button type="button" onClick={() => void copyRecipientMethod(record.to!)}><Copy size={14} />{copiedRecipient === record.to ? paymentText.copied : paymentText.copy}</button></> : <span>{paymentText.missing}</span>}</div>}
+            {record.status === "PENDING_CONFIRMATION" && (methods.length ? <div className={styles.recipientMethods}>{copyableMethods(record.to!, methods)}</div> : <p className={styles.recipientMethodMissing}>{paymentText.missing}</p>)}
           </div>;
         })}</div> : <p className={styles.settlementEmpty}>{paymentText.noneOutgoing}</p>}
       </section>
@@ -238,7 +271,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
     </>}
     {screen === "payment" && selected && <>
       <div className={styles.paymentHero}>{avatar(selected.to === state.viewerId ? selected.from : selected.to)}<p>{name(selected.from)} {copy.payTo} {name(selected.to)}</p><strong>{money(selected.amount)}</strong><span className={styles.badge} data-status={selected.status}>{selected.status === "PENDING_CONFIRMATION" && selected.to === state.viewerId ? selected.paidAt ? paymentText.payerMarked : paymentText.awaiting : statusText(selected)}</span></div>
-      {selected.status === "DISPUTED" ? <div className={styles.contact}><CircleHelp size={22} /><h2>{copy.reported}</h2><p>{copy.reviewHint}</p></div> : selected.from === state.viewerId && selected.status === "PENDING_CONFIRMATION" ? <div className={styles.contact}><Wallet size={22} /><h2>{copy.contact}</h2>{selectedPayeeMethod ? <><p className={styles.methodValue}>{selectedPayeeMethod}</p><button className={styles.paymentMethodEditButton} type="button" onClick={() => void copyRecipientMethod(selected.to!)}><Copy size={15} />{copiedRecipient === selected.to ? paymentText.copied : paymentText.copy}</button></> : <><p>{paymentText.missing}</p>{!preview && <a href={chatHref}>{copy.chat}<ArrowRight size={16} /></a>}</>}</div> : null}
+      {selected.status === "DISPUTED" ? <div className={styles.contact}><CircleHelp size={22} /><h2>{copy.reported}</h2><p>{copy.reviewHint}</p></div> : selected.from === state.viewerId && selected.status === "PENDING_CONFIRMATION" ? <div className={styles.contact}><Wallet size={22} /><h2>{copy.contact}</h2>{selectedPayeeMethods.length ? <div className={styles.recipientMethods}>{copyableMethods(selected.to!, selectedPayeeMethods)}</div> : <><p>{paymentText.missing}</p>{!preview && <a href={chatHref}>{copy.chat}<ArrowRight size={16} /></a>}</>}</div> : null}
       {footer(<>
         {selected.status === "PENDING_CONFIRMATION" && selected.from === state.viewerId && (selected.paidAt ? <><p className={styles.hint}>{paymentText.waitingRecipient}</p><button className={styles.textButton} type="button" disabled={busy} onClick={() => run({ intent: "undoPay", recordId: selected.id }, "progress")}>{paymentText.undoPaid}</button></> : <><p className={styles.hint}>{copy.markHint}</p>{primary(copy.markedPaid, () => run({ intent: "pay", recordId: selected.id }, "progress"), unresolved || state.legacyBlocked, <Check size={18} />)}</>)}
         {selected.status === "PENDING_CONFIRMATION" && selected.to === state.viewerId && <><p className={styles.hint}>{paymentText.receiptHint}</p>{primary(paymentText.confirmReceipt, () => setConfirmation("receive"), unresolved || state.legacyBlocked, <Check size={18} />)}</>}
