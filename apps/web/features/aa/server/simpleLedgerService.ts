@@ -36,6 +36,7 @@ export function projectSimpleLedger(
       id: t.id, type: t.type, status: t.status, title: t.title, note: t.note ?? "", amount: t.baseAmountMinor.toString(),
       source: t.importSource, creatorId: t.creatorParticipantId, from: t.transferFromParticipantId, to: t.transferToParticipantId,
       paidAt: t.payerConfirmedAt?.toISOString() ?? null,
+      receivedAt: t.payeeConfirmedAt?.toISOString() ?? null,
       round: t.importSource === AA_SETTLEMENT ? t.id.slice(0, t.id.lastIndexOf(":")) : null,
       contributions: t.contributions.map(item => ({ participantId: item.participantId, amount: item.amountMinor.toString() })),
       shares: t.shares.map(item => ({ participantId: item.participantId, amount: item.amountMinor.toString() })),

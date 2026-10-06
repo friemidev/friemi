@@ -23,6 +23,7 @@ test("payment details are exposed only to their owner and current payer", () => 
     baseAmountMinor: 500n,
     creatorParticipantId: "payer",
     payerConfirmedAt: null,
+    payeeConfirmedAt: null,
     contributions: [],
     shares: [],
     conflicts: [],
@@ -52,4 +53,9 @@ test("payment details are exposed only to their owner and current payer", () => 
   const paidLedger = { ...ledger, transactions: [{ ...transfer, status: "POSTED" }] } as unknown as typeof ledger;
   const paidView = projectSimpleLedger(paidLedger, "payer", access);
   assert.equal(paidView.participants.find(person => person.id === "recipient")?.paymentMethod, null);
+
+  const receiptLedger = { ...ledger, transactions: [{ ...transfer, status: "POSTED", payeeConfirmedAt: new Date("2026-10-03T13:00:00Z") }] } as unknown as typeof ledger;
+  const receiptView = projectSimpleLedger(receiptLedger, "recipient", access);
+  assert.equal(receiptView.records[0].paidAt, null);
+  assert.equal(receiptView.records[0].receivedAt, "2026-10-03T13:00:00.000Z");
 });
