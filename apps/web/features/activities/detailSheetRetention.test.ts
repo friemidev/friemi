@@ -9,7 +9,7 @@ test("detail retention evicts the least recently opened document at its limit", 
   cache.retain(a, () => evicted.push("a"));
   cache.retain(b, () => evicted.push("b"));
   cache.retain(a, () => evicted.push("a"));
-  assert.deepEqual(evicted, []);
+  assert.equal(evicted.length, 0);
   cache.retain(c, () => evicted.push("c"));
   assert.deepEqual(evicted, ["b"]);
 });
@@ -23,5 +23,5 @@ test("unmounted or locked details release their cache slot and callbacks", () =>
   cache.release(a);
   cache.release(a);
   cache.retain(c, () => evicted.push("c"));
-  assert.deepEqual(evicted, []);
+  assert.equal(evicted.length, 0);
 });
