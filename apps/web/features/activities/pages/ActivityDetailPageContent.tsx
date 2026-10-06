@@ -42,6 +42,7 @@ import { ActivityCheckInReviewPanel } from "@/features/activities/components/Act
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { ActivityDetailRefresh } from "@/features/activities/components/ActivityDetailRefresh";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
 import { ActivityPlanetLinkManager } from "@/features/activities/components/ActivityPlanetLinkManager";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
@@ -1029,6 +1030,7 @@ export async function ActivityDetailPageContent({
         className="space-y-5 py-4 sm:space-y-6 sm:py-8"
         mobileSafeTop
       >
+        <ActivityDetailRefresh validatedAt={Date.now()} />
         <MobileNavSectionOverride section="activities" />
         <DetailSourceRestore sourceKey="activity_detail" />
         <ActivityLayerHeader
@@ -1870,6 +1872,7 @@ export async function ActivityDetailPageContent({
           : "app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)]",
       )}
     >
+      <ActivityDetailRefresh validatedAt={Date.now()} />
       {isSheetPresentation ? null : (
         <MobileNavSectionOverride section="lobby" />
       )}

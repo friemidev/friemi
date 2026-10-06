@@ -26,6 +26,7 @@ type MobileBottomSheetProps = {
   headerAction?: ReactNode;
   heightClassName?: string;
   initiallyExpanded?: boolean;
+  keepMounted?: boolean;
   onClose: () => void;
   open: boolean;
   zIndexClassName?: string;
@@ -40,6 +41,7 @@ export function MobileBottomSheet({
   headerAction,
   heightClassName = "h-[85%]",
   initiallyExpanded = false,
+  keepMounted = false,
   onClose,
   open,
   zIndexClassName = "z-[70]",
@@ -147,7 +149,6 @@ export function MobileBottomSheet({
     dragDeltaYRef.current = 0;
     setDragDeltaY(0);
     setIsDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handleDragMove(event: ReactPointerEvent<HTMLDivElement>) {
@@ -159,6 +160,11 @@ export function MobileBottomSheet({
     }
 
     const nextDeltaY = event.clientY - dragStartYRef.current;
+    // Capturing on pointerdown retargets an ordinary handle-button click to
+    // this wrapper. Capture only once the gesture is actually a drag.
+    if (Math.abs(nextDeltaY) > 8 && !event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     dragDeltaYRef.current = nextDeltaY;
     setDragDeltaY(nextDeltaY);
   }
@@ -259,19 +265,22 @@ export function MobileBottomSheet({
     sheetStyle = { height: "100%" };
   }
 
-  if (!open || !mounted) {
+  if ((!open && !keepMounted) || !mounted) {
     return null;
   }
 
   return createPortal(
     <div
-      data-friemi-modal-overlay="true"
+      data-friemi-modal-overlay={open ? "true" : undefined}
+      aria-hidden={!open || undefined}
+      inert={!open}
       className={cn(
         "friemi-sheet-overlay fixed inset-x-0 flex items-end bg-[#111210]/42",
         zIndexClassName,
       )}
       data-state={isClosing ? "closing" : "open"}
       style={{
+        display: open ? undefined : "none",
         height: "var(--friemi-modal-viewport-height, 100dvh)",
         top: "var(--friemi-modal-viewport-offset-top, 0px)",
       }}
@@ -284,7 +293,7 @@ export function MobileBottomSheet({
     >
       <section
         aria-label={ariaLabel}
-        aria-modal="true"
+        aria-modal={open || undefined}
         className={cn(
           "friemi-sheet-panel flex w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-18px_54px_rgba(17,18,16,0.22)]",
           isExpanded ? "!rounded-none" : null,

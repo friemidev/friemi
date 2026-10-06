@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  type ImgHTMLAttributes,
-} from "react";
+import { useEffect, useRef, useState, type ImgHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const retainedImageLimit = 160;
@@ -85,6 +81,7 @@ export function RetainedImage({
   src,
   ...props
 }: RetainedImageProps) {
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const [readySource, setReadySource] = useState<string | null>(() =>
     decodedImageSources.has(src) ? src : null,
   );
@@ -100,6 +97,24 @@ export function RetainedImage({
     setReadySource(null);
     onReadyChange?.(false);
     retainImage(src, referrerPolicy);
+
+    // A cached/SSR image can finish loading before React attaches onLoad.
+    const image = imageRef.current;
+    let cancelled = false;
+    if (image?.complete && image.naturalWidth > 0) {
+      void image
+        .decode()
+        .catch(() => undefined)
+        .then(() => {
+          if (cancelled) return;
+          decodedImageSources.add(src);
+          setReadySource(src);
+          onReadyChange?.(true);
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [onReadyChange, referrerPolicy, src]);
 
   return (
@@ -114,6 +129,7 @@ export function RetainedImage({
         className,
       )}
       decoding={decoding}
+      ref={imageRef}
       onError={() => {
         decodedImageSources.delete(src);
         retainedImages.delete(src);

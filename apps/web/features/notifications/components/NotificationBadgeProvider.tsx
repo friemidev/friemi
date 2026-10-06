@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@capawesome/capacitor-badge";
 import {
   chatRosterWakeEvent,
@@ -53,7 +53,7 @@ function normalizeUnreadCount(value: unknown) {
 
 export function NotificationBadgeProvider({
   children,
-  enabled,
+  enabled: requestedEnabled,
   freshnessGuardEnabled,
   initialUnreadDirectMessageCount = 0,
   initialUnreadNotificationCount,
@@ -67,6 +67,10 @@ export function NotificationBadgeProvider({
   viewerProfileId: string | null;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Embedded details share the parent's inbox connection and badge polling.
+  const isSheet = searchParams.get("sheet") === "1";
+  const enabled = requestedEnabled && !isSheet;
   const abortControllerRef = useRef<AbortController | null>(null);
   const consecutiveFailuresRef = useRef(0);
   const hasScheduledInitialRefreshRef = useRef(false);
@@ -228,7 +232,7 @@ export function NotificationBadgeProvider({
 
   useChatInboxRealtime({
     onChanged: handleChatInboxChanged,
-    profileId: viewerProfileId,
+    profileId: enabled ? viewerProfileId : null,
   });
 
   useEffect(() => {
@@ -443,7 +447,7 @@ export function NotificationBadgeProvider({
   );
 
   useEffect(() => {
-    if (!isFriemiIOSApp()) {
+    if (isSheet || !isFriemiIOSApp()) {
       return;
     }
 
@@ -459,7 +463,7 @@ export function NotificationBadgeProvider({
     Badge.set({ count: totalBadgeCount }).catch((error: unknown) => {
       console.error("Failed to set iOS app badge", error);
     });
-  }, [unreadDirectMessageCount, unreadNotificationCount]);
+  }, [isSheet, unreadDirectMessageCount, unreadNotificationCount]);
 
   const value = useMemo(
     () => ({

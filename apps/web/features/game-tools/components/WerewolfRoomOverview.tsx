@@ -18,7 +18,6 @@ import {
   Check,
   Crown,
   Flag,
-  Hand,
   HeartPulse,
   LogOut,
   Monitor,
@@ -56,10 +55,6 @@ import {
   getWerewolfViewerPrivateToken,
   isWerewolfJudgeViewer,
 } from "@/features/game-tools/werewolfJudgeControls";
-import {
-  getActiveWerewolfVoteResultNotice,
-  getVisibleWerewolfSheriffCandidateSeatNumbers,
-} from "@/features/game-tools/werewolfFlow";
 import {
   getWerewolfViewerAccessScope,
 } from "@/features/game-tools/werewolfViewerAccess";
@@ -980,31 +975,6 @@ export function WerewolfRoomOverview({
   const judgeTransferCandidates = room.members.filter(
     (member) => !member.seatedSeatId && !member.isCurrentMember,
   );
-  const publishedVoteResult = useMemo(
-    () =>
-      getActiveWerewolfVoteResultNotice({
-        events: room.events,
-        flow: room.state.flow,
-      }),
-    [room.events, room.state.flow],
-  );
-  const votersByTargetSeat = publishedVoteResult?.votersByTarget ?? {};
-  const getVoteMarkerLabel = (voterSeatNumber: number) =>
-    locale === "zh-CN"
-      ? `${voterSeatNumber}号投票`
-      : locale === "fr"
-        ? `Le siège ${voterSeatNumber} a voté`
-        : `Seat ${voterSeatNumber} voted`;
-  const visibleSheriffCandidateSeatNumbers = useMemo(
-    () => getVisibleWerewolfSheriffCandidateSeatNumbers(room.state.flow),
-    [room.state.flow],
-  );
-  const sheriffCandidateLabel =
-    locale === "zh-CN"
-      ? "正在竞选警长"
-      : locale === "fr"
-        ? "Candidat au poste de capitaine"
-        : "Sheriff candidate";
 
   useEffect(() => {
     if (
@@ -2064,10 +2034,6 @@ export function WerewolfRoomOverview({
       !isLobby &&
       seat.isClaimed &&
       (judgeIsViewer || room.status === "FINISHED");
-    const isSheriffCandidate = visibleSheriffCandidateSeatNumbers.includes(
-      seat.seatNumber,
-    );
-    const activeVoterSeatNumbers = votersByTargetSeat[seat.seatNumber] ?? [];
     const topPercent =
       sideCount <= 1 ? 52 : 22 + (rowIndex / (sideCount - 1)) * 64;
     const sidePositionClass = side === "left" ? "left-[4%]" : "right-[4%]";
@@ -2167,17 +2133,6 @@ export function WerewolfRoomOverview({
               <Crown className="h-3 w-3" />
             </span>
           ) : null}
-          {isSheriffCandidate ? (
-            <span
-              aria-label={sheriffCandidateLabel}
-              className={`absolute -top-2 z-30 grid h-7 w-7 place-items-center rounded-full bg-[#F4C95D] text-[#153B31] shadow-lg ring-2 ring-[#082E28] ${
-                side === "left" ? "-right-2" : "-left-2"
-              }`}
-              title={sheriffCandidateLabel}
-            >
-              <Hand className="h-4 w-4" strokeWidth={2.4} />
-            </span>
-          ) : null}
           <span
             className={`absolute -bottom-1 z-30 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-bold text-[#153B31] shadow-md friemi-tabular ${
               side === "left" ? "-left-1" : "-right-1"
@@ -2185,28 +2140,6 @@ export function WerewolfRoomOverview({
           >
             {seat.seatNumber}
           </span>
-          {activeVoterSeatNumbers.length > 0 ? (
-            <span
-              aria-label={activeVoterSeatNumbers
-                .map(getVoteMarkerLabel)
-                .join("、")}
-              className={`absolute top-1/2 z-40 flex w-[4.75rem] -translate-y-1/2 flex-wrap gap-1 ${
-                side === "left"
-                  ? "left-[calc(100%+0.35rem)] justify-start"
-                  : "right-[calc(100%+0.35rem)] justify-end"
-              }`}
-            >
-              {activeVoterSeatNumbers.map((voterSeatNumber) => (
-                <span
-                  className="grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[9px] font-black text-[#7A1F2B] shadow-lg ring-1 ring-[#7A1F2B]/25 friemi-tabular"
-                  key={voterSeatNumber}
-                  title={getVoteMarkerLabel(voterSeatNumber)}
-                >
-                  {voterSeatNumber}
-                </span>
-              ))}
-            </span>
-          ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <p
@@ -2600,22 +2533,7 @@ export function WerewolfRoomOverview({
                 locale={locale}
                 privateToken={currentSeatPrivateToken}
                 roleDeck={room.variant.roles}
-                roleKey={
-                  judgeIsViewer
-                    ? null
-                    : (currentViewerSeat.roleKey as WerewolfRoleKey | null)
-                }
                 roomStatus={room.status}
-                seatNumber={currentViewerSeat.seatNumber}
-                seats={room.seats.map((seat) => ({
-                  displayName: seat.displayName,
-                  isActive: seat.isActive,
-                  isDead: seat.isDead,
-                  isPlayerSeat: seat.isPlayerSeat,
-                  roleKey: seat.roleKey,
-                  seatNumber: seat.seatNumber,
-                }))}
-                sheriffSeatNumber={room.state.sheriffSeatNumber ?? null}
                 submissions={room.flowSubmissions}
               />
             ) : null}
