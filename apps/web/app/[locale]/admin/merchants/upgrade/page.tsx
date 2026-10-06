@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { ArrowLeft, Search } from "lucide-react";
+import { Search, UserRoundPlus } from "lucide-react";
+import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantUpgradeClient } from "@/components/admin/MerchantManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { requireAdminPageAccess } from "@/lib/admin-auth";
@@ -25,29 +25,17 @@ export default async function UpgradeMerchantPage({
   const candidates = query ? await searchAdminMerchantCandidates(query) : [];
 
   return (
-    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:0.9rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-4xl space-y-7 pb-32 max-md:px-5 max-md:py-0 md:pb-10">
-      <header className="flex items-start gap-3">
-        <Link
-          aria-label="返回店铺列表"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-zinc-900 ring-1 ring-[#D6D5B2] transition active:scale-95"
-          href={withLocale(locale, "/admin/merchants")}
-        >
-          <ArrowLeft aria-hidden="true" className="h-5 w-5" />
-        </Link>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-normal text-[#176B49]">
-            店铺管理
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-normal text-ink md:text-3xl">
-            升级 Friemi 账号
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
-            找到个人账号后，为该用户开通店家身份和默认店铺。
-          </p>
-        </div>
-      </header>
+    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-4xl space-y-6 pb-32 max-md:px-4 max-md:py-0 md:py-10">
+      <MerchantAdminHeader
+        backHref={withLocale(locale, "/admin/merchants")}
+        backLabel="返回店铺列表"
+        description="查找 Friemi 用户，开通店家身份和默认店铺。"
+        eyebrow="店铺管理"
+        icon={UserRoundPlus}
+        title="升级 Friemi 账号"
+      />
 
-      <form className="flex flex-col gap-3 sm:flex-row" method="get">
+      <form className="flex flex-col gap-3 rounded-2xl border border-[#DFE8DA] bg-white p-4 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.5)] sm:flex-row sm:p-5" method="get">
         <label className="relative min-w-0 flex-1">
           <Search
             aria-hidden="true"
@@ -56,7 +44,7 @@ export default async function UpgradeMerchantPage({
           <input
             aria-label="搜索 Friemi 用户"
             autoComplete="off"
-            className="h-12 w-full rounded-md border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-[#176B49]"
+            className="h-12 w-full rounded-xl border border-[#D7E2D5] bg-[#FAFCF9] pl-9 pr-3 text-sm text-[#1D3024] outline-none transition placeholder:text-zinc-400 focus:border-[#176B49] focus:ring-2 focus:ring-[#176B49]/15"
             defaultValue={query}
             maxLength={80}
             name="q"
@@ -65,7 +53,7 @@ export default async function UpgradeMerchantPage({
           />
         </label>
         <button
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#176B49] px-5 text-sm font-semibold text-white transition hover:bg-[#105838]"
           type="submit"
         >
           <Search aria-hidden="true" className="h-4 w-4" />

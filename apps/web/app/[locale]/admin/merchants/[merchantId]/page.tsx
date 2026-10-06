@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink, Ticket } from "lucide-react";
+import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import {
   MerchantCouponManagementClient,
   MerchantSummary,
@@ -30,39 +31,26 @@ export default async function MerchantDetailPage({
   if (!merchant) notFound();
 
   return (
-    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:0.9rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-7 pb-32 max-md:px-5 max-md:py-0 md:pb-10">
-      <header className="space-y-4">
-        <div className="flex items-start gap-3">
+    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-6 pb-32 max-md:px-4 max-md:py-0 md:py-10">
+      <MerchantAdminHeader
+        actions={
           <Link
-            aria-label="返回店铺列表"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-zinc-900 ring-1 ring-[#D6D5B2] transition active:scale-95"
-            href={withLocale(locale, "/admin/merchants")}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#C9DBCB] bg-white px-4 text-sm font-semibold text-[#24583E] transition hover:bg-[#F3F8F2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176B49]"
+            href={withLocale(locale, `/merchants/${merchant.slug}`)}
           >
-            <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+            <ExternalLink aria-hidden="true" className="h-4 w-4" />
+            公开主页
           </Link>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-normal text-[#176B49]">
-              单店管理
-            </p>
-            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-              <h1 className="min-w-0 truncate text-2xl font-bold tracking-normal text-ink md:text-3xl">
-                {merchant.name}
-              </h1>
-              <Link
-                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-white px-3 text-sm font-semibold text-zinc-800 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                href={withLocale(locale, `/merchants/${merchant.slug}`)}
-              >
-                <ExternalLink aria-hidden="true" className="h-4 w-4" />
-                公开主页
-              </Link>
-            </div>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
-              {merchant.description}
-            </p>
-          </div>
-        </div>
-        <MerchantSummary merchant={merchant} />
-      </header>
+        }
+        backHref={withLocale(locale, "/admin/merchants")}
+        backLabel="返回店铺列表"
+        description={merchant.description}
+        eyebrow="单店管理 · 优惠券"
+        icon={Ticket}
+        title={merchant.name}
+      />
+
+      <MerchantSummary merchant={merchant} />
 
       <MerchantCouponManagementClient
         initialCoupons={coupons}
