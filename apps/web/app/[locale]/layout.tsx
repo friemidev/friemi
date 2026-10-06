@@ -12,6 +12,7 @@ import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSecti
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
+import { RouteMotion } from "@/components/navigation/RouteMotion";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
 import { ModalViewportGuard } from "@/components/ui/ModalViewportGuard";
@@ -125,6 +126,7 @@ export default async function LocaleLayout({
               }`}
             >
               <RouteProgress />
+              <RouteMotion />
               <RouteTransitionMetrics locale={locale} />
               <ModalViewportGuard />
               <AndroidAppBridge locale={locale} />

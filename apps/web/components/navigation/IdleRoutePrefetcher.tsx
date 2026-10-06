@@ -68,7 +68,7 @@ export function IdleRoutePrefetcher({
   const search = searchParams.toString();
 
   useEffect(() => {
-    if (!enabled || !pathname || !isMobileViewport) {
+    if (!enabled || !pathname || !isMobileViewport || new URLSearchParams(search).get("sheet") === "1") {
       return;
     }
 

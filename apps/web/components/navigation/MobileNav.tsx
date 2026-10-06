@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLinkStatus } from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { locales } from "@chill-club/shared";
 import {
   Compass,
@@ -25,7 +25,16 @@ type MobileNavProps = {
 
 function MobileNavPending({ primary }: { primary?: boolean }) {
   const { pending } = useLinkStatus();
-  if (!pending) return null;
+  const [showPending, setShowPending] = useState(false);
+  useEffect(() => {
+    if (!pending) {
+      setShowPending(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowPending(true), 150);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
+  if (!pending || !showPending) return null;
 
   return (
     <span

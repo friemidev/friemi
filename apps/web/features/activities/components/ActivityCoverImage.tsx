@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   defaultActivityCategoryIllustrationSrc,
   isActivityCategoryIllustrationSrc,
@@ -19,7 +19,21 @@ type ActivityCoverImageProps = {
   src: string | null;
 };
 
-export function ActivityCoverImage({
+const loadedCoverSources = new Set<string>();
+
+function rememberCover(src: string) {
+  loadedCoverSources.delete(src);
+  loadedCoverSources.add(src);
+  if (loadedCoverSources.size > 160) {
+    loadedCoverSources.delete(loadedCoverSources.values().next().value!);
+  }
+}
+
+export function ActivityCoverImage(props: ActivityCoverImageProps) {
+  return <ActivityCoverImageContent key={JSON.stringify([props.src, props.recoverySrc])} {...props} />;
+}
+
+function ActivityCoverImageContent({
   alt = "",
   fallbackSrc,
   fetchPriority = "auto",
@@ -32,6 +46,8 @@ export function ActivityCoverImage({
   const [hasFailed, setHasFailed] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [usesRecovery, setUsesRecovery] = useState(false);
+  const [skipRevealTransition, setSkipRevealTransition] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const normalizedFallbackSrc = fallbackSrc?.trim() || null;
   const normalizedPrimarySrc = src?.trim() || null;
   const normalizedRecoverySrc = recoverySrc?.trim() || null;
@@ -62,11 +78,16 @@ export function ActivityCoverImage({
     setHasFailed(true);
   }, [normalizedPrimarySrc, normalizedRecoverySrc, usesRecovery]);
 
-  useEffect(() => {
-    setHasFailed(false);
-    setHasLoaded(false);
-    setUsesRecovery(false);
-  }, [recoverySrc, src]);
+  useLayoutEffect(() => {
+    const image = imageRef.current;
+    const ready = Boolean(primarySrc && (
+      loadedCoverSources.has(primarySrc) ||
+      (image?.complete && image.naturalWidth > 0)
+    ));
+    setHasLoaded(ready);
+    setSkipRevealTransition(ready);
+    if (ready && primarySrc) rememberCover(primarySrc);
+  }, [primarySrc]);
 
   useEffect(() => {
     if (!activeSrc || hasLoaded || hasFailed) {
@@ -126,10 +147,14 @@ export function ActivityCoverImage({
       {primarySrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imageRef}
           src={primarySrc}
           alt={alt}
           className={cn(
-            "absolute transition-[opacity,transform] duration-300 ease-out",
+            "absolute ease-out motion-reduce:transition-none",
+            skipRevealTransition
+              ? "transition-transform duration-150"
+              : "transition-[opacity,transform] duration-150",
             usesCategoryArtwork
               ? "left-1/2 top-1/2 h-[72%] w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain"
               : "inset-0 h-full w-full object-cover group-hover/card:scale-[1.035]",
@@ -141,7 +166,10 @@ export function ActivityCoverImage({
           loading={loading}
           referrerPolicy="no-referrer"
           onError={handleSourceFailure}
-          onLoad={() => setHasLoaded(true)}
+          onLoad={() => {
+            rememberCover(primarySrc);
+            setHasLoaded(true);
+          }}
         />
       ) : null}
       <div className={cn("absolute inset-0", overlayClassName)} aria-hidden />

@@ -16,6 +16,7 @@ import { AnalyticsExternalLink } from "@/features/analytics/components/Analytics
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
+import { ActivityDetailRefresh } from "@/features/activities/components/ActivityDetailRefresh";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
@@ -287,6 +288,7 @@ export default async function PublicEventDetailPage({
       mobileSafeBottom={!isSheetPresentation}
       mobileSafeTop={!isSheetPresentation}
     >
+      <ActivityDetailRefresh validatedAt={Date.now()} />
       {isSheetPresentation ? null : (
         <MobileNavSectionOverride section="activities" />
       )}
