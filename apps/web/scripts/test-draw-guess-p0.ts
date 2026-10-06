@@ -257,9 +257,9 @@ async function previewDuoRelay() {
   assert.equal(current.view.phase, "CHAIN_WORD");
   process.env.VERCEL_ENV = "production";
   try {
-    assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: players[0].nickname, locale: "zh-CN", mode: "CHAIN", playerCount: 2 }), { error: "CHAIN_NOT_ENABLED" });
+    assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: players[0].nickname, locale: "zh-CN", mode: "CHAIN", playerCount: 2 }), { error: "INVALID_PLAYER_COUNT" });
   } finally { process.env.VERCEL_ENV = "preview"; }
-  console.log("PASS Preview two-person relay: system seat, full game, human voting, rematch, production guard");
+  console.log("PASS Preview two-person relay: system seat, full game, human voting, rematch, production player minimum");
 }
 
 try {

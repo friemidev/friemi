@@ -26,6 +26,7 @@
     "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts",
     "draw-guess:deadlines": "node scripts/run-draw-guess-deadlines.mjs",
     "draw-guess:preview-cron": "node scripts/configure-draw-guess-preview-cron.mjs",
+    "draw-guess:production-cron": "node scripts/configure-draw-guess-production-cron.mjs",
     "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts"
   },
   "dependencies": {

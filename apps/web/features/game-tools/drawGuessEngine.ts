@@ -41,11 +41,15 @@ export type DrawGuessChatMessage = {
   correct: boolean;
   at: string;
   laughedBy?: number[];
+  reactedBy?: Partial<Record<DrawGuessReactionKind, number[]>>;
 };
 
-export const DRAW_GUESS_REACTIONS = ["😂", "👏", "👀"] as const;
+export const DRAW_GUESS_REACTIONS = ["😂", "👏", "👀", "❓"] as const;
 export type DrawGuessReactionKind = (typeof DRAW_GUESS_REACTIONS)[number];
 export type DrawGuessReaction = { seat: number; kind: DrawGuessReactionKind; at: string };
+export function getDrawGuessMessageReactorSeats(message: DrawGuessChatMessage, kind: DrawGuessReactionKind) {
+  return kind === "😂" ? message.laughedBy ?? [] : message.reactedBy?.[kind] ?? [];
+}
 export const DRAW_GUESS_CHAIN_REACTIONS = ["😂", "👏", "😮"] as const;
 export type DrawGuessChainReactionKind = (typeof DRAW_GUESS_CHAIN_REACTIONS)[number];
 export type DrawGuessChainReaction = { seat: number; kind: DrawGuessChainReactionKind; owner: number; step: number; stage: number; at: string };
@@ -132,6 +136,7 @@ export type DrawGuessAction =
   | { type: "CHAIN_REACT"; kind: DrawGuessChainReactionKind; owner: number; step: number }
   | { type: "REVEAL_CONTROL"; command: "PAUSE" | "RESUME" | "NEXT" }
   | { type: "LAUGH_GUESS"; messageId: string }
+  | { type: "REACT_GUESS"; messageId: string; kind: DrawGuessReactionKind }
   | { type: "ADD_STROKE"; stroke: DrawStroke }
   | { type: "UNDO_STROKE" }
   | { type: "CLEAR_STROKES" }
@@ -679,16 +684,24 @@ export function applyDrawGuessAction(state: DrawGuessState, action: DrawGuessAct
     if (now - (next.reactionLastAt[String(seat)] ?? -Infinity) < 1_500) return invalid("TOO_FAST");
     next.reactionUsed[String(seat)] = [...used, action.kind];
     next.reactionLastAt[String(seat)] = now;
-    next.reactions = [...next.reactions, { seat, kind: action.kind, at: new Date(now).toISOString() }].slice(-24);
+    next.reactions = [...next.reactions, { seat, kind: action.kind, at: new Date(now).toISOString() }].slice(-40);
     const counts = next.classicReactionCounts[String(next.turnIndex)] ??= {};
     counts[action.kind] = (counts[action.kind] ?? 0) + 1;
-  } else if (action.type === "LAUGH_GUESS") {
+  } else if (action.type === "LAUGH_GUESS" || action.type === "REACT_GUESS") {
     if (next.mode !== "CLASSIC" || next.phase !== "DRAW_GUESS") return invalid("NOT_ALLOWED");
     const message = next.classicChat.find((item) => item.id === action.messageId);
     if (!message || message.correct || !message.text || message.seat === seat) return invalid("NOT_ALLOWED");
-    if (message.laughedBy?.includes(seat)) return invalid("REACTION_USED");
-    if (next.classicChat.filter((item) => item.laughedBy?.includes(seat)).length >= 3) return invalid("REACTION_LIMIT");
-    message.laughedBy = [...(message.laughedBy ?? []), seat];
+    const kind = action.type === "LAUGH_GUESS" ? "😂" : action.kind;
+    if (!DRAW_GUESS_REACTIONS.includes(kind)) return invalid("INVALID_REACTION");
+    if (getDrawGuessMessageReactorSeats(message, kind).includes(seat)) return invalid("REACTION_USED");
+    const usedCount = next.classicChat.reduce((total, item) => total + DRAW_GUESS_REACTIONS.reduce((count, reaction) =>
+      count + (getDrawGuessMessageReactorSeats(item, reaction).includes(seat) ? 1 : 0), 0), 0);
+    if (usedCount >= (action.type === "LAUGH_GUESS" ? 3 : 8)) return invalid("REACTION_LIMIT");
+    if (kind === "😂") message.laughedBy = [...(message.laughedBy ?? []), seat];
+    else {
+      message.reactedBy ??= {};
+      message.reactedBy[kind] = [...(message.reactedBy[kind] ?? []), seat];
+    }
   } else if (action.type === "ADD_STROKE" || action.type === "UNDO_STROKE" || action.type === "CLEAR_STROKES" || action.type === "SAVE_CLASSIC_DRAFT") {
     if (next.phase !== "DRAW_GUESS" || seat !== next.turnIndex) return invalid("NOT_ALLOWED");
     if (next.drawDeadlineAt && now >= Date.parse(next.drawDeadlineAt)) return invalid("DRAW_TIME_ENDED");
@@ -814,6 +827,13 @@ export function getDrawGuessViewerState(state: DrawGuessState, seat: number, cou
       myReactions: state.reactionUsed?.[String(seat)] ?? [],
       reactionCounts: state.classicReactionCounts?.[String(state.turnIndex)] ?? {},
       ...(state.phase === "FINISHED" ? { classicHighlight: getDrawGuessClassicHighlight(state) } : {}),
+      ...(state.phase === "FINISHED" ? { classicTurns: state.drawings.map((drawing, artistSeat) => ({
+        answer: state.classicAnswers?.[artistSeat] ?? "",
+        artistSeat,
+        chat: state.classicChats?.[artistSeat] ?? [],
+        drawing,
+        roundNumber: state.roundIndex ?? 1,
+      })) } : {}),
       drawing: state.drawings[state.turnIndex] ?? [],
       inkSeq: state.inkSeq ?? 0,
       guesses: state.guesses[String(state.turnIndex)] ?? {},

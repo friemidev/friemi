@@ -1,4 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import type { KeyboardResize } from "@capacitor/keyboard";
+import type { PresentationOption } from "@capacitor/push-notifications";
 
 const isIOSCommand =
   process.argv.includes("ios") && !process.argv.includes("android");
@@ -36,7 +38,7 @@ const iosAllowNavigationWithServerHost = Array.from(
   new Set([...iosAllowNavigation, iosServerHost]),
 );
 const pushNotifications = {
-  presentationOptions: ["badge", "sound", "alert"],
+  presentationOptions: ["badge", "sound", "alert"] as PresentationOption[],
 };
 
 const config: CapacitorConfig = {
@@ -46,7 +48,7 @@ const config: CapacitorConfig = {
   plugins: {
     PushNotifications: pushNotifications,
     // Resize the WebView once; the chat visualViewport guard uses that actual height.
-    Keyboard: { resize: "native" },
+    Keyboard: { resize: "native" as KeyboardResize },
   },
   ...(isIOSCommand
     ? {

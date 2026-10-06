@@ -15,8 +15,8 @@ export function isDrawGuessClassicEnabled() {
 }
 
 export function isDrawGuessChainEnabled() {
-  // Dev and Preview can keep testing relay; only the production entry is paused.
-  return process.env.VERCEL_ENV !== "production";
+  // Relay is available in every environment; an explicit false remains a kill switch.
+  return process.env.DRAW_GUESS_CHAIN_ENABLED !== "false";
 }
 
 export function isDrawGuessPreviewDuoEnabled() {

@@ -15,6 +15,7 @@ delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const { prisma } = await import("../lib/prisma");
 const server = await import("../features/game-tools/drawGuessRoomServer");
+const { isDrawGuessChainEnabled, isDrawGuessPreviewRelayDuoEnabled } = await import("../features/game-tools/drawGuessFlags");
 const reports = await import("../features/game-tools/drawGuessReports");
 const { getFinishedDrawGuessArtworkForMember } = await import("../features/game-tools/drawGuessArtworkAccess");
 const { maintainDrawGuessData } = await import("../features/game-tools/drawGuessMaintenance");
@@ -125,7 +126,11 @@ async function run() {
   assert.deepEqual(await reports.reviewDrawGuessReport({ id: report.reportId, reviewerProfileId: players[0].id, status: "DISMISSED", note: "Duplicate review" }), { error: "NOT_OPEN" });
 
   process.env.VERCEL_ENV = "production";
+  assert.equal(isDrawGuessChainEnabled(), true);
+  assert.equal(isDrawGuessPreviewRelayDuoEnabled(), false);
+  process.env.DRAW_GUESS_CHAIN_ENABLED = "false";
   assert.deepEqual(await server.createDrawGuessRoom({ hostId: players[0].id, hostName: "P1", locale: "zh-CN", mode: "CHAIN", playerCount: 5 }), { error: "CHAIN_NOT_ENABLED" });
+  delete process.env.DRAW_GUESS_CHAIN_ENABLED;
   process.env.VERCEL_ENV = "preview";
   const cleanup = await maintainDrawGuessData(Date.now());
   assert.deepEqual(cleanup, { commandsDeleted: 0, draftsDeleted: 0, roomsCleared: 0, roomsDeleted: 0 });
