@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
+import {
+  detailSheetRetention,
+  detailSheetVisibilityMessage,
+} from "@/features/activities/detailSheetRetention";
 
 type MobileActivityDetailSheetLinkProps = {
   children: ReactNode;
@@ -14,8 +18,6 @@ type MobileActivityDetailSheetLinkProps = {
   locale?: string;
   locked?: boolean;
 };
-
-const fullPageNavigationDelayMs = 1000;
 
 function getLockedCopy(locale: string) {
   if (locale === "fr") {
@@ -77,38 +79,37 @@ export function MobileActivityDetailSheetLink({
 }: MobileActivityDetailSheetLinkProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const fullPageNavigationTimerRef = useRef<number | null>(null);
+  const [retained, setRetained] = useState(false);
+  const retentionKey = useRef({});
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
 
   useEffect(() => {
-    return () => {
-      if (fullPageNavigationTimerRef.current !== null) {
-        window.clearTimeout(fullPageNavigationTimerRef.current);
-      }
-    };
-  }, []);
+    const key = retentionKey.current;
+    setRetained(false);
+    return () => detailSheetRetention.release(key);
+  }, [href, locked]);
 
   useEffect(() => {
     if (open && !locked) {
+      detailSheetRetention.retain(retentionKey.current, () => setRetained(false));
+      setRetained(true);
       router.prefetch(href);
     }
   }, [href, locked, open, router]);
 
-  function openFullPage() {
-    if (fullPageNavigationTimerRef.current !== null) {
-      return;
-    }
+  useEffect(() => {
+    frameRef.current?.contentWindow?.postMessage(
+      { type: detailSheetVisibilityMessage, visible: open },
+      window.location.origin,
+    );
+  }, [open]);
 
-    // Reveal the existing list while the prefetched detail route settles.
-    // This keeps the route-level loader out of the closing sheet.
+  function openFullPage() {
     setOpen(false);
-    router.prefetch(href);
-    fullPageNavigationTimerRef.current = window.setTimeout(() => {
-      fullPageNavigationTimerRef.current = null;
-      router.push(href);
-    }, fullPageNavigationDelayMs);
+    router.push(href);
   }
 
   return (
@@ -139,6 +140,7 @@ export function MobileActivityDetailSheetLink({
           )
         }
         initiallyExpanded
+        keepMounted={retained && !locked}
         onClose={() => setOpen(false)}
         open={open}
         zIndexClassName="z-[80]"
@@ -157,14 +159,26 @@ export function MobileActivityDetailSheetLink({
           </div>
         ) : (
           <iframe
+            ref={frameRef}
             className="h-full w-full border-0 bg-white"
             loading="lazy"
             onLoad={(event) => {
-              event.currentTarget.contentWindow?.scrollTo({
-                behavior: "auto",
-                left: 0,
-                top: 0,
-              });
+              const frame = event.currentTarget.contentWindow;
+              try {
+                // A login or another page opened inside the sheet is not a
+                // reusable preview of this activity.
+                if (frame?.location.href !== new URL(sheetHref, window.location.origin).href) {
+                  detailSheetRetention.release(retentionKey.current);
+                  setRetained(false);
+                }
+              } catch {
+                detailSheetRetention.release(retentionKey.current);
+                setRetained(false);
+              }
+              frame?.postMessage(
+                { type: detailSheetVisibilityMessage, visible: open },
+                window.location.origin,
+              );
             }}
             src={sheetHref}
             title={label}
