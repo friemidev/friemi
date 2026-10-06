@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   ShieldAlert,
+  Ticket,
   type LucideIcon,
   UserRound,
   UsersRound,
@@ -54,6 +55,12 @@ const accountMenuSecurityCopy: Record<string, string> = {
   "zh-CN": "账号与安全",
   en: "Account & Security",
   fr: "Compte et securite",
+};
+
+const inventoryAdminCopy: Record<string, string> = {
+  "zh-CN": "票券库存",
+  en: "Ticket inventory",
+  fr: "Stock de billets",
 };
 
 function isFriemiAndroidApp() {
@@ -151,6 +158,7 @@ export function AccountMenu({
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
+  const inventoryOpsHref = withLocale(locale, "/admin/items/tickets");
   const reportOpsHref = withLocale(locale, "/admin/reports");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
@@ -375,6 +383,15 @@ export function AccountMenu({
                   icon={Building2}
                   label={t.merchantOps}
                   active={pathname.startsWith(merchantOpsHref)}
+                  onClick={closeMenu}
+                />
+                <MenuLink
+                  href={inventoryOpsHref}
+                  icon={Ticket}
+                  label={
+                    inventoryAdminCopy[locale] ?? inventoryAdminCopy["zh-CN"]
+                  }
+                  active={pathname.startsWith(inventoryOpsHref)}
                   onClick={closeMenu}
                 />
                 <MenuLink
