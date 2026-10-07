@@ -25,23 +25,23 @@ export default async function UpgradeMerchantPage({
   const candidates = query ? await searchAdminMerchantCandidates(query) : [];
 
   return (
-    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-4xl space-y-6 pb-32 max-md:px-4 max-md:py-0 md:py-10">
+    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-4xl space-y-6 pb-16 max-md:px-4 max-md:py-0 md:py-10">
       <MerchantAdminHeader
         backHref={withLocale(locale, "/admin/merchants")}
         backLabel="返回店铺列表"
-        title="升级 Friemi 账号"
+        title="升级店家账号"
       />
 
-      <form className="flex flex-col gap-3 rounded-2xl border border-[#DFE8DA] bg-white p-4 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.5)] sm:flex-row sm:p-5" method="get">
+      <form className="flex flex-col gap-3 sm:flex-row" method="get">
         <label className="relative min-w-0 flex-1">
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-outline"
           />
           <input
             aria-label="搜索 Friemi 用户"
             autoComplete="off"
-            className="h-12 w-full rounded-xl border border-[#D7E2D5] bg-[#FAFCF9] pl-9 pr-3 text-sm text-[#1D3024] outline-none transition placeholder:text-zinc-400 focus:border-[#176B49] focus:ring-2 focus:ring-[#176B49]/15"
+            className="h-12 w-full rounded-xl border-0 bg-fog pl-11 pr-3 text-base text-ink outline-none transition placeholder:text-ink/60 focus:ring-2 focus:ring-forest"
             defaultValue={query}
             maxLength={80}
             name="q"
@@ -50,7 +50,7 @@ export default async function UpgradeMerchantPage({
           />
         </label>
         <button
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#176B49] px-5 text-sm font-semibold text-white transition hover:bg-[#105838]"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-forest px-5 text-sm font-semibold text-paper transition hover:bg-forest/90"
           type="submit"
         >
           <Search aria-hidden="true" className="h-4 w-4" />

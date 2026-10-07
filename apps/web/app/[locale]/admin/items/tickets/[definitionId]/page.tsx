@@ -51,60 +51,63 @@ export default async function AdminTicketHistoryPage({
     );
 
   return (
-    <PageContainer className="max-w-3xl space-y-5 pb-28 pt-5 md:pb-12 md:pt-10">
+    <PageContainer className="merchant-admin-page app-mobile-page-shell max-w-4xl space-y-6 pb-14 pt-3 max-md:px-4 md:py-10">
       <Link
-        className="inline-flex items-center gap-2 text-sm font-bold text-[#156240]"
+        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         href={withLocale(
           locale,
           `/admin/merchants?view=items&ticket=${encodeURIComponent(definitionId)}`,
         )}
       >
-        <ArrowLeft className="h-4 w-4" /> {copy.admin}
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> {copy.admin}
       </Link>
-      <header className="rounded-[1.3rem] bg-[#143E2A] p-6 text-white">
-        <p className="text-xs font-bold tracking-[0.12em] text-[#CDE8CF]">
-          FRIEMI ADMIN
-        </p>
-        <h1 className="mt-2 text-2xl font-black">{data.definition.title}</h1>
-        <p className="mt-3 text-sm text-white/75">
+      <header className="rounded-2xl bg-forest p-5 text-paper sm:p-6">
+        <h1 className="text-2xl font-bold">{data.definition.title}</h1>
+        <p className="mt-3 text-sm text-paper/85">
           {copy.supply} {data.definition.totalSupply} · {copy.remaining}{" "}
           {data.definition.totalSupply - data.definition.issuedCount}
         </p>
       </header>
 
-      <section className="rounded-[1.3rem] bg-white p-5 ring-1 ring-[#D6D5B2]">
-        <h2 className="text-lg font-bold text-[#111210]">{copy.issue}</h2>
-        <ol className="mt-4 divide-y divide-[#E5E2D3]">
-          {data.issueBatches.map((batch) => (
-            <li
-              className="flex items-start justify-between gap-3 py-3"
-              key={batch.id}
-            >
-              <div>
-                <p className="text-sm font-bold text-[#111210]">
-                  {batch.recipient.nickname} · {batch.recipient.friendCode}
-                </p>
-                <p className="mt-1 text-xs text-[#6C746A]">
-                  {batch.actor.nickname} · {copy.quantity} {batch.quantity}
-                </p>
-              </div>
-              <time
-                className="shrink-0 text-xs text-[#6C746A]"
-                dateTime={batch.createdAt.toISOString()}
+      <section className="rounded-2xl bg-paper p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-ink">
+          {copy.adminIssueHistory} · {data.issueCount}
+        </h2>
+        {data.issueBatches.length ? (
+          <ol className="mt-5 space-y-4">
+            {data.issueBatches.map((batch) => (
+              <li
+                className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                key={batch.id}
               >
-                {formatDate(batch.createdAt)}
-              </time>
-            </li>
-          ))}
-        </ol>
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    {batch.recipient.nickname} · {batch.recipient.friendCode}
+                  </p>
+                  <p className="mt-1 text-sm text-ink/70">
+                    {batch.actor.nickname} · {copy.quantity} {batch.quantity}
+                  </p>
+                </div>
+                <time
+                  className="text-sm text-ink/70 sm:shrink-0"
+                  dateTime={batch.createdAt.toISOString()}
+                >
+                  {formatDate(batch.createdAt)}
+                </time>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-4 text-sm text-ink/70">{copy.adminIssueEmpty}</p>
+        )}
         {data.issueCount > data.pageSize ? (
           <nav
-            aria-label={copy.issue}
-            className="mt-5 flex justify-between border-t border-[#E5E2D3] pt-4"
+            aria-label={copy.adminIssueHistory}
+            className="mt-5 flex justify-between border-t border-sand/50 pt-3"
           >
             {issuePage > 1 ? (
               <Link
-                className="text-sm font-bold text-[#156240]"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-forest"
                 href={issuePageHref(issuePage - 1)}
               >
                 {copy.previous}
@@ -114,7 +117,7 @@ export default async function AdminTicketHistoryPage({
             )}
             {issuePage * data.pageSize < data.issueCount ? (
               <Link
-                className="text-sm font-bold text-[#156240]"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-forest"
                 href={issuePageHref(issuePage + 1)}
               >
                 {copy.next}
@@ -124,22 +127,22 @@ export default async function AdminTicketHistoryPage({
         ) : null}
       </section>
 
-      <section className="rounded-[1.3rem] bg-white p-5 ring-1 ring-[#D6D5B2]">
-        <h2 className="text-lg font-bold text-[#111210]">
+      <section className="rounded-2xl bg-paper p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-ink">
           {copy.giftHistory} · {data.giftCount}
         </h2>
         {data.gifts.length ? (
-          <ol className="mt-4 divide-y divide-[#E5E2D3]">
+          <ol className="mt-5 space-y-4">
             {data.gifts.map((gift) => (
               <li
-                className="flex items-start justify-between gap-3 py-3"
+                className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
                 key={gift.id}
               >
                 <div>
-                  <p className="text-sm font-bold text-[#111210]">
+                  <p className="text-sm font-semibold text-ink">
                     {gift.sender.nickname} → {gift.recipient.nickname}
                   </p>
-                  <p className="mt-1 text-xs text-[#6C746A]">
+                  <p className="mt-1 text-sm text-ink/70">
                     {gift.sender.friendCode} → {gift.recipient.friendCode} ·{" "}
                     {copy.serial} {gift.item.serialNumber} ·{" "}
                     {gift.method === "FRIEND_QR"
@@ -148,7 +151,7 @@ export default async function AdminTicketHistoryPage({
                   </p>
                 </div>
                 <time
-                  className="shrink-0 text-xs text-[#6C746A]"
+                  className="text-sm text-ink/70 sm:shrink-0"
                   dateTime={gift.createdAt.toISOString()}
                 >
                   {formatDate(gift.createdAt)}
@@ -157,16 +160,16 @@ export default async function AdminTicketHistoryPage({
             ))}
           </ol>
         ) : (
-          <p className="mt-4 text-sm text-[#7A8276]">{copy.historyEmpty}</p>
+          <p className="mt-4 text-sm text-ink/70">{copy.historyEmpty}</p>
         )}
         {data.giftCount > data.pageSize ? (
           <nav
             aria-label={copy.giftHistory}
-            className="mt-5 flex justify-between border-t border-[#E5E2D3] pt-4"
+            className="mt-5 flex justify-between border-t border-sand/50 pt-3"
           >
             {page > 1 ? (
               <Link
-                className="text-sm font-bold text-[#156240]"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-forest"
                 href={pageHref(page - 1)}
               >
                 {copy.previous}
@@ -176,7 +179,7 @@ export default async function AdminTicketHistoryPage({
             )}
             {page * data.pageSize < data.giftCount ? (
               <Link
-                className="text-sm font-bold text-[#156240]"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-forest"
                 href={pageHref(page + 1)}
               >
                 {copy.next}

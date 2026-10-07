@@ -1,9 +1,17 @@
 export function getInventoryCopy(locale: string) {
   if (locale === "fr") {
     return {
-      admin: "Gestion des billets",
+      admin: "Distribution des billets",
       adminIntro:
         "Créez un lot, puis répartissez les billets entre les organisateurs.",
+      adminBatch: "Lots de billets",
+      adminEmptyTitle: "Créez votre premier lot",
+      adminIssueHint:
+        "Trouvez un compte par code Friemi ou QR, puis choisissez la quantité.",
+      adminNewBatch: "Nouveau lot",
+      adminSoldOut: "Tous les billets de ce lot ont été attribués.",
+      adminIssueHistory: "Attributions aux comptes",
+      adminIssueEmpty: "Aucun billet attribué pour le moment.",
       available: "Disponibles à offrir",
       allocated: "Attribués",
       back: "Retour au sac",
@@ -42,8 +50,16 @@ export function getInventoryCopy(locale: string) {
   }
   if (locale === "en") {
     return {
-      admin: "Ticket inventory",
+      admin: "Ticket distribution",
       adminIntro: "Create a ticket batch, then allocate tickets to organizers.",
+      adminBatch: "Ticket batches",
+      adminEmptyTitle: "Create your first batch",
+      adminIssueHint:
+        "Find an account by Friemi code or QR, then choose the quantity.",
+      adminNewBatch: "New batch",
+      adminSoldOut: "All tickets in this batch have been allocated.",
+      adminIssueHistory: "Allocations to accounts",
+      adminIssueEmpty: "No tickets have been allocated yet.",
       available: "Available to gift",
       allocated: "Allocated",
       back: "Back to bag",
@@ -82,8 +98,15 @@ export function getInventoryCopy(locale: string) {
     };
   }
   return {
-    admin: "票券库存管理",
+    admin: "票券分发",
     adminIntro: "先创建票券批次，再按数量分配到一个或多个举办人账户。",
+    adminBatch: "票券批次",
+    adminEmptyTitle: "创建第一批票券",
+    adminIssueHint: "输入 Friemi 码或扫码确认账户，再选择分配数量。",
+    adminNewBatch: "新建批次",
+    adminSoldOut: "这一批票券已全部分配。",
+    adminIssueHistory: "账户分发记录",
+    adminIssueEmpty: "还没有分发记录。",
     available: "可赠送",
     allocated: "已分配",
     back: "返回背包",

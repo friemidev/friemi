@@ -52,6 +52,11 @@ function MobileNavPending({ primary }: { primary?: boolean }) {
 function shouldHideMobileNav(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
   const localizedPlanetsPath = withLocale(locale, "/planets");
+  const localizedMerchantAdminPath = withLocale(locale, "/admin/merchants");
+  const localizedTicketAdminPath = withLocale(locale, "/admin/items/tickets");
+  const localizedStorePath = withLocale(locale, "/profile/store");
+  const localizedAccountSettingsPath = withLocale(locale, "/account/settings");
+  const localizedAccountSecurityPath = withLocale(locale, "/account/security");
   const segments = pathname.split("/").filter(Boolean);
   const isAaRoute =
     segments[0] === locale &&
@@ -64,6 +69,14 @@ function shouldHideMobileNav(pathname: string, locale: string) {
     pathname === localizedPollPath ||
     pathname.startsWith(`${localizedPollPath}/`) ||
     pathname.startsWith(`${localizedPlanetsPath}/`) ||
+    pathname === localizedMerchantAdminPath ||
+    pathname.startsWith(`${localizedMerchantAdminPath}/`) ||
+    pathname === localizedTicketAdminPath ||
+    pathname.startsWith(`${localizedTicketAdminPath}/`) ||
+    pathname === localizedStorePath ||
+    pathname.startsWith(`${localizedStorePath}/`) ||
+    pathname === localizedAccountSettingsPath ||
+    pathname === localizedAccountSecurityPath ||
     pathname === withLocale(locale, "/game-tools") ||
     pathname.startsWith(`${withLocale(locale, "/game-tools")}/`) ||
     pathname.startsWith(`${withLocale(locale, "/messages")}/`) ||

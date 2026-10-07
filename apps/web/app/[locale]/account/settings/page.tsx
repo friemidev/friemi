@@ -19,10 +19,13 @@ const accountSettingsCopy = {
     metadataTitle: "设置",
     title: "设置",
     description: "管理语言偏好、账号资料、安全和登录状态。",
+    backToProfile: "返回个人主页",
+    accountGroup: "账号",
+    adminGroup: "管理工具",
     accountSettings: "账号设置",
     accountSecurity: "账号与安全",
     activityPriorityAdmin: "活动权重管理",
-    couponMerchantAdmin: "优惠券与门店",
+    couponMerchantAdmin: "店铺与物品",
     officialMessagesAdmin: "官方消息发布",
     language: "语言",
     signOut: "退出登录",
@@ -32,10 +35,13 @@ const accountSettingsCopy = {
     title: "Settings",
     description:
       "Manage language, account profile, security, and sign-in state.",
+    backToProfile: "Back to profile",
+    accountGroup: "Account",
+    adminGroup: "Management",
     accountSettings: "Account settings",
     accountSecurity: "Account & security",
     activityPriorityAdmin: "Activity priority admin",
-    couponMerchantAdmin: "Coupons & stores",
+    couponMerchantAdmin: "Stores & items",
     officialMessagesAdmin: "Official messages",
     language: "Language",
     signOut: "Sign out",
@@ -44,10 +50,13 @@ const accountSettingsCopy = {
     metadataTitle: "Reglages",
     title: "Reglages",
     description: "Gerez la langue, le profil, la securite et la connexion.",
+    backToProfile: "Retour au profil",
+    accountGroup: "Compte",
+    adminGroup: "Gestion",
     accountSettings: "Parametres du compte",
     accountSecurity: "Compte et securite",
     activityPriorityAdmin: "Priorite des activites",
-    couponMerchantAdmin: "Coupons et boutiques",
+    couponMerchantAdmin: "Boutiques et objets",
     officialMessagesAdmin: "Messages officiels",
     language: "Langue",
     signOut: "Deconnexion",
@@ -82,36 +91,26 @@ export default async function AccountSettingsPage({
   ]);
 
   return (
-    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1.25rem] [--app-mobile-page-bottom-gap:1.75rem] relative isolate max-w-xl overflow-hidden px-5 md:min-h-[70vh] md:pb-12 md:pt-10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-      >
-        <div className="absolute inset-x-0 top-0 h-56 bg-[linear-gradient(180deg,#FFF5E6_0%,rgba(254,255,249,0)_100%)]" />
-        <div className="absolute -right-20 top-20 h-48 w-48 rounded-full bg-[#DEEBFF]/70 blur-3xl" />
-        <div className="absolute -left-24 bottom-16 h-56 w-56 rounded-full bg-[#8AB68E]/24 blur-3xl" />
-      </div>
-
-      <header className="relative">
-        <div className="flex min-h-11 items-center justify-between gap-4">
-          <h1 className="min-h-[31px] text-[31px] font-bold leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
-            {copy.title}
-          </h1>
-          <Link
-            href={withLocale(locale, "/profile")}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FEFFF9]/76 text-[#1D1D1B] shadow-[0_14px_34px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]/72 backdrop-blur transition active:scale-95"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </Link>
-        </div>
+    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] max-w-xl px-5 pb-16 md:min-h-[70vh] md:py-10">
+      <header className="flex min-h-11 items-center gap-3">
+        <Link
+          aria-label={copy.backToProfile}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-ink transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={withLocale(locale, "/profile")}
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </Link>
+        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
+          {copy.title}
+        </h1>
       </header>
 
-      <div className="mt-6 space-y-8">
+      <div className="mt-8 space-y-8">
         <AccountLanguageSettingsSection label={copy.language} locale={locale} />
 
         {profile ? (
           <AccountSettingsActionList
+            accountGroupLabel={copy.accountGroup}
             accountSecurityLabel={copy.accountSecurity}
             accountSettingsLabel={copy.accountSettings}
             adminActivityPriorityLabel={
@@ -120,6 +119,7 @@ export default async function AccountSettingsPage({
             adminCouponMerchantLabel={
               isAdmin ? copy.couponMerchantAdmin : undefined
             }
+            adminGroupLabel={copy.adminGroup}
             adminOfficialMessagesLabel={
               isAdmin ? copy.officialMessagesAdmin : undefined
             }

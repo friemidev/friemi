@@ -57,6 +57,9 @@ function shouldHideHeader(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
   const localizedMerchantAdminPath = withLocale(locale, "/admin/merchants");
   const localizedTicketAdminPath = withLocale(locale, "/admin/items/tickets");
+  const localizedStorePath = withLocale(locale, "/profile/store");
+  const localizedAccountSettingsPath = withLocale(locale, "/account/settings");
+  const localizedAccountSecurityPath = withLocale(locale, "/account/security");
 
   return (
     pathname === localizedPollPath ||
@@ -64,7 +67,11 @@ function shouldHideHeader(pathname: string, locale: string) {
     pathname === localizedMerchantAdminPath ||
     pathname.startsWith(`${localizedMerchantAdminPath}/`) ||
     pathname === localizedTicketAdminPath ||
-    pathname.startsWith(`${localizedTicketAdminPath}/`)
+    pathname.startsWith(`${localizedTicketAdminPath}/`) ||
+    pathname === localizedStorePath ||
+    pathname.startsWith(`${localizedStorePath}/`) ||
+    pathname === localizedAccountSettingsPath ||
+    pathname === localizedAccountSecurityPath
   );
 }
 

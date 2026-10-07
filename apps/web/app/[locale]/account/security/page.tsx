@@ -1,10 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, ChevronRight, Mail, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Mail,
+  ScrollText,
+  ShieldCheck,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountDeletionEntryCard } from "@/features/account/components/AccountDeletionEntryCard";
 import { AccountContactBindingsSection } from "@/features/account/components/AccountContactBindingsSection";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { hasClerkKeys } from "@/lib/clerk";
 import { withLocale } from "@/lib/routes";
 
 type AccountSecurityPageProps = {
@@ -16,25 +24,22 @@ type AccountSecurityPageProps = {
 const accountSecurityCopy = {
   "zh-CN": {
     metadataTitle: "账号与安全",
-    eyebrow: "账号与安全",
-    title: "管理你的 Friemi 账号",
+    back: "返回设置",
     description:
       "查看账号标识、联系方式绑定、隐私入口，并在需要时从 App 内发起账号删除。",
-    profileTitle: "当前账号",
+    profileTitle: "账号信息",
     loginEmail: "登录邮箱",
-    contactEmail: "联系邮箱",
     friendCode: "个人码",
-    missing: "暂未填写",
+    missing: "未设置",
+    privacyTitle: "隐私与支持",
     privacyLink: "查看隐私政策",
     safetyLink: "查看社区安全说明",
-    supportTitle: "需要帮助？",
-    supportBody:
-      "如果你对账号删除、数据保留或隐私政策有疑问，可以通过邮箱联系我们。",
+    supportTitle: "联系支持",
     supportEmail: "friemi.dev@gmail.com",
     deletion: {
       title: "删除账号",
-      body: "删除账号会影响你的个人资料、联系方式、设备 token 和后续登录状态。活动、报名、消息和举报等记录可能因安全、反滥用、纠纷处理或法律合规保留必要信息。",
-      openConfirm: "删除账号",
+      body: "删除后将退出登录；部分历史记录可能按隐私政策保留。",
+      openConfirm: "查看删除影响",
       confirmTitle: "删除前请确认这些影响",
       impactItems: [
         "个人资料会被停用，昵称、联系方式和设备 token 将在删除流程中清理或失效。",
@@ -51,25 +56,22 @@ const accountSecurityCopy = {
   },
   en: {
     metadataTitle: "Account & Security",
-    eyebrow: "Account & Security",
-    title: "Manage your Friemi account",
+    back: "Back to settings",
     description:
       "Review account identifiers, contact bindings, privacy links, and initiate account deletion from inside the app when needed.",
-    profileTitle: "Current account",
+    profileTitle: "Account details",
     loginEmail: "Login email",
-    contactEmail: "Contact email",
     friendCode: "Friemi ID",
     missing: "Not set",
+    privacyTitle: "Privacy & support",
     privacyLink: "View Privacy Policy",
     safetyLink: "View Community Safety",
-    supportTitle: "Need help?",
-    supportBody:
-      "Contact us by email if you have questions about account deletion, data retention, or the privacy policy.",
+    supportTitle: "Contact support",
     supportEmail: "friemi.dev@gmail.com",
     deletion: {
       title: "Delete account",
-      body: "Deleting your account affects your profile, contact bindings, device tokens, and future sign-in state. Some activity, signup, message, and report records may be retained for safety, anti-abuse, dispute handling, or legal compliance.",
-      openConfirm: "Delete account",
+      body: "Deletion signs you out. Some history may be retained under the privacy policy.",
+      openConfirm: "Review deletion effects",
       confirmTitle: "Before deleting, confirm these effects",
       impactItems: [
         "Your profile will be deactivated, and contact information plus device tokens will be cleaned up or disabled.",
@@ -87,25 +89,22 @@ const accountSecurityCopy = {
   },
   fr: {
     metadataTitle: "Compte et securite",
-    eyebrow: "Compte et securite",
-    title: "Gerer votre compte Friemi",
+    back: "Retour aux réglages",
     description:
       "Consultez les informations du compte, les coordonnees liees, les liens de confidentialite et lancez la suppression du compte depuis l'app si besoin.",
-    profileTitle: "Compte actuel",
+    profileTitle: "Informations du compte",
     loginEmail: "E-mail de connexion",
-    contactEmail: "E-mail de contact",
     friendCode: "ID Friemi",
-    missing: "Non renseigne",
+    missing: "Non renseigné",
+    privacyTitle: "Confidentialité et aide",
     privacyLink: "Voir la politique de confidentialite",
     safetyLink: "Voir la securite communautaire",
-    supportTitle: "Besoin d'aide ?",
-    supportBody:
-      "Contactez-nous par e-mail pour toute question sur la suppression du compte, la conservation des donnees ou la politique de confidentialite.",
+    supportTitle: "Contacter l'assistance",
     supportEmail: "friemi.dev@gmail.com",
     deletion: {
       title: "Supprimer le compte",
-      body: "La suppression du compte affecte le profil, les coordonnees, les tokens d'appareil et les connexions futures. Certains historiques d'activite, d'inscription, de message ou de signalement peuvent etre conserves pour la securite, l'anti-abus, les litiges ou la conformite.",
-      openConfirm: "Supprimer le compte",
+      body: "La suppression vous déconnecte. Certains historiques peuvent être conservés selon la politique de confidentialité.",
+      openConfirm: "Voir les conséquences",
       confirmTitle: "Avant de supprimer, confirmez ces effets",
       impactItems: [
         "Votre profil sera desactive et les coordonnees ainsi que les tokens d'appareil seront nettoyes ou desactives.",
@@ -116,7 +115,8 @@ const accountSecurityCopy = {
         "Je comprends que la suppression peut etre irreversible et souhaite continuer.",
       submit: "Confirmer la suppression",
       submitting: "Suppression...",
-      success: "La soumission nettoie les donnees du compte et vous deconnecte.",
+      success:
+        "La soumission nettoie les donnees du compte et vous deconnecte.",
       error:
         "La suppression a echoue. Reessayez plus tard ou contactez-nous par e-mail.",
       cancel: "Conserver le compte",
@@ -145,101 +145,140 @@ export default async function AccountSecurityPage({
   const copy =
     accountSecurityCopy[locale as keyof typeof accountSecurityCopy] ??
     accountSecurityCopy["zh-CN"];
-  const profile = await ensureCurrentUserProfile(
-    locale,
-    "/account/security",
-  );
+  const profile = await ensureCurrentUserProfile(locale, "/account/security");
 
   return (
-    <PageContainer className="min-h-[100svh] max-w-2xl bg-white px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:pt-8">
-      <header className="flex min-h-12 items-center gap-3 border-b border-[#ECEBE3] pb-4">
+    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] max-w-xl px-5 pb-16 md:min-h-[70vh] md:py-10">
+      <header className="flex min-h-11 items-center gap-3">
         <Link
+          aria-label={copy.back}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-ink transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           href={withLocale(locale, "/account/settings")}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#1D1D1B] transition hover:bg-[#F4F5F0]"
-          aria-label="Back"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-        <h1 className="text-xl font-bold text-ink">{copy.metadataTitle}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
+          {copy.metadataTitle}
+        </h1>
       </header>
 
-      <section className="py-6">
-        <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-          <UserRound className="h-5 w-5 text-[#156240]" aria-hidden="true" />
-          {copy.profileTitle}
-        </h2>
-        <dl className="mt-3 divide-y divide-[#ECEBE3]">
-          <AccountField label={copy.loginEmail} value={profile.email} />
-          <AccountField
-            label={copy.contactEmail}
-            value={profile.contactEmail}
-          />
-          <AccountField label={copy.friendCode} value={profile.friendCode} />
-        </dl>
-        <nav className="mt-2 divide-y divide-[#ECEBE3] border-t border-[#ECEBE3]">
-          <SecurityLink
-            href={withLocale(locale, "/privacy")}
-            label={copy.privacyLink}
-          />
-          <SecurityLink
-            href={withLocale(locale, "/safety")}
-            label={copy.safetyLink}
-          />
-        </nav>
-      </section>
+      <div className="mt-8 space-y-8">
+        <section aria-labelledby="account-security-details-heading">
+          <h2
+            className="mb-2 px-2 text-sm font-bold text-ink/70"
+            id="account-security-details-heading"
+          >
+            {copy.profileTitle}
+          </h2>
+          <dl className="space-y-0.5">
+            <AccountField
+              label={copy.loginEmail}
+              missing={copy.missing}
+              value={profile.email}
+            />
+            <AccountField
+              label={copy.friendCode}
+              missing={copy.missing}
+              value={profile.friendCode}
+            />
+          </dl>
+        </section>
 
-      <AccountContactBindingsSection
-        initialContactEmail={profile.contactEmail}
-        initialPhone={profile.phone}
-        initialWechatId={profile.wechatId}
-        loginEmail={profile.email}
-        locale={locale}
-      />
+        <AccountContactBindingsSection
+          initialContactEmail={profile.contactEmail}
+          initialPhone={profile.phone}
+          initialWechatId={profile.wechatId}
+          loginEmail={profile.email}
+          locale={locale}
+        />
 
-      <section className="border-t border-[#ECEBE3] py-6">
-        <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-          <Mail className="h-5 w-5 text-[#F09182]" aria-hidden="true" />
-          {copy.supportTitle}
-        </h2>
-        <a
-          className="mt-3 flex min-h-11 items-center justify-between gap-3 text-sm font-semibold text-[#156240]"
-          href={`mailto:${copy.supportEmail}`}
-        >
-          <span>{copy.supportEmail}</span>
-          <ChevronRight className="h-4 w-4 text-[#9A9D94]" aria-hidden="true" />
-        </a>
-      </section>
+        <section aria-labelledby="account-security-privacy-heading">
+          <h2
+            className="mb-2 px-2 text-sm font-bold text-ink/70"
+            id="account-security-privacy-heading"
+          >
+            {copy.privacyTitle}
+          </h2>
+          <nav className="space-y-0.5">
+            <SecurityLink
+              href={withLocale(locale, "/privacy")}
+              icon={ScrollText}
+              label={copy.privacyLink}
+            />
+            <SecurityLink
+              href={withLocale(locale, "/safety")}
+              icon={ShieldCheck}
+              label={copy.safetyLink}
+            />
+            <SecurityLink
+              href={`mailto:${copy.supportEmail}`}
+              icon={Mail}
+              label={copy.supportTitle}
+              secondary={copy.supportEmail}
+            />
+          </nav>
+        </section>
 
-      <AccountDeletionEntryCard copy={copy.deletion} locale={locale} />
+        <AccountDeletionEntryCard
+          clerkEnabled={hasClerkKeys()}
+          copy={copy.deletion}
+          locale={locale}
+        />
+      </div>
     </PageContainer>
   );
 }
 
 function AccountField({
   label,
+  missing,
   value,
 }: {
   label: string;
+  missing: string;
   value?: string | null;
 }) {
   return (
-    <div className="flex min-h-12 min-w-0 items-center justify-between gap-4 py-3">
-      <dt className="shrink-0 text-sm font-medium text-[#697066]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-sm font-semibold text-ink">
-        {value?.trim() || "-"}
+    <div className="flex min-h-14 min-w-0 items-center justify-between gap-4 rounded-xl px-2 py-2">
+      <dt className="shrink-0 text-sm font-medium text-ink/70">{label}</dt>
+      <dd className="min-w-0 break-all text-right text-sm font-semibold text-ink">
+        {value?.trim() || missing}
       </dd>
     </div>
   );
 }
 
-function SecurityLink({ href, label }: { href: string; label: string }) {
+function SecurityLink({
+  href,
+  icon: Icon,
+  label,
+  secondary,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  secondary?: string;
+}) {
   return (
     <Link
-      className="flex min-h-12 items-center justify-between gap-3 text-sm font-semibold text-ink"
+      className="group flex min-h-14 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
       href={href}
     >
-      <span>{label}</span>
-      <ChevronRight className="h-4 w-4 text-[#9A9D94]" aria-hidden="true" />
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-fog text-forest">
+        <Icon aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        {secondary ? (
+          <span className="block break-all text-xs text-ink/70">
+            {secondary}
+          </span>
+        ) : null}
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-outline transition group-hover:translate-x-0.5"
+      />
     </Link>
   );
 }

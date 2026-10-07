@@ -172,19 +172,19 @@ function RecipientQrScanner({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md rounded-[1.4rem] bg-[#FEFFF9] p-4 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl bg-paper p-4 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#111210]">{copy.scan}</h2>
+          <h2 className="text-lg font-bold text-ink">{copy.scan}</h2>
           <button
             aria-label={locale === "zh-CN" ? "关闭" : "Close"}
-            className="grid h-9 w-9 place-items-center rounded-full bg-[#F1F2EC]"
+            className="grid h-11 w-11 place-items-center rounded-full bg-fog text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
             onClick={onClose}
             type="button"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="relative aspect-square overflow-hidden rounded-[1rem] bg-[#111210]">
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-ink">
           <video
             autoPlay
             className="h-full w-full object-cover"
@@ -193,13 +193,13 @@ function RecipientQrScanner({
             ref={videoRef}
           />
           <canvas className="hidden" ref={canvasRef} />
-          <div className="pointer-events-none absolute inset-[15%] rounded-xl border-2 border-white/80" />
+          <div className="pointer-events-none absolute inset-[15%] rounded-xl border-2 border-paper/80" />
           {!ready && !error ? (
-            <LoaderCircle className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" />
+            <LoaderCircle className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-spin text-paper" />
           ) : null}
         </div>
         <p
-          className={`mt-3 text-sm leading-6 ${error ? "text-[#B5301F]" : "text-[#5F635E]"}`}
+          className={`mt-3 text-sm leading-6 ${error ? "text-danger" : "text-ink/70"}`}
           role={error ? "alert" : undefined}
         >
           {error || copy.scanHint}
@@ -324,16 +324,13 @@ export function FriemiRecipientPicker({
         value={recipient?.friendCode ?? ""}
       />
       <input name="method" readOnly type="hidden" value={method} />
-      <label
-        className="block text-sm font-bold text-[#263B2E]"
-        htmlFor={inputId}
-      >
+      <label className="block text-sm font-semibold text-ink" htmlFor={inputId}>
         {copy.code}
       </label>
       <div className="flex gap-2">
         <input
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-xl border border-[#D6D5B2] bg-white px-3 py-3 text-base text-[#111210] outline-none focus:border-[#156240] focus:ring-2 focus:ring-[#156240]/20"
+          className="min-h-12 min-w-0 flex-1 rounded-xl border border-sand bg-paper px-3 py-3 text-base text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
           id={inputId}
           inputMode="numeric"
           maxLength={12}
@@ -357,7 +354,7 @@ export function FriemiRecipientPicker({
         />
         <button
           aria-label={copy.scan}
-          className="grid h-[50px] w-[50px] shrink-0 place-items-center rounded-xl bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-fog text-forest transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           onClick={startScan}
           type="button"
         >
@@ -365,7 +362,7 @@ export function FriemiRecipientPicker({
         </button>
       </div>
       <button
-        className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 py-2 text-sm font-bold text-[#156240] disabled:opacity-50"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fog px-4 py-2 text-sm font-semibold text-forest transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-50"
         disabled={pending || !code.trim()}
         onClick={() => lookup(code)}
         type="button"
@@ -378,22 +375,19 @@ export function FriemiRecipientPicker({
         {copy.lookup}
       </button>
       {recipient ? (
-        <div
-          className="rounded-xl border border-[#BFD8B9] bg-[#EAF5E8] px-4 py-3"
-          role="status"
-        >
-          <p className="flex items-center gap-2 text-xs font-bold text-[#156240]">
+        <div className="rounded-xl bg-fog px-4 py-3" role="status">
+          <p className="flex items-center gap-2 text-xs font-bold text-forest">
             <CheckCircle2 className="h-4 w-4" />
             {copy.selected}
           </p>
-          <p className="mt-1 text-base font-bold text-[#111210]">
+          <p className="mt-1 text-base font-bold text-ink">
             {recipient.nickname} · {recipient.friendCode}
           </p>
-          <p className="mt-1 text-xs text-[#5F635E]">{copy.confirm}</p>
+          <p className="mt-1 text-sm text-ink/70">{copy.confirm}</p>
         </div>
       ) : null}
       {error ? (
-        <p className="text-sm text-[#B5301F]" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}

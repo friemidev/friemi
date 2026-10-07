@@ -326,14 +326,16 @@ function CouponScanner({
         className={
           triggerVariant === "icon"
             ? "inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
-            : "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_14px_28px_rgba(21,98,64,0.18)] transition active:scale-[0.98]"
+            : "flex min-h-28 w-full flex-col items-start justify-between rounded-[1.25rem] bg-fog p-4 text-left text-forest transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         }
         onClick={startScan}
         title={copy.scan}
         type="button"
       >
         <ScanLine className="h-5 w-5" />
-        {triggerVariant === "full" ? copy.scan : null}
+        {triggerVariant === "full" ? (
+          <span className="text-base font-bold">{copy.scan}</span>
+        ) : null}
       </button>
 
       {open
