@@ -34,17 +34,13 @@ export function getInventoryCopy(locale: string) {
       adminNewBatch: "Nouveau lot",
       adminSoldOut: "Tous les billets de ce lot ont été attribués.",
       adminIssueHistory: "Attributions par l'administration",
-      adminIssueHistoryHint:
-        "Billets ajoutés au sac d'un compte par l'administration.",
       adminIssueEmpty:
         "Aucune attribution. Les billets attribués apparaîtront ici.",
-      adminIssueTo: (name: string, code: string) =>
-        `Attribués à ${name} · code Friemi ${code}`,
-      adminIssueRow: (actor: string, count: number) =>
-        `Attribués par ${actor} · ${count} billets`,
+      adminHistoryAllocationTo: (name: string) => `Attribués à ${name}`,
+      adminHistoryBy: (actor: string) => `Par ${actor}`,
+      adminHistoryTicketCount: (count: number) =>
+        `${count} billet${count > 1 ? "s" : ""}`,
       adminGiftHistory: "Cadeaux entre comptes",
-      adminGiftHistoryHint:
-        "Billets offerts depuis le sac d'un compte à un autre.",
       adminGiftEmpty:
         "Aucun cadeau. Les billets offerts par les détenteurs apparaîtront ici.",
       adminGiftStatus: "Cadeau entre comptes :",
@@ -124,16 +120,13 @@ export function getInventoryCopy(locale: string) {
       adminNewBatch: "New batch",
       adminSoldOut: "All tickets in this batch have been allocated.",
       adminIssueHistory: "Admin allocations",
-      adminIssueHistoryHint: "Tickets added to an account's bag by an admin.",
       adminIssueEmpty:
         "No allocations yet. Allocated tickets will appear here.",
-      adminIssueTo: (name: string, code: string) =>
-        `Allocated to ${name} · Friemi code ${code}`,
-      adminIssueRow: (actor: string, count: number) =>
-        `Allocated by ${actor} · ${count} tickets`,
+      adminHistoryAllocationTo: (name: string) => `Allocated to ${name}`,
+      adminHistoryBy: (actor: string) => `By ${actor}`,
+      adminHistoryTicketCount: (count: number) =>
+        `${count} ticket${count === 1 ? "" : "s"}`,
       adminGiftHistory: "Gifts between accounts",
-      adminGiftHistoryHint:
-        "Tickets gifted from one account's bag to another account.",
       adminGiftEmpty:
         "No gifts yet. Tickets gifted by holders will appear here.",
       adminGiftStatus: "Gifting between accounts:",
@@ -208,14 +201,11 @@ export function getInventoryCopy(locale: string) {
     adminNewBatch: "新建批次",
     adminSoldOut: "这一批票券已全部分配。",
     adminIssueHistory: "管理员分配记录",
-    adminIssueHistoryHint: "管理员将票放入指定账户背包的记录。",
     adminIssueEmpty: "还没有分配记录。完成分配后会显示在这里。",
-    adminIssueTo: (name: string, code: string) =>
-      `分配给 ${name} · Friemi 码 ${code}`,
-    adminIssueRow: (actor: string, count: number) =>
-      `由 ${actor} 分配 · ${count} 张`,
+    adminHistoryAllocationTo: (name: string) => `分配给 ${name}`,
+    adminHistoryBy: (actor: string) => `由 ${actor} 分配`,
+    adminHistoryTicketCount: (count: number) => `${count} 张`,
     adminGiftHistory: "账户间赠送记录",
-    adminGiftHistoryHint: "持有人从背包将票赠送给另一账户的记录。",
     adminGiftEmpty: "还没有赠送记录。持有人送票后会显示在这里。",
     adminGiftStatus: "账户间赠送：",
     adminGiftEnabled: "已允许",

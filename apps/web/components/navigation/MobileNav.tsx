@@ -16,6 +16,7 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { useMobileNavSection } from "./MobileNavSectionContext";
 import { usePrimaryTabState } from "@/features/navigation/usePrimaryTabState";
@@ -93,10 +94,12 @@ export function MobileNav({ locale }: MobileNavProps) {
   const query = searchParams.toString();
   const tabState = usePrimaryTabState(`${pathname}${query ? `?${query}` : ""}`);
   const { sectionOverride } = useMobileNavSection();
-  const { unreadDirectMessageCount } = useNotificationBadge();
+  const { unreadDirectMessageCount, unreadInventoryTicketGiftCount } =
+    useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
+  const newTicketLabel = getTicketRedemptionCopy(currentLocale).newTickets;
   const unreadBadgeText =
     unreadDirectMessageCount > 99 ? "99+" : String(unreadDirectMessageCount);
   const items = useMemo(
@@ -182,6 +185,8 @@ export function MobileNav({ locale }: MobileNavProps) {
           const href = tabState.href(withLocale(currentLocale, item.href));
           const showUnreadBadge =
             baseHref === "/footprints" && unreadDirectMessageCount > 0;
+          const showBagDot =
+            baseHref === "/profile" && unreadInventoryTicketGiftCount > 0;
 
           return (
             <IntentPrefetchLink
@@ -191,7 +196,9 @@ export function MobileNav({ locale }: MobileNavProps) {
               onNavigate={(event) => {
                 if (tabState.navigate(href)) event.preventDefault();
               }}
-              aria-label={item.label}
+              aria-label={
+                showBagDot ? `${item.label}: ${newTicketLabel}` : item.label
+              }
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
@@ -240,6 +247,11 @@ export function MobileNav({ locale }: MobileNavProps) {
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}
                   </span>
+                ) : showBagDot ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#EC334E] ring-2 ring-white"
+                  />
                 ) : null}
               </span>
               {item.isPrimary ? null : (

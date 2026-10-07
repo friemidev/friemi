@@ -20,6 +20,8 @@ export function unreadBadgeCountsMatch(
   return (
     first.unreadActivityRoomCount === second.unreadActivityRoomCount &&
     first.unreadDirectMessageCount === second.unreadDirectMessageCount &&
+    first.unreadInventoryTicketGiftCount ===
+      second.unreadInventoryTicketGiftCount &&
     first.unreadMessageCount === second.unreadMessageCount &&
     first.unreadNotificationCount === second.unreadNotificationCount &&
     first.unreadPlanetChatCount === second.unreadPlanetChatCount
@@ -44,6 +46,13 @@ export async function getCachedUnreadBadgeCounts(profileId: string): Promise<{
 
   try {
     const cached = await redis.get<unknown>(getUnreadBadgeCacheKey(profileId));
+    if (
+      !cached ||
+      typeof cached !== "object" ||
+      !("unreadInventoryTicketGiftCount" in cached)
+    ) {
+      return { counts: null, status: "miss" };
+    }
     const counts = parseUnreadBadgeCountsPayload(cached);
 
     return {

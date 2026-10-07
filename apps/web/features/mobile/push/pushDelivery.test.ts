@@ -56,6 +56,53 @@ test("getNotificationPath routes activity and message notifications correctly", 
   );
 });
 
+test("received tickets open the specific bag item with a safe bag fallback", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      inventoryItemDefinitionId: "ticket-definition-1",
+      type: "INVENTORY_TICKET_RECEIVED",
+    }),
+    "/profile/bag/items/ticket-definition-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      type: "INVENTORY_TICKET_RECEIVED",
+    }),
+    "/profile/bag",
+  );
+});
+
+test("received ticket push uses its title and the device language", () => {
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: "hoting",
+      locale: "zh-CN",
+      ticketTitle: "酒会票",
+      type: "INVENTORY_TICKET_RECEIVED",
+    }),
+    {
+      body: "hoting赠送了「酒会票」，已放入物品背包",
+      title: "收到票券",
+    },
+  );
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: "Alex",
+      locale: "en",
+      ticketTitle: "Wine tasting ticket",
+      type: "INVENTORY_TICKET_RECEIVED",
+    }),
+    {
+      body: "Alex sent you a ticket: “Wine tasting ticket”. It's in your bag",
+      title: "Ticket received",
+    },
+  );
+});
+
 test("getNotificationCopy keeps localized fallback copy", () => {
   assert.deepEqual(
     getNotificationCopy({

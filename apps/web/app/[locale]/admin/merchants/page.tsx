@@ -52,7 +52,7 @@ export default async function AdminMerchantsPage({
   const merchantCopy = getMerchantAdminCopy(locale);
 
   return (
-    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-5 pb-16 max-md:px-4 max-md:py-0 md:py-10">
+    <PageContainer mobileSafeTop className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-5 pb-16 max-md:px-4 max-md:py-0 md:py-10">
       <MerchantAdminHeader
         backHref={withLocale(locale, "/account/settings")}
         backLabel={merchantCopy.common.backToSettings}

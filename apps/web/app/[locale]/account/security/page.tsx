@@ -148,7 +148,7 @@ export default async function AccountSecurityPage({
   const profile = await ensureCurrentUserProfile(locale, "/account/security");
 
   return (
-    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] max-w-xl px-5 pb-16 md:min-h-[70vh] md:py-10">
+    <PageContainer mobileSafeTop className="app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.75rem] max-w-xl px-5 pb-16 md:min-h-[70vh] md:py-10">
       <header className="flex min-h-11 items-center gap-3">
         <Link
           aria-label={copy.back}

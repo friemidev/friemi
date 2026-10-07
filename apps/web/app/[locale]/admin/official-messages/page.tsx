@@ -22,7 +22,7 @@ export default async function AdminOfficialMessagesPage({
         : "官方消息";
 
   return (
-    <PageContainer mobileSafeTop className="space-y-6 pb-28 md:max-w-3xl md:pb-12 md:pt-10">
+    <PageContainer mobileSafeTop className="[--app-mobile-page-top-gap:1.5rem] space-y-6 pb-28 md:max-w-3xl md:pb-12 md:pt-10">
       <header className="flex items-center gap-3">
         <AdminSettingsBackLink locale={locale} />
         <h1 className="text-2xl font-bold text-ink sm:text-3xl">{title}</h1>

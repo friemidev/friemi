@@ -75,7 +75,9 @@ function getNotificationCategory(
   if (type === "FRIEND_REQUEST" || type === "PLANET_JOIN_REQUEST") {
     return "friends";
   }
-  if (type === "CHARM_GIFT_RECEIVED") return "gift";
+  if (type === "CHARM_GIFT_RECEIVED" || type === "INVENTORY_TICKET_RECEIVED") {
+    return "gift";
+  }
   if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
     return "activity";
@@ -145,6 +147,26 @@ function getNotificationText(
     notification.couponWalletItem?.coupon.merchant.name ??
     actorName ??
     "Friemi";
+
+  if (notification.type === "INVENTORY_TICKET_RECEIVED") {
+    const ticketTitle = notification.inventoryItemDefinition?.title;
+    if (locale === "fr") {
+      return {
+        title: "Billet reçu",
+        body: `${actorName ?? "Quelqu'un"} vous a offert un billet${ticketTitle ? ` : « ${ticketTitle} »` : ""}. Il est dans votre sac.`,
+      };
+    }
+    if (locale === "en") {
+      return {
+        title: "Ticket received",
+        body: `${actorName ?? "Someone"} sent you a ticket${ticketTitle ? `: “${ticketTitle}”` : ""}. It's in your bag.`,
+      };
+    }
+    return {
+      title: "收到票券",
+      body: `${actorName ?? "有人"}赠送了「${ticketTitle ?? "票券"}」，已放入物品背包。`,
+    };
+  }
 
   if (
     notification.type === "COUPON_RECEIVED" ||
@@ -434,6 +456,13 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (notification.type === "INVENTORY_TICKET_RECEIVED") {
+    return locale === "fr"
+      ? "Voir le billet"
+      : locale === "en"
+        ? "View ticket"
+        : "查看票券";
+  }
   if (
     notification.type === "COUPON_RECEIVED" ||
     notification.type === "COUPON_REDEEMED"
@@ -939,6 +968,13 @@ function getNotificationVisual(
         : "border-sand bg-paper/62",
     };
   }
+  if (type === "INVENTORY_TICKET_RECEIVED") {
+    return {
+      icon: TicketCheck,
+      iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-outline",
+      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+    };
+  }
   if (type.startsWith("AA_")) {
     const isWarning =
       type === "AA_DISPUTE_OPENED" || type === "AA_REVIEW_REQUIRED";
@@ -1127,6 +1163,7 @@ function NotificationCard({
         notification.type === "DIRECT_MESSAGE" ||
         notification.type === "PLANET_JOIN_REQUEST" ||
         notification.type === "CHARM_GIFT_RECEIVED" ||
+        notification.type === "INVENTORY_TICKET_RECEIVED" ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||
@@ -1475,7 +1512,7 @@ export function NotificationsCenterClient({
   const deleteCopy = getNotificationDeleteCopy(locale);
   const filterCopy = getNotificationFilterCopy(locale);
   const selectionCopy = getNotificationSelectionCopy(locale);
-  const { setUnreadNotificationCount } =
+  const { refreshUnreadInventoryTicketGiftCount, setUnreadNotificationCount } =
     useNotificationBadge(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("all");
@@ -1622,6 +1659,7 @@ export function NotificationsCenterClient({
     startTransition(async () => {
       try {
         await mutation();
+        await refreshUnreadInventoryTicketGiftCount();
       } catch (error) {
         setNotifications(previousNotifications);
         router.refresh();

@@ -156,7 +156,7 @@ export function MerchantCouponPublisher({
   }
 
   return (
-    <main className="app-mobile-page-shell min-h-svh bg-white text-ink">
+    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] min-h-svh bg-white text-ink">
       <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-6">
         <header className="flex h-14 items-center gap-3">
           <Link

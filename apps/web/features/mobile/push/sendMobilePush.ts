@@ -320,6 +320,10 @@ export async function sendMobilePushForNotification(notificationId: string) {
           },
         },
       },
+      inventoryItemDefinition: {
+        select: { title: true },
+      },
+      inventoryItemDefinitionId: true,
       momentId: true,
       planetId: true,
       planet: {
@@ -417,6 +421,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       messageBody,
       merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
       planetName: notification.planet?.name ?? null,
+      ticketTitle: notification.inventoryItemDefinition?.title ?? null,
       type: notification.type,
     });
     const path = getNotificationPath({
@@ -424,6 +429,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       actorId: notification.actorId,
       activityId: notification.activityId,
       conversationId: directMessageConversationId,
+      inventoryItemDefinitionId: notification.inventoryItemDefinitionId,
       momentId: notification.momentId,
       planetSlug: notification.planet?.slug ?? null,
       type: notification.type,

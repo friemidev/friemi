@@ -263,6 +263,7 @@ enum NotificationType {
   COUPON_CLAIMED
   COUPON_REDEEMED
   COUPON_REDEMPTION_COMPLETED
+  INVENTORY_TICKET_RECEIVED
 }
 
 enum ReportTargetType {
@@ -490,6 +491,7 @@ model UserProfile {
   friemiChecks            FriemiCheck[]
   inventoryDefinitionsCreated InventoryItemDefinition[] @relation("InventoryDefinitionCreator")
   inventoryItems          InventoryItem[]                @relation("InventoryItemOwner")
+  inventoryItemsRedeemed  InventoryItem[]                @relation("InventoryItemRedeemer")
   inventoryIssueBatches   InventoryIssueBatch[]          @relation("InventoryIssueRecipient")
   inventoryIssuesMade     InventoryIssueBatch[]          @relation("InventoryIssueActor")
   inventoryGiftsSent      InventoryItemGift[]            @relation("InventoryGiftSender")
@@ -1303,6 +1305,7 @@ model InventoryItemDefinition {
   createdBy          UserProfile           @relation("InventoryDefinitionCreator", fields: [createdByProfileId], references: [id])
   items              InventoryItem[]
   issueBatches       InventoryIssueBatch[]
+  notifications      Notification[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
@@ -1337,12 +1340,19 @@ model InventoryItem {
   serialNumber   Int
   giftedAt       DateTime?
   gift           InventoryItemGift?
+  redemptionToken          String?      @unique @db.VarChar(64)
+  redemptionTokenExpiresAt DateTime?
+  redeemedAt               DateTime?
+  redeemedByProfileId      String?
+  redeemedBy               UserProfile? @relation("InventoryItemRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
 
   @@unique([definitionId, serialNumber])
   @@index([ownerProfileId, definitionId, giftedAt])
   @@index([issueBatchId])
+  @@index([redeemedByProfileId, redeemedAt])
+  @@index([redemptionTokenExpiresAt])
 }
 
 model InventoryItemGift {
@@ -1618,6 +1628,8 @@ model Notification {
   aaTransaction          AaTransaction?        @relation(fields: [aaTransactionId], references: [id], onDelete: SetNull)
   couponWalletItemId     String?
   couponWalletItem       CouponWalletItem?     @relation(fields: [couponWalletItemId], references: [id], onDelete: SetNull)
+  inventoryItemDefinitionId String?
+  inventoryItemDefinition   InventoryItemDefinition? @relation(fields: [inventoryItemDefinitionId], references: [id], onDelete: SetNull)
   dedupeKey              String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
@@ -1632,6 +1644,7 @@ model Notification {
   @@index([planetId])
   @@index([aaTransactionId])
   @@index([couponWalletItemId])
+  @@index([inventoryItemDefinitionId])
 }
 
 model OfficialMessage {

@@ -33,10 +33,13 @@ type UnreadCountRefreshResult = "aborted" | "failed" | "success";
 
 type NotificationBadgeContextValue = {
   refreshUnreadDirectMessageCount: () => Promise<void>;
+  refreshUnreadInventoryTicketGiftCount: () => Promise<void>;
   refreshUnreadNotificationCount: () => Promise<void>;
   setUnreadDirectMessageCount: (count: number) => void;
+  setUnreadInventoryTicketGiftCount: (count: number) => void;
   setUnreadNotificationCount: (count: number) => void;
   unreadDirectMessageCount: number;
+  unreadInventoryTicketGiftCount: number;
   unreadNotificationCount: number;
 };
 
@@ -56,6 +59,7 @@ export function NotificationBadgeProvider({
   enabled: requestedEnabled,
   freshnessGuardEnabled,
   initialUnreadDirectMessageCount = 0,
+  initialUnreadInventoryTicketGiftCount = 0,
   initialUnreadNotificationCount,
   viewerProfileId,
 }: {
@@ -63,6 +67,7 @@ export function NotificationBadgeProvider({
   enabled: boolean;
   freshnessGuardEnabled: boolean;
   initialUnreadDirectMessageCount?: number;
+  initialUnreadInventoryTicketGiftCount?: number;
   initialUnreadNotificationCount: number;
   viewerProfileId: string | null;
 }) {
@@ -85,6 +90,8 @@ export function NotificationBadgeProvider({
   const [unreadDirectMessageCount, setUnreadDirectMessageCountState] = useState(
     () => normalizeUnreadCount(initialUnreadDirectMessageCount),
   );
+  const [unreadInventoryTicketGiftCount, setUnreadInventoryTicketGiftCountState] =
+    useState(() => normalizeUnreadCount(initialUnreadInventoryTicketGiftCount));
 
   const setUnreadNotificationCount = useCallback((count: number) => {
     setUnreadNotificationCountState(normalizeUnreadCount(count));
@@ -94,11 +101,16 @@ export function NotificationBadgeProvider({
     setUnreadDirectMessageCountState(normalizeUnreadCount(count));
   }, []);
 
+  const setUnreadInventoryTicketGiftCount = useCallback((count: number) => {
+    setUnreadInventoryTicketGiftCountState(normalizeUnreadCount(count));
+  }, []);
+
   const runUnreadCountRefresh = useCallback(() => {
     if (!enabled) {
       lastSuccessfulRefreshAtRef.current = null;
       setUnreadNotificationCountState(0);
       setUnreadDirectMessageCountState(0);
+      setUnreadInventoryTicketGiftCountState(0);
       return Promise.resolve<UnreadCountRefreshResult>("success");
     }
 
@@ -121,6 +133,7 @@ export function NotificationBadgeProvider({
         if (response.status === 401) {
           setUnreadNotificationCountState(0);
           setUnreadDirectMessageCountState(0);
+          setUnreadInventoryTicketGiftCountState(0);
           result = "success";
         } else if (response.ok) {
           const counts = parseUnreadBadgeCountsPayload(await response.json());
@@ -128,6 +141,9 @@ export function NotificationBadgeProvider({
           if (counts) {
             setUnreadNotificationCountState(counts.unreadNotificationCount);
             setUnreadDirectMessageCountState(counts.unreadMessageCount);
+            setUnreadInventoryTicketGiftCountState(
+              counts.unreadInventoryTicketGiftCount,
+            );
             result = "success";
           } else {
             result = "failed";
@@ -213,6 +229,7 @@ export function NotificationBadgeProvider({
 
   const refreshUnreadNotificationCount = refreshUnreadCounts;
   const refreshUnreadDirectMessageCount = refreshUnreadCounts;
+  const refreshUnreadInventoryTicketGiftCount = refreshUnreadCounts;
   const handleChatInboxChanged = useCallback(
     (payload: ChatRealtimePayload | null) => {
       window.dispatchEvent(
@@ -248,6 +265,12 @@ export function NotificationBadgeProvider({
   }, [initialUnreadDirectMessageCount]);
 
   useEffect(() => {
+    setUnreadInventoryTicketGiftCountState(
+      normalizeUnreadCount(initialUnreadInventoryTicketGiftCount),
+    );
+  }, [initialUnreadInventoryTicketGiftCount]);
+
+  useEffect(() => {
     if (!enabled) {
       abortControllerRef.current?.abort();
       consecutiveFailuresRef.current = 0;
@@ -256,6 +279,7 @@ export function NotificationBadgeProvider({
       nextRefreshNotBeforeAtRef.current = null;
       setUnreadNotificationCountState(0);
       setUnreadDirectMessageCountState(0);
+      setUnreadInventoryTicketGiftCountState(0);
       return;
     }
 
@@ -383,6 +407,13 @@ export function NotificationBadgeProvider({
           handledPayload = true;
         }
 
+        if (typeof event.detail?.unreadInventoryTicketGiftCount === "number") {
+          setUnreadInventoryTicketGiftCountState(
+            normalizeUnreadCount(event.detail.unreadInventoryTicketGiftCount),
+          );
+          handledPayload = true;
+        }
+
         if (handledPayload) {
           consecutiveFailuresRef.current = 0;
           lastSuccessfulRefreshAtRef.current = Date.now();
@@ -468,18 +499,24 @@ export function NotificationBadgeProvider({
   const value = useMemo(
     () => ({
       refreshUnreadDirectMessageCount,
+      refreshUnreadInventoryTicketGiftCount,
       refreshUnreadNotificationCount,
       setUnreadDirectMessageCount,
+      setUnreadInventoryTicketGiftCount,
       setUnreadNotificationCount,
       unreadDirectMessageCount,
+      unreadInventoryTicketGiftCount,
       unreadNotificationCount,
     }),
     [
       refreshUnreadDirectMessageCount,
+      refreshUnreadInventoryTicketGiftCount,
       refreshUnreadNotificationCount,
       setUnreadDirectMessageCount,
+      setUnreadInventoryTicketGiftCount,
       setUnreadNotificationCount,
       unreadDirectMessageCount,
+      unreadInventoryTicketGiftCount,
       unreadNotificationCount,
     ],
   );
@@ -500,10 +537,13 @@ export function useNotificationBadge(fallbackUnreadCount = 0) {
 
   return {
     refreshUnreadDirectMessageCount: async () => undefined,
+    refreshUnreadInventoryTicketGiftCount: async () => undefined,
     refreshUnreadNotificationCount: async () => undefined,
     setUnreadDirectMessageCount: () => undefined,
+    setUnreadInventoryTicketGiftCount: () => undefined,
     setUnreadNotificationCount: () => undefined,
     unreadDirectMessageCount: 0,
+    unreadInventoryTicketGiftCount: 0,
     unreadNotificationCount: normalizeUnreadCount(fallbackUnreadCount),
   };
 }

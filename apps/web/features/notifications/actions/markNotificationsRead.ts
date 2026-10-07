@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -82,6 +83,7 @@ export async function markAllNotificationsReadAction(formData: FormData) {
       readAt: new Date(),
     },
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   revalidatePath(withLocale(locale, "/notifications"));
   redirect(withLocale(locale, "/notifications"));
@@ -103,6 +105,7 @@ export async function markNotificationReadAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(locale, "/notifications"));
@@ -121,6 +124,7 @@ export async function deleteNotificationAction(formData: FormData) {
         recipientId: profile.id,
       }),
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(locale, "/notifications"));
@@ -144,6 +148,7 @@ export async function deleteNotificationClientAction(
         recipientId: profile.id,
       }),
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -171,6 +176,7 @@ export async function deleteNotificationsClientAction(
         recipientId: profile.id,
       }),
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -199,6 +205,7 @@ export async function markNotificationReadClientAction(
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -230,6 +237,7 @@ export async function markNotificationsReadClientAction(
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
   }
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -253,6 +261,7 @@ export async function markAllNotificationsReadClientAction(locale: string) {
       readAt: new Date(),
     },
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
 
@@ -337,6 +346,7 @@ export async function followBackFromNotificationClientAction(
       type: "FRIEND_REQUEST",
     });
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   if (targetFollowsViewer) {
     await markReferralMutualFollowAcceptedBetween(profile.id, target.id).catch(
@@ -369,6 +379,7 @@ export async function deleteReadNotificationsAction(formData: FormData) {
       },
     }),
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   revalidatePath(withLocale(locale, "/notifications"));
   redirect(withLocale(locale, "/notifications"));
@@ -389,6 +400,7 @@ export async function deleteReadNotificationsClientAction(locale: string) {
       },
     }),
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
 
@@ -409,6 +421,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       actorId: true,
       activityId: true,
       couponWalletItemId: true,
+      inventoryItemDefinitionId: true,
       momentId: true,
       planet: {
         select: {
@@ -418,6 +431,28 @@ export async function openNotificationActivityAction(formData: FormData) {
       type: true,
     },
   });
+
+  if (notification?.type === "INVENTORY_TICKET_RECEIVED") {
+    await prisma.notification.updateMany({
+      where: { id: notificationId, recipientId: profile.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    await invalidateUnreadBadgeCache([profile.id]);
+
+    const target = notification.inventoryItemDefinitionId
+      ? `/profile/bag/items/${notification.inventoryItemDefinitionId}`
+      : "/profile/bag";
+    revalidatePath(withLocale(locale, "/notifications"));
+    revalidatePath(withLocale(locale, target));
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "bag",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(withLocale(locale, target));
+  }
 
   if (
     notification?.type === "COUPON_RECEIVED" ||
@@ -433,6 +468,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       },
       data: { readAt: new Date() },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     const opensBag =
       notification.type === "COUPON_RECEIVED" ||
@@ -461,6 +497,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     if (notification.actorId) {
@@ -494,6 +531,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     if (notification.planet?.slug) {
@@ -529,6 +567,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, "/admin/reports"));
@@ -553,6 +592,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     if (notification.actorId) {
@@ -595,6 +635,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     if (conversation?.id) {
@@ -634,6 +675,7 @@ export async function openNotificationActivityAction(formData: FormData) {
         readAt: new Date(),
       },
     });
+    await invalidateUnreadBadgeCache([profile.id]);
 
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, "/footprints"));
@@ -677,6 +719,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       readAt: new Date(),
     },
   });
+  await invalidateUnreadBadgeCache([profile.id]);
 
   revalidatePath(withLocale(locale, "/notifications"));
 

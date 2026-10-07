@@ -1,13 +1,18 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { ArrowLeft, Gift, Ticket } from "lucide-react";
+import { ArrowLeft, ChevronRight, Gift, ScanLine, Ticket } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { TicketGiftForm } from "@/features/inventory/components/TicketGiftForm";
 import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
+import { ReceivedTicketsSeen } from "@/features/inventory/components/ReceivedTicketsSeen";
 import { getInventoryCopy } from "@/features/inventory/copy";
 import { getInventoryDefinitionForProfile } from "@/features/inventory/services/inventoryService";
+import { canRedeemTicketDefinition } from "@/features/inventory/services/ticketRedemptionService";
+import { getOwnedTicketPage } from "@/features/inventory/services/ticketWalletQueries";
+import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { withLocale } from "@/lib/routes";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -19,13 +24,17 @@ export default async function InventoryItemDetailPage({
   searchParams,
 }: {
   params: Promise<{ definitionId: string; locale: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; ticketsPage?: string }>;
 }) {
   const { definitionId, locale } = await params;
-  const { page: rawPage } = await searchParams;
+  const { page: rawPage, ticketsPage: rawTicketsPage } = await searchParams;
   const page = Math.max(
     1,
     Math.min(1000, Number.parseInt(rawPage ?? "1", 10) || 1),
+  );
+  const requestedTicketsPage = Math.max(
+    1,
+    Math.min(1000, Number.parseInt(rawTicketsPage ?? "1", 10) || 1),
   );
   const profile = await ensureCurrentUserProfile(
     locale,
@@ -38,16 +47,44 @@ export default async function InventoryItemDetailPage({
   });
   if (!item) notFound();
 
+  const [ownedTickets, canCheckIn] = await Promise.all([
+    getOwnedTicketPage({
+      definitionId,
+      page: requestedTicketsPage,
+      profileId: profile.id,
+    }),
+    isCurrentUserAdmin().then((isAdmin) =>
+      canRedeemTicketDefinition({
+        actorProfileId: profile.id,
+        definitionId,
+        isAdmin,
+      }),
+    ),
+  ]);
+
   const copy = getInventoryCopy(locale);
+  const redemptionCopy = getTicketRedemptionCopy(locale);
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
   const historyHref = (targetPage: number) =>
-    withLocale(locale, `/profile/bag/items/${definitionId}?page=${targetPage}`);
+    withLocale(
+      locale,
+      `/profile/bag/items/${definitionId}?page=${targetPage}&ticketsPage=${ownedTickets.page}`,
+    );
+  const ticketsHref = (targetPage: number) =>
+    withLocale(
+      locale,
+      `/profile/bag/items/${definitionId}?page=${page}&ticketsPage=${targetPage}`,
+    );
 
   return (
-    <PageContainer className="max-w-3xl space-y-5 pb-28 pt-5 md:pb-12 md:pt-10">
+    <PageContainer
+      className="max-w-3xl space-y-5 pb-28 pt-5 md:pb-12 md:pt-10"
+      mobileSafeTop
+    >
+      <ReceivedTicketsSeen locale={locale} />
       <Link
         className="inline-flex items-center gap-2 text-sm font-bold text-[#156240]"
         href={withLocale(locale, "/profile/bag")}
@@ -108,6 +145,27 @@ export default async function InventoryItemDetailPage({
         </div>
       </header>
 
+      {canCheckIn ? (
+        <Link
+          className="flex items-center gap-4 rounded-[1.2rem] bg-white p-4 text-[#123D31] ring-1 ring-[#D6D5B2] active:scale-[0.99]"
+          href={withLocale(
+            locale,
+            `/tickets/redeem?definitionId=${encodeURIComponent(definitionId)}`,
+          )}
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EAF5E8] text-[#156240]">
+            <ScanLine aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1 font-bold">
+            {redemptionCopy.checkIn}
+          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-[#627268]"
+          />
+        </Link>
+      ) : null}
+
       {item.transferableCount > 0 && item.isGiftable ? (
         <TicketGiftForm
           definitionId={item.id}
@@ -116,37 +174,81 @@ export default async function InventoryItemDetailPage({
         />
       ) : (
         <div className="rounded-[1.15rem] bg-[#F3F5EF] px-5 py-4 text-sm text-[#5F635E] ring-1 ring-[#E5E2D3]">
-          {item.quantity > 0 && item.ownedItems.some((owned) => owned.giftedAt)
-            ? copy.transferLocked
-            : copy.noTickets}
+          {item.quantity > 0 && ownedTickets.redeemedCount > 0
+            ? redemptionCopy.redeemedNoGift
+            : item.quantity > 0 &&
+                item.ownedItems.some((owned) => owned.giftedAt)
+              ? copy.transferLocked
+              : copy.noTickets}
         </div>
       )}
 
-      {item.ownedItems.length > 0 ? (
+      {ownedTickets.total > 0 ? (
         <section className="rounded-[1.25rem] bg-white p-5 ring-1 ring-[#D6D5B2]">
           <h2 className="text-base font-bold text-[#111210]">
             {copy.ticketList}
           </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {item.ownedItems.map((owned) => (
-              <span
-                className="rounded-lg bg-[#F3F5EF] px-3 py-2 text-xs font-bold text-[#263B2E]"
+          <div className="mt-4 divide-y divide-[#E5E2D3]">
+            {ownedTickets.items.map((owned) => (
+              <Link
+                className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm font-semibold text-[#263B2E]"
+                href={withLocale(
+                  locale,
+                  `/profile/bag/items/${definitionId}/${owned.id}`,
+                )}
                 key={owned.id}
               >
-                {copy.serial} {owned.serialNumber}
-                {owned.giftedAt ? (
-                  <span className="ml-2 text-[#7A8276]">
-                    · {copy.transferLocked}
-                  </span>
-                ) : null}
-              </span>
+                <span>
+                  {copy.serial} {owned.serialNumber}
+                  {owned.redeemedAt ? (
+                    <span className="ml-2 text-[#156240]">
+                      · {redemptionCopy.redeemed}
+                    </span>
+                  ) : owned.giftedAt ? (
+                    <span className="ml-2 text-[#7A8276]">
+                      · {copy.transferLocked}
+                    </span>
+                  ) : null}
+                </span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 text-[#7A8276]"
+                />
+              </Link>
             ))}
-            {item.quantity > item.ownedItems.length ? (
-              <span className="rounded-lg bg-[#F3F5EF] px-3 py-2 text-xs text-[#6C746A]">
-                +{item.quantity - item.ownedItems.length}
-              </span>
-            ) : null}
           </div>
+          {ownedTickets.total > ownedTickets.pageSize ? (
+            <nav
+              aria-label={redemptionCopy.ticketList}
+              className="mt-4 flex items-center justify-between border-t border-[#E5E2D3] pt-4 text-sm"
+            >
+              {ownedTickets.page > 1 ? (
+                <Link
+                  className="font-bold text-[#156240]"
+                  href={ticketsHref(ownedTickets.page - 1)}
+                >
+                  {copy.previous}
+                </Link>
+              ) : (
+                <span />
+              )}
+              <span className="text-[#667065]">
+                {ownedTickets.page} /{" "}
+                {Math.ceil(ownedTickets.total / ownedTickets.pageSize)}
+              </span>
+              {ownedTickets.page * ownedTickets.pageSize <
+              ownedTickets.total ? (
+                <Link
+                  className="font-bold text-[#156240]"
+                  href={ticketsHref(ownedTickets.page + 1)}
+                >
+                  {copy.next}
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
         </section>
       ) : null}
 

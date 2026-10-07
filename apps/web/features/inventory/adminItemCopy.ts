@@ -52,6 +52,8 @@ type AdminItemCopy = {
     settingsHint: string;
     historyLabel: string;
     historyHint: string;
+    redeemLabel: string;
+    redeemHint: string;
   };
   settings: {
     pageTitle: string;
@@ -145,6 +147,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       settingsHint: "上传背包展示图，管理是否允许持有人赠送。",
       historyLabel: "分配与赠送记录",
       historyHint: "分别查看管理员分配和账户间赠送的历史。",
+      redeemLabel: "入场核销",
+      redeemHint: "扫描持票人的二维码，确认后核销单张票券。",
     },
     settings: {
       pageTitle: "物品设置",
@@ -241,6 +245,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       historyLabel: "Allocation and gift history",
       historyHint:
         "View admin allocations and gifts between accounts separately.",
+      redeemLabel: "Check in tickets",
+      redeemHint: "Scan a guest's ticket QR code and confirm one ticket at a time.",
     },
     settings: {
       pageTitle: "Item settings",
@@ -342,6 +348,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       historyLabel: "Historique des attributions et cadeaux",
       historyHint:
         "Consultez séparément les attributions par l’administration et les cadeaux entre comptes.",
+      redeemLabel: "Valider les billets",
+      redeemHint: "Scannez le QR code d’un invité et confirmez un billet à la fois.",
     },
     settings: {
       pageTitle: "Paramètres de l’objet",
