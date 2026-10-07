@@ -71,9 +71,13 @@ function getFallbackLabel(sourceKey: DetailSourceContext["sourceKey"], locale: s
 
 export function DetailSourceReturnLink({
   className,
+  fallbackHref,
+  fallbackLabel,
   locale,
 }: {
   className?: string;
+  fallbackHref?: string;
+  fallbackLabel?: string;
   locale: string;
 }) {
   const [context, setContext] = useState<DetailSourceContext | null>(null);
@@ -82,11 +86,15 @@ export function DetailSourceReturnLink({
     setContext(getDetailSourceForCurrentTarget());
   }, []);
 
-  if (!context) {
+  const href = context?.sourceHref ?? fallbackHref;
+
+  if (!href) {
     return null;
   }
 
-  const label = context.sourceLabel || getFallbackLabel(context.sourceKey, locale);
+  const label = context
+    ? context.sourceLabel || getFallbackLabel(context.sourceKey, locale)
+    : fallbackLabel ?? href;
 
   return (
     <Link
@@ -94,7 +102,7 @@ export function DetailSourceReturnLink({
         "inline-flex h-9 max-w-full items-center gap-2 rounded-full border border-[#8AB68E] bg-white px-3.5 text-sm font-semibold text-[#156240] shadow-sm transition hover:bg-[#FEFFF9] hover:text-[#1D1D1B] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
         className,
       )}
-      href={context.sourceHref}
+      href={href}
     >
       <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="truncate">{label}</span>

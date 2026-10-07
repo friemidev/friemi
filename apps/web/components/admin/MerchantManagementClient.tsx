@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   Building2,
   ChevronRight,
-  ExternalLink,
   Globe2,
   Loader2,
   Mail,
@@ -23,6 +22,7 @@ import {
 import { toast, Toaster } from "sonner";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { FormField } from "@/components/admin/FormField";
+import { getMerchantAdminCopy } from "@/components/admin/merchantAdminCopy";
 import type {
   AdminMerchantCandidate,
   AdminMerchantListItem,
@@ -40,6 +40,7 @@ export function MerchantManagementClient({
   initialMerchants,
   locale,
 }: MerchantListProps) {
+  const copy = getMerchantAdminCopy(locale);
   const [query, setQuery] = useState("");
   const merchants = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -58,7 +59,7 @@ export function MerchantManagementClient({
   }, [initialMerchants, query]);
 
   return (
-    <section aria-label="店铺列表" className="space-y-3">
+    <section aria-label={copy.list.merchantsTab} className="space-y-3">
       <div className="flex items-center gap-3">
         <label className="relative block min-w-0 flex-1">
           <Search
@@ -66,10 +67,10 @@ export function MerchantManagementClient({
             className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-outline"
           />
           <Input
-            aria-label="搜索店铺"
+            aria-label={copy.list.searchAria}
             className="h-12 rounded-xl border-0 bg-fog pl-11 text-base text-ink focus-visible:ring-forest"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索店名、城市或店家账号"
+            placeholder={copy.list.searchPlaceholder}
             value={query}
           />
         </label>
@@ -78,12 +79,9 @@ export function MerchantManagementClient({
       {merchants.length > 0 ? (
         <div className="divide-y divide-sand/40">
           {merchants.map((merchant) => (
-            <article
-              className="flex min-w-0 items-center gap-1 py-1"
-              key={merchant.id}
-            >
+            <article className="min-w-0 py-1" key={merchant.id}>
               <Link
-                aria-label={`管理店铺 ${merchant.name}`}
+                aria-label={copy.list.merchantAria(merchant.name)}
                 className="group flex min-h-20 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest sm:px-3"
                 href={withLocale(locale, `/admin/merchants/${merchant.id}`)}
               >
@@ -95,27 +93,21 @@ export function MerchantManagementClient({
                     {merchant.name}
                   </span>
                   <span className="mt-1 block truncate text-xs text-ink/70">
-                    {merchant.city || merchant.address || "未填写地址"}
+                    {merchant.city ||
+                      merchant.address ||
+                      copy.list.missingAddress}
                     {" · "}
                     {merchant.owner
-                      ? `店家 ${merchant.owner.nickname}`
-                      : "待绑定店家"}
+                      ? copy.list.owner(merchant.owner.nickname)
+                      : copy.list.pendingOwner}
                     {" · "}
-                    {merchant.activityCount} 个活动
+                    {copy.list.activities(merchant.activityCount)}
                   </span>
                 </span>
                 <ChevronRight
                   aria-hidden="true"
                   className="h-5 w-5 shrink-0 text-outline transition group-hover:translate-x-0.5 group-hover:text-forest"
                 />
-              </Link>
-              <Link
-                aria-label={`查看 ${merchant.name} 的公开主页`}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-outline transition hover:bg-fog hover:text-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                href={withLocale(locale, `/merchants/${merchant.slug}`)}
-                title="查看公开主页"
-              >
-                <ExternalLink aria-hidden="true" className="h-4 w-4" />
               </Link>
             </article>
           ))}
@@ -127,8 +119,24 @@ export function MerchantManagementClient({
             className="mx-auto h-8 w-8 text-forest"
           />
           <p className="mt-3 text-sm font-semibold text-ink">
-            {initialMerchants.length === 0 ? "还没有店铺" : "没有匹配的店铺"}
+            {initialMerchants.length === 0
+              ? copy.list.noMerchants
+              : copy.list.noResults}
           </p>
+          {initialMerchants.length === 0 ? (
+            <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-ink/70">
+              {copy.list.noMerchantsHint}
+            </p>
+          ) : null}
+          {initialMerchants.length > 0 ? (
+            <button
+              className="mt-3 min-h-11 rounded-xl px-4 text-sm font-semibold text-forest underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              onClick={() => setQuery("")}
+              type="button"
+            >
+              {copy.list.clearSearch}
+            </button>
+          ) : null}
         </div>
       )}
     </section>
@@ -138,15 +146,21 @@ export function MerchantManagementClient({
 type MerchantUpgradeClientProps = {
   candidates: AdminMerchantCandidate[];
   locale: string;
+  merchant?: AdminMerchantListItem | null;
   query: string;
 };
 
 export function MerchantUpgradeClient({
   candidates,
   locale,
+  merchant,
   query,
 }: MerchantUpgradeClientProps) {
+  const copy = getMerchantAdminCopy(locale);
   const router = useRouter();
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
+    null,
+  );
   const [assigningProfileId, setAssigningProfileId] = useState<string | null>(
     null,
   );
@@ -157,23 +171,34 @@ export function MerchantUpgradeClient({
 
     try {
       const response = await fetch("/api/admin/merchants/assign-owner", {
-        body: JSON.stringify({ profileId }),
+        body: JSON.stringify({
+          profileId,
+          ...(merchant ? { merchantId: merchant.id } : {}),
+        }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
       if (!response.ok) {
-        toast.error("升级店家失败，请确认账号仍然有效");
+        toast.error(
+          response.status === 409
+            ? copy.bind.conflict
+            : merchant
+              ? copy.bind.failed
+              : copy.bind.createFailed,
+        );
         return;
       }
 
       const json = (await response.json()) as {
         merchant: AdminMerchantListItem;
       };
-      toast.success("账号已升级为店家");
+      toast.success(merchant ? copy.bind.success : copy.bind.createSuccess);
       router.push(withLocale(locale, `/admin/merchants/${json.merchant.id}`));
       router.refresh();
     } catch {
-      toast.error("升级店家失败，请稍后重试");
+      toast.error(
+        merchant ? copy.bind.networkError : copy.bind.createNetworkError,
+      );
     } finally {
       setAssigningProfileId(null);
     }
@@ -187,54 +212,83 @@ export function MerchantUpgradeClient({
     <div className="space-y-3">
       <Toaster closeButton position="top-center" richColors />
       <p className="text-sm font-semibold text-ink/70">
-        搜索结果 · {candidates.length}
+        {copy.bind.results(candidates.length)}
       </p>
       {candidates.length > 0 ? (
         <div className="divide-y divide-sand/40">
           {candidates.map((candidate) => (
-            <div
-              className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
-              key={candidate.id}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-fog text-sm font-bold text-forest">
-                  {candidate.nickname.slice(0, 1).toUpperCase()}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-ink">
-                    {candidate.nickname}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-ink/70">
-                    Friemi 个人号：{candidate.friendCode ?? "未生成"}
-                    {candidate.email ? ` · ${candidate.email}` : ""}
-                  </p>
+            <div className="py-4" key={candidate.id}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-fog text-sm font-bold text-forest">
+                    {candidate.nickname.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink">
+                      {candidate.nickname}
+                    </p>
+                    <p className="mt-1 break-words text-xs text-ink/70">
+                      {copy.bind.friendCode}:{" "}
+                      {candidate.friendCode ?? copy.bind.missingCode}
+                      {candidate.email ? ` · ${candidate.email}` : ""}
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  aria-controls={`merchant-account-confirm-${candidate.id}`}
+                  aria-expanded={selectedProfileId === candidate.id}
+                  className="h-11 shrink-0 rounded-xl"
+                  disabled={Boolean(assigningProfileId)}
+                  onClick={() =>
+                    setSelectedProfileId((current) =>
+                      current === candidate.id ? null : candidate.id,
+                    )
+                  }
+                  type="button"
+                  variant="secondary"
+                >
+                  {selectedProfileId === candidate.id
+                    ? copy.bind.cancel
+                    : copy.bind.select}
+                </Button>
               </div>
-              <Button
-                className="h-11 shrink-0 rounded-xl bg-forest hover:bg-forest/90"
-                disabled={Boolean(assigningProfileId)}
-                onClick={() => void assignMerchantAccount(candidate.id)}
-                type="button"
-              >
-                {assigningProfileId === candidate.id ? (
-                  <Loader2
-                    aria-hidden="true"
-                    className="mr-2 h-4 w-4 animate-spin"
-                  />
-                ) : (
-                  <Store aria-hidden="true" className="mr-2 h-4 w-4" />
-                )}
-                升级并开通店铺
-              </Button>
+              {selectedProfileId === candidate.id ? (
+                <div
+                  className="mt-3 space-y-3 rounded-xl bg-fog p-4"
+                  id={`merchant-account-confirm-${candidate.id}`}
+                >
+                  <p className="text-sm leading-6 text-ink">
+                    {merchant
+                      ? copy.bind.confirm(candidate.nickname, merchant.name)
+                      : copy.bind.confirmCreate(candidate.nickname)}
+                  </p>
+                  <Button
+                    className="h-11 rounded-xl bg-forest hover:bg-forest/90"
+                    disabled={Boolean(assigningProfileId)}
+                    onClick={() => void assignMerchantAccount(candidate.id)}
+                    type="button"
+                  >
+                    {assigningProfileId === candidate.id ? (
+                      <Loader2
+                        aria-hidden="true"
+                        className="mr-2 h-4 w-4 animate-spin"
+                      />
+                    ) : (
+                      <Store aria-hidden="true" className="mr-2 h-4 w-4" />
+                    )}
+                    {merchant ? copy.bind.submit : copy.bind.submitCreate}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
       ) : (
         <div className="rounded-2xl bg-fog px-5 py-12 text-center">
-          <p className="text-sm font-semibold text-ink">没有找到可升级账号</p>
-          <p className="mt-1 text-sm text-ink/70">
-            请检查昵称、邮箱或 6 位 Friemi 个人号；已有店铺的账号不会重复显示。
+          <p className="text-sm font-semibold text-ink">
+            {merchant ? copy.bind.noResults : copy.bind.noCreateResults}
           </p>
+          <p className="mt-1 text-sm text-ink/70">{copy.bind.noResultsHint}</p>
         </div>
       )}
     </div>
@@ -255,7 +309,7 @@ type MerchantFormState = {
 
 const emptyMerchantForm = (): MerchantFormState => ({
   address: "",
-  city: "Paris",
+  city: "",
   contactEmail: "",
   description: "",
   latitude: "",
@@ -266,12 +320,14 @@ const emptyMerchantForm = (): MerchantFormState => ({
 });
 
 export function MerchantCreateClient({ locale }: { locale: string }) {
+  const copy = getMerchantAdminCopy(locale);
   const router = useRouter();
   const [form, setForm] = useState<MerchantFormState>(emptyMerchantForm);
   const [isSaving, setIsSaving] = useState(false);
   const canSave =
     form.name.trim().length > 0 &&
     form.description.trim().length > 0 &&
+    form.city.trim().length > 0 &&
     !isSaving;
 
   async function submitMerchant(event: React.FormEvent<HTMLFormElement>) {
@@ -295,22 +351,22 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
       });
 
       if (response.status === 409) {
-        toast.error("商家 URL 标识已存在，请更换一个标识");
+        toast.error(copy.create.slugConflict);
         return;
       }
       if (!response.ok) {
-        toast.error("店铺创建失败，请检查必填信息");
+        toast.error(copy.create.failed);
         return;
       }
 
       const json = (await response.json()) as {
         merchant: AdminMerchantListItem;
       };
-      toast.success("合作店铺已创建");
+      toast.success(copy.create.success);
       router.push(withLocale(locale, `/admin/merchants/${json.merchant.id}`));
       router.refresh();
     } catch {
-      toast.error("店铺创建失败，请稍后重试");
+      toast.error(copy.create.networkError);
     } finally {
       setIsSaving(false);
     }
@@ -319,40 +375,44 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
   return (
     <form className="space-y-7" onSubmit={submitMerchant}>
       <Toaster closeButton position="top-center" richColors />
-      <FormSection title="店铺资料">
-        <FormField label="店铺名称 *">
+      <FormSection title={copy.create.sectionTitle}>
+        <FormField label={`${copy.create.name} *`}>
           <Input
-            aria-label="店铺名称"
+            aria-label={copy.create.name}
             className="h-12 rounded-xl text-base"
             onChange={(event) => setForm({ ...form, name: event.target.value })}
+            required
             value={form.name}
           />
         </FormField>
-        <FormField label="店铺简介 *">
+        <FormField label={`${copy.create.description} *`}>
           <Textarea
-            aria-label="店铺简介"
+            aria-label={copy.create.description}
             className="min-h-28 rounded-xl text-base"
             onChange={(event) =>
               setForm({ ...form, description: event.target.value })
             }
-            placeholder="介绍店铺的类型和特色"
+            placeholder={copy.create.descriptionPlaceholder}
+            required
             value={form.description}
           />
         </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="城市">
+          <FormField label={`${copy.create.city} *`}>
             <Input
-              aria-label="城市"
+              aria-label={copy.create.city}
               className="h-12 rounded-xl text-base"
               onChange={(event) =>
                 setForm({ ...form, city: event.target.value })
               }
+              placeholder={copy.create.cityPlaceholder}
+              required
               value={form.city}
             />
           </FormField>
-          <FormField label="详细地址">
+          <FormField label={copy.create.address}>
             <Input
-              aria-label="详细地址"
+              aria-label={copy.create.address}
               className="h-12 rounded-xl text-base"
               onChange={(event) =>
                 setForm({ ...form, address: event.target.value })
@@ -365,16 +425,16 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
 
       <details className="group rounded-2xl bg-fog p-4 sm:p-5">
         <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
-          更多资料{" "}
+          {copy.create.more}{" "}
           <ChevronRight
             aria-hidden="true"
             className="h-4 w-4 transition group-open:rotate-90"
           />
         </summary>
         <div className="grid gap-4 pt-4 sm:grid-cols-2">
-          <FormField hint="留空则根据店名自动生成" label="URL 标识">
+          <FormField hint={copy.create.slugHint} label={copy.create.slug}>
             <Input
-              aria-label="URL 标识"
+              aria-label={copy.create.slug}
               className="h-12 rounded-xl text-base"
               onChange={(event) =>
                 setForm({ ...form, slug: event.target.value })
@@ -383,9 +443,9 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
               value={form.slug}
             />
           </FormField>
-          <FormField label="联系邮箱">
+          <FormField label={copy.create.email}>
             <Input
-              aria-label="联系邮箱"
+              aria-label={copy.create.email}
               className="h-12 rounded-xl text-base"
               onChange={(event) =>
                 setForm({ ...form, contactEmail: event.target.value })
@@ -394,9 +454,9 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
               value={form.contactEmail}
             />
           </FormField>
-          <FormField label="官网">
+          <FormField label={copy.create.website}>
             <Input
-              aria-label="官网"
+              aria-label={copy.create.website}
               className="h-12 rounded-xl text-base"
               onChange={(event) =>
                 setForm({ ...form, websiteUrl: event.target.value })
@@ -406,9 +466,9 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
             />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="纬度">
+            <FormField label={copy.create.latitude}>
               <Input
-                aria-label="纬度"
+                aria-label={copy.create.latitude}
                 className="h-12 rounded-xl text-base"
                 inputMode="decimal"
                 onChange={(event) =>
@@ -418,9 +478,9 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
                 value={form.latitude}
               />
             </FormField>
-            <FormField label="经度">
+            <FormField label={copy.create.longitude}>
               <Input
-                aria-label="经度"
+                aria-label={copy.create.longitude}
                 className="h-12 rounded-xl text-base"
                 inputMode="decimal"
                 onChange={(event) =>
@@ -445,7 +505,7 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
           ) : (
             <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
           )}
-          创建店铺
+          {copy.create.save}
         </Button>
         <Button
           className="h-12 rounded-xl"
@@ -454,7 +514,7 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
           type="button"
           variant="secondary"
         >
-          清空
+          {copy.create.clear}
         </Button>
       </div>
     </form>
@@ -465,7 +525,6 @@ type CouponFormState = {
   accentColor: string;
   backgroundColor: string;
   description: string;
-  expiresAt: string;
   foregroundColor: string;
   terms: string;
   title: string;
@@ -475,7 +534,6 @@ const emptyCouponForm = (): CouponFormState => ({
   accentColor: "#F1F2E3",
   backgroundColor: "#0F6D46",
   description: "",
-  expiresAt: "",
   foregroundColor: "#FFFFFF",
   terms: "",
   title: "",
@@ -483,41 +541,55 @@ const emptyCouponForm = (): CouponFormState => ({
 
 export function MerchantCouponManagementClient({
   initialCoupons,
+  locale,
   merchant,
 }: {
   initialCoupons: AdminCouponTemplate[];
+  locale: string;
   merchant: AdminMerchantListItem;
 }) {
+  const copy = getMerchantAdminCopy(locale);
   const [coupons, setCoupons] = useState(initialCoupons);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>(
-    platformCouponTemplates[0]?.key ?? "",
+    platformCouponTemplates.find(
+      (template) =>
+        !initialCoupons.some(
+          (coupon) =>
+            coupon.platformTemplateKey === template.key && coupon.isActive,
+        ),
+    )?.key ?? "",
   );
   const [bindingTemplate, setBindingTemplate] = useState(false);
   const [isCustomOpen, setIsCustomOpen] = useState(false);
   const [form, setForm] = useState<CouponFormState>(emptyCouponForm);
   const [isSaving, setIsSaving] = useState(false);
-  const selectedTemplate = platformCouponTemplates.find(
-    (template) => template.key === selectedTemplateKey,
+  const activeCoupons = coupons.filter((coupon) => coupon.isActive);
+  const availableTemplates = platformCouponTemplates.filter(
+    (template) =>
+      !coupons.some(
+        (coupon) =>
+          coupon.platformTemplateKey === template.key && coupon.isActive,
+      ),
   );
-  const selectedTemplateAssigned = coupons.some(
-    (coupon) => coupon.platformTemplateKey === selectedTemplateKey,
-  );
+  const selectedTemplate =
+    availableTemplates.find(
+      (template) => template.key === selectedTemplateKey,
+    ) ?? availableTemplates[0];
 
   async function bindPlatformCoupon() {
-    if (!selectedTemplateKey || bindingTemplate || selectedTemplateAssigned)
-      return;
+    if (!selectedTemplate || bindingTemplate) return;
     setBindingTemplate(true);
     try {
       const response = await fetch(
         `/api/admin/merchants/${merchant.id}/coupons`,
         {
-          body: JSON.stringify({ platformTemplateKey: selectedTemplateKey }),
+          body: JSON.stringify({ platformTemplateKey: selectedTemplate.key }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         },
       );
       if (!response.ok) {
-        toast.error("优惠券样式分配失败，请稍后重试");
+        toast.error(copy.coupons.addFailed);
         return;
       }
       const json = (await response.json()) as { coupon: AdminCouponTemplate };
@@ -525,9 +597,9 @@ export function MerchantCouponManagementClient({
         ...current.filter((item) => item.id !== json.coupon.id),
         json.coupon,
       ]);
-      toast.success("优惠券样式已分配给此店铺");
+      toast.success(copy.coupons.addSuccess);
     } catch {
-      toast.error("优惠券样式分配失败，请稍后重试");
+      toast.error(copy.coupons.addFailed);
     } finally {
       setBindingTemplate(false);
     }
@@ -543,9 +615,6 @@ export function MerchantCouponManagementClient({
         {
           body: JSON.stringify({
             ...form,
-            expiresAt: form.expiresAt
-              ? new Date(form.expiresAt).toISOString()
-              : null,
             terms: form.terms || null,
           }),
           headers: { "Content-Type": "application/json" },
@@ -553,16 +622,16 @@ export function MerchantCouponManagementClient({
         },
       );
       if (!response.ok) {
-        toast.error("自定义优惠券创建失败，请检查内容");
+        toast.error(copy.coupons.saveFailed);
         return;
       }
       const json = (await response.json()) as { coupon: AdminCouponTemplate };
       setCoupons((current) => [...current, json.coupon]);
       setForm(emptyCouponForm());
       setIsCustomOpen(false);
-      toast.success("自定义优惠券已添加");
+      toast.success(copy.coupons.saveSuccess);
     } catch {
-      toast.error("自定义优惠券创建失败，请稍后重试");
+      toast.error(copy.coupons.saveNetworkError);
     } finally {
       setIsSaving(false);
     }
@@ -572,19 +641,16 @@ export function MerchantCouponManagementClient({
     <div className="space-y-8">
       <Toaster closeButton position="top-center" richColors />
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xl font-bold text-ink">优惠券样式</h2>
+        <h2 className="text-xl font-bold text-ink">{copy.coupons.templates}</h2>
         <span className="text-xs font-semibold tabular-nums text-ink/70">
-          已分配 {coupons.length}
+          {copy.coupons.added(activeCoupons.length)}
         </span>
       </div>
 
-      <section className="space-y-3" aria-labelledby="assigned-coupons-title">
-        <h3 className="text-sm font-bold text-ink" id="assigned-coupons-title">
-          当前样式
-        </h3>
-        {coupons.length > 0 ? (
+      <section aria-label={copy.coupons.availableAria} className="space-y-3">
+        {activeCoupons.length > 0 ? (
           <div className="grid gap-2 sm:grid-cols-2">
-            {coupons.map((coupon) => (
+            {activeCoupons.map((coupon) => (
               <div
                 className="flex min-w-0 items-center gap-3 rounded-xl bg-fog p-3"
                 key={coupon.id}
@@ -605,7 +671,7 @@ export function MerchantCouponManagementClient({
                       color: coupon.foregroundColor,
                     }}
                   >
-                    Coupon
+                    {copy.coupons.thumbnailLabel}
                   </span>
                 )}
                 <div className="min-w-0">
@@ -620,17 +686,23 @@ export function MerchantCouponManagementClient({
             ))}
           </div>
         ) : (
-          <p className="rounded-xl bg-fog px-4 py-6 text-center text-sm text-ink/70">
-            还没有分配优惠券样式
+          <p className="rounded-xl bg-fog px-4 py-6 text-center text-sm leading-6 text-ink/70">
+            {copy.coupons.empty}
           </p>
         )}
       </section>
 
-      <section aria-labelledby="platform-template-title" className="space-y-3">
-        <h3 className="text-sm font-bold text-ink" id="platform-template-title">
-          添加平台样式
-        </h3>
-        {selectedTemplate ? (
+      {selectedTemplate ? (
+        <section
+          aria-labelledby="platform-template-title"
+          className="space-y-3"
+        >
+          <h3
+            className="text-sm font-bold text-ink"
+            id="platform-template-title"
+          >
+            {copy.coupons.platformTitle}
+          </h3>
           <div className="grid gap-4 rounded-2xl bg-fog p-4 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-start sm:p-5">
             <Image
               alt={selectedTemplate.title}
@@ -641,17 +713,17 @@ export function MerchantCouponManagementClient({
               width={1448}
             />
             <div className="space-y-3">
-              {platformCouponTemplates.length > 1 ? (
-                <FormField label="选择样式">
+              {availableTemplates.length > 1 ? (
+                <FormField label={copy.coupons.selectStyle}>
                   <select
-                    aria-label="选择样式"
+                    aria-label={copy.coupons.selectStyle}
                     className="h-12 w-full rounded-xl border border-sand/60 bg-paper px-3 text-base font-semibold text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                     onChange={(event) =>
                       setSelectedTemplateKey(event.target.value)
                     }
-                    value={selectedTemplateKey}
+                    value={selectedTemplate.key}
                   >
-                    {platformCouponTemplates.map((template) => (
+                    {availableTemplates.map((template) => (
                       <option key={template.key} value={template.key}>
                         {template.title}
                       </option>
@@ -668,7 +740,7 @@ export function MerchantCouponManagementClient({
               </p>
               <Button
                 className="h-12 rounded-xl bg-forest hover:bg-forest/90"
-                disabled={bindingTemplate || selectedTemplateAssigned}
+                disabled={bindingTemplate}
                 onClick={() => void bindPlatformCoupon()}
                 type="button"
               >
@@ -680,17 +752,17 @@ export function MerchantCouponManagementClient({
                 ) : (
                   <TicketCheck aria-hidden="true" className="mr-2 h-4 w-4" />
                 )}
-                {selectedTemplateAssigned ? "已分配" : "分配给店铺"}
+                {copy.coupons.add}
               </Button>
             </div>
           </div>
-        ) : null}
-      </section>
+        </section>
+      ) : null}
 
       <section aria-labelledby="custom-coupon-title" className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h3 className="text-sm font-bold text-ink" id="custom-coupon-title">
-            自定义样式
+            {copy.coupons.customTitle}
           </h3>
           <Button
             className="h-11 rounded-xl"
@@ -699,7 +771,7 @@ export function MerchantCouponManagementClient({
             variant="secondary"
           >
             <TicketPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-            {isCustomOpen ? "收起" : "添加自定义样式"}
+            {isCustomOpen ? copy.coupons.hideForm : copy.coupons.showForm}
           </Button>
         </div>
 
@@ -708,33 +780,20 @@ export function MerchantCouponManagementClient({
             className="space-y-4 rounded-2xl bg-fog p-4 sm:p-5"
             onSubmit={createCustomCoupon}
           >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="优惠券名称 *">
-                <Input
-                  aria-label="优惠券名称"
-                  className="h-12 text-base"
-                  maxLength={120}
-                  onChange={(event) =>
-                    setForm({ ...form, title: event.target.value })
-                  }
-                  value={form.title}
-                />
-              </FormField>
-              <FormField label="有效期">
-                <Input
-                  aria-label="有效期"
-                  className="h-12 text-base"
-                  onChange={(event) =>
-                    setForm({ ...form, expiresAt: event.target.value })
-                  }
-                  type="date"
-                  value={form.expiresAt}
-                />
-              </FormField>
-            </div>
-            <FormField label="优惠内容 *">
+            <FormField label={`${copy.coupons.name} *`}>
+              <Input
+                aria-label={copy.coupons.name}
+                className="h-12 text-base"
+                maxLength={120}
+                onChange={(event) =>
+                  setForm({ ...form, title: event.target.value })
+                }
+                value={form.title}
+              />
+            </FormField>
+            <FormField label={`${copy.coupons.description} *`}>
               <Textarea
-                aria-label="优惠内容"
+                aria-label={copy.coupons.description}
                 className="min-h-24 text-base"
                 maxLength={1200}
                 onChange={(event) =>
@@ -743,9 +802,9 @@ export function MerchantCouponManagementClient({
                 value={form.description}
               />
             </FormField>
-            <FormField label="使用规则">
+            <FormField label={copy.coupons.terms}>
               <Textarea
-                aria-label="使用规则"
+                aria-label={copy.coupons.terms}
                 className="min-h-20 text-base"
                 maxLength={1200}
                 onChange={(event) =>
@@ -756,21 +815,21 @@ export function MerchantCouponManagementClient({
             </FormField>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <ColorField
-                label="底色"
+                label={copy.coupons.background}
                 onChange={(backgroundColor) =>
                   setForm({ ...form, backgroundColor })
                 }
                 value={form.backgroundColor}
               />
               <ColorField
-                label="文字"
+                label={copy.coupons.foreground}
                 onChange={(foregroundColor) =>
                   setForm({ ...form, foregroundColor })
                 }
                 value={form.foregroundColor}
               />
               <ColorField
-                label="强调"
+                label={copy.coupons.accent}
                 onChange={(accentColor) => setForm({ ...form, accentColor })}
                 value={form.accentColor}
               />
@@ -782,9 +841,11 @@ export function MerchantCouponManagementClient({
                 color: form.foregroundColor,
               }}
             >
-              <p className="text-xs font-semibold opacity-75">Friemi Coupon</p>
+              <p className="text-xs font-semibold opacity-75">
+                {copy.coupons.previewBrandLabel}
+              </p>
               <p className="mt-1 text-lg font-bold">
-                {form.title || "优惠券预览"}
+                {form.title || copy.coupons.preview}
               </p>
               <span
                 className="mt-3 block h-1 w-12 rounded-full"
@@ -806,7 +867,7 @@ export function MerchantCouponManagementClient({
               ) : (
                 <TicketPlus aria-hidden="true" className="mr-2 h-4 w-4" />
               )}
-              保存优惠券
+              {copy.coupons.save}
             </Button>
           </form>
         ) : null}
@@ -831,13 +892,16 @@ function FormSection({
 }
 
 export function MerchantSummary({
+  locale,
   merchant,
 }: {
+  locale: string;
   merchant: AdminMerchantListItem;
 }) {
+  const copy = getMerchantAdminCopy(locale);
   return (
     <section
-      aria-label={`${merchant.name} 店铺资料`}
+      aria-label={copy.detail.summaryAria(merchant.name)}
       className="rounded-2xl bg-ink p-5 text-paper sm:p-6"
     >
       <div className="flex min-w-0 items-start gap-3">
@@ -845,40 +909,42 @@ export function MerchantSummary({
           <Store aria-hidden="true" className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-lg font-bold sm:text-xl">
-            {merchant.name}
-          </h2>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 className="break-words text-lg font-bold sm:text-xl">
+              {merchant.name}
+            </h2>
+            <span className="rounded-full bg-paper/10 px-2.5 py-1 text-xs font-semibold text-paper/90">
+              {merchant.owner ? copy.detail.bound : copy.detail.unbound}
+            </span>
+          </div>
           <p className="mt-1 break-words text-sm leading-5 text-paper/70">
             {merchant.description}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-paper/10 px-2.5 py-1 text-[11px] font-semibold text-paper/90">
-          {merchant.owner ? "已绑定" : "未绑定"}
-        </span>
       </div>
-      <div className="mt-6 grid gap-x-6 gap-y-3 text-xs text-paper/75 sm:grid-cols-2">
+      <div className="mt-6 grid gap-x-6 gap-y-3 text-sm text-paper/80 sm:grid-cols-2">
         <InfoLine
           icon={MapPin}
-          text={merchant.address || merchant.city || "未填写地址"}
+          text={merchant.address || merchant.city || copy.list.missingAddress}
         />
         <InfoLine
           icon={UserRoundCheck}
           text={
             merchant.owner
               ? `${merchant.owner.nickname}${merchant.owner.friendCode ? ` · ${merchant.owner.friendCode}` : ""}`
-              : "未绑定店家账号"
+              : copy.detail.noOwner
           }
         />
         <InfoLine
           icon={Building2}
-          text={`${merchant.activityCount} 个关联活动`}
+          text={copy.list.activities(merchant.activityCount)}
         />
         {merchant.websiteUrl ? (
           <InfoLine icon={Globe2} text={merchant.websiteUrl} />
         ) : merchant.contactEmail ? (
           <InfoLine icon={Mail} text={merchant.contactEmail} />
         ) : (
-          <InfoLine icon={Mail} text="未填写联系方式" />
+          <InfoLine icon={Mail} text={copy.detail.noContact} />
         )}
       </div>
     </section>

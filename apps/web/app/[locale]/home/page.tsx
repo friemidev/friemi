@@ -418,7 +418,7 @@ export default async function HomePage({
 function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
     <div className="friemi-native-app-mobile-only md:hidden">
-      <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
+      <section className="relative isolate min-h-[68svh] overflow-hidden bg-[#1D1D1B] text-white">
         <BrandBackdrop
           className="-right-28 top-10 z-0 h-[30rem] w-[18rem] opacity-35 blur-[0.2px]"
           imageClassName="object-contain object-top"
@@ -436,7 +436,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         <div className="home-hero-scrim absolute inset-0" />
         <div className="home-hero-bottom-scrim absolute inset-x-0 bottom-0 h-40" />
 
-        <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6">
+        <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[68svh] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-[calc(var(--app-top-safe-area)+4rem)] sm:px-6">
           <div className="home-luxury-reveal max-w-4xl">
             <p className="text-xs font-semibold uppercase tracking-normal text-white/70">
               {t.heroEyebrow}

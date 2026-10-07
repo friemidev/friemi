@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { FileWarning, Mail, ShieldCheck } from "lucide-react";
-import { BrandLockup } from "@/components/brand/BrandLockup";
+import { ArrowLeft, FileWarning, Mail, ShieldCheck } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 
 type SafetyPageProps = {
@@ -205,10 +204,17 @@ export default async function SafetyPage({ params }: SafetyPageProps) {
 
   return (
     <main className="min-h-screen bg-white">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-[calc(var(--app-top-safe-area)+1rem)] sm:px-6 sm:pb-12 sm:pt-[calc(var(--app-top-safe-area)+3rem)] md:pt-12 lg:px-8">
         <header className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] sm:p-8">
-          <BrandLockup size="sm" />
-          <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
+          <Link
+            aria-label={copy.backHome}
+            className="grid h-11 w-11 place-items-center rounded-full bg-fog text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/home")}
+            title={copy.backHome}
+          >
+            <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+          </Link>
+          <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {copy.eyebrow}
           </p>
@@ -218,15 +224,7 @@ export default async function SafetyPage({ params }: SafetyPageProps) {
           <p className="mt-4 max-w-3xl text-base leading-7 text-[#156240]">
             {copy.description}
           </p>
-          <div className="mt-6 flex flex-col gap-3 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <p>{copy.updatedAt}</p>
-            <Link
-              className="inline-flex w-fit items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 py-2 font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#FEFFF9]"
-              href={withLocale(locale, "/home")}
-            >
-              {copy.backHome}
-            </Link>
-          </div>
+          <p className="mt-6 text-sm text-zinc-600">{copy.updatedAt}</p>
         </header>
 
         <section className="mt-6 rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.06)] sm:p-8">

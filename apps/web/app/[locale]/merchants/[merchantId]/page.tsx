@@ -9,6 +9,7 @@ import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProf
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 type MerchantPageProps = {
   params: Promise<{
@@ -37,9 +38,19 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
   }
 
   return (
-    <PageContainer className="space-y-7 pb-10">
+    <PageContainer mobileSafeTop mobileSafeBottom className="space-y-7 pb-10">
       <DetailSourceRestore sourceKey="merchant" />
-      <DetailSourceReturnLink locale={locale} />
+      <DetailSourceReturnLink
+        fallbackHref={withLocale(locale, "/activities")}
+        fallbackLabel={
+          locale === "fr"
+            ? "Retour aux activités"
+            : locale === "en"
+              ? "Back to activities"
+              : "返回活动大厅"
+        }
+        locale={locale}
+      />
       <section className="grid gap-5 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:p-6 lg:grid-cols-[1fr_320px] lg:items-end">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-paper text-2xl font-semibold text-ink ring-1 ring-black/10">

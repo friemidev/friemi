@@ -73,6 +73,7 @@ import type {
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
 import { getInventoryCopy } from "@/features/inventory/copy";
+import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
 import type { FriemiCoinBalanceViewModel } from "@/features/charm/queries/getFriemiCoinBalance";
 import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfileGiftWall";
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
@@ -2654,31 +2655,48 @@ function InventoryBagCard({
   const copy = getInventoryCopy(locale);
   return (
     <Link
-      className="grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-[#D6D5B2] transition hover:ring-[#156240] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#156240]"
+      className={cn(
+        "grid content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-sand transition hover:ring-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-forest",
+        item.imageUrl ? "min-h-[15rem]" : "min-h-[10.5rem]",
+      )}
       href={withLocale(locale, `/profile/bag/items/${item.id}`)}
     >
       <div>
-        <div className="flex items-start justify-between gap-2">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EAF5E8] text-[#156240]">
-            <Ticket className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <span className="rounded-full bg-[#F3F5EF] px-2 py-1 text-[10px] font-bold text-[#156240]">
-            {copy.ticket}
-          </span>
-        </div>
-        <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
+        {item.imageUrl ? (
+          <div className="relative">
+            <InventoryItemArtwork
+              alt=""
+              className="aspect-[4/3] w-full rounded-[0.8rem]"
+              fit="contain"
+              imageUrl={item.imageUrl}
+            />
+            <span className="absolute right-2 top-2 rounded-full bg-paper/95 px-2 py-1 text-[10px] font-bold text-forest shadow-sm">
+              {copy.ticket}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-2">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-fog text-forest">
+              <Ticket className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="rounded-full bg-fog px-2 py-1 text-[10px] font-bold text-forest">
+              {copy.ticket}
+            </span>
+          </div>
+        )}
+        <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-5 text-ink">
           {item.title}
         </h3>
       </div>
-      <div className="mt-3 flex items-end justify-between gap-2 border-t border-[#E5E2D3] pt-2">
+      <div className="mt-3 flex items-end justify-between gap-2 border-t border-sand pt-2">
         <div>
-          <p className="text-[10px] text-[#6C746A]">{copy.owned}</p>
-          <p className="text-lg font-black tabular-nums text-[#111210]">
+          <p className="text-[10px] text-ink/70">{copy.owned}</p>
+          <p className="text-lg font-black tabular-nums text-ink">
             {item.quantity}
           </p>
         </div>
         {item.transferableCount > 0 ? (
-          <p className="text-right text-[10px] font-bold text-[#156240]">
+          <p className="text-right text-[10px] font-bold text-forest">
             {copy.available} {item.transferableCount}
           </p>
         ) : null}

@@ -8,8 +8,7 @@
 .screen {
   display: flex;
   min-height: calc(
-    100dvh - var(--app-mobile-header-height, 0px) -
-      var(--app-mobile-nav-height, 0px)
+    100dvh - var(--app-mobile-nav-height, 0px)
   );
   align-items: center;
   justify-content: center;

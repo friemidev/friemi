@@ -16,6 +16,7 @@ export async function findActiveProfileByFriemiCode(value: string) {
 export async function createTicketDefinition(input: {
   actorProfileId: string;
   description: string | null;
+  imageUrl: string | null;
   isGiftable: boolean;
   title: string;
   totalSupply: number;
@@ -24,6 +25,7 @@ export async function createTicketDefinition(input: {
     data: {
       createdByProfileId: input.actorProfileId,
       description: input.description,
+      imageUrl: input.imageUrl,
       isGiftable: input.isGiftable,
       kind: "EVENT_TICKET",
       title: input.title,
@@ -31,6 +33,17 @@ export async function createTicketDefinition(input: {
     },
     select: { id: true },
   });
+}
+
+export async function updateInventoryDefinitionImage(input: {
+  definitionId: string;
+  imageUrl: string | null;
+}) {
+  const updated = await prisma.inventoryItemDefinition.updateMany({
+    where: { id: input.definitionId },
+    data: { imageUrl: input.imageUrl },
+  });
+  return updated.count > 0;
 }
 
 export async function setTicketGiftable(input: {
@@ -302,6 +315,7 @@ export async function getInventoryBagSummary(profileId: string) {
       createdAt: true,
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       kind: true,
       title: true,
@@ -327,6 +341,7 @@ export async function getInventoryBagSummary(profileId: string) {
         createdAt: definition.createdAt.toISOString(),
         description: definition.description,
         id: definition.id,
+        imageUrl: definition.imageUrl,
         isGiftable: definition.isGiftable,
         kind: definition.kind,
         quantity,
@@ -347,6 +362,7 @@ export async function getInventoryDefinitionForProfile(input: {
     select: {
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       kind: true,
       title: true,
@@ -445,20 +461,59 @@ export async function getInventoryDefinitionForProfile(input: {
   };
 }
 
-export async function getAdminTicketDefinitions() {
-  return prisma.inventoryItemDefinition.findMany({
-    where: { kind: "EVENT_TICKET" },
-    orderBy: { createdAt: "desc" },
+const adminTicketDefinitionSelect = {
+  createdAt: true,
+  description: true,
+  id: true,
+  imageUrl: true,
+  isGiftable: true,
+  issuedCount: true,
+  kind: true,
+  title: true,
+  totalSupply: true,
+} as const;
+
+export async function getAdminTicketDefinitionPage(input: {
+  page: number;
+  query: string;
+}) {
+  const pageSize = 20;
+  const requestedPage =
+    Number.isSafeInteger(input.page) && input.page > 0 ? input.page : 1;
+  const query = input.query.trim().slice(0, 120);
+  const where: Prisma.InventoryItemDefinitionWhereInput = {
+    kind: "EVENT_TICKET",
+    ...(query ? { title: { contains: query, mode: "insensitive" } } : {}),
+  };
+  const total = await prisma.inventoryItemDefinition.count({ where });
+  const page = Math.min(
+    requestedPage,
+    Math.max(1, Math.ceil(total / pageSize)),
+  );
+  const items = await prisma.inventoryItemDefinition.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: adminTicketDefinitionSelect,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+
+  return { items, total, page, pageSize };
+}
+
+export async function getAdminInventoryDefinition(definitionId: string) {
+  return prisma.inventoryItemDefinition.findUnique({
+    where: { id: definitionId },
     select: {
-      createdAt: true,
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       issuedCount: true,
+      kind: true,
       title: true,
       totalSupply: true,
     },
-    take: 100,
   });
 }
 
@@ -471,6 +526,7 @@ export async function getAdminTicketHistory(
     where: { id: definitionId },
     select: {
       id: true,
+      imageUrl: true,
       kind: true,
       title: true,
       issuedCount: true,

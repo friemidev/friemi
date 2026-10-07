@@ -17,54 +17,88 @@ import {
 } from "@/features/scan/globalQrScanner";
 import { lookupInventoryRecipientAction } from "../actions/inventoryActions";
 import { extractFriemiCodeFromQrValue } from "../friendCodeQr";
+import { normalizeFriemiCode } from "../friemiCode";
 
-type Recipient = {
+export type InventoryRecipient = {
   avatarUrl: string | null;
   friendCode: string | null;
   id: string;
   nickname: string;
 };
 
-function getCopy(locale: string) {
+function getCopy(locale: string, purpose: "allocate" | "gift" = "gift") {
   if (locale === "fr") {
     return {
-      code: "Code Friemi du destinataire",
+      code:
+        purpose === "allocate"
+          ? "Code Friemi du compte destinataire"
+          : "Code Friemi du destinataire",
       codePlaceholder: "Code à 6 chiffres",
-      confirm: "Vérifiez le destinataire avant de continuer.",
+      codeHint:
+        "À distance, saisissez son code. En personne, scannez son QR de profil.",
+      confirm:
+        purpose === "allocate"
+          ? "Vérifiez le compte et le nombre de billets avant d'attribuer."
+          : "Vérifiez le destinataire avant de continuer.",
+      invalidCode: "Saisissez un code Friemi à 6 chiffres.",
       invalidQr: "Ce QR code ne contient pas un profil Friemi.",
       lookup: "Rechercher",
       noCamera: "Caméra indisponible. Saisissez le code Friemi.",
       notFound: "Aucun compte actif ne correspond à ce code.",
       scan: "Scanner son QR",
+      scanButton: "Scanner",
       scanHint: "Placez le QR de profil Friemi dans le cadre.",
-      selected: "Destinataire confirmé",
+      selected:
+        purpose === "allocate"
+          ? "Compte destinataire confirmé"
+          : "Destinataire confirmé",
     };
   }
   if (locale === "en") {
     return {
-      code: "Recipient’s Friemi code",
+      code:
+        purpose === "allocate"
+          ? "Receiving account’s Friemi code"
+          : "Recipient’s Friemi code",
       codePlaceholder: "6-digit code",
-      confirm: "Check the recipient before continuing.",
+      codeHint:
+        "Enter their code remotely, or scan their profile QR in person.",
+      confirm:
+        purpose === "allocate"
+          ? "Check the account and ticket count before allocating."
+          : "Check the recipient before continuing.",
+      invalidCode: "Enter a 6-digit Friemi code.",
       invalidQr: "This QR code is not a Friemi profile.",
       lookup: "Find account",
       noCamera: "Camera unavailable. Enter the Friemi code.",
       notFound: "No active account matches this code.",
       scan: "Scan their QR",
+      scanButton: "Scan QR",
       scanHint: "Place the Friemi profile QR inside the frame.",
-      selected: "Recipient confirmed",
+      selected:
+        purpose === "allocate"
+          ? "Receiving account confirmed"
+          : "Recipient confirmed",
     };
   }
   return {
-    code: "收票人的 Friemi 码",
+    code:
+      purpose === "allocate" ? "接收账户的 Friemi 码" : "收票人的 Friemi 码",
     codePlaceholder: "输入 6 位个人码",
-    confirm: "赠送前请核对收票人。",
+    codeHint: "远程输入对方个人码；见面时可扫描个人二维码。",
+    confirm:
+      purpose === "allocate"
+        ? "分配前请核对接收账户和票券数量。"
+        : "赠送前请核对收票人。",
+    invalidCode: "请输入 6 位 Friemi 个人码。",
     invalidQr: "这个二维码不是 Friemi 个人二维码。",
     lookup: "查找账户",
     noCamera: "无法使用相机，可手动输入 Friemi 码。",
     notFound: "没有找到对应的活跃账户。",
     scan: "扫描个人二维码",
+    scanButton: "扫码",
     scanHint: "把对方的 Friemi 个人二维码放入框内。",
-    selected: "已确认收票人",
+    selected: purpose === "allocate" ? "已确认接收账户" : "已确认收票人",
   };
 }
 
@@ -212,18 +246,22 @@ function RecipientQrScanner({
 
 export function FriemiRecipientPicker({
   locale,
+  onRecipientChange,
   onSelectionChange,
+  purpose = "gift",
 }: {
   locale: string;
-  onSelectionChange: (selected: boolean) => void;
+  onRecipientChange?: (recipient: InventoryRecipient | null) => void;
+  onSelectionChange?: (selected: boolean) => void;
+  purpose?: "allocate" | "gift";
 }) {
-  const copy = getCopy(locale);
+  const copy = getCopy(locale, purpose);
   const inputId = useId();
   const [code, setCode] = useState("");
   const [method, setMethod] = useState<"FRIEMI_CODE" | "FRIEND_QR">(
     "FRIEMI_CODE",
   );
-  const [recipient, setRecipient] = useState<Recipient | null>(null);
+  const [recipient, setRecipient] = useState<InventoryRecipient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -234,15 +272,21 @@ export function FriemiRecipientPicker({
     (value: string) => {
       const lookupId = ++lookupIdRef.current;
       setRecipient(null);
-      onSelectionChange(false);
+      onRecipientChange?.(null);
+      onSelectionChange?.(false);
       setError(null);
+      if (!normalizeFriemiCode(value)) {
+        setError(copy.invalidCode);
+        return;
+      }
       startTransition(async () => {
         try {
           const result = await lookupInventoryRecipientAction(locale, value);
           if (lookupId !== lookupIdRef.current) return;
           if (result.status === "FOUND") {
             setRecipient(result.profile);
-            onSelectionChange(true);
+            onRecipientChange?.(result.profile);
+            onSelectionChange?.(true);
           } else {
             setError(copy.notFound);
           }
@@ -252,7 +296,13 @@ export function FriemiRecipientPicker({
         }
       });
     },
-    [copy.notFound, locale, onSelectionChange],
+    [
+      copy.invalidCode,
+      copy.notFound,
+      locale,
+      onRecipientChange,
+      onSelectionChange,
+    ],
   );
 
   useEffect(() => {
@@ -281,6 +331,12 @@ export function FriemiRecipientPicker({
   }, [copy.invalidQr, lookup]);
 
   function startScan() {
+    lookupIdRef.current += 1;
+    setCode("");
+    setRecipient(null);
+    onRecipientChange?.(null);
+    onSelectionChange?.(false);
+    setError(null);
     if (!canUseNativeAndroidQrScanner()) {
       setScannerOpen(true);
       return;
@@ -340,7 +396,8 @@ export function FriemiRecipientPicker({
             setMethod("FRIEMI_CODE");
             setRecipient(null);
             setError(null);
-            onSelectionChange(false);
+            onRecipientChange?.(null);
+            onSelectionChange?.(false);
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -354,13 +411,15 @@ export function FriemiRecipientPicker({
         />
         <button
           aria-label={copy.scan}
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-fog text-forest transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-fog px-3 text-sm font-semibold text-forest transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           onClick={startScan}
           type="button"
         >
           <QrCode className="h-5 w-5" />
+          {copy.scanButton}
         </button>
       </div>
+      <p className="text-xs leading-5 text-ink/70">{copy.codeHint}</p>
       <button
         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fog px-4 py-2 text-sm font-semibold text-forest transition hover:bg-sand/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-50"
         disabled={pending || !code.trim()}

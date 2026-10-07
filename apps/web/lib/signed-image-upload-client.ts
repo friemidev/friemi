@@ -17,10 +17,12 @@ type SignedImageUploadResult =
 
 async function getErrorCode(response: Response) {
   const body = (await response.json().catch(() => null)) as {
-    error?: SignedImageUploadErrorCode;
+    error?: SignedImageUploadErrorCode | "FORBIDDEN";
   } | null;
 
-  return body?.error ?? "UPLOAD_FAILED";
+  return body?.error === "FORBIDDEN"
+    ? "UNAUTHORIZED"
+    : (body?.error ?? "UPLOAD_FAILED");
 }
 
 export async function uploadImageWithSignedUrl(

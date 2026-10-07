@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
+  ArrowLeft,
   ArrowRight,
   CalendarDays,
   ListChecks,
   Newspaper,
   Sparkles,
 } from "lucide-react";
-import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdatesDescending } from "@/features/updates/versionUpdates";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -58,11 +58,17 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
 
   return (
     <main className="relative isolate overflow-hidden bg-white">
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-[calc(var(--app-top-safe-area)+1rem)] sm:px-6 sm:pt-[calc(var(--app-top-safe-area)+3rem)] md:pt-12 lg:px-8">
         <header className="grid gap-7 rounded-[2rem] border border-[#D6D5B2] bg-white/[0.78] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] backdrop-blur sm:p-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div className="min-w-0">
-            <BrandLockup size="sm" />
-            <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
+            <Link
+              aria-label={locale === "fr" ? "Retour à l'accueil" : locale === "en" ? "Back home" : "返回首页"}
+              className="grid h-11 w-11 place-items-center rounded-full bg-fog text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              href={withLocale(locale, "/home")}
+            >
+              <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+            </Link>
+            <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Product Notes
             </p>

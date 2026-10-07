@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import {
+  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   CalendarCheck2,
@@ -563,7 +564,14 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
 
   return (
     <>
-      <PageContainer className="co-creator-page relative isolate overflow-hidden pb-8 pt-4 md:pb-12 md:pt-7">
+      <PageContainer mobileSafeTop className="co-creator-page relative isolate overflow-hidden pb-8 pt-4 md:pb-12 md:pt-7">
+        <Link
+          aria-label={locale === "fr" ? "Retour à l'accueil" : locale === "en" ? "Back home" : "返回首页"}
+          className="relative z-10 mb-5 grid h-11 w-11 place-items-center rounded-full bg-fog text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={withLocale(locale, "/home")}
+        >
+          <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+        </Link>
         <section className="co-creator-reveal relative z-10 grid gap-5 border-b border-[#D6D5B2] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
           <div className="flex min-w-0 flex-col justify-center gap-5">
             <div className="space-y-4">

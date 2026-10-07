@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
+import { AdminItemPageFrame } from "@/features/inventory/components/AdminItemPageFrame";
 import { getInventoryCopy } from "@/features/inventory/copy";
-import { getAdminTicketHistory } from "@/features/inventory/services/inventoryService";
+import {
+  getAdminInventoryDefinition,
+  getAdminTicketHistory,
+} from "@/features/inventory/services/inventoryService";
 import { isCurrentUserAdmin, requireAdminPageAccess } from "@/lib/admin-auth";
 import { withLocale } from "@/lib/routes";
 import { noIndexMetadata } from "@/lib/seo";
@@ -30,10 +33,14 @@ export default async function AdminTicketHistoryPage({
     1,
     Math.min(1000, Number.parseInt(rawIssuePage ?? "1", 10) || 1),
   );
-  const data = await getAdminTicketHistory(definitionId, page, issuePage);
-  if (!data) notFound();
+  const [data, definition] = await Promise.all([
+    getAdminTicketHistory(definitionId, page, issuePage),
+    getAdminInventoryDefinition(definitionId),
+  ]);
+  if (!data || !definition || definition.kind !== "EVENT_TICKET") notFound();
 
   const copy = getInventoryCopy(locale);
+  const itemCopy = getAdminItemCopy(locale);
   const formatDate = (value: Date) =>
     new Intl.DateTimeFormat(locale, {
       dateStyle: "medium",
@@ -51,28 +58,23 @@ export default async function AdminTicketHistoryPage({
     );
 
   return (
-    <PageContainer className="merchant-admin-page app-mobile-page-shell max-w-4xl space-y-6 pb-14 pt-3 max-md:px-4 md:py-10">
-      <Link
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-        href={withLocale(
-          locale,
-          `/admin/merchants?view=items&ticket=${encodeURIComponent(definitionId)}`,
-        )}
-      >
-        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> {copy.admin}
-      </Link>
-      <header className="rounded-2xl bg-forest p-5 text-paper sm:p-6">
-        <h1 className="text-2xl font-bold">{data.definition.title}</h1>
-        <p className="mt-3 text-sm text-paper/85">
-          {copy.supply} {data.definition.totalSupply} · {copy.remaining}{" "}
-          {data.definition.totalSupply - data.definition.issuedCount}
-        </p>
-      </header>
-
+    <AdminItemPageFrame
+      backHref={`/admin/items/${definitionId}`}
+      backLabel={itemCopy.frame.backToDetail}
+      compact
+      definition={definition}
+      locale={locale}
+      pageTitle={itemCopy.detail.historyLabel}
+    >
       <section className="rounded-2xl bg-paper p-5 sm:p-6">
         <h2 className="text-lg font-bold text-ink">
           {copy.adminIssueHistory} · {data.issueCount}
         </h2>
+        {data.issueBatches.length ? (
+          <p className="mt-1 text-sm text-ink/70">
+            {copy.adminIssueHistoryHint}
+          </p>
+        ) : null}
         {data.issueBatches.length ? (
           <ol className="mt-5 space-y-4">
             {data.issueBatches.map((batch) => (
@@ -82,10 +84,13 @@ export default async function AdminTicketHistoryPage({
               >
                 <div>
                   <p className="text-sm font-semibold text-ink">
-                    {batch.recipient.nickname} · {batch.recipient.friendCode}
+                    {copy.adminIssueTo(
+                      batch.recipient.nickname,
+                      batch.recipient.friendCode ?? "",
+                    )}
                   </p>
                   <p className="mt-1 text-sm text-ink/70">
-                    {batch.actor.nickname} · {copy.quantity} {batch.quantity}
+                    {copy.adminIssueRow(batch.actor.nickname, batch.quantity)}
                   </p>
                 </div>
                 <time
@@ -129,8 +134,13 @@ export default async function AdminTicketHistoryPage({
 
       <section className="rounded-2xl bg-paper p-5 sm:p-6">
         <h2 className="text-lg font-bold text-ink">
-          {copy.giftHistory} · {data.giftCount}
+          {copy.adminGiftHistory} · {data.giftCount}
         </h2>
+        {data.gifts.length ? (
+          <p className="mt-1 text-sm text-ink/70">
+            {copy.adminGiftHistoryHint}
+          </p>
+        ) : null}
         {data.gifts.length ? (
           <ol className="mt-5 space-y-4">
             {data.gifts.map((gift) => (
@@ -160,11 +170,11 @@ export default async function AdminTicketHistoryPage({
             ))}
           </ol>
         ) : (
-          <p className="mt-4 text-sm text-ink/70">{copy.historyEmpty}</p>
+          <p className="mt-4 text-sm text-ink/70">{copy.adminGiftEmpty}</p>
         )}
         {data.giftCount > data.pageSize ? (
           <nav
-            aria-label={copy.giftHistory}
+            aria-label={copy.adminGiftHistory}
             className="mt-5 flex justify-between border-t border-sand/50 pt-3"
           >
             {page > 1 ? (
@@ -188,6 +198,6 @@ export default async function AdminTicketHistoryPage({
           </nav>
         ) : null}
       </section>
-    </PageContainer>
+    </AdminItemPageFrame>
   );
 }

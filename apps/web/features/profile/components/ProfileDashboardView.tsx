@@ -364,7 +364,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
-      store: "Boutique",
+      store: "Gestion boutique",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -430,7 +430,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
-      store: "Store",
+      store: "Manage store",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -495,7 +495,7 @@ function getMobileProfileCopy(locale: string) {
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
-    store: "门店",
+    store: "管理门店",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -1289,6 +1289,7 @@ function ProfileFeatureLink({
   lockedLabel,
   status,
   tone = "green",
+  wrapLabel = false,
 }: {
   artwork?: ProfileFeatureArtworkKey;
   href: string;
@@ -1298,6 +1299,7 @@ function ProfileFeatureLink({
   lockedLabel?: string;
   status?: string;
   tone?: "green" | "pink" | "blue" | "gold" | "gray";
+  wrapLabel?: boolean;
 }) {
   const toneClass = locked
     ? "bg-[#F5F4EF] text-[#9A9A90]"
@@ -1336,7 +1338,8 @@ function ProfileFeatureLink({
       </span>
       <span
         className={cn(
-          "max-w-full truncate text-[11px] font-bold",
+          "max-w-full text-[11px] font-bold",
+          wrapLabel ? "line-clamp-2 leading-tight" : "truncate",
           locked ? "text-[#6C746A]" : "text-[#1D1D1B]",
         )}
       >
@@ -3198,6 +3201,7 @@ function SelfMobileProfileHome({
             icon={Store}
             label={copy.store}
             tone="green"
+            wrapLabel
           />
         ) : null}
         <ProfileFeatureLink
@@ -3475,6 +3479,16 @@ export function ProfileDashboardView({
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
+                {merchantHref ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-forest px-4 text-sm font-semibold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                    href={merchantHref}
+                  >
+                    <Store aria-hidden="true" className="h-4 w-4" />
+                    {mobileCopy.store}
+                    <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                ) : null}
                 <ProfileOverviewPanel
                   activeActivitySection={activeProfileSection}
                   createdCount={dashboard.createdActivityCount}

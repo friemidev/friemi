@@ -1,3 +1,4 @@
+import { AdminSettingsBackLink } from "@/components/admin/AdminSettingsBackLink";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { OfficialMessageComposer } from "@/features/official-messages/components/OfficialMessageComposer";
 import { getOfficialMessages } from "@/features/official-messages/services/officialMessages";
@@ -21,10 +22,10 @@ export default async function AdminOfficialMessagesPage({
         : "官方消息";
 
   return (
-    <PageContainer className="space-y-6 pb-28 md:max-w-3xl md:pb-12 md:pt-10">
-      <header>
-        <p className="text-xs font-semibold text-[#156240]">Friemi Admin</p>
-        <h1 className="mt-2 text-3xl font-bold text-[#111210]">{title}</h1>
+    <PageContainer mobileSafeTop className="space-y-6 pb-28 md:max-w-3xl md:pb-12 md:pt-10">
+      <header className="flex items-center gap-3">
+        <AdminSettingsBackLink locale={locale} />
+        <h1 className="text-2xl font-bold text-ink sm:text-3xl">{title}</h1>
       </header>
       <OfficialMessageComposer locale={locale} />
       <section className="divide-y divide-[#E7E2D6] border-y border-[#E7E2D6]">

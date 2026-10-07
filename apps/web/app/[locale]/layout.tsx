@@ -5,7 +5,7 @@ import { getMessages } from "next-intl/server";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { DesktopAppNavigation } from "@/components/navigation/DesktopAppNavigation";
 import { AndroidAuthReturnRefresh } from "@/features/auth/components/AndroidAuthReturnRefresh";
 import { AuthSessionRefresh } from "@/features/auth/components/AuthSessionRefresh";
 import { MobileNav } from "@/components/navigation/MobileNav";
@@ -95,7 +95,7 @@ export default async function LocaleLayout({
               <ModalViewportGuard />
               <AndroidAppBridge locale={locale} />
               {clerkEnabled ? <IOSAppBridge /> : null}
-              <AppHeader
+              <DesktopAppNavigation
                 locale={locale}
                 isAuthenticated={Boolean(viewerProfile)}
                 showNotificationNav={Boolean(viewerProfile)}
