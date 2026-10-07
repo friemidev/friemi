@@ -1,18 +1,27 @@
 "use client";
 
-import { LoaderCircle, Plus, Send } from "lucide-react";
+import Link from "next/link";
+import { LoaderCircle, Plus, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { withLocale } from "@/lib/routes";
 import {
   createTicketDefinitionAction,
   issueTicketBatchAction,
   setTicketGiftableAction,
+  updateTicketImageAction,
   type CreateTicketDefinitionState,
   type IssueTicketState,
   type SetTicketGiftableState,
+  type UpdateTicketImageState,
 } from "../actions/inventoryActions";
+import { getAdminItemCopy } from "../adminItemCopy";
 import { getInventoryCopy } from "../copy";
-import { FriemiRecipientPicker } from "./FriemiRecipientPicker";
+import { AdminItemImageField } from "./AdminItemImageField";
+import {
+  FriemiRecipientPicker,
+  type InventoryRecipient,
+} from "./FriemiRecipientPicker";
 
 const fieldClassName =
   "w-full min-h-12 rounded-xl border border-sand bg-paper px-3 py-3 text-base text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20";
@@ -25,15 +34,25 @@ export function CreateTicketDefinitionForm({
   showHeading?: boolean;
 }) {
   const copy = getInventoryCopy(locale);
+  const adminCopy = getAdminItemCopy(locale);
   const router = useRouter();
   const [state, action, pending] = useActionState<
     CreateTicketDefinitionState,
     FormData
   >(createTicketDefinitionAction, {});
+  const [uploading, setUploading] = useState(false);
+  const [previewReady, setPreviewReady] = useState(true);
 
   useEffect(() => {
-    if (state.status === "CREATED") router.refresh();
-  }, [router, state.definitionId, state.status]);
+    if (state.status === "CREATED" && state.definitionId) {
+      router.replace(
+        withLocale(
+          locale,
+          `/admin/items/${encodeURIComponent(state.definitionId)}`,
+        ),
+      );
+    }
+  }, [locale, router, state.definitionId, state.status]);
 
   return (
     <section className={showHeading ? "rounded-2xl bg-paper p-5 sm:p-6" : ""}>
@@ -68,18 +87,29 @@ export function CreateTicketDefinitionForm({
             rows={3}
           />
         </label>
+        <div className="grid gap-2 text-sm font-semibold text-ink">
+          {adminCopy.form.optionalImage}
+          <AdminItemImageField
+            locale={locale}
+            onPreviewReadyChange={setPreviewReady}
+            onUploadingChange={setUploading}
+          />
+        </div>
         <label className="grid gap-2 text-sm font-semibold text-ink">
           {copy.supply}
           <input
             className={fieldClassName}
-            defaultValue={1000}
             inputMode="numeric"
             max={100000}
             min={1}
             name="totalSupply"
+            placeholder={copy.adminSupplyPlaceholder}
             required
             type="number"
           />
+          <span className="text-xs font-normal leading-5 text-ink/70">
+            {copy.adminSupplyHint}
+          </span>
         </label>
         <label className="flex min-h-12 items-center gap-3 rounded-xl bg-fog px-4 py-3 text-sm font-semibold text-ink">
           <input
@@ -90,9 +120,12 @@ export function CreateTicketDefinitionForm({
           />
           {copy.giftable}
         </label>
+        <p className="-mt-2 text-sm leading-6 text-ink/70">
+          {copy.adminGiftFormHint}
+        </p>
         <button
           className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-bold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-50"
-          disabled={pending}
+          disabled={pending || uploading || !previewReady}
           type="submit"
         >
           {pending ? (
@@ -117,16 +150,98 @@ export function CreateTicketDefinitionForm({
   );
 }
 
+export function UpdateTicketImageForm({
+  definitionId,
+  imageUrl,
+  locale,
+}: {
+  definitionId: string;
+  imageUrl: string | null;
+  locale: string;
+}) {
+  const copy = getAdminItemCopy(locale).form;
+  const router = useRouter();
+  const [state, action, pending] = useActionState<
+    UpdateTicketImageState,
+    FormData
+  >(updateTicketImageAction, {});
+  const [uploading, setUploading] = useState(false);
+  const [draftUrl, setDraftUrl] = useState(imageUrl ?? "");
+  const [savedUrl, setSavedUrl] = useState(imageUrl ?? "");
+  const [previewReady, setPreviewReady] = useState(true);
+  const submittedUrlRef = useRef(imageUrl ?? "");
+  const changed = draftUrl !== savedUrl;
+
+  useEffect(() => {
+    setDraftUrl(imageUrl ?? "");
+    setSavedUrl(imageUrl ?? "");
+  }, [imageUrl]);
+
+  useEffect(() => {
+    if (state.status !== "UPDATED") return;
+    setSavedUrl(submittedUrlRef.current);
+    router.refresh();
+  }, [router, state]);
+
+  return (
+    <form
+      action={action}
+      className="space-y-4"
+      onSubmit={() => {
+        submittedUrlRef.current = draftUrl;
+      }}
+    >
+      <input name="locale" readOnly type="hidden" value={locale} />
+      <input name="definitionId" readOnly type="hidden" value={definitionId} />
+      <AdminItemImageField
+        initialUrl={imageUrl}
+        locale={locale}
+        onChange={setDraftUrl}
+        onPreviewReadyChange={setPreviewReady}
+        onUploadingChange={setUploading}
+      />
+      <button
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-4 text-sm font-bold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-50"
+        disabled={pending || uploading || !previewReady || !changed}
+        type="submit"
+      >
+        {pending ? (
+          <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />
+        ) : (
+          <Save aria-hidden="true" className="h-4 w-4" />
+        )}
+        {copy.saveImage}
+      </button>
+      {state.status === "UPDATED" ? (
+        <p className="text-sm font-semibold text-forest" role="status">
+          {copy.imageUpdated}
+        </p>
+      ) : null}
+      {state.status && state.status !== "UPDATED" ? (
+        <p className="text-sm text-danger" role="alert">
+          {state.status === "INVALID"
+            ? copy.invalidImage
+            : state.status === "FORBIDDEN"
+              ? copy.forbidden
+              : copy.saveFailed}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 export function IssueTicketForm({
   definitionId,
   initialRequestId,
   locale,
   remaining,
+  ticketTitle,
 }: {
   definitionId: string;
   initialRequestId: string;
   locale: string;
   remaining: number;
+  ticketTitle: string;
 }) {
   const copy = getInventoryCopy(locale);
   const router = useRouter();
@@ -134,12 +249,22 @@ export function IssueTicketForm({
     issueTicketBatchAction,
     {},
   );
-  const [selected, setSelected] = useState(false);
+  const [recipient, setRecipient] = useState<InventoryRecipient | null>(null);
+  const [quantity, setQuantity] = useState("");
   const [requestId, setRequestId] = useState(initialRequestId);
+  const maxQuantity = Math.min(remaining, 2000);
+  const quantityNumber = Number(quantity);
+  const canIssue =
+    recipient !== null &&
+    /^\d+$/.test(quantity) &&
+    Number.isSafeInteger(quantityNumber) &&
+    quantityNumber >= 1 &&
+    quantityNumber <= maxQuantity;
 
   useEffect(() => {
     if (state.status !== "ISSUED") return;
-    setSelected(false);
+    setRecipient(null);
+    setQuantity("");
     setRequestId(crypto.randomUUID());
     router.refresh();
   }, [router, state.batchId, state.status]);
@@ -159,24 +284,39 @@ export function IssueTicketForm({
           <FriemiRecipientPicker
             key={requestId}
             locale={locale}
-            onSelectionChange={setSelected}
+            onRecipientChange={setRecipient}
+            purpose="allocate"
           />
           <label className="grid gap-2 text-sm font-semibold text-ink">
-            {copy.quantity}
+            {copy.adminIssueQuantity}
             <input
               className={fieldClassName}
-              defaultValue={Math.min(remaining, 1000)}
               inputMode="numeric"
-              max={Math.min(remaining, 2000)}
+              max={maxQuantity}
               min={1}
               name="quantity"
+              onChange={(event) => setQuantity(event.target.value)}
               required
               type="number"
+              value={quantity}
             />
+            <span className="text-xs font-normal text-ink/70">
+              {copy.adminIssueLimit(maxQuantity)}
+            </span>
           </label>
+          {canIssue && recipient ? (
+            <p className="rounded-xl bg-fog px-4 py-3 text-sm leading-6 text-ink">
+              {copy.adminIssueReview(
+                quantityNumber,
+                ticketTitle,
+                recipient.nickname,
+                recipient.friendCode ?? "",
+              )}
+            </p>
+          ) : null}
           <button
             className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-bold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-50"
-            disabled={pending || !selected}
+            disabled={pending || !canIssue}
             type="submit"
           >
             {pending ? (
@@ -184,24 +324,38 @@ export function IssueTicketForm({
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {copy.issue}
+            {copy.adminIssueConfirm}
           </button>
         </form>
       ) : null}
       {state.status === "ISSUED" ? (
-        <p
-          className="rounded-xl bg-fog px-4 py-3 text-sm font-bold text-forest"
+        <div
+          className="rounded-xl bg-fog px-4 py-3 text-sm text-forest"
           role="status"
         >
-          {copy.issued} {state.recipientName}
-        </p>
+          <p className="font-bold">
+            {copy.issued} {state.recipientName}
+          </p>
+          <Link
+            className="mt-2 inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, `/admin/items/tickets/${definitionId}`)}
+          >
+            {copy.adminIssueSuccessHistory}
+          </Link>
+        </div>
       ) : null}
       {state.status && state.status !== "ISSUED" ? (
         <p
           className="rounded-xl bg-rose/30 px-4 py-3 text-sm text-danger"
           role="alert"
         >
-          {state.status === "SOLD_OUT" ? copy.remaining : copy.issueError}
+          {state.status === "SOLD_OUT"
+            ? copy.adminIssueNoStock
+            : state.status === "NOT_FOUND"
+              ? copy.adminIssueNotFound
+              : state.status === "INVALID"
+                ? copy.adminIssueInvalid
+                : copy.issueError}
         </p>
       ) : null}
     </div>
@@ -241,7 +395,6 @@ export function TicketGiftabilityButton({
         value={String(!isGiftable)}
       />
       <button
-        aria-pressed={isGiftable}
         className={`inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${
           tone === "dark"
             ? "bg-paper/10 text-paper hover:bg-paper/20 focus-visible:outline-paper"

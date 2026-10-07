@@ -410,6 +410,15 @@ export async function createSignedProfileAvatarUpload(
   });
 }
 
+export async function createSignedInventoryItemImageUpload(
+  userId: string,
+  file: { name: string; size: number; type?: string | null },
+): Promise<ActivityCoverSignedUploadResult> {
+  return createSignedPublicImageUpload(userId, file, {
+    pathPrefix: "inventory-items",
+  });
+}
+
 async function finalizeSignedPublicImageUpload(
   userId: string,
   path: string,
@@ -518,6 +527,15 @@ export async function finalizeSignedProfileAvatarUpload(
   });
 }
 
+export async function finalizeSignedInventoryItemImageUpload(
+  userId: string,
+  path: string,
+): Promise<ActivityCoverUploadResult> {
+  return finalizeSignedPublicImageUpload(userId, path, {
+    pathPrefix: "inventory-items",
+  });
+}
+
 export async function uploadActivityCoverBuffer(
   userId: string,
   fileBuffer: Buffer,
@@ -564,6 +582,47 @@ export async function uploadProfileAvatarBuffer(
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "profile-avatars",
   });
+}
+
+export async function uploadInventoryItemImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "inventory-items",
+  });
+}
+
+export function isUploadedInventoryItemImageUrl(imageUrl: string) {
+  const config = getActivityCoverStorageConfig();
+
+  if (!config) return false;
+
+  try {
+    const url = new URL(imageUrl);
+    const storageUrl = new URL(config.supabaseUrl);
+    const prefix = `/storage/v1/object/public/${config.bucket}/inventory-items/`;
+    const path = url.pathname.startsWith(prefix)
+      ? url.pathname.slice(prefix.length)
+      : "";
+    const extensions = Object.values(allowedImageMimeTypes).join("|");
+    const pathPattern = new RegExp(
+      `^[a-zA-Z0-9_-]+/[0-9a-f-]{36}\\.(${extensions})$`,
+      "i",
+    );
+
+    return (
+      url.origin === storageUrl.origin &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      pathPattern.test(path)
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function isUploadedProfileAvatarUrl(imageUrl: string) {

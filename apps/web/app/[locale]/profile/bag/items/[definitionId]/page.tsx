@@ -4,6 +4,7 @@ import { ArrowLeft, Gift, Ticket } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { TicketGiftForm } from "@/features/inventory/components/TicketGiftForm";
+import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
 import { getInventoryCopy } from "@/features/inventory/copy";
 import { getInventoryDefinitionForProfile } from "@/features/inventory/services/inventoryService";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -54,10 +55,18 @@ export default async function InventoryItemDetailPage({
         <ArrowLeft className="h-4 w-4" /> {copy.back}
       </Link>
 
-      <header className="rounded-[1.5rem] bg-[#143E2A] p-6 text-white shadow-[0_18px_42px_rgba(20,62,42,0.18)] sm:p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-[0.12em] text-[#CDE8CF]">
+      <header className="rounded-[1.5rem] bg-forest p-6 text-white shadow-[0_18px_42px_rgba(20,62,42,0.18)] sm:p-8">
+        <div
+          className={
+            item.imageUrl
+              ? "grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)]"
+              : "flex items-start justify-between gap-4"
+          }
+        >
+          <div
+            className={item.imageUrl ? "order-2 min-w-0 sm:order-1" : "min-w-0"}
+          >
+            <p className="text-xs font-bold tracking-[0.12em] text-white/75">
               FRIEMI · {copy.ticket}
             </p>
             <h1 className="mt-3 text-2xl font-black leading-tight sm:text-3xl">
@@ -69,10 +78,19 @@ export default async function InventoryItemDetailPage({
               </p>
             ) : null}
           </div>
-          <Ticket
-            className="h-8 w-8 shrink-0 text-[#CDE8CF]"
-            aria-hidden="true"
-          />
+          {item.imageUrl ? (
+            <InventoryItemArtwork
+              alt={item.title}
+              className="order-1 aspect-[4/3] w-full rounded-[1rem] ring-1 ring-white/20 sm:order-2"
+              fit="contain"
+              imageUrl={item.imageUrl}
+            />
+          ) : (
+            <Ticket
+              className="h-8 w-8 shrink-0 text-white/75"
+              aria-hidden="true"
+            />
+          )}
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/20 pt-5">
           <div>

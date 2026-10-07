@@ -126,7 +126,7 @@ export function GlobalSearchIconLink({ locale }: { locale: string }) {
   return (
     <Link
       aria-label={t.mobileOpen}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/75 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 xl:hidden"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/75 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 min-[1480px]:hidden"
       href={withLocale(locale, "/search")}
       title={t.mobileOpen}
     >

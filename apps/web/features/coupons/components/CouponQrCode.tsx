@@ -61,7 +61,7 @@ export function CouponQrCode({
         )}
       </div>
       <button
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white px-4 text-xs font-black text-[#156240] ring-1 ring-[#BFD8B9] transition active:scale-95"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-forest ring-1 ring-sand transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         onClick={copyLink}
         type="button"
       >

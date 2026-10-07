@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
 import {
+  BarChart3,
   ChevronRight,
+  Flag,
+  Languages,
   LogOut,
   Newspaper,
+  PackageOpen,
   Settings,
   ShieldCheck,
   SlidersHorizontal,
@@ -17,11 +21,24 @@ import { withLocale } from "@/lib/routes";
 type AccountSettingsActionListProps = {
   accountGroupLabel: string;
   accountSecurityLabel: string;
+  accountSecurityHint: string;
   accountSettingsLabel: string;
+  accountSettingsHint: string;
   adminActivityPriorityLabel?: string;
-  adminCouponMerchantLabel?: string;
+  adminActivityPriorityHint?: string;
+  adminAnalyticsLabel?: string;
+  adminAnalyticsHint?: string;
+  adminMerchantLabel?: string;
+  adminMerchantHint?: string;
+  adminItemLabel?: string;
+  adminItemHint?: string;
   adminGroupLabel: string;
   adminOfficialMessagesLabel?: string;
+  adminOfficialMessagesHint?: string;
+  adminReportsLabel?: string;
+  adminReportsHint?: string;
+  languageLabel: string;
+  languageHint: string;
   locale: string;
   signOutLabel: string;
 };
@@ -31,10 +48,12 @@ const rowClassName =
 
 function RowContent({
   danger = false,
+  hint,
   icon: Icon,
   label,
 }: {
   danger?: boolean;
+  hint?: string;
   icon: LucideIcon;
   label: string;
 }) {
@@ -45,10 +64,17 @@ function RowContent({
       >
         <Icon aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" />
       </span>
-      <span
-        className={`min-w-0 flex-1 text-sm font-semibold ${danger ? "text-danger" : "text-ink"}`}
-      >
-        {label}
+      <span className="min-w-0 flex-1">
+        <span
+          className={`block text-sm font-semibold ${danger ? "text-danger" : "text-ink"}`}
+        >
+          {label}
+        </span>
+        {hint ? (
+          <span className="mt-0.5 block text-xs leading-5 text-ink/65">
+            {hint}
+          </span>
+        ) : null}
       </span>
       <ChevronRight
         aria-hidden="true"
@@ -61,18 +87,31 @@ function RowContent({
 export function AccountSettingsActionList({
   accountGroupLabel,
   accountSecurityLabel,
+  accountSecurityHint,
   accountSettingsLabel,
+  accountSettingsHint,
   adminActivityPriorityLabel,
-  adminCouponMerchantLabel,
+  adminActivityPriorityHint,
+  adminAnalyticsLabel,
+  adminAnalyticsHint,
+  adminMerchantLabel,
+  adminMerchantHint,
+  adminItemLabel,
+  adminItemHint,
   adminGroupLabel,
   adminOfficialMessagesLabel,
+  adminOfficialMessagesHint,
+  adminReportsLabel,
+  adminReportsHint,
+  languageLabel,
+  languageHint,
   locale,
   signOutLabel,
 }: AccountSettingsActionListProps) {
   const { openUserProfile, signOut } = useClerk();
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       <section aria-labelledby="account-settings-account-heading">
         <h2
           className="mb-2 px-2 text-sm font-bold text-ink/70"
@@ -86,20 +125,41 @@ export function AccountSettingsActionList({
             onClick={() => openUserProfile()}
             type="button"
           >
-            <RowContent icon={Settings} label={accountSettingsLabel} />
+            <RowContent
+              hint={accountSettingsHint}
+              icon={Settings}
+              label={accountSettingsLabel}
+            />
           </button>
+          <Link
+            className={rowClassName}
+            href={withLocale(locale, "/account/settings/language")}
+          >
+            <RowContent
+              hint={languageHint}
+              icon={Languages}
+              label={languageLabel}
+            />
+          </Link>
           <Link
             className={rowClassName}
             href={withLocale(locale, "/account/security")}
           >
-            <RowContent icon={ShieldCheck} label={accountSecurityLabel} />
+            <RowContent
+              hint={accountSecurityHint}
+              icon={ShieldCheck}
+              label={accountSecurityLabel}
+            />
           </Link>
         </div>
       </section>
 
-      {adminOfficialMessagesLabel ||
+      {adminAnalyticsLabel ||
+      adminReportsLabel ||
+      adminOfficialMessagesLabel ||
       adminActivityPriorityLabel ||
-      adminCouponMerchantLabel ? (
+      adminMerchantLabel ||
+      adminItemLabel ? (
         <section aria-labelledby="account-settings-admin-heading">
           <h2
             className="mb-2 px-2 text-sm font-bold text-ink/70"
@@ -108,12 +168,28 @@ export function AccountSettingsActionList({
             {adminGroupLabel}
           </h2>
           <div className="space-y-0.5">
-            {adminCouponMerchantLabel ? (
+            {adminMerchantLabel ? (
               <Link
                 className={rowClassName}
                 href={withLocale(locale, "/admin/merchants")}
               >
-                <RowContent icon={Store} label={adminCouponMerchantLabel} />
+                <RowContent
+                  hint={adminMerchantHint}
+                  icon={Store}
+                  label={adminMerchantLabel}
+                />
+              </Link>
+            ) : null}
+            {adminItemLabel ? (
+              <Link
+                className={rowClassName}
+                href={withLocale(locale, "/admin/merchants?view=items")}
+              >
+                <RowContent
+                  hint={adminItemHint}
+                  icon={PackageOpen}
+                  label={adminItemLabel}
+                />
               </Link>
             ) : null}
             {adminActivityPriorityLabel ? (
@@ -122,6 +198,7 @@ export function AccountSettingsActionList({
                 href={withLocale(locale, "/admin/activity-priority")}
               >
                 <RowContent
+                  hint={adminActivityPriorityHint}
                   icon={SlidersHorizontal}
                   label={adminActivityPriorityLabel}
                 />
@@ -133,8 +210,33 @@ export function AccountSettingsActionList({
                 href={withLocale(locale, "/admin/official-messages")}
               >
                 <RowContent
+                  hint={adminOfficialMessagesHint}
                   icon={Newspaper}
                   label={adminOfficialMessagesLabel}
+                />
+              </Link>
+            ) : null}
+            {adminAnalyticsLabel ? (
+              <Link
+                className={rowClassName}
+                href={withLocale(locale, "/admin/analytics")}
+              >
+                <RowContent
+                  hint={adminAnalyticsHint}
+                  icon={BarChart3}
+                  label={adminAnalyticsLabel}
+                />
+              </Link>
+            ) : null}
+            {adminReportsLabel ? (
+              <Link
+                className={rowClassName}
+                href={withLocale(locale, "/admin/reports")}
+              >
+                <RowContent
+                  hint={adminReportsHint}
+                  icon={Flag}
+                  label={adminReportsLabel}
                 />
               </Link>
             ) : null}

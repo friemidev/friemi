@@ -8,7 +8,6 @@ import {
   ListChecks,
   Sparkles,
 } from "lucide-react";
-import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdateBySlug } from "@/features/updates/versionUpdates";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -62,7 +61,7 @@ export default async function VersionUpdateDetailPage({
 
   return (
     <main className="relative isolate overflow-hidden bg-white">
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-[calc(var(--app-top-safe-area)+1rem)] sm:px-6 sm:pt-[calc(var(--app-top-safe-area)+3rem)] md:pt-12 lg:px-8">
         <Link
           href={withLocale(locale, "/updates")}
           className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-white/[0.78] px-4 text-sm font-semibold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-[#1D1D1B]"
@@ -72,8 +71,7 @@ export default async function VersionUpdateDetailPage({
         </Link>
 
         <header className="mt-5 overflow-hidden rounded-[2rem] border border-[#D6D5B2] bg-white/[0.78] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] backdrop-blur sm:p-7">
-          <BrandLockup size="sm" />
-          <div className="mt-8 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#156240] px-3 py-1 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]">
               <ListChecks className="h-3.5 w-3.5" />
               {update.version}

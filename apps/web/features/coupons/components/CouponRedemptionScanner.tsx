@@ -38,6 +38,8 @@ function getCopy(locale: string, mode: QrScannerMode) {
           ? "Autorisez l'accès à la caméra pour scanner un QR code."
           : "Autorisez l'accès à la caméra pour scanner le coupon.",
       scan: mode === "global" ? "Scanner" : "Scanner un coupon",
+      scanHint:
+        mode === "global" ? "" : "Scannez celui du client, puis confirmez.",
       scanning:
         mode === "global"
           ? "Placez n'importe quel QR code dans le cadre."
@@ -60,6 +62,8 @@ function getCopy(locale: string, mode: QrScannerMode) {
           ? "Allow camera access to scan a QR code."
           : "Allow camera access to scan the coupon.",
       scan: mode === "global" ? "Scan" : "Scan coupon",
+      scanHint:
+        mode === "global" ? "" : "Scan the customer's coupon, then confirm.",
       scanning:
         mode === "global"
           ? "Place any QR code inside the frame."
@@ -81,6 +85,7 @@ function getCopy(locale: string, mode: QrScannerMode) {
         ? "请允许使用相机，以便扫描二维码。"
         : "请允许使用相机，以便扫描优惠券。",
     scan: mode === "global" ? "扫码" : "扫码核销",
+    scanHint: mode === "global" ? "" : "扫描顾客的券，核对后再确认。",
     scanning:
       mode === "global"
         ? "将任意二维码放入框内。"
@@ -115,11 +120,49 @@ function CouponScanner({
   const [detected, setDetected] = useState(false);
   const [textResult, setTextResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const nativeQrScanPendingRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeScanner();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const controls = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [open]);
 
   const handleScanValue = useCallback(
     (rawValue: string) => {
@@ -325,16 +368,22 @@ function CouponScanner({
         aria-label={copy.scan}
         className={
           triggerVariant === "icon"
-            ? "inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
-            : "flex min-h-28 w-full flex-col items-start justify-between rounded-[1.25rem] bg-fog p-4 text-left text-forest transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            ? "inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-forest ring-1 ring-sand transition active:scale-95"
+            : "flex min-h-32 w-full flex-col items-start justify-between rounded-[1.25rem] bg-fog p-4 text-left text-forest transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         }
         onClick={startScan}
+        ref={triggerRef}
         title={copy.scan}
         type="button"
       >
         <ScanLine className="h-5 w-5" />
         {triggerVariant === "full" ? (
-          <span className="text-base font-bold">{copy.scan}</span>
+          <span className="grid gap-1">
+            <span className="text-base font-bold">{copy.scan}</span>
+            <span className="text-xs leading-5 text-forest/80">
+              {copy.scanHint}
+            </span>
+          </span>
         ) : null}
       </button>
 
@@ -346,15 +395,19 @@ function CouponScanner({
               className="fixed inset-0 z-[10000] flex min-h-[100svh] items-end justify-center bg-black/45 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center"
               role="dialog"
             >
-              <section className="w-full max-w-md overflow-hidden rounded-[1.25rem] bg-white shadow-2xl">
+              <section
+                className="w-full max-w-md overflow-hidden rounded-[1.25rem] bg-white shadow-2xl"
+                ref={dialogRef}
+              >
                 <header className="flex items-center justify-between border-b border-[#EFEAD7] px-4 py-3">
                   <h2 className="text-base font-black text-[#111210]">
                     {copy.scan}
                   </h2>
                   <button
                     aria-label={copy.close}
-                    className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-[#D6D5B2]"
+                    className="grid h-11 w-11 place-items-center rounded-full ring-1 ring-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
                     onClick={closeScanner}
+                    ref={closeButtonRef}
                     type="button"
                   >
                     <X className="h-4 w-4" />

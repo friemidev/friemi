@@ -1295,6 +1295,7 @@ model InventoryItemDefinition {
   kind               InventoryItemKind     @default(EVENT_TICKET)
   title              String                @db.VarChar(120)
   description        String?               @db.Text
+  imageUrl           String?               @db.Text
   isGiftable         Boolean               @default(false)
   totalSupply        Int
   issuedCount        Int                   @default(0)
