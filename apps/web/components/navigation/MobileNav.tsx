@@ -16,8 +16,10 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { useMobileNavSection } from "./MobileNavSectionContext";
+import { usePrimaryTabState } from "@/features/navigation/usePrimaryTabState";
 
 type MobileNavProps = {
   locale: string;
@@ -52,6 +54,11 @@ function MobileNavPending({ primary }: { primary?: boolean }) {
 function shouldHideMobileNav(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
   const localizedPlanetsPath = withLocale(locale, "/planets");
+  const localizedMerchantAdminPath = withLocale(locale, "/admin/merchants");
+  const localizedItemsAdminPath = withLocale(locale, "/admin/items");
+  const localizedStorePath = withLocale(locale, "/profile/store");
+  const localizedAccountSettingsPath = withLocale(locale, "/account/settings");
+  const localizedAccountSecurityPath = withLocale(locale, "/account/security");
   const segments = pathname.split("/").filter(Boolean);
   const isAaRoute =
     segments[0] === locale &&
@@ -64,6 +71,15 @@ function shouldHideMobileNav(pathname: string, locale: string) {
     pathname === localizedPollPath ||
     pathname.startsWith(`${localizedPollPath}/`) ||
     pathname.startsWith(`${localizedPlanetsPath}/`) ||
+    pathname === localizedMerchantAdminPath ||
+    pathname.startsWith(`${localizedMerchantAdminPath}/`) ||
+    pathname === localizedItemsAdminPath ||
+    pathname.startsWith(`${localizedItemsAdminPath}/`) ||
+    pathname === localizedStorePath ||
+    pathname.startsWith(`${localizedStorePath}/`) ||
+    pathname === localizedAccountSettingsPath ||
+    pathname.startsWith(`${localizedAccountSettingsPath}/`) ||
+    pathname === localizedAccountSecurityPath ||
     pathname === withLocale(locale, "/game-tools") ||
     pathname.startsWith(`${withLocale(locale, "/game-tools")}/`) ||
     pathname.startsWith(`${withLocale(locale, "/messages")}/`) ||
@@ -75,11 +91,15 @@ export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const tabState = usePrimaryTabState(`${pathname}${query ? `?${query}` : ""}`);
   const { sectionOverride } = useMobileNavSection();
-  const { unreadDirectMessageCount } = useNotificationBadge();
+  const { unreadDirectMessageCount, unreadInventoryTicketGiftCount } =
+    useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
+  const newTicketLabel = getTicketRedemptionCopy(currentLocale).newTickets;
   const unreadBadgeText =
     unreadDirectMessageCount > 99 ? "99+" : String(unreadDirectMessageCount);
   const items = useMemo(
@@ -162,14 +182,23 @@ export function MobileNav({ locale }: MobileNavProps) {
           const Icon = item.icon;
           const baseHref = item.href.split("?")[0] ?? item.href;
           const active = isItemActive(item.href);
+          const href = tabState.href(withLocale(currentLocale, item.href));
           const showUnreadBadge =
             baseHref === "/footprints" && unreadDirectMessageCount > 0;
+          const showBagDot =
+            baseHref === "/profile" && unreadInventoryTicketGiftCount > 0;
 
           return (
             <IntentPrefetchLink
               key={item.href}
-              href={withLocale(currentLocale, item.href)}
-              aria-label={item.label}
+              href={href}
+              scroll={tabState.canRestore(href) ? false : undefined}
+              onNavigate={(event) => {
+                if (tabState.navigate(href)) event.preventDefault();
+              }}
+              aria-label={
+                showBagDot ? `${item.label}: ${newTicketLabel}` : item.label
+              }
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
@@ -218,6 +247,11 @@ export function MobileNav({ locale }: MobileNavProps) {
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}
                   </span>
+                ) : showBagDot ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#EC334E] ring-2 ring-white"
+                  />
                 ) : null}
               </span>
               {item.isPrimary ? null : (

@@ -323,7 +323,7 @@ export function MobileBottomSheet({
         >
           <button
             aria-label={closeLabel ?? ariaLabel}
-            className="mx-auto flex h-6 w-20 cursor-grab items-center justify-center rounded-full transition active:cursor-grabbing active:scale-95"
+            className="relative z-20 mx-auto flex h-6 w-20 cursor-grab items-center justify-center rounded-full transition active:cursor-grabbing active:scale-95 after:absolute after:-bottom-4 after:-top-1 after:inset-x-0 after:content-['']"
             onClick={() => {
               if (suppressNextClickRef.current) {
                 suppressNextClickRef.current = false;

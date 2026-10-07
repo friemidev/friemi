@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AdminSettingsBackLink } from "@/components/admin/AdminSettingsBackLink";
 import {
   adminAnalyticsWindowOptions,
   getAdminAnalyticsDashboard,
@@ -1420,18 +1421,21 @@ export default async function AdminAnalyticsPage({
   const focusItems = getFocusItems(dashboard, locale);
 
   return (
-    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
+    <PageContainer mobileSafeTop className="[--app-mobile-page-top-gap:1.5rem] max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
-            {t.subtitle} · {t.dataWindow(dashboard.windowDays)}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
-            {t.title}
-          </h1>
-          <p className="max-w-4xl text-sm leading-6 text-zinc-600">
-            {t.description}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <AdminSettingsBackLink locale={locale} />
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+              {t.subtitle} · {t.dataWindow(dashboard.windowDays)}
+            </p>
+            <h1 className="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
+              {t.title}
+            </h1>
+            <p className="max-w-4xl text-sm leading-6 text-zinc-600">
+              {t.description}
+            </p>
+          </div>
         </div>
         <div className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white/82 px-4 text-sm font-medium text-zinc-600 ring-1 ring-black/10">
           <span className="h-2 w-2 rounded-full bg-moss" />

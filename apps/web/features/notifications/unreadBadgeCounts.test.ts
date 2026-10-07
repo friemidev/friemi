@@ -10,12 +10,14 @@ test("creates the combined chat badge from direct, room, and planet counts", () 
     createUnreadBadgeCounts({
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
+      unreadInventoryTicketGiftCount: 1,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 5,
     }),
     {
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
+      unreadInventoryTicketGiftCount: 1,
       unreadMessageCount: 12,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 5,
@@ -28,6 +30,7 @@ test("parses badge payloads and recomputes the combined message count", () => {
     parseUnreadBadgeCountsPayload({
       unreadActivityRoomCount: 4.9,
       unreadDirectMessageCount: 3.8,
+      unreadInventoryTicketGiftCount: 1.9,
       unreadMessageCount: 999,
       unreadNotificationCount: 2.2,
       unreadPlanetChatCount: 5.7,
@@ -35,6 +38,7 @@ test("parses badge payloads and recomputes the combined message count", () => {
     {
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
+      unreadInventoryTicketGiftCount: 1,
       unreadMessageCount: 12,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 5,
@@ -52,6 +56,7 @@ test("keeps old unread badge payloads compatible during rolling deploys", () => 
     {
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
+      unreadInventoryTicketGiftCount: 0,
       unreadMessageCount: 7,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 0,
@@ -64,10 +69,20 @@ test("rejects incomplete or invalid badge payloads", () => {
     parseUnreadBadgeCountsPayload({
       unreadActivityRoomCount: 1,
       unreadDirectMessageCount: -1,
+      unreadInventoryTicketGiftCount: 0,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 0,
     }),
     null,
   );
   assert.equal(parseUnreadBadgeCountsPayload(null), null);
+  assert.equal(
+    parseUnreadBadgeCountsPayload({
+      unreadActivityRoomCount: 1,
+      unreadDirectMessageCount: 1,
+      unreadInventoryTicketGiftCount: -1,
+      unreadNotificationCount: 2,
+    }),
+    null,
+  );
 });

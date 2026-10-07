@@ -41,3 +41,21 @@ test("notification dedupe keys require an explicit occurrence", () => {
     null,
   );
 });
+
+test("ticket gift notification dedupes by gift and recipient", () => {
+  const input = {
+    inventoryItemDefinitionId: "definition-1",
+    occurrenceId: "gift-1",
+    recipientId: "recipient-1",
+    type: "INVENTORY_TICKET_RECEIVED" as const,
+  };
+  assert.equal(getNotificationDedupeKey(input), getNotificationDedupeKey(input));
+  assert.notEqual(
+    getNotificationDedupeKey(input),
+    getNotificationDedupeKey({ ...input, occurrenceId: "gift-2" }),
+  );
+  assert.notEqual(
+    getNotificationDedupeKey(input),
+    getNotificationDedupeKey({ ...input, recipientId: "recipient-2" }),
+  );
+});

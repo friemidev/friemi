@@ -1,9 +1,55 @@
 export function getInventoryCopy(locale: string) {
   if (locale === "fr") {
     return {
-      admin: "Gestion des billets",
+      admin: "Distribution des billets",
       adminIntro:
-        "Créez un lot, puis répartissez les billets entre les organisateurs.",
+        "Créez un lot, attribuez les billets aux comptes choisis. Si le cadeau est autorisé, leurs détenteurs pourront les offrir depuis leur sac.",
+      adminBatch: "Lots de billets",
+      adminBatchAvailable: (count: number) => `${count} restants`,
+      adminEmptyTitle: "Créez votre premier lot",
+      adminIssueHint:
+        "Vérifiez le compte destinataire par code Friemi ou QR, puis indiquez le nombre de billets à attribuer.",
+      adminIssueQuantity: "Nombre de billets à attribuer",
+      adminIssueForBatch: (title: string) => `Attribuer : ${title}`,
+      adminIssueLimit: (count: number) =>
+        `Maximum pour cette attribution : ${count}`,
+      adminIssueReview: (
+        count: number,
+        title: string,
+        name: string,
+        code: string,
+      ) =>
+        `${count} billets « ${title} » seront ajoutés au sac de ${name} (code Friemi ${code}). Vérifiez ces informations avant de confirmer.`,
+      adminIssueConfirm: "Confirmer l'attribution",
+      adminIssueSuccessHistory: "Voir l'attribution dans l'historique",
+      adminIssueNoStock:
+        "Le stock a changé. Actualisez la page, puis ajustez la quantité.",
+      adminIssueNotFound:
+        "Ce compte n'est plus disponible. Recherchez de nouveau son code Friemi.",
+      adminIssueInvalid:
+        "Vérifiez le compte et la quantité avant de réessayer.",
+      adminSupplyPlaceholder: "Ex. 1 000",
+      adminSupplyHint:
+        "La création du lot n'ajoute aucun billet aux comptes. Attribuez-les ensuite.",
+      adminNewBatch: "Nouveau lot",
+      adminSoldOut: "Tous les billets de ce lot ont été attribués.",
+      adminIssueHistory: "Attributions par l'administration",
+      adminIssueEmpty:
+        "Aucune attribution. Les billets attribués apparaîtront ici.",
+      adminHistoryAllocationTo: (name: string) => `Attribués à ${name}`,
+      adminHistoryBy: (actor: string) => `Par ${actor}`,
+      adminHistoryTicketCount: (count: number) =>
+        `${count} billet${count > 1 ? "s" : ""}`,
+      adminGiftHistory: "Cadeaux entre comptes",
+      adminGiftEmpty:
+        "Aucun cadeau. Les billets offerts par les détenteurs apparaîtront ici.",
+      adminGiftStatus: "Cadeau entre comptes :",
+      adminGiftEnabled: "Autorisé",
+      adminGiftDisabled: "Suspendu",
+      adminGiftSettingsHint:
+        "Ce réglage s'applique aussi aux billets non offerts déjà attribués. Un billet déjà offert ne peut jamais être offert à nouveau.",
+      adminGiftFormHint:
+        "Une fois activé, le détenteur peut offrir chaque billet une seule fois. Le désactiver empêche tout cadeau, même après attribution.",
       available: "Disponibles à offrir",
       allocated: "Attribués",
       back: "Retour au sac",
@@ -11,8 +57,8 @@ export function getInventoryCopy(locale: string) {
       createError: "Le lot n'a pas pu être créé.",
       created: "Lot créé.",
       description: "Description",
-      disableGifting: "Désactiver le cadeau",
-      enableGifting: "Autoriser le cadeau",
+      disableGifting: "Suspendre les cadeaux",
+      enableGifting: "Autoriser les cadeaux",
       gift: "Offrir un billet",
       giftError: "Le billet n'a pas pu être envoyé.",
       gifted: "Billet envoyé à",
@@ -37,13 +83,59 @@ export function getInventoryCopy(locale: string) {
       ticketHint: "Un billet ne peut être offert qu'une seule fois.",
       ticketList: "Billets dans votre sac",
       transferLocked: "Ce billet a déjà été offert et ne peut plus l'être.",
-      viewHistory: "Voir les détails et l'historique",
+      viewHistory: "Voir les attributions et les cadeaux",
     };
   }
   if (locale === "en") {
     return {
-      admin: "Ticket inventory",
-      adminIntro: "Create a ticket batch, then allocate tickets to organizers.",
+      admin: "Ticket distribution",
+      adminIntro:
+        "Create a batch and allocate tickets to selected accounts. When gifting is allowed, holders can gift them from their bags.",
+      adminBatch: "Ticket batches",
+      adminBatchAvailable: (count: number) => `${count} left`,
+      adminEmptyTitle: "Create your first batch",
+      adminIssueHint:
+        "Verify the receiving account by Friemi code or QR, then enter the number of tickets to allocate.",
+      adminIssueQuantity: "Tickets to allocate",
+      adminIssueForBatch: (title: string) => `Allocate: ${title}`,
+      adminIssueLimit: (count: number) =>
+        `Maximum for this allocation: ${count}`,
+      adminIssueReview: (
+        count: number,
+        title: string,
+        name: string,
+        code: string,
+      ) =>
+        `${count} ${title} tickets will be added to ${name}'s bag (Friemi code ${code}). Check these details before confirming.`,
+      adminIssueConfirm: "Confirm allocation",
+      adminIssueSuccessHistory: "View allocation in history",
+      adminIssueNoStock:
+        "Stock has changed. Refresh the page and adjust the quantity.",
+      adminIssueNotFound:
+        "This account is no longer available. Look up its Friemi code again.",
+      adminIssueInvalid: "Check the account and quantity, then try again.",
+      adminSupplyPlaceholder: "e.g. 1000",
+      adminSupplyHint:
+        "Creating a batch does not add tickets to any account. Allocate them next.",
+      adminNewBatch: "New batch",
+      adminSoldOut: "All tickets in this batch have been allocated.",
+      adminIssueHistory: "Admin allocations",
+      adminIssueEmpty:
+        "No allocations yet. Allocated tickets will appear here.",
+      adminHistoryAllocationTo: (name: string) => `Allocated to ${name}`,
+      adminHistoryBy: (actor: string) => `By ${actor}`,
+      adminHistoryTicketCount: (count: number) =>
+        `${count} ticket${count === 1 ? "" : "s"}`,
+      adminGiftHistory: "Gifts between accounts",
+      adminGiftEmpty:
+        "No gifts yet. Tickets gifted by holders will appear here.",
+      adminGiftStatus: "Gifting between accounts:",
+      adminGiftEnabled: "Allowed",
+      adminGiftDisabled: "Paused",
+      adminGiftSettingsHint:
+        "This also affects allocated tickets that have not been gifted. A ticket already gifted can never be gifted again.",
+      adminGiftFormHint:
+        "When enabled, a holder can gift each ticket once. Disabling it stops gifting even after allocation.",
       available: "Available to gift",
       allocated: "Allocated",
       back: "Back to bag",
@@ -51,8 +143,8 @@ export function getInventoryCopy(locale: string) {
       createError: "Could not create the ticket batch.",
       created: "Ticket batch created.",
       description: "Description",
-      disableGifting: "Disable gifting",
-      enableGifting: "Enable gifting",
+      disableGifting: "Pause gifting",
+      enableGifting: "Allow gifting",
       gift: "Gift one ticket",
       giftError: "Could not send the ticket.",
       gifted: "Ticket sent to",
@@ -78,12 +170,50 @@ export function getInventoryCopy(locale: string) {
       ticketList: "Tickets in your bag",
       transferLocked:
         "This ticket was already gifted and cannot be gifted again.",
-      viewHistory: "View details and history",
+      viewHistory: "View allocations and gifts",
     };
   }
   return {
-    admin: "票券库存管理",
-    adminIntro: "先创建票券批次，再按数量分配到一个或多个举办人账户。",
+    admin: "票券分发",
+    adminIntro:
+      "先创建批次，再分配给指定账户；允许赠送时，持有人可从背包送票。",
+    adminBatch: "票券批次",
+    adminBatchAvailable: (count: number) => `剩余 ${count} 张`,
+    adminEmptyTitle: "创建第一批票券",
+    adminIssueHint: "通过 Friemi 码或扫码确认接收账户，再填写分配数量。",
+    adminIssueQuantity: "本次分配数量",
+    adminIssueForBatch: (title: string) => `分配「${title}」`,
+    adminIssueLimit: (count: number) => `本次最多分配 ${count} 张`,
+    adminIssueReview: (
+      count: number,
+      title: string,
+      name: string,
+      code: string,
+    ) =>
+      `将 ${count} 张「${title}」放入 ${name}（Friemi 码 ${code}）的背包。请核对票券、账户和数量。`,
+    adminIssueConfirm: "确认分配票券",
+    adminIssueSuccessHistory: "在历史中查看这次分配",
+    adminIssueNoStock: "库存已变化，请刷新页面并调整分配数量。",
+    adminIssueNotFound: "这个账户已不可用，请重新查找 Friemi 码。",
+    adminIssueInvalid: "请重新核对账户和数量后再试。",
+    adminSupplyPlaceholder: "例如 1000",
+    adminSupplyHint: "创建批次后，票还未进入任何账户；下一步再按数量分配。",
+    adminNewBatch: "新建批次",
+    adminSoldOut: "这一批票券已全部分配。",
+    adminIssueHistory: "管理员分配记录",
+    adminIssueEmpty: "还没有分配记录。完成分配后会显示在这里。",
+    adminHistoryAllocationTo: (name: string) => `分配给 ${name}`,
+    adminHistoryBy: (actor: string) => `由 ${actor} 分配`,
+    adminHistoryTicketCount: (count: number) => `${count} 张`,
+    adminGiftHistory: "账户间赠送记录",
+    adminGiftEmpty: "还没有赠送记录。持有人送票后会显示在这里。",
+    adminGiftStatus: "账户间赠送：",
+    adminGiftEnabled: "已允许",
+    adminGiftDisabled: "已暂停",
+    adminGiftSettingsHint:
+      "此设置也影响已分配但尚未赠送的票；赠送过的票始终不能再赠送。",
+    adminGiftFormHint:
+      "开启后，持有人可将每张票赠送一次；关闭后，即使已分配也无法赠送。",
     available: "可赠送",
     allocated: "已分配",
     back: "返回背包",
@@ -91,8 +221,8 @@ export function getInventoryCopy(locale: string) {
     createError: "创建票券失败，请检查填写内容。",
     created: "票券批次已创建。",
     description: "说明",
-    disableGifting: "关闭赠送",
-    enableGifting: "开启赠送",
+    disableGifting: "暂停赠送",
+    enableGifting: "允许赠送",
     gift: "赠送一张票",
     giftError: "票券未能送出，请稍后重试。",
     gifted: "已将票券赠送给",
@@ -117,6 +247,6 @@ export function getInventoryCopy(locale: string) {
     ticketHint: "每张票只能赠送一次，收到后不可继续赠送。",
     ticketList: "背包中的票券",
     transferLocked: "这张票已经赠送过，不能再次赠送。",
-    viewHistory: "查看票券与历史",
+    viewHistory: "查看分配与赠送记录",
   };
 }

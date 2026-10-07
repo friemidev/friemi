@@ -93,7 +93,7 @@ export function PlanetChatPage({
 
   return (
     <main className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:overflow-hidden max-md:bg-white md:min-h-[calc(100dvh-5rem)] md:bg-[#EDF4FA] md:px-5 md:py-8">
-      <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 min-w-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] md:h-[calc(100dvh-8rem)] md:rounded-[1.25rem] md:border md:border-[#E2DFD3]">
+      <section data-route-motion-surface className="mobile-chat-viewport mx-auto flex h-full min-h-0 min-w-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] md:h-[calc(100dvh-8rem)] md:rounded-[1.25rem] md:border md:border-[#E2DFD3]">
         <header className="grid min-w-0 shrink-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-black/[0.04] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:pt-3">
           <PlanetChatBackButton fallbackHref={fallbackHref} label={copy.back} />
           <div className="flex min-w-0 items-center justify-center gap-2">

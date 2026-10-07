@@ -1,4 +1,4 @@
-export function restoreDetailScroll(scrollY: number) {
+export function restoreDetailScroll(scrollY: number, timeoutMs = 1500) {
   if (!Number.isFinite(scrollY) || scrollY < 0) return;
 
   let stopped = false;
@@ -35,7 +35,7 @@ export function restoreDetailScroll(scrollY: number) {
     passive: true,
   }));
   observer?.observe(document.body);
-  timeout = window.setTimeout(stop, 1500);
+  timeout = window.setTimeout(stop, timeoutMs);
   restore();
   // Run once after Next restores its own history position. Retry only if content
   // is still too short, and never pull the user back after they start interacting.

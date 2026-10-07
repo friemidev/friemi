@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Prisma, type InventoryGiftMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { normalizeFriemiCode } from "../friemiCode";
 
 export async function findActiveProfileByFriemiCode(value: string) {
@@ -16,6 +17,7 @@ export async function findActiveProfileByFriemiCode(value: string) {
 export async function createTicketDefinition(input: {
   actorProfileId: string;
   description: string | null;
+  imageUrl: string | null;
   isGiftable: boolean;
   title: string;
   totalSupply: number;
@@ -24,6 +26,7 @@ export async function createTicketDefinition(input: {
     data: {
       createdByProfileId: input.actorProfileId,
       description: input.description,
+      imageUrl: input.imageUrl,
       isGiftable: input.isGiftable,
       kind: "EVENT_TICKET",
       title: input.title,
@@ -31,6 +34,17 @@ export async function createTicketDefinition(input: {
     },
     select: { id: true },
   });
+}
+
+export async function updateInventoryDefinitionImage(input: {
+  definitionId: string;
+  imageUrl: string | null;
+}) {
+  const updated = await prisma.inventoryItemDefinition.updateMany({
+    where: { id: input.definitionId },
+    data: { imageUrl: input.imageUrl },
+  });
+  return updated.count > 0;
 }
 
 export async function setTicketGiftable(input: {
@@ -221,6 +235,7 @@ export async function giftTicketByFriemiCode(input: {
             definitionId: input.definitionId,
             giftedAt: null,
             ownerProfileId: input.senderProfileId,
+            redeemedAt: null,
           },
           orderBy: { serialNumber: "asc" },
           select: { id: true, serialNumber: true },
@@ -233,8 +248,14 @@ export async function giftTicketByFriemiCode(input: {
             id: item.id,
             giftedAt: null,
             ownerProfileId: input.senderProfileId,
+            redeemedAt: null,
           },
-          data: { giftedAt, ownerProfileId: recipient.id },
+          data: {
+            giftedAt,
+            ownerProfileId: recipient.id,
+            redemptionToken: null,
+            redemptionTokenExpiresAt: null,
+          },
         });
         if (updated.count === 0) throw new GiftRaceError();
 
@@ -248,6 +269,16 @@ export async function giftTicketByFriemiCode(input: {
           },
           select: { id: true },
         });
+
+        await createNotifications(tx, [
+          {
+            actorId: input.senderProfileId,
+            inventoryItemDefinitionId: input.definitionId,
+            occurrenceId: gift.id,
+            recipientId: recipient.id,
+            type: "INVENTORY_TICKET_RECEIVED",
+          },
+        ]);
 
         return {
           status: "GIFTED" as const,
@@ -302,6 +333,7 @@ export async function getInventoryBagSummary(profileId: string) {
       createdAt: true,
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       kind: true,
       title: true,
@@ -320,6 +352,7 @@ export async function getInventoryBagSummary(profileId: string) {
             definitionId: definition.id,
             giftedAt: null,
             ownerProfileId: profileId,
+            redeemedAt: null,
           },
         }),
       ]);
@@ -327,6 +360,7 @@ export async function getInventoryBagSummary(profileId: string) {
         createdAt: definition.createdAt.toISOString(),
         description: definition.description,
         id: definition.id,
+        imageUrl: definition.imageUrl,
         isGiftable: definition.isGiftable,
         kind: definition.kind,
         quantity,
@@ -347,6 +381,7 @@ export async function getInventoryDefinitionForProfile(input: {
     select: {
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       kind: true,
       title: true,
@@ -367,6 +402,7 @@ export async function getInventoryDefinitionForProfile(input: {
           definitionId: input.definitionId,
           giftedAt: null,
           ownerProfileId: input.profileId,
+          redeemedAt: null,
         },
       }),
       prisma.inventoryIssueBatch.count({
@@ -396,7 +432,7 @@ export async function getInventoryDefinitionForProfile(input: {
       },
       orderBy: { serialNumber: "asc" },
       take: 20,
-      select: { giftedAt: true, id: true, serialNumber: true },
+      select: { giftedAt: true, id: true, redeemedAt: true, serialNumber: true },
     }),
     prisma.inventoryItemGift.findMany({
       where: {
@@ -437,6 +473,7 @@ export async function getInventoryDefinitionForProfile(input: {
     pageSize,
     ownedItems: ownedItems.map((item) => ({
       giftedAt: item.giftedAt?.toISOString() ?? null,
+      redeemedAt: item.redeemedAt?.toISOString() ?? null,
       id: item.id,
       serialNumber: item.serialNumber,
     })),
@@ -445,20 +482,59 @@ export async function getInventoryDefinitionForProfile(input: {
   };
 }
 
-export async function getAdminTicketDefinitions() {
-  return prisma.inventoryItemDefinition.findMany({
-    where: { kind: "EVENT_TICKET" },
-    orderBy: { createdAt: "desc" },
+const adminTicketDefinitionSelect = {
+  createdAt: true,
+  description: true,
+  id: true,
+  imageUrl: true,
+  isGiftable: true,
+  issuedCount: true,
+  kind: true,
+  title: true,
+  totalSupply: true,
+} as const;
+
+export async function getAdminTicketDefinitionPage(input: {
+  page: number;
+  query: string;
+}) {
+  const pageSize = 20;
+  const requestedPage =
+    Number.isSafeInteger(input.page) && input.page > 0 ? input.page : 1;
+  const query = input.query.trim().slice(0, 120);
+  const where: Prisma.InventoryItemDefinitionWhereInput = {
+    kind: "EVENT_TICKET",
+    ...(query ? { title: { contains: query, mode: "insensitive" } } : {}),
+  };
+  const total = await prisma.inventoryItemDefinition.count({ where });
+  const page = Math.min(
+    requestedPage,
+    Math.max(1, Math.ceil(total / pageSize)),
+  );
+  const items = await prisma.inventoryItemDefinition.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: adminTicketDefinitionSelect,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+
+  return { items, total, page, pageSize };
+}
+
+export async function getAdminInventoryDefinition(definitionId: string) {
+  return prisma.inventoryItemDefinition.findUnique({
+    where: { id: definitionId },
     select: {
-      createdAt: true,
       description: true,
       id: true,
+      imageUrl: true,
       isGiftable: true,
       issuedCount: true,
+      kind: true,
       title: true,
       totalSupply: true,
     },
-    take: 100,
   });
 }
 
@@ -471,6 +547,7 @@ export async function getAdminTicketHistory(
     where: { id: definitionId },
     select: {
       id: true,
+      imageUrl: true,
       kind: true,
       title: true,
       issuedCount: true,
@@ -480,13 +557,20 @@ export async function getAdminTicketHistory(
   if (!definition || definition.kind !== "EVENT_TICKET") return null;
 
   const pageSize = 30;
-  const [giftCount, issueCount, issueBatches, gifts] = await Promise.all([
+  const [giftCount, issueCount] = await Promise.all([
     prisma.inventoryItemGift.count({ where: { item: { definitionId } } }),
     prisma.inventoryIssueBatch.count({ where: { definitionId } }),
+  ]);
+  const giftPage = Math.min(page, Math.max(1, Math.ceil(giftCount / pageSize)));
+  const allocationPage = Math.min(
+    issuePage,
+    Math.max(1, Math.ceil(issueCount / pageSize)),
+  );
+  const [issueBatches, gifts] = await Promise.all([
     prisma.inventoryIssueBatch.findMany({
       where: { definitionId },
-      orderBy: { createdAt: "desc" },
-      skip: (issuePage - 1) * pageSize,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (allocationPage - 1) * pageSize,
       take: pageSize,
       select: {
         actor: { select: { nickname: true } },
@@ -499,7 +583,7 @@ export async function getAdminTicketHistory(
     prisma.inventoryItemGift.findMany({
       where: { item: { definitionId } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
+      skip: (giftPage - 1) * pageSize,
       take: pageSize,
       select: {
         createdAt: true,
@@ -518,8 +602,8 @@ export async function getAdminTicketHistory(
     gifts,
     issueBatches,
     issueCount,
-    issuePage,
-    page,
+    issuePage: allocationPage,
+    page: giftPage,
     pageSize,
   };
 }

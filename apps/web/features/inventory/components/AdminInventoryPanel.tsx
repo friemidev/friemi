@@ -1,125 +1,232 @@
-import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { ArrowUpRight, Ticket } from "lucide-react";
 import {
-  CreateTicketDefinitionForm,
-  IssueTicketForm,
-  TicketGiftabilityButton,
-} from "@/features/inventory/components/AdminTicketForms";
-import { getInventoryCopy } from "@/features/inventory/copy";
-import { getAdminTicketDefinitions } from "@/features/inventory/services/inventoryService";
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  PackageOpen,
+  Plus,
+  Search,
+  Ticket,
+} from "lucide-react";
+import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
+import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
+import { getAdminTicketDefinitionPage } from "@/features/inventory/services/inventoryService";
 import { withLocale } from "@/lib/routes";
+
+type TicketPage = Awaited<ReturnType<typeof getAdminTicketDefinitionPage>>;
 
 export async function AdminInventoryPanel({
   locale,
-  selectedDefinitionId,
+  page,
+  query,
 }: {
   locale: string;
-  selectedDefinitionId?: string;
+  page: number;
+  query: string;
 }) {
-  const definitions = await getAdminTicketDefinitions();
-  const selected =
-    definitions.find((definition) => definition.id === selectedDefinitionId) ??
-    definitions[0];
-  const copy = getInventoryCopy(locale);
+  const ticketPage = await getAdminTicketDefinitionPage({ page, query });
+  return (
+    <AdminInventoryPanelContent
+      locale={locale}
+      query={query}
+      ticketPage={ticketPage}
+    />
+  );
+}
+
+export function AdminInventoryPanelContent({
+  locale,
+  query,
+  ticketPage,
+}: {
+  locale: string;
+  query: string;
+  ticketPage: TicketPage;
+}) {
+  const { items, page, pageSize, total } = ticketPage;
+  const copy = getAdminItemCopy(locale).list;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageHref = (targetPage: number) => {
+    const params = new URLSearchParams({ view: "items" });
+    if (query) params.set("q", query);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    return withLocale(locale, `/admin/merchants?${params.toString()}`);
+  };
 
   return (
-    <section aria-label={copy.admin} className="space-y-6">
-      {selected ? (
-        <h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-[#1D3024]">
-          <Ticket aria-hidden="true" className="h-5 w-5 text-[#176B49]" />
-          {copy.admin}
-        </h2>
-      ) : null}
+    <section aria-labelledby="admin-items-title" className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2
+            className="text-xl font-bold tracking-tight text-ink sm:text-2xl"
+            id="admin-items-title"
+          >
+            {copy.title}
+            <span className="ml-2 text-base font-semibold tabular-nums text-ink/60">
+              {copy.countLabel(total)}
+            </span>
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ink/70">{copy.intro}</p>
+        </div>
+        <Link
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-4 text-sm font-bold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={withLocale(locale, "/admin/items/new")}
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          {copy.new}
+        </Link>
+      </div>
 
-      {selected ? (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-8">
-          <nav aria-label={copy.admin} className="max-h-[26rem] space-y-1 overflow-auto">
-            {definitions.map((definition) => {
+      <form
+        action={withLocale(locale, "/admin/merchants")}
+        className="flex flex-wrap gap-2"
+        method="get"
+        role="search"
+      >
+        <input name="view" readOnly type="hidden" value="items" />
+        <label className="relative min-w-0 flex-1 sm:max-w-md">
+          <span className="sr-only">{copy.searchAria}</span>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50"
+          />
+          <input
+            className="min-h-11 w-full rounded-xl border border-sand bg-paper py-2 pl-11 pr-4 text-base text-ink outline-none placeholder:text-ink/50 focus:border-forest focus:ring-2 focus:ring-forest/20"
+            defaultValue={query}
+            maxLength={120}
+            name="q"
+            placeholder={copy.searchPlaceholder}
+            type="search"
+          />
+        </label>
+        <button
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-ink px-4 text-sm font-semibold text-paper transition hover:bg-ink/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          type="submit"
+        >
+          {copy.searchButton}
+        </button>
+        {query ? (
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm font-semibold text-forest underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/admin/merchants?view=items")}
+          >
+            {copy.clear}
+          </Link>
+        ) : null}
+      </form>
+
+      {items.length ? (
+        <>
+          <p className="text-sm tabular-nums text-ink/70" role="status">
+            {copy.resultRange(
+              query,
+              (page - 1) * pageSize + 1,
+              Math.min(page * pageSize, total),
+              total,
+            )}
+          </p>
+          <ul className="divide-y divide-sand/50 rounded-2xl bg-paper px-4 sm:px-5">
+            {items.map((definition) => {
               const remaining = definition.totalSupply - definition.issuedCount;
-              const active = definition.id === selected.id;
               return (
-                <Link
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-14 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176B49] ${
-                    active
-                      ? "bg-[#E8F3E9] text-[#174D33]"
-                      : "text-[#35483A] hover:bg-[#F2F6F0]"
-                  }`}
-                  href={withLocale(
-                    locale,
-                    `/admin/merchants?view=items&ticket=${encodeURIComponent(definition.id)}`,
-                  )}
-                  key={definition.id}
-                >
-                  <span className="min-w-0 truncate text-sm font-semibold">
-                    {definition.title}
-                  </span>
-                  <span
-                    className={`shrink-0 text-xs font-semibold tabular-nums ${active ? "text-[#176B49]" : "text-[#718073]"}`}
+                <li key={definition.id}>
+                  <Link
+                    className="group flex min-h-24 items-center gap-4 py-3 outline-none focus-visible:rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                    href={withLocale(locale, `/admin/items/${definition.id}`)}
                   >
-                    {remaining}
-                  </span>
-                </Link>
+                    <span className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-fog text-forest sm:h-20 sm:w-20">
+                      {definition.imageUrl ? (
+                        <InventoryItemArtwork
+                          alt=""
+                          className="h-full w-full"
+                          imageUrl={definition.imageUrl}
+                        />
+                      ) : (
+                        <Ticket aria-hidden="true" className="h-7 w-7" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 space-y-1">
+                      <span className="block truncate text-base font-bold text-ink group-hover:text-forest">
+                        {definition.title}
+                      </span>
+                      <span className="block text-xs font-semibold text-forest">
+                        {copy.ticketType}
+                        <span aria-hidden="true" className="mx-2 text-ink/40">
+                          ·
+                        </span>
+                        {definition.isGiftable ? copy.giftable : copy.paused}
+                      </span>
+                      <span className="block text-sm tabular-nums text-ink/70">
+                        {copy.remaining(remaining, definition.totalSupply)}
+                      </span>
+                    </span>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="h-5 w-5 shrink-0 text-ink/50 transition group-hover:text-forest"
+                    />
+                  </Link>
+                </li>
               );
             })}
-          </nav>
-
-          <div className="min-w-0 rounded-2xl bg-white px-4 py-5 sm:px-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-[#1D3024]">
-                  {selected.title}
-                </h3>
-                <p className="mt-1 text-sm text-[#617063]">
-                  {copy.remaining} {selected.totalSupply - selected.issuedCount}
-                  <span aria-hidden="true"> / </span>
-                  {copy.supply} {selected.totalSupply}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <TicketGiftabilityButton
-                  definitionId={selected.id}
-                  isGiftable={selected.isGiftable}
-                  locale={locale}
-                />
+          </ul>
+          {totalPages > 1 ? (
+            <nav
+              aria-label={copy.paginationAria}
+              className="flex items-center justify-between gap-3"
+            >
+              {page > 1 ? (
                 <Link
-                  className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-[#176B49] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176B49]"
-                  href={withLocale(
-                    locale,
-                    `/admin/items/tickets/${selected.id}`,
-                  )}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-forest hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                  href={pageHref(page - 1)}
                 >
-                  {copy.viewHistory}
-                  <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                  <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                  {copy.previous}
                 </Link>
-              </div>
-            </div>
-            <IssueTicketForm
-              definitionId={selected.id}
-              initialRequestId={randomUUID()}
-              locale={locale}
-              remaining={selected.totalSupply - selected.issuedCount}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {definitions.length === 0 ? (
-        <div className="max-w-xl [&>section]:!rounded-none [&>section]:!bg-transparent [&>section]:!p-0 [&>section]:!ring-0">
-          <h2 className="text-xl font-bold text-[#1D3024]">{copy.create}</h2>
-          <p className="mb-5 mt-1 text-sm text-[#617063]">{copy.adminIntro}</p>
-          <CreateTicketDefinitionForm locale={locale} showHeading={false} />
-        </div>
+              ) : (
+                <span />
+              )}
+              <span className="text-sm tabular-nums text-ink/70">
+                {copy.pageNumber(page, totalPages)}
+              </span>
+              {page < totalPages ? (
+                <Link
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-forest hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                  href={pageHref(page + 1)}
+                >
+                  {copy.next}
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
+        </>
       ) : (
-        <details className="border-t border-[#DFE8DA] pt-5" id="create-ticket">
-          <summary className="cursor-pointer text-sm font-semibold text-[#176B49] marker:text-[#176B49]">
-            {copy.create}
-          </summary>
-          <div className="mt-4 max-w-xl [&>section]:!rounded-none [&>section]:!bg-transparent [&>section]:!p-0 [&>section]:!ring-0">
-            <CreateTicketDefinitionForm locale={locale} showHeading={false} />
+        <div className="flex flex-col items-start gap-3 rounded-2xl bg-paper px-5 py-8 sm:px-6">
+          <span className="grid h-12 w-12 place-items-center rounded-xl bg-fog text-forest">
+            <PackageOpen aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <div>
+            <h3 className="text-lg font-bold text-ink">
+              {query ? copy.noResultsTitle : copy.emptyTitle}
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-ink/70">
+              {query ? copy.noResultsHint : copy.emptyHint}
+            </p>
           </div>
-        </details>
+          <Link
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-forest underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={
+              query
+                ? withLocale(locale, "/admin/merchants?view=items")
+                : withLocale(locale, "/admin/items/new")
+            }
+          >
+            {query ? copy.viewAll : copy.createFirst}
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </div>
       )}
     </section>
   );

@@ -4,8 +4,7 @@ type PageContainerProps = {
   children: React.ReactNode;
   className?: string;
   /**
-   * Set on pages whose mobile header is hidden (see AppHeaderChrome's
-   * shouldHideHeaderOnMobile) so content clears the status bar/notch
+   * Set on mobile pages whose content needs to clear the status bar/notch
    * instead of sitting under it. Skip this on pages that already defer
    * safe-area handling to a nested child (e.g. an .app-mobile-page-shell
    * component), or it'll be padded twice.

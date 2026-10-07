@@ -2,16 +2,29 @@
 
 import { startTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { detailSheetVisibilityMessage } from "@/features/activities/detailSheetRetention";
+import {
+  detailSheetReadyMessage,
+  detailSheetVisibilityMessage,
+} from "@/features/activities/detailSheetRetention";
 
 const freshForMs = 30_000;
 
-export function ActivityDetailRefresh({ validatedAt }: { validatedAt: number }) {
+export function ActivityDetailRefresh({
+  validatedAt,
+}: {
+  validatedAt: number;
+}) {
   const router = useRouter();
   const attemptedAt = useRef(0);
   const visible = useRef<boolean | null>(null);
 
   useEffect(() => {
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        { type: detailSheetReadyMessage },
+        window.location.origin,
+      );
+    }
     visible.current ??= window.parent === window;
     const refreshIfStale = () => {
       if (!visible.current || document.hidden || !navigator.onLine) return;
@@ -28,7 +41,8 @@ export function ActivityDetailRefresh({ validatedAt }: { validatedAt: number }) 
         event.source !== window.parent ||
         event.data?.type !== detailSheetVisibilityMessage ||
         typeof event.data.visible !== "boolean"
-      ) return;
+      )
+        return;
       visible.current = event.data.visible;
       refreshIfStale();
     };

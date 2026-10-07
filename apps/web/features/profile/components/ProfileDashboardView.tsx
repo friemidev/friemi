@@ -35,6 +35,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
+import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ProfileQrScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
@@ -364,7 +366,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
-      store: "Boutique",
+      store: "Gestion boutique",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -430,7 +432,7 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
-      store: "Store",
+      store: "Manage store",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -495,7 +497,7 @@ function getMobileProfileCopy(locale: string) {
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
-    store: "门店",
+    store: "管理门店",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -1287,8 +1289,11 @@ function ProfileFeatureLink({
   label,
   locked = false,
   lockedLabel,
+  showDot = false,
+  unreadLabel,
   status,
   tone = "green",
+  wrapLabel = false,
 }: {
   artwork?: ProfileFeatureArtworkKey;
   href: string;
@@ -1296,8 +1301,11 @@ function ProfileFeatureLink({
   label: string;
   locked?: boolean;
   lockedLabel?: string;
+  showDot?: boolean;
+  unreadLabel?: string;
   status?: string;
   tone?: "green" | "pink" | "blue" | "gold" | "gray";
+  wrapLabel?: boolean;
 }) {
   const toneClass = locked
     ? "bg-[#F5F4EF] text-[#9A9A90]"
@@ -1313,17 +1321,19 @@ function ProfileFeatureLink({
 
   const content = (
     <>
-      <span
-        className={cn(
-          "relative flex h-12 w-12 items-center justify-center rounded-full",
-          artwork ? "overflow-hidden bg-white" : toneClass,
-        )}
-      >
-        {artwork ? (
-          <ProfileFeatureArtwork artwork={artwork} />
-        ) : (
-          <Icon className="h-5 w-5" strokeWidth={2.25} />
-        )}
+      <span className="relative inline-flex">
+        <span
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-full",
+            artwork ? "overflow-hidden bg-white" : toneClass,
+          )}
+        >
+          {artwork ? (
+            <ProfileFeatureArtwork artwork={artwork} />
+          ) : (
+            <Icon className="h-5 w-5" strokeWidth={2.25} />
+          )}
+        </span>
         {locked ? (
           <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
             <Lock className="h-3 w-3" strokeWidth={2.4} />
@@ -1332,11 +1342,17 @@ function ProfileFeatureLink({
           <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-semibold leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">{status}</span>
           </span>
+        ) : showDot ? (
+          <span
+            aria-hidden="true"
+            className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-[#EC334E] ring-2 ring-white"
+          />
         ) : null}
       </span>
       <span
         className={cn(
-          "max-w-full truncate text-[11px] font-bold",
+          "max-w-full text-[11px] font-bold",
+          wrapLabel ? "line-clamp-2 leading-tight" : "truncate",
           locked ? "text-[#6C746A]" : "text-[#1D1D1B]",
         )}
       >
@@ -1361,6 +1377,9 @@ function ProfileFeatureLink({
   return (
     <Link
       href={href}
+      aria-label={
+        showDot && unreadLabel ? `${label}: ${unreadLabel}` : undefined
+      }
       className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
     >
       {content}
@@ -3081,6 +3100,8 @@ function SelfMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
+  const ticketCopy = getTicketRedemptionCopy(locale);
+  const { unreadInventoryTicketGiftCount } = useNotificationBadge();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
   const [currentNickname, setCurrentNickname] = useState(profile.nickname);
   const [currentNicknameChangedAt, setCurrentNicknameChangedAt] = useState(
@@ -3198,6 +3219,7 @@ function SelfMobileProfileHome({
             icon={Store}
             label={copy.store}
             tone="green"
+            wrapLabel
           />
         ) : null}
         <ProfileFeatureLink
@@ -3240,7 +3262,9 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
+          showDot={unreadInventoryTicketGiftCount > 0}
           tone="green"
+          unreadLabel={ticketCopy.newTickets}
         />
         <ProfileFeatureLink
           artwork="settings"
@@ -3475,6 +3499,16 @@ export function ProfileDashboardView({
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
+                {merchantHref ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-forest px-4 text-sm font-semibold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                    href={merchantHref}
+                  >
+                    <Store aria-hidden="true" className="h-4 w-4" />
+                    {mobileCopy.store}
+                    <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                ) : null}
                 <ProfileOverviewPanel
                   activeActivitySection={activeProfileSection}
                   createdCount={dashboard.createdActivityCount}

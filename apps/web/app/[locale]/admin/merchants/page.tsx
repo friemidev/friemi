@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { Plus, UserRoundPlus } from "lucide-react";
+import { redirect } from "next/navigation";
+import { PackageOpen, Plus, Store, UserRoundPlus } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantManagementClient } from "@/components/admin/MerchantManagementClient";
+import { getMerchantAdminCopy } from "@/components/admin/merchantAdminCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminInventoryPanel } from "@/features/inventory/components/AdminInventoryPanel";
-import { requireAdminPageAccess } from "@/lib/admin-auth";
+import { isCurrentUserAdmin, requireAdminPageAccess } from "@/lib/admin-auth";
 import { getAdminMerchants } from "@/lib/admin-scraper";
 import { withLocale } from "@/lib/routes";
 
@@ -13,6 +16,8 @@ export const dynamic = "force-dynamic";
 type AdminMerchantsPageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{
+    page?: string | string[];
+    q?: string | string[];
     ticket?: string | string[];
     view?: string | string[];
   }>;
@@ -24,71 +29,107 @@ export default async function AdminMerchantsPage({
 }: AdminMerchantsPageProps) {
   const { locale } = await params;
   await requireAdminPageAccess(locale, "/admin/merchants");
+  if (!(await isCurrentUserAdmin())) redirect(withLocale(locale, "/"));
   const query = await searchParams;
   const rawView = Array.isArray(query.view) ? query.view[0] : query.view;
   const view = rawView === "items" ? "items" : "merchants";
-  const rawTicket = Array.isArray(query.ticket) ? query.ticket[0] : query.ticket;
+  const rawTicket = Array.isArray(query.ticket)
+    ? query.ticket[0]
+    : query.ticket;
+  if (view === "items" && rawTicket) {
+    redirect(
+      withLocale(locale, `/admin/items/${encodeURIComponent(rawTicket)}`),
+    );
+  }
+  const rawSearch = Array.isArray(query.q) ? query.q[0] : query.q;
+  const itemSearch = rawSearch?.trim().slice(0, 120) ?? "";
+  const rawPage = Array.isArray(query.page) ? query.page[0] : query.page;
+  const itemPage = Math.max(
+    1,
+    Math.min(100_000, Number.parseInt(rawPage ?? "1", 10) || 1),
+  );
   const merchants = view === "merchants" ? await getAdminMerchants() : [];
+  const merchantCopy = getMerchantAdminCopy(locale);
 
   return (
-    <PageContainer className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-6xl space-y-6 pb-32 max-md:px-4 max-md:py-0 md:py-10">
+    <PageContainer mobileSafeTop className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-5 pb-16 max-md:px-4 max-md:py-0 md:py-10">
       <MerchantAdminHeader
         backHref={withLocale(locale, "/account/settings")}
-        backLabel="返回账户设置"
-        title="店铺与物品"
+        backLabel={merchantCopy.common.backToSettings}
+        title={merchantCopy.list.pageTitle}
       />
 
-      <nav aria-label="管理内容" className="flex gap-7 border-b border-[#DCE6DA]">
+      <nav
+        aria-label={merchantCopy.common.managementAria}
+        className="grid grid-cols-2 gap-1 rounded-2xl bg-fog p-1"
+      >
         <Link
           aria-current={view === "merchants" ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center border-b-2 pb-2 text-sm font-semibold transition ${
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${
             view === "merchants"
-              ? "border-[#176B49] text-[#176B49]"
-              : "border-transparent text-[#617063] hover:text-[#176B49]"
+              ? "bg-paper text-forest"
+              : "text-ink/70 hover:bg-paper/70 hover:text-ink"
           }`}
           href={withLocale(locale, "/admin/merchants")}
         >
-          店铺
+          <Store aria-hidden="true" className="h-4 w-4" />
+          {merchantCopy.list.merchantsTab}
         </Link>
         <Link
           aria-current={view === "items" ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center border-b-2 pb-2 text-sm font-semibold transition ${
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${
             view === "items"
-              ? "border-[#176B49] text-[#176B49]"
-              : "border-transparent text-[#617063] hover:text-[#176B49]"
+              ? "bg-paper text-forest"
+              : "text-ink/70 hover:bg-paper/70 hover:text-ink"
           }`}
           href={withLocale(locale, "/admin/merchants?view=items")}
         >
-          物品分发
+          <PackageOpen aria-hidden="true" className="h-4 w-4" />
+          {getAdminItemCopy(locale).merchant.itemsLabel}
         </Link>
       </nav>
 
       {view === "items" ? (
-        <AdminInventoryPanel locale={locale} selectedDefinitionId={rawTicket} />
+        <AdminInventoryPanel
+          locale={locale}
+          page={itemPage}
+          query={itemSearch}
+        />
       ) : (
         <>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-[#1D3024]">合作店铺</h2>
+          <section
+            aria-labelledby="merchant-section-title"
+            className="flex flex-col gap-5 rounded-2xl bg-ink px-5 py-5 text-paper sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          >
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold" id="merchant-section-title">
+                {merchantCopy.list.count(merchants.length)}
+              </h2>
+              <p className="max-w-xl text-sm leading-6 text-paper/75">
+                {merchantCopy.list.intro}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:flex">
               <Link
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-[#24583E] transition hover:bg-[#EDF5EC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176B49]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-paper/10 px-3 text-sm font-semibold text-paper transition hover:bg-paper/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper sm:px-4"
                 href={withLocale(locale, "/admin/merchants/upgrade")}
               >
                 <UserRoundPlus aria-hidden="true" className="h-4 w-4" />
-                升级店铺
+                {merchantCopy.list.createWithAccount}
               </Link>
               <Link
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#176B49] px-4 text-sm font-semibold text-white transition hover:bg-[#105838] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176B49]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-paper px-3 text-sm font-semibold text-ink transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper sm:px-4"
                 href={withLocale(locale, "/admin/merchants/new")}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                添加店铺
+                {merchantCopy.list.createWithoutAccount}
               </Link>
             </div>
-          </div>
-          <MerchantManagementClient initialMerchants={merchants} locale={locale} />
+          </section>
+          <MerchantManagementClient
+            initialMerchants={merchants}
+            locale={locale}
+          />
         </>
       )}
     </PageContainer>

@@ -4,6 +4,7 @@ import {
   detectActivityCoverMimeType,
   isActivityCoverUploadPathOwnedByUser,
   isMomentImageUploadPathOwnedByUser,
+  isUploadedInventoryItemImageUrl,
   validateImageUploadFile,
 } from "./activity-cover-storage";
 
@@ -88,4 +89,41 @@ test("accepts only signed moment paths owned by the current user", () => {
     ),
     false,
   );
+});
+
+test("accepts only item images from the configured public storage path", () => {
+  const oldUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const oldKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const oldBucket = process.env.SUPABASE_STORAGE_BUCKET;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://storage.example.com";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+  process.env.SUPABASE_STORAGE_BUCKET = "activity-covers";
+
+  const valid =
+    "https://storage.example.com/storage/v1/object/public/activity-covers/inventory-items/admin-1/123e4567-e89b-12d3-a456-426614174000.webp";
+
+  try {
+    assert.equal(isUploadedInventoryItemImageUrl(valid), true);
+    assert.equal(
+      isUploadedInventoryItemImageUrl(
+        valid.replace("storage.example.com", "evil.example.com"),
+      ),
+      false,
+    );
+    assert.equal(
+      isUploadedInventoryItemImageUrl(
+        valid.replace("inventory-items", "profile-avatars"),
+      ),
+      false,
+    );
+    assert.equal(isUploadedInventoryItemImageUrl(`${valid}?other=1`), false);
+    assert.equal(isUploadedInventoryItemImageUrl("javascript:alert(1)"), false);
+  } finally {
+    if (oldUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = oldUrl;
+    if (oldKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = oldKey;
+    if (oldBucket === undefined) delete process.env.SUPABASE_STORAGE_BUCKET;
+    else process.env.SUPABASE_STORAGE_BUCKET = oldBucket;
+  }
 });

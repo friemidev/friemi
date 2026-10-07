@@ -2446,7 +2446,7 @@ export function ActivityRoomChatPage({
   }
 
   return (
-    <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 min-w-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
+    <section data-route-motion-surface className="mobile-chat-viewport mx-auto flex h-full min-h-0 min-w-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
       <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-black/[0.04] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <ActivityRoomChatBackButton
           activityId={activity?.id ?? activityId}

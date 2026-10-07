@@ -22,3 +22,4 @@ export class DetailSheetRetention {
 
 export const detailSheetRetention = new DetailSheetRetention();
 export const detailSheetVisibilityMessage = "friemi:activity-sheet-visibility";
+export const detailSheetReadyMessage = "friemi:activity-sheet-ready";
