@@ -627,7 +627,6 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
 }
 
 .chat-message-scroll {
-  animation: chat-room-content-in 180ms ease-out;
   min-width: 0;
   overflow-x: hidden;
   overscroll-behavior-x: none;

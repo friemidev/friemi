@@ -3712,7 +3712,7 @@ export function FootprintsMobilePage({
   momentFeedLoaded,
   momentFeedNextCursor,
   moments: initialMoments,
-  linkableActivities,
+  linkableActivities: initialLinkableActivities,
   canCreatePlanet: initialCanCreatePlanet,
   planetChats: initialPlanetChats,
   planets: initialPlanets,
@@ -3733,6 +3733,7 @@ export function FootprintsMobilePage({
     : null;
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
   const [moments, setMoments] = useState(initialMoments);
+  const [linkableActivities, setLinkableActivities] = useState(initialLinkableActivities);
   const [momentCursor, setMomentCursor] = useState(momentFeedNextCursor);
   const [hasMoreMoments, setHasMoreMoments] = useState(momentFeedHasMore);
   const [planets, setPlanets] = useState(initialPlanets);
@@ -4039,11 +4040,13 @@ export function FootprintsMobilePage({
 
   useEffect(() => {
     if (!momentFeedLoaded) return;
+    setLinkableActivities(initialLinkableActivities);
     setMoments(initialMoments);
     setMomentCursor(momentFeedNextCursor);
     setHasMoreMoments(momentFeedHasMore);
     setLoadedTabs((current) => ({ ...current, moment: true }));
   }, [
+    initialLinkableActivities,
     initialMoments,
     momentFeedHasMore,
     momentFeedLoaded,

@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import { Suspense } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { headers } from "next/headers";
@@ -21,11 +22,7 @@ import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notification
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
 import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
 import { ActiveGameToolFloatingWindow } from "@/features/game-tools/components/ActiveGameToolFloatingWindow";
-import {
-  getActiveGameToolRoomForProfile,
-  getGameToolPrivateSeatPath,
-  getGameToolRoomPath,
-} from "@/features/game-tools/gameToolRooms";
+import { ActiveGameToolFloatingWindowLoader } from "@/features/game-tools/components/ActiveGameToolFloatingWindowLoader";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { PresenceHeartbeat } from "@/features/profile/components/PresenceHeartbeat";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
@@ -33,7 +30,6 @@ import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { createPerformanceTracker } from "@/lib/performance";
 import { isFriemiNativeAppUserAgent } from "@/lib/mobile-root-lobby-entry";
-import { withLocale } from "@/lib/routes";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -65,38 +61,6 @@ export default async function LocaleLayout({
     perf.measure("viewer.identity", getOptionalLayoutViewerState),
   ]);
   const viewerProfile = viewerState.profile;
-  const activeGameToolRoom = viewerProfile
-    ? await perf.measure("gameTool.activeRoom", () =>
-        getActiveGameToolRoomForProfile({
-          profileId: viewerProfile.id,
-        }),
-      )
-    : null;
-  const activeGameToolPrivateSeatPath = activeGameToolRoom?.privateSeatToken
-    ? getGameToolPrivateSeatPath({
-        kind: activeGameToolRoom.kind,
-        privateSeatToken: activeGameToolRoom.privateSeatToken,
-      })
-    : null;
-  const activeGameToolFloatingRoom = activeGameToolRoom
-    ? {
-        code: activeGameToolRoom.code,
-        href: withLocale(
-          locale,
-          getGameToolRoomPath({
-            kind: activeGameToolRoom.kind,
-            roomId: activeGameToolRoom.id,
-          }),
-        ),
-        id: activeGameToolRoom.id,
-        kind: activeGameToolRoom.kind,
-        privateSeatHref: activeGameToolPrivateSeatPath
-          ? withLocale(locale, activeGameToolPrivateSeatPath)
-          : null,
-        seatNumber: activeGameToolRoom.seatNumber,
-        title: activeGameToolRoom.title,
-      }
-    : null;
   perf.finish({
     hasViewer: Boolean(viewerProfile),
     showAdminNav: viewerState.showAdminNav,
@@ -161,12 +125,24 @@ export default async function LocaleLayout({
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
               {viewerProfile ? <PresenceHeartbeat /> : null}
               {children}
-              <ActiveGameToolFloatingWindow
-                activeRoom={activeGameToolFloatingRoom}
+              {viewerProfile ? (
+                <Suspense fallback={null} key={viewerProfile.id}>
+                  <ActiveGameToolFloatingWindowLoader
+                    locale={locale}
+                    profileId={viewerProfile.id}
+                  />
+                </Suspense>
+              ) : (
+                <ActiveGameToolFloatingWindow
+                  activeRoom={null}
+                  locale={locale}
+                />
+              )}
+              <IdleRoutePrefetcher locale={locale} />
+              <MobileNav
+                key={`${locale}:${viewerProfile?.id ?? "anonymous"}`}
                 locale={locale}
               />
-              <IdleRoutePrefetcher locale={locale} />
-              <MobileNav locale={locale} />
               <FriemiAlertProvider locale={locale} />
             </div>
           </MobileNavSectionProvider>

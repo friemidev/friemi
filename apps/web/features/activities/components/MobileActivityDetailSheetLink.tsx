@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
-import {
-  detailSheetRetention,
-  detailSheetVisibilityMessage,
-} from "@/features/activities/detailSheetRetention";
+import { detailSheetRetention } from "@/features/activities/detailSheetRetention";
+import { ActivityDetailFrame, getDetailFrameCopy } from "./ActivityDetailFrame";
 
 type MobileActivityDetailSheetLinkProps = {
   children: ReactNode;
@@ -81,7 +79,6 @@ export function MobileActivityDetailSheetLink({
   const [open, setOpen] = useState(false);
   const [retained, setRetained] = useState(false);
   const retentionKey = useRef({});
-  const frameRef = useRef<HTMLIFrameElement>(null);
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
@@ -94,18 +91,12 @@ export function MobileActivityDetailSheetLink({
 
   useEffect(() => {
     if (open && !locked) {
-      detailSheetRetention.retain(retentionKey.current, () => setRetained(false));
+      detailSheetRetention.retain(retentionKey.current, () =>
+        setRetained(false),
+      );
       setRetained(true);
-      router.prefetch(href);
     }
-  }, [href, locked, open, router]);
-
-  useEffect(() => {
-    frameRef.current?.contentWindow?.postMessage(
-      { type: detailSheetVisibilityMessage, visible: open },
-      window.location.origin,
-    );
-  }, [open]);
+  }, [href, locked, open]);
 
   function openFullPage() {
     setOpen(false);
@@ -125,13 +116,15 @@ export function MobileActivityDetailSheetLink({
       <MobileBottomSheet
         ariaLabel={label}
         bodyClassName="overflow-hidden"
-        closeLabel={label}
+        closeLabel={getDetailFrameCopy(locale).close}
         headerAction={
           locked ? undefined : (
             <button
               aria-label={openPageLabel}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95 after:absolute after:-inset-1.5 after:content-['']"
               onClick={openFullPage}
+              onFocus={() => router.prefetch(href)}
+              onPointerEnter={() => router.prefetch(href)}
               title={openPageLabel}
               type="button"
             >
@@ -158,30 +151,16 @@ export function MobileActivityDetailSheetLink({
             </p>
           </div>
         ) : (
-          <iframe
-            ref={frameRef}
-            className="h-full w-full border-0 bg-white"
-            loading="lazy"
-            onLoad={(event) => {
-              const frame = event.currentTarget.contentWindow;
-              try {
-                // A login or another page opened inside the sheet is not a
-                // reusable preview of this activity.
-                if (frame?.location.href !== new URL(sheetHref, window.location.origin).href) {
-                  detailSheetRetention.release(retentionKey.current);
-                  setRetained(false);
-                }
-              } catch {
-                detailSheetRetention.release(retentionKey.current);
-                setRetained(false);
-              }
-              frame?.postMessage(
-                { type: detailSheetVisibilityMessage, visible: open },
-                window.location.origin,
-              );
+          <ActivityDetailFrame
+            key={sheetHref}
+            href={sheetHref}
+            label={label}
+            locale={locale}
+            open={open}
+            onNavigate={() => {
+              detailSheetRetention.release(retentionKey.current);
+              setRetained(false);
             }}
-            src={sheetHref}
-            title={label}
           />
         )}
       </MobileBottomSheet>

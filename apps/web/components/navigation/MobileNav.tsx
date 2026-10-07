@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { useMobileNavSection } from "./MobileNavSectionContext";
+import { usePrimaryTabState } from "@/features/navigation/usePrimaryTabState";
 
 type MobileNavProps = {
   locale: string;
@@ -88,6 +89,8 @@ export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const tabState = usePrimaryTabState(`${pathname}${query ? `?${query}` : ""}`);
   const { sectionOverride } = useMobileNavSection();
   const { unreadDirectMessageCount } = useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
@@ -175,13 +178,18 @@ export function MobileNav({ locale }: MobileNavProps) {
           const Icon = item.icon;
           const baseHref = item.href.split("?")[0] ?? item.href;
           const active = isItemActive(item.href);
+          const href = tabState.href(withLocale(currentLocale, item.href));
           const showUnreadBadge =
             baseHref === "/footprints" && unreadDirectMessageCount > 0;
 
           return (
             <IntentPrefetchLink
               key={item.href}
-              href={withLocale(currentLocale, item.href)}
+              href={href}
+              scroll={tabState.canRestore(href) ? false : undefined}
+              onNavigate={(event) => {
+                if (tabState.navigate(href)) event.preventDefault();
+              }}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               title={item.label}

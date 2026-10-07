@@ -187,28 +187,17 @@ export function RouteMotion() {
     )
       return;
 
-    const surface = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        ".app-layout-shell main:not(main main)",
-      ),
-    ).find(
-      (element) =>
-        element.getBoundingClientRect().width > 0 &&
-        element.getBoundingClientRect().height > 0,
-    );
-    if (!surface) return;
-
-    const targets = getMotionTargets(surface);
-    if (!targets.length) return;
-
-    surface.dataset.friemiRouteSurface = "";
-    document.documentElement.dataset.friemiRouteDirection = direction;
+    let surface: HTMLElement | undefined;
+    let observer: MutationObserver | null = null;
+    let waitTimer = 0;
     const animations: Animation[] = [];
     let cleaned = false;
     const cleanup = () => {
       if (cleaned) return;
       cleaned = true;
-      delete surface.dataset.friemiRouteSurface;
+      observer?.disconnect();
+      window.clearTimeout(waitTimer);
+      if (surface) delete surface.dataset.friemiRouteSurface;
       delete document.documentElement.dataset.friemiRouteDirection;
       if (cancelRef.current === cancel) cancelRef.current = null;
       if (animationsRef.current === animations) animationsRef.current = [];
@@ -219,27 +208,69 @@ export function RouteMotion() {
     };
     cancelRef.current = cancel;
     animationsRef.current = animations;
-    try {
-      const offset =
-        Math.min(32, window.innerWidth * 0.08) *
-        (direction === "back" ? -1 : 1);
-      for (const target of targets) {
-        const animation = target.animate(
-          [
-            { translate: `${offset}px 0` },
-            { translate: "0px 0" },
-          ],
-          { duration: 200, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+    const start = () => {
+      if (cleaned) return;
+      const visible = (element: HTMLElement) =>
+        !element.closest("[data-route-loading], [hidden], [inert]") &&
+        element.getBoundingClientRect().width > 0 &&
+        element.getBoundingClientRect().height > 0;
+      // Streamed chat pages can arrive after the URL commits. Animate the real
+      // viewport once, not the loading shell or an ancestor of fixed controls.
+      surface =
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".app-layout-shell [data-route-motion-surface], .app-layout-shell .mobile-chat-viewport",
+          ),
+        ).find(visible) ??
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".app-layout-shell main:not(main main)",
+          ),
+        ).find(
+          (element) =>
+            visible(element) && !element.querySelector("[data-route-loading]"),
         );
-        animation.id = "friemi-route-slide-in";
-        animations.push(animation);
+      if (!surface) return;
+      observer?.disconnect();
+      window.clearTimeout(waitTimer);
+      if (document.querySelector('[aria-modal="true"], dialog[open]')) {
+        cancel();
+        return;
       }
-      void Promise.all(animations.map((animation) => animation.finished)).then(
-        cleanup,
-        cancel,
+      const targets = getMotionTargets(surface);
+      if (!targets.length) {
+        cancel();
+        return;
+      }
+      surface.dataset.friemiRouteSurface = "";
+      document.documentElement.dataset.friemiRouteDirection = direction;
+      try {
+        const offset =
+          Math.min(32, window.innerWidth * 0.08) *
+          (direction === "back" ? -1 : 1);
+        for (const target of targets) {
+          const animation = target.animate(
+            [{ translate: `${offset}px 0` }, { translate: "0px 0" }],
+            { duration: 200, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+          );
+          animation.id = "friemi-route-slide-in";
+          animations.push(animation);
+        }
+        void Promise.all(
+          animations.map((animation) => animation.finished),
+        ).then(cleanup, cancel);
+      } catch {
+        cancel();
+      }
+    };
+    start();
+    if (!surface && !cleaned) {
+      observer = new MutationObserver(start);
+      observer.observe(
+        document.querySelector(".app-layout-shell") ?? document.body,
+        { childList: true, subtree: true },
       );
-    } catch {
-      cancel();
+      waitTimer = window.setTimeout(cancel, 10_000);
     }
     return cancel;
   }, [pathname, routeKey]);

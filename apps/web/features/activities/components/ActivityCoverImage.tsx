@@ -7,6 +7,7 @@ import {
 } from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { coverFailureCache } from "../coverFailureCache";
 
 type ActivityCoverImageProps = {
   alt?: string;
@@ -51,7 +52,9 @@ function ActivityCoverImageContent({
   const normalizedFallbackSrc = fallbackSrc?.trim() || null;
   const normalizedPrimarySrc = src?.trim() || null;
   const normalizedRecoverySrc = recoverySrc?.trim() || null;
-  const activeSrc = usesRecovery ? normalizedRecoverySrc : normalizedPrimarySrc;
+  const candidateSrc = usesRecovery || coverFailureCache.has(normalizedPrimarySrc)
+    ? normalizedRecoverySrc : normalizedPrimarySrc;
+  const activeSrc = coverFailureCache.has(candidateSrc) ? null : candidateSrc;
   const usesCategoryArtwork =
     isActivityCategoryIllustrationSrc(activeSrc) &&
     activeSrc !== defaultActivityCategoryIllustrationSrc;
@@ -63,7 +66,8 @@ function ActivityCoverImageContent({
       ? activeSrc
       : null;
 
-  const handleSourceFailure = useCallback(() => {
+  const handleSourceFailure = useCallback((rememberFailure = false) => {
+    if (rememberFailure && activeSrc && navigator.onLine) coverFailureCache.fail(activeSrc);
     setHasLoaded(false);
 
     if (
@@ -76,7 +80,7 @@ function ActivityCoverImageContent({
     }
 
     setHasFailed(true);
-  }, [normalizedPrimarySrc, normalizedRecoverySrc, usesRecovery]);
+  }, [activeSrc, normalizedPrimarySrc, normalizedRecoverySrc, usesRecovery]);
 
   useLayoutEffect(() => {
     const image = imageRef.current;
@@ -99,7 +103,7 @@ function ActivityCoverImageContent({
     return () => window.clearTimeout(timeoutId);
   }, [activeSrc, handleSourceFailure, hasFailed, hasLoaded]);
 
-  if ((!src || hasFailed) && !normalizedFallbackSrc) {
+  if ((!activeSrc || hasFailed) && !normalizedFallbackSrc) {
     return (
       <div
         className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[#FEFFF9]"
@@ -165,8 +169,9 @@ function ActivityCoverImageContent({
           fetchPriority={fetchPriority}
           loading={loading}
           referrerPolicy="no-referrer"
-          onError={handleSourceFailure}
+          onError={() => handleSourceFailure(true)}
           onLoad={() => {
+            coverFailureCache.clear(primarySrc);
             rememberCover(primarySrc);
             setHasLoaded(true);
           }}

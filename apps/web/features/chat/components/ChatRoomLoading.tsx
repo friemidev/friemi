@@ -20,6 +20,7 @@ export function ChatRoomLoading() {
     <div
       className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:overflow-hidden max-md:bg-white md:px-5 md:py-8"
       data-chat-loading
+      data-route-loading
     >
       <section
         aria-busy="true"
@@ -41,12 +42,12 @@ export function ChatRoomLoading() {
           </button>
           <div
             aria-hidden="true"
-            className="chat-loading-pulse mx-auto h-4 w-28 rounded bg-[#EDF1EE]"
+            className="friemi-delayed-loader mx-auto h-4 w-28 rounded bg-[#EDF1EE]"
           />
         </header>
         <div
           aria-hidden="true"
-          className="chat-loading-pulse flex min-h-0 flex-1 flex-col justify-end gap-6 overflow-hidden px-4 pb-6"
+          className="friemi-delayed-loader flex min-h-0 flex-1 flex-col justify-end gap-6 overflow-hidden px-4 pb-6"
         >
           {[false, true, false, false, true].map((mine, index) => (
             <div
