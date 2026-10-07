@@ -1,4 +1,4 @@
-import { Search, UserRoundPlus } from "lucide-react";
+import { Search } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantUpgradeClient } from "@/components/admin/MerchantManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -29,9 +29,6 @@ export default async function UpgradeMerchantPage({
       <MerchantAdminHeader
         backHref={withLocale(locale, "/admin/merchants")}
         backLabel="返回店铺列表"
-        description="查找 Friemi 用户，开通店家身份和默认店铺。"
-        eyebrow="店铺管理"
-        icon={UserRoundPlus}
         title="升级 Friemi 账号"
       />
 

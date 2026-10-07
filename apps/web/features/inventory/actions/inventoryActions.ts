@@ -101,7 +101,7 @@ export async function createTicketDefinitionAction(
   });
   if (!parsed.success) return { status: "INVALID" };
 
-  const actor = await ensureCurrentUserProfile(locale, "/admin/items/tickets");
+  const actor = await ensureCurrentUserProfile(locale, "/admin/merchants?view=items");
   if (actor.status !== "ACTIVE") return { status: "FORBIDDEN" };
   try {
     const definition = await createTicketDefinition({
@@ -112,6 +112,7 @@ export async function createTicketDefinitionAction(
       totalSupply: parsed.data.totalSupply,
     });
     revalidatePath(withLocale(locale, "/admin/items/tickets"));
+    revalidatePath(withLocale(locale, "/admin/merchants"));
     return { definitionId: definition.id, status: "CREATED" };
   } catch (error) {
     console.error("Failed to create inventory ticket definition", error);
@@ -131,7 +132,7 @@ export async function setTicketGiftableAction(
     return { status: "INVALID" };
   }
 
-  const actor = await ensureCurrentUserProfile(locale, "/admin/items/tickets");
+  const actor = await ensureCurrentUserProfile(locale, "/admin/merchants?view=items");
   if (actor.status !== "ACTIVE") return { status: "FORBIDDEN" };
 
   try {
@@ -141,6 +142,7 @@ export async function setTicketGiftableAction(
     });
     if (!updated) return { status: "INVALID" };
     revalidatePath(withLocale(locale, "/admin/items/tickets"));
+    revalidatePath(withLocale(locale, "/admin/merchants"));
     revalidatePath(withLocale(locale, "/profile/bag"));
     revalidatePath(withLocale(locale, `/profile/bag/items/${definitionId}`));
     return { status: "UPDATED" };
@@ -166,7 +168,7 @@ export async function issueTicketBatchAction(
     return { status: "INVALID" };
   }
 
-  const actor = await ensureCurrentUserProfile(locale, "/admin/items/tickets");
+  const actor = await ensureCurrentUserProfile(locale, "/admin/merchants?view=items");
   if (actor.status !== "ACTIVE") return { status: "FORBIDDEN" };
   try {
     const result = await issueTicketBatch({
@@ -175,6 +177,7 @@ export async function issueTicketBatchAction(
     });
     if (result.status !== "ISSUED") return { status: result.status };
     revalidatePath(withLocale(locale, "/admin/items/tickets"));
+    revalidatePath(withLocale(locale, "/admin/merchants"));
     revalidatePath(withLocale(locale, "/profile/bag"));
     return result;
   } catch (error) {

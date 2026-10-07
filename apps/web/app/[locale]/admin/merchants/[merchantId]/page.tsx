@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, Ticket } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import {
   MerchantCouponManagementClient,
@@ -45,8 +45,6 @@ export default async function MerchantDetailPage({
         backHref={withLocale(locale, "/admin/merchants")}
         backLabel="返回店铺列表"
         description={merchant.description}
-        eyebrow="单店管理 · 优惠券"
-        icon={Ticket}
         title={merchant.name}
       />
 

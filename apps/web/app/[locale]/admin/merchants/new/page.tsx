@@ -1,4 +1,3 @@
-import { Store } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantCreateClient } from "@/components/admin/MerchantManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -22,9 +21,6 @@ export default async function NewMerchantPage({
       <MerchantAdminHeader
         backHref={withLocale(locale, "/admin/merchants")}
         backLabel="返回店铺列表"
-        description="填写店铺的基本资料。创建后可继续分配优惠券样式。"
-        eyebrow="店铺管理"
-        icon={Store}
         title="添加合作店铺"
       />
 

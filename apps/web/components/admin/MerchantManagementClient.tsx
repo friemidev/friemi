@@ -58,16 +58,8 @@ export function MerchantManagementClient({
   }, [initialMerchants, query]);
 
   return (
-    <section aria-labelledby="merchant-list-title" className="space-y-4">
-      <div className="flex flex-col gap-4 rounded-2xl border border-[#DFE8DA] bg-white p-4 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.5)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div>
-          <h2 className="text-lg font-bold text-[#1D3024]" id="merchant-list-title">
-            店铺列表
-          </h2>
-          <p className="mt-1 text-sm text-[#617063]">
-            找到店铺后，可进入详情管理优惠券。
-          </p>
-        </div>
+    <section aria-label="店铺列表" className="space-y-4">
+      <div className="flex justify-end">
         <label className="relative block w-full sm:w-80">
           <Search
             aria-hidden="true"
@@ -84,10 +76,10 @@ export function MerchantManagementClient({
       </div>
 
       {merchants.length > 0 ? (
-        <div className="grid gap-3">
+        <div className="overflow-hidden rounded-2xl bg-white">
           {merchants.map((merchant) => (
             <article
-              className="grid gap-4 rounded-2xl border border-[#DFE8DA] bg-white p-4 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] transition hover:border-[#BFD7C5] hover:shadow-[0_16px_32px_-26px_rgba(29,65,44,0.5)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5"
+              className="grid gap-4 p-4 transition hover:bg-[#FAFCF9] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#EEF2EA]"
               key={merchant.id}
             >
               <div className="flex min-w-0 gap-3">
@@ -109,9 +101,6 @@ export function MerchantManagementClient({
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#58675B]">
-                    {merchant.description}
-                  </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-[#718074]">
                     <span>{merchant.address || merchant.city}</span>
                     <span>{merchant.activityCount} 个关联活动</span>
@@ -147,18 +136,13 @@ export function MerchantManagementClient({
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-[#C9DBCB] bg-white px-5 py-14 text-center">
+        <div className="rounded-2xl bg-white px-5 py-14 text-center">
           <Building2
             aria-hidden="true"
             className="mx-auto h-8 w-8 text-[#84A58C]"
           />
           <p className="mt-3 text-sm font-semibold text-ink">
             {initialMerchants.length === 0 ? "还没有店铺" : "没有匹配的店铺"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-500">
-            {initialMerchants.length === 0
-              ? "可以添加合作店铺，或将 Friemi 账号升级为店家。"
-              : "请更换店名、城市或店家账号关键词。"}
           </p>
         </div>
       )}
@@ -358,7 +342,7 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
   }
 
   return (
-    <form className="space-y-7" onSubmit={submitMerchant}>
+    <form className="space-y-8 rounded-2xl bg-white p-5 sm:p-6" onSubmit={submitMerchant}>
       <Toaster closeButton position="top-center" richColors />
       <FormSection description="用于店铺列表和公开主页展示。" title="基本信息">
         <div className="grid gap-4 md:grid-cols-2">
@@ -470,7 +454,7 @@ export function MerchantCreateClient({ locale }: { locale: string }) {
         </div>
       </FormSection>
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-[#DFE8DA] bg-white p-4 sm:p-5">
+      <div className="flex flex-wrap gap-3 pt-1">
         <Button className="h-11 min-w-36 rounded-xl bg-[#176B49] hover:bg-[#105838]" disabled={!canSave} type="submit">
           {isSaving ? (
             <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
@@ -597,10 +581,10 @@ export function MerchantCouponManagementClient({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-9 rounded-2xl bg-white p-5 sm:p-6">
       <Toaster closeButton position="top-center" richColors />
 
-      <section className="space-y-5 rounded-2xl border border-[#DFE8DA] bg-white p-5 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] sm:p-6" aria-labelledby="assigned-coupons-title">
+      <section className="space-y-4" aria-labelledby="assigned-coupons-title">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2
@@ -609,9 +593,6 @@ export function MerchantCouponManagementClient({
             >
               已分配样式
             </h2>
-            <p className="mt-1 text-sm text-[#617063]">
-              店家发布优惠券时可以从这些样式中选择。
-            </p>
           </div>
           <span className="shrink-0 rounded-full bg-[#E7F2E9] px-3 py-1 text-xs font-bold text-[#176B49]">
             {coupons.length} 种
@@ -621,7 +602,7 @@ export function MerchantCouponManagementClient({
           <div className="grid gap-3 sm:grid-cols-2">
             {coupons.map((coupon) => (
               <div
-                className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E5EBE1] bg-[#FAFCF9] p-3"
+                className="flex min-w-0 items-center gap-3 rounded-xl bg-[#F6F8F3] p-3"
                 key={coupon.id}
               >
                 {coupon.imageUrl ? (
@@ -655,11 +636,11 @@ export function MerchantCouponManagementClient({
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-dashed border-[#D7E2D5] bg-[#FAFCF9] px-4 py-7 text-center text-sm text-[#617063]">暂未分配优惠券样式，可从下方选择平台样式。</p>
+          <p className="rounded-xl bg-[#F6F8F3] px-4 py-7 text-center text-sm text-[#617063]">暂无已分配样式</p>
         )}
       </section>
 
-      <section aria-labelledby="platform-template-title" className="space-y-5 rounded-2xl border border-[#DFE8DA] bg-white p-5 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] sm:p-6">
+      <section aria-labelledby="platform-template-title" className="space-y-4">
         <div>
           <h2
             className="text-lg font-bold text-[#1D3024]"
@@ -667,12 +648,9 @@ export function MerchantCouponManagementClient({
           >
             分配平台样式
           </h2>
-          <p className="mt-1 text-sm text-[#617063]">
-            选择 Friemi 已设计的优惠券样式并绑定到此店铺。
-          </p>
         </div>
         {selectedTemplate ? (
-          <div className="grid gap-5 rounded-xl border border-[#E5EBE1] bg-[#FAFCF9] p-4 md:grid-cols-[15rem_minmax(0,1fr)] md:items-start">
+          <div className="grid gap-5 rounded-xl bg-[#F6F8F3] p-4 md:grid-cols-[15rem_minmax(0,1fr)] md:items-start">
             <Image
               alt={selectedTemplate.title}
               className="aspect-[4/3] w-full rounded-xl object-cover ring-1 ring-[#D7E2D5]"
@@ -721,15 +699,12 @@ export function MerchantCouponManagementClient({
         ) : null}
       </section>
 
-      <section aria-labelledby="custom-coupon-title" className="space-y-5 rounded-2xl border border-[#DFE8DA] bg-white p-5 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] sm:p-6">
+      <section aria-labelledby="custom-coupon-title" className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-[#1D3024]" id="custom-coupon-title">
               自定义样式
             </h2>
-            <p className="mt-1 text-sm text-[#617063]">
-              平台样式不适用时，再为该店铺建立专属样式。
-            </p>
           </div>
           <Button
             className="h-11 rounded-xl"
@@ -743,7 +718,7 @@ export function MerchantCouponManagementClient({
         </div>
 
         {isCustomOpen ? (
-          <form className="space-y-4 border-t border-[#E5EBE1] pt-5" onSubmit={createCustomCoupon}>
+          <form className="space-y-4 pt-3" onSubmit={createCustomCoupon}>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label="优惠券名称 *">
                 <Input
@@ -857,7 +832,7 @@ function FormSection({
   title: string;
 }) {
   return (
-    <section className="space-y-5 rounded-2xl border border-[#DFE8DA] bg-white p-5 shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] sm:p-6">
+    <section className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-[#1D3024]">{title}</h2>
         <p className="mt-1 text-sm text-[#617063]">{description}</p>
@@ -873,7 +848,7 @@ export function MerchantSummary({
   merchant: AdminMerchantListItem;
 }) {
   return (
-    <div className="grid gap-3 rounded-2xl border border-[#DFE8DA] bg-white p-5 text-sm text-[#58675B] shadow-[0_12px_30px_-26px_rgba(29,65,44,0.45)] sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 text-sm text-[#58675B] sm:grid-cols-2 lg:grid-cols-4">
       <InfoLine icon={MapPin} text={merchant.address || merchant.city} />
       <InfoLine
         icon={UserRoundCheck}

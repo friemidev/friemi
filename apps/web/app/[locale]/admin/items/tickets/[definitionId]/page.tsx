@@ -54,7 +54,10 @@ export default async function AdminTicketHistoryPage({
     <PageContainer className="max-w-3xl space-y-5 pb-28 pt-5 md:pb-12 md:pt-10">
       <Link
         className="inline-flex items-center gap-2 text-sm font-bold text-[#156240]"
-        href={withLocale(locale, "/admin/items/tickets")}
+        href={withLocale(
+          locale,
+          `/admin/merchants?view=items&ticket=${encodeURIComponent(definitionId)}`,
+        )}
       >
         <ArrowLeft className="h-4 w-4" /> {copy.admin}
       </Link>

@@ -17,7 +17,13 @@ import { FriemiRecipientPicker } from "./FriemiRecipientPicker";
 const fieldClassName =
   "w-full rounded-xl border border-[#D6D5B2] bg-white px-3 py-3 text-base text-[#111210] outline-none focus:border-[#156240] focus:ring-2 focus:ring-[#156240]/20";
 
-export function CreateTicketDefinitionForm({ locale }: { locale: string }) {
+export function CreateTicketDefinitionForm({
+  locale,
+  showHeading = true,
+}: {
+  locale: string;
+  showHeading?: boolean;
+}) {
   const copy = getInventoryCopy(locale);
   const router = useRouter();
   const [state, action, pending] = useActionState<
@@ -31,9 +37,13 @@ export function CreateTicketDefinitionForm({ locale }: { locale: string }) {
 
   return (
     <section className="rounded-[1.3rem] bg-white p-5 ring-1 ring-[#D6D5B2] sm:p-6">
-      <h2 className="text-lg font-bold text-[#111210]">{copy.create}</h2>
-      <p className="mt-1 text-sm text-[#6C746A]">{copy.ticketHint}</p>
-      <form action={action} className="mt-5 grid gap-4">
+      {showHeading ? (
+        <>
+          <h2 className="text-lg font-bold text-[#111210]">{copy.create}</h2>
+          <p className="mt-1 text-sm text-[#6C746A]">{copy.ticketHint}</p>
+        </>
+      ) : null}
+      <form action={action} className={`grid gap-4 ${showHeading ? "mt-5" : ""}`}>
         <input name="locale" readOnly type="hidden" value={locale} />
         <label className="grid gap-2 text-sm font-bold text-[#263B2E]">
           {copy.title}
