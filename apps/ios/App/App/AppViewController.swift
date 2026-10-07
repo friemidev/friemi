@@ -1,4 +1,5 @@
 import Capacitor
+import CapacitorKeyboard
 import UIKit
 import WebKit
 
@@ -11,6 +12,10 @@ class AppViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        // Register only if auto-discovery missed it; duplicate loads toggle the accessory override.
+        if bridge?.plugin(withName: "Keyboard") == nil {
+            bridge?.registerPluginInstance(KeyboardPlugin())
+        }
         bridge?.registerPluginInstance(FriemiNavigationPlugin())
         capacitorUIDelegate = webView?.uiDelegate
         webView?.uiDelegate = self

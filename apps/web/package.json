@@ -6,6 +6,8 @@
   "scripts": {
     "aa:preview": "node scripts/build-aa-preview.mjs && node scripts/serve-aa-preview.mjs",
     "dev": "next dev",
+    "ios:sync": "cap sync ios && npm run ios:verify-keyboard",
+    "ios:verify-keyboard": "tsx scripts/verify-ios-keyboard.ts",
     "build": "prisma generate --schema=prisma/schema.prisma && node scripts/verify-prisma-client.cjs && next build",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",

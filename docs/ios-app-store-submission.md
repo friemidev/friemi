@@ -351,6 +351,20 @@ https://www.friemi.com/safety
 
 ### E. iOS 推送和系统能力
 
+#### 键盘工具栏与 @ 成员列表验收
+
+输入框上方的上下箭头和完成按钮属于 iOS WebView 的原生 accessory bar，不是网页元素。网页 CSS 无法移除它；未包含 `CapacitorKeyboard` 的旧 App 必须更新安装包，不能只部署网站。
+
+在 macOS 上，从包含本次修改的代码执行：
+
+```bash
+npm run ios:sync --workspace=apps/web
+```
+
+此命令执行 Capacitor/CocoaPods 同步，并核对 `Podfile.lock`、已安装 Pods 和插件注册清单。之后用 Xcode 打开 `apps/ios/App/App.xcworkspace`，重新 Archive 并通过 TestFlight/App Store 分发。同步后生成的 `Podfile.lock` 应包含 `CapacitorKeyboard`；不要手写锁文件冒充已安装，也不要跳过同步直接复用旧 Archive。
+
+真机确认：聚吧群聊与星球群聊输入 @ 后，标题和搜索框可见，成员列表可上下滚动；点击搜索时键盘弹出但不遮住列表；选人后昵称插入原光标处。聊天、晒晒评论和搜索输入框上方不再出现上下箭头/完成栏，系统键盘、中文候选词和正常输入功能保留。Safari 网页没有 App 原生插件，不能用它来验收工具栏隐藏。
+
 - 已完成的代码侧内容：
   - 安装 `@capacitor/push-notifications`
   - iOS AppDelegate 补 APNs 注册成功/失败回调
