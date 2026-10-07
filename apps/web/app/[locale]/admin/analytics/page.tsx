@@ -153,7 +153,6 @@ function getCopy(locale: string) {
       sectionOverview: "Vue d'ensemble",
       sectionSources: "Sources",
       seeReports: "Traiter les signalements",
-      seeScraper: "Gérer les imports",
       shareTitle: "Partage",
       sourceClicks: "Clics source",
       sourceSurfaceTitle: "Entrées des groupes",
@@ -269,7 +268,6 @@ function getCopy(locale: string) {
       sectionOverview: "Overview",
       sectionSources: "Sources",
       seeReports: "Review reports",
-      seeScraper: "Manage imports",
       shareTitle: "Sharing",
       sourceClicks: "Source clicks",
       sourceSurfaceTitle: "Crew entry points",
@@ -381,7 +379,6 @@ function getCopy(locale: string) {
     sectionOverview: "总览",
     sectionSources: "来源价值",
     seeReports: "处理举报",
-    seeScraper: "管理导入",
     shareTitle: "分享传播",
     sourceClicks: "来源点击",
     sourceSurfaceTitle: "聚吧入口来源",
@@ -565,7 +562,6 @@ function getFocusItems(
   ) {
     items.push({
       body: copy.publicEventBody,
-      href: "/admin/data-scraper",
       severity: "watch",
       title: copy.publicEventTitle,
     });
@@ -594,7 +590,6 @@ function getFocusItems(
   if (dashboard.publicEventSources.length === 0) {
     items.push({
       body: copy.noSourcesBody,
-      href: "/admin/data-scraper",
       severity: "watch",
       title: copy.noSourcesTitle,
     });
@@ -1658,22 +1653,13 @@ export default async function AdminAnalyticsPage({
             </div>
 
             <div>
-              <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-                <div>
-                  <h2 className="text-lg font-semibold text-ink">
-                    {t.publicEventSources}
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-zinc-500">
-                    {t.publicEventSourcesDescription}
-                  </p>
-                </div>
-                <Link
-                  className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                  href={withLocale(locale, "/admin/data-scraper")}
-                >
-                  <span className="truncate">{t.seeScraper}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.publicEventSources}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  {t.publicEventSourcesDescription}
+                </p>
               </div>
 
               {dashboard.publicEventSources.length > 0 ? (

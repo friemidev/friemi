@@ -11,7 +11,5 @@ type AdminPageProps = {
 
 export default async function AdminPage({ params }: AdminPageProps) {
   const { locale } = await params;
-  redirect(withLocale(locale, "/admin/data-scraper"));
+  redirect(withLocale(locale, "/admin/merchants"));
 }
-
-

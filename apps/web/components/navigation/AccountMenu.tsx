@@ -10,7 +10,6 @@ import {
   Check,
   Copy,
   KeyRound,
-  LayoutDashboard,
   LogOut,
   MessageCircle,
   Settings,
@@ -149,7 +148,6 @@ export function AccountMenu({
   const accountSettingsHref = withLocale(locale, "/account/settings");
   const accountSecurityHref = withLocale(locale, "/account/security");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
-  const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
   const profileActive =
@@ -361,13 +359,6 @@ export function AccountMenu({
                   icon={BarChart3}
                   label={t.analyticsOps}
                   active={pathname.startsWith(analyticsOpsHref)}
-                  onClick={closeMenu}
-                />
-                <MenuLink
-                  href={activityOpsHref}
-                  icon={LayoutDashboard}
-                  label={t.activityOps}
-                  active={pathname.startsWith(activityOpsHref)}
                   onClick={closeMenu}
                 />
                 <MenuLink

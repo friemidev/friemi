@@ -55,10 +55,16 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
 
 function shouldHideHeader(pathname: string, locale: string) {
   const localizedPollPath = withLocale(locale, "/poll");
+  const localizedMerchantAdminPath = withLocale(locale, "/admin/merchants");
+  const localizedTicketAdminPath = withLocale(locale, "/admin/items/tickets");
 
   return (
     pathname === localizedPollPath ||
-    pathname.startsWith(`${localizedPollPath}/`)
+    pathname.startsWith(`${localizedPollPath}/`) ||
+    pathname === localizedMerchantAdminPath ||
+    pathname.startsWith(`${localizedMerchantAdminPath}/`) ||
+    pathname === localizedTicketAdminPath ||
+    pathname.startsWith(`${localizedTicketAdminPath}/`)
   );
 }
 

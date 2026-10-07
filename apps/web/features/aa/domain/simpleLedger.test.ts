@@ -43,6 +43,8 @@ test("six-person reference and partial payment followed by new expense", () => {
   const mike = state.records.find(r => r.source === AA_SETTLEMENT && r.from === "Mike")!;
   const others = state.records.filter(r => r.source === AA_SETTLEMENT && r.id !== mike.id);
   state = command({ ...state, viewerId: "Mike", canManage: false }, { intent: "pay", recordId: mike.id });
+  assert.equal(state.records.find(r => r.id === mike.id)!.status, "PENDING_CONFIRMATION");
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: mike.id });
   assert.deepEqual(state.records.filter(r => r.source === AA_SETTLEMENT && r.id !== mike.id), others);
   state = command({ ...state, viewerId: "Lou", canManage: true }, { intent: "reopen" });
   assert.equal(state.records.find(r => r.id === mike.id)!.status, "POSTED");
@@ -54,24 +56,69 @@ test("six-person reference and partial payment followed by new expense", () => {
   ]);
 });
 
-test("payment is credited once, payer-only, stale requests fail and fixed plan is conserved", () => {
+test("payer marks paid, recipient confirms once, stale requests fail and fixed plan is conserved", () => {
   let state = command(createAaExample(), { intent: "start" });
   const payment = state.records.find(r => r.source === AA_SETTLEMENT)!;
   const old = structuredClone(state);
   assert.throws(() => command({ ...state, viewerId: "Amy", canManage: false }, { intent: "pay", recordId: payment.id }), /FORBIDDEN/);
+  assert.throws(() => command(state, { intent: "receive", recordId: payment.id }), /FORBIDDEN/);
   state = command(state, { intent: "pay", recordId: payment.id });
-  assert.deepEqual(balances(state), { Amy: 200, Kevin: 0, Lou: -200 });
+  assert.equal(state.records.find(r => r.id === payment.id)!.status, "PENDING_CONFIRMATION");
+  assert.equal(state.records.find(r => r.id === payment.id)!.receivedAt, null);
+  assert.deepEqual(balances(state), { Amy: 200, Kevin: 500, Lou: -700 });
   assert.deepEqual(command(state, { intent: "pay", recordId: payment.id }), state);
   assert.throws(() => applyAaCommand(state, { intent: "pay", recordId: payment.id, expectedVersion: old.version, operationId: "stale" }, "2026-10-02T12:00:00Z"), /STALE_VERSION/);
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: payment.id });
+  assert.deepEqual(balances(state), { Amy: 200, Kevin: 0, Lou: -200 });
+  assert.equal(state.records.find(r => r.id === payment.id)!.status, "POSTED");
+  assert.ok(state.records.find(r => r.id === payment.id)!.receivedAt);
+  assert.deepEqual(command(state, { intent: "receive", recordId: payment.id }), state);
+  assert.deepEqual(command({ ...state, viewerId: "Lou", canManage: true }, { intent: "pay", recordId: payment.id }).records, state.records);
   assertSimplePlan(state);
+});
+
+test("recipient can confirm receipt before payer marks paid", () => {
+  let state = command(createAaExample(), { intent: "start" });
+  const payment = state.records.find(r => r.source === AA_SETTLEMENT && r.to === "Kevin")!;
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: payment.id });
+  const confirmed = state.records.find(r => r.id === payment.id)!;
+  assert.equal(confirmed.status, "POSTED");
+  assert.equal(confirmed.paidAt, null);
+  assert.ok(confirmed.receivedAt);
+  assert.deepEqual(balances(state), { Amy: 200, Kevin: 0, Lou: -200 });
+  assert.deepEqual(command({ ...state, viewerId: "Lou", canManage: true }, { intent: "pay", recordId: payment.id }).records, state.records);
+});
+
+test("a marked but unconfirmed payment blocks reopening until the payer undoes the mark", () => {
+  let state = command(createAaExample(), { intent: "start" });
+  const payment = state.records.find(r => r.source === AA_SETTLEMENT && r.to === "Kevin")!;
+  state = command(state, { intent: "pay", recordId: payment.id });
+  assert.throws(() => command(state, { intent: "reopen" }), /BLOCKED/);
+  assert.throws(() => command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "undoPay", recordId: payment.id }), /FORBIDDEN/);
+  state = command(state, { intent: "undoPay", recordId: payment.id });
+  assert.equal(state.records.find(r => r.id === payment.id)!.paidAt, null);
+  assert.deepEqual(command(state, { intent: "undoPay", recordId: payment.id }), state);
+  state = command(state, { intent: "reopen" });
+  assert.equal(state.status, "ACTIVE");
+});
+
+test("recipient confirmation of an older payer-posted payment keeps its existing balance", () => {
+  let state = command(createAaExample(), { intent: "start" });
+  const payment = state.records.find(r => r.source === AA_SETTLEMENT && r.to === "Kevin")!;
+  state = { ...state, records: state.records.map(r => r.id === payment.id ? { ...r, status: "POSTED", paidAt: "2026-10-02T10:00:00Z" } : r) };
+  const before = balances(state);
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: payment.id });
+  assert.deepEqual(balances(state), before);
+  assert.ok(state.records.find(r => r.id === payment.id)!.receivedAt);
 });
 
 test("recipient dispute reserves paid money, pauses new payments, resolves without duplicate debit", () => {
   let state = command(createAaExample(), { intent: "start" });
   const payment = state.records.find(r => r.source === AA_SETTLEMENT && r.to === "Kevin")!;
   state = command(state, { intent: "pay", recordId: payment.id });
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: payment.id });
   const before = balances(state);
-  assert.throws(() => command(state, { intent: "dispute", recordId: payment.id }), /FORBIDDEN/);
+  assert.throws(() => command({ ...state, viewerId: "Lou", canManage: true }, { intent: "dispute", recordId: payment.id }), /FORBIDDEN/);
   state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "dispute", recordId: payment.id });
   assert.deepEqual(balances(state), before);
   assert.throws(() => command({ ...state, viewerId: "Lou", canManage: true }, { intent: "reopen" }), /BLOCKED/);
@@ -86,6 +133,7 @@ test("late dispute after re-settlement, then verified unpaid, cancels replacemen
   let state = command(createAaExample(), { intent: "start" });
   const payment = state.records.find(r => r.source === AA_SETTLEMENT && r.to === "Kevin")!;
   state = command(state, { intent: "pay", recordId: payment.id });
+  state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "receive", recordId: payment.id });
   state = command(state, { intent: "reopen" }); state = command(state, { intent: "start" });
   state = command({ ...state, viewerId: "Kevin", canManage: false }, { intent: "dispute", recordId: payment.id });
   assertSimplePlan(state);
@@ -112,7 +160,7 @@ test("editing, permissions, frozen ledger, invalid decimals, deleted ID, empty b
 test("deleted expenses after paid settlement still generate reversal refunds", () => {
   let state = command(createAaExample("ten"), { intent: "start" });
   const expense = state.records[0];
-  for (const r of state.records.filter(r => r.source === AA_SETTLEMENT)) state = command({ ...state, viewerId: r.from!, canManage: false }, { intent: "pay", recordId: r.id });
+  for (const r of state.records.filter(r => r.source === AA_SETTLEMENT)) state = command({ ...state, viewerId: r.to!, canManage: false }, { intent: "receive", recordId: r.id });
   state = command({ ...state, viewerId: "Lou", canManage: true }, { intent: "reopen" });
   state = command(state, { intent: "delete", recordId: expense.id });
   state = command(state, { intent: "start" });
@@ -140,7 +188,7 @@ test("10,000 varied splits and plans conserve cents, have no self transfers, and
     state = command(state, { intent: "start" });
     for (const payment of state.records.filter(r => r.source === AA_SETTLEMENT)) {
       assert.notEqual(payment.from, payment.to); assert.ok(BigInt(payment.amount) > 0n);
-      state = command({ ...state, viewerId: payment.from!, canManage: false }, { intent: "pay", recordId: payment.id });
+      state = command({ ...state, viewerId: payment.to!, canManage: false }, { intent: "receive", recordId: payment.id });
     }
     assert.ok(simpleBalances(state).every(p => p.balanceMinor === 0n));
   }

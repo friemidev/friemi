@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.app-layout-shell:has(.merchant-admin-page) {
+  background: #f6f8f3;
+}
+
 @font-face {
   font-family: "Friemi Latin";
   src: url("/font/Plus_Jakarta_Sans/PlusJakartaSans-FriemiLatin.woff2")

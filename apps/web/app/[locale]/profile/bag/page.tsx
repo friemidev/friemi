@@ -38,6 +38,7 @@ export default async function ProfileBagPage({
           blindBoxCheckCount: 0,
           checks: [],
           coupons: [],
+          inventoryItems: [],
           coinBalance: {
             balance: 0,
             earnedTotal: 0,
