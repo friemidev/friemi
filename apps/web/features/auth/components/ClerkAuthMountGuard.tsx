@@ -1,10 +1,11 @@
 "use client";
 
-import { registerPlugin } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { SignIn, SignUp, useAuth, useSignIn } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
+import { promoteIOSAuthToMainFrame } from "../iosAuthFrame";
 import { AndroidBrowserSignIn } from "./AndroidBrowserSignIn";
 
 type NativeAuthProvider = "apple" | "google";
@@ -114,6 +115,8 @@ export function ClerkAuthMountGuard({
   }
 
   useEffect(() => {
+    if (promoteIOSAuthToMainFrame(window)) return;
+
     const userAgent = window.navigator.userAgent;
     document.documentElement.dataset.friemiAuthPage = "true";
     setMounted(true);
@@ -304,6 +307,11 @@ function NativeIOSAuthButtons({
       return;
     }
 
+    if (!Capacitor.isPluginAvailable("FriemiNavigation")) {
+      setErrorMessage(copy.unavailable);
+      return;
+    }
+
     setBusyProvider(provider);
     setErrorMessage(null);
 
@@ -353,7 +361,18 @@ function NativeIOSAuthButtons({
 
       throw new Error(copy.error);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : copy.error);
+      const unavailable =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "UNIMPLEMENTED";
+      setErrorMessage(
+        unavailable
+          ? copy.unavailable
+          : error instanceof Error
+            ? error.message
+            : copy.error,
+      );
     } finally {
       setBusyProvider(null);
     }
@@ -387,7 +406,10 @@ function NativeIOSAuthButtons({
         </button>
       </div>
       {errorMessage ? (
-        <p className="rounded-[0.9rem] bg-[#FFF1EF] px-3 py-2 text-center text-xs font-bold text-[#B5301F]">
+        <p
+          role="alert"
+          className="rounded-[0.9rem] bg-[#FFF1EF] px-3 py-2 text-center text-xs font-bold text-[#B5301F]"
+        >
           {errorMessage}
         </p>
       ) : null}
@@ -402,6 +424,8 @@ function getNativeAuthCopy(locale: string, mode: "sign-in" | "sign-up") {
       error: "登录失败，请稍后再试。",
       google: "使用 Google 继续",
       loading: "正在打开...",
+      unavailable:
+        "当前页面无法打开原生登录，请返回“我的”重试，或使用下方邮箱登录。",
       title: mode === "sign-up" ? "在 App 内注册" : "在 App 内登录",
     };
   }
@@ -412,6 +436,8 @@ function getNativeAuthCopy(locale: string, mode: "sign-in" | "sign-up") {
       error: "La connexion a échoué. Réessayez plus tard.",
       google: "Continuer avec Google",
       loading: "Ouverture...",
+      unavailable:
+        "Connexion native indisponible sur cette page. Réessayez depuis votre profil ou connectez-vous par e-mail ci-dessous.",
       title:
         mode === "sign-up" ? "Inscription dans l'app" : "Connexion dans l'app",
     };
@@ -422,6 +448,8 @@ function getNativeAuthCopy(locale: string, mode: "sign-in" | "sign-up") {
     error: "Sign-in failed. Please try again.",
     google: "Continue with Google",
     loading: "Opening...",
+    unavailable:
+      "Native sign-in is unavailable on this page. Try again from your profile or sign in with email below.",
     title: mode === "sign-up" ? "Sign up in app" : "Sign in in app",
   };
 }
