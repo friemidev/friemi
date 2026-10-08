@@ -48,6 +48,7 @@ import {
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 import { werewolfAtmospheres } from "@/features/game-tools/werewolfCardAssets";
 import { getWerewolfExitHref } from "@/features/game-tools/werewolfRoomLinks";
+import { canLeaveWerewolfOccupancy } from "@/features/game-tools/werewolfRoomAccess";
 import {
   canUseWerewolfAntidote,
   createInitialWerewolfFlowState,
@@ -1995,11 +1996,14 @@ export async function leaveWerewolfSeatAction(
       return { formError: t.leaveFailed };
     }
 
-    if (member?.profileId && profile?.id !== member.profileId) {
-      return { formError: t.leaveFailed };
-    }
-
-    if (targetSeat?.profileId && profile?.id !== targetSeat.profileId) {
+    if (
+      !canLeaveWerewolfOccupancy({
+        hasPrivateToken: Boolean(result.data.privateToken),
+        memberProfileId: member?.profileId ?? null,
+        seatProfileId: targetSeat?.profileId ?? null,
+        viewerProfileId: profile?.id ?? null,
+      })
+    ) {
       return { formError: t.leaveFailed };
     }
 

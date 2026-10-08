@@ -18,13 +18,19 @@ import {
   Eye,
   EyeOff,
   Flag,
+  LogOut,
   Sparkles,
   TimerReset,
   Moon,
   ShieldCheck,
   UsersRound,
+  X,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import {
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+  DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+} from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfFlowPanel } from "@/features/game-tools/components/WerewolfFlowPanel";
 import {
   finishWerewolfRoomAction,
@@ -129,10 +135,15 @@ type Copy = {
   back: string;
   boundary: string;
   cancel: string;
+  close: string;
   confirmReveal: string;
   dead: string;
   deathBody: string;
   deathTitle: string;
+  exitGame: string;
+  exitGameBody: string;
+  exitGameConfirm: string;
+  exitGameTitle: string;
   finishGame: string;
   finishGood: string;
   finishGoodConfirm: string;
@@ -167,6 +178,7 @@ type Copy = {
   start: string;
   startConfirm: string;
   started: string;
+  stayGame: string;
   statusError: string;
   unready: string;
   visibleFor: string;
@@ -183,10 +195,15 @@ const copies: Record<string, Copy> = {
     back: "返回房间",
     boundary: "听法官主持，手机只看身份。",
     cancel: "先不看",
+    close: "关闭",
     confirmReveal: "查看身份",
     dead: "出局",
     deathBody: "你已出局，留在房间看结算。",
     deathTitle: "你已出局",
+    exitGame: "退出游戏",
+    exitGameBody: "退出后你将离开本局，当前座位会显示为已离开。",
+    exitGameConfirm: "确认退出",
+    exitGameTitle: "退出本局？",
     finishGame: "结束游戏",
     finishGood: "好人阵营获胜",
     finishGoodConfirm: "好人阵营获胜，结束本局？",
@@ -229,6 +246,7 @@ const copies: Record<string, Copy> = {
     start: "发身份",
     startConfirm: "发身份后座位会锁定，确定开局？",
     started: "游戏已开始",
+    stayGame: "继续游戏",
     statusError: "没改成功，再试一次。",
     unready: "取消准备",
     visibleFor: "剩余",
@@ -243,10 +261,16 @@ const copies: Record<string, Copy> = {
     back: "Back to room",
     boundary: "Keep speeches, votes, and night calls at the table.",
     cancel: "Cancel",
+    close: "Close",
     confirmReveal: "Reveal role",
     dead: "Dead",
     deathBody: "You are out. Stay in the room for the result.",
     deathTitle: "You are out",
+    exitGame: "Exit game",
+    exitGameBody:
+      "You will leave this game and your seat will be marked as left.",
+    exitGameConfirm: "Exit game",
+    exitGameTitle: "Exit this game?",
     finishGame: "End game",
     finishGood: "Good team wins",
     finishGoodConfirm: "End the game and mark the good team as winner?",
@@ -292,6 +316,7 @@ const copies: Record<string, Copy> = {
     startConfirm:
       "Start the game and randomly deal roles? Seats lock after this.",
     started: "Game started",
+    stayGame: "Stay in game",
     statusError: "That did not go through. Try again.",
     unready: "Cancel ready",
     visibleFor: "Left",
@@ -306,10 +331,16 @@ const copies: Record<string, Copy> = {
     back: "Retour salle",
     boundary: "La parole, les votes et la nuit restent autour de la table.",
     cancel: "Annuler",
+    close: "Fermer",
     confirmReveal: "Voir le rôle",
     dead: "Mort",
     deathBody: "Vous êtes éliminé. Restez pour voir le résultat.",
     deathTitle: "Vous êtes éliminé",
+    exitGame: "Quitter la partie",
+    exitGameBody:
+      "Vous quitterez cette partie et votre place sera marquée comme partie.",
+    exitGameConfirm: "Confirmer",
+    exitGameTitle: "Quitter cette partie ?",
     finishGame: "Terminer",
     finishGood: "Village gagnant",
     finishGoodConfirm: "Terminer la partie avec le village gagnant ?",
@@ -355,6 +386,7 @@ const copies: Record<string, Copy> = {
     startConfirm:
       "Démarrer la partie et distribuer les rôles ? Les places seront verrouillées.",
     started: "Partie commencée",
+    stayGame: "Rester dans la partie",
     statusError: "Ça n'a pas marché. Réessayez.",
     unready: "Annuler prêt",
     visibleFor: "Reste",
@@ -527,6 +559,7 @@ export function WerewolfPrivateSeatCard({
   const [revealed, setRevealed] = useState(false);
   const [revealSecondsLeft, setRevealSecondsLeft] = useState(0);
   const [showRevealConfirm, setShowRevealConfirm] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [showDeathIntro, setShowDeathIntro] = useState(false);
   const [showResultIntro, setShowResultIntro] = useState(false);
   const [flowEvents, setFlowEvents] = useState(initialFlowEvents);
@@ -627,6 +660,27 @@ export function WerewolfPrivateSeatCard({
     onRoomChanged: handleRealtimeRoomChange,
     roomId,
   });
+
+  useEffect(() => {
+    if (!leaveState.formError) {
+      return;
+    }
+
+    try {
+      if (
+        window.sessionStorage.getItem(
+          DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        ) === roomId
+      ) {
+        window.sessionStorage.removeItem(
+          DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        );
+        window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+      }
+    } catch {
+      // The error remains visible even when browser storage is unavailable.
+    }
+  }, [leaveState.formError, roomId]);
 
   useEffect(() => {
     setIsDead(initialIsDead);
@@ -1222,6 +1276,16 @@ export function WerewolfPrivateSeatCard({
             <ArrowLeft className="h-5 w-5" />
           </Link>
 
+          <button
+            aria-label={t.exitGame}
+            className="absolute right-3 top-[calc(var(--app-top-safe-area)+0.75rem)] z-30 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/18 bg-black/46 px-3 text-xs font-bold text-white shadow-[0_12px_30px_rgba(0,0,0,0.34)] backdrop-blur-md transition hover:bg-black/62 active:scale-95 md:right-5 md:top-5"
+            onClick={() => setExitDialogOpen(true)}
+            type="button"
+          >
+            <LogOut className="h-4 w-4" />
+            {t.exitGame}
+          </button>
+
           <div className="relative flex min-h-[100svh] flex-col p-0 md:min-h-[calc(100svh-5.5rem)] md:p-5">
             <div className="hidden flex-wrap items-center justify-between gap-2 md:flex">
               <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normal text-white/86 backdrop-blur">
@@ -1356,6 +1420,90 @@ export function WerewolfPrivateSeatCard({
             </div>
           </div>
         </section>
+      ) : null}
+      {showInGamePlayerCard && exitDialogOpen ? (
+        <div
+          className="fixed inset-0 z-[140] grid place-items-end bg-black/58 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] md:place-items-center"
+          onMouseDown={() => setExitDialogOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-describedby="werewolf-private-exit-description"
+            aria-labelledby="werewolf-private-exit-title"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-[1.35rem] border border-[#F1F2E3]/32 bg-[#FFFDF7] p-4 text-[#153B31] shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FCE7E2] text-[#B5301F]">
+                <LogOut className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2
+                  className="text-base font-bold leading-6"
+                  id="werewolf-private-exit-title"
+                >
+                  {t.exitGameTitle}
+                </h2>
+                <p
+                  className="mt-1 text-sm font-semibold leading-6 text-[#153B31]/66"
+                  id="werewolf-private-exit-description"
+                >
+                  {t.exitGameBody}
+                </p>
+              </div>
+              <button
+                aria-label={t.close}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#153B31]/58 transition hover:bg-[#EDF3EA] active:scale-95"
+                onClick={() => setExitDialogOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {leaveState.formError ? (
+              <p className="mt-4 rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm font-bold text-[#9B2433]">
+                {leaveState.formError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="h-11 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
+                onClick={() => setExitDialogOpen(false)}
+                type="button"
+              >
+                {t.stayGame}
+              </button>
+              <form
+                action={leaveAction}
+                onSubmit={() => {
+                  try {
+                    window.sessionStorage.setItem(
+                      DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+                      roomId,
+                    );
+                    window.dispatchEvent(
+                      new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT),
+                    );
+                  } catch {
+                    // Server-side exit still works without browser storage.
+                  }
+                }}
+              >
+                <input name="intent" type="hidden" value="exit_room" />
+                <input name="locale" type="hidden" value={locale} />
+                <input name="privateToken" type="hidden" value={privateToken} />
+                <SubmitButton
+                  className="h-11 w-full rounded-full bg-[#B5301F] px-4 text-sm font-semibold text-white transition hover:bg-[#9F281B] disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.exitGameConfirm}
+                />
+              </form>
+            </div>
+          </section>
+        </div>
       ) : null}
       {roomStatus === "IN_PROGRESS" ? (
         <WerewolfFlowPanel
