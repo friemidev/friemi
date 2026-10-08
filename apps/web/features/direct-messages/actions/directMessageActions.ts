@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { getNowConversationContext } from "@/features/now/queries";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -49,6 +50,7 @@ export type OpenActivityOrganizerConversationState = {
 const createDirectConversationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   friendProfileId: z.string().min(1),
+  nowInviteId: z.string().trim().max(100).optional(),
   redirectPath: z.string().trim().max(300).optional(),
 });
 
@@ -531,6 +533,7 @@ export async function createDirectConversationAction(
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     friendProfileId: getString(formData, "friendProfileId"),
+    nowInviteId: getString(formData, "nowInviteId").trim() || undefined,
     redirectPath: getString(formData, "redirectPath").trim() || undefined,
   };
   const result = createDirectConversationSchema.safeParse(rawInput);
@@ -555,6 +558,19 @@ export async function createDirectConversationAction(
       currentUserProfileId: profile.id,
       peerProfileId: result.data.friendProfileId,
     });
+    if (result.data.nowInviteId) {
+      const context = await getNowConversationContext({
+        inviteId: result.data.nowInviteId,
+        currentUserProfileId: profile.id,
+        peerProfileId: result.data.friendProfileId,
+      });
+      if (context) {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { nowInviteId: context.id },
+        });
+      }
+    }
 
     trackConversationOpened({
       conversationId: conversation.id,

@@ -46,6 +46,9 @@ const notificationSelect = {
       title: true,
     },
   },
+  nowInvite: {
+    select: { id: true, title: true },
+  },
   activityAnnouncement: {
     select: {
       id: true,
@@ -128,6 +131,7 @@ export type NotificationViewModel = {
     id: string;
     title: string;
   } | null;
+  nowInvite: { id: string; title: string } | null;
   activityAnnouncement: {
     id: string;
     content: string;
@@ -193,6 +197,7 @@ function mapNotification(
           title: notification.activity.title,
         }
       : null,
+    nowInvite: notification.nowInvite,
     activityAnnouncement: notification.activityAnnouncement
       ? {
           id: notification.activityAnnouncement.id,

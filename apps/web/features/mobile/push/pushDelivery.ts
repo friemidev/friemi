@@ -22,9 +22,13 @@ export function getNotificationPath(input: {
   conversationId?: string | null;
   inventoryItemDefinitionId?: string | null;
   momentId?: string | null;
+  nowInviteId?: string | null;
   planetSlug?: string | null;
   type: NotificationType;
 }) {
+  if (input.type.startsWith("NOW_")) {
+    return input.nowInviteId ? `/now/${input.nowInviteId}` : "/now/mine";
+  }
   if (input.type === "INVENTORY_TICKET_RECEIVED") {
     return input.inventoryItemDefinitionId
       ? `/profile/bag/items/${input.inventoryItemDefinitionId}`
@@ -107,6 +111,7 @@ export function getNotificationCopy(input: {
   locale: PushCopyLocale;
   messageBody?: string | null;
   merchantName?: string | null;
+  nowTitle?: string | null;
   planetName?: string | null;
   ticketTitle?: string | null;
   type: NotificationType;
@@ -118,6 +123,8 @@ export function getNotificationCopy(input: {
       : input.locale === "en"
         ? "your plan"
         : "votre sortie");
+  const nowTitle =
+    input.nowTitle || (input.locale === "zh-CN" ? "此刻" : "NOW");
   const planetName =
     input.planetName ||
     (input.locale === "zh-CN"
@@ -146,6 +153,10 @@ export function getNotificationCopy(input: {
     Partial<Record<NotificationType, string>>
   > = {
     "zh-CN": {
+      NOW_INTERESTED: `${actorName}对「${nowTitle}」举手了`,
+      NOW_SELECTED: `你被选入「${nowTitle}」的组局意向`,
+      NOW_MESSAGE: `${actorName}在「${nowTitle}」留言了`,
+      NOW_CONVERTED: `「${nowTitle}」已转为聚吧，记得正式报名`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} 提交了签到`
@@ -184,6 +195,10 @@ export function getNotificationCopy(input: {
       AA_PAYMENT_REQUEST: `${activityTitle} 有新的付款请求`,
     },
     en: {
+      NOW_INTERESTED: `${actorName} raised a hand for “${nowTitle}”`,
+      NOW_SELECTED: `The host picked you for “${nowTitle}”`,
+      NOW_MESSAGE: `${actorName} left a note on “${nowTitle}”`,
+      NOW_CONVERTED: `“${nowTitle}” is now a hangout; sign up to join`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} checked in`
@@ -222,6 +237,10 @@ export function getNotificationCopy(input: {
       AA_PAYMENT_REQUEST: `${activityTitle} has a payment request`,
     },
     fr: {
+      NOW_INTERESTED: `${actorName} a levé la main pour « ${nowTitle} »`,
+      NOW_SELECTED: `L'hôte vous a choisi·e pour « ${nowTitle} »`,
+      NOW_MESSAGE: `${actorName} a écrit dans « ${nowTitle} »`,
+      NOW_CONVERTED: `« ${nowTitle} » est devenue une sortie ; inscrivez-vous`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} a envoye son pointage`
