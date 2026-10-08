@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PLAYWRIGHT_MONITOR_BASE_URL: ${{ github.event.inputs.base_url || vars.PLAYWRIGHT_MONITOR_BASE_URL }}
+      PLAYWRIGHT_MONITOR_BASE_URL: ${{ github.event.inputs.base_url || 'https://friemi-git-dev-friemi.vercel.app' }}
       PLAYWRIGHT_MONITOR_MAX_LOAD_MS: ${{ github.event.inputs.max_load_ms || vars.PLAYWRIGHT_MONITOR_MAX_LOAD_MS || '10000' }}
       PLAYWRIGHT_AUTH_STORAGE_STATE: ${{ vars.PLAYWRIGHT_AUTH_STORAGE_STATE }}
     steps:
@@ -33,18 +33,23 @@ jobs:
           node-version: 20.19.0
           cache: npm
 
+      - name: Validate monitoring target
+        run: |
+          if [ -z "$PLAYWRIGHT_MONITOR_BASE_URL" ]; then
+            echo "::error::Set a monitoring target in the workflow or pass base_url manually."
+            exit 1
+          fi
+          if ! curl --fail --silent --show-error --location --max-time 15 \
+            --output /dev/null "$PLAYWRIGHT_MONITOR_BASE_URL/api/health"; then
+            echo "::error::Monitoring target health check failed: $PLAYWRIGHT_MONITOR_BASE_URL/api/health"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-
-      - name: Validate monitoring target
-        run: |
-          if [ -z "$PLAYWRIGHT_MONITOR_BASE_URL" ]; then
-            echo "::error::Set repository variable PLAYWRIGHT_MONITOR_BASE_URL or pass base_url manually."
-            exit 1
-          fi
 
       - name: Run site monitoring
         run: npm run monitor:site --workspace=apps/web

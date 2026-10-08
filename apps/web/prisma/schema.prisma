@@ -161,6 +161,16 @@ enum FriemiCheckStatus {
   EXPIRED
 }
 
+enum InventoryItemKind {
+  EVENT_TICKET
+  GENERAL
+}
+
+enum InventoryGiftMethod {
+  FRIEMI_CODE
+  FRIEND_QR
+}
+
 enum CouponWalletStatus {
   AVAILABLE
   REDEEMED
@@ -257,6 +267,7 @@ enum NotificationType {
   COUPON_CLAIMED
   COUPON_REDEEMED
   COUPON_REDEMPTION_COMPLETED
+  INVENTORY_TICKET_RECEIVED
 }
 
 enum ReportTargetType {
@@ -482,6 +493,13 @@ model UserProfile {
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
   receivedCharmGiftEvents CharmGiftEvent[]              @relation("CharmGiftRecipient")
   friemiChecks            FriemiCheck[]
+  inventoryDefinitionsCreated InventoryItemDefinition[] @relation("InventoryDefinitionCreator")
+  inventoryItems          InventoryItem[]                @relation("InventoryItemOwner")
+  inventoryItemsRedeemed  InventoryItem[]                @relation("InventoryItemRedeemer")
+  inventoryIssueBatches   InventoryIssueBatch[]          @relation("InventoryIssueRecipient")
+  inventoryIssuesMade     InventoryIssueBatch[]          @relation("InventoryIssueActor")
+  inventoryGiftsSent      InventoryItemGift[]            @relation("InventoryGiftSender")
+  inventoryGiftsReceived  InventoryItemGift[]            @relation("InventoryGiftRecipient")
   friemiCoinBalance       UserFriemiCoinBalance?
   friemiCoinTransactions  FriemiCoinTransaction[]
   blindBoxFragmentBalance UserBlindBoxFragmentBalance?
@@ -1336,6 +1354,85 @@ model FriemiCheck {
   @@index([profileId, status, createdAt])
 }
 
+model InventoryItemDefinition {
+  id                 String                @id @default(cuid())
+  kind               InventoryItemKind     @default(EVENT_TICKET)
+  title              String                @db.VarChar(120)
+  description        String?               @db.Text
+  imageUrl           String?               @db.Text
+  isGiftable         Boolean               @default(false)
+  totalSupply        Int
+  issuedCount        Int                   @default(0)
+  createdByProfileId String
+  createdBy          UserProfile           @relation("InventoryDefinitionCreator", fields: [createdByProfileId], references: [id])
+  items              InventoryItem[]
+  issueBatches       InventoryIssueBatch[]
+  notifications      Notification[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([kind, createdAt])
+}
+
+model InventoryIssueBatch {
+  id                 String                  @id @default(cuid())
+  requestId          String                  @unique @db.VarChar(100)
+  definitionId       String
+  definition         InventoryItemDefinition @relation(fields: [definitionId], references: [id])
+  recipientProfileId String
+  recipient          UserProfile             @relation("InventoryIssueRecipient", fields: [recipientProfileId], references: [id])
+  actorProfileId     String
+  actor              UserProfile             @relation("InventoryIssueActor", fields: [actorProfileId], references: [id])
+  quantity           Int
+  items              InventoryItem[]
+  createdAt          DateTime                @default(now())
+
+  @@index([definitionId, createdAt])
+  @@index([recipientProfileId, createdAt])
+}
+
+model InventoryItem {
+  id             String                  @id @default(cuid())
+  definitionId   String
+  definition     InventoryItemDefinition @relation(fields: [definitionId], references: [id])
+  ownerProfileId String
+  owner          UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
+  issueBatchId   String
+  issueBatch     InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
+  serialNumber   Int
+  giftedAt       DateTime?
+  gift           InventoryItemGift?
+  redemptionToken          String?      @unique @db.VarChar(64)
+  redemptionTokenExpiresAt DateTime?
+  redeemedAt               DateTime?
+  redeemedByProfileId      String?
+  redeemedBy               UserProfile? @relation("InventoryItemRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@unique([definitionId, serialNumber])
+  @@index([ownerProfileId, definitionId, giftedAt])
+  @@index([issueBatchId])
+  @@index([redeemedByProfileId, redeemedAt])
+  @@index([redemptionTokenExpiresAt])
+}
+
+model InventoryItemGift {
+  id                 String              @id @default(cuid())
+  requestId          String              @unique @db.VarChar(100)
+  itemId             String              @unique
+  item               InventoryItem       @relation(fields: [itemId], references: [id])
+  senderProfileId    String
+  sender             UserProfile         @relation("InventoryGiftSender", fields: [senderProfileId], references: [id])
+  recipientProfileId String
+  recipient          UserProfile         @relation("InventoryGiftRecipient", fields: [recipientProfileId], references: [id])
+  method             InventoryGiftMethod
+  createdAt          DateTime            @default(now())
+
+  @@index([senderProfileId, createdAt])
+  @@index([recipientProfileId, createdAt])
+}
+
 model UserFriemiCoinBalance {
   profileId         String      @id
   profile           UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -1595,6 +1692,8 @@ model Notification {
   aaTransaction          AaTransaction?        @relation(fields: [aaTransactionId], references: [id], onDelete: SetNull)
   couponWalletItemId     String?
   couponWalletItem       CouponWalletItem?     @relation(fields: [couponWalletItemId], references: [id], onDelete: SetNull)
+  inventoryItemDefinitionId String?
+  inventoryItemDefinition   InventoryItemDefinition? @relation(fields: [inventoryItemDefinitionId], references: [id], onDelete: SetNull)
   dedupeKey              String?               @unique @db.VarChar(80)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
@@ -1610,6 +1709,7 @@ model Notification {
   @@index([planetId])
   @@index([aaTransactionId])
   @@index([couponWalletItemId])
+  @@index([inventoryItemDefinitionId])
 }
 
 model OfficialMessage {
@@ -2334,19 +2434,19 @@ model DrawGuessRound {
 }
 
 model DrawGuessArtwork {
-  id            String       @id @default(cuid())
-  roomId        String
-  room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  roundNumber   Int
-  ownerSeat     Int
-  stage         Int
-  artistSeat    Int
-  strokes       Json
-  previewPng    Bytes?       @db.ByteA
-  previewBytes  Int          @default(0)
-  submittedAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  roomId       String
+  room         GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  ownerSeat    Int
+  stage        Int
+  artistSeat   Int
+  strokes      Json
+  previewPng   Bytes?       @db.ByteA
+  previewBytes Int          @default(0)
+  submittedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@unique([roomId, roundNumber, ownerSeat, stage])
   @@index([roomId, roundNumber, submittedAt])

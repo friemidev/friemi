@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.app-layout-shell:has(.merchant-admin-page) {
+  background: #f6f8f3;
+}
+
 @font-face {
   font-family: "Friemi Latin";
   src: url("/font/Plus_Jakarta_Sans/PlusJakartaSans-FriemiLatin.woff2")
@@ -133,7 +137,6 @@
   --app-bottom-safe-area: env(safe-area-inset-bottom);
   --app-left-safe-area: env(safe-area-inset-left);
   --app-right-safe-area: env(safe-area-inset-right);
-  --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
   --app-mobile-nav-height: 3.75rem;
   --app-mobile-page-top-gap: 1rem;
   --app-mobile-page-bottom-gap: 1rem;
@@ -142,6 +145,103 @@
   --friemi-stable-viewport-height: 100vh;
   --friemi-visual-viewport-height: 100vh;
   --friemi-visual-viewport-width: 100vw;
+  --friemi-motion-press: 80ms;
+  --friemi-motion-release: 180ms;
+  --friemi-motion-enter: 220ms;
+  --friemi-motion-exit: 160ms;
+  --friemi-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Defaults stay below utility styles and the games' own interaction systems. */
+@layer base {
+  :where(.app-layout-shell, [data-friemi-modal-overlay])
+    :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: transform, background-color, border-color, color, opacity;
+    transition-duration: var(--friemi-motion-release);
+    transition-timing-function: var(--friemi-motion-ease);
+  }
+
+  :where(.app-layout-shell, [data-friemi-modal-overlay])
+    :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)):where(:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])) {
+    transform: scale(0.97);
+    transition-duration: var(--friemi-motion-press);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.app-layout-shell, [data-friemi-modal-overlay])
+      :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)) {
+      transition: none;
+    }
+
+    :where(.app-layout-shell, [data-friemi-modal-overlay])
+      :where(button, a[href]):not(:where(.draw-guess-theme *, [class*="draw-guess-"], .werewolf-room-fullscreen *, .avalon-tool *, .auth-page-shell *, .cl-rootBox *)):active {
+      transform: none;
+    }
+  }
+}
+
+.friemi-pressable,
+.friemi-interactive-card {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition-property: transform, background-color, border-color, color, opacity;
+  transition-duration: var(--friemi-motion-release);
+  transition-timing-function: var(--friemi-motion-ease);
+}
+
+.friemi-pressable:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  transform: scale(0.97);
+  transition-duration: var(--friemi-motion-press);
+}
+
+.friemi-interactive-card:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.985);
+  transition-duration: var(--friemi-motion-press);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .friemi-interactive-card:hover:not(:active) {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes friemi-loader-reveal {
+  to { visibility: visible; }
+}
+
+.friemi-delayed-loader {
+  visibility: hidden;
+  animation: friemi-loader-reveal 0s 150ms forwards;
+}
+
+/* Clip only the horizontal entry offset without creating a scroll container. */
+html[data-friemi-route-direction] .app-layout-shell {
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --friemi-motion-press: 0ms;
+    --friemi-motion-release: 0ms;
+    --friemi-motion-enter: 0ms;
+    --friemi-motion-exit: 0ms;
+  }
+
+  .friemi-pressable,
+  .friemi-interactive-card,
+  .friemi-nav-pending,
+  .app-layout-shell:not(:has(.mobile-chat-viewport, .draw-guess-theme, .werewolf-room-fullscreen, .avalon-tool, .auth-page-shell)) :where(main:not(main main)) {
+    animation: none;
+    transition: none;
+  }
+
+  .friemi-pressable:active:not(:disabled):not([aria-disabled="true"]),
+  .friemi-interactive-card:active:not(:disabled):not([aria-disabled="true"]),
+  .friemi-interactive-card:hover:not(:active) {
+    transform: none;
+  }
 }
 
 @supports (height: 100dvh) {
@@ -203,7 +303,7 @@ body {
     ) !important;
   }
 
-  .friemi-native-app-shell > .app-header {
+  .friemi-native-app-shell > .app-desktop-navigation {
     display: none !important;
   }
 
@@ -406,8 +506,8 @@ html[data-friemi-ios-app="true"]:has(.mobile-v23-lobby-detail-sheet)
   background: var(--friemi-palette-paper);
 }
 
-.app-layout-shell:has(.auth-page-shell) > .app-header,
 .app-layout-shell:has(.auth-page-shell) > .app-mobile-nav,
+.app-layout-shell:has(.auth-page-shell) > .app-desktop-navigation,
 .app-layout-shell:has(.auth-page-shell) [data-mobile-scroll-progress],
 .app-layout-shell:has(.auth-page-shell) [data-route-progress],
 .app-layout-shell:has(.route-loading-shell) [data-route-progress] {
@@ -418,8 +518,8 @@ html[data-friemi-auth-page="true"] .app-layout-shell {
   padding-bottom: 0 !important;
 }
 
-html[data-friemi-auth-page="true"] .app-layout-shell > .app-header,
 html[data-friemi-auth-page="true"] .app-layout-shell > .app-mobile-nav,
+html[data-friemi-auth-page="true"] .app-layout-shell > .app-desktop-navigation,
 html[data-friemi-auth-page="true"]
   .app-layout-shell
   [data-mobile-scroll-progress],
@@ -502,11 +602,6 @@ html[data-friemi-auth-page="true"] .app-layout-shell [data-route-progress] {
   }
 }
 
-html[data-friemi-android-app="true"] .app-layout-shell > header,
-html[data-friemi-ios-app="true"] .app-layout-shell > header {
-  padding-top: var(--app-top-safe-area);
-}
-
 html[data-friemi-android-app="true"] .app-layout-shell > nav {
   left: var(--app-left-safe-area);
   padding-bottom: var(--app-bottom-safe-area);
@@ -529,6 +624,74 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   display: none !important;
 }
 
+.chat-message-scroll {
+  min-width: 0;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+@keyframes chat-room-content-in {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
+.chat-loading-pulse {
+  animation: chat-loading-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes chat-loading-pulse {
+  50% { opacity: 0.5; }
+}
+
+.chat-navigation-pending {
+  animation: chat-room-content-in 120ms ease-out 100ms backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-message-scroll,
+  .chat-loading-pulse,
+  .chat-navigation-pending {
+    animation: none;
+  }
+}
+
+.chat-composer-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  max-height: 192px;
+  margin-block: 3px;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  border: 1px solid #e2e5e2;
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px 10px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 22px;
+  color: #111210;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.chat-composer-input::placeholder {
+  color: #969c96;
+}
+
+.chat-composer-input:focus-visible {
+  border-color: #8ab68e;
+}
+
+.chat-composer-input:disabled {
+  background: #f1f2ec;
+}
+
 @media (max-width: 767px) {
   .app-layout-shell:has(.now-flow-page) {
     padding-bottom: 0;
@@ -545,7 +708,6 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   }
 
   html[data-friemi-viewport-height="short"] {
-    --app-mobile-header-height: calc(3.25rem + var(--app-top-safe-area));
     --app-mobile-nav-height: 3.5rem;
     --app-mobile-page-top-gap: 0.625rem;
     --app-mobile-page-bottom-gap: 0.625rem;
@@ -656,6 +818,8 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     height: var(--friemi-chat-visual-height, 100dvh) !important;
     max-height: var(--friemi-chat-visual-height, 100dvh) !important;
     width: 100% !important;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     overscroll-behavior: contain;
   }
@@ -664,6 +828,13 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   body:has(.mobile-chat-viewport) {
     overflow: hidden;
     overscroll-behavior: contain;
+  }
+
+  /* Keep focusing the composer from zooming and panning the iOS viewport. */
+  [data-message-composer] textarea,
+  [data-activity-room-composer] textarea,
+  [data-planet-chat-composer] textarea {
+    font-size: 16px;
   }
 
   html[data-friemi-chat-keyboard-open="true"] [data-message-composer],
@@ -716,31 +887,23 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     overscroll-behavior: contain;
   }
 
-  .app-layout-shell:has(.mobile-v23-home) > .app-header,
   .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-home) [data-route-progress],
-  .app-layout-shell:has(.mobile-v23-lobby) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby) [data-route-progress],
-  .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
-  .app-layout-shell:has(.planet-detail-page) > .app-header,
   .app-layout-shell:has(.planet-detail-page) [data-mobile-scroll-progress],
   .app-layout-shell:has(.planet-detail-page) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail-sheet) > .app-mobile-nav,
-  .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
   .app-layout-shell:has(.mobile-v23-admin-priority)
     [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-admin-priority) [data-route-progress],
-  .app-layout-shell:has(.mobile-v23-create) > .app-header,
   .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-create) [data-route-progress],
-  .app-layout-shell:has(.werewolf-room-fullscreen) > .app-header,
   .app-layout-shell:has(.werewolf-room-fullscreen)
     [data-mobile-scroll-progress],
   .app-layout-shell:has(.werewolf-room-fullscreen) [data-route-progress],
-  .app-layout-shell:has(.top-news-story-page) > .app-header,
   .app-layout-shell:has(.top-news-story-page) > .app-mobile-nav,
   .app-layout-shell:has(.top-news-story-page) [data-mobile-scroll-progress],
   .app-layout-shell:has(.top-news-story-page) [data-route-progress] {
@@ -776,12 +939,6 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
 
   .app-mobile-page-shell :where([class*="ring-[#E3DCC5]"]) {
     --tw-ring-color: rgba(227, 220, 197, 0.58);
-  }
-}
-
-@media (min-width: 640px) {
-  :root {
-    --app-mobile-header-height: calc(4rem + var(--app-top-safe-area));
   }
 }
 
@@ -1235,7 +1392,7 @@ a {
 }
 
 .friemi-feed-reveal {
-  animation: friemi-feed-reveal 320ms ease-out both;
+  animation: friemi-feed-reveal var(--friemi-motion-enter) var(--friemi-motion-ease) backwards;
 }
 
 .friemi-shimmer {
@@ -1495,38 +1652,34 @@ html[data-home-motion-ready="true"]
   opacity: 0;
   transform: translate3d(
       var(--home-reveal-x, 0),
-      var(--home-reveal-y, 1.35rem),
+      var(--home-reveal-y, 0.5rem),
       0
     )
     scale(var(--home-reveal-scale, 1));
-  filter: blur(var(--home-reveal-blur, 0));
 }
 
 [data-home-reveal] {
   transition:
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 920ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 780ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--home-reveal-delay, 0ms);
-  will-change: opacity, transform, filter;
+    opacity var(--friemi-motion-enter) var(--friemi-motion-ease),
+    transform var(--friemi-motion-enter) var(--friemi-motion-ease);
+  transition-delay: min(var(--home-reveal-delay, 0ms), 60ms);
 }
 
 [data-home-reveal="left"] {
-  --home-reveal-x: -2rem;
+  --home-reveal-x: -0.5rem;
   --home-reveal-y: 0;
   --home-reveal-scale: 0.985;
 }
 
 [data-home-reveal="right"],
 [data-home-reveal="slide-right"] {
-  --home-reveal-x: 2rem;
+  --home-reveal-x: 0.5rem;
   --home-reveal-y: 0;
   --home-reveal-scale: 0.985;
 }
 
 [data-home-reveal="slide-right"] {
-  --home-reveal-x: 3.25rem;
-  --home-reveal-blur: 0.25rem;
+  --home-reveal-x: 0.75rem;
 }
 
 .home-activity-carousel {
@@ -1540,9 +1693,9 @@ html[data-home-motion-ready="true"]
 .home-carousel-card {
   transform: translateY(0) scale(1);
   transition:
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 360ms ease;
+    transform var(--friemi-motion-release) var(--friemi-motion-ease),
+    box-shadow var(--friemi-motion-release) ease,
+    border-color var(--friemi-motion-release) ease;
 }
 
 .home-carousel-card:hover,
@@ -1552,7 +1705,7 @@ html[data-home-motion-ready="true"]
 }
 
 .home-carousel-card__media img {
-  transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform var(--friemi-motion-enter) var(--friemi-motion-ease);
 }
 
 .home-carousel-card:hover .home-carousel-card__media img,
@@ -1999,6 +2152,49 @@ html[data-home-motion-ready="true"]
   }
   to {
     opacity: 0;
+  }
+}
+
+@keyframes friemi-sheet-overlay-in {
+  from { background-color: transparent; }
+  to { background-color: rgb(17 18 16 / 0.42); }
+}
+
+.friemi-sheet-overlay {
+  animation: friemi-sheet-overlay-in var(--friemi-motion-enter) ease-out;
+}
+
+.friemi-sheet-panel {
+  animation: activity-room-sheet-in var(--friemi-motion-enter) var(--friemi-motion-ease);
+  transition: height var(--friemi-motion-enter) var(--friemi-motion-ease),
+    border-radius var(--friemi-motion-enter) ease-out,
+    transform var(--friemi-motion-release) var(--friemi-motion-ease);
+}
+
+.friemi-sheet-overlay[data-state="closing"] {
+  animation: mobile-bottom-sheet-overlay-out var(--friemi-motion-exit) ease-in forwards;
+}
+
+.friemi-sheet-panel[data-entered="true"] {
+  animation: none;
+}
+
+.friemi-sheet-overlay[data-state="closing"] .friemi-sheet-panel {
+  animation: activity-room-sheet-out var(--friemi-motion-exit) ease-in forwards;
+}
+
+.friemi-sheet-panel[data-dragging="true"] {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friemi-sheet-overlay,
+  .friemi-sheet-panel,
+  .friemi-sheet-overlay[data-state="closing"],
+  .friemi-sheet-overlay[data-state="closing"] .friemi-sheet-panel {
+    animation: none;
+    transition: none;
   }
 }
 

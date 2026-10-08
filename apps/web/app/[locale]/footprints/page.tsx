@@ -113,7 +113,7 @@ export default async function FootprintsPage({
           page: { hasMore: false, items: [], nextCursor: null },
           error: null,
         }),
-    profile
+    profile && initialTab === "moment"
       ? perf
           .measure("moments.linkableActivities", () =>
             getMomentLinkableActivities(profile.id),

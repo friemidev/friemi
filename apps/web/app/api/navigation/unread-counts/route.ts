@@ -2,7 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
-import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
+import {
+  getUnreadInventoryTicketGiftCount,
+  getUnreadNotificationCount,
+} from "@/features/notifications/queries/getNotifications";
 import { getUnreadOfficialMessageCount } from "@/features/official-messages/services/officialMessages";
 import { createUnreadBadgeCounts } from "@/features/notifications/unreadBadgeCounts";
 import {
@@ -52,12 +55,14 @@ async function getViewerProfileId() {
 async function loadUnreadBadgeCounts(profileId: string) {
   const [
     unreadNotificationCount,
+    unreadInventoryTicketGiftCount,
     unreadDirectMessageCount,
     unreadOfficialMessageCount,
     unreadActivityRoomCount,
     unreadPlanetChatCount,
   ] = await Promise.all([
     getUnreadNotificationCount(profileId),
+    getUnreadInventoryTicketGiftCount(profileId),
     getUnreadDirectMessageCount(profileId),
     getUnreadOfficialMessageCount(profileId),
     getUnreadActivityRoomTotalMessageCount(profileId),
@@ -69,6 +74,7 @@ async function loadUnreadBadgeCounts(profileId: string) {
     unreadDirectMessageCount:
       unreadDirectMessageCount + unreadOfficialMessageCount,
     unreadNotificationCount,
+    unreadInventoryTicketGiftCount,
     unreadPlanetChatCount,
   });
 }
@@ -123,6 +129,7 @@ export async function GET(request: Request) {
                 unreadActivityRoomCount: 0,
                 unreadDirectMessageCount: 0,
                 unreadNotificationCount: 0,
+                unreadInventoryTicketGiftCount: 0,
                 unreadPlanetChatCount: 0,
               }),
               requestId,

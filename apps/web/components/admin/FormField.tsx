@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 import { cn } from "@chill-club/ui";
 
 type FormFieldProps = {
@@ -8,12 +8,27 @@ type FormFieldProps = {
   className?: string;
 };
 
-export function FormField({ label, hint, children, className }: FormFieldProps) {
+export function FormField({
+  label,
+  hint,
+  children,
+  className,
+}: FormFieldProps) {
+  const generatedId = useId();
+  const control = isValidElement<{ id?: string }>(children)
+    ? cloneElement(children, { id: children.props.id ?? generatedId })
+    : children;
+  const controlId = isValidElement<{ id?: string }>(control)
+    ? control.props.id
+    : undefined;
+
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="block text-sm font-medium text-zinc-700">{label}</label>
-      {children}
-      {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+      <label className="block text-sm font-medium text-ink" htmlFor={controlId}>
+        {label}
+      </label>
+      {control}
+      {hint ? <p className="text-xs text-ink/70">{hint}</p> : null}
     </div>
   );
 }

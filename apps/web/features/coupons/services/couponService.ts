@@ -15,6 +15,7 @@ import {
   getPlatformCouponTemplate,
   platformCouponTemplates,
 } from "../platformCouponTemplates";
+import { bindProfileToExistingMerchantInTransaction } from "./merchantOwnerBinding";
 
 export type ClaimCouponResult =
   | { itemId: string; status: "CLAIMED" }
@@ -181,6 +182,21 @@ export async function promoteProfileToMerchant(profileId: string) {
       },
     });
 
+    await ensureDefaultMerchantCoupon(merchant.id, tx);
+    return merchant;
+  });
+}
+
+export async function bindProfileToExistingMerchant(
+  profileId: string,
+  merchantId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const merchant = await bindProfileToExistingMerchantInTransaction(
+      tx,
+      profileId,
+      merchantId,
+    );
     await ensureDefaultMerchantCoupon(merchant.id, tx);
     return merchant;
   });

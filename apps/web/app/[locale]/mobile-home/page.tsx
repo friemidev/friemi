@@ -754,7 +754,7 @@ function MobileHomeV23NewsCard({
   return (
     <Link
       href={href}
-      className="relative h-[7.2rem] w-[17.8rem] flex-none snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+      className="friemi-interactive-card relative h-[7.2rem] w-[17.8rem] flex-none snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
       aria-label={title}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -791,12 +791,11 @@ function MobileHomeV23ActivityCard({
     <MobileActivityDetailSheetLink
       href={getMobileHomeActivityHref(activity, locale)}
       label={activity.title}
-      className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
+      className="friemi-interactive-card group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
-          categoryArtworkClassName="h-[140%]"
           fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
           src={getActivityCoverThumbnailUrl(
             getActivityListCoverSrc(activity.coverImageUrl, activity.category),
@@ -842,7 +841,7 @@ function MobileHomeV23FallbackCard({
   return (
     <IntentPrefetchLink
       href={withLocale(locale, card.href)}
-      className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
+      className="friemi-interactive-card group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
         <Image
@@ -850,7 +849,7 @@ function MobileHomeV23FallbackCard({
           alt=""
           fill
           sizes="150px"
-          className="object-cover transition duration-500 group-active:scale-[1.03]"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/24 to-transparent" />
       </div>

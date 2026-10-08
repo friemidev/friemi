@@ -69,8 +69,11 @@ import type { UserAchievementProgressItem } from "@/features/achievements/querie
 import type {
   ProfileBagCheckItem,
   ProfileBagCouponItem,
+  ProfileBagInventoryItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
+import { getInventoryCopy } from "@/features/inventory/copy";
+import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
 import type { FriemiCoinBalanceViewModel } from "@/features/charm/queries/getFriemiCoinBalance";
 import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfileGiftWall";
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
@@ -2575,9 +2578,7 @@ function CheckBagCard({
         <div
           className={cn(
             "aspect-[2/1] overflow-hidden rounded-[0.8rem] bg-[#F8FAF4] ring-1",
-            available
-              ? "ring-[#BFD8B9]"
-              : "grayscale ring-[#DFDAC5]",
+            available ? "ring-[#BFD8B9]" : "grayscale ring-[#DFDAC5]",
           )}
         >
           {check.type === "WELCOME" ? (
@@ -2637,7 +2638,72 @@ type BagDisplayItem =
       date: string;
       item: ProfileBagCheckItem;
       kind: "check";
+    }
+  | {
+      date: string;
+      item: ProfileBagInventoryItem;
+      kind: "inventory";
     };
+
+function InventoryBagCard({
+  item,
+  locale,
+}: {
+  item: ProfileBagInventoryItem;
+  locale: string;
+}) {
+  const copy = getInventoryCopy(locale);
+  return (
+    <Link
+      className={cn(
+        "grid content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-sand transition hover:ring-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-forest",
+        item.imageUrl ? "min-h-[15rem]" : "min-h-[10.5rem]",
+      )}
+      href={withLocale(locale, `/profile/bag/items/${item.id}`)}
+    >
+      <div>
+        {item.imageUrl ? (
+          <div className="relative">
+            <InventoryItemArtwork
+              alt=""
+              className="aspect-[4/3] w-full rounded-[0.8rem]"
+              fit="contain"
+              imageUrl={item.imageUrl}
+            />
+            <span className="absolute right-2 top-2 rounded-full bg-paper/95 px-2 py-1 text-[10px] font-bold text-forest shadow-sm">
+              {copy.ticket}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-2">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-fog text-forest">
+              <Ticket className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="rounded-full bg-fog px-2 py-1 text-[10px] font-bold text-forest">
+              {copy.ticket}
+            </span>
+          </div>
+        )}
+        <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-5 text-ink">
+          {item.title}
+        </h3>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-2 border-t border-sand pt-2">
+        <div>
+          <p className="text-[10px] text-ink/70">{copy.owned}</p>
+          <p className="text-lg font-black tabular-nums text-ink">
+            {item.quantity}
+          </p>
+        </div>
+        {item.transferableCount > 0 ? (
+          <p className="text-right text-[10px] font-bold text-forest">
+            {copy.available} {item.transferableCount}
+          </p>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
 
 export function ProfileBagPageView({
   bag,
@@ -2654,6 +2720,11 @@ export function ProfileBagPageView({
   const couponCopy = getCouponBagCopy(locale);
   const [itemFilter, setItemFilter] = useState<BagItemFilter>("available");
   const bagItems: BagDisplayItem[] = [
+    ...bag.inventoryItems.map((item) => ({
+      date: item.createdAt,
+      item,
+      kind: "inventory" as const,
+    })),
     ...bag.coupons.map((item) => ({
       date: item.claimedAt,
       item,
@@ -2665,8 +2736,10 @@ export function ProfileBagPageView({
       kind: "check" as const,
     })),
   ].sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
-  const filteredItems = bagItems.filter(({ item }) => {
+  const filteredItems = bagItems.filter(({ item, kind }) => {
     if (itemFilter === "all") return true;
+    if (kind === "inventory")
+      return itemFilter === "available" && item.quantity > 0;
     if (itemFilter === "used") return item.status === "REDEEMED";
     return item.status === "AVAILABLE";
   });
@@ -2749,7 +2822,13 @@ export function ProfileBagPageView({
         {filteredItems.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {filteredItems.map((displayItem) =>
-              displayItem.kind === "coupon" ? (
+              displayItem.kind === "inventory" ? (
+                <InventoryBagCard
+                  item={displayItem.item}
+                  key={`inventory-${displayItem.item.id}`}
+                  locale={locale}
+                />
+              ) : displayItem.kind === "coupon" ? (
                 <CouponBagCard
                   item={displayItem.item}
                   key={`coupon-${displayItem.item.id}`}

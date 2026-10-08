@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 const heartbeatIntervalMs = 90 * 1000;
 const heartbeatDedupeMs = 10 * 1000;
@@ -22,7 +23,9 @@ const backgroundEvents = [
 ] as const;
 
 export function PresenceHeartbeat() {
+  const isSheet = useSearchParams().get("sheet") === "1";
   useEffect(() => {
+    if (isSheet) return;
     let stopped = false;
     let heartbeatTimer: number | null = null;
     let lastPingAt = 0;
@@ -162,7 +165,7 @@ export function PresenceHeartbeat() {
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [isSheet]);
 
   return null;
 }

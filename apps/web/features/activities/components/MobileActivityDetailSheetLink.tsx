@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { cn } from "@/lib/utils";
+import { detailSheetRetention } from "@/features/activities/detailSheetRetention";
+import { ActivityDetailFrame, getDetailFrameCopy } from "./ActivityDetailFrame";
 
 type MobileActivityDetailSheetLinkProps = {
   children: ReactNode;
@@ -14,8 +16,6 @@ type MobileActivityDetailSheetLinkProps = {
   locale?: string;
   locked?: boolean;
 };
-
-const fullPageNavigationDelayMs = 1000;
 
 function getLockedCopy(locale: string) {
   if (locale === "fr") {
@@ -77,38 +77,30 @@ export function MobileActivityDetailSheetLink({
 }: MobileActivityDetailSheetLinkProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const fullPageNavigationTimerRef = useRef<number | null>(null);
+  const [retained, setRetained] = useState(false);
+  const retentionKey = useRef({});
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
 
   useEffect(() => {
-    return () => {
-      if (fullPageNavigationTimerRef.current !== null) {
-        window.clearTimeout(fullPageNavigationTimerRef.current);
-      }
-    };
-  }, []);
+    const key = retentionKey.current;
+    setRetained(false);
+    return () => detailSheetRetention.release(key);
+  }, [href, locked]);
 
   useEffect(() => {
     if (open && !locked) {
-      router.prefetch(href);
+      detailSheetRetention.retain(retentionKey.current, () =>
+        setRetained(false),
+      );
+      setRetained(true);
     }
-  }, [href, locked, open, router]);
+  }, [href, locked, open]);
 
   function openFullPage() {
-    if (fullPageNavigationTimerRef.current !== null) {
-      return;
-    }
-
-    // Reveal the existing list while the prefetched detail route settles.
-    // This keeps the route-level loader out of the closing sheet.
     setOpen(false);
-    router.prefetch(href);
-    fullPageNavigationTimerRef.current = window.setTimeout(() => {
-      fullPageNavigationTimerRef.current = null;
-      router.push(href);
-    }, fullPageNavigationDelayMs);
+    router.push(href);
   }
 
   return (
@@ -124,13 +116,15 @@ export function MobileActivityDetailSheetLink({
       <MobileBottomSheet
         ariaLabel={label}
         bodyClassName="overflow-hidden"
-        closeLabel={label}
+        closeLabel={getDetailFrameCopy(locale).close}
         headerAction={
           locked ? undefined : (
             <button
               aria-label={openPageLabel}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-95 after:absolute after:-inset-1.5 after:content-['']"
               onClick={openFullPage}
+              onFocus={() => router.prefetch(href)}
+              onPointerEnter={() => router.prefetch(href)}
               title={openPageLabel}
               type="button"
             >
@@ -139,6 +133,7 @@ export function MobileActivityDetailSheetLink({
           )
         }
         initiallyExpanded
+        keepMounted={retained && !locked}
         onClose={() => setOpen(false)}
         open={open}
         zIndexClassName="z-[80]"
@@ -156,18 +151,16 @@ export function MobileActivityDetailSheetLink({
             </p>
           </div>
         ) : (
-          <iframe
-            className="h-full w-full border-0 bg-white"
-            loading="lazy"
-            onLoad={(event) => {
-              event.currentTarget.contentWindow?.scrollTo({
-                behavior: "auto",
-                left: 0,
-                top: 0,
-              });
+          <ActivityDetailFrame
+            key={sheetHref}
+            href={sheetHref}
+            label={label}
+            locale={locale}
+            open={open}
+            onNavigate={() => {
+              detailSheetRetention.release(retentionKey.current);
+              setRetained(false);
             }}
-            src={sheetHref}
-            title={label}
           />
         )}
       </MobileBottomSheet>

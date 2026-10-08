@@ -81,6 +81,12 @@ const notificationSelect = {
       },
     },
   },
+  inventoryItemDefinition: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
   moment: {
     select: {
       id: true,
@@ -148,6 +154,10 @@ export type NotificationViewModel = {
       title: string;
     };
   } | null;
+  inventoryItemDefinition: {
+    id: string;
+    title: string;
+  } | null;
   moment: {
     id: string;
     content: string | null;
@@ -197,6 +207,7 @@ function mapNotification(
       : null,
     charmGiftEvent: notification.charmGiftEvent,
     couponWalletItem: notification.couponWalletItem,
+    inventoryItemDefinition: notification.inventoryItemDefinition,
     moment: notification.moment
       ? {
           id: notification.moment.id,
@@ -220,6 +231,16 @@ export async function getUnreadNotificationCount(profileId: string) {
       recipientId: profileId,
       readAt: null,
     }),
+  });
+}
+
+export async function getUnreadInventoryTicketGiftCount(profileId: string) {
+  return prisma.notification.count({
+    where: {
+      recipientId: profileId,
+      readAt: null,
+      type: "INVENTORY_TICKET_RECEIVED",
+    },
   });
 }
 

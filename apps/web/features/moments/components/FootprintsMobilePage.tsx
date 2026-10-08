@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
+import { ChatNavigationPending } from "@/features/chat/components/ChatNavigationPending";
 import {
   chatRosterWakeEvent,
   type ChatRealtimeScope,
@@ -3310,9 +3311,10 @@ function FootprintsRoomChatRow({
     >
       <Link
         aria-label={t.openRoomChat(room.title)}
-        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={withLocale(locale, `/lobby/${room.id}/room`)}
       >
+        <ChatNavigationPending />
         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem] bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
           <UsersRound className="h-5 w-5" />
           {room.coverImageUrl ? (
@@ -3440,7 +3442,7 @@ function FootprintsPlanetChatRow({
     >
       <Link
         aria-label={`${planetLabel}: ${planet.name}`}
-        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
         href={href}
         onClick={() => {
           window.sessionStorage.setItem(
@@ -3449,6 +3451,7 @@ function FootprintsPlanetChatRow({
           );
         }}
       >
+        <ChatNavigationPending />
         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem] bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
           <span className="flex h-full w-full items-center justify-center">
             <Globe2 className="h-5 w-5" />
@@ -3648,11 +3651,12 @@ function FootprintsMessageRow({
         <div className="flex min-w-0 items-center gap-2">
           <Link
             aria-label={t.openConversation(friend.friend.nickname)}
-            className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+            className="friemi-interactive-card relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
             href={withLocale(locale, `/messages/${friend.conversationId}`)}
             onClick={() => saveMessageThreadReturnHref(returnHref)}
           >
             {content}
+            <ChatNavigationPending />
           </Link>
           {backFollowAction}
           <ChatRosterDismissButton
@@ -3711,7 +3715,7 @@ export function FootprintsMobilePage({
   momentFeedLoaded,
   momentFeedNextCursor,
   moments: initialMoments,
-  linkableActivities,
+  linkableActivities: initialLinkableActivities,
   canCreatePlanet: initialCanCreatePlanet,
   planetChats: initialPlanetChats,
   planets: initialPlanets,
@@ -3732,6 +3736,7 @@ export function FootprintsMobilePage({
     : null;
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
   const [moments, setMoments] = useState(initialMoments);
+  const [linkableActivities, setLinkableActivities] = useState(initialLinkableActivities);
   const [momentCursor, setMomentCursor] = useState(momentFeedNextCursor);
   const [hasMoreMoments, setHasMoreMoments] = useState(momentFeedHasMore);
   const [planets, setPlanets] = useState(initialPlanets);
@@ -4038,11 +4043,13 @@ export function FootprintsMobilePage({
 
   useEffect(() => {
     if (!momentFeedLoaded) return;
+    setLinkableActivities(initialLinkableActivities);
     setMoments(initialMoments);
     setMomentCursor(momentFeedNextCursor);
     setHasMoreMoments(momentFeedHasMore);
     setLoadedTabs((current) => ({ ...current, moment: true }));
   }, [
+    initialLinkableActivities,
     initialMoments,
     momentFeedHasMore,
     momentFeedLoaded,

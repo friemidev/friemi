@@ -124,6 +124,7 @@ type MobileLobbyPageResponse = {
 
 const mobileLobbyTabMemoryCache = new Map<string, MobileLobbyTabCache>();
 const mobileLobbyTabCacheFreshMs = 45_000;
+const mobileLobbyTabRetentionMs = 5 * 60_000;
 const mobileLobbyTabCacheLimit = 8;
 const mobileLobbyWarmupDelayMs = 1_400;
 const mobileLobbyWarmupIntervalMs = 650;
@@ -699,6 +700,7 @@ export function MobileLobbyV23View({
     hasMore: initialHasMore,
     page: 1,
   };
+  const serverPageRef = useRef({ activeTab, activities, initialHasMore, tabCacheKey });
   const [selectedTab, setSelectedTab] =
     useState<MobileLobbyV23TabId>(activeTab);
   const [activeCategory, setActiveCategory] =
@@ -709,12 +711,14 @@ export function MobileLobbyV23View({
   >(() => {
     const cachedTabs = mobileLobbyTabMemoryCache.get(tabCacheKey) ?? {};
     const cachedPages = Object.fromEntries(
-      Object.entries(cachedTabs).map(([tab, entry]) => [tab, entry.page]),
+      Object.entries(cachedTabs)
+        .filter(([, entry]) => Date.now() - entry.cachedAt < mobileLobbyTabRetentionMs)
+        .map(([tab, entry]) => [tab, entry.page]),
     ) as Partial<Record<MobileLobbyV23TabId, MobileLobbyTabPageState>>;
 
     return {
       ...cachedPages,
-      [activeTab]: initialTabPage,
+      [activeTab]: cachedPages[activeTab] ?? initialTabPage,
     };
   });
   const [endedTabPages, setEndedTabPages] = useState<
@@ -846,11 +850,21 @@ export function MobileLobbyV23View({
           : window.setTimeout(() => controller.abort(), 15000);
 
       try {
-        const result = await fetchMobileLobbyPage(
+        let result = await fetchMobileLobbyPage(
           tab,
           nextPage,
           controller.signal,
         );
+        // Revalidate all retained pages before swapping the list. Refreshing
+        // only page one would remove the user's scroll range on return.
+        if (background && !loadNext && currentPage) {
+          const refreshed = [...result.activities];
+          for (let page = 2; page <= currentPage.page && result.hasMore; page += 1) {
+            result = await fetchMobileLobbyPage(tab, page, controller.signal);
+            refreshed.push(...result.activities);
+          }
+          result = { ...result, activities: refreshed };
+        }
 
         const previous = tabPagesRef.current[tab];
         const nextTabPage = {
@@ -1006,6 +1020,14 @@ export function MobileLobbyV23View({
     setSelectedTab(activeTab);
   }, [activeTab]);
   useEffect(() => {
+    const previous = serverPageRef.current;
+    if (previous.activeTab === activeTab && previous.activities === activities && previous.initialHasMore === initialHasMore && previous.tabCacheKey === tabCacheKey) {
+      if (!getMobileLobbyTabCacheEntry(tabCacheKey, activeTab)) {
+        cacheMobileLobbyTabPage(tabCacheKey, activeTab, tabPagesRef.current[activeTab]!);
+      }
+      return;
+    }
+    serverPageRef.current = { activeTab, activities, initialHasMore, tabCacheKey };
     const nextState = {
       activities: dedupeActivities(activities),
       hasMore: initialHasMore,
@@ -1054,7 +1076,8 @@ export function MobileLobbyV23View({
 
     const runWarmup = async () => {
       for (const tab of warmupTabs) {
-        if (cancelled) {
+        const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+        if (cancelled || document.hidden || !navigator.onLine || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType ?? "")) {
           return;
         }
 

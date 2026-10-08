@@ -4,11 +4,11 @@ import { parseMoneyToMinor } from "./money";
 export const AA_EXPENSE = "aa-simple-expense";
 export const AA_PREPAYMENT = "aa-simple-prepayment";
 export const AA_SETTLEMENT = "aa-simple-settlement";
-export type AaPerson = { id: string; name: string; active: boolean };
+export type AaPerson = { id: string; name: string; active: boolean; paymentMethod?: string | null };
 export type AaRecord = {
   id: string; type: LedgerTransactionInput["type"]; status: LedgerTransactionInput["status"];
   title: string; note: string; amount: string; source: string | null; creatorId: string;
-  from: string | null; to: string | null; paidAt: string | null; round: string | null;
+  from: string | null; to: string | null; paidAt: string | null; receivedAt: string | null; round: string | null;
   contributions: { participantId: string; amount: string }[];
   shares: { participantId: string; amount: string }[];
 };
@@ -19,7 +19,7 @@ export type AaSimpleState = {
   legacyBlocked: boolean;
 };
 export type AaCommand = {
-  intent: "expense" | "prepayment" | "delete" | "start" | "reopen" | "pay" | "dispute" | "received" | "unpaid";
+  intent: "expense" | "prepayment" | "delete" | "start" | "reopen" | "pay" | "undoPay" | "receive" | "dispute" | "received" | "unpaid";
   operationId: string; expectedVersion: number; recordId?: string;
   amount?: string; title?: string; note?: string; payerId?: string; recipientId?: string; participantIds?: string[];
 };
@@ -42,7 +42,7 @@ export function toSimpleAccountingInput(record: AaRecord): LedgerTransactionInpu
   return {
     id: record.id, type: record.type,
     // A reported payment stays reserved while the two parties reconcile it.
-    status: record.source === AA_SETTLEMENT && record.status === "DISPUTED" && record.paidAt ? "POSTED" : record.status,
+    status: record.source === AA_SETTLEMENT && record.status === "DISPUTED" && (record.paidAt || record.receivedAt) ? "POSTED" : record.status,
     baseAmountMinor: BigInt(record.amount),
     contributions: record.contributions.map(item => ({ participantId: item.participantId, amountMinor: BigInt(item.amount) })),
     shares: record.shares.map(item => ({ participantId: item.participantId, amountMinor: BigInt(item.amount) })),
@@ -124,7 +124,7 @@ export function applyAaCommand(original: AaSimpleState, command: AaCommand, now:
     const next: AaRecord = {
       id: record?.id ?? command.operationId, type: command.intent === "expense" ? "EXPENSE" : "TRANSFER", status: "POSTED",
       title, note: command.note ?? "", amount: amount.toString(), source: command.intent === "expense" ? AA_EXPENSE : AA_PREPAYMENT,
-      creatorId: record?.creatorId ?? viewer.id, from: null, to: null, paidAt: null, round: null, contributions: [], shares: [],
+      creatorId: record?.creatorId ?? viewer.id, from: null, to: null, paidAt: null, receivedAt: null, round: null, contributions: [], shares: [],
     };
     if (command.intent === "expense") {
       const ids = command.participantIds ?? [];
@@ -148,21 +148,37 @@ export function applyAaCommand(original: AaSimpleState, command: AaCommand, now:
     state.startedAt = now; state.status = "FROZEN";
     simpleSuggestions(state).forEach((item, index) => state.records.push({
       id: `${command.operationId}:${index}`, type: "TRANSFER", status: "PENDING_CONFIRMATION", title: "结算付款", note: "",
-      ...item, source: AA_SETTLEMENT, creatorId: viewer.id, paidAt: null, round: command.operationId, contributions: [], shares: [],
+      ...item, source: AA_SETTLEMENT, creatorId: viewer.id, paidAt: null, receivedAt: null, round: command.operationId, contributions: [], shares: [],
     }));
   } else if (command.intent === "reopen") {
     requireThat(state.canSettle, "FORBIDDEN");
-    requireThat(state.status === "FROZEN" && !disputed, "BLOCKED");
+    requireThat(state.status === "FROZEN" && !disputed &&
+      !state.records.some(r => r.source === AA_SETTLEMENT && r.status === "PENDING_CONFIRMATION" && r.paidAt), "BLOCKED");
     state.records.forEach(r => { if (r.source === AA_SETTLEMENT && r.status === "PENDING_CONFIRMATION") r.status = "VOIDED"; });
     state.status = "ACTIVE"; state.startedAt = null;
   } else {
     requireThat(record?.source === AA_SETTLEMENT, "INVALID_RECORD");
     if (command.intent === "pay") {
       requireThat(record.from === viewer.id, "FORBIDDEN");
-      if (record.status === "POSTED") return original;
+      if (record.status === "POSTED" || (record.status === "PENDING_CONFIRMATION" && record.paidAt)) return original;
       requireThat(state.status === "FROZEN" && !disputed && !state.legacyBlocked && record.status === "PENDING_CONFIRMATION", "BLOCKED");
       assertSimplePlan(state);
-      record.status = "POSTED"; record.paidAt = now;
+      // Payer acknowledgement is visible to the recipient, but cannot settle the balance alone.
+      record.paidAt = now;
+    } else if (command.intent === "undoPay") {
+      requireThat(record.from === viewer.id, "FORBIDDEN");
+      requireThat(state.status === "FROZEN" && !disputed && record.status === "PENDING_CONFIRMATION", "BLOCKED");
+      if (!record.paidAt) return original;
+      record.paidAt = null;
+    } else if (command.intent === "receive") {
+      requireThat(record.to === viewer.id, "FORBIDDEN");
+      if (record.status === "POSTED" && record.receivedAt) return original;
+      requireThat(!disputed && !state.legacyBlocked &&
+        (state.status === "FROZEN" && record.status === "PENDING_CONFIRMATION" ||
+          record.status === "POSTED" && Boolean(record.paidAt)), "BLOCKED");
+      if (record.status === "PENDING_CONFIRMATION") assertSimplePlan(state);
+      // The recipient may confirm directly, without waiting for the payer's acknowledgement.
+      record.status = "POSTED"; record.receivedAt = now;
     } else if (command.intent === "dispute") {
       requireThat(record.to === viewer.id, "FORBIDDEN");
       requireThat(record.status === "POSTED", "INVALID_RECORD");

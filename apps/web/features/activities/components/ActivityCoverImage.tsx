@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   defaultActivityCategoryIllustrationSrc,
   isActivityCategoryIllustrationSrc,
 } from "@/features/activities/utils/activityCategoryVisuals";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { coverFailureCache } from "../coverFailureCache";
 
 type ActivityCoverImageProps = {
   alt?: string;
-  categoryArtworkClassName?: string;
   fallbackSrc?: string | null;
   fetchPriority?: "auto" | "high" | "low";
   imageClassName?: string;
@@ -20,9 +20,22 @@ type ActivityCoverImageProps = {
   src: string | null;
 };
 
-export function ActivityCoverImage({
+const loadedCoverSources = new Set<string>();
+
+function rememberCover(src: string) {
+  loadedCoverSources.delete(src);
+  loadedCoverSources.add(src);
+  if (loadedCoverSources.size > 160) {
+    loadedCoverSources.delete(loadedCoverSources.values().next().value!);
+  }
+}
+
+export function ActivityCoverImage(props: ActivityCoverImageProps) {
+  return <ActivityCoverImageContent key={JSON.stringify([props.src, props.recoverySrc])} {...props} />;
+}
+
+function ActivityCoverImageContent({
   alt = "",
-  categoryArtworkClassName,
   fallbackSrc,
   fetchPriority = "auto",
   imageClassName,
@@ -34,14 +47,18 @@ export function ActivityCoverImage({
   const [hasFailed, setHasFailed] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [usesRecovery, setUsesRecovery] = useState(false);
+  const [skipRevealTransition, setSkipRevealTransition] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const normalizedFallbackSrc = fallbackSrc?.trim() || null;
   const normalizedPrimarySrc = src?.trim() || null;
   const normalizedRecoverySrc = recoverySrc?.trim() || null;
-  const activeSrc = usesRecovery ? normalizedRecoverySrc : normalizedPrimarySrc;
-  const usesCategoryArtworkCrop =
+  const candidateSrc = usesRecovery || coverFailureCache.has(normalizedPrimarySrc)
+    ? normalizedRecoverySrc : normalizedPrimarySrc;
+  const activeSrc = coverFailureCache.has(candidateSrc) ? null : candidateSrc;
+  const usesCategoryArtwork =
     isActivityCategoryIllustrationSrc(activeSrc) &&
     activeSrc !== defaultActivityCategoryIllustrationSrc;
-  const fallbackUsesCategoryArtworkCrop =
+  const fallbackUsesCategoryArtwork =
     isActivityCategoryIllustrationSrc(normalizedFallbackSrc) &&
     normalizedFallbackSrc !== defaultActivityCategoryIllustrationSrc;
   const primarySrc =
@@ -49,7 +66,8 @@ export function ActivityCoverImage({
       ? activeSrc
       : null;
 
-  const handleSourceFailure = useCallback(() => {
+  const handleSourceFailure = useCallback((rememberFailure = false) => {
+    if (rememberFailure && activeSrc && navigator.onLine) coverFailureCache.fail(activeSrc);
     setHasLoaded(false);
 
     if (
@@ -62,13 +80,18 @@ export function ActivityCoverImage({
     }
 
     setHasFailed(true);
-  }, [normalizedPrimarySrc, normalizedRecoverySrc, usesRecovery]);
+  }, [activeSrc, normalizedPrimarySrc, normalizedRecoverySrc, usesRecovery]);
 
-  useEffect(() => {
-    setHasFailed(false);
-    setHasLoaded(false);
-    setUsesRecovery(false);
-  }, [recoverySrc, src]);
+  useLayoutEffect(() => {
+    const image = imageRef.current;
+    const ready = Boolean(primarySrc && (
+      loadedCoverSources.has(primarySrc) ||
+      (image?.complete && image.naturalWidth > 0)
+    ));
+    setHasLoaded(ready);
+    setSkipRevealTransition(ready);
+    if (ready && primarySrc) rememberCover(primarySrc);
+  }, [primarySrc]);
 
   useEffect(() => {
     if (!activeSrc || hasLoaded || hasFailed) {
@@ -80,7 +103,7 @@ export function ActivityCoverImage({
     return () => window.clearTimeout(timeoutId);
   }, [activeSrc, handleSourceFailure, hasFailed, hasLoaded]);
 
-  if ((!src || hasFailed) && !normalizedFallbackSrc) {
+  if ((!activeSrc || hasFailed) && !normalizedFallbackSrc) {
     return (
       <div
         className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[#FEFFF9]"
@@ -114,13 +137,9 @@ export function ActivityCoverImage({
         <img
           alt=""
           className={cn(
-            "absolute w-full object-cover",
-            fallbackUsesCategoryArtworkCrop
-              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
-              : "inset-0 h-full",
-            fallbackUsesCategoryArtworkCrop
-              ? categoryArtworkClassName
-              : undefined,
+            fallbackUsesCategoryArtwork
+              ? "absolute left-1/2 top-1/2 h-[72%] w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              : "absolute inset-0 h-full w-full object-cover",
           )}
           decoding="sync"
           fetchPriority={fetchPriority}
@@ -132,14 +151,17 @@ export function ActivityCoverImage({
       {primarySrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imageRef}
           src={primarySrc}
           alt={alt}
           className={cn(
-            "absolute w-full object-cover transition-[opacity,transform] duration-300 ease-out",
-            usesCategoryArtworkCrop
-              ? "inset-x-0 bottom-0 h-[124%] object-bottom"
-              : "inset-0 h-full group-hover/card:scale-[1.035]",
-            usesCategoryArtworkCrop ? categoryArtworkClassName : undefined,
+            "absolute ease-out motion-reduce:transition-none",
+            skipRevealTransition
+              ? "transition-transform duration-150"
+              : "transition-[opacity,transform] duration-150",
+            usesCategoryArtwork
+              ? "left-1/2 top-1/2 h-[72%] w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain"
+              : "inset-0 h-full w-full object-cover group-hover/card:scale-[1.035]",
             hasLoaded ? "opacity-100" : "opacity-0",
             imageClassName,
           )}
@@ -147,8 +169,12 @@ export function ActivityCoverImage({
           fetchPriority={fetchPriority}
           loading={loading}
           referrerPolicy="no-referrer"
-          onError={handleSourceFailure}
-          onLoad={() => setHasLoaded(true)}
+          onError={() => handleSourceFailure(true)}
+          onLoad={() => {
+            coverFailureCache.clear(primarySrc);
+            rememberCover(primarySrc);
+            setHasLoaded(true);
+          }}
         />
       ) : null}
       <div className={cn("absolute inset-0", overlayClassName)} aria-hidden />

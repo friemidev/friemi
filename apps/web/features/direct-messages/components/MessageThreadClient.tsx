@@ -15,6 +15,7 @@ import { dispatchChatCursorWake } from "@/features/chat/chatCursorSync";
 import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
 import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
+import { useChatMessageMotion } from "@/features/chat/useChatMessageMotion";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -30,6 +31,7 @@ import {
   shouldShowChatTimeSeparator,
 } from "@/lib/chatDateSeparators";
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
+import { ChatTimeSeparator } from "@/features/chat/components/ChatTimeSeparator";
 import {
   deleteDirectMessagesAction,
   recallDirectMessageAction,
@@ -78,34 +80,6 @@ const defaultActionState: DirectMessageActionState = {
     body: "",
   },
 };
-
-function ChatTimeSeparator({
-  createdAt,
-  showDate,
-  locale,
-}: {
-  createdAt: string;
-  showDate: boolean;
-  locale: string;
-}) {
-  const dateLabel = showDate ? formatChatDateSeparator(createdAt, locale) : "";
-  const timeLabel = formatChatMessageTime(createdAt, locale);
-  const label = [dateLabel, timeLabel].filter(Boolean).join(" ");
-
-  if (!label) {
-    return null;
-  }
-
-  return (
-    <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
-      <span className="h-px flex-1 bg-[#E7E2D6]" />
-      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#8B907F] ring-1 ring-[#E7E2D6]">
-        {label}
-      </span>
-      <span className="h-px flex-1 bg-[#E7E2D6]" />
-    </div>
-  );
-}
 
 function SystemThreadNotice({ label }: { label: string }) {
   return (
@@ -162,6 +136,7 @@ export function MessageThreadClient({
     setMessages,
   });
   const hasMessages = messages.length > 0;
+  useChatMessageMotion(messages, chatHistory.scrollContainerRef);
   const lastMessageId = messages[messages.length - 1]?.id;
   const canSendNow =
     (canSend || peerReplyUnlocked) &&
@@ -520,7 +495,7 @@ export function MessageThreadClient({
   return (
     <>
       <div
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+        className="chat-message-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
         onScroll={chatHistory.onScroll}
         ref={chatHistory.scrollContainerRef}
       >
@@ -584,27 +559,29 @@ export function MessageThreadClient({
                       locale={locale}
                     />
                   ) : null}
-                  <MessageBubble
-                    {...message}
-                    actionMenuOpen={actionMenuMessageId === message.id}
-                    isDeleting={deletingMessageIds.includes(message.id)}
-                    isRecalling={recallingMessageIds.includes(message.id)}
-                    isSelected={selectedMessageIds.includes(message.id)}
-                    locale={locale}
-                    onDelete={handleDelete}
-                    onOpenActionMenu={handleOpenActionMenu}
-                    onRecall={handleRecall}
-                    onReply={handleReply}
-                    onRetry={
-                      message.deliveryStatus === "failed" && canSendNow
-                        ? handleRetryMessage
-                        : undefined
-                    }
-                    onStartSelection={handleStartSelection}
-                    onToggleSelection={handleToggleSelection}
-                    sender={message.isMine ? currentUser : peer}
-                    selectionMode={selectionMode}
-                  />
+                  <div className="min-w-0" data-chat-motion-id={message.id}>
+                    <MessageBubble
+                      {...message}
+                      actionMenuOpen={actionMenuMessageId === message.id}
+                      isDeleting={deletingMessageIds.includes(message.id)}
+                      isRecalling={recallingMessageIds.includes(message.id)}
+                      isSelected={selectedMessageIds.includes(message.id)}
+                      locale={locale}
+                      onDelete={handleDelete}
+                      onOpenActionMenu={handleOpenActionMenu}
+                      onRecall={handleRecall}
+                      onReply={handleReply}
+                      onRetry={
+                        message.deliveryStatus === "failed" && canSendNow
+                          ? handleRetryMessage
+                          : undefined
+                      }
+                      onStartSelection={handleStartSelection}
+                      onToggleSelection={handleToggleSelection}
+                      sender={message.isMine ? currentUser : peer}
+                      selectionMode={selectionMode}
+                    />
+                  </div>
                 </Fragment>
               );
             })}

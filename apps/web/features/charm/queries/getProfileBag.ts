@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getInventoryBagSummary } from "@/features/inventory/services/inventoryService";
 import {
   blindBoxFragmentExchangeCount,
   canRedeemBlindBoxFragments,
@@ -14,6 +15,7 @@ import { grantStarterFriemiWallet } from "../services/charmRewards";
 export type FriemiCheckDisplayStatus = "AVAILABLE" | "REDEEMED" | "EXPIRED";
 
 export type ProfileBagCheckItem = {
+  isGiftable: false;
   id: string;
   createdAt: string;
   expiresAt: string | null;
@@ -25,6 +27,7 @@ export type ProfileBagCheckItem = {
 };
 
 export type ProfileBagCouponItem = {
+  isGiftable: false;
   claimedAt: string;
   coupon: {
     accentColor: string;
@@ -45,11 +48,16 @@ export type ProfileBagCouponItem = {
   status: "AVAILABLE" | "EXPIRED" | "REDEEMED" | "VOIDED";
 };
 
+export type ProfileBagInventoryItem = Awaited<
+  ReturnType<typeof getInventoryBagSummary>
+>[number];
+
 export type ProfileBagViewModel = {
   availableCheckCount: number;
   blindBoxCheckCount: number;
   checks: ProfileBagCheckItem[];
   coupons: ProfileBagCouponItem[];
+  inventoryItems: ProfileBagInventoryItem[];
   coinBalance: {
     balance: number;
     earnedTotal: number;
@@ -149,50 +157,52 @@ export async function getProfileBag(profileId: string) {
     }
   }
 
-  const [checks, coupons, fragmentBalance, coinBalance] = await Promise.all([
-    getFriemiChecksForBag(profileId),
-    prisma.couponWalletItem.findMany({
-      where: { ownerProfileId: profileId },
-      orderBy: [{ status: "asc" }, { claimedAt: "desc" }],
-      take: 50,
-      select: {
-        claimedAt: true,
-        id: true,
-        redeemedAt: true,
-        status: true,
-        coupon: {
-          select: {
-            accentColor: true,
-            backgroundColor: true,
-            description: true,
-            expiresAt: true,
-            foregroundColor: true,
-            terms: true,
-            title: true,
-            template: {
-              select: { imageUrl: true },
-            },
-            merchant: {
-              select: {
-                logoUrl: true,
-                name: true,
+  const [checks, coupons, fragmentBalance, coinBalance, inventoryItems] =
+    await Promise.all([
+      getFriemiChecksForBag(profileId),
+      prisma.couponWalletItem.findMany({
+        where: { ownerProfileId: profileId },
+        orderBy: [{ status: "asc" }, { claimedAt: "desc" }],
+        take: 50,
+        select: {
+          claimedAt: true,
+          id: true,
+          redeemedAt: true,
+          status: true,
+          coupon: {
+            select: {
+              accentColor: true,
+              backgroundColor: true,
+              description: true,
+              expiresAt: true,
+              foregroundColor: true,
+              terms: true,
+              title: true,
+              template: {
+                select: { imageUrl: true },
+              },
+              merchant: {
+                select: {
+                  logoUrl: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-    }),
-    prisma.userBlindBoxFragmentBalance.findUnique({
-      where: {
-        profileId,
-      },
-      select: {
-        fragmentCount: true,
-        redeemedBlindBoxCount: true,
-      },
-    }),
-    getFriemiCoinBalance(profileId),
-  ]);
+      }),
+      prisma.userBlindBoxFragmentBalance.findUnique({
+        where: {
+          profileId,
+        },
+        select: {
+          fragmentCount: true,
+          redeemedBlindBoxCount: true,
+        },
+      }),
+      getFriemiCoinBalance(profileId),
+      getInventoryBagSummary(profileId),
+    ]);
   const mappedChecks = checks.map((check) => {
     const status = resolveFriemiCheckDisplayStatus({
       expiresAt: check.expiresAt,
@@ -207,6 +217,7 @@ export async function getProfileBag(profileId: string) {
       createdAt: check.createdAt.toISOString(),
       expiresAt: check.expiresAt?.toISOString() ?? null,
       id: check.id,
+      isGiftable: false as const,
       redeemedAt: check.redeemedAt?.toISOString() ?? null,
       status,
       type: check.type,
@@ -221,6 +232,7 @@ export async function getProfileBag(profileId: string) {
       imageUrl: item.coupon.template?.imageUrl ?? null,
     },
     id: item.id,
+    isGiftable: false as const,
     redeemedAt: item.redeemedAt?.toISOString() ?? null,
     status:
       item.status === "AVAILABLE" &&
@@ -239,6 +251,7 @@ export async function getProfileBag(profileId: string) {
     ).length,
     checks: mappedChecks,
     coupons: mappedCoupons,
+    inventoryItems,
     coinBalance: {
       balance: coinBalance.balance,
       earnedTotal: coinBalance.earnedTotal,

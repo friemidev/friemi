@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -25,6 +26,7 @@ type MobileBottomSheetProps = {
   headerAction?: ReactNode;
   heightClassName?: string;
   initiallyExpanded?: boolean;
+  keepMounted?: boolean;
   onClose: () => void;
   open: boolean;
   zIndexClassName?: string;
@@ -39,6 +41,7 @@ export function MobileBottomSheet({
   headerAction,
   heightClassName = "h-[85%]",
   initiallyExpanded = false,
+  keepMounted = false,
   onClose,
   open,
   zIndexClassName = "z-[70]",
@@ -54,10 +57,16 @@ export function MobileBottomSheet({
   const [isDragging, setIsDragging] = useState(false);
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
   const [isClosing, setIsClosing] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const requestClose = useCallback(() => {
     if (isClosing || closeTimeoutRef.current !== null) {
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
       return;
     }
 
@@ -72,13 +81,16 @@ export function MobileBottomSheet({
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (open) {
-      setDragDeltaY(0);
-      setIsDragging(false);
-      setIsExpanded(initiallyExpanded);
-      setIsClosing(false);
+  useLayoutEffect(() => {
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
     }
+    setDragDeltaY(0);
+    setIsDragging(false);
+    setIsExpanded(initiallyExpanded);
+    setIsClosing(false);
+    setHasEntered(false);
   }, [initiallyExpanded, open]);
 
   useEffect(() => {
@@ -130,13 +142,13 @@ export function MobileBottomSheet({
     }
 
     dragPointerIdRef.current = event.pointerId;
+    setHasEntered(true);
     dragStartYRef.current = event.clientY;
     dragViewportHeightRef.current =
       window.visualViewport?.height ?? window.innerHeight;
     dragDeltaYRef.current = 0;
     setDragDeltaY(0);
     setIsDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handleDragMove(event: ReactPointerEvent<HTMLDivElement>) {
@@ -148,6 +160,11 @@ export function MobileBottomSheet({
     }
 
     const nextDeltaY = event.clientY - dragStartYRef.current;
+    // Capturing on pointerdown retargets an ordinary handle-button click to
+    // this wrapper. Capture only once the gesture is actually a drag.
+    if (Math.abs(nextDeltaY) > 8 && !event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     dragDeltaYRef.current = nextDeltaY;
     setDragDeltaY(nextDeltaY);
   }
@@ -248,21 +265,22 @@ export function MobileBottomSheet({
     sheetStyle = { height: "100%" };
   }
 
-  if (!open || !mounted) {
+  if ((!open && !keepMounted) || !mounted) {
     return null;
   }
 
   return createPortal(
     <div
-      data-friemi-modal-overlay="true"
+      data-friemi-modal-overlay={open ? "true" : undefined}
+      aria-hidden={!open || undefined}
+      inert={!open}
       className={cn(
-        "fixed inset-x-0 flex items-end bg-[#111210]/42",
-        isClosing
-          ? "animate-[mobile-bottom-sheet-overlay-out_160ms_ease-in_forwards]"
-          : null,
+        "friemi-sheet-overlay fixed inset-x-0 flex items-end bg-[#111210]/42",
         zIndexClassName,
       )}
+      data-state={isClosing ? "closing" : "open"}
       style={{
+        display: open ? undefined : "none",
         height: "var(--friemi-modal-viewport-height, 100dvh)",
         top: "var(--friemi-modal-viewport-offset-top, 0px)",
       }}
@@ -275,17 +293,20 @@ export function MobileBottomSheet({
     >
       <section
         aria-label={ariaLabel}
-        aria-modal="true"
+        aria-modal={open || undefined}
         className={cn(
-          "flex w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-18px_54px_rgba(17,18,16,0.22)] transition-[height,border-radius,transform] duration-200 ease-out motion-reduce:animate-none motion-reduce:transition-none",
-          isClosing
-            ? "animate-[activity-room-sheet-out_160ms_ease-in_forwards]"
-            : "animate-[activity-room-sheet-in_180ms_ease-out]",
-          isDragging ? "transition-none" : null,
+          "friemi-sheet-panel flex w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-18px_54px_rgba(17,18,16,0.22)]",
           isExpanded ? "!rounded-none" : null,
           heightClassName,
           className,
         )}
+        data-dragging={isDragging || undefined}
+        data-entered={hasEntered || undefined}
+        onAnimationEnd={(event) => {
+          if (event.target === event.currentTarget && !isClosing) {
+            setHasEntered(true);
+          }
+        }}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
         style={sheetStyle}
@@ -302,7 +323,7 @@ export function MobileBottomSheet({
         >
           <button
             aria-label={closeLabel ?? ariaLabel}
-            className="mx-auto flex h-6 w-20 cursor-grab items-center justify-center rounded-full transition active:cursor-grabbing active:scale-95"
+            className="relative z-20 mx-auto flex h-6 w-20 cursor-grab items-center justify-center rounded-full transition active:cursor-grabbing active:scale-95 after:absolute after:-bottom-4 after:-top-1 after:inset-x-0 after:content-['']"
             onClick={() => {
               if (suppressNextClickRef.current) {
                 suppressNextClickRef.current = false;

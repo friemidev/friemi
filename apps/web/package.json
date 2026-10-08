@@ -6,6 +6,8 @@
   "scripts": {
     "aa:preview": "node scripts/build-aa-preview.mjs && node scripts/serve-aa-preview.mjs",
     "dev": "next dev",
+    "ios:sync": "cap sync ios && npm run ios:verify-keyboard",
+    "ios:verify-keyboard": "tsx scripts/verify-ios-keyboard.ts",
     "build": "prisma generate --schema=prisma/schema.prisma && node scripts/verify-prisma-client.cjs && next build",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -26,9 +28,11 @@
     "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts",
     "draw-guess:deadlines": "node scripts/run-draw-guess-deadlines.mjs",
     "draw-guess:preview-cron": "node scripts/configure-draw-guess-preview-cron.mjs",
+    "draw-guess:production-cron": "node scripts/configure-draw-guess-production-cron.mjs",
     "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts"
   },
   "dependencies": {
+    "@capacitor/keyboard": "7.0.6",
     "@capacitor/push-notifications": "^7.0.7",
     "@capawesome/capacitor-badge": "^7.0.1",
     "@chill-club/shared": "file:../../packages/shared",

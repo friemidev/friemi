@@ -1,18 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useId, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  CheckCircle2,
-  Flag,
-  Loader2,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { CheckCircle2, Flag, Loader2, X } from "lucide-react";
 import type { ReportReason, ReportTargetType } from "@prisma/client";
-import { Button, Textarea } from "@chill-club/ui";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import {
@@ -20,6 +11,7 @@ import {
   type CreateReportState,
 } from "../actions/reportActions";
 import { getReportCopy } from "../copy";
+import { SafetyDialog } from "./SafetyDialog";
 
 type ReportDialogProps = {
   className?: string;
@@ -29,43 +21,141 @@ type ReportDialogProps = {
   targetId: string;
   targetType: ReportTargetType;
   variant?: "button" | "link" | "icon";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 };
 
 const reportReasons: ReportReason[] = [
-  "SPAM",
+  "SAFETY_CONCERN",
   "HARASSMENT",
   "INAPPROPRIATE_CONTENT",
+  "SPAM",
   "MISLEADING_INFORMATION",
-  "SAFETY_CONCERN",
   "OTHER",
 ];
 
-const initialState: CreateReportState = {
-  values: {
-    reason: "MISLEADING_INFORMATION",
-    description: "",
-  },
-};
-
-function SubmitButton({ locale }: { locale: string }) {
-  const { pending } = useFormStatus();
+function ReportForm({
+  locale,
+  redirectPath,
+  targetId,
+  targetType,
+  onClose,
+}: Pick<
+  ReportDialogProps,
+  "locale" | "redirectPath" | "targetId" | "targetType"
+> & { onClose: () => void }) {
   const t = getReportCopy(locale);
-
+  const titleId = useId();
+  const hintId = useId();
+  const [reason, setReason] = useState<ReportReason>("SAFETY_CONCERN");
+  const [description, setDescription] = useState("");
+  const [state, formAction, pending] = useActionState(
+    createReportAction,
+    {} as CreateReportState,
+  );
   return (
-    <Button
-      type="submit"
-      className="h-11 w-full rounded-full"
-      disabled={pending}
-    >
-      {pending ? (
-        <span className="inline-flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t.submitting}
-        </span>
+    <SafetyDialog labelledBy={titleId} onClose={onClose}>
+      <header className="flex items-start justify-between gap-3 border-b border-sand px-5 py-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-ink/70">
+            {t.targetTypes[targetType]}
+          </p>
+          <h2 id={titleId} className="mt-1 text-lg font-bold">
+            {state.ok ? t.successTitle : t.title}
+          </h2>
+        </div>
+        <button
+          aria-label={t.close}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-forest focus-visible:outline"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" className="h-5 w-5" />
+        </button>
+      </header>
+      {state.ok ? (
+        <div className="space-y-5 p-5">
+          <p
+            role="status"
+            className="flex items-start gap-2 text-sm leading-6 text-forest"
+          >
+            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+            {t.successDescription}
+          </p>
+          <button
+            type="button"
+            className="min-h-11 w-full rounded-full bg-forest px-4 py-2 font-semibold text-white"
+            onClick={onClose}
+          >
+            {t.close}
+          </button>
+        </div>
       ) : (
-        t.submit
+        <form action={formAction} className="grid gap-4 p-5">
+          <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="targetType" value={targetType} />
+          <input type="hidden" name="targetId" value={targetId} />
+          <input type="hidden" name="redirectPath" value={redirectPath} />
+          <label className="grid gap-2 text-sm font-semibold">
+            {t.reasonLabel}
+            <select
+              className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-base"
+              disabled={pending}
+              name="reason"
+              onChange={(event) =>
+                setReason(event.target.value as ReportReason)
+              }
+              value={reason}
+            >
+              {reportReasons.map((item) => (
+                <option key={item} value={item}>
+                  {t.reasons[item]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-semibold">
+            {t.descriptionLabel}
+            <textarea
+              aria-describedby={hintId}
+              className="min-h-28 w-full resize-y rounded-lg border border-sand bg-white px-3 py-3 text-base leading-6 outline-none focus:border-forest"
+              disabled={pending}
+              maxLength={500}
+              name="description"
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={t.descriptionPlaceholder}
+              value={description}
+            />
+          </label>
+          <p id={hintId} className="text-sm leading-6 text-ink/75">
+            {t.descriptionHint}
+          </p>
+          {state.formError ? (
+            <p role="alert" className="text-sm font-semibold text-danger">
+              {state.formError}
+            </p>
+          ) : null}
+          {Object.values(state.fieldErrors ?? {}).map((messages, index) => (
+            <p key={index} role="alert" className="text-sm text-danger">
+              {messages[0]}
+            </p>
+          ))}
+          <button
+            type="submit"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 py-2 font-semibold text-white disabled:opacity-60"
+            disabled={pending}
+          >
+            {pending ? (
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+            ) : (
+              <Flag aria-hidden="true" className="h-4 w-4" />
+            )}
+            {pending ? t.submitting : t.submit}
+          </button>
+        </form>
       )}
-    </Button>
+    </SafetyDialog>
   );
 }
 
@@ -77,184 +167,64 @@ export function ReportDialog({
   targetId,
   targetType,
   variant = "button",
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: ReportDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(
-    createReportAction,
-    initialState,
-  );
-  const router = useRouter();
-  const descriptionId = useId();
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
+  const setOpen = (value: boolean) => {
+    setLocalOpen(value);
+    onOpenChange?.(value);
+  };
   const t = getReportCopy(locale);
   const triggerLabel = isAuthenticated ? t.trigger : t.signInTrigger;
-  const signInHref = getSignInHref(locale, redirectPath);
-
-  useEffect(() => {
-    if (state.ok) {
-      router.refresh();
-    }
-  }, [router, state.ok]);
-
+  const triggerClass = cn(
+    "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-sm font-medium text-ink/75 ring-1 ring-sand transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-forest",
+    variant === "link" && "bg-transparent px-0 text-xs ring-0",
+    variant === "icon" && "h-11 w-11 px-0",
+    className,
+  );
+  const trigger = (
+    <>
+      <Flag className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className={variant === "icon" ? "sr-only" : undefined}>
+        {triggerLabel}
+      </span>
+    </>
+  );
   if (!isAuthenticated) {
-    return (
+    return hideTrigger ? null : (
       <Link
-        className={cn(
-          "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-white hover:text-ink",
-          variant === "link" && "h-auto px-0 text-xs ring-0 hover:bg-transparent",
-          variant === "icon" && "h-9 w-9 px-0",
-          className,
-        )}
-        href={signInHref}
+        className={triggerClass}
+        href={getSignInHref(locale, redirectPath)}
         title={triggerLabel}
       >
-        <Flag className="h-4 w-4" aria-hidden="true" />
-        {variant === "icon" ? (
-          <span className="sr-only">{triggerLabel}</span>
-        ) : (
-          triggerLabel
-        )}
+        {trigger}
       </Link>
     );
   }
-
   return (
     <>
-      <button
-        type="button"
-        className={cn(
-          "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/80 px-3 text-sm font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
-          variant === "link" &&
-            "h-auto bg-transparent px-0 text-xs ring-0 hover:bg-transparent",
-          variant === "icon" && "h-9 w-9 px-0",
-          className,
-        )}
-        onClick={() => setOpen(true)}
-        title={triggerLabel}
-      >
-        <Flag className="h-4 w-4" aria-hidden="true" />
-        {variant === "icon" ? (
-          <span className="sr-only">{triggerLabel}</span>
-        ) : (
-          triggerLabel
-        )}
-      </button>
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-4"
-          role="presentation"
+      {!hideTrigger ? (
+        <button
+          type="button"
+          className={triggerClass}
+          onClick={() => setOpen(true)}
+          title={triggerLabel}
         >
-          <div
-            aria-describedby={descriptionId}
-            aria-modal="true"
-            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#D6D5B2] bg-[#FFF5E6] shadow-2xl sm:max-w-lg"
-            role="dialog"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-5">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-normal text-moss">
-                  {t.targetTypes[targetType]}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
-                  {state.ok ? t.successTitle : t.title}
-                </h2>
-                <p
-                  id={descriptionId}
-                  className="mt-2 text-sm leading-6 text-zinc-600"
-                >
-                  {state.ok ? t.successDescription : t.description}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink"
-                onClick={() => setOpen(false)}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-                <span className="sr-only">{t.close}</span>
-              </button>
-            </div>
-
-            {state.ok ? (
-              <div className="px-5 py-6">
-                <div className="rounded-2xl border border-moss/20 bg-moss/10 px-4 py-4 text-sm leading-6 text-moss">
-                  <CheckCircle2 className="mb-2 h-5 w-5" />
-                  {t.successNote}
-                </div>
-                <Button
-                  type="button"
-                  className="mt-5 h-11 w-full rounded-full"
-                  onClick={() => setOpen(false)}
-                >
-                  {t.close}
-                </Button>
-              </div>
-            ) : (
-              <form action={formAction} className="grid gap-4 px-5 py-5">
-                <input type="hidden" name="locale" value={locale} />
-                <input type="hidden" name="targetType" value={targetType} />
-                <input type="hidden" name="targetId" value={targetId} />
-                <input type="hidden" name="redirectPath" value={redirectPath} />
-
-                <label className="grid gap-2 text-sm font-medium text-ink">
-                  {t.reasonLabel}
-                  <select
-                    className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400"
-                    defaultValue={
-                      state.values?.reason ?? initialState.values?.reason
-                    }
-                    name="reason"
-                  >
-                    {reportReasons.map((reason) => (
-                      <option key={reason} value={reason}>
-                        {t.reasons[reason]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium text-ink">
-                  {t.descriptionLabel}
-                  <Textarea
-                    className="min-h-28 rounded-xl"
-                    defaultValue={state.values?.description}
-                    maxLength={500}
-                    name="description"
-                    placeholder={t.descriptionPlaceholder}
-                  />
-                </label>
-
-                <div className="rounded-2xl bg-[#F1F2EC] px-4 py-3 text-sm leading-6 text-moss">
-                  <ShieldAlert className="mb-1 h-4 w-4" />
-                  {t.descriptionHint}
-                </div>
-
-                {state.formError ? (
-                  <p role="alert" className="text-sm font-medium text-red-600">
-                    {state.formError}
-                  </p>
-                ) : null}
-                {state.fieldErrors?.reason?.[0] ? (
-                  <p role="alert" className="text-sm font-medium text-red-600">
-                    {state.fieldErrors.reason[0]}
-                  </p>
-                ) : null}
-
-                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <SubmitButton locale={locale} />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-11 rounded-full px-5"
-                    onClick={() => setOpen(false)}
-                  >
-                    {t.cancel}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+          {trigger}
+        </button>
+      ) : null}
+      {open ? (
+        <ReportForm
+          key={targetType + ":" + targetId}
+          locale={locale}
+          redirectPath={redirectPath}
+          targetId={targetId}
+          targetType={targetType}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </>
   );

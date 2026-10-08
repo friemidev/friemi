@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { FileWarning, Mail, ShieldCheck } from "lucide-react";
-import { BrandLockup } from "@/components/brand/BrandLockup";
+import { ArrowLeft, FileWarning, Mail, ShieldCheck } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 
 type PrivacyPageProps = {
@@ -31,12 +30,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "隐私与数据说明",
     description:
       "Friemi 是面向海外中文用户的活动发现与组局工具。我们只在提供账号、活动、报名、消息、通知、安全和支持服务所需的范围内处理数据。",
-    updatedAt: "最后更新：2026-07-08",
+    updatedAt: "最后更新：2026-10-05",
     contactLabel: "隐私与账号删除联系邮箱",
-    safetyLabel: "查看社区安全说明",
+    safetyLabel: "儿童安全标准与社区准则",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "返回首页",
     sections: [
+      {
+        title: "儿童安全",
+        body: [
+          "Friemi 严格禁止儿童性虐待与性剥削（CSAE），以及创建、传播或分享儿童性虐待材料（CSAM）。举报方式、处置规则和联系人见本页链接的儿童安全标准与社区准则。",
+        ],
+      },
       {
         title: "我们收集的信息",
         body: [
@@ -93,12 +98,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "Privacy and data",
     description:
       "Friemi helps overseas Chinese-speaking users discover activities, start group plans, and communicate around events. We process data only to provide account, event, messaging, notification, safety, analytics, and support features.",
-    updatedAt: "Last updated: 2026-07-08",
+    updatedAt: "Last updated: 2026-10-05",
     contactLabel: "Privacy and account deletion contact",
-    safetyLabel: "View Community Safety",
+    safetyLabel: "Child Safety and Community Standards",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Back home",
     sections: [
+      {
+        title: "Child safety",
+        body: [
+          "Friemi strictly prohibits Child Sexual Abuse and Exploitation (CSAE) and the creation, distribution or sharing of Child Sexual Abuse Material (CSAM). Reporting channels, enforcement procedures and contact information are set out in the Child Safety and Community Standards linked on this page.",
+        ],
+      },
       {
         title: "Information we collect",
         body: [
@@ -136,12 +147,18 @@ const privacyCopy: Record<string, PrivacyCopy> = {
     eyebrow: "Confidentialite et donnees",
     description:
       "Friemi aide les utilisateurs sinophones a l'etranger a decouvrir des activites, creer des sorties et communiquer autour des evenements. Nous traitons les donnees necessaires au compte, aux activites, aux messages, aux notifications, a la securite, a l'analyse et au support.",
-    updatedAt: "Derniere mise a jour : 2026-07-08",
+    updatedAt: "Derniere mise a jour : 2026-10-05",
     contactLabel: "Contact confidentialite et suppression de compte",
-    safetyLabel: "Voir la securite communautaire",
+    safetyLabel: "Protection des enfants et règles communautaires",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Retour a l'accueil",
     sections: [
+      {
+        title: "Protection des enfants",
+        body: [
+          "Friemi interdit strictement les abus et l’exploitation sexuels des enfants (CSAE), ainsi que la création, la diffusion ou le partage de contenus d’abus sexuels sur enfants (CSAM). Les moyens de signalement, les mesures prises et les coordonnées du contact figurent dans les règles de protection des enfants et de la communauté accessibles depuis cette page.",
+        ],
+      },
       {
         title: "Informations collectees",
         body: [
@@ -193,10 +210,17 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
 
   return (
     <main className="min-h-screen bg-white">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-[calc(var(--app-top-safe-area)+1rem)] sm:px-6 sm:pb-12 sm:pt-[calc(var(--app-top-safe-area)+3rem)] md:pt-12 lg:px-8">
         <header className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] sm:p-8">
-          <BrandLockup size="sm" />
-          <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
+          <Link
+            aria-label={copy.backHome}
+            className="grid h-11 w-11 place-items-center rounded-full bg-fog text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/home")}
+            title={copy.backHome}
+          >
+            <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+          </Link>
+          <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {copy.eyebrow}
           </p>
@@ -206,15 +230,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
           <p className="mt-4 max-w-3xl text-base leading-7 text-[#156240]">
             {copy.description}
           </p>
-          <div className="mt-6 flex flex-col gap-3 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <p>{copy.updatedAt}</p>
-            <Link
-              className="inline-flex w-fit items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 py-2 font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#FEFFF9]"
-              href={withLocale(locale, "/home")}
-            >
-              {copy.backHome}
-            </Link>
-          </div>
+          <p className="mt-6 text-sm text-zinc-600">{copy.updatedAt}</p>
         </header>
 
         <section className="mt-6 rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.06)] sm:p-8">
@@ -231,7 +247,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
             </a>
             <Link
               className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
-              href={withLocale(locale, "/safety")}
+              href={withLocale(locale, "/safety#child-safety")}
             >
               <FileWarning className="h-4 w-4" aria-hidden="true" />
               {copy.safetyLabel}

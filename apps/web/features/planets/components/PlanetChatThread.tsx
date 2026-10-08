@@ -13,15 +13,15 @@ import { dispatchChatReplyRequest } from "@/features/chat/chatReplyEvents";
 import type { ChatReplyTarget } from "@/features/chat/types";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
 import {
-  formatChatDateSeparator,
-  formatChatMessageTime,
   getChatDateKey,
   shouldShowChatTimeSeparator,
 } from "@/lib/chatDateSeparators";
+import { ChatTimeSeparator } from "@/features/chat/components/ChatTimeSeparator";
 import { getAvatarInitial } from "@/lib/display-text";
 import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
 import { withLocale } from "@/lib/routes";
 import { useChatCursorSync } from "@/features/chat/useChatCursorSync";
+import { useChatMessageMotion } from "@/features/chat/useChatMessageMotion";
 import { mergeChatCursorMessages } from "@/features/chat/chatCursorSync";
 import { useChatHistoryPagination } from "@/features/chat/useChatHistoryPagination";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,12 @@ function PlanetMessageBubble({
   }
 
   return (
-    <div className="relative inline-block max-w-full">
+    <div
+      className={cn(
+        "relative flex min-w-0 max-w-full flex-col",
+        isViewer ? "items-end" : "items-start",
+      )}
+    >
       {actionOpen ? (
         <div
           className={cn(
@@ -117,7 +122,7 @@ function PlanetMessageBubble({
       ) : null}
       <div
         className={cn(
-          "relative inline-block select-none rounded-2xl px-3 py-2 text-left text-sm leading-5 [-webkit-touch-callout:none]",
+          "relative inline-block min-w-0 max-w-full select-none rounded-2xl px-3 py-2 text-left text-sm leading-5 [-webkit-touch-callout:none]",
           isViewer
             ? "rounded-tr-sm bg-[#155F40] text-white after:absolute after:-right-1 after:top-1.5 after:border-b-[5px] after:border-l-[6px] after:border-t-[5px] after:border-b-transparent after:border-l-[#155F40] after:border-t-transparent"
             : "rounded-tl-sm bg-[#F0F1ED] text-[#171917] after:absolute after:-left-1 after:top-1.5 after:border-b-[5px] after:border-r-[6px] after:border-t-[5px] after:border-b-transparent after:border-r-[#F0F1ED] after:border-t-transparent",
@@ -171,13 +176,6 @@ function PlanetMessageBubble({
           pointerStartRef.current = null;
         }}
       >
-        {message.replyTo ? (
-          <ChatReplyBubblePreview
-            inverted={isViewer}
-            locale={locale}
-            replyTo={message.replyTo}
-          />
-        ) : null}
         {message.imageUrls.length ? (
           <ChatImagePreviewGrid
             imageLabel={imageCopy.image}
@@ -198,6 +196,9 @@ function PlanetMessageBubble({
           </p>
         ) : null}
       </div>
+      {message.replyTo ? (
+        <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
+      ) : null}
     </div>
   );
 }
@@ -221,30 +222,6 @@ function Avatar({
         />
       ) : null}
     </span>
-  );
-}
-
-function TimeSeparator({
-  createdAt,
-  locale,
-  showDate,
-}: {
-  createdAt: string;
-  locale: string;
-  showDate: boolean;
-}) {
-  const dateLabel = showDate ? formatChatDateSeparator(createdAt, locale) : "";
-  const timeLabel = formatChatMessageTime(createdAt, locale);
-  const label = [dateLabel, timeLabel].filter(Boolean).join(" ");
-
-  return (
-    <div aria-label={label} className="my-1 flex items-center gap-3 px-8">
-      <span className="h-px flex-1 bg-[#E8E5DA]" />
-      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#8A9088] ring-1 ring-[#E8E5DA]">
-        {label}
-      </span>
-      <span className="h-px flex-1 bg-[#E8E5DA]" />
-    </div>
   );
 }
 
@@ -275,6 +252,7 @@ export function PlanetChatThread({
     setMessages,
   });
   const anchorRef = useRef<HTMLDivElement>(null);
+  useChatMessageMotion(messages, chatHistory.scrollContainerRef);
   const lastMessageId = messages.at(-1)?.id;
   const emptyLabel =
     locale === "fr"
@@ -329,7 +307,7 @@ export function PlanetChatThread({
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
+      className="chat-message-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5"
       onScroll={chatHistory.onScroll}
       ref={chatHistory.scrollContainerRef}
     >
@@ -364,14 +342,15 @@ export function PlanetChatThread({
           return (
             <Fragment key={message.id}>
               {showTime ? (
-                <TimeSeparator
+                <ChatTimeSeparator
                   createdAt={message.createdAt}
                   locale={locale}
                   showDate={showDate}
                 />
               ) : null}
               <div
-                className={`flex items-start gap-2 ${isViewer ? "flex-row-reverse" : ""}`}
+                data-chat-motion-id={message.id}
+                className={`flex min-w-0 items-start gap-2 ${isViewer ? "flex-row-reverse" : ""}`}
               >
                 <Link
                   aria-label={message.author.nickname}
@@ -385,9 +364,9 @@ export function PlanetChatThread({
                     name={message.author.nickname}
                   />
                 </Link>
-                <div className={`max-w-[76%] ${isViewer ? "text-right" : ""}`}>
+                <div className={`min-w-0 max-w-[76%] ${isViewer ? "text-right" : ""}`}>
                   {!isViewer ? (
-                    <p className="mb-1 px-1 text-[11px] font-semibold text-[#838A83]">
+                    <p className="mb-1 truncate px-1 text-[11px] font-semibold text-[#838A83]">
                       {message.author.nickname}
                     </p>
                   ) : null}

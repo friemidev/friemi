@@ -1,6 +1,7 @@
 "use client";
 
 import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import {
   PushNotifications,
   type PushNotificationSchema,
@@ -52,6 +53,17 @@ export function IOSAppBridge() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
   const lastRegisteredTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Older installed app builds do not yet include the native Keyboard plugin.
+    if (!isFriemiIOSApp() || !Capacitor.isPluginAvailable("Keyboard")) return;
+
+    void Keyboard.setAccessoryBarVisible({
+      isVisible: false,
+    }).catch((error) => {
+      console.warn("Failed to update iOS keyboard accessory bar", error);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isFriemiIOSApp()) {

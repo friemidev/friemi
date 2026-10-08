@@ -321,7 +321,8 @@ function toLedgerInput(
   return {
     id: transaction.id,
     type: transaction.type,
-    status: transaction.importSource === AA_SETTLEMENT && transaction.status === "DISPUTED" && transaction.payerConfirmedAt ? "POSTED" : transaction.status,
+    status: transaction.importSource === AA_SETTLEMENT && transaction.status === "DISPUTED" &&
+      (transaction.payerConfirmedAt || transaction.payeeConfirmedAt) ? "POSTED" : transaction.status,
     baseAmountMinor: transaction.baseAmountMinor,
     contributions: transaction.contributions.map((contribution) => ({
       participantId: contribution.participantId,

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Form from "next/form";
 import { LoaderCircle, Search } from "lucide-react";
 import { useFormStatus } from "react-dom";
+import { useEffect, useState } from "react";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -30,7 +32,16 @@ function SearchSubmitButton({
   label: string;
 }) {
   const { pending } = useFormStatus();
-  const Icon = pending ? LoaderCircle : Search;
+  const [showPending, setShowPending] = useState(false);
+  useEffect(() => {
+    if (!pending) {
+      setShowPending(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowPending(true), 150);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
+  const Icon = pending && showPending ? LoaderCircle : Search;
 
   return (
     <button
@@ -46,13 +57,18 @@ function SearchSubmitButton({
       {isPage ? (
         <>
           <Icon
-            className={cn("h-4 w-4 sm:hidden", pending && "animate-spin")}
+            className={cn(
+              "h-4 w-4 sm:hidden",
+              pending &&
+                showPending &&
+                "animate-spin motion-reduce:animate-none",
+            )}
             aria-hidden="true"
           />
           <span className="hidden sm:inline-flex items-center gap-2">
-            {pending ? (
+            {pending && showPending ? (
               <LoaderCircle
-                className="h-4 w-4 animate-spin"
+                className="h-4 w-4 animate-spin motion-reduce:animate-none"
                 aria-hidden="true"
               />
             ) : null}
@@ -61,7 +77,10 @@ function SearchSubmitButton({
         </>
       ) : (
         <Icon
-          className={cn("h-4 w-4", pending && "animate-spin")}
+          className={cn(
+            "h-4 w-4",
+            pending && showPending && "animate-spin motion-reduce:animate-none",
+          )}
           aria-hidden="true"
         />
       )}
@@ -83,8 +102,13 @@ export function GlobalSearchForm({
   const searchInputId = inputId ?? `global-search-${variant}`;
 
   return (
-    <form
+    <Form
       action={withLocale(locale, "/search")}
+      prefetch={false}
+      onSubmit={(event) => {
+        const input = event.currentTarget.elements.namedItem("q");
+        if (input instanceof HTMLInputElement) input.blur();
+      }}
       className={cn(
         "relative flex min-w-0 items-center",
         isPage ? "w-full" : "w-56 2xl:w-72",
@@ -107,6 +131,7 @@ export function GlobalSearchForm({
         id={searchInputId}
         name="q"
         type="search"
+        enterKeyHint="search"
         defaultValue={normalizeGlobalSearchQuery(defaultQuery)}
         maxLength={globalSearchQueryMaxLength}
         placeholder={placeholder ?? t.placeholder}
@@ -116,7 +141,7 @@ export function GlobalSearchForm({
         )}
       />
       <SearchSubmitButton isPage={isPage} label={t.submit} />
-    </form>
+    </Form>
   );
 }
 
@@ -126,7 +151,7 @@ export function GlobalSearchIconLink({ locale }: { locale: string }) {
   return (
     <Link
       aria-label={t.mobileOpen}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/75 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 xl:hidden"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/75 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 min-[1480px]:hidden"
       href={withLocale(locale, "/search")}
       title={t.mobileOpen}
     >

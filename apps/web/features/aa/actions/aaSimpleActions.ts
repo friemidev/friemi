@@ -11,7 +11,7 @@ import { projectSimpleLedger, simpleLedgerInclude } from "../server/simpleLedger
 import { applyAaCommand, AA_SETTLEMENT, type AaCommand, type AaSimpleState } from "../domain/simpleLedger";
 
 const schema = z.object({
-  intent: z.enum(["expense", "prepayment", "delete", "start", "reopen", "pay", "dispute", "received", "unpaid"]),
+  intent: z.enum(["expense", "prepayment", "delete", "start", "reopen", "pay", "undoPay", "receive", "dispute", "received", "unpaid"]),
   operationId: z.string().uuid(), expectedVersion: z.number().int().positive(), recordId: z.string().max(120).optional(),
   amount: z.string().max(16).optional(), title: z.string().max(120).optional(), note: z.string().max(2000).optional(),
   payerId: z.string().max(120).optional(), recipientId: z.string().max(120).optional(), participantIds: z.array(z.string().max(120)).max(50).optional(),
@@ -65,6 +65,8 @@ export async function runAaSimpleCommand(activityId: string, locale: string, inp
           transferFromParticipantId: record.from, transferToParticipantId: record.to,
           payerConfirmedAt: record.paidAt ? new Date(record.paidAt) : null,
           payerConfirmedById: record.paidAt ? record.from : null,
+          payeeConfirmedAt: record.receivedAt ? new Date(record.receivedAt) : null,
+          payeeConfirmedById: record.receivedAt ? record.to : null,
           voidedAt: record.status === "VOIDED" ? now : null, voidedByParticipantId: record.status === "VOIDED" ? original.viewerId : null,
           ...splits,
         };
@@ -84,7 +86,7 @@ export async function runAaSimpleCommand(activityId: string, locale: string, inp
         before: { version: original.version, records: original.records.filter(r => JSON.stringify(r) !== JSON.stringify(nextById.get(r.id))) },
         after: { command: fingerprint, version: next.version, recordIds: next.records.filter(r => r.source === AA_SETTLEMENT && r.round === command.operationId).map(r => r.id) },
       } });
-      if (["start", "reopen", "pay", "dispute", "received", "unpaid"].includes(command.intent)) {
+      if (["start", "reopen", "pay", "undoPay", "receive", "dispute", "received", "unpaid"].includes(command.intent)) {
         const actor = ledger.participants.find(person => person.id === original.viewerId)!;
         const shared = { activityId, actor, participants: ledger.participants, occurrenceId: command.operationId };
         const notify = async (type: "AA_PAYMENT_REQUEST" | "AA_ENTRY_UPDATED" | "AA_DISPUTE_OPENED", ids: string[]) => {

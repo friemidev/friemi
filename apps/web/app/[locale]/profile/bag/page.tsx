@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { blindBoxFragmentExchangeCount } from "@/features/charm/charm";
 import { getProfileBag } from "@/features/charm/queries/getProfileBag";
 import { ProfileBagPageView } from "@/features/profile/components/ProfilePrivateSubpages";
+import { ReceivedTicketsSeen } from "@/features/inventory/components/ReceivedTicketsSeen";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -38,6 +39,7 @@ export default async function ProfileBagPage({
           blindBoxCheckCount: 0,
           checks: [],
           coupons: [],
+          inventoryItems: [],
           coinBalance: {
             balance: 0,
             earnedTotal: 0,
@@ -56,6 +58,7 @@ export default async function ProfileBagPage({
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0 md:py-8">
+      <ReceivedTicketsSeen locale={locale} />
       <ProfileBagPageView
         bag={result.bag}
         hasError={Boolean(result.error)}

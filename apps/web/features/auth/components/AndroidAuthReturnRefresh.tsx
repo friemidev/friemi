@@ -10,6 +10,7 @@ import {
   authRedirectParamName,
 } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
+import { isAndroidAuthReturnPath } from "../androidAuthFlow";
 
 type AndroidAuthReturnRefreshProps = {
   locale: string;
@@ -109,7 +110,8 @@ export function AndroidAuthReturnRefresh({
   const sessionRefreshStartedRef = useRef(false);
   const routeKey = `${pathname}?${searchParams.toString()}`;
   const isAndroidAuthReturn =
-    searchParams.get(androidAuthReturnParamName) === "1";
+    searchParams.get(androidAuthReturnParamName) === "1" &&
+    !isAndroidAuthReturnPath(pathname);
   const hasRetried = searchParams.get(androidAuthRetryParamName) === "1";
 
   const cleanTarget = useMemo(

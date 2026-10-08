@@ -14,6 +14,7 @@ import {
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -427,9 +428,9 @@ export function MessageThread({
   const hasMessages = conversation.messages.length > 0;
 
   return (
-    <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] max-md:max-h-full md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+    <section className="mx-0 flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white shadow-[0_18px_48px_rgba(21,98,64,0.08)] max-md:max-h-full md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
-      <div className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <div className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-black/[0.04] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <div className="flex h-9 w-9 items-center justify-start">
           <MessageThreadBackButton
             fallbackHref={withLocale(locale, backHref)}
@@ -504,6 +505,14 @@ export function MessageThread({
                   <span className="truncate">{t.sendGift}</span>
                 </>
               }
+            />
+            <ReportDialog
+              className="w-full justify-start rounded-none bg-transparent px-3 text-sm ring-0"
+              isAuthenticated
+              locale={locale}
+              redirectPath={`/messages/${conversation.id}`}
+              targetId={conversation.peer.id}
+              targetType="USER_PROFILE"
             />
           </div>
         </details>

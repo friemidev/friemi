@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AdminSettingsBackLink } from "@/components/admin/AdminSettingsBackLink";
 import {
   adminAnalyticsWindowOptions,
   getAdminAnalyticsDashboard,
@@ -153,7 +154,6 @@ function getCopy(locale: string) {
       sectionOverview: "Vue d'ensemble",
       sectionSources: "Sources",
       seeReports: "Traiter les signalements",
-      seeScraper: "Gérer les imports",
       shareTitle: "Partage",
       sourceClicks: "Clics source",
       sourceSurfaceTitle: "Entrées des groupes",
@@ -269,7 +269,6 @@ function getCopy(locale: string) {
       sectionOverview: "Overview",
       sectionSources: "Sources",
       seeReports: "Review reports",
-      seeScraper: "Manage imports",
       shareTitle: "Sharing",
       sourceClicks: "Source clicks",
       sourceSurfaceTitle: "Crew entry points",
@@ -381,7 +380,6 @@ function getCopy(locale: string) {
     sectionOverview: "总览",
     sectionSources: "来源价值",
     seeReports: "处理举报",
-    seeScraper: "管理导入",
     shareTitle: "分享传播",
     sourceClicks: "来源点击",
     sourceSurfaceTitle: "聚吧入口来源",
@@ -565,7 +563,6 @@ function getFocusItems(
   ) {
     items.push({
       body: copy.publicEventBody,
-      href: "/admin/data-scraper",
       severity: "watch",
       title: copy.publicEventTitle,
     });
@@ -594,7 +591,6 @@ function getFocusItems(
   if (dashboard.publicEventSources.length === 0) {
     items.push({
       body: copy.noSourcesBody,
-      href: "/admin/data-scraper",
       severity: "watch",
       title: copy.noSourcesTitle,
     });
@@ -1425,18 +1421,21 @@ export default async function AdminAnalyticsPage({
   const focusItems = getFocusItems(dashboard, locale);
 
   return (
-    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
+    <PageContainer mobileSafeTop className="[--app-mobile-page-top-gap:1.5rem] max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
-            {t.subtitle} · {t.dataWindow(dashboard.windowDays)}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
-            {t.title}
-          </h1>
-          <p className="max-w-4xl text-sm leading-6 text-zinc-600">
-            {t.description}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <AdminSettingsBackLink locale={locale} />
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+              {t.subtitle} · {t.dataWindow(dashboard.windowDays)}
+            </p>
+            <h1 className="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
+              {t.title}
+            </h1>
+            <p className="max-w-4xl text-sm leading-6 text-zinc-600">
+              {t.description}
+            </p>
+          </div>
         </div>
         <div className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white/82 px-4 text-sm font-medium text-zinc-600 ring-1 ring-black/10">
           <span className="h-2 w-2 rounded-full bg-moss" />
@@ -1658,22 +1657,13 @@ export default async function AdminAnalyticsPage({
             </div>
 
             <div>
-              <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-                <div>
-                  <h2 className="text-lg font-semibold text-ink">
-                    {t.publicEventSources}
-                  </h2>
-                  <p className="mt-1 text-sm leading-6 text-zinc-500">
-                    {t.publicEventSourcesDescription}
-                  </p>
-                </div>
-                <Link
-                  className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                  href={withLocale(locale, "/admin/data-scraper")}
-                >
-                  <span className="truncate">{t.seeScraper}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.publicEventSources}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  {t.publicEventSourcesDescription}
+                </p>
               </div>
 
               {dashboard.publicEventSources.length > 0 ? (

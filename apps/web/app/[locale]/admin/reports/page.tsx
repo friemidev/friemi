@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
+import { AdminSettingsBackLink } from "@/components/admin/AdminSettingsBackLink";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
@@ -392,19 +393,22 @@ export default async function AdminReportsPage({
   ]);
 
   return (
-    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
+    <PageContainer mobileSafeTop className="[--app-mobile-page-top-gap:1.5rem] max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
       <DetailSourceRestore sourceKey="admin_reports" />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
-            {t.eyebrow}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-normal text-ink">
-            {t.title}
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-zinc-600">
-            {t.description}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <AdminSettingsBackLink locale={locale} />
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+              {t.eyebrow}
+            </p>
+            <h1 className="text-3xl font-semibold tracking-normal text-ink">
+              {t.title}
+            </h1>
+            <p className="max-w-3xl text-sm leading-6 text-zinc-600">
+              {t.description}
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:w-[22rem] sm:gap-3">

@@ -10,7 +10,7 @@ type AuthSessionRefreshProps = {
 };
 
 function isAuthRoute(pathname: string) {
-  return /\/(?:sign-in|sign-up)(?:\/|$)/.test(pathname);
+  return /\/(?:sign-in|sign-up|android-auth-return)(?:\/|$)/.test(pathname);
 }
 
 function isFriemiNativeApp() {

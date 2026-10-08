@@ -22,7 +22,7 @@ export default async function AdminActivityPriorityPage({
   const items = await getAdminActivityPriorityItems();
 
   return (
-    <PageContainer className="mobile-v23-admin-priority app-mobile-page-shell [--app-mobile-page-top-gap:0.9rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-3 pb-32 max-md:px-5 max-md:py-0 md:space-y-6 md:pb-10">
+    <PageContainer mobileSafeTop className="mobile-v23-admin-priority app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-3 pb-32 max-md:px-5 max-md:py-0 md:space-y-6 md:pb-10">
       <header className="flex items-center gap-3 md:block md:space-y-3">
         <ActivityHistoryBackButton
           ariaLabel="返回"

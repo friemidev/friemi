@@ -23,12 +23,14 @@ export function IntentPrefetchLink({
   const hasPrefetchedRef = useRef(false);
 
   useEffect(() => {
+    hasPrefetchedRef.current = false;
     return () => {
       if (prefetchTimerRef.current !== null) {
         window.clearTimeout(prefetchTimerRef.current);
+        prefetchTimerRef.current = null;
       }
     };
-  }, []);
+  }, [href]);
 
   function prefetchNow() {
     if (hasPrefetchedRef.current) {

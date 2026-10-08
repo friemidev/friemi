@@ -18,6 +18,7 @@ export type CreateNotificationInput = {
   activityAnnouncementId?: string | null;
   charmGiftEventId?: string | null;
   couponWalletItemId?: string | null;
+  inventoryItemDefinitionId?: string | null;
   dedupe?: boolean;
   dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
@@ -48,6 +49,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.activityAnnouncementId ?? "",
         input.charmGiftEventId ?? "",
         input.couponWalletItemId ?? "",
+        input.inventoryItemDefinitionId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
         input.nowInviteId ?? "",
@@ -66,6 +68,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     activityAnnouncementId: input.activityAnnouncementId ?? null,
     charmGiftEventId: input.charmGiftEventId ?? null,
     couponWalletItemId: input.couponWalletItemId ?? null,
+    inventoryItemDefinitionId: input.inventoryItemDefinitionId ?? null,
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,

@@ -1,6 +1,7 @@
 export type UnreadBadgeCounts = {
   unreadActivityRoomCount: number;
   unreadDirectMessageCount: number;
+  unreadInventoryTicketGiftCount: number;
   unreadMessageCount: number;
   unreadNotificationCount: number;
   unreadPlanetChatCount: number;
@@ -17,17 +18,20 @@ function parseUnreadCount(value: unknown) {
 export function createUnreadBadgeCounts({
   unreadActivityRoomCount,
   unreadDirectMessageCount,
+  unreadInventoryTicketGiftCount = 0,
   unreadNotificationCount,
   unreadPlanetChatCount = 0,
 }: Omit<
   UnreadBadgeCounts,
-  "unreadMessageCount" | "unreadPlanetChatCount"
+  "unreadInventoryTicketGiftCount" | "unreadMessageCount" | "unreadPlanetChatCount"
 > & {
+  unreadInventoryTicketGiftCount?: number;
   unreadPlanetChatCount?: number;
 }): UnreadBadgeCounts {
   return {
     unreadActivityRoomCount,
     unreadDirectMessageCount,
+    unreadInventoryTicketGiftCount,
     unreadMessageCount:
       unreadDirectMessageCount +
       unreadActivityRoomCount +
@@ -51,6 +55,10 @@ export function parseUnreadBadgeCountsPayload(
   const unreadDirectMessageCount = parseUnreadCount(
     candidate.unreadDirectMessageCount,
   );
+  const unreadInventoryTicketGiftCount =
+    candidate.unreadInventoryTicketGiftCount === undefined
+      ? 0
+      : parseUnreadCount(candidate.unreadInventoryTicketGiftCount);
   const unreadNotificationCount = parseUnreadCount(
     candidate.unreadNotificationCount,
   );
@@ -62,6 +70,7 @@ export function parseUnreadBadgeCountsPayload(
   if (
     unreadActivityRoomCount === null ||
     unreadDirectMessageCount === null ||
+    unreadInventoryTicketGiftCount === null ||
     unreadNotificationCount === null ||
     unreadPlanetChatCount === null
   ) {
@@ -71,6 +80,7 @@ export function parseUnreadBadgeCountsPayload(
   return createUnreadBadgeCounts({
     unreadActivityRoomCount,
     unreadDirectMessageCount,
+    unreadInventoryTicketGiftCount,
     unreadNotificationCount,
     unreadPlanetChatCount,
   });

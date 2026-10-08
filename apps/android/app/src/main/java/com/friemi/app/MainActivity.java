@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -47,6 +48,7 @@ import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.browser.customtabs.CustomTabsClient;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -97,6 +99,7 @@ public final class MainActivity extends ComponentActivity {
     private ValueCallback<Uri[]> filePathCallback;
     private String currentUrl;
     private String pendingGalleryImageUrl;
+    private String authBrowserPackage;
     private boolean webBackRequested;
     private boolean pageLoading;
     private final Runnable slowLoadNoticeRunnable = () -> {
@@ -457,6 +460,15 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void loadUrl(String url) {
+        if (isBrowserAuthCompletion(Uri.parse(url))) {
+            // Verified App Links can intercept the browser's authenticated
+            // callback. Keep that step in the same browser, never the WebView.
+            if (isBlank(webView.getUrl())) {
+                loadUrl(getBaseUrl() + "/" + resolveLocale(null) + "/sign-in");
+            }
+            openAuthBrowser(url);
+            return;
+        }
         currentUrl = url;
         showLoading();
         webView.loadUrl(url);
@@ -685,7 +697,13 @@ public final class MainActivity extends ComponentActivity {
         }
 
         String lowerHost = host.toLowerCase(Locale.ROOT);
-        return isGoogleOAuthHost(lowerHost) || isClerkAuthHost(lowerHost);
+        return isBrowserAuthCompletion(uri) || lowerHost.equals("accounts.friemi.com")
+            || isGoogleOAuthHost(lowerHost) || isClerkAuthHost(lowerHost);
+    }
+
+    private boolean isBrowserAuthCompletion(Uri uri) {
+        return isHttp(uri) && isFriemiHost(uri.getHost()) && uri.getPath() != null
+            && uri.getPath().matches("/(zh-CN|en|fr)/android-auth-browser/?");
     }
 
     private boolean shouldLoadClerkHandshakeInWebView(Uri uri) {
@@ -1197,6 +1215,10 @@ public final class MainActivity extends ComponentActivity {
         if (loadInternalUrlIfPossible(url)) {
             return;
         }
+        if (shouldOpenInAuthBrowser(Uri.parse(url))) {
+            openAuthBrowser(url);
+            return;
+        }
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
@@ -1300,6 +1322,24 @@ public final class MainActivity extends ComponentActivity {
             return;
         }
         try {
+            if (authBrowserPackage == null) {
+                authBrowserPackage = CustomTabsClient.getPackageName(this, null);
+                if (authBrowserPackage == null) {
+                    // Resolve a generic web URL, not a verified Friemi App Link.
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://"));
+                    browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    ResolveInfo browser = getPackageManager().resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY);
+                    if (browser != null && browser.activityInfo != null
+                        && !getPackageName().equals(browser.activityInfo.packageName)
+                        && !"android".equals(browser.activityInfo.packageName)) {
+                        authBrowserPackage = browser.activityInfo.packageName;
+                    }
+                }
+            }
+            if (authBrowserPackage == null) {
+                Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
+                return;
+            }
             CustomTabColorSchemeParams colors = new CustomTabColorSchemeParams.Builder()
                 .setToolbarColor(getColorCompat(R.color.friemi_mist))
                 .setNavigationBarColor(getColorCompat(R.color.friemi_mist))
@@ -1313,9 +1353,11 @@ public final class MainActivity extends ComponentActivity {
                 .setUrlBarHidingEnabled(true)
                 .setShareState(CustomTabsIntent.SHARE_STATE_OFF)
                 .build();
+            intent.intent.setPackage(authBrowserPackage);
             intent.launchUrl(this, Uri.parse(url));
         } catch (ActivityNotFoundException error) {
-            openExternal(url);
+            authBrowserPackage = null;
+            Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
         }
     }
 

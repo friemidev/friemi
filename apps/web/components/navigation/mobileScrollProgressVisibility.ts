@@ -2,12 +2,18 @@ export function shouldHideMobileScrollProgress(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
   const firstRouteSegment = segments[0];
   const localizedRouteSegment = segments[1];
+  const isAccountSettingsRoute =
+    segments[segments.length - 2] === "account" &&
+    (segments.at(-1) === "settings" || segments.at(-1) === "security");
 
   if (
+    isAccountSettingsRoute ||
+    firstRouteSegment === "admin" ||
     firstRouteSegment === "footprints" ||
     firstRouteSegment === "game-tools" ||
     firstRouteSegment === "poll" ||
     firstRouteSegment === "profile" ||
+    localizedRouteSegment === "admin" ||
     localizedRouteSegment === "footprints" ||
     localizedRouteSegment === "game-tools" ||
     localizedRouteSegment === "poll" ||

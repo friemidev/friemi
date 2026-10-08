@@ -5,12 +5,6 @@ import { getMobileHomeTopNewsConfigItems } from "./topNewsConfig";
 test("mobile home top news uses fixed story routes and preview images", () => {
   assert.deepEqual(getMobileHomeTopNewsConfigItems("zh-CN"), [
     {
-      href: "/top-news/host-recruitment",
-      id: "founding-host-recruitment",
-      image: "/top_news/founding-host-recruitment-cover.png",
-      title: "Friemi 共创主理人招募",
-    },
-    {
       href: "/top-news/werewolf",
       id: "werewolf-guide",
       image:
@@ -30,10 +24,8 @@ test("mobile home top news localizes fixed story titles", () => {
   const englishItems = getMobileHomeTopNewsConfigItems("en");
   const frenchItems = getMobileHomeTopNewsConfigItems("fr");
 
-  assert.equal(englishItems[0]?.title, "Become a Friemi Founding Host");
-  assert.equal(englishItems[1]?.title, "Werewolf game setup guide");
-  assert.equal(englishItems[2]?.title, "Discover Friemi");
-  assert.equal(frenchItems[0]?.title, "Devenez hôte fondateur Friemi");
-  assert.equal(frenchItems[1]?.title, "Guide de lancement Loups-garous");
-  assert.equal(frenchItems[2]?.title, "Découvrez Friemi");
+  assert.equal(englishItems[0]?.title, "Werewolf game setup guide");
+  assert.equal(englishItems[1]?.title, "Discover Friemi");
+  assert.equal(frenchItems[0]?.title, "Guide de lancement Loups-garous");
+  assert.equal(frenchItems[1]?.title, "Découvrez Friemi");
 });

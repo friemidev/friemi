@@ -66,6 +66,7 @@ const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
 const isMobileApiRoute = createRouteMatcher(["/api/mobile(.*)"]);
+const isAndroidHandoffApiRoute = createRouteMatcher(["/api/auth/android-handoff"]);
 
 function getLocaleFromPath(pathname: string) {
   const locale = pathname.split("/").filter(Boolean)[0];
@@ -345,11 +346,21 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
-  if (isMobileApiRoute(request)) {
+  if (isMobileApiRoute(request) || isAndroidHandoffApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
 
-  return withReferralCookie(request, intlMiddleware(request));
+  const response = intlMiddleware(request);
+  if (
+    /^\/(?:zh-CN|en|fr)\/android-auth-(?:browser|return)\/?$/.test(
+      request.nextUrl.pathname,
+    )
+  ) {
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("X-Frame-Options", "DENY");
+  }
+  return withReferralCookie(request, response);
 });
 
 export const config = {
@@ -379,5 +390,6 @@ export const config = {
     "/api/search/:path*",
     "/api/translations/:path*",
     "/api/mobile/:path*",
+    "/api/auth/android-handoff",
   ],
 };

@@ -93,11 +93,16 @@ export function RouteProgress() {
   const [progress, setProgress] = useState(0);
   const progressTimerRef = useRef<number | null>(null);
   const finishTimerRef = useRef<number | null>(null);
+  const startTimerRef = useRef<number | null>(null);
   const isActiveRef = useRef(isActive);
   isActiveRef.current = isActive;
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   useEffect(() => {
+    if (startTimerRef.current !== null) {
+      window.clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
     if (!isActiveRef.current) {
       return;
     }
@@ -111,6 +116,7 @@ export function RouteProgress() {
     }
 
     finishTimerRef.current = window.setTimeout(() => {
+      isActiveRef.current = false;
       setIsActive(false);
       setIsFinishing(false);
       setProgress(0);
@@ -125,12 +131,14 @@ export function RouteProgress() {
   }, [routeKey]);
 
   useEffect(() => {
-    function startProgress() {
+    function showProgress() {
+      startTimerRef.current = null;
       if (finishTimerRef.current) {
         window.clearTimeout(finishTimerRef.current);
         finishTimerRef.current = null;
       }
 
+      isActiveRef.current = true;
       setIsActive(true);
       setIsFinishing(false);
       setProgress(12);
@@ -162,13 +170,21 @@ export function RouteProgress() {
         return;
       }
 
-      startProgress();
+      if (startTimerRef.current !== null) {
+        window.clearTimeout(startTimerRef.current);
+      }
+      startTimerRef.current = window.setTimeout(showProgress, 150);
     }
 
     document.addEventListener("click", handleClick, true);
 
     return () => {
       document.removeEventListener("click", handleClick, true);
+
+      if (startTimerRef.current !== null) {
+        window.clearTimeout(startTimerRef.current);
+        startTimerRef.current = null;
+      }
 
       if (progressTimerRef.current) {
         window.clearInterval(progressTimerRef.current);
@@ -195,10 +211,10 @@ export function RouteProgress() {
       )}
     >
       <div
-        className="h-full rounded-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.18)]"
+        className="h-full w-full origin-left rounded-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.18)]"
         style={{
           opacity: isActive ? (isFinishing ? 0.55 : 1) : 0,
-          width: `${progress}%`,
+          transform: `scaleX(${progress / 100})`,
         }}
       />
     </div>
