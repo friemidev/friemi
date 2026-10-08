@@ -15,7 +15,7 @@ const reportCopy = {
     descriptionLabel: "补充说明",
     descriptionPlaceholder: "可选，简单说明发生了什么",
     descriptionHint:
-      "儿童安全问题请选择“安全风险”并补充说明。请勿转发疑似儿童性虐待材料或填写无关隐私信息。",
+      "请描述相关内容和发生时间，不要填写无关隐私，也不要上传或转发疑似儿童性虐待材料。",
     submit: "提交举报",
     submitting: "提交中...",
     cancel: "取消",
@@ -42,7 +42,7 @@ const reportCopy = {
       HARASSMENT: "骚扰或攻击",
       INAPPROPRIATE_CONTENT: "不适当内容",
       MISLEADING_INFORMATION: "虚假或误导信息",
-      SAFETY_CONCERN: "安全风险（含儿童安全）",
+      SAFETY_CONCERN: "儿童安全或其他安全风险",
       OTHER: "其他",
     },
     statuses: {
@@ -109,10 +109,10 @@ const reportCopy = {
     title: "Report content",
     description: "Tell us what looks wrong. We will review it soon.",
     reasonLabel: "Reason",
-    descriptionLabel: "Détails",
+    descriptionLabel: "Details",
     descriptionPlaceholder: "Optional. Briefly describe what happened",
     descriptionHint:
-      "For child safety issues, choose Safety concern and describe the issue. Do not forward suspected CSAM or include unrelated private details.",
+      "Describe the content and time. Do not include unrelated personal details or upload or forward suspected child sexual abuse material.",
     submit: "Submit report",
     submitting: "Submitting...",
     cancel: "Cancel",
@@ -139,7 +139,7 @@ const reportCopy = {
       HARASSMENT: "Harassment",
       INAPPROPRIATE_CONTENT: "Inappropriate content",
       MISLEADING_INFORMATION: "Misleading information",
-      SAFETY_CONCERN: "Safety concern (including child safety)",
+      SAFETY_CONCERN: "Child safety or other safety concern",
       OTHER: "Other",
     },
     statuses: {
@@ -210,7 +210,7 @@ const reportCopy = {
     descriptionLabel: "Détails",
     descriptionPlaceholder: "Facultatif. Décrivez brièvement la situation",
     descriptionHint:
-      "Pour la sécurité des enfants, choisissez Risque de sécurité et décrivez le problème. Ne transmettez pas de CSAM présumés ni de données privées sans rapport.",
+      "Décrivez le contenu et la date. N'ajoutez pas de données privées inutiles et ne joignez ni ne transférez de contenu présumé d'abus sexuels sur enfants.",
     submit: "Envoyer",
     submitting: "Envoi...",
     cancel: "Annuler",
@@ -237,7 +237,7 @@ const reportCopy = {
       HARASSMENT: "Harcèlement",
       INAPPROPRIATE_CONTENT: "Contenu inapproprié",
       MISLEADING_INFORMATION: "Information trompeuse",
-      SAFETY_CONCERN: "Risque de sécurité (y compris des enfants)",
+      SAFETY_CONCERN: "Sécurité des enfants ou autre risque",
       OTHER: "Autre",
     },
     statuses: {

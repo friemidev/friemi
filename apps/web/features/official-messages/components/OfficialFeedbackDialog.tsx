@@ -1,161 +1,166 @@
 "use client";
 
-import { MessageSquareText, SendHorizontal, X } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import {
+  CheckCircle2,
+  MessageSquareText,
+  SendHorizontal,
+  X,
+} from "lucide-react";
+import { useActionState, useId, useState } from "react";
 import {
   submitOfficialFeedbackAction,
   type SubmitOfficialFeedbackState,
 } from "@/features/official-messages/actions/officialMessageActions";
+import { getChildSafetyCopy } from "@/features/reports/childSafetyCopy";
+import { SafetyDialog } from "@/features/reports/components/SafetyDialog";
 
 const initialState: SubmitOfficialFeedbackState = {};
 
 function getCopy(locale: string) {
-  if (locale === "fr") {
+  if (locale === "fr")
     return {
-      cancel: "Fermer",
-      description: "Decrivez le probleme ou votre suggestion.",
+      close: "Fermer",
       label: "Votre message",
-      open: "Signaler un probleme",
-      placeholder: "Que pouvons-nous ameliorer ?",
+      placeholder:
+        "Indiquez le compte, le contenu ou la page concernés et décrivez le problème.",
       send: "Envoyer",
       sending: "Envoi...",
-      sent: "Merci, votre message a ete envoye.",
-      title: "Retour a Friemi",
+      sent: "Votre message a été transmis à Friemi.",
     };
-  }
-
-  if (locale === "en") {
+  if (locale === "en")
     return {
-      cancel: "Close",
-      description: "Describe the issue or share a suggestion.",
+      close: "Close",
       label: "Your message",
-      open: "Report an issue",
-      placeholder: "What can we improve?",
+      placeholder:
+        "Identify the account, content or page and describe what happened.",
       send: "Send feedback",
       sending: "Sending...",
-      sent: "Thanks. Your feedback has been sent.",
-      title: "Feedback to Friemi",
+      sent: "Your feedback has been sent to Friemi.",
     };
-  }
-
   return {
-    cancel: "关闭",
-    description: "请描述遇到的问题或告诉我们你的建议。",
+    close: "关闭",
     label: "反馈内容",
-    open: "问题反馈",
-    placeholder: "请尽量写清出现问题的页面和操作步骤",
+    placeholder: "请说明相关账号、内容或页面，以及发生了什么",
     send: "发送反馈",
     sending: "发送中...",
-    sent: "反馈已发送，谢谢你的帮助。",
-    title: "向 Friemi 反馈",
+    sent: "反馈已提交给 Friemi。",
   };
 }
 
-export function OfficialFeedbackDialog({ locale }: { locale: string }) {
+function FeedbackForm({
+  locale,
+  onClose,
+}: {
+  locale: string;
+  onClose: () => void;
+}) {
   const copy = getCopy(locale);
-  const [open, setOpen] = useState(false);
+  const safety = getChildSafetyCopy(locale);
+  const titleId = useId();
+  const hintId = useId();
+  const [content, setContent] = useState("");
+  const [topic, setTopic] = useState("GENERAL");
   const [state, formAction, pending] = useActionState(
     submitOfficialFeedbackAction,
     initialState,
   );
-  const [mounted, setMounted] = useState(false);
-  const formRef = useRef<HTMLFormElement | null>(null);
-
-  useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    if (state.ok) formRef.current?.reset();
-  }, [state.ok]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open]);
-
-  const dialog = open ? (
-    <div
-      aria-labelledby="official-feedback-title"
-      aria-modal="true"
-      className="fixed inset-0 z-[130] flex items-end bg-black/45 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:items-center md:justify-center"
-      role="dialog"
-    >
-      <div className="w-full max-w-md rounded-[1.25rem] bg-[#FEFFF9] p-5 shadow-[0_24px_80px_rgba(17,18,16,0.24)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2
-              className="text-lg font-bold text-[#111210]"
-              id="official-feedback-title"
-            >
-              {copy.title}
-            </h2>
-            <p className="mt-1 text-sm font-semibold leading-6 text-[#6C746A]">
-              {copy.description}
-            </p>
-          </div>
+  return (
+    <SafetyDialog labelledBy={titleId} onClose={onClose}>
+      <header className="flex items-start justify-between gap-3 border-b border-sand px-5 py-3">
+        <h2 id={titleId} className="self-center text-lg font-bold">
+          {safety.feedback}
+        </h2>
+        <button
+          aria-label={copy.close}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-forest focus-visible:outline"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" className="h-5 w-5" />
+        </button>
+      </header>
+      {state.ok ? (
+        <div className="space-y-5 p-5">
+          <p role="status" className="flex items-center gap-2 text-forest">
+            <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0" />
+            {copy.sent}
+          </p>
           <button
-            aria-label={copy.cancel}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2]"
-            onClick={() => setOpen(false)}
+            className="min-h-11 w-full rounded-full bg-forest px-4 py-2 font-semibold text-white"
+            onClick={onClose}
             type="button"
           >
-            <X className="h-5 w-5" />
+            {copy.close}
           </button>
         </div>
-
-        <form action={formAction} className="mt-5 grid gap-4" ref={formRef}>
+      ) : (
+        <form action={formAction} className="grid gap-4 p-5">
           <input name="locale" type="hidden" value={locale} />
-          <label className="grid gap-2">
-            <span className="text-xs font-bold text-[#4F574F]">
-              {copy.label}
-            </span>
+          <label className="grid gap-2 text-sm font-semibold">
+            {safety.topic}
+            <select
+              name="topic"
+              value={topic}
+              disabled={pending}
+              onChange={(event) => setTopic(event.target.value)}
+              className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-base"
+            >
+              <option value="GENERAL">{safety.general}</option>
+              <option value="CHILD_SAFETY">{safety.child}</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-semibold">
+            {copy.label}
             <textarea
-              autoFocus
-              className="min-h-36 resize-none rounded-lg border border-[#D6D5B2] bg-white px-3 py-3 text-sm font-semibold leading-6 text-[#111210] outline-none focus:border-[#156240]"
+              aria-describedby={hintId}
+              className="min-h-32 w-full resize-y rounded-lg border border-sand bg-white px-3 py-3 text-base leading-6 outline-none focus:border-forest"
+              disabled={pending}
               maxLength={2000}
+              minLength={2}
               name="content"
+              onChange={(event) => setContent(event.target.value)}
               placeholder={copy.placeholder}
               required
+              value={content}
             />
           </label>
+          <p id={hintId} className="text-sm leading-6 text-ink/75">
+            {safety.hint}
+          </p>
           {state.formError ? (
-            <p className="text-sm font-semibold text-[#B4233A]" role="alert">
+            <p className="text-sm font-semibold text-danger" role="alert">
               {state.formError}
-            </p>
-          ) : state.ok ? (
-            <p className="text-sm font-semibold text-[#156240]" role="status">
-              {copy.sent}
             </p>
           ) : null}
           <button
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-bold text-white disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 py-2 text-sm font-bold text-white disabled:opacity-60"
             disabled={pending}
             type="submit"
           >
-            <SendHorizontal className="h-4 w-4" />
+            <SendHorizontal aria-hidden="true" className="h-4 w-4" />
             {pending ? copy.sending : copy.send}
           </button>
         </form>
-      </div>
-    </div>
-  ) : null;
+      )}
+    </SafetyDialog>
+  );
+}
 
+export function OfficialFeedbackDialog({ locale }: { locale: string }) {
+  const [open, setOpen] = useState(false);
   return (
     <>
       <button
-        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(21,98,64,0.2)] transition active:scale-[0.98]"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-2 text-sm font-bold text-white transition active:scale-[0.98]"
         onClick={() => setOpen(true)}
         type="button"
       >
-        <MessageSquareText className="h-5 w-5" />
-        {copy.open}
+        <MessageSquareText aria-hidden="true" className="h-5 w-5 shrink-0" />
+        {getChildSafetyCopy(locale).feedback}
       </button>
-      {mounted && dialog ? createPortal(dialog, document.body) : null}
+      {open ? (
+        <FeedbackForm locale={locale} onClose={() => setOpen(false)} />
+      ) : null}
     </>
   );
 }

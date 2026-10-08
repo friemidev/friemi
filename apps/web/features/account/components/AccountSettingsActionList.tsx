@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { withLocale } from "@/lib/routes";
+import { OfficialFeedbackDialog } from "@/features/official-messages/components/OfficialFeedbackDialog";
+import { getChildSafetyCopy } from "@/features/reports/childSafetyCopy";
 
 type AccountSettingsActionListProps = {
   accountGroupLabel: string;
@@ -109,6 +111,7 @@ export function AccountSettingsActionList({
   signOutLabel,
 }: AccountSettingsActionListProps) {
   const { openUserProfile, signOut } = useClerk();
+  const safety = getChildSafetyCopy(locale);
 
   return (
     <div className="space-y-8">
@@ -152,6 +155,16 @@ export function AccountSettingsActionList({
             />
           </Link>
         </div>
+      </section>
+
+      <section id="feedback" aria-label={safety.feedback}>
+        <OfficialFeedbackDialog locale={locale} />
+        <Link
+          className={rowClassName}
+          href={withLocale(locale, "/safety#child-safety")}
+        >
+          <RowContent icon={ShieldCheck} label={safety.standards} />
+        </Link>
       </section>
 
       {adminAnalyticsLabel ||

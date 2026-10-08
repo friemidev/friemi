@@ -1,6 +1,17 @@
 import Link from "next/link";
+import React from "react";
 import type { Metadata } from "next";
-import { ArrowLeft, FileWarning, Mail, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  FileWarning,
+  Mail,
+  MessageSquareText,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  childSafetyContactEmail,
+  getChildSafetyCopy,
+} from "@/features/reports/childSafetyCopy";
 import { withLocale } from "@/lib/routes";
 
 type SafetyPageProps = {
@@ -31,10 +42,10 @@ const safetyCopy: Record<string, SafetyCopy> = {
     eyebrow: "儿童与社区安全",
     description:
       "Friemi 支持用户创建活动、组局、评论、消息和个人资料内容。我们希望大家在真实、友好和可线下见面的前提下使用产品，因此会对举报和安全问题进行人工复核与处理。",
-    updatedAt: "最后更新：2026-10-05",
+    updatedAt: "最后更新：2026-10-08",
     backHome: "返回首页",
     contactLabel: "儿童安全与社区举报联系邮箱",
-    contactEmail: "friemi.dev@gmail.com",
+    contactEmail: childSafetyContactEmail,
     privacyLabel: "隐私政策",
     sections: [
       {
@@ -50,7 +61,7 @@ const safetyCopy: Record<string, SafetyCopy> = {
         id: "child-safety-reporting",
         title: "如何举报儿童安全问题",
         body: [
-          "登录 Friemi 后，可在用户资料、活动、组局详情或评论的“举报”入口提交问题；选择“安全风险”，并在补充说明中注明儿童安全问题。涉及消息或其他内容时，可举报相关用户资料，并提供内容位置及必要说明。",
+          getChildSafetyCopy("zh-CN").reporting,
           "也可联系儿童安全与社区举报邮箱 friemi.dev@gmail.com。请提供相关用户、内容或活动的标识及简要说明；请勿下载、附加或转发疑似 CSAM，也不要提交无关的个人隐私信息。",
           "如儿童正面临紧急危险，请立即联系当地紧急服务或执法机构。",
         ],
@@ -111,10 +122,10 @@ const safetyCopy: Record<string, SafetyCopy> = {
     eyebrow: "Community safety",
     description:
       "Friemi lets users create activities, group plans, comments, messages, and profile content. We review reports and safety issues to keep the product trustworthy for real-world social plans.",
-    updatedAt: "Last updated: 2026-10-05",
+    updatedAt: "Last updated: 2026-10-08",
     backHome: "Back home",
     contactLabel: "Child safety and community reporting contact",
-    contactEmail: "friemi.dev@gmail.com",
+    contactEmail: childSafetyContactEmail,
     privacyLabel: "Privacy Policy",
     sections: [
       {
@@ -130,7 +141,7 @@ const safetyCopy: Record<string, SafetyCopy> = {
         id: "child-safety-reporting",
         title: "Reporting a child safety concern",
         body: [
-          "After signing in to Friemi, use Report on a profile, activity, group plan or comment. Select Safety concern and describe the child safety issue. For messages or other content, report the relevant profile and identify the content and location in the description.",
+          getChildSafetyCopy("en").reporting,
           "You can also contact our child safety and community reporting address at friemi.dev@gmail.com. Include the relevant account, content or activity identifier and a brief description. Do not download, attach or forward suspected CSAM or share unrelated personal information.",
           "If a child is in immediate danger, contact local emergency services or law enforcement immediately.",
         ],
@@ -191,10 +202,10 @@ const safetyCopy: Record<string, SafetyCopy> = {
     eyebrow: "Sécurité des enfants et de la communauté",
     description:
       "Friemi permet de créer des activités, des sorties, des commentaires, des messages et des profils. Nous examinons les signalements et les questions de sécurité pour protéger les utilisateurs lors des échanges et des rencontres.",
-    updatedAt: "Dernière mise à jour : 2026-10-05",
+    updatedAt: "Dernière mise à jour : 2026-10-08",
     backHome: "Retour à l’accueil",
     contactLabel: "Contact pour la sécurité des enfants et les signalements",
-    contactEmail: "friemi.dev@gmail.com",
+    contactEmail: childSafetyContactEmail,
     privacyLabel: "Politique de confidentialité",
     sections: [
       {
@@ -210,7 +221,7 @@ const safetyCopy: Record<string, SafetyCopy> = {
         id: "child-safety-reporting",
         title: "Signaler un problème de sécurité concernant un enfant",
         body: [
-          "Après connexion à Friemi, utilisez Signaler depuis un profil, une activité, une sortie ou un commentaire. Choisissez Risque de sécurité et décrivez le problème concernant la sécurité des enfants. Pour un message ou un autre contenu, signalez le profil concerné en précisant le contenu et son emplacement.",
+          getChildSafetyCopy("fr").reporting,
           "Vous pouvez également écrire à notre contact pour la sécurité des enfants et les signalements : friemi.dev@gmail.com. Indiquez le compte, le contenu ou l’activité concernés et décrivez brièvement le problème. Ne téléchargez, ne joignez et ne retransmettez pas de contenus soupçonnés d’être des CSAM, ni de données personnelles sans rapport avec le signalement.",
           "Si un enfant est en danger immédiat, contactez les services d’urgence ou les forces de l’ordre de votre pays.",
         ],
@@ -283,6 +294,7 @@ export async function generateMetadata({
 export default async function SafetyPage({ params }: SafetyPageProps) {
   const { locale } = await params;
   const copy = safetyCopy[locale] ?? safetyCopy["zh-CN"];
+  const childSafety = getChildSafetyCopy(locale);
 
   return (
     <main className="min-h-screen bg-white">
@@ -313,7 +325,18 @@ export default async function SafetyPage({ params }: SafetyPageProps) {
           <h2 className="text-lg font-semibold text-[#1D1D1B]">
             {copy.contactLabel}
           </h2>
+          <p className="mt-2 text-sm text-ink/80">{childSafety.contact}</p>
           <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-white"
+              href={withLocale(locale, "/account/settings#feedback")}
+            >
+              <MessageSquareText
+                className="h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+              {childSafety.feedback}
+            </Link>
             <a
               className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[#156240] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D1D1B]"
               href={`mailto:${copy.contactEmail}`}

@@ -14,6 +14,7 @@ import {
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -502,6 +503,14 @@ export function MessageThread({
                   <span className="truncate">{t.sendGift}</span>
                 </>
               }
+            />
+            <ReportDialog
+              className="w-full justify-start rounded-none bg-transparent px-3 text-sm ring-0"
+              isAuthenticated
+              locale={locale}
+              redirectPath={`/messages/${conversation.id}`}
+              targetId={conversation.peer.id}
+              targetType="USER_PROFILE"
             />
           </div>
         </details>

@@ -94,19 +94,20 @@ function normalizeEmail(value: string | null | undefined) {
 }
 
 export function isOfficialFeedbackAccount({
-  contactEmail,
   email,
 }: {
   contactEmail?: string | null;
   email?: string | null;
 }) {
-  return [email, contactEmail]
-    .map(normalizeEmail)
-    .includes(officialFeedbackAccountEmail);
+  // A profile's editable contact email must never grant inbox access.
+  return normalizeEmail(email) === officialFeedbackAccountEmail;
 }
 
-async function getFeedbackOperatorProfile(profileId: string) {
-  const profile = await prisma.userProfile.findUnique({
+async function getFeedbackOperatorProfile(
+  profileId: string,
+  db: Pick<typeof prisma, "userProfile"> = prisma,
+) {
+  const profile = await db.userProfile.findUnique({
     where: { id: profileId },
     select: {
       contactEmail: true,
@@ -285,10 +286,13 @@ export async function getOfficialFeedbackRoster(
   };
 }
 
-export async function getOfficialFeedbackInbox(profileId: string) {
-  if (!(await getFeedbackOperatorProfile(profileId))) return null;
+export async function getOfficialFeedbackInbox(
+  profileId: string,
+  db: Pick<typeof prisma, "userProfile" | "officialFeedback"> = prisma,
+) {
+  if (!(await getFeedbackOperatorProfile(profileId, db))) return null;
 
-  const feedback = await prisma.officialFeedback.findMany({
+  const feedback = await db.officialFeedback.findMany({
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: 500,
     select: {
@@ -345,34 +349,25 @@ export async function markOfficialFeedbackRead(profileId: string) {
   return true;
 }
 
-export async function createOfficialFeedback({
-  content,
-  senderProfileId,
-}: {
-  content: string;
-  senderProfileId: string;
-}) {
+export async function createOfficialFeedback(
+  {
+    content,
+    senderProfileId,
+  }: {
+    content: string;
+    senderProfileId: string;
+  },
+  db: Pick<typeof prisma, "userProfile" | "officialFeedback"> = prisma,
+) {
   const [feedback, operators] = await Promise.all([
-    prisma.officialFeedback.create({
+    db.officialFeedback.create({
       data: { content, senderProfileId },
       select: { id: true },
     }),
-    prisma.userProfile.findMany({
+    db.userProfile.findMany({
       where: {
-        OR: [
-          {
-            email: {
-              equals: officialFeedbackAccountEmail,
-              mode: "insensitive",
-            },
-          },
-          {
-            contactEmail: {
-              equals: officialFeedbackAccountEmail,
-              mode: "insensitive",
-            },
-          },
-        ],
+        email: { equals: officialFeedbackAccountEmail, mode: "insensitive" },
+        status: "ACTIVE",
       },
       select: { id: true },
     }),

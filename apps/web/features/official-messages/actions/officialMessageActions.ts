@@ -10,16 +10,15 @@ import { scheduleChatInboxRealtimeChange } from "@/features/chat/chatRealtimeSer
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
+import {
+  formatOfficialFeedback,
+  officialFeedbackSchema,
+} from "../officialFeedbackInput";
 
 const officialMessageSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   title: z.string().trim().min(1).max(120),
   content: z.string().trim().min(1).max(4000),
-});
-
-const officialFeedbackSchema = z.object({
-  locale: z.string().min(1).default("zh-CN"),
-  content: z.string().trim().min(2).max(2000),
 });
 
 export type PublishOfficialMessageState = {
@@ -40,6 +39,7 @@ export async function submitOfficialFeedbackAction(
   const result = officialFeedbackSchema.safeParse({
     content: formData.get("content"),
     locale,
+    topic: formData.get("topic") ?? "GENERAL",
   });
 
   if (!result.success) {
@@ -54,10 +54,22 @@ export async function submitOfficialFeedbackAction(
   }
 
   const profile = await ensureCurrentUserProfile(locale, "/official-messages");
-  const feedback = await createOfficialFeedback({
-    content: result.data.content,
-    senderProfileId: profile.id,
-  });
+  let feedback;
+  try {
+    feedback = await createOfficialFeedback({
+      content: formatOfficialFeedback(result.data),
+      senderProfileId: profile.id,
+    });
+  } catch {
+    return {
+      formError:
+        locale === "fr"
+          ? "Échec de l'envoi. Votre texte est conservé ; veuillez réessayer."
+          : locale === "en"
+            ? "Could not send. Your text is saved here; please try again."
+            : "发送失败，内容已保留，请重试。",
+    };
+  }
   scheduleChatInboxRealtimeChange({
     profileIds: feedback.recipientProfileIds,
     scope: "official",
