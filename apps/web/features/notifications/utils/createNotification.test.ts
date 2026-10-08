@@ -59,3 +59,19 @@ test("ticket gift notification dedupes by gift and recipient", () => {
     getNotificationDedupeKey({ ...input, recipientId: "recipient-2" }),
   );
 });
+
+test("ticket allocation notification dedupes by batch rather than ticket", () => {
+  const batch = {
+    actorId: "admin-1",
+    inventoryItemDefinitionId: "definition-1",
+    occurrenceId: "issue-batch-1",
+    recipientId: "recipient-1",
+    type: "INVENTORY_TICKET_RECEIVED" as const,
+  };
+
+  assert.equal(getNotificationDedupeKey(batch), getNotificationDedupeKey(batch));
+  assert.notEqual(
+    getNotificationDedupeKey(batch),
+    getNotificationDedupeKey({ ...batch, occurrenceId: "issue-batch-2" }),
+  );
+});

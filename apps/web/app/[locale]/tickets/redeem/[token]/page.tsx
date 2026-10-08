@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { TicketRedemptionPreview } from "@/features/inventory/components/TicketRedemptionPreview";
 import { getTicketRedemptionPreview } from "@/features/inventory/actions/ticketRedemptionActions";
+import { normalizeFriemiCode } from "@/features/inventory/friemiCode";
 import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -15,12 +16,24 @@ export default async function TicketRedemptionPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; token: string }>;
-  searchParams: Promise<{ definitionId?: string; source?: string }>;
+  searchParams: Promise<{
+    definitionId?: string;
+    holderCode?: string;
+    source?: string;
+  }>;
 }) {
   const { locale, token } = await params;
-  const { definitionId, source } = await searchParams;
+  const { definitionId, holderCode, source } = await searchParams;
+  const holderFriendCode =
+    normalizeFriemiCode(typeof holderCode === "string" ? holderCode : "") ??
+    undefined;
   await ensureCurrentUserProfile(locale, `/tickets/redeem/${token}`);
-  const preview = await getTicketRedemptionPreview(token, locale, definitionId);
+  const preview = await getTicketRedemptionPreview(
+    token,
+    locale,
+    definitionId,
+    holderFriendCode,
+  );
   const copy = getTicketRedemptionCopy(locale);
   const returnQuery = new URLSearchParams();
   if (definitionId) returnQuery.set("definitionId", definitionId);
@@ -32,7 +45,7 @@ export default async function TicketRedemptionPage({
       <header className="flex items-center gap-3">
         <Link
           aria-label={copy.back}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#123D31] ring-1 ring-[#D6D5B2]"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#123D31] ring-1 ring-[#D6D5B2]"
           href={withLocale(locale, scannerPath)}
         >
           <ArrowLeft aria-hidden="true" className="h-5 w-5" />
@@ -42,6 +55,7 @@ export default async function TicketRedemptionPage({
       <div className="mt-6">
         <TicketRedemptionPreview
           expectedDefinitionId={definitionId}
+          holderFriendCode={holderFriendCode}
           initialPreview={preview}
           locale={locale}
           token={token}

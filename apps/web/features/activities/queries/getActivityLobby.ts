@@ -26,7 +26,7 @@ import {
 } from "../utils/activityDisplay";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { compareLobbyActivityStatusAndOwnership } from "../utils/lobbyActivitySort";
-import { dedupeActivityCards } from "../utils/activityCardIdentity";
+import { getLobbyRetentionWhere } from "../utils/lobbyActivityRetention";
 import {
   applyPrivateActivityCardAccess,
   canAccessPrivateActivityCard,
@@ -1488,15 +1488,6 @@ export async function getActivityLobbyPreview(category?: ActivityCategory) {
 
 const mobileActivityLobbyPageSize = 8;
 
-function getMobileLobbyDateKey(value: string | Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "Europe/Paris",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function getMobileLobbyPopularScore(activity: ActivityCardViewModel) {
   return (
     activity.participantCount * 2 +
@@ -1523,21 +1514,6 @@ function sortMobileLobbyPageActivities(
   );
 }
 
-function paginateMobileLobbyActivities(
-  activities: ActivityCardViewModel[],
-  page: number,
-) {
-  const normalizedPage = Math.max(1, Math.floor(page));
-  const start = (normalizedPage - 1) * mobileActivityLobbyPageSize;
-  const deduped = dedupeActivityCards(activities);
-
-  return {
-    activities: deduped.slice(start, start + mobileActivityLobbyPageSize),
-    hasMore: start + mobileActivityLobbyPageSize < deduped.length,
-    page: normalizedPage,
-  };
-}
-
 export async function getMobileActivityLobbyPage({
   page = 1,
   status = "ongoing",
@@ -1549,94 +1525,115 @@ export async function getMobileActivityLobbyPage({
   tab: MobileActivityLobbyTabId;
   viewerProfileId: string | null;
 }): Promise<MobileActivityLobbyPage> {
-  const normalizedPage = Math.max(1, Math.floor(page));
-
-  if (
-    viewerProfileId &&
-    (tab === "nearby" ||
-      (status === "ended" && (tab === "today" || tab === "popular")))
-  ) {
-    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
-      page: normalizedPage,
-      status,
-    });
-    let activities = feed.activities;
-
-    if (tab === "today") {
-      const today = getMobileLobbyDateKey(new Date());
-      activities = activities.filter(
-        (activity) => getMobileLobbyDateKey(activity.startAt) === today,
-      );
-    } else if (tab === "popular") {
-      activities = sortMobileLobbyPageActivities(
-        activities,
+  const normalizedPage = Number.isFinite(page)
+    ? Math.max(1, Math.floor(page))
+    : 1;
+  const reference = new Date();
+  const [mutualFollowIds, followedProfileIds] = viewerProfileId
+    ? await Promise.all([
+        getViewerFriendIds(viewerProfileId),
+        getViewerFollowedProfileIds(viewerProfileId),
+      ])
+    : [[], []];
+  const context = viewerProfileId
+    ? await getLobbyQueryContext(
         viewerProfileId,
-        (left, right) =>
-          getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
-      );
-    }
+        mutualFollowIds,
+        followedProfileIds,
+      )
+    : null;
+  const filters: Prisma.ActivityWhereInput[] = [
+    context?.accessibleWhere ??
+      getVisibleActivityWhere({
+        includeEnded: true,
+        includePast: true,
+        visibility: null,
+      }),
+    getLobbyRetentionWhere(status === "ended", reference),
+    // Preserve the owner's legacy plans in "Mine" without listing imported events.
+    tab === "mine" && viewerProfileId
+      ? {
+          OR: [
+            strictTeamCardWhere,
+            { AND: [baseTeamCardWhere, { organizerId: viewerProfileId }] },
+          ],
+        }
+      : strictTeamCardWhere,
+  ];
 
-    return {
-      activities,
-      hasMore: feed.page < feed.totalPages,
-      page: feed.page,
-      pageSize: mobileActivityLobbyPageSize,
-      status,
-      tab,
-    };
+  if (tab === "mine" || tab === "friends") {
+    const profileIds =
+      tab === "mine"
+        ? viewerProfileId
+          ? [viewerProfileId]
+          : []
+        : followedProfileIds;
+    filters.push({
+      OR: [
+        { organizerId: { in: profileIds } },
+        {
+          participants: {
+            some: {
+              userProfileId: { in: profileIds },
+              status: { in: [...visibleLobbyParticipationStatuses] },
+            },
+          },
+        },
+      ],
+    });
   }
-
-  let activities: ActivityCardViewModel[] = [];
-
-  if (!viewerProfileId) {
-    activities = await getActivityLobbyPreview();
-  } else if (tab === "mine") {
-    const [created, joined] = await Promise.all([
-      getActivityLobbySection(viewerProfileId, "created"),
-      getActivityLobbySection(viewerProfileId, "joined"),
-    ]);
-    activities = sortMobileLobbyPageActivities(
-      [...created, ...joined],
-      viewerProfileId,
-    );
-  } else if (tab === "friends") {
-    const [hosted, joined] = await Promise.all([
-      getActivityLobbySection(viewerProfileId, "friendHosted"),
-      getActivityLobbySection(viewerProfileId, "friendJoined"),
-    ]);
-    activities = sortMobileLobbyPageActivities(
-      [...hosted, ...joined],
-      viewerProfileId,
-    );
-  } else {
-    activities = await getActivityLobbySection(viewerProfileId, "open");
-  }
-
-  activities = activities.filter(
-    (activity) =>
-      (getActivityTimeState(activity) === "ENDED") === (status === "ended"),
-  );
 
   if (tab === "today") {
-    const today = getMobileLobbyDateKey(new Date());
-    activities = activities.filter(
-      (activity) => getMobileLobbyDateKey(activity.startAt) === today,
+    const dayStart = getActivityFloatingDayStart(
+      getActivityFloatingNow(reference),
     );
-  } else if (tab === "popular") {
-    activities = sortMobileLobbyPageActivities(
-      activities,
-      viewerProfileId,
-      (left, right) =>
-        getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left),
-    );
-  } else if (tab === "nearby") {
-    activities = sortMobileLobbyPageActivities(activities, viewerProfileId);
+    filters.push({
+      startAt: {
+        gte: dayStart,
+        lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000),
+      },
+    });
   }
 
-  const result = paginateMobileLobbyActivities(activities, normalizedPage);
+  // Filter in SQL before pagination, so old history cannot crowd recent plans out.
+  const rows = await prisma.activity.findMany({
+    where: { AND: filters },
+    orderBy:
+      tab === "popular"
+        ? [
+            { participants: { _count: "desc" } },
+            { favorites: { _count: "desc" } },
+            { startAt: "desc" },
+            { id: "asc" },
+          ]
+        : [{ startAt: status === "ended" ? "desc" : "asc" }, { id: "asc" }],
+    skip: (normalizedPage - 1) * mobileActivityLobbyPageSize,
+    take: mobileActivityLobbyPageSize + 1,
+    select: activityCardSelect,
+  });
+  const cards = rows
+    .slice(0, mobileActivityLobbyPageSize)
+    .map(getActivityCardViewModel);
+  const decorated = viewerProfileId
+    ? await decorateLobbyActivities(
+        cards,
+        viewerProfileId,
+        followedProfileIds,
+        mutualFollowIds,
+      )
+    : cards.map((card) => applyPrivateActivityCardAccess(card, false));
 
   return {
-    ...result,
+    activities: sortMobileLobbyPageActivities(
+      decorated,
+      viewerProfileId,
+      tab === "popular"
+        ? (left, right) =>
+            getMobileLobbyPopularScore(right) - getMobileLobbyPopularScore(left)
+        : undefined,
+    ),
+    hasMore: rows.length > mobileActivityLobbyPageSize,
+    page: normalizedPage,
     pageSize: mobileActivityLobbyPageSize,
     status,
     tab,

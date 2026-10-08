@@ -30,7 +30,6 @@ export async function getOwnedTicketPage(input: {
       giftedAt: true,
       id: true,
       redeemedAt: true,
-      serialNumber: true,
     },
   });
 
@@ -39,7 +38,6 @@ export async function getOwnedTicketPage(input: {
       giftedAt: item.giftedAt?.toISOString() ?? null,
       id: item.id,
       redeemedAt: item.redeemedAt?.toISOString() ?? null,
-      serialNumber: item.serialNumber,
     })),
     page,
     pageSize: ticketPageSize,
@@ -70,7 +68,6 @@ export async function getOwnedTicketForProfile(input: {
       giftedAt: true,
       id: true,
       redeemedAt: true,
-      serialNumber: true,
     },
   });
 
@@ -80,7 +77,6 @@ export async function getOwnedTicketForProfile(input: {
         giftedAt: item.giftedAt?.toISOString() ?? null,
         id: item.id,
         redeemedAt: item.redeemedAt?.toISOString() ?? null,
-        serialNumber: item.serialNumber,
       }
     : null;
 }

@@ -1,4 +1,4 @@
-import { AA_SETTLEMENT } from "../domain/simpleLedger";
+import { AA_ROUNDING, AA_SETTLEMENT, simpleRoundingCorrectionForRecords } from "../domain/simpleLedger";
 import type {
   AaParticipantRole,
   AaTransactionStatus,
@@ -366,10 +366,26 @@ export async function getActivityAaSnapshot(
   const currentAccess = await getActivityAaAccess(activityId, profileId);
 
   const calculationInputs = ledger.transactions.map(toLedgerInput);
-  const balances = calculateBalances(
+  let balances = calculateBalances(
     ledger.participants.map((participant) => participant.id),
     calculationInputs,
   );
+  if (!ledger.transactions.some(transaction => transaction.importSource === AA_ROUNDING && transaction.status === "POSTED")) {
+    // Match the stable participant order used by the simplified ledger's cent allocation.
+    const roundingParticipantIds = [...ledger.participants]
+      .sort((left, right) => left.joinedAt.getTime() - right.joinedAt.getTime() || left.id.localeCompare(right.id))
+      .map(participant => participant.id);
+    const correction = new Map(simpleRoundingCorrectionForRecords(
+      roundingParticipantIds,
+      ledger.transactions.map(transaction => ({
+        source: transaction.importSource,
+        status: transaction.status,
+        amount: transaction.baseAmountMinor.toString(),
+        shares: transaction.shares.map(share => ({ participantId: share.participantId, amount: share.amountMinor.toString() })),
+      })),
+    ).map(item => [item.participantId, item.delta]));
+    balances = balances.map(item => ({ ...item, balanceMinor: item.balanceMinor - (correction.get(item.participantId) ?? 0n) }));
+  }
   const suggestions = buildSettlementSuggestions(balances);
   const participantById = new Map(
     ledger.participants.map((participant) => [participant.id, participant]),
@@ -399,12 +415,13 @@ export async function getActivityAaSnapshot(
   const viewerSettlementCount = suggestions.filter(
     (suggestion) => suggestion.fromParticipantId === viewer.id,
   ).length;
-  const postedTransactions = ledger.transactions.filter(
+  const visibleTransactions = ledger.transactions.filter(transaction => transaction.importSource !== AA_ROUNDING);
+  const postedTransactions = visibleTransactions.filter(
     (transaction) => transaction.status === "POSTED",
   );
   const categoryTotals = new Map<string, bigint>();
   postedTransactions
-    .filter((transaction) => transaction.type === "EXPENSE")
+    .filter((transaction) => transaction.type === "EXPENSE" && transaction.importSource !== AA_ROUNDING)
     .forEach((transaction) => {
       categoryTotals.set(
         transaction.categoryNameSnapshot,
@@ -434,10 +451,10 @@ export async function getActivityAaSnapshot(
       balanceMinor: (balanceById.get(viewer.id) ?? 0n).toString(),
     },
     summary: {
-      expenseTotalMinor: ledger.transactions
+      expenseTotalMinor: visibleTransactions
         .filter(
           (transaction) =>
-            transaction.type === "EXPENSE" && transaction.status === "POSTED",
+            transaction.type === "EXPENSE" && transaction.status === "POSTED" && transaction.importSource !== AA_ROUNDING,
         )
         .reduce((sum, transaction) => sum + transaction.baseAmountMinor, 0n)
         .toString(),
@@ -452,7 +469,7 @@ export async function getActivityAaSnapshot(
       futurePostedCount: postedTransactions.filter(
         (transaction) => transaction.occurredAt > new Date(),
       ).length,
-      postedCount: ledger.transactions.filter(
+      postedCount: visibleTransactions.filter(
         (transaction) => transaction.status === "POSTED",
       ).length,
       pendingReviewCount,
@@ -495,7 +512,7 @@ export async function getActivityAaSnapshot(
       iconKey: category.iconKey,
       isActive: category.isActive,
     })),
-    transactions: ledger.transactions.map((transaction) => ({
+    transactions: visibleTransactions.map((transaction) => ({
       id: transaction.id,
       type: transaction.type,
       status: transaction.status,

@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { TicketGiftForm } from "@/features/inventory/components/TicketGiftForm";
 import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
-import { ReceivedTicketsSeen } from "@/features/inventory/components/ReceivedTicketsSeen";
 import { getInventoryCopy } from "@/features/inventory/copy";
 import { getInventoryDefinitionForProfile } from "@/features/inventory/services/inventoryService";
 import { canRedeemTicketDefinition } from "@/features/inventory/services/ticketRedemptionService";
@@ -84,7 +83,6 @@ export default async function InventoryItemDetailPage({
       className="max-w-3xl space-y-5 pb-28 pt-5 md:pb-12 md:pt-10"
       mobileSafeTop
     >
-      <ReceivedTicketsSeen locale={locale} />
       <Link
         className="inline-flex items-center gap-2 text-sm font-bold text-[#156240]"
         href={withLocale(locale, "/profile/bag")}
@@ -184,35 +182,46 @@ export default async function InventoryItemDetailPage({
       )}
 
       {ownedTickets.total > 0 ? (
-        <section className="rounded-[1.25rem] bg-white p-5 ring-1 ring-[#D6D5B2]">
-          <h2 className="text-base font-bold text-[#111210]">
-            {copy.ticketList}
-          </h2>
-          <div className="mt-4 divide-y divide-[#E5E2D3]">
+        <section>
+          <h2 className="text-base font-bold text-ink">{copy.ticketList}</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {ownedTickets.items.map((owned) => (
               <Link
-                className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm font-semibold text-[#263B2E]"
+                className="flex min-h-24 items-center gap-3 rounded-[1.15rem] bg-white p-3 text-ink shadow-[0_8px_24px_rgba(20,62,42,0.05)] transition active:scale-[0.99]"
                 href={withLocale(
                   locale,
                   `/profile/bag/items/${definitionId}/${owned.id}`,
                 )}
                 key={owned.id}
               >
-                <span>
-                  {copy.serial} {owned.serialNumber}
-                  {owned.redeemedAt ? (
-                    <span className="ml-2 text-[#156240]">
-                      · {redemptionCopy.redeemed}
-                    </span>
-                  ) : owned.giftedAt ? (
-                    <span className="ml-2 text-[#7A8276]">
-                      · {copy.transferLocked}
-                    </span>
-                  ) : null}
+                {item.imageUrl ? (
+                  <InventoryItemArtwork
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl bg-fog"
+                    fit="contain"
+                    imageUrl={item.imageUrl}
+                  />
+                ) : (
+                  <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-fog text-forest">
+                    <Ticket aria-hidden="true" className="h-6 w-6" />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold">
+                    {item.title}
+                  </span>
+                  <span className="mt-1 block text-xs font-medium text-ink/70">
+                    {owned.redeemedAt
+                      ? redemptionCopy.checkedIn
+                      : redemptionCopy.ready}
+                    {!owned.redeemedAt && owned.giftedAt
+                      ? ` · ${redemptionCopy.giftLocked}`
+                      : ""}
+                  </span>
                 </span>
                 <ChevronRight
                   aria-hidden="true"
-                  className="h-4 w-4 shrink-0 text-[#7A8276]"
+                  className="h-4 w-4 shrink-0 text-ink/50"
                 />
               </Link>
             ))}
@@ -220,7 +229,7 @@ export default async function InventoryItemDetailPage({
           {ownedTickets.total > ownedTickets.pageSize ? (
             <nav
               aria-label={redemptionCopy.ticketList}
-              className="mt-4 flex items-center justify-between border-t border-[#E5E2D3] pt-4 text-sm"
+              className="mt-4 flex items-center justify-between py-3 text-sm"
             >
               {ownedTickets.page > 1 ? (
                 <Link
@@ -276,9 +285,6 @@ export default async function InventoryItemDetailPage({
                       {received
                         ? gift.sender.nickname
                         : gift.recipient.nickname}
-                      <span className="ml-1 font-normal text-[#6C746A]">
-                        · {copy.serial} {gift.serialNumber}
-                      </span>
                     </p>
                     <p className="mt-1 text-xs text-[#6C746A]">
                       {received

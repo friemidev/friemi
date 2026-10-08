@@ -27,6 +27,7 @@ import {
   planetMomentImageMaxCount,
 } from "@/features/planets/utils/planetMomentPolicy";
 import { planetCategoryValues } from "@/features/planets/utils/planetCategories";
+import { getPlanetInvitePath } from "@/features/planets/utils/planetInvite";
 import { isAllowedPlanetVideoUrl } from "@/lib/planet-video-storage";
 import { withLocale } from "@/lib/routes";
 
@@ -361,7 +362,7 @@ export async function joinPlanetByInviteAction(formData: FormData) {
   const inviteCode = readString(formData, "inviteCode").trim().toUpperCase();
   if (!inviteCode) return;
 
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, getPlanetInvitePath(locale, inviteCode));
   const planet = await prisma.planet.findUnique({
     where: { inviteCode },
     select: { id: true, slug: true, ownerId: true },

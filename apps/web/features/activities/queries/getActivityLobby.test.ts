@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ActivityCardViewModel } from "../types";
-import { sortMobileHomeTrendingTeamActivities } from "./getActivityLobby";
+import {
+  getMobileActivityLobbyPage,
+  sortMobileHomeTrendingTeamActivities,
+} from "./getActivityLobby";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 function activity(
   overrides: Partial<ActivityCardViewModel>,
@@ -30,6 +35,61 @@ function activity(
     ...overrides,
   } as ActivityCardViewModel;
 }
+
+test("mobile history filtering happens in the database before pagination", async (t) => {
+  const calls: Prisma.ActivityFindManyArgs[] = [];
+  const original = prisma.activity.findMany;
+  prisma.activity.findMany = (async (args: Prisma.ActivityFindManyArgs) => {
+    calls.push(args);
+    return [];
+  }) as typeof original;
+  t.after(() => {
+    prisma.activity.findMany = original;
+  });
+  await getMobileActivityLobbyPage({
+    tab: "nearby",
+    status: "ongoing",
+    viewerProfileId: null,
+  });
+  await getMobileActivityLobbyPage({
+    tab: "nearby",
+    status: "ended",
+    page: 3,
+    viewerProfileId: null,
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].skip, 0);
+  assert.equal(calls[1].skip, 16);
+  assert.equal(calls[1].take, 9);
+  const activeFilters = calls[0].where?.AND as Prisma.ActivityWhereInput[];
+  const archivedFilters = calls[1].where?.AND as Prisma.ActivityWhereInput[];
+  assert.deepEqual(activeFilters[1].status, { not: "CANCELLED" });
+  assert.deepEqual(archivedFilters[1].OR?.[0], { status: "CANCELLED" });
+  assert.ok(JSON.stringify(activeFilters[0]).includes("ENDED"));
+});
+
+test("anonymous users cannot load another user's mine or following tabs", async (t) => {
+  const calls: Prisma.ActivityFindManyArgs[] = [];
+  const original = prisma.activity.findMany;
+  prisma.activity.findMany = (async (args: Prisma.ActivityFindManyArgs) => {
+    calls.push(args);
+    return [];
+  }) as typeof original;
+  t.after(() => {
+    prisma.activity.findMany = original;
+  });
+  for (const tab of ["mine", "friends"] as const) {
+    await getMobileActivityLobbyPage({ tab, viewerProfileId: null });
+  }
+  for (const args of calls) {
+    const filters = args.where?.AND as Prisma.ActivityWhereInput[];
+    assert.deepEqual(filters.at(-1)?.OR?.[0], { organizerId: { in: [] } });
+    assert.deepEqual(
+      filters.at(-1)?.OR?.[1]?.participants?.some?.userProfileId,
+      { in: [] },
+    );
+  }
+});
 
 test("mobile home trending teams exclude public event and imported info cards", () => {
   const sorted = sortMobileHomeTrendingTeamActivities(

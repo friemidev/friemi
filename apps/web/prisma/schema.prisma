@@ -916,7 +916,7 @@ model ActivityPriorityOverride {
   updatedById    String?
   updatedBy      UserProfile?               @relation("ActivityPriorityOverrideUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
+  updatedAt      DateTime                   @default(now()) @updatedAt
 
   @@unique([targetType, targetId])
   @@index([targetType, boostExpiresAt])
@@ -1072,7 +1072,7 @@ model CouponClaimCode {
   claimedWalletItem   CouponWalletItem?     @relation(fields: [claimedWalletItemId], references: [id], onDelete: SetNull)
   claimedAt           DateTime?
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  updatedAt           DateTime              @default(now()) @updatedAt
 
   @@index([couponId, status, createdAt])
   @@index([claimedByProfileId, claimedAt])
@@ -1117,7 +1117,7 @@ model TopNewsItem {
   createdByProfileId String?
   updatedByProfileId String?
   createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime @default(now()) @updatedAt
 
   @@index([isActive, sortOrder])
   @@index([updatedAt])
@@ -1330,26 +1330,29 @@ model InventoryIssueBatch {
 }
 
 model InventoryItem {
-  id             String                  @id @default(cuid())
-  definitionId   String
-  definition     InventoryItemDefinition @relation(fields: [definitionId], references: [id])
-  ownerProfileId String
-  owner          UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
-  issueBatchId   String
-  issueBatch     InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
-  serialNumber   Int
-  giftedAt       DateTime?
-  gift           InventoryItemGift?
+  id                       String                  @id @default(cuid())
+  definitionId             String
+  definition               InventoryItemDefinition @relation(fields: [definitionId], references: [id])
+  ownerProfileId           String
+  owner                    UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
+  issueBatchId             String
+  issueBatch               InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
+  serialNumber             Int
+  giftedAt                 DateTime?
+  gift                     InventoryItemGift?
   redemptionToken          String?      @unique @db.VarChar(64)
+  redemptionCode           String?      @unique @db.VarChar(10)
   redemptionTokenExpiresAt DateTime?
   redeemedAt               DateTime?
   redeemedByProfileId      String?
   redeemedBy               UserProfile? @relation("InventoryItemRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  bagSeenAt                DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   @@unique([definitionId, serialNumber])
   @@index([ownerProfileId, definitionId, giftedAt])
+  @@index([ownerProfileId, bagSeenAt])
   @@index([issueBatchId])
   @@index([redeemedByProfileId, redeemedAt])
   @@index([redemptionTokenExpiresAt])
@@ -2345,7 +2348,7 @@ model DrawGuessWordBank {
   sortOrder   Int            @default(0)
   rooms       GameToolRoom[]
   createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  updatedAt   DateTime       @default(now()) @updatedAt
 
   @@unique([locale, title])
   @@index([locale, isActive, sortOrder])

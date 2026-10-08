@@ -1896,6 +1896,7 @@ export async function ActivityDetailPageContent({
             </ActivityShareDialogButton>
           }
           backHref={withLocale(locale, "/lobby")}
+          returnMode="path"
           title={mobileDetailTitle}
         />
       )}

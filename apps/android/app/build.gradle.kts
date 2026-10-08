@@ -2,7 +2,6 @@ import java.net.URI
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 if (file("google-services.json").exists()) {
@@ -102,6 +101,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             manifestPlaceholders["friemiUsesCleartextTraffic"] = "false"
             if (hasFriemiReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
@@ -120,10 +122,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 }
 

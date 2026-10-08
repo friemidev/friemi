@@ -105,8 +105,7 @@ export function TicketGiftForm({
           className="mt-4 rounded-xl bg-[#EAF5E8] px-4 py-3 text-sm font-bold text-[#156240]"
           role="status"
         >
-          {copy.gifted} {state.recipientName} · {copy.serial}{" "}
-          {state.serialNumber}
+          {copy.gifted} {state.recipientName}
         </p>
       ) : null}
       {error ? (

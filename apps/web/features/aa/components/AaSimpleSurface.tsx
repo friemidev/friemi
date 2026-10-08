@@ -1,6 +1,7 @@
 import { MobileNavSectionOverride } from "@/components/navigation/MobileNavSectionOverride";
 import { runAaSimpleCommand } from "../actions/aaSimpleActions";
 import { saveAaPaymentMethod } from "../actions/aaPaymentMethodActions";
+import { uploadSimpleAaReceipt } from "../actions/aaSimpleReceiptActions";
 import type { AaSimpleState } from "../domain/simpleLedger";
 import { AaSimpleClient, type AaScreen } from "./AaSimpleClient";
 
@@ -9,6 +10,7 @@ export function AaSimpleSurface({ state, locale, screen, recordId }: { state: Aa
     <MobileNavSectionOverride section="activities" />
     <AaSimpleClient initialState={state} locale={locale} initialScreen={screen} initialRecordId={recordId}
       onCommand={runAaSimpleCommand.bind(null, state.activityId, locale)}
+      onUploadReceipt={uploadSimpleAaReceipt.bind(null, state.activityId, locale)}
       onSavePaymentMethod={saveAaPaymentMethod.bind(null, state.activityId, locale)} />
   </div>;
 }

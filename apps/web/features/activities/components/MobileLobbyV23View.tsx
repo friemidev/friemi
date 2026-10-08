@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileActivityListRow } from "@/features/activities/components/MobileActivityListRow";
 import { retainImageSources } from "@/components/media/RetainedImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
+import { isArchivedLobbyActivity } from "@/features/activities/utils/lobbyActivityRetention";
 import {
   dedupeActivityCards,
   filterUniqueActivityCards,
@@ -310,7 +310,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Créé",
       participants: "pers.",
       retryLabel: "Réessayer",
-      showEndedLabel: "Afficher les sorties terminées",
+      showEndedLabel: "Afficher les sorties plus anciennes",
       tabs: {
         nearby: "Proche",
         friends: "Suivis",
@@ -340,7 +340,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Host",
       participants: "people",
       retryLabel: "Retry",
-      showEndedLabel: "Show ended plans",
+      showEndedLabel: "Show older plans",
       tabs: {
         nearby: "Nearby",
         friends: "Following",
@@ -367,7 +367,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     hostedBadge: "我发起的",
     participants: "人",
     retryLabel: "重试",
-    showEndedLabel: "显示已结束",
+    showEndedLabel: "展开更早结束的聚吧",
     tabs: {
       nearby: "附近",
       friends: "关注",
@@ -774,10 +774,7 @@ export function MobileLobbyV23View({
   const showEnded = Boolean(showEndedTabs[displayedActiveTab]);
   const visibleActiveActivities = filterMobileLobbyActivitiesByPrice(
     filterMobileLobbyActivitiesByCategory(
-      (activePage?.activities ?? []).filter((activity) => {
-        const status = getActivityDisplayStatus(activity);
-        return status !== "ENDED" && status !== "CANCELLED";
-      }),
+      (activePage?.activities ?? []).filter((activity) => !isArchivedLobbyActivity(activity)),
       activeCategory,
     ),
     initialFreeOnly,
@@ -785,10 +782,7 @@ export function MobileLobbyV23View({
   const visibleEndedActivities = showEnded
     ? filterMobileLobbyActivitiesByPrice(
         filterMobileLobbyActivitiesByCategory(
-          (endedPage?.activities ?? []).filter((activity) => {
-            const status = getActivityDisplayStatus(activity);
-            return status === "ENDED" || status === "CANCELLED";
-          }),
+          (endedPage?.activities ?? []).filter((activity) => isArchivedLobbyActivity(activity)),
           activeCategory,
         ),
         initialFreeOnly,

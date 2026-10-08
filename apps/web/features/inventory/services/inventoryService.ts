@@ -135,6 +135,16 @@ export async function issueTicketBatch(input: {
           })),
         });
 
+        await createNotifications(tx, [
+          {
+            actorId: input.actorProfileId,
+            inventoryItemDefinitionId: definition.id,
+            occurrenceId: batch.id,
+            recipientId: recipient.id,
+            type: "INVENTORY_TICKET_RECEIVED",
+          },
+        ]);
+
         return {
           status: "ISSUED" as const,
           batchId: batch.id,
@@ -251,8 +261,10 @@ export async function giftTicketByFriemiCode(input: {
             redeemedAt: null,
           },
           data: {
+            bagSeenAt: null,
             giftedAt,
             ownerProfileId: recipient.id,
+            redemptionCode: null,
             redemptionToken: null,
             redemptionTokenExpiresAt: null,
           },

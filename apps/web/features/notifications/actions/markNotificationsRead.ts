@@ -421,7 +421,6 @@ export async function openNotificationActivityAction(formData: FormData) {
       actorId: true,
       activityId: true,
       couponWalletItemId: true,
-      inventoryItemDefinitionId: true,
       momentId: true,
       planet: {
         select: {
@@ -439,9 +438,7 @@ export async function openNotificationActivityAction(formData: FormData) {
     });
     await invalidateUnreadBadgeCache([profile.id]);
 
-    const target = notification.inventoryItemDefinitionId
-      ? `/profile/bag/items/${notification.inventoryItemDefinitionId}`
-      : "/profile/bag";
+    const target = "/profile/bag";
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, target));
     trackNotificationOpened({

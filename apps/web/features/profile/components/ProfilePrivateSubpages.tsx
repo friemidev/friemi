@@ -70,8 +70,10 @@ import type {
   ProfileBagCheckItem,
   ProfileBagCouponItem,
   ProfileBagInventoryItem,
+  ProfileBagTicketItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
+import type { BagTicketFilter } from "@/features/inventory/services/inventoryBagQueries";
 import { getInventoryCopy } from "@/features/inventory/copy";
 import { InventoryItemArtwork } from "@/features/inventory/components/InventoryItemArtwork";
 import type { FriemiCoinBalanceViewModel } from "@/features/charm/queries/getFriemiCoinBalance";
@@ -808,7 +810,7 @@ export function ProfilePrivatePageShell({
   const toneClasses = getToneClasses(tone);
   const backHref = withLocale(locale, backFallbackPath);
   const backControlClassName =
-    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#D6D5B2] transition active:scale-95";
+    "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#D6D5B2] transition active:scale-95";
   const handleHistoryBack = () => {
     if (window.history.length > 1) {
       window.history.back();
@@ -842,7 +844,7 @@ export function ProfilePrivatePageShell({
         <h1 className="min-w-0 flex-1 truncate text-center text-xl font-bold text-[#111210]">
           {title}
         </h1>
-        <div className="flex h-10 min-w-10 shrink-0 items-center justify-end">
+        <div className="flex h-11 min-w-11 shrink-0 items-center justify-end">
           {right}
         </div>
       </header>
@@ -2627,7 +2629,6 @@ function CheckBagCard({
   );
 }
 
-type BagItemFilter = "all" | "available" | "used";
 type BagDisplayItem =
   | {
       date: string;
@@ -2643,6 +2644,11 @@ type BagDisplayItem =
       date: string;
       item: ProfileBagInventoryItem;
       kind: "inventory";
+    }
+  | {
+      date: string;
+      item: ProfileBagTicketItem;
+      kind: "ticket";
     };
 
 function InventoryBagCard({
@@ -2653,6 +2659,7 @@ function InventoryBagCard({
   locale: string;
 }) {
   const copy = getInventoryCopy(locale);
+  const bagCopy = getProfilePrivateSubpageCopy(locale).bag;
   return (
     <Link
       className={cn(
@@ -2671,16 +2678,16 @@ function InventoryBagCard({
               imageUrl={item.imageUrl}
             />
             <span className="absolute right-2 top-2 rounded-full bg-paper/95 px-2 py-1 text-[10px] font-bold text-forest shadow-sm">
-              {copy.ticket}
+              {bagCopy.checkList}
             </span>
           </div>
         ) : (
           <div className="flex items-start justify-between gap-2">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-fog text-forest">
-              <Ticket className="h-5 w-5" aria-hidden="true" />
+              <Package className="h-5 w-5" aria-hidden="true" />
             </span>
             <span className="rounded-full bg-fog px-2 py-1 text-[10px] font-bold text-forest">
-              {copy.ticket}
+              {bagCopy.checkList}
             </span>
           </div>
         )}
@@ -2705,32 +2712,97 @@ function InventoryBagCard({
   );
 }
 
+function TicketBagCard({
+  filter,
+  item,
+  locale,
+  page,
+}: {
+  filter: BagTicketFilter;
+  item: ProfileBagTicketItem;
+  locale: string;
+  page: number;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const status = item.redeemedAt ? copy.bag.redeemed : copy.bag.statusAvailable;
+
+  return (
+    <Link
+      aria-label={`${item.title} · ${status}`}
+      className={cn(
+        "grid content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-sand transition hover:ring-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-forest",
+        item.imageUrl ? "min-h-[15rem]" : "min-h-[10.5rem]",
+      )}
+      href={withLocale(
+        locale,
+        `/profile/bag/items/${item.definitionId}/${item.id}?filter=${filter}&page=${page}`,
+      )}
+    >
+      <div>
+        {item.imageUrl ? (
+          <InventoryItemArtwork
+            alt=""
+            className="aspect-[4/3] w-full rounded-[0.8rem]"
+            fit="contain"
+            imageUrl={item.imageUrl}
+          />
+        ) : (
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-fog text-forest">
+            <Ticket className="h-5 w-5" aria-hidden="true" />
+          </span>
+        )}
+        <h3 className="mt-3 line-clamp-2 text-sm font-bold leading-5 text-ink">
+          {item.title}
+        </h3>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-sand pt-2">
+        <span
+          className={cn(
+            "text-xs font-bold",
+            item.redeemedAt ? "text-ink/70" : "text-forest",
+          )}
+        >
+          {status}
+        </span>
+        <ChevronRight className="h-4 w-4 text-ink/70" aria-hidden="true" />
+      </div>
+    </Link>
+  );
+}
+
 export function ProfileBagPageView({
   bag,
   hasError,
+  itemFilter,
   locale,
   notice,
 }: {
   bag: ProfileBagViewModel;
   hasError?: boolean;
+  itemFilter: BagTicketFilter;
   locale: string;
   notice?: "already-claimed" | "claimed" | null;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const couponCopy = getCouponBagCopy(locale);
-  const [itemFilter, setItemFilter] = useState<BagItemFilter>("available");
+  const inventoryCopy = getInventoryCopy(locale);
   const bagItems: BagDisplayItem[] = [
-    ...bag.inventoryItems.map((item) => ({
+    ...bag.ticketPage.items.map((item) => ({
+      date: item.updatedAt,
+      item,
+      kind: "ticket" as const,
+    })),
+    ...(bag.ticketPage.page === 1 ? bag.inventoryItems : []).map((item) => ({
       date: item.createdAt,
       item,
       kind: "inventory" as const,
     })),
-    ...bag.coupons.map((item) => ({
+    ...(bag.ticketPage.page === 1 ? bag.coupons : []).map((item) => ({
       date: item.claimedAt,
       item,
       kind: "coupon" as const,
     })),
-    ...bag.checks.map((item) => ({
+    ...(bag.ticketPage.page === 1 ? bag.checks : []).map((item) => ({
       date: item.createdAt,
       item,
       kind: "check" as const,
@@ -2738,12 +2810,13 @@ export function ProfileBagPageView({
   ].sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
   const filteredItems = bagItems.filter(({ item, kind }) => {
     if (itemFilter === "all") return true;
+    if (kind === "ticket") return true;
     if (kind === "inventory")
       return itemFilter === "available" && item.quantity > 0;
     if (itemFilter === "used") return item.status === "REDEEMED";
     return item.status === "AVAILABLE";
   });
-  const filters: Array<{ key: BagItemFilter; label: string }> = [
+  const filters: Array<{ key: BagTicketFilter; label: string }> = [
     { key: "available", label: copy.bag.available },
     { key: "used", label: copy.bag.redeemed },
     { key: "all", label: copy.bag.all },
@@ -2790,39 +2863,45 @@ export function ProfileBagPageView({
         </p>
       </section>
 
-      <div
+      <nav
         aria-label={copy.bag.checkList}
         className="mt-5 grid grid-cols-3 rounded-[0.9rem] bg-[#F3F5EF] p-1"
-        role="tablist"
       >
         {filters.map((filter) => {
           const selected = filter.key === itemFilter;
 
           return (
-            <button
-              aria-selected={selected}
+            <Link
+              aria-current={selected ? "page" : undefined}
               className={cn(
-                "h-9 rounded-[0.7rem] px-2 text-xs font-bold transition",
+                "flex min-h-11 items-center justify-center rounded-[0.7rem] px-2 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-forest",
                 selected
                   ? "bg-white text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]"
                   : "text-[#6C746A]",
               )}
+              href={withLocale(locale, `/profile/bag?filter=${filter.key}`)}
               key={filter.key}
-              onClick={() => setItemFilter(filter.key)}
-              role="tab"
-              type="button"
+              prefetch={false}
             >
               {filter.label}
-            </button>
+            </Link>
           );
         })}
-      </div>
+      </nav>
 
       <section className="mt-4">
         {filteredItems.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {filteredItems.map((displayItem) =>
-              displayItem.kind === "inventory" ? (
+              displayItem.kind === "ticket" ? (
+                <TicketBagCard
+                  filter={itemFilter}
+                  item={displayItem.item}
+                  key={`ticket-${displayItem.item.id}`}
+                  locale={locale}
+                  page={bag.ticketPage.page}
+                />
+              ) : displayItem.kind === "inventory" ? (
                 <InventoryBagCard
                   item={displayItem.item}
                   key={`inventory-${displayItem.item.id}`}
@@ -2850,6 +2929,46 @@ export function ProfileBagPageView({
             </p>
           </div>
         )}
+        {bag.ticketPage.total > bag.ticketPage.pageSize ? (
+          <nav
+            aria-label={inventoryCopy.ticketList}
+            className="mt-5 flex items-center justify-between gap-3 text-sm"
+          >
+            {bag.ticketPage.page > 1 ? (
+              <Link
+                className="inline-flex min-h-11 items-center font-bold text-forest focus:outline-none focus-visible:underline"
+                href={withLocale(
+                  locale,
+                  `/profile/bag?filter=${itemFilter}&page=${bag.ticketPage.page - 1}`,
+                )}
+                prefetch={false}
+              >
+                {inventoryCopy.previous}
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="tabular-nums text-ink/70">
+              {bag.ticketPage.page} /{" "}
+              {Math.ceil(bag.ticketPage.total / bag.ticketPage.pageSize)}
+            </span>
+            {bag.ticketPage.page * bag.ticketPage.pageSize <
+            bag.ticketPage.total ? (
+              <Link
+                className="inline-flex min-h-11 items-center font-bold text-forest focus:outline-none focus-visible:underline"
+                href={withLocale(
+                  locale,
+                  `/profile/bag?filter=${itemFilter}&page=${bag.ticketPage.page + 1}`,
+                )}
+                prefetch={false}
+              >
+                {inventoryCopy.next}
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        ) : null}
       </section>
     </ProfilePrivatePageShell>
   );
