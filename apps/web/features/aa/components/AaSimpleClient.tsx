@@ -2,12 +2,13 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronRight, CircleHelp, Coins, Copy, Plus, ReceiptText, RotateCcw, Users, Wallet } from "lucide-react";
-import { AA_EXPENSE, AA_PREPAYMENT, AA_SETTLEMENT, applyAaCommand, isPrepaymentRefund, simpleBalances, splitSimpleExpense, type AaCommand, type AaRecord, type AaSimpleState } from "../domain/simpleLedger";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, CircleHelp, Coins, Copy, ImagePlus, Plus, ReceiptText, RotateCcw, Users, Wallet } from "lucide-react";
+import { AA_EXPENSE, AA_PREPAYMENT, AA_ROUNDING, AA_SETTLEMENT, applyAaCommand, exactSimpleShares, formatExactEuroShare, isPrepaymentRefund, simpleBalances, simpleRoundingCorrection, splitSimpleExpense, type AaCommand, type AaRecord, type AaSimpleState } from "../domain/simpleLedger";
 import { formatMinorAmount, parseMoneyToMinor } from "../domain/money";
 import { decodePaymentMethods, encodePaymentMethods, MAX_PAYMENT_METHOD_STORAGE_LENGTH } from "../domain/paymentMethods";
 import { getSimpleAaCopy, getSimpleAaError } from "../simpleCopy";
 import { brand } from "../../../lib/brand";
+import { allowedImageMimeTypes, maxImageBucketFileSize } from "../../../lib/image-upload-policy";
 import styles from "./AaSimpleClient.module.css";
 
 export type AaScreen = "overview" | "choose" | "expense" | "prepayment" | "details" | "progress" | "payment" | "record";
@@ -20,10 +21,11 @@ type Props = {
   initialState: AaSimpleState; locale: string; initialScreen?: AaScreen; initialRecordId?: string; preview?: boolean;
   onCommand?: (command: AaCommand) => Promise<{ state?: AaSimpleState; error?: string }>;
   onSavePaymentMethod?: (values: string[]) => Promise<{ paymentMethod?: string | null; error?: string }>;
+  onUploadReceipt?: (recordId: string, data: FormData) => Promise<{ attachment?: NonNullable<AaRecord["attachments"]>[number]; error?: string }>;
   onStateChange?: (state: AaSimpleState) => void;
 };
 
-export function AaSimpleClient({ initialState, locale, initialScreen = "overview", initialRecordId, preview = false, onCommand, onSavePaymentMethod, onStateChange }: Props) {
+export function AaSimpleClient({ initialState, locale, initialScreen = "overview", initialRecordId, preview = false, onCommand, onSavePaymentMethod, onUploadReceipt, onStateChange }: Props) {
   const [state, setState] = useState(initialState);
   const [screen, setScreen] = useState<AaScreen>(initialScreen);
   const [tab, setTab] = useState("expenses");
@@ -58,7 +60,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const mine = balanceOf(state.viewerId);
   const myRefund = isPrepaymentRefund(state, state.viewerId, mine);
   const active = state.status === "ACTIVE";
-  const visible = state.records.filter(r => r.status !== "VOIDED");
+  const visible = state.records.filter(r => r.status !== "VOIDED" && r.source !== AA_ROUNDING);
   const expenses = visible.filter(r => r.type === "EXPENSE");
   const prepayments = visible.filter(r => r.source === AA_PREPAYMENT);
   const historical = visible.filter(r => r.type !== "EXPENSE" && ![AA_PREPAYMENT, AA_SETTLEMENT].includes(r.source ?? ""));
@@ -68,7 +70,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const incoming = pendingTransfers.filter(r => r.to === state.viewerId);
   const outgoing = pendingTransfers.filter(r => r.from === state.viewerId);
   const disputedTransfers = transfers.filter(r => r.status === "DISPUTED" && (state.canSettle || r.from === state.viewerId || r.to === state.viewerId));
-  const pastTransfers = state.records.filter(r => r.source === AA_SETTLEMENT && (r.from === state.viewerId || r.to === state.viewerId) && (r.status === "POSTED" || r.status === "VOIDED"));
+  const pastTransfers = state.records.filter(r => r.source === AA_SETTLEMENT && r.status === "POSTED");
   const incomingAmount = incoming.reduce((sum, record) => sum + BigInt(record.amount), 0n);
   const outgoingAmount = outgoing.reduce((sum, record) => sum + BigInt(record.amount), 0n);
   const myPaymentMethod = state.participants.find(person => person.id === state.viewerId)?.paymentMethod ?? null;
@@ -84,26 +86,58 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
   const total = expenses.filter(r => r.status === "POSTED").reduce((sum, r) => sum + BigInt(r.amount), 0n);
   const prepaid = prepayments.filter(r => r.status === "POSTED").reduce((sum, r) => sum + BigInt(r.amount), 0n);
   const completed = transfers.filter(r => r.status === "POSTED").length;
+  const exactShares = exactSimpleShares(state);
+  const roundingByPerson = new Map(simpleRoundingCorrection(state).map(item => [item.participantId, item.delta]));
   const selected = state.records.find(r => r.id === selectedId);
   const selectedPayeeMethods = decodePaymentMethods(state.participants.find(person => person.id === selected?.to)?.paymentMethod);
   const viewerActive = state.participants.some(p => p.id === state.viewerId && p.active);
   const canEditPaymentMethod = viewerActive && state.status !== "ARCHIVED";
   const canRecord = active && !unresolved && (viewerActive || state.canManage);
+  const canAttachReceipt = (record: AaRecord) => record.source === AA_EXPENSE && record.status === "POSTED" && state.status !== "ARCHIVED" && (state.canManage || record.creatorId === state.viewerId || record.contributions.some(item => item.participantId === state.viewerId) || record.shares.some(item => item.participantId === state.viewerId));
   const statusText = (r: AaRecord) => r.status === "POSTED" ? (r.source === AA_SETTLEMENT ? r.receivedAt ? paymentText.received : copy.paid : copy.posted) : r.status === "DISPUTED" ? copy.disputed : r.status === "VOIDED" ? copy.voided : r.source === AA_SETTLEMENT && r.paidAt ? paymentText.waitingRecipient : copy.pending;
   const go = (next: AaScreen) => { setError(""); setPaymentMethodError(""); setConfirmation(null); setScreen(next); };
   const openRecord = (record: AaRecord) => { setSelectedId(record.id); go(record.source === AA_SETTLEMENT ? "payment" : "record"); };
-  async function run(input: Omit<AaCommand, "expectedVersion" | "operationId">, nextScreen?: AaScreen) {
+  async function run(input: Omit<AaCommand, "expectedVersion" | "operationId">, nextScreen?: AaScreen, afterSave?: (next: AaSimpleState, operationId: string) => Promise<void>) {
     if (lock.current) return;
     lock.current = true; setBusy(true); setError("");
     try {
       const command = { ...input, operationId: crypto.randomUUID(), expectedVersion: state.version };
       const result = preview ? { state: applyAaCommand(state, command, new Date().toISOString()) } : await onCommand!(command);
       if (result.error) throw new Error(result.error);
-      if (result.state) { setState(result.state); onStateChange?.(result.state); if (input.intent === "start" && !preview) router.refresh(); }
+      if (result.state) { setState(result.state); onStateChange?.(result.state); if (input.intent === "start" && !preview) router.refresh(); await afterSave?.(result.state, command.operationId); }
       setConfirmation(null);
       if (nextScreen) go(nextScreen);
     } catch (cause) { setError(getSimpleAaError(cause instanceof Error ? cause.message : "FAILED", locale)); }
     finally { lock.current = false; setBusy(false); }
+  }
+  async function uploadReceipt(recordId: string, file: File, current: AaSimpleState) {
+    if (preview) {
+      const attachment = { id: crypto.randomUUID(), fileName: file.name, status: "READY" as const };
+      const next = { ...current, records: current.records.map(r => r.id === recordId ? { ...r, attachments: [...(r.attachments ?? []), attachment] } : r) };
+      setState(next); onStateChange?.(next); return true;
+    }
+    const data = new FormData(); data.set("receipt", file);
+    const result = await onUploadReceipt!(recordId, data);
+    if (!result.attachment) return false;
+    const next = { ...current, records: current.records.map(r => r.id === recordId ? { ...r, attachments: [...(r.attachments ?? []), result.attachment!] } : r) };
+    setState(next); onStateChange?.(next); return true;
+  }
+  async function saveEntry(input: Omit<AaCommand, "expectedVersion" | "operationId">, file: File | null) {
+    await run(input, undefined, async (next, operationId) => {
+      const recordId = input.recordId ?? operationId;
+      if (file) {
+        const uploaded = await uploadReceipt(recordId, file, next).catch(() => false);
+        if (!uploaded) { setSelectedId(recordId); go("record"); setError(copy.receiptUploadFailed); return; }
+      }
+      go("overview");
+    });
+  }
+  async function addReceiptToSelected(file: File) {
+    if (!selected || busy) return;
+    setBusy(true); setError("");
+    try { if (!await uploadReceipt(selected.id, file, state)) setError(copy.receiptUploadFailed); }
+    catch { setError(copy.receiptUploadFailed); }
+    finally { setBusy(false); }
   }
   async function savePaymentMethods(values: string[]) {
     if (paymentMethodBusy) return;
@@ -167,7 +201,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
 
   return <section className={styles.shell} aria-busy={busy}>
     <header className={styles.header}>
-      {screen === "overview" && !preview ? <a className={styles.iconButton} aria-label={copy.back} href={chatHref}><ArrowLeft size={21} /></a> : <button type="button" className={styles.iconButton} aria-label={copy.back} onClick={back} disabled={screen === "overview"}><ArrowLeft size={21} /></button>}
+      {screen === "overview" && !preview ? <button type="button" className={styles.iconButton} aria-label={copy.back} onClick={() => router.replace(chatHref)}><ArrowLeft size={21} /></button> : <button type="button" className={styles.iconButton} aria-label={copy.back} onClick={back} disabled={screen === "overview"}><ArrowLeft size={21} /></button>}
       <h1 ref={heading} tabIndex={-1}>{title}</h1><img className={styles.headerMark} src={brand.logoIconPath} width={32} height={32} alt="Friemi" />
     </header>
     {error && <div role="alert" className={styles.error}>{error}{!preview && <button type="button" onClick={() => window.location.reload()}>{copy.refresh}</button>}</div>}
@@ -206,7 +240,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
       <button type="button" onClick={() => go("expense")} disabled={!canRecord}><span className={styles.choiceIcon}><ReceiptText size={28} /></span><strong>{copy.expense}</strong><p>{copy.expenseHint}</p><ArrowRight size={20} /></button>
       <button type="button" onClick={() => go("prepayment")} disabled={!canRecord}><span className={styles.choiceIcon} data-warm><Wallet size={28} /></span><strong>{copy.prepayment}</strong><p>{copy.prepaymentHint}</p><ArrowRight size={20} /></button>
     </div>}
-    {(screen === "expense" || screen === "prepayment") && <EntryForm key={`${screen}:${editing?.id ?? "new"}`} state={state} kind={screen} editing={editing} locale={locale} busy={busy} canRecord={canRecord} onSave={input => run(input, "overview")} />}
+    {(screen === "expense" || screen === "prepayment") && <EntryForm key={`${screen}:${editing?.id ?? "new"}`} state={state} kind={screen} editing={editing} locale={locale} busy={busy} canRecord={canRecord} onSave={saveEntry} />}
     {screen === "details" && <>
       <div className={styles.total}><span>{copy.total}</span><strong>{money(total)}</strong></div>
       <div className={styles.list}>
@@ -217,9 +251,12 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
           const sum = (items: AaRecord[], prop: "shares" | "contributions") => items.filter(r => r.status === "POSTED").reduce((a, r) => a + r[prop].filter(i => i.participantId === person.id).reduce((s, i) => s + BigInt(i.amount), 0n), 0n);
           const transferSum = (items: AaRecord[], field: "from" | "to") => items.filter(r => (r.status === "POSTED" || (r.source === AA_SETTLEMENT && r.status === "DISPUTED" && (r.paidAt || r.receivedAt))) && r[field] === person.id).reduce((a, r) => a + BigInt(r.amount), 0n);
           const figures = [[copy.share, sum(expenses, "shares")], [copy.advanced, sum(expenses, "contributions")], [copy.prepayOut, transferSum(prepayments, "from")], [copy.prepayIn, transferSum(prepayments, "to")], [copy.paymentOut, transferSum(transfers, "from")], [copy.paymentIn, transferSum(transfers, "to")]] as const;
+          const exactShare = exactShares.get(person.id)!;
+          const legacyShare = expenses.filter(r => r.source !== AA_EXPENSE && r.status === "POSTED").reduce((total, r) => total + r.shares.filter(s => s.participantId === person.id).reduce((part, s) => part + BigInt(s.amount), 0n), 0n);
+          const displayedShare = formatExactEuroShare({ numerator: exactShare.numerator + legacyShare * exactShare.denominator, denominator: exactShare.denominator }, locale);
           const known = -figures[0][1] + figures[1][1] + figures[2][1] - figures[3][1] + figures[4][1] - figures[5][1];
-          const adjustment = value - known;
-          return <details className={styles.personDetail} key={person.id}><summary>{avatar(person.id)}<span className={styles.grow}><strong>{person.name}{person.id === state.viewerId ? ` (${copy.me})` : ""}</strong><small>{copy.share} {money(figures[0][1])}</small></span><span className={styles.balance}><small>{balanceLabel}</small><b>{money(value < 0n ? -value : value)}</b></span></summary><dl className={styles.breakdown}>{figures.map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{money(amount)}</dd></div>)}{adjustment !== 0n && <div><dt>{copy.adjustment}</dt><dd>{money(adjustment)}</dd></div>}</dl></details>;
+          const adjustment = value - known + (roundingByPerson.get(person.id) ?? 0n);
+          return <details className={styles.personDetail} key={person.id}><summary>{avatar(person.id)}<span className={styles.grow}><strong>{person.name}{person.id === state.viewerId ? ` (${copy.me})` : ""}</strong><small>{copy.share} {displayedShare}</small></span><span className={styles.balance}><small>{balanceLabel}</small>{value === 0n && !active && <CheckCircle2 className={styles.settledCheck} size={19} aria-label={copy.settled} />}<b>{money(value < 0n ? -value : value)}</b></span></summary><dl className={styles.breakdown}>{figures.map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{label === copy.share ? displayedShare : money(amount)}</dd></div>)}{adjustment !== 0n && <div><dt>{copy.adjustment}</dt><dd>{money(adjustment)}</dd></div>}</dl></details>;
         })}
       </div>
       {state.legacyBlocked && <p className={styles.notice}>{copy.legacyBlocked}</p>}
@@ -266,7 +303,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
         <div className={styles.settlementItems}>{disputedTransfers.map(record => <button className={styles.settlementRecord} key={record.id} type="button" onClick={() => openRecord(record)}>{avatar(record.from)}<span className={styles.grow}><strong>{name(record.from)} <span className={styles.arrow}>→</span> {name(record.to)}</strong><small>{copy.reviewHint}</small></span><b className={styles.number}>{money(record.amount)}</b><ChevronRight size={16} /></button>)}</div>
       </section>}
       {transfers.length === 0 && <p className={styles.hint}>{active ? copy.host : balances.every(b => b.balanceMinor === 0n) ? copy.emptySettlement : copy.legacyBlocked}</p>}
-      {pastTransfers.length > 0 && <details className={styles.history}><summary>{copy.paidHistory}</summary><div className={styles.list}>{pastTransfers.map(r => <button type="button" key={r.id} className={styles.row} onClick={() => openRecord(r)}>{avatar(r.from === state.viewerId ? r.to : r.from)}<span className={styles.grow}><strong>{name(r.from)} <span className={styles.arrow}>→</span> {name(r.to)}</strong><small>{statusText(r)}</small></span><b className={styles.number}>{money(r.amount)}</b><ChevronRight size={16} /></button>)}</div></details>}
+      {pastTransfers.length > 0 && <section className={styles.settlementCard} aria-label={copy.settled}><div className={styles.settlementHeading}><h2>{copy.settled}</h2><span>{pastTransfers.length} {copy.transfers}</span></div><div className={styles.settlementItems}>{pastTransfers.map(r => <button type="button" key={r.id} className={styles.settlementRecord} onClick={() => openRecord(r)}>{avatar(r.from === state.viewerId ? r.to : r.from)}<span className={styles.grow}><strong>{name(r.from)} <span className={styles.arrow}>→</span> {name(r.to)}</strong><small>{statusText(r)}</small></span><b className={styles.number}>{money(r.amount)}</b><CheckCircle2 className={styles.settledCheck} size={22} aria-label={copy.settled} /></button>)}</div></section>}
       {footer(primary(copy.details, () => go("details")))}
     </>}
     {screen === "payment" && selected && <>
@@ -283,8 +320,9 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
     </>}
     {screen === "record" && selected && <>
       <div className={styles.total}><span>{selected.source === AA_PREPAYMENT ? copy.prepayments : selected.type === "EXPENSE" ? copy.expenses : copy.legacy}</span><strong>{money(selected.amount)}</strong></div>
-      {selected.type === "TRANSFER" ? <div className={styles.row}>{avatar(selected.from)}<strong>{name(selected.from)} → {name(selected.to)}</strong></div> : <><h2 className={styles.sectionTitle}>{copy.payer}</h2>{selected.contributions.map(item => <div className={styles.row} key={item.participantId}>{avatar(item.participantId)}<strong className={styles.grow}>{name(item.participantId)}</strong><b>{money(item.amount)}</b></div>)}<h2 className={styles.sectionTitle}>{copy.breakdown}</h2><div className={styles.list}>{selected.shares.map(item => <div className={styles.row} key={item.participantId}>{avatar(item.participantId)}<span className={styles.grow}>{name(item.participantId)}</span><b>{money(item.amount)}</b></div>)}</div></>}
+      {selected.type === "TRANSFER" ? <div className={styles.row}>{avatar(selected.from)}<strong>{name(selected.from)} → {name(selected.to)}</strong></div> : <><h2 className={styles.sectionTitle}>{copy.payer}</h2>{selected.contributions.map(item => <div className={styles.row} key={item.participantId}>{avatar(item.participantId)}<strong className={styles.grow}>{name(item.participantId)}</strong><b>{money(item.amount)}</b></div>)}<h2 className={styles.sectionTitle}>{copy.breakdown}</h2><div className={styles.list}>{selected.shares.map(item => <div className={styles.row} key={item.participantId}>{avatar(item.participantId)}<span className={styles.grow}>{name(item.participantId)}</span><b>{selected.source === AA_EXPENSE ? formatExactEuroShare({ numerator: BigInt(selected.amount), denominator: BigInt(selected.shares.length) }, locale) : money(item.amount)}</b></div>)}</div></>}
       {selected.note && <p className={styles.note}>{selected.note}</p>}
+      {selected.source === AA_EXPENSE && <section className={styles.receipts}><h2>{copy.receipts}</h2>{selected.attachments?.map(item => item.status === "READY" ? preview ? <div className={styles.receiptFile} key={item.id}><ReceiptText size={17} /><span>{item.fileName}</span></div> : <a key={item.id} href={`/api/aa/${encodeURIComponent(state.activityId)}/receipts/${encodeURIComponent(item.id)}`} target="_blank" rel="noopener noreferrer"><ReceiptText size={17} /><span>{item.fileName}</span><ArrowRight size={16} /></a> : null)}{canAttachReceipt(selected) && <label className={styles.receiptButton}><ImagePlus size={17} />{busy ? copy.working : copy.addReceipt}<input aria-label={copy.addReceipt} accept="image/*" disabled={busy} type="file" onChange={event => { const file = event.target.files?.[0]; if (file) void addReceiptToSelected(file); event.target.value = ""; }} /></label>}</section>}
       {!([AA_EXPENSE, AA_PREPAYMENT].includes(selected.source ?? "")) && <div className={styles.contact}><p>{copy.legacyHint}</p>{!preview && <a href={`/${locale}/lobby/${state.activityId}/aa/transactions/${selected.id}`}>{copy.openOriginal}<ArrowRight size={16} /></a>}</div>}
       {canRecord && [AA_EXPENSE, AA_PREPAYMENT].includes(selected.source ?? "") && (state.canManage || selected.creatorId === state.viewerId) && footer(<>{primary(copy.edit, () => { setEditing(selected); go(selected.source === AA_PREPAYMENT ? "prepayment" : "expense"); })}<button type="button" className={styles.textButton} onClick={() => setConfirmation("delete")}>{copy.remove}</button></>)}
     </>}
@@ -294,7 +332,7 @@ export function AaSimpleClient({ initialState, locale, initialScreen = "overview
 
 function EntryForm({ state, kind, editing, locale, busy, canRecord, onSave }: {
   state: AaSimpleState; kind: "expense" | "prepayment"; editing: AaRecord | null; locale: string; busy: boolean; canRecord: boolean;
-  onSave: (command: Omit<AaCommand, "expectedVersion" | "operationId">) => Promise<void>;
+  onSave: (command: Omit<AaCommand, "expectedVersion" | "operationId">, receipt: File | null) => Promise<void>;
 }) {
   const copy = getSimpleAaCopy(locale);
   const id = useId();
@@ -305,19 +343,22 @@ function EntryForm({ state, kind, editing, locale, busy, canRecord, onSave }: {
   const [recipient, setRecipient] = useState(editing?.to ?? state.participants.find(p => p.id !== state.viewerId && p.active)?.id ?? "");
   const [people, setPeople] = useState(editing?.shares.map(i => i.participantId) ?? state.participants.filter(p => p.active).map(p => p.id));
   const [formError, setFormError] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
   const allocations = useMemo(() => { try { return splitSimpleExpense(parseMoneyToMinor(amount), payer, people); } catch { return []; } }, [amount, payer, people]);
   const money = (value: string) => formatMinorAmount(BigInt(value), "EUR", locale);
   function submit(event: FormEvent) {
     event.preventDefault(); setFormError("");
     try { if (parseMoneyToMinor(amount) <= 0n || (kind === "expense" && !allocations.length) || (kind === "prepayment" && payer === recipient)) throw new Error(); }
     catch { setFormError(copy.invalid); return; }
-    void onSave({ intent: kind, recordId: editing?.id, amount, title: kind === "expense" ? title.trim() : copy.prepayments, note, payerId: payer, recipientId: recipient, participantIds: people });
+    if (receipt && (receipt.size > maxImageBucketFileSize || !(receipt.type in allowedImageMimeTypes))) { setFormError(copy.invalidReceipt); return; }
+    void onSave({ intent: kind, recordId: editing?.id, amount, title: kind === "expense" ? title.trim() : copy.prepayments, note, payerId: payer, recipientId: recipient, participantIds: people }, kind === "expense" ? receipt : null);
   }
   return <form className={styles.form} onSubmit={submit}>
     <div className={styles.amountInput}><label htmlFor={`${id}-amount`}>{copy.amount}</label><div><span>€</span><input id={`${id}-amount`} aria-label={copy.amount} type="text" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value.replace(",", "."))} required maxLength={13} autoComplete="off" /></div></div>
     {kind === "expense" && <label className={styles.field}>{copy.title}<input placeholder={copy.titlePlaceholder} value={title} onChange={e => setTitle(e.target.value)} maxLength={120} required /></label>}
+    {kind === "expense" && <label className={styles.receiptPicker}><ImagePlus size={19} /><span>{receipt ? receipt.name : copy.addReceipt}</span><input accept="image/*" aria-label={copy.addReceipt} type="file" onChange={event => setReceipt(event.target.files?.[0] ?? null)} /></label>}
     <fieldset className={styles.fieldset}><legend>{kind === "expense" ? copy.payer : copy.sender}</legend><div className={styles.chips}>{state.participants.filter(p => p.active).filter(p => kind === "expense" || state.canManage || p.id === state.viewerId).map((p, index) => <button key={p.id} type="button" aria-pressed={payer === p.id} onClick={() => { setPayer(p.id); if (p.id === recipient) setRecipient(state.participants.find(q => q.active && q.id !== p.id)?.id ?? ""); }}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{p.name.slice(0, 1)}</span>{p.name}{payer === p.id && <Check size={14} />}</button>)}</div></fieldset>
-    {kind === "prepayment" ? <fieldset className={styles.fieldset}><legend>{copy.recipient}</legend><div className={styles.chips}>{state.participants.filter(p => p.active && p.id !== payer).map((p, index) => <button key={p.id} type="button" aria-pressed={recipient === p.id} onClick={() => setRecipient(p.id)}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{p.name.slice(0, 1)}</span>{p.name}{recipient === p.id && <Check size={14} />}</button>)}</div></fieldset> : <fieldset className={styles.fieldset}><legend>{copy.split}</legend><button type="button" className={styles.selectAll} onClick={() => setPeople(state.participants.filter(p => p.active).map(p => p.id))}>{copy.all}</button><div className={styles.participantGrid}>{state.participants.filter(p => p.active).map((p, index) => { const selected = people.includes(p.id); return <button key={p.id} type="button" aria-pressed={selected} onClick={() => setPeople(ids => selected ? ids.filter(i => i !== p.id) : [...ids, p.id])}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{p.name.slice(0, 1)}</span><span className={styles.grow}>{p.name}</span><span className={styles.checkbox}>{selected && <Check size={13} />}</span>{selected && allocations.length > 0 && <b>{money(allocations.find(i => i.participantId === p.id)!.amount)}</b>}</button>; })}</div></fieldset>}
+    {kind === "prepayment" ? <fieldset className={styles.fieldset}><legend>{copy.recipient}</legend><div className={styles.chips}>{state.participants.filter(p => p.active && p.id !== payer).map((p, index) => <button key={p.id} type="button" aria-pressed={recipient === p.id} onClick={() => setRecipient(p.id)}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{p.name.slice(0, 1)}</span>{p.name}{recipient === p.id && <Check size={14} />}</button>)}</div></fieldset> : <fieldset className={styles.fieldset}><legend>{copy.split}</legend><button type="button" className={styles.selectAll} onClick={() => setPeople(state.participants.filter(p => p.active).map(p => p.id))}>{copy.all}</button><div className={styles.participantGrid}>{state.participants.filter(p => p.active).map((p, index) => { const selected = people.includes(p.id); return <button key={p.id} type="button" aria-pressed={selected} onClick={() => setPeople(ids => selected ? ids.filter(i => i !== p.id) : [...ids, p.id])}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{p.name.slice(0, 1)}</span><span className={styles.grow}>{p.name}</span><span className={styles.checkbox}>{selected && <Check size={13} />}</span>{selected && allocations.length > 0 && <b>{formatExactEuroShare({ numerator: parseMoneyToMinor(amount), denominator: BigInt(people.length) }, locale)}</b>}</button>; })}</div></fieldset>}
     <details className={styles.optional} open={undefined}><summary>{copy.more}</summary><label className={styles.field}>{copy.note}<textarea value={note} onChange={e => setNote(e.target.value)} maxLength={2000} rows={3} /></label></details>
     {formError && <p className={styles.error} role="alert">{formError}</p>}
     <div className={styles.footer}><button className={styles.primary} type="submit" disabled={busy || !canRecord}>{busy ? copy.working : kind === "expense" ? copy.save : copy.savePrepay}</button></div>

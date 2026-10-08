@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AA_SETTLEMENT, applyAaCommand, assertSimplePlan, isPrepaymentRefund, simpleBalances, simpleSuggestions, splitSimpleExpense, type AaCommand, type AaSimpleState } from "./simpleLedger";
+import { AA_ROUNDING, AA_SETTLEMENT, applyAaCommand, assertSimplePlan, exactSimpleShares, formatExactEuroShare, isPrepaymentRefund, simpleBalances, simpleSuggestions, splitSimpleExpense, type AaCommand, type AaSimpleState } from "./simpleLedger";
 import { createAaExample } from "./simpleFixtures";
 import { calculateBalances } from "./ledger";
 
@@ -14,6 +14,26 @@ test("10 / 3 preserves cents, payer first, fixed participant order and outside p
   assert.deepEqual(splitSimpleExpense(1n, "c", ["b", "a", "c"]).map(r => r.amount), ["1", "0", "0"]);
   assert.throws(() => splitSimpleExpense(10n, "a", ["a", "a"]));
   assert.throws(() => splitSimpleExpense(10n, "a", []));
+});
+
+test("equal shares display identically; cent remainder is assigned once when settlement starts", () => {
+  let state = createAaExample("empty");
+  for (let i = 0; i < 2; i++) state = command(state, { intent: "expense", title: "Small expense", amount: "0.01", payerId: "Lou", participantIds: ["Lou", "Kevin", "Amy"] });
+  const exact = exactSimpleShares(state);
+  assert.deepEqual(state.participants.map(person => formatExactEuroShare(exact.get(person.id)!, "zh-CN")), ["€0.006…", "€0.006…", "€0.006…"]);
+  assert.deepEqual(balances(state), { Amy: 0, Kevin: -1, Lou: 1 });
+  assert.deepEqual(simpleSuggestions(state), [{ from: "Kevin", to: "Lou", amount: "1" }]);
+  state = command(state, { intent: "start" });
+  const correction = state.records.find(record => record.source === AA_ROUNDING)!;
+  assert.equal(correction.amount, "1");
+  assert.deepEqual(correction.contributions, [{ participantId: "Lou", amount: "1" }]);
+  assert.deepEqual(correction.shares, [{ participantId: "Kevin", amount: "1" }]);
+  const payment = state.records.find(record => record.source === AA_SETTLEMENT)!;
+  state = command({ ...state, viewerId: "Lou", canManage: false }, { intent: "receive", recordId: payment.id });
+  assert.deepEqual(balances(state), { Amy: 0, Kevin: 0, Lou: 0 });
+  state = command({ ...state, viewerId: "Lou", canManage: true }, { intent: "reopen" });
+  assert.equal(state.records.find(record => record.source === AA_ROUNDING)?.status, "VOIDED");
+  assert.deepEqual(balances(state), { Amy: 0, Kevin: 0, Lou: 0 });
 });
 
 test("PM 51 EUR and prepayments produce Lou refunds of 5 and 2 EUR", () => {

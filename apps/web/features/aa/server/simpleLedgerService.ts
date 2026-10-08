@@ -9,6 +9,7 @@ export const simpleLedgerInclude = {
   participants: { orderBy: [{ joinedAt: "asc" }, { id: "asc" }] },
   transactions: { orderBy: [{ createdAt: "asc" }, { id: "asc" }], include: {
     contributions: true, shares: { orderBy: [{ ruleValue: "asc" }, { id: "asc" }] },
+    attachments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
     conflicts: { where: { status: "OPEN" } }, changeRequests: { where: { status: "PENDING" } },
   } },
 } satisfies Prisma.AaLedgerInclude;
@@ -40,6 +41,7 @@ export function projectSimpleLedger(
       round: t.importSource === AA_SETTLEMENT ? t.id.slice(0, t.id.lastIndexOf(":")) : null,
       contributions: t.contributions.map(item => ({ participantId: item.participantId, amount: item.amountMinor.toString() })),
       shares: t.shares.map(item => ({ participantId: item.participantId, amount: item.amountMinor.toString() })),
+      attachments: t.attachments?.map(item => ({ id: item.id, fileName: item.fileName, status: item.status })) ?? [],
     })),
   };
 }
