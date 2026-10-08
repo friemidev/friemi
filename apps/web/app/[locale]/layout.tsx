@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
@@ -21,15 +22,67 @@ import { NotificationBadgeProvider } from "@/features/notifications/components/N
 import { resolveUnreadBadgeFreshnessGuardEnabled } from "@/features/notifications/unreadBadgePolling";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
 import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
+import { MobileViewportProfile } from "@/features/mobile/components/MobileViewportProfile";
 import { ActiveGameToolFloatingWindow } from "@/features/game-tools/components/ActiveGameToolFloatingWindow";
 import { ActiveGameToolFloatingWindowLoader } from "@/features/game-tools/components/ActiveGameToolFloatingWindowLoader";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { PresenceHeartbeat } from "@/features/profile/components/PresenceHeartbeat";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { hasClerkKeys } from "@/lib/clerk";
-import { createPerformanceTracker } from "@/lib/performance";
 import { isFriemiNativeAppUserAgent } from "@/lib/mobile-root-lobby-entry";
+import { createPerformanceTracker } from "@/lib/performance";
+import { getCanonicalSiteUrl } from "@/lib/site-url";
+import "../globals.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getCanonicalSiteUrl()),
+  title: brand.name,
+  description: brand.description,
+  icons: {
+    apple: brand.appleIconPath,
+    icon: [
+      {
+        rel: "icon",
+        sizes: "192x192",
+        type: "image/png",
+        url: brand.faviconPath,
+      },
+      {
+        rel: "icon",
+        sizes: "512x512",
+        type: "image/png",
+        url: brand.manifestIcon512Path,
+      },
+    ],
+  },
+  openGraph: {
+    description: brand.description,
+    images: [
+      {
+        alt: brand.name,
+        height: 630,
+        type: "image/png",
+        url: brand.shareImagePath,
+        width: 1200,
+      },
+    ],
+    siteName: brand.name,
+    title: brand.name,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    description: brand.description,
+    images: [brand.shareImagePath],
+    title: brand.name,
+  },
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -151,9 +204,16 @@ export default async function LocaleLayout({
     </NextIntlClientProvider>
   );
 
-  return clerkEnabled ? (
-    <ClerkProvider touchSession>{content}</ClerkProvider>
-  ) : (
-    content
+  return (
+    <html lang={locale} suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <MobileViewportProfile />
+        {clerkEnabled ? (
+          <ClerkProvider touchSession>{content}</ClerkProvider>
+        ) : (
+          content
+        )}
+      </body>
+    </html>
   );
 }
