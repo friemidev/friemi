@@ -101,7 +101,6 @@ export default async function OwnedTicketPage({
       ) : (
         <div className="mt-5">
           <TicketRedemptionCode
-            holderFriemiCode={profile.friendCode}
             itemId={ticket.id}
             locale={locale}
           />

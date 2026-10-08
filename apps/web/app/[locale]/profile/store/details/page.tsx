@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { MerchantStoreDetails } from "@/features/coupons/components/MerchantStoreDashboard";
-import { getMerchantStoreDashboard } from "@/features/coupons/queries/getMerchantStoreDashboard";
+import { getMerchantStoreInfo } from "@/features/coupons/queries/getMerchantStoreInfo";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -19,9 +19,9 @@ export default async function MerchantStoreDetailsPage({
     locale,
     "/profile/store/details",
   );
-  const dashboard = await getMerchantStoreDashboard(profile.id);
+  const merchant = await getMerchantStoreInfo(profile.id);
 
-  if (!dashboard) notFound();
+  if (!merchant) notFound();
 
-  return <MerchantStoreDetails dashboard={dashboard} locale={locale} />;
+  return <MerchantStoreDetails dashboard={{ merchant }} locale={locale} />;
 }

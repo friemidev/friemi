@@ -66,7 +66,7 @@ export function AdminItemPageFrame({
         </div>
         <div className="min-w-0 self-center">
           <p className="text-xs font-semibold text-paper/75">
-            {copy.ticketType}
+            {definition.merchant?.name ?? copy.ticketType}
           </p>
           <h2
             className={`mt-1 break-words font-bold tracking-tight ${compact ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"}`}

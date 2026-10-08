@@ -10,7 +10,7 @@ const redisEnvironmentNames = [
 ] as const;
 const mutableEnvironment = process.env as Record<string, string | undefined>;
 
-test("manual lookup limits an actor globally and per event holder", async () => {
+test("manual lookup allows busy check-in while bounding each actor", async () => {
   const original = Object.fromEntries(
     redisEnvironmentNames.map((name) => [name, process.env[name]]),
   );
@@ -19,31 +19,11 @@ test("manual lookup limits an actor globally and per event holder", async () => 
   mutableEnvironment.NODE_ENV = "test";
   try {
     const actor = `manual-limit-test-${Date.now()}`;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      assert.equal(
-        await allowTicketManualCodeLookup(actor, "event-1", "123456"),
-        true,
-      );
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      assert.equal(await allowTicketManualCodeLookup(actor), true);
     }
-    assert.equal(
-      await allowTicketManualCodeLookup(actor, "event-1", "123456"),
-      false,
-    );
-    const globalActor = `${actor}-global`;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      assert.equal(
-        await allowTicketManualCodeLookup(
-          globalActor,
-          "event-1",
-          String(attempt).padStart(6, "0"),
-        ),
-        true,
-      );
-    }
-    assert.equal(
-      await allowTicketManualCodeLookup(globalActor, "event-1", "999999"),
-      false,
-    );
+    assert.equal(await allowTicketManualCodeLookup(actor), false);
+    assert.equal(await allowTicketManualCodeLookup(`${actor}-another`), true);
   } finally {
     if (originalNodeEnv === undefined) delete mutableEnvironment.NODE_ENV;
     else mutableEnvironment.NODE_ENV = originalNodeEnv;
@@ -63,10 +43,7 @@ test("production without Redis blocks manual code lookup", async () => {
   for (const name of redisEnvironmentNames) delete process.env[name];
   mutableEnvironment.NODE_ENV = "production";
   try {
-    assert.equal(
-      await allowTicketManualCodeLookup("actor", "event", "123456"),
-      false,
-    );
+    assert.equal(await allowTicketManualCodeLookup("actor"), false);
   } finally {
     if (originalNodeEnv === undefined) delete mutableEnvironment.NODE_ENV;
     else mutableEnvironment.NODE_ENV = originalNodeEnv;

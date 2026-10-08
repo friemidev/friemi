@@ -28,9 +28,11 @@ const fieldClassName =
 
 export function CreateTicketDefinitionForm({
   locale,
+  merchants = [],
   showHeading = true,
 }: {
   locale: string;
+  merchants?: { city: string; id: string; name: string }[];
   showHeading?: boolean;
 }) {
   const copy = getInventoryCopy(locale);
@@ -86,6 +88,20 @@ export function CreateTicketDefinitionForm({
             name="description"
             rows={3}
           />
+        </label>
+        <label className="grid gap-2 text-sm font-semibold text-ink">
+          {adminCopy.form.merchantLabel}
+          <select className={fieldClassName} defaultValue="" name="merchantId">
+            <option value="">{adminCopy.form.merchantNone}</option>
+            {merchants.map((merchant) => (
+              <option key={merchant.id} value={merchant.id}>
+                {merchant.name} · {merchant.city}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-normal leading-5 text-ink/70">
+            {adminCopy.form.merchantHint}
+          </span>
         </label>
         <div className="grid gap-2 text-sm font-semibold text-ink">
           {adminCopy.form.optionalImage}

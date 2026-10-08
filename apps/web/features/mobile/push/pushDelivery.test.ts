@@ -108,6 +108,26 @@ test("received ticket push works for gifts and admin batches in each locale", ()
   );
 });
 
+test("ticket check-in invitations open the workbench with clear push copy", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      type: "INVENTORY_TICKET_ACCESS_INVITED",
+    }),
+    "/profile/ticket-workbench",
+  );
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: "hoting",
+      locale: "zh-CN",
+      ticketTitle: "酒会票",
+      type: "INVENTORY_TICKET_ACCESS_INVITED",
+    }),
+    { body: "hoting 邀请你核销「酒会票」", title: "核销邀请" },
+  );
+});
+
 test("getNotificationCopy keeps localized fallback copy", () => {
   assert.deepEqual(
     getNotificationCopy({

@@ -78,6 +78,7 @@ function getNotificationCategory(
   if (type === "CHARM_GIFT_RECEIVED" || type === "INVENTORY_TICKET_RECEIVED") {
     return "gift";
   }
+  if (type === "INVENTORY_TICKET_ACCESS_INVITED") return "system";
   if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
     return "activity";
@@ -165,6 +166,25 @@ function getNotificationText(
     return {
       title: "收到票券",
       body: `「${ticketTitle ?? "票券"}」已放入物品背包。`,
+    };
+  }
+  if (notification.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    const ticketTitle = notification.inventoryItemDefinition?.title;
+    if (locale === "fr") {
+      return {
+        title: "Invitation au contrôle",
+        body: `Vous êtes invité à contrôler « ${ticketTitle ?? "Billet"} ».`,
+      };
+    }
+    if (locale === "en") {
+      return {
+        title: "Ticket check-in invitation",
+        body: `You were invited to check in “${ticketTitle ?? "Ticket"}”.`,
+      };
+    }
+    return {
+      title: "票券核销邀请",
+      body: `你受邀核销「${ticketTitle ?? "票券"}」，请在工作台接受。`,
     };
   }
 
@@ -462,6 +482,13 @@ function getNotificationActionLabel(
       : locale === "en"
         ? "View ticket"
         : "查看票券";
+  }
+  if (notification.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return locale === "fr"
+      ? "Voir l’invitation"
+      : locale === "en"
+        ? "Review invitation"
+        : "处理邀请";
   }
   if (
     notification.type === "COUPON_RECEIVED" ||
@@ -968,7 +995,10 @@ function getNotificationVisual(
         : "border-sand bg-paper/62",
     };
   }
-  if (type === "INVENTORY_TICKET_RECEIVED") {
+  if (
+    type === "INVENTORY_TICKET_RECEIVED" ||
+    type === "INVENTORY_TICKET_ACCESS_INVITED"
+  ) {
     return {
       icon: TicketCheck,
       iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-outline",
@@ -1164,6 +1194,7 @@ function NotificationCard({
         notification.type === "PLANET_JOIN_REQUEST" ||
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_RECEIVED" ||
+        notification.type === "INVENTORY_TICKET_ACCESS_INVITED" ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||

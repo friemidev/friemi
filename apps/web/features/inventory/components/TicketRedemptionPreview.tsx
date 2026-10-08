@@ -20,13 +20,11 @@ type Preview =
 
 export function TicketRedemptionPreview({
   expectedDefinitionId,
-  holderFriendCode,
   initialPreview,
   locale,
   token,
 }: {
   expectedDefinitionId?: string;
-  holderFriendCode?: string;
   initialPreview: Preview;
   locale: string;
   token: string;
@@ -49,7 +47,6 @@ export function TicketRedemptionPreview({
         token,
         locale,
         expectedDefinitionId,
-        holderFriendCode,
       );
       if (result.status === "FAILED" || result.status === "RATE_LIMITED") {
         setError(

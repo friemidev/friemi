@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { normalizeFriemiCode } from "../friemiCode";
+import { hasTicketRedeemerAccessInDatabase } from "./ticketAccessService";
 import { allowTicketManualCodeLookup } from "./ticketRedemptionRateLimit";
 
 export const ticketRedemptionTokenLifetimeMinutes = 10;
@@ -64,15 +64,44 @@ type RedeemerAccessInput = {
 
 type TicketDatabase = Prisma.TransactionClient | typeof prisma;
 let lastExpiredCodeCleanupAt = 0;
+// 32 visually distinct characters give a six-character code 30 bits of
+// entropy. Avoid 0/O and 1/I to make verbal check-in less error-prone.
+const checkInCodeAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+async function lockTicketAccessScope(
+  tx: Prisma.TransactionClient,
+  definitionId: string,
+  actorProfileId: string,
+) {
+  // Hold these rows until commit so revoking a grant, rebinding a ticket, or
+  // changing the merchant owner cannot race the check-in authorization.
+  await tx.$queryRaw`
+    SELECT "id" FROM "InventoryItemDefinition"
+    WHERE "id" = ${definitionId} FOR SHARE
+  `;
+  await tx.$queryRaw`
+    SELECT merchant."id" FROM "Merchant" merchant
+    JOIN "InventoryItemDefinition" definition
+      ON definition."merchantId" = merchant."id"
+    WHERE definition."id" = ${definitionId}
+    FOR SHARE OF merchant
+  `;
+  await tx.$queryRaw`
+    SELECT "id" FROM "TicketAccess"
+    WHERE "definitionId" = ${definitionId}
+      AND "profileId" = ${actorProfileId}
+    FOR SHARE
+  `;
+}
 
 function getTicketCredential(value: string) {
   if (/^[A-Za-z0-9_-]{43}$/.test(value)) {
     return { kind: "token" as const, value };
   }
-  // Ten-digit codes issued before the six-digit switch remain usable only
-  // until their original ten-minute expiry.
-  if (/^(?:\d{6}|\d{10})$/.test(value)) {
-    return { kind: "code" as const, value };
+  // Numeric six- and ten-digit codes remain valid through their original
+  // ten-minute expiry.
+  if (/^(?:[A-Za-z0-9]{6}|\d{10})$/.test(value)) {
+    return { kind: "code" as const, value: value.toUpperCase() };
   }
   return null;
 }
@@ -85,58 +114,14 @@ function getCredentialLookupWhere(
     : { redemptionToken: credential.value };
 }
 
-function getManualCodeContext(input: {
-  expectedDefinitionId?: string;
-  holderFriendCode?: string;
-}) {
-  if (
-    typeof input.expectedDefinitionId !== "string" ||
-    !input.expectedDefinitionId ||
-    typeof input.holderFriendCode !== "string"
-  ) {
-    return null;
-  }
-  const holderFriendCode = normalizeFriemiCode(input.holderFriendCode);
-  return holderFriendCode
-    ? { definitionId: input.expectedDefinitionId, holderFriendCode }
-    : null;
-}
-
 async function findTicketByCredential(
   db: TicketDatabase,
   credential: NonNullable<ReturnType<typeof getTicketCredential>>,
-  manualContext: NonNullable<ReturnType<typeof getManualCodeContext>> | null,
 ) {
-  if (credential.kind === "code") {
-    if (!manualContext) return null;
-    return db.inventoryItem.findFirst({
-      where: {
-        redemptionCode: credential.value,
-        definitionId: manualContext.definitionId,
-        owner: { friendCode: manualContext.holderFriendCode },
-      },
-      select: ticketForRedemptionSelect,
-    });
-  }
   return db.inventoryItem.findUnique({
     where: getCredentialLookupWhere(credential),
     select: ticketForRedemptionSelect,
   });
-}
-
-async function hasTicketRedeemerAccess(
-  db: TicketDatabase,
-  input: RedeemerAccessInput,
-) {
-  if (input.isAdmin) return true;
-  const assigned = await db.inventoryIssueBatch.findFirst({
-    where: {
-      definitionId: input.definitionId,
-      recipientProfileId: input.actorProfileId,
-    },
-    select: { id: true },
-  });
-  return Boolean(assigned);
 }
 
 export async function canRedeemTicketDefinition(input: RedeemerAccessInput) {
@@ -145,7 +130,7 @@ export async function canRedeemTicketDefinition(input: RedeemerAccessInput) {
     select: { kind: true },
   });
   if (definition?.kind !== "EVENT_TICKET") return false;
-  return hasTicketRedeemerAccess(prisma, input);
+  return hasTicketRedeemerAccessInDatabase(prisma, input);
 }
 
 export async function generateTicketTokenInTransaction(
@@ -172,7 +157,10 @@ export async function generateTicketTokenInTransaction(
   if (item.redeemedAt) return { status: "ALREADY_REDEEMED" };
 
   const token = randomBytes(32).toString("base64url");
-  const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const code = Array.from(
+    { length: 6 },
+    () => checkInCodeAlphabet[randomInt(checkInCodeAlphabet.length)],
+  ).join("");
   const expiresAt = new Date(
     input.now.getTime() + ticketRedemptionTokenLifetimeMinutes * 60_000,
   );
@@ -225,7 +213,7 @@ export async function generateTicketRedemptionToken(input: {
   if (eligibleItem.redeemedAt) return { status: "ALREADY_REDEEMED" };
 
   // Old codes remain reserved through their original validity window, even if
-  // the ticket was checked in. Release them afterwards so six digits suffice
+  // the ticket was checked in. Release them afterwards so six characters suffice
   // over the lifetime of many events. Run at most once per process per minute.
   const cleanupNow = Date.now();
   if (cleanupNow - lastExpiredCodeCleanupAt >= 60_000) {
@@ -287,24 +275,15 @@ function ticketDetails(item: {
 export async function previewTicketRedemption(input: {
   actorProfileId: string;
   expectedDefinitionId?: string;
-  holderFriendCode?: string;
   isAdmin: boolean;
   token: string;
 }): Promise<TicketRedemptionPreviewResult> {
   const token = input.token.trim();
   const credential = getTicketCredential(token);
   if (!credential) return { status: "INVALID" };
-  const manualContext =
-    credential.kind === "code" ? getManualCodeContext(input) : null;
-  if (credential.kind === "code" && !manualContext)
-    return { status: "INVALID" };
   if (
     credential.kind === "code" &&
-    !(await allowTicketManualCodeLookup(
-      input.actorProfileId,
-      manualContext!.definitionId,
-      manualContext!.holderFriendCode,
-    ))
+    !(await allowTicketManualCodeLookup(input.actorProfileId))
   ) {
     return { status: "RATE_LIMITED" };
   }
@@ -321,7 +300,6 @@ export async function previewTicketRedemptionInDatabase(
   input: {
     actorProfileId: string;
     expectedDefinitionId?: string;
-    holderFriendCode?: string;
     isAdmin: boolean;
     now: Date;
     token: string;
@@ -329,13 +307,9 @@ export async function previewTicketRedemptionInDatabase(
 ): Promise<TicketRedemptionPreviewResult> {
   const credential = getTicketCredential(input.token);
   if (!credential) return { status: "INVALID" };
-  const manualContext =
-    credential.kind === "code" ? getManualCodeContext(input) : null;
-  if (credential.kind === "code" && !manualContext)
-    return { status: "INVALID" };
   if (
     input.expectedDefinitionId &&
-    !(await hasTicketRedeemerAccess(db, {
+    !(await hasTicketRedeemerAccessInDatabase(db, {
       actorProfileId: input.actorProfileId,
       definitionId: input.expectedDefinitionId,
       isAdmin: input.isAdmin,
@@ -344,7 +318,7 @@ export async function previewTicketRedemptionInDatabase(
     return { status: "FORBIDDEN" };
   }
 
-  const item = await findTicketByCredential(db, credential, manualContext);
+  const item = await findTicketByCredential(db, credential);
   if (!item || item.definition.kind !== "EVENT_TICKET") {
     return { status: "NOT_FOUND" };
   }
@@ -352,17 +326,17 @@ export async function previewTicketRedemptionInDatabase(
     input.expectedDefinitionId &&
     item.definitionId !== input.expectedDefinitionId
   ) {
-    return { status: "MISMATCH" };
+    return { status: credential.kind === "code" ? "NOT_FOUND" : "MISMATCH" };
   }
   if (
     !input.expectedDefinitionId &&
-    !(await hasTicketRedeemerAccess(db, {
+    !(await hasTicketRedeemerAccessInDatabase(db, {
       actorProfileId: input.actorProfileId,
       definitionId: item.definitionId,
       isAdmin: input.isAdmin,
     }))
   ) {
-    return { status: "FORBIDDEN" };
+    return { status: credential.kind === "code" ? "NOT_FOUND" : "FORBIDDEN" };
   }
 
   const details = ticketDetails(item);
@@ -392,7 +366,6 @@ export async function redeemTicketInTransaction(
   input: {
     actorProfileId: string;
     expectedDefinitionId?: string;
-    holderFriendCode?: string;
     isAdmin: boolean;
     now: Date;
     token: string;
@@ -400,13 +373,16 @@ export async function redeemTicketInTransaction(
 ): Promise<RedeemTicketByTokenResult> {
   const credential = getTicketCredential(input.token);
   if (!credential) return { status: "INVALID" };
-  const manualContext =
-    credential.kind === "code" ? getManualCodeContext(input) : null;
-  if (credential.kind === "code" && !manualContext)
-    return { status: "INVALID" };
+  if (input.expectedDefinitionId) {
+    await lockTicketAccessScope(
+      tx,
+      input.expectedDefinitionId,
+      input.actorProfileId,
+    );
+  }
   if (
     input.expectedDefinitionId &&
-    !(await hasTicketRedeemerAccess(tx, {
+    !(await hasTicketRedeemerAccessInDatabase(tx, {
       actorProfileId: input.actorProfileId,
       definitionId: input.expectedDefinitionId,
       isAdmin: input.isAdmin,
@@ -415,7 +391,7 @@ export async function redeemTicketInTransaction(
     return { status: "FORBIDDEN" };
   }
 
-  const item = await findTicketByCredential(tx, credential, manualContext);
+  const item = await findTicketByCredential(tx, credential);
   if (!item || item.definition.kind !== "EVENT_TICKET") {
     return { status: "NOT_FOUND" };
   }
@@ -423,19 +399,21 @@ export async function redeemTicketInTransaction(
     input.expectedDefinitionId &&
     item.definitionId !== input.expectedDefinitionId
   ) {
-    return { status: "MISMATCH" };
+    return { status: credential.kind === "code" ? "NOT_FOUND" : "MISMATCH" };
+  }
+  if (!input.expectedDefinitionId) {
+    await lockTicketAccessScope(tx, item.definitionId, input.actorProfileId);
   }
   if (
     !input.expectedDefinitionId &&
-    !(await hasTicketRedeemerAccess(tx, {
+    !(await hasTicketRedeemerAccessInDatabase(tx, {
       actorProfileId: input.actorProfileId,
       definitionId: item.definitionId,
       isAdmin: input.isAdmin,
     }))
   ) {
-    return { status: "FORBIDDEN" };
+    return { status: credential.kind === "code" ? "NOT_FOUND" : "FORBIDDEN" };
   }
-
   const details = ticketDetails(item);
   if (item.redeemedAt) {
     return {
@@ -481,11 +459,23 @@ export async function redeemTicketInTransaction(
       status:
         (credential.kind === "code"
           ? current?.redemptionCode
-          : current?.redemptionToken) === input.token
+          : current?.redemptionToken) === credential.value
           ? "EXPIRED"
           : "NOT_FOUND",
     };
   }
+
+  await tx.ticketRedemptionEvent.create({
+    data: {
+      itemId: item.id,
+      definitionId: item.definitionId,
+      holderProfileId: item.ownerProfileId,
+      redeemerProfileId: input.actorProfileId,
+      method: credential.kind === "code" ? "MANUAL" : "QR",
+      redeemedAt: input.now,
+    },
+    select: { id: true },
+  });
 
   return {
     ...details,
@@ -497,29 +487,35 @@ export async function redeemTicketInTransaction(
 export async function redeemTicketByToken(input: {
   actorProfileId: string;
   expectedDefinitionId?: string;
-  holderFriendCode?: string;
   isAdmin: boolean;
   token: string;
 }): Promise<RedeemTicketByTokenResult> {
   const token = input.token.trim();
   const credential = getTicketCredential(token);
   if (!credential) return { status: "INVALID" };
-  const manualContext =
-    credential.kind === "code" ? getManualCodeContext(input) : null;
-  if (credential.kind === "code" && !manualContext)
-    return { status: "INVALID" };
   if (
     credential.kind === "code" &&
-    !(await allowTicketManualCodeLookup(
-      input.actorProfileId,
-      manualContext!.definitionId,
-      manualContext!.holderFriendCode,
-    ))
+    !(await allowTicketManualCodeLookup(input.actorProfileId))
   ) {
     return { status: "RATE_LIMITED" };
   }
-  return prisma.$transaction(
-    (tx) => redeemTicketInTransaction(tx, { ...input, token, now: new Date() }),
-    { timeout: 10_000 },
-  );
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await prisma.$transaction(
+        (tx) =>
+          redeemTicketInTransaction(tx, { ...input, token, now: new Date() }),
+        {
+          timeout: 10_000,
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        },
+      );
+    } catch (error) {
+      const retryable =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2034" ||
+          (error.code === "P2010" && error.meta?.code === "40P01"));
+      if (!retryable || attempt === 2) throw error;
+    }
+  }
+  throw new Error("Ticket redemption retry limit reached");
 }

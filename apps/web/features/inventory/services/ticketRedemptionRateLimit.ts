@@ -2,11 +2,12 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { getOptionalRedis } from "@/lib/redis";
 import { getRedisRuntimeConfig } from "@/lib/redisConfig";
 
-const actorAttemptsPerMinute = 20;
-const holderAttemptsPerTenMinutes = 4;
+// A valid six-character code has roughly a billion possibilities. Count both
+// preview and confirmation requests while allowing busy staff to check in
+// well over 100 guests per minute.
+const actorAttemptsPerMinute = 300;
 const localAttempts = new Map<string, { count: number; resetAt: number }>();
 let actorLimiter: Ratelimit | null = null;
-let holderLimiter: Ratelimit | null = null;
 
 function allowLocalAttempt(key: string, limit: number, windowMs: number) {
   const now = Date.now();
@@ -20,13 +21,8 @@ function allowLocalAttempt(key: string, limit: number, windowMs: number) {
   return true;
 }
 
-/** Manual codes require both an event and a holder and have separate budgets. */
-export async function allowTicketManualCodeLookup(
-  actorProfileId: string,
-  definitionId: string,
-  holderFriendCode: string,
-) {
-  const holderKey = `${actorProfileId}:${definitionId}:${holderFriendCode}`;
+/** Bound manual guesses by the authorized staff account. */
+export async function allowTicketManualCodeLookup(actorProfileId: string) {
   const redis = getOptionalRedis();
   if (redis) {
     try {
@@ -36,14 +32,7 @@ export async function allowTicketManualCodeLookup(
         prefix: `${getRedisRuntimeConfig().keyPrefix}:ratelimit:ticket-manual-actor`,
         redis,
       });
-      holderLimiter ??= new Ratelimit({
-        analytics: false,
-        limiter: Ratelimit.fixedWindow(holderAttemptsPerTenMinutes, "10 m"),
-        prefix: `${getRedisRuntimeConfig().keyPrefix}:ratelimit:ticket-manual-holder`,
-        redis,
-      });
-      if (!(await actorLimiter.limit(actorProfileId)).success) return false;
-      return (await holderLimiter.limit(holderKey)).success;
+      return (await actorLimiter.limit(actorProfileId)).success;
     } catch (error) {
       console.error("Ticket manual-code rate limiter unavailable", error);
       return false;
@@ -53,16 +42,9 @@ export async function allowTicketManualCodeLookup(
   // A per-process fallback can be bypassed across production instances.
   // Keep it only for local development; QR token lookup remains available.
   if (process.env.NODE_ENV === "production") return false;
-  return (
-    allowLocalAttempt(
-      `actor:${actorProfileId}`,
-      actorAttemptsPerMinute,
-      60_000,
-    ) &&
-    allowLocalAttempt(
-      `holder:${holderKey}`,
-      holderAttemptsPerTenMinutes,
-      600_000,
-    )
+  return allowLocalAttempt(
+    `actor:${actorProfileId}`,
+    actorAttemptsPerMinute,
+    60_000,
   );
 }
