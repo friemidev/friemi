@@ -47,7 +47,8 @@ function trackNotificationOpened({
     | "notifications"
     | "profile"
     | "bag"
-    | "store";
+    | "store"
+    | "ticket_workbench";
   type: string;
   userProfileId: string;
 }) {
@@ -431,20 +432,29 @@ export async function openNotificationActivityAction(formData: FormData) {
     },
   });
 
-  if (notification?.type === "INVENTORY_TICKET_RECEIVED") {
+  if (
+    notification?.type === "INVENTORY_TICKET_RECEIVED" ||
+    notification?.type === "INVENTORY_TICKET_ACCESS_INVITED"
+  ) {
     await prisma.notification.updateMany({
       where: { id: notificationId, recipientId: profile.id, readAt: null },
       data: { readAt: new Date() },
     });
     await invalidateUnreadBadgeCache([profile.id]);
 
-    const target = "/profile/bag";
+    const target =
+      notification.type === "INVENTORY_TICKET_RECEIVED"
+        ? "/profile/bag"
+        : "/profile/ticket-workbench";
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, target));
     trackNotificationOpened({
       locale,
       notificationId,
-      targetType: "bag",
+      targetType:
+        notification.type === "INVENTORY_TICKET_RECEIVED"
+          ? "bag"
+          : "ticket_workbench",
       type: notification.type,
       userProfileId: profile.id,
     });

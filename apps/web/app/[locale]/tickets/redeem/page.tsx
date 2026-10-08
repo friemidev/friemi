@@ -43,7 +43,11 @@ export default async function TicketRedemptionScannerPage({
   const backPath = definitionId
     ? source === "admin"
       ? `/admin/items/${definitionId}`
-      : `/profile/bag/items/${definitionId}`
+      : source === "store"
+        ? `/profile/store/tickets/${definitionId}`
+        : source === "workbench"
+          ? `/profile/ticket-workbench/${definitionId}`
+          : `/profile/bag/items/${definitionId}`
     : "/profile/bag";
 
   return (

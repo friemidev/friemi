@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, History, ImagePlus, ScanLine, Send } from "lucide-react";
+import { ArrowUpRight, History, ImagePlus, ScanLine, Send, Users } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminItemPageFrame } from "@/features/inventory/components/AdminItemPageFrame";
@@ -42,6 +42,12 @@ export default async function AdminItemDetailPage({
       href: `/admin/items/tickets/${definitionId}`,
       icon: History,
       label: copy.detail.historyLabel,
+    },
+    {
+      description: copy.detail.accessHint,
+      href: `/admin/items/${definitionId}/access`,
+      icon: Users,
+      label: copy.detail.accessLabel,
     },
     {
       description: copy.detail.redeemHint,

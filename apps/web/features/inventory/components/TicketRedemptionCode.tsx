@@ -14,11 +14,9 @@ type ReadyCode = {
 };
 
 export function TicketRedemptionCode({
-  holderFriemiCode,
   itemId,
   locale,
 }: {
-  holderFriemiCode: string | null;
   itemId: string;
   locale: string;
 }) {
@@ -151,14 +149,6 @@ export function TicketRedemptionCode({
             {Math.floor(expiresIn / 60)}:
             {String(expiresIn % 60).padStart(2, "0")}
           </p>
-          {holderFriemiCode ? (
-            <p className="mt-3 text-center text-sm text-ink/70">
-              {copy.holderCode} ·{" "}
-              <span className="font-mono font-semibold tracking-[0.08em] text-ink tabular-nums">
-                {holderFriemiCode.slice(0, 3)} {holderFriemiCode.slice(3)}
-              </span>
-            </p>
-          ) : null}
         </div>
       ) : pending ? (
         <div className="mt-6 grid min-h-56 place-items-center" role="status">

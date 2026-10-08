@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Package,
   PencilLine,
+  ScanLine,
   Settings,
   Share2,
   ShieldCheck,
@@ -107,6 +108,7 @@ type ProfileDashboardViewProps = {
   isSelf?: boolean;
   locale: string;
   merchantHref?: string | null;
+  ticketWorkbenchHref?: string | null;
   profile: PublicProfileViewModel;
   achievementPreviewItems?: PublicAchievementWallItem[];
   publicAchievements?: PublicAchievementWallItem[];
@@ -370,6 +372,8 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       store: "Gestion boutique",
+      ticketWorkbench: "Contrôle des billets",
+      ticketWorkbenchHint: "Vérifier les billets autorisés",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -436,6 +440,8 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       store: "Manage store",
+      ticketWorkbench: "Ticket check-in",
+      ticketWorkbenchHint: "Check assigned tickets",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -501,6 +507,8 @@ function getMobileProfileCopy(locale: string) {
     message: "发消息",
     moments: "足迹",
     store: "管理门店",
+    ticketWorkbench: "核销工作台",
+    ticketWorkbenchHint: "查验已授权票券",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -3114,6 +3122,7 @@ function SelfMobileProfileHome({
   dashboard,
   locale,
   merchantHref,
+  ticketWorkbenchHref,
   onPresenceStatusChange,
   presenceStatus,
   profile,
@@ -3124,6 +3133,7 @@ function SelfMobileProfileHome({
   dashboard: ProfileDashboardViewModel;
   locale: string;
   merchantHref?: string | null;
+  ticketWorkbenchHref?: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
@@ -3306,6 +3316,24 @@ function SelfMobileProfileHome({
         />
       </section>
 
+      {ticketWorkbenchHref ? (
+        <Link
+          className="mt-5 flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={ticketWorkbenchHref}
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white">
+            <ScanLine aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">{copy.ticketWorkbench}</span>
+            <span className="mt-0.5 block text-xs text-ink/70">
+              {copy.ticketWorkbenchHint}
+            </span>
+          </span>
+          <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+        </Link>
+      ) : null}
+
       <ProfilePreviewTabs
         achievementPreviewItems={achievementPreviewItems}
         dashboard={dashboard}
@@ -3383,6 +3411,7 @@ export function ProfileDashboardView({
   isSelf = false,
   locale,
   merchantHref = null,
+  ticketWorkbenchHref = null,
   profile,
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
@@ -3441,6 +3470,7 @@ export function ProfileDashboardView({
             dashboard={dashboard}
             locale={locale}
             merchantHref={merchantHref}
+            ticketWorkbenchHref={ticketWorkbenchHref}
             onPresenceStatusChange={setCurrentPresenceStatus}
             presenceStatus={currentPresenceStatus}
             profile={profile}
@@ -3530,6 +3560,16 @@ export function ProfileDashboardView({
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
+                {ticketWorkbenchHref ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-fog px-4 text-sm font-semibold text-forest transition hover:bg-sand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                    href={ticketWorkbenchHref}
+                  >
+                    <ScanLine aria-hidden="true" className="h-4 w-4" />
+                    {mobileCopy.ticketWorkbench}
+                    <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                ) : null}
                 {merchantHref ? (
                   <Link
                     className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-forest px-4 text-sm font-semibold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"

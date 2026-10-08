@@ -171,6 +171,29 @@ enum InventoryGiftMethod {
   FRIEND_QR
 }
 
+enum TicketAccessRole {
+  MANAGER
+  REDEEMER
+}
+
+enum TicketAccessStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+enum TicketAccessSource {
+  ADMIN
+  INVITATION
+  ALLOCATION
+}
+
+enum TicketRedemptionMethod {
+  QR
+  MANUAL
+  UNKNOWN
+}
+
 enum CouponWalletStatus {
   AVAILABLE
   REDEEMED
@@ -264,6 +287,7 @@ enum NotificationType {
   COUPON_REDEEMED
   COUPON_REDEMPTION_COMPLETED
   INVENTORY_TICKET_RECEIVED
+  INVENTORY_TICKET_ACCESS_INVITED
 }
 
 enum ReportTargetType {
@@ -496,6 +520,11 @@ model UserProfile {
   inventoryIssuesMade     InventoryIssueBatch[]          @relation("InventoryIssueActor")
   inventoryGiftsSent      InventoryItemGift[]            @relation("InventoryGiftSender")
   inventoryGiftsReceived  InventoryItemGift[]            @relation("InventoryGiftRecipient")
+  ticketAccesses          TicketAccess[]                 @relation("TicketAccessProfile")
+  ticketAccessesInvited   TicketAccess[]                 @relation("TicketAccessInviter")
+  ticketAccessesRevoked   TicketAccess[]                 @relation("TicketAccessRevoker")
+  ticketRedemptionsHeld   TicketRedemptionEvent[]        @relation("TicketRedemptionHolder")
+  ticketRedemptionsMade   TicketRedemptionEvent[]        @relation("TicketRedemptionActor")
   friemiCoinBalance       UserFriemiCoinBalance?
   friemiCoinTransactions  FriemiCoinTransaction[]
   blindBoxFragmentBalance UserBlindBoxFragmentBalance?
@@ -960,6 +989,7 @@ model Merchant {
   ownerProfileId  String?                  @unique
   owner           UserProfile?             @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
   activities      Activity[]
+  ticketDefinitions InventoryItemDefinition[]
   coupons         Coupon[]
   couponTemplates MerchantCouponTemplate[]
   createdAt       DateTime                 @default(now())
@@ -1303,13 +1333,42 @@ model InventoryItemDefinition {
   issuedCount        Int                   @default(0)
   createdByProfileId String
   createdBy          UserProfile           @relation("InventoryDefinitionCreator", fields: [createdByProfileId], references: [id])
+  merchantId         String?
+  merchant           Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   items              InventoryItem[]
   issueBatches       InventoryIssueBatch[]
+  accesses           TicketAccess[]
+  redemptions        TicketRedemptionEvent[]
   notifications      Notification[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
   @@index([kind, createdAt])
+  @@index([merchantId, kind, createdAt])
+}
+
+model TicketAccess {
+  id                 String                  @id @default(cuid())
+  definitionId       String
+  definition         InventoryItemDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  profileId          String
+  profile            UserProfile             @relation("TicketAccessProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  role               TicketAccessRole
+  status             TicketAccessStatus
+  source             TicketAccessSource
+  invitedByProfileId String?
+  invitedBy          UserProfile?            @relation("TicketAccessInviter", fields: [invitedByProfileId], references: [id], onDelete: SetNull)
+  revokedByProfileId String?
+  revokedBy          UserProfile?            @relation("TicketAccessRevoker", fields: [revokedByProfileId], references: [id], onDelete: SetNull)
+  invitedAt          DateTime                @default(now())
+  acceptedAt         DateTime?
+  revokedAt          DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([definitionId, profileId, role])
+  @@index([profileId, status, role])
+  @@index([definitionId, role, status])
 }
 
 model InventoryIssueBatch {
@@ -1340,6 +1399,7 @@ model InventoryItem {
   serialNumber             Int
   giftedAt                 DateTime?
   gift                     InventoryItemGift?
+  redemptionEvent          TicketRedemptionEvent?
   redemptionToken          String?      @unique @db.VarChar(64)
   redemptionCode           String?      @unique @db.VarChar(10)
   redemptionTokenExpiresAt DateTime?
@@ -1372,6 +1432,25 @@ model InventoryItemGift {
 
   @@index([senderProfileId, createdAt])
   @@index([recipientProfileId, createdAt])
+}
+
+model TicketRedemptionEvent {
+  id                String                  @id @default(cuid())
+  itemId            String                  @unique
+  item              InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  definitionId      String
+  definition        InventoryItemDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  holderProfileId   String
+  holder            UserProfile             @relation("TicketRedemptionHolder", fields: [holderProfileId], references: [id], onDelete: Restrict)
+  redeemerProfileId String
+  redeemer          UserProfile             @relation("TicketRedemptionActor", fields: [redeemerProfileId], references: [id], onDelete: Restrict)
+  method            TicketRedemptionMethod
+  redeemedAt        DateTime
+  createdAt         DateTime                @default(now())
+
+  @@index([definitionId, redeemedAt, id])
+  @@index([redeemerProfileId, redeemedAt])
+  @@index([holderProfileId, redeemedAt])
 }
 
 model UserFriemiCoinBalance {

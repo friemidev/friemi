@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { TicketRedemptionPreview } from "@/features/inventory/components/TicketRedemptionPreview";
 import { getTicketRedemptionPreview } from "@/features/inventory/actions/ticketRedemptionActions";
-import { normalizeFriemiCode } from "@/features/inventory/friemiCode";
 import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -18,26 +17,19 @@ export default async function TicketRedemptionPage({
   params: Promise<{ locale: string; token: string }>;
   searchParams: Promise<{
     definitionId?: string;
-    holderCode?: string;
     source?: string;
   }>;
 }) {
   const { locale, token } = await params;
-  const { definitionId, holderCode, source } = await searchParams;
-  const holderFriendCode =
-    normalizeFriemiCode(typeof holderCode === "string" ? holderCode : "") ??
-    undefined;
+  const { definitionId, source } = await searchParams;
   await ensureCurrentUserProfile(locale, `/tickets/redeem/${token}`);
-  const preview = await getTicketRedemptionPreview(
-    token,
-    locale,
-    definitionId,
-    holderFriendCode,
-  );
+  const preview = await getTicketRedemptionPreview(token, locale, definitionId);
   const copy = getTicketRedemptionCopy(locale);
   const returnQuery = new URLSearchParams();
   if (definitionId) returnQuery.set("definitionId", definitionId);
-  if (source === "admin") returnQuery.set("source", "admin");
+  if (source === "admin" || source === "store" || source === "workbench") {
+    returnQuery.set("source", source);
+  }
   const scannerPath = `/tickets/redeem${returnQuery.size ? `?${returnQuery.toString()}` : ""}`;
 
   return (
@@ -55,7 +47,6 @@ export default async function TicketRedemptionPage({
       <div className="mt-6">
         <TicketRedemptionPreview
           expectedDefinitionId={definitionId}
-          holderFriendCode={holderFriendCode}
           initialPreview={preview}
           locale={locale}
           token={token}

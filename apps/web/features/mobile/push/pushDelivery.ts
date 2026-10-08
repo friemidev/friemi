@@ -27,6 +27,9 @@ export function getNotificationPath(input: {
   if (input.type === "INVENTORY_TICKET_RECEIVED") {
     return "/profile/bag";
   }
+  if (input.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return "/profile/ticket-workbench";
+  }
   if (input.type === "COUPON_RECEIVED" || input.type === "COUPON_REDEEMED") {
     return "/profile/bag";
   }
@@ -155,6 +158,7 @@ export function getNotificationCopy(input: {
       FRIEND_REQUEST: `${actorName} 关注了你`,
       CHARM_GIFT_RECEIVED: `${actorName} 给你送了礼物`,
       INVENTORY_TICKET_RECEIVED: `「${ticketTitle ?? "票券"}」已放入物品背包`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} 邀请你核销「${ticketTitle ?? "票券"}」`,
       COUPON_RECEIVED: `${merchantName}的优惠券已放入背包`,
       COUPON_CLAIMED: `${actorName}领取了${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle}核销成功`,
@@ -193,6 +197,7 @@ export function getNotificationCopy(input: {
       FRIEND_REQUEST: `${actorName} started following you`,
       CHARM_GIFT_RECEIVED: `${actorName} sent you a gift`,
       INVENTORY_TICKET_RECEIVED: `“${ticketTitle ?? "Ticket"}” is now in your bag`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} invited you to check in “${ticketTitle ?? "tickets"}”`,
       COUPON_RECEIVED: `${merchantName}'s coupon was added to your bag`,
       COUPON_CLAIMED: `${actorName} claimed ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} was redeemed`,
@@ -231,6 +236,7 @@ export function getNotificationCopy(input: {
       FRIEND_REQUEST: `${actorName} vous suit`,
       CHARM_GIFT_RECEIVED: `${actorName} vous a envoyé un cadeau`,
       INVENTORY_TICKET_RECEIVED: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} vous invite à contrôler « ${ticketTitle ?? "billet"} »`,
       COUPON_RECEIVED: `Le coupon de ${merchantName} est dans votre sac`,
       COUPON_CLAIMED: `${actorName} a reçu ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} a été utilisé`,
@@ -281,6 +287,18 @@ export function getNotificationCopy(input: {
           : input.locale === "en"
             ? "Ticket received"
             : "Billet reçu",
+    };
+  }
+
+  if (input.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return {
+      body: copy[input.locale].INVENTORY_TICKET_ACCESS_INVITED ?? "",
+      title:
+        input.locale === "zh-CN"
+          ? "核销邀请"
+          : input.locale === "en"
+            ? "Check-in invitation"
+            : "Invitation au contrôle",
     };
   }
 

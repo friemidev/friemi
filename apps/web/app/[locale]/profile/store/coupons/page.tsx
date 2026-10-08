@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MerchantStoreDashboard } from "@/features/coupons/components/MerchantStoreDashboard";
+import { MerchantCouponList } from "@/features/coupons/components/MerchantCouponList";
 import { getMerchantStoreDashboard } from "@/features/coupons/queries/getMerchantStoreDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
@@ -23,5 +23,5 @@ export default async function MerchantCouponsPage({
 
   if (!dashboard) notFound();
 
-  return <MerchantStoreDashboard dashboard={dashboard} locale={locale} />;
+  return <MerchantCouponList dashboard={dashboard} locale={locale} />;
 }

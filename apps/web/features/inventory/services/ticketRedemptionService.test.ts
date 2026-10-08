@@ -10,8 +10,8 @@ import {
 
 const token = "A".repeat(43);
 const code = "123456";
+const mixedCode = "A7B9C2";
 const legacyCode = "1234567890";
-const holderFriendCode = "654321";
 const now = new Date("2026-10-07T12:00:00.000Z");
 
 function redemptionFixture(
@@ -21,10 +21,10 @@ function redemptionFixture(
     redeemedAt?: Date | null;
     updated?: number;
     credential?: string;
-    holderCode?: string;
   } = {},
 ) {
   const calls: string[] = [];
+  const history: Array<{ itemId: string; method: string }> = [];
   const item = {
     id: "ticket-1",
     definitionId: "definition-1",
@@ -33,7 +33,7 @@ function redemptionFixture(
       imageUrl: "https://example.com/ticket.webp",
       title: "Wine evening",
     },
-    owner: { friendCode: holderFriendCode, nickname: "Guest" },
+    owner: { nickname: "Guest" },
     ownerProfileId: "holder-1",
     redeemedAt: input.redeemedAt ?? null,
     redemptionTokenExpiresAt:
@@ -43,13 +43,15 @@ function redemptionFixture(
     serialNumber: 42,
   };
   const currentToken = token;
-  const currentCode = input.credential === legacyCode ? legacyCode : code;
+  const currentCode =
+    input.credential && input.credential !== token ? input.credential : code;
   const credential = input.credential ?? token;
   const credentialWhere =
-    credential === code || credential === legacyCode
+    credential !== token
       ? { redemptionCode: credential }
       : { redemptionToken: token };
   const tx = {
+    $queryRaw: async () => [],
     inventoryItem: {
       findUnique: async ({
         where,
@@ -60,7 +62,13 @@ function redemptionFixture(
           redemptionCode?: string;
         };
       }) => {
-        calls.push(where.id ? "read-current" : "read-token");
+        calls.push(
+          where.id
+            ? "read-current"
+            : where.redemptionCode
+              ? "read-code"
+              : "read-token",
+        );
         if (where.id) {
           return {
             redeemedAt: item.redeemedAt,
@@ -68,21 +76,11 @@ function redemptionFixture(
             redemptionCode: currentCode,
           };
         }
-        return currentToken === where.redemptionToken ? item : null;
-      },
-      findFirst: async ({
-        where,
-      }: {
-        where: {
-          redemptionCode: string;
-          definitionId: string;
-          owner: { friendCode: string };
-        };
-      }) => {
-        calls.push("read-code");
-        return currentCode === where.redemptionCode &&
-          where.definitionId === "definition-1" &&
-          where.owner.friendCode === holderFriendCode
+        return (
+          where.redemptionCode
+            ? currentCode === where.redemptionCode
+            : currentToken === where.redemptionToken
+        )
           ? item
           : null;
       },
@@ -108,26 +106,36 @@ function redemptionFixture(
         return { count: 1 };
       },
     },
-    inventoryIssueBatch: {
+    inventoryItemDefinition: {
       findFirst: async ({
         where,
       }: {
-        where: { definitionId: string; recipientProfileId: string };
+        where: { id: string; AND: Array<Record<string, unknown>> };
       }) => {
         calls.push("check-assignment");
-        assert.deepEqual(where, {
-          definitionId: "definition-1",
-          recipientProfileId: "organizer-1",
-        });
-        return input.assigned ? { id: "batch-1" } : null;
+        assert.equal(where.id, "definition-1");
+        assert.match(JSON.stringify(where.AND), /"status":"ACTIVE"/);
+        assert.match(JSON.stringify(where.AND), /"profileId":"organizer-1"/);
+        return input.assigned ? { id: "definition-1" } : null;
+      },
+    },
+    ticketRedemptionEvent: {
+      create: async ({
+        data,
+      }: {
+        data: { itemId: string; method: string };
+      }) => {
+        calls.push("write-history");
+        history.push({ itemId: data.itemId, method: data.method });
+        return { id: "history-1" };
       },
     },
   } as unknown as Prisma.TransactionClient;
-  return { calls, tx };
+  return { calls, history, tx };
 }
 
 test("assigned organizer redeems once with an owner and token guarded update", async () => {
-  const { calls, tx } = redemptionFixture({ assigned: true });
+  const { calls, history, tx } = redemptionFixture({ assigned: true });
   const first = await redeemTicketInTransaction(tx, {
     actorProfileId: "organizer-1",
     isAdmin: false,
@@ -140,7 +148,12 @@ test("assigned organizer redeems once with an owner and token guarded update", a
     assert.equal(first.ownerNickname, "Guest");
     assert.equal(first.redeemedAt, now.toISOString());
   }
-  assert.deepEqual(calls, ["read-token", "check-assignment", "atomic-redeem"]);
+  assert.deepEqual(calls, [
+    "read-token",
+    "check-assignment",
+    "atomic-redeem",
+    "write-history",
+  ]);
 
   const second = await redeemTicketInTransaction(tx, {
     actorProfileId: "organizer-1",
@@ -150,61 +163,86 @@ test("assigned organizer redeems once with an owner and token guarded update", a
   });
   assert.equal(second.status, "ALREADY_REDEEMED");
   assert.equal(calls.filter((call) => call === "atomic-redeem").length, 1);
+  assert.deepEqual(history, [{ itemId: "ticket-1", method: "QR" }]);
 });
 
-test("a six-digit code previews and redeems the same ticket", async () => {
-  const { calls, tx } = redemptionFixture({ assigned: true, credential: code });
+test("a mixed six-character code previews and redeems without holder or event input", async () => {
+  const { calls, history, tx } = redemptionFixture({
+    assigned: true,
+    credential: mixedCode,
+  });
   const input = {
     actorProfileId: "organizer-1",
-    expectedDefinitionId: "definition-1",
-    holderFriendCode,
     isAdmin: false,
     now,
-    token: code,
+    token: mixedCode.toLowerCase(),
   };
   const preview = await previewTicketRedemptionInDatabase(tx, input);
   assert.equal(preview.status, "READY");
   const result = await redeemTicketInTransaction(tx, input);
   assert.equal(result.status, "REDEEMED");
   assert.deepEqual(calls, [
+    "read-code",
+    "check-assignment",
+    "read-code",
+    "check-assignment",
+    "atomic-redeem",
+    "write-history",
+  ]);
+  assert.deepEqual(history, [{ itemId: "ticket-1", method: "MANUAL" }]);
+});
+
+test("a scoped manual code still checks the selected event before lookup", async () => {
+  const { calls, tx } = redemptionFixture({ assigned: true, credential: code });
+  const input = {
+    actorProfileId: "organizer-1",
+    expectedDefinitionId: "definition-1",
+    isAdmin: false,
+    now,
+    token: code,
+  };
+  assert.equal(
+    (await previewTicketRedemptionInDatabase(tx, input)).status,
+    "READY",
+  );
+  assert.equal((await redeemTicketInTransaction(tx, input)).status, "REDEEMED");
+  assert.deepEqual(calls, [
     "check-assignment",
     "read-code",
     "check-assignment",
     "read-code",
     "atomic-redeem",
+    "write-history",
   ]);
 });
 
-test("manual code requires both the event and the holder Friemi code", async () => {
-  const { calls, tx } = redemptionFixture({ assigned: true, credential: code });
-  const baseInput = {
-    actorProfileId: "organizer-1",
-    isAdmin: false,
-    now,
-    token: code,
-  };
-  assert.deepEqual(await previewTicketRedemptionInDatabase(tx, baseInput), {
-    status: "INVALID",
+test("a wrong manual code cannot reveal or redeem a ticket", async () => {
+  const { calls, tx } = redemptionFixture({
+    assigned: true,
+    credential: mixedCode,
   });
-  assert.deepEqual(
-    await redeemTicketInTransaction(tx, {
-      ...baseInput,
-      expectedDefinitionId: "definition-1",
-    }),
-    { status: "INVALID" },
-  );
-  assert.deepEqual(calls, []);
-});
-
-test("a wrong holder code cannot reveal or redeem a matching ticket code", async () => {
-  const { calls, tx } = redemptionFixture({ assigned: true, credential: code });
   const input = {
     actorProfileId: "organizer-1",
-    expectedDefinitionId: "definition-1",
-    holderFriendCode: "111111",
     isAdmin: false,
     now,
-    token: code,
+    token: "Z9Z9Z9",
+  };
+  assert.deepEqual(await previewTicketRedemptionInDatabase(tx, input), {
+    status: "NOT_FOUND",
+  });
+  assert.deepEqual(await redeemTicketInTransaction(tx, input), {
+    status: "NOT_FOUND",
+  });
+  assert.deepEqual(calls, ["read-code", "read-code"]);
+});
+
+test("an unauthorized manual lookup looks the same as an unknown code", async () => {
+  const { calls, tx } = redemptionFixture({ credential: mixedCode });
+  const input = {
+    actorProfileId: "organizer-1",
+    isAdmin: false,
+    now,
+    token: mixedCode,
   };
   assert.deepEqual(await previewTicketRedemptionInDatabase(tx, input), {
     status: "NOT_FOUND",
@@ -213,19 +251,17 @@ test("a wrong holder code cannot reveal or redeem a matching ticket code", async
     status: "NOT_FOUND",
   });
   assert.deepEqual(calls, [
-    "check-assignment",
     "read-code",
     "check-assignment",
     "read-code",
+    "check-assignment",
   ]);
 });
 
-test("an unexpired legacy ten-digit code remains valid with holder and event", async () => {
+test("an unexpired legacy ten-digit code remains valid without extra fields", async () => {
   const { tx } = redemptionFixture({ assigned: true, credential: legacyCode });
   const result = await previewTicketRedemptionInDatabase(tx, {
     actorProfileId: "organizer-1",
-    expectedDefinitionId: "definition-1",
-    holderFriendCode,
     isAdmin: false,
     now,
     token: legacyCode,
@@ -248,16 +284,12 @@ test("unassigned accounts cannot inspect or redeem the ticket", async () => {
 test("a ticket from another event is rejected in preview and before the redeem write", async () => {
   const calls: string[] = [];
   const tx = {
-    inventoryIssueBatch: {
-      findFirst: async ({
-        where,
-      }: {
-        where: { definitionId: string; recipientProfileId: string };
-      }) => {
+    $queryRaw: async () => [],
+    inventoryItemDefinition: {
+      findFirst: async ({ where }: { where: { id: string } }) => {
         calls.push("check-current-event");
-        assert.equal(where.definitionId, "definition-2");
-        assert.equal(where.recipientProfileId, "organizer-1");
-        return { id: "batch-2" };
+        assert.equal(where.id, "definition-2");
+        return { id: "definition-2" };
       },
     },
     inventoryItem: {
@@ -314,7 +346,7 @@ test("site administrators can redeem without an allocation batch", async () => {
     token,
   });
   assert.equal(result.status, "REDEEMED");
-  assert.deepEqual(calls, ["read-token", "atomic-redeem"]);
+  assert.deepEqual(calls, ["read-token", "atomic-redeem", "write-history"]);
 });
 
 test("expired tokens do not perform a redeem write", async () => {
@@ -397,7 +429,10 @@ test("holder generates a ten-minute token only for their unredeemed ticket", asy
           updatedAt: now,
         });
         assert.match(data.redemptionToken, /^[A-Za-z0-9_-]{43}$/);
-        assert.match(data.redemptionCode, /^\d{6}$/);
+        assert.match(
+          data.redemptionCode,
+          /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/,
+        );
         assert.equal(data.updatedAt, now);
         assert.equal(
           data.redemptionTokenExpiresAt.getTime(),
@@ -413,6 +448,7 @@ test("holder generates a ten-minute token only for their unredeemed ticket", asy
     now,
   });
   assert.equal(result.status, "READY");
-  if (result.status === "READY") assert.match(result.code, /^\d{6}$/);
+  if (result.status === "READY")
+    assert.match(result.code, /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/);
   assert.deepEqual(calls, ["write-token"]);
 });

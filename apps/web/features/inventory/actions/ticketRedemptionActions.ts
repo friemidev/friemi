@@ -44,7 +44,6 @@ export async function getTicketRedemptionPreview(
   token: string,
   locale: string,
   expectedDefinitionId?: string,
-  holderFriendCode?: string,
 ): Promise<TicketRedemptionPreviewResult | TicketActionFailure> {
   if (!isValidExpectedDefinitionId(expectedDefinitionId)) {
     return { status: "INVALID" };
@@ -59,7 +58,6 @@ export async function getTicketRedemptionPreview(
     return await previewTicketRedemption({
       actorProfileId: actor.id,
       expectedDefinitionId,
-      holderFriendCode,
       isAdmin: await isCurrentUserAdmin(),
       token,
     });
@@ -73,7 +71,6 @@ export async function redeemTicketByTokenAction(
   token: string,
   locale: string,
   expectedDefinitionId?: string,
-  holderFriendCode?: string,
 ): Promise<RedeemTicketByTokenResult | TicketActionFailure> {
   if (!isValidExpectedDefinitionId(expectedDefinitionId)) {
     return { status: "INVALID" };
@@ -88,7 +85,6 @@ export async function redeemTicketByTokenAction(
     const result = await redeemTicketByToken({
       actorProfileId: actor.id,
       expectedDefinitionId,
-      holderFriendCode,
       isAdmin: await isCurrentUserAdmin(),
       token,
     });

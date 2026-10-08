@@ -1,46 +1,27 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import {
-  useActionState,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useActionState } from "react";
 import {
   ArrowLeft,
-  ArrowUpRight,
-  ChevronDown,
   ChevronRight,
-  CirclePlus,
   MapPin,
   PencilLine,
-  QrCode,
-  Search,
   Store,
   Ticket,
-  X,
+  TicketCheck,
 } from "lucide-react";
 import {
-  unlistCouponCampaignAction,
   updateMerchantStoreAction,
-  type UnlistCouponCampaignState,
   type UpdateMerchantStoreState,
 } from "@/features/coupons/actions/couponActions";
 import type { MerchantStoreDashboardViewModel } from "@/features/coupons/queries/getMerchantStoreDashboard";
 import { withLocale } from "@/lib/routes";
-import { CouponQrCode } from "./CouponQrCode";
-import { CouponRedemptionScanner } from "./CouponRedemptionScanner";
 
 const initialUpdateState: UpdateMerchantStoreState = {};
-const initialUnlistState: UnlistCouponCampaignState = {};
+export type Campaign = MerchantStoreDashboardViewModel["campaigns"][number];
 
-type CouponFilter = "all" | "active" | "scheduled" | "ended";
-type Campaign = MerchantStoreDashboardViewModel["campaigns"][number];
-
-function getCopy(locale: string) {
+export function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       active: "En ligne",
@@ -54,8 +35,17 @@ function getCopy(locale: string) {
       copyLink: "Copier le lien",
       coupons: "Coupons",
       couponManage: "Gérer les coupons",
+      couponDetail: "Détails du coupon",
+      conditions: "Conditions",
       campaignList: "Coupons publiés",
+      pageSummary: (start: number, end: number, total: number) =>
+        `${start}–${end} sur ${total}`,
+      previousPage: "Précédent",
+      nextPage: "Suivant",
+      pageNumber: (page: number, total: number) => `${page} / ${total}`,
       couponManageHint: "Publier, partager et suivre les coupons",
+      ticketManage: "Billets d'événement",
+      ticketManageHint: "Contrôler les billets, gérer l'équipe et consulter l'historique",
       couponHelp: "Montrez le QR au client ou envoyez-lui le lien.",
       description: "Présentation",
       edit: "Modifier la boutique",
@@ -110,8 +100,17 @@ function getCopy(locale: string) {
       copyLink: "Copy link",
       coupons: "Coupons",
       couponManage: "Manage coupons",
+      couponDetail: "Coupon details",
+      conditions: "Conditions",
       campaignList: "Published coupons",
+      pageSummary: (start: number, end: number, total: number) =>
+        `${start}–${end} of ${total}`,
+      previousPage: "Previous",
+      nextPage: "Next",
+      pageNumber: (page: number, total: number) => `${page} / ${total}`,
       couponManageHint: "Publish, share, and track coupons",
+      ticketManage: "Event tickets",
+      ticketManageHint: "Check tickets, manage staff, and review history",
       couponHelp: "Show customers the QR code or send them the link.",
       description: "Description",
       edit: "Edit store",
@@ -164,8 +163,17 @@ function getCopy(locale: string) {
     copyLink: "复制领券链接",
     coupons: "优惠券",
     couponManage: "优惠券管理",
+    couponDetail: "优惠券详情",
+    conditions: "使用条件",
     campaignList: "已发布的券",
+    pageSummary: (start: number, end: number, total: number) =>
+      `第 ${start}–${end} 张，共 ${total} 张`,
+    previousPage: "上一页",
+    nextPage: "下一页",
+    pageNumber: (page: number, total: number) => `${page} / ${total}`,
     couponManageHint: "发布、分享与查看领取情况",
+    ticketManage: "活动票券",
+    ticketManageHint: "核销票券、邀请工作人员、查看记录",
     couponHelp: "向顾客出示二维码，或把链接发给顾客。",
     description: "门店介绍",
     edit: "编辑门店资料",
@@ -205,425 +213,11 @@ function getCopy(locale: string) {
   };
 }
 
-function getFilter(
-  campaign: Campaign,
-  locallyUnlisted: boolean,
-): Exclude<CouponFilter, "all"> {
-  if (locallyUnlisted) return "ended";
-  if (campaign.claimAvailability === "AVAILABLE") return "active";
-  if (campaign.claimAvailability === "NOT_STARTED") return "scheduled";
-  return "ended";
-}
-
-export function MerchantStoreDashboard({
-  dashboard,
-  locale,
-}: {
-  dashboard: MerchantStoreDashboardViewModel;
-  locale: string;
-}) {
-  const copy = getCopy(locale);
-  const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(
-    query.trim().toLocaleLowerCase(locale),
-  );
-  const [filter, setFilter] = useState<CouponFilter>("all");
-  const [openQrId, setOpenQrId] = useState<string | null>(null);
-  const [confirmUnlistId, setConfirmUnlistId] = useState<string | null>(null);
-  const [locallyUnlistedIds, setLocallyUnlistedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [unlistState, unlistAction, unlistPending] = useActionState(
-    unlistCouponCampaignAction,
-    initialUnlistState,
-  );
-
-  useEffect(() => {
-    if (unlistState.status !== "UNLISTED" || !unlistState.couponId) return;
-    const couponId = unlistState.couponId;
-    setLocallyUnlistedIds((current) => {
-      if (current.has(couponId)) return current;
-      return new Set([...current, couponId]);
-    });
-  }, [unlistState.couponId, unlistState.status]);
-
-  const counts = useMemo(
-    () => ({
-      active: dashboard.campaigns.filter(
-        (campaign) =>
-          getFilter(campaign, locallyUnlistedIds.has(campaign.id)) === "active",
-      ).length,
-      all: dashboard.campaigns.length,
-      ended: dashboard.campaigns.filter(
-        (campaign) =>
-          getFilter(campaign, locallyUnlistedIds.has(campaign.id)) === "ended",
-      ).length,
-      scheduled: dashboard.campaigns.filter(
-        (campaign) =>
-          getFilter(campaign, locallyUnlistedIds.has(campaign.id)) ===
-          "scheduled",
-      ).length,
-    }),
-    [dashboard.campaigns, locallyUnlistedIds],
-  );
-
-  const visibleCampaigns = useMemo(
-    () =>
-      dashboard.campaigns.filter((campaign) => {
-        const matchesFilter =
-          filter === "all" ||
-          getFilter(campaign, locallyUnlistedIds.has(campaign.id)) === filter;
-        const searchable =
-          `${campaign.title} ${campaign.description} ${campaign.terms ?? ""}`
-            .toLocaleLowerCase(locale)
-            .trim();
-        return (
-          matchesFilter &&
-          (!deferredQuery || searchable.includes(deferredQuery))
-        );
-      }),
-    [dashboard.campaigns, deferredQuery, filter, locale, locallyUnlistedIds],
-  );
-
-  const filters: Array<{ key: CouponFilter; label: string }> = [
-    { key: "all", label: copy.all },
-    { key: "active", label: copy.active },
-    { key: "scheduled", label: copy.scheduled },
-    { key: "ended", label: copy.ended },
-  ];
-
-  return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] min-h-svh bg-white text-ink">
-      <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
-        <header className="flex h-14 items-center gap-3">
-          <Link
-            aria-label={copy.storeBack}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-forest transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-            href={withLocale(locale, "/profile/store")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-base font-bold">{copy.couponManage}</h1>
-        </header>
-
-        <p className="pt-2 text-sm text-ink/65">{dashboard.merchant.name}</p>
-        <div className="grid gap-7 pt-6 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-10">
-          <div className="min-w-0 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Link
-                className="flex min-h-32 flex-col items-start justify-between rounded-[1.25rem] bg-coral p-4 text-left text-ink transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                href={withLocale(locale, "/profile/store/coupons/new")}
-              >
-                <span className="flex w-full items-start justify-between">
-                  <CirclePlus className="h-5 w-5" />
-                  <ArrowUpRight className="h-4 w-4 text-ink/70" />
-                </span>
-                <span className="text-base font-bold">{copy.publish}</span>
-                <span className="text-xs leading-5 text-ink/75">
-                  {copy.publishHint}
-                </span>
-              </Link>
-              <CouponRedemptionScanner locale={locale} />
-            </div>
-
-            <div
-              className="grid grid-cols-3 gap-3 py-2"
-              aria-label={copy.coupons}
-            >
-              <StoreMetric
-                label={copy.claimed}
-                value={dashboard.stats.claimedCount}
-              />
-              <StoreMetric
-                label={copy.available}
-                value={dashboard.stats.availableCount}
-              />
-              <StoreMetric
-                label={copy.redeemed}
-                value={dashboard.stats.redeemedCount}
-              />
-            </div>
-          </div>
-
-          <section
-            className="min-w-0"
-            aria-labelledby="merchant-coupons-heading"
-          >
-            <h2
-              id="merchant-coupons-heading"
-              className="flex items-baseline gap-2 text-xl font-bold"
-            >
-              {copy.campaignList}
-              <span className="text-sm font-medium tabular-nums text-ink/70">
-                {counts.all}
-              </span>
-            </h2>
-
-            {dashboard.campaigns.length > 3 ? (
-              <div className="relative mt-5">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/45" />
-                <input
-                  aria-label={copy.search}
-                  className="h-12 w-full rounded-xl bg-fog pl-11 pr-14 text-base outline-none placeholder:text-ink/55 focus:ring-2 focus:ring-forest"
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={copy.search}
-                  type="search"
-                  value={query}
-                />
-                {query ? (
-                  <button
-                    aria-label={copy.clearSearch}
-                    className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-ink/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                    onClick={() => setQuery("")}
-                    type="button"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-
-            {counts.all > 0 ? (
-              <div
-                aria-label={copy.coupons}
-                className="-mx-4 mt-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0"
-                role="group"
-              >
-                {filters.map((item) => {
-                  const selected = filter === item.key;
-                  return (
-                    <button
-                      aria-pressed={selected}
-                      className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${selected ? "bg-forest text-white" : "text-ink/70 hover:bg-fog"}`}
-                      key={item.key}
-                      onClick={() => setFilter(item.key)}
-                      type="button"
-                    >
-                      {item.label}
-                      <span
-                        className={selected ? "text-white/75" : "text-ink/70"}
-                      >
-                        {counts[item.key]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            <div className="mt-3 divide-y divide-sand/40">
-              {visibleCampaigns.map((campaign) => {
-                const wasUnlisted = locallyUnlistedIds.has(campaign.id);
-                const status = wasUnlisted
-                  ? {
-                      className: "bg-fog text-ink/70",
-                      label: copy.statusUnlisted,
-                    }
-                  : getCampaignStatus(campaign, copy);
-                const isPublished =
-                  campaign.campaignStatus === "PUBLISHED" && !wasUnlisted;
-                const canShowQr =
-                  !wasUnlisted &&
-                  (campaign.claimAvailability === "AVAILABLE" ||
-                    campaign.claimAvailability === "NOT_STARTED") &&
-                  Boolean(campaign.claimToken);
-                const path = campaign.claimToken
-                  ? withLocale(locale, `/coupons/claim/${campaign.claimToken}`)
-                  : null;
-                const qrOpen = openQrId === campaign.id;
-                const remaining =
-                  campaign.quantityLimit === null
-                    ? null
-                    : Math.max(
-                        campaign.quantityLimit - campaign.claimedCount,
-                        0,
-                      );
-
-                return (
-                  <article className="py-5 first:pt-2" key={campaign.id}>
-                    <div className="flex min-w-0 gap-4">
-                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-fog">
-                        {campaign.imageUrl ? (
-                          <Image
-                            alt=""
-                            className="h-full w-full object-cover"
-                            fill
-                            sizes="80px"
-                            src={campaign.imageUrl}
-                          />
-                        ) : (
-                          <span className="grid h-full w-full place-items-center text-forest">
-                            <Ticket className="h-6 w-6" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
-                          <h3 className="min-w-0 flex-1 text-sm font-bold leading-5">
-                            {campaign.title}
-                          </h3>
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${status.className}`}
-                          >
-                            {status.label}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-ink/70">
-                          {copy.claimed} {campaign.claimedCount}
-                          {remaining === null
-                            ? ""
-                            : ` · ${copy.remaining} ${remaining}`}
-                        </p>
-                        {campaign.expiresAt ? (
-                          <p className="mt-0.5 text-xs leading-5 text-ink/70">
-                            {copy.validUntil}{" "}
-                            {formatDate(locale, campaign.expiresAt)}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="mt-3 flex min-h-11 items-center justify-between gap-4 pl-24">
-                      {canShowQr && path ? (
-                        <button
-                          aria-expanded={qrOpen}
-                          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                          onClick={() =>
-                            setOpenQrId((current) =>
-                              current === campaign.id ? null : campaign.id,
-                            )
-                          }
-                          type="button"
-                        >
-                          <QrCode className="h-4 w-4" />
-                          {qrOpen ? copy.hideQr : copy.showQr}
-                          <ChevronDown
-                            className={`h-4 w-4 transition-transform ${qrOpen ? "rotate-180" : ""}`}
-                          />
-                        </button>
-                      ) : (
-                        <span />
-                      )}
-                      {isPublished && confirmUnlistId !== campaign.id ? (
-                        <button
-                          className="min-h-11 text-sm font-semibold text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
-                          onClick={() => setConfirmUnlistId(campaign.id)}
-                          type="button"
-                        >
-                          {copy.unlist}
-                        </button>
-                      ) : null}
-                    </div>
-                    {isPublished && confirmUnlistId === campaign.id ? (
-                      <div className="mt-2 rounded-xl bg-fog p-4">
-                        <p className="text-sm leading-6 text-ink/80">
-                          {copy.unlistHint}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <form action={unlistAction}>
-                            <input
-                              name="couponId"
-                              type="hidden"
-                              value={campaign.id}
-                            />
-                            <input name="locale" type="hidden" value={locale} />
-                            <button
-                              className="min-h-11 rounded-full bg-danger px-4 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
-                              disabled={unlistPending}
-                              type="submit"
-                            >
-                              {copy.unlistConfirm}
-                            </button>
-                          </form>
-                          <button
-                            className="min-h-11 rounded-full px-4 text-sm font-semibold text-ink/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                            onClick={() => setConfirmUnlistId(null)}
-                            type="button"
-                          >
-                            {copy.unlistCancel}
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                    {unlistState.couponId === campaign.id &&
-                    unlistState.status === "UNLISTED" ? (
-                      <p
-                        className="pl-24 text-xs font-semibold text-forest"
-                        role="status"
-                      >
-                        {copy.statusUnlisted}
-                      </p>
-                    ) : null}
-                    {unlistState.couponId === campaign.id &&
-                    unlistState.status !== "UNLISTED" ? (
-                      <p
-                        className="pl-24 text-xs font-semibold text-danger"
-                        role="alert"
-                      >
-                        {copy.unlistError}
-                      </p>
-                    ) : null}
-                    {qrOpen && canShowQr && path ? (
-                      <div className="mt-3 rounded-[1.25rem] bg-fog px-4 py-5">
-                        <p className="mb-3 text-center text-sm font-semibold text-forest">
-                          {copy.qr}
-                        </p>
-                        <p className="mb-4 text-center text-sm text-ink/75">
-                          {campaign.claimAvailability === "NOT_STARTED"
-                            ? copy.scheduledHint
-                            : copy.couponHelp}
-                        </p>
-                        <CouponQrCode
-                          copiedLabel={copy.copied}
-                          copyLabel={copy.copyLink}
-                          path={path}
-                        />
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-
-            {visibleCampaigns.length === 0 ? (
-              <div className="rounded-[1.25rem] bg-fog px-5 py-10 text-center">
-                <Ticket className="mx-auto h-6 w-6 text-forest" />
-                <p className="mt-3 text-sm font-medium text-ink/70">
-                  {counts.all === 0 ? copy.noCampaign : copy.empty}
-                </p>
-                {counts.all === 0 ? (
-                  <Link
-                    className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                    href={withLocale(locale, "/profile/store/coupons/new")}
-                  >
-                    {copy.publish}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                ) : (
-                  <button
-                    className="mt-4 min-h-11 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                    onClick={() => {
-                      setFilter("all");
-                      setQuery("");
-                    }}
-                    type="button"
-                  >
-                    {copy.clearFilters}
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </section>
-        </div>
-      </div>
-    </main>
-  );
-}
-
 export function MerchantStoreHome({
   dashboard,
   locale,
 }: {
-  dashboard: MerchantStoreDashboardViewModel;
+  dashboard: Pick<MerchantStoreDashboardViewModel, "merchant">;
   locale: string;
 }) {
   const copy = getCopy(locale);
@@ -674,11 +268,26 @@ export function MerchantStoreHome({
         </section>
 
         <nav
-          className="divide-y divide-sand/50 border-t border-sand/50"
+          className="space-y-1"
           aria-label={copy.title}
         >
           <Link
-            className="flex min-h-20 items-center gap-4 py-4 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            className="flex min-h-20 items-center gap-4 rounded-2xl px-1 py-4 transition hover:bg-fog/60 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/profile/store/tickets")}
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest text-white">
+              <TicketCheck className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-bold">{copy.ticketManage}</span>
+              <span className="mt-0.5 block text-sm text-ink/65">
+                {copy.ticketManageHint}
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-ink/45" />
+          </Link>
+          <Link
+            className="flex min-h-20 items-center gap-4 rounded-2xl px-1 py-4 transition hover:bg-fog/60 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
             href={withLocale(locale, "/profile/store/coupons")}
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-coral/40 text-forest">
@@ -695,7 +304,7 @@ export function MerchantStoreHome({
             <ChevronRight className="h-5 w-5 shrink-0 text-ink/45" />
           </Link>
           <Link
-            className="flex min-h-20 items-center gap-4 py-4 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            className="flex min-h-20 items-center gap-4 rounded-2xl px-1 py-4 transition hover:bg-fog/60 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
             href={withLocale(locale, "/profile/store/details")}
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-fog text-forest">
@@ -719,7 +328,7 @@ export function MerchantStoreDetails({
   dashboard,
   locale,
 }: {
-  dashboard: MerchantStoreDashboardViewModel;
+  dashboard: Pick<MerchantStoreDashboardViewModel, "merchant">;
   locale: string;
 }) {
   const copy = getCopy(locale);
@@ -784,7 +393,7 @@ export function MerchantStoreDetails({
   );
 }
 
-function getCampaignStatus(
+export function getCampaignStatus(
   campaign: Campaign,
   copy: ReturnType<typeof getCopy>,
 ) {
