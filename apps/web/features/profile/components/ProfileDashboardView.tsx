@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Copy,
   Crown,
+  Flag,
   Gift,
   Heart,
   HeartHandshake,
@@ -75,6 +76,8 @@ import {
 } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { getReportCopy } from "@/features/reports/copy";
 import { useViewerProfile } from "./ViewerProfileProvider";
 import {
   updateProfileIdentityAction,
@@ -2058,6 +2061,7 @@ function PublicProfileMoreMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [remarkOpen, setRemarkOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const menuId = `public-profile-more-menu-${profile.id}`;
   const dialogTitleId = `profile-remark-dialog-title-${profile.id}`;
 
@@ -2141,9 +2145,36 @@ function PublicProfileMoreMenu({
               <PencilLine className="h-4 w-4 text-[#156240]" />
               <span>{remarkCopy.edit}</span>
             </button>
+            <button
+              className="flex min-h-11 w-full items-center gap-2.5 px-3 text-left text-sm font-semibold text-ink hover:bg-fog"
+              onClick={() => {
+                setMenuOpen(false);
+                if (!isAuthenticated) {
+                  router.push(getSignInHref(locale, `/profile/${profile.id}`));
+                  return;
+                }
+                setReportOpen(true);
+              }}
+              role="menuitem"
+              type="button"
+            >
+              <Flag aria-hidden="true" className="h-4 w-4 text-forest" />
+              <span>{getReportCopy(locale).trigger}</span>
+            </button>
           </div>
         ) : null}
       </div>
+
+      <ReportDialog
+        hideTrigger
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        onOpenChange={setReportOpen}
+        open={reportOpen}
+        redirectPath={`/profile/${profile.id}`}
+        targetId={profile.id}
+        targetType="USER_PROFILE"
+      />
 
       {remarkOpen ? (
         <div

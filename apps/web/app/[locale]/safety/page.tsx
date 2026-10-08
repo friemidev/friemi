@@ -1,6 +1,17 @@
 import Link from "next/link";
+import React from "react";
 import type { Metadata } from "next";
-import { ArrowLeft, FileWarning, Mail, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  FileWarning,
+  Mail,
+  MessageSquareText,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  childSafetyContactEmail,
+  getChildSafetyCopy,
+} from "@/features/reports/childSafetyCopy";
 import { withLocale } from "@/lib/routes";
 
 type SafetyPageProps = {
@@ -19,6 +30,7 @@ type SafetyCopy = {
   contactEmail: string;
   privacyLabel: string;
   sections: {
+    id?: string;
     title: string;
     body: string[];
   }[];
@@ -26,16 +38,43 @@ type SafetyCopy = {
 
 const safetyCopy: Record<string, SafetyCopy> = {
   "zh-CN": {
-    title: "Friemi 社区安全与内容治理",
-    eyebrow: "社区安全",
+    title: "Friemi 儿童安全与社区准则",
+    eyebrow: "儿童与社区安全",
     description:
       "Friemi 支持用户创建活动、组局、评论、消息和个人资料内容。我们希望大家在真实、友好和可线下见面的前提下使用产品，因此会对举报和安全问题进行人工复核与处理。",
-    updatedAt: "最后更新：2026-07-08",
+    updatedAt: "最后更新：2026-10-08",
     backHome: "返回首页",
-    contactLabel: "安全与举报联系邮箱",
-    contactEmail: "friemi.dev@gmail.com",
+    contactLabel: "儿童安全与社区举报联系邮箱",
+    contactEmail: childSafetyContactEmail,
     privacyLabel: "隐私政策",
     sections: [
+      {
+        id: "child-safety",
+        title: "儿童安全标准：明确禁止 CSAE 和 CSAM",
+        body: [
+          "Friemi（开发者：Haotian XUE）严格禁止任何形式的儿童性虐待与性剥削（Child Sexual Abuse and Exploitation，CSAE），以及创建、上传、发布、传播、分享或索取儿童性虐待材料（Child Sexual Abuse Material，CSAM）。本标准中的儿童指未满 18 周岁的人。",
+          "禁止以性目的诱骗或接近儿童、对儿童实施性勒索、儿童性交易或贩运，以及促进、协助或鼓励这些行为的任何内容。",
+          "本标准适用于 Friemi 中的活动、组局、个人资料、评论、消息、图片及其他内容和互动，无论内容是公开还是私密。",
+        ],
+      },
+      {
+        id: "child-safety-reporting",
+        title: "如何举报儿童安全问题",
+        body: [
+          getChildSafetyCopy("zh-CN").reporting,
+          "也可联系儿童安全与社区举报邮箱 friemi.dev@gmail.com。请提供相关用户、内容或活动的标识及简要说明；请勿下载、附加或转发疑似 CSAM，也不要提交无关的个人隐私信息。",
+          "如儿童正面临紧急危险，请立即联系当地紧急服务或执法机构。",
+        ],
+      },
+      {
+        id: "child-safety-response",
+        title: "审查、处置与向主管机构报告",
+        body: [
+          "Friemi 由负责儿童安全的管理员优先审查此类举报。获知服务中存在 CSAM 后，我们将及时移除相关内容或停止其访问，并视违规情况限制、停用或删除相关账号。",
+          "我们遵守适用的儿童安全法律法规，并按适用要求向美国国家失踪与受虐儿童中心（NCMEC）或相关地区主管机构报告已确认的 CSAM；只按法律要求保留和提供必要信息，限制其访问。",
+          "儿童安全联系人通过 friemi.dev@gmail.com 接收举报和询问，并负责协调审查、处置及主管机构报告。我们会根据产品与法律要求的变化更新本标准。",
+        ],
+      },
       {
         title: "适用范围",
         body: [
@@ -79,16 +118,43 @@ const safetyCopy: Record<string, SafetyCopy> = {
     ],
   },
   en: {
-    title: "Friemi Community Safety and Moderation",
+    title: "Friemi Child Safety and Community Standards",
     eyebrow: "Community safety",
     description:
       "Friemi lets users create activities, group plans, comments, messages, and profile content. We review reports and safety issues to keep the product trustworthy for real-world social plans.",
-    updatedAt: "Last updated: 2026-07-08",
+    updatedAt: "Last updated: 2026-10-08",
     backHome: "Back home",
-    contactLabel: "Safety and reporting contact",
-    contactEmail: "friemi.dev@gmail.com",
+    contactLabel: "Child safety and community reporting contact",
+    contactEmail: childSafetyContactEmail,
     privacyLabel: "Privacy Policy",
     sections: [
+      {
+        id: "child-safety",
+        title: "Child Safety Standards: CSAE and CSAM are prohibited",
+        body: [
+          "Friemi, published by Haotian XUE, strictly prohibits all forms of Child Sexual Abuse and Exploitation (CSAE), and the creation, upload, publication, distribution, sharing or solicitation of Child Sexual Abuse Material (CSAM). For these standards, a child is anyone under 18.",
+          "Prohibited behavior includes grooming a child for sexual purposes, sexual extortion of a child, child sex trafficking, and any content or conduct that facilitates or encourages these acts.",
+          "These standards apply to activities, group plans, profiles, comments, messages, images and all other content and interactions on Friemi, whether public or private.",
+        ],
+      },
+      {
+        id: "child-safety-reporting",
+        title: "Reporting a child safety concern",
+        body: [
+          getChildSafetyCopy("en").reporting,
+          "You can also contact our child safety and community reporting address at friemi.dev@gmail.com. Include the relevant account, content or activity identifier and a brief description. Do not download, attach or forward suspected CSAM or share unrelated personal information.",
+          "If a child is in immediate danger, contact local emergency services or law enforcement immediately.",
+        ],
+      },
+      {
+        id: "child-safety-response",
+        title: "Review, enforcement and reporting to authorities",
+        body: [
+          "Friemi administrators responsible for child safety prioritize these reports. When we become aware of CSAM on our service, we promptly remove it or disable access and take appropriate account measures, including restriction, suspension or removal.",
+          "We comply with applicable child safety laws and report confirmed CSAM to the National Center for Missing & Exploited Children (NCMEC) or the relevant regional authority as required. Necessary information is retained and disclosed only as required by law, with access restricted.",
+          "Our child safety contact receives reports and questions at friemi.dev@gmail.com and coordinates review, enforcement and reports to authorities. We update these standards when our product or applicable requirements change.",
+        ],
+      },
       {
         title: "Scope",
         body: [
@@ -132,16 +198,43 @@ const safetyCopy: Record<string, SafetyCopy> = {
     ],
   },
   fr: {
-    title: "Securite et moderation de la communaute Friemi",
-    eyebrow: "Securite communautaire",
+    title: "Protection des enfants et règles communautaires — Friemi",
+    eyebrow: "Sécurité des enfants et de la communauté",
     description:
-      "Friemi permet de creer des activites, groupes, commentaires, messages et profils. Nous examinons les signalements et les questions de securite pour garder une experience fiable autour des rencontres reelles.",
-    updatedAt: "Derniere mise a jour : 2026-07-08",
-    backHome: "Retour a l'accueil",
-    contactLabel: "Contact securite et signalement",
-    contactEmail: "friemi.dev@gmail.com",
-    privacyLabel: "Politique de confidentialite",
+      "Friemi permet de créer des activités, des sorties, des commentaires, des messages et des profils. Nous examinons les signalements et les questions de sécurité pour protéger les utilisateurs lors des échanges et des rencontres.",
+    updatedAt: "Dernière mise à jour : 2026-10-08",
+    backHome: "Retour à l’accueil",
+    contactLabel: "Contact pour la sécurité des enfants et les signalements",
+    contactEmail: childSafetyContactEmail,
+    privacyLabel: "Politique de confidentialité",
     sections: [
+      {
+        id: "child-safety",
+        title: "Protection des enfants : interdiction des CSAE et CSAM",
+        body: [
+          "Friemi, publié par Haotian XUE, interdit strictement toute forme d’abus et d’exploitation sexuels des enfants (Child Sexual Abuse and Exploitation, CSAE), ainsi que la création, la publication, la diffusion, le partage ou la sollicitation de contenus d’abus sexuels sur enfants (Child Sexual Abuse Material, CSAM). Ces règles considèrent comme enfant toute personne de moins de 18 ans.",
+          "Sont notamment interdits la sollicitation de mineurs à des fins sexuelles, le chantage sexuel visant un enfant, la traite d’enfants à des fins sexuelles et tout contenu ou comportement facilitant ou encourageant ces actes.",
+          "Ces règles s’appliquent aux activités, sorties, profils, commentaires, messages, images et à tous les autres contenus et interactions sur Friemi, publics comme privés.",
+        ],
+      },
+      {
+        id: "child-safety-reporting",
+        title: "Signaler un problème de sécurité concernant un enfant",
+        body: [
+          getChildSafetyCopy("fr").reporting,
+          "Vous pouvez également écrire à notre contact pour la sécurité des enfants et les signalements : friemi.dev@gmail.com. Indiquez le compte, le contenu ou l’activité concernés et décrivez brièvement le problème. Ne téléchargez, ne joignez et ne retransmettez pas de contenus soupçonnés d’être des CSAM, ni de données personnelles sans rapport avec le signalement.",
+          "Si un enfant est en danger immédiat, contactez les services d’urgence ou les forces de l’ordre de votre pays.",
+        ],
+      },
+      {
+        id: "child-safety-response",
+        title: "Examen, mesures et signalement aux autorités",
+        body: [
+          "Les administrateurs de Friemi responsables de la sécurité des enfants examinent ces signalements en priorité. Lorsque nous avons connaissance de CSAM sur notre service, nous les retirons rapidement ou en désactivons l’accès et prenons les mesures appropriées, pouvant inclure la restriction, la suspension ou la suppression des comptes concernés.",
+          "Nous respectons les lois applicables en matière de protection des enfants et signalons les cas confirmés de CSAM au National Center for Missing & Exploited Children (NCMEC) ou à l’autorité régionale compétente, conformément aux obligations applicables. Les informations nécessaires sont conservées et transmises uniquement selon les exigences légales, avec un accès restreint.",
+          "Notre contact pour la sécurité des enfants reçoit les signalements et les questions à friemi.dev@gmail.com et coordonne leur examen, les mesures prises et les signalements aux autorités. Nous actualisons ces règles en fonction de l’évolution du service et des exigences applicables.",
+        ],
+      },
       {
         title: "Perimetre",
         body: [
@@ -201,6 +294,7 @@ export async function generateMetadata({
 export default async function SafetyPage({ params }: SafetyPageProps) {
   const { locale } = await params;
   const copy = safetyCopy[locale] ?? safetyCopy["zh-CN"];
+  const childSafety = getChildSafetyCopy(locale);
 
   return (
     <main className="min-h-screen bg-white">
@@ -231,7 +325,18 @@ export default async function SafetyPage({ params }: SafetyPageProps) {
           <h2 className="text-lg font-semibold text-[#1D1D1B]">
             {copy.contactLabel}
           </h2>
+          <p className="mt-2 text-sm text-ink/80">{childSafety.contact}</p>
           <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-semibold text-white"
+              href={withLocale(locale, "/account/settings#feedback")}
+            >
+              <MessageSquareText
+                className="h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+              {childSafety.feedback}
+            </Link>
             <a
               className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[#156240] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D1D1B]"
               href={`mailto:${copy.contactEmail}`}
@@ -253,7 +358,8 @@ export default async function SafetyPage({ params }: SafetyPageProps) {
           {copy.sections.map((section) => (
             <section
               key={section.title}
-              className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-8"
+              id={section.id}
+              className="scroll-mt-24 rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-8"
             >
               <h2 className="text-xl font-semibold text-[#1D1D1B]">
                 {section.title}
