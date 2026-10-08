@@ -2,12 +2,13 @@
 
 ## Status (2026-10-05)
 
-Production account pre-import and isolated database rehearsal are complete.
-All 100 source accounts now exist in the verified Production Clerk instance.
-No live Vercel Clerk key switch or production database identity update has been
-performed. The five Production DNS records are verified and certificates issued.
-Do not deploy a new Clerk publishable key on its own: login configuration,
-real-device verification and controlled cutover gates remain open.
+The user-authorized Production cutover is complete. All 100 imported accounts
+are bound to their original production business profiles, and the website uses
+the verified Production Clerk key pair. All 127 profiles remain; the other 27
+bindings were preserved. Preview still uses Development Clerk and was not remapped.
+Existing Google-session application access and private Realtime delivery passed.
+Fresh phone/browser re-login confirmation, original-password testing and deferred
+Apple configuration remain separate follow-ups; do not claim those are verified.
 
 - Branch: `codex/clerk-production-migration`, based on `origin/dev` at `9aaf563`.
 - Source application: `app_3FX8OBLdQ6eEf8D0Zdv3ZOwgHve`.
@@ -22,8 +23,10 @@ real-device verification and controlled cutover gates remain open.
   email merge is safe. A legacy `_backup_userprofile_ghost_email_bindings_20260629`
   table exists; leave this historical backup untouched.
 
-Vercel's Production and Preview publishable key points to
-`simple-ewe-14.clerk.accounts.dev`. The local `apps/web/.env` points to
+Before cutover, Vercel's Production and Preview shared keys pointing to
+`simple-ewe-14.clerk.accounts.dev`. They now have separate environment-scoped
+entries: Production uses `clerk.friemi.com`, Preview retains the source keys.
+The local `apps/web/.env` points to
 `tolerant-mayfly-67.clerk.accounts.dev` and its secret key returned 35 users, not
 the 100-user source instance. Do not use it for this migration. The old saved
 production database password failed authentication via the verified session
@@ -85,7 +88,10 @@ Verified results:
   (`https://clerk.friemi.com/v1/oauth_callback`) were added and saved. The console
   displayed its saved confirmation, and reopening the client verified all three
   values. The existing Friemi iOS client was not modified. No secret was printed,
-  copied to Git or rotated. Actual OAuth sign-in has not been tested.
+  copied to Git or rotated. One existing Google user subsequently signed in to
+  Production and linked to the exact imported account; see the isolated-login
+  result below. That existing session now passes the live application checks
+  recorded under Controlled Cutover; a fresh interactive re-login is still pending.
 - Apple Production SSO still shows `Setup required`.
   Among three source web-Apple users, one uses a private relay email and does not
   have a native `apple:` binding. Native login alone is not adequate evidence that
@@ -95,15 +101,25 @@ Verified results:
   provider subject and relay address. Resolve this with an authenticated account
   linking/recovery path and an actual login test; never guess by display name or
   treat a newly supplied email address as proof of ownership.
-- Production Supabase's Third-Party Auth page currently has no providers. Adding
-  the Production Clerk issuer and enabling the corresponding Clerk integration
-  requires confirmation; the form is open but has not been submitted. Private
+- Production Supabase's Third-Party Auth page now has one enabled Clerk provider,
+  `https://clerk.friemi.com`. The user enabled the Production Clerk Supabase
+  integration and created this connection; both dashboard states were verified.
+  A refreshed token from the existing Google session was independently checked:
+  issuer `https://clerk.friemi.com`, `role: authenticated`, and the exact mapped
+  Production subject. Private
   drawing Realtime uses the ordinary Clerk session token, not a legacy Supabase
   JWT template. Existing public revision broadcasts are not proof of private
   channel authorization.
 - Production environment inventory has no `ADMIN_CLERK_USER_IDS`, `ADMIN_EMAILS`
   or Clerk webhook signing secret. Preserve database roles and copied metadata;
   do not assume a webhook endpoint is configured just because its route exists.
+- The October 5 Realtime preflight found 96 public tables with RLS disabled and
+  SELECT/INSERT/UPDATE/DELETE privileges for both `anon` and `authenticated`.
+  A publishable-key-only HEAD request for zero UserProfile rows returned HTTP 200;
+  no user content was fetched. The user subsequently disabled Production Data API;
+  the same zero-row HEAD request now returns HTTP 503 instead of 200. The underlying
+  table grants were not changed: do not re-enable Data API without an access-control
+  review. See the security gate and verification results below.
 
 The user explicitly approved saving the existing Production key locally and
 adding the five Clerk CNAMEs. DNS setup is complete; do not ask for the same
@@ -138,7 +154,8 @@ The user saved the existing Production secret in the private `target-clerk.env`
 file (`0600`). Backend API `/instance` and domain checks verified the exact target
 instance, Production environment and `clerk.friemi.com` domain. The former local
 receiver was removed without bypassing Chrome's restriction. No key was logged or
-committed. Google web OAuth and Apple Developer configuration remain release gates.
+committed. Google web OAuth was configured and tested. Apple Developer
+configuration remains deferred by the user, with the access risks described above.
 
 ## Isolated Vercel CLI
 
@@ -160,8 +177,67 @@ vercel --global-config "$HOME/.config/friemi/vercel" --scope friemi project insp
 
 Only the migration worktree's ignored `.vercel` directory was linked to
 `friemi/friemi` (`prj_3uVe9Gg1U6QD4H4ZJoB5xigCsISS`, root `apps/web`). Other projects'
-local links were not changed. Production environment variables were downloaded
-for migration checks only; no environment values or deployments were updated.
+local links were not changed. Initial downloads were read-only; the subsequent
+authorized Production updates are recorded below.
+
+## Controlled Cutover (2026-10-05)
+
+- Confirmed the current live commit was
+  `30f9a4c6f20353f237c4f55d6ec3a53b20f21de9`, including the latest policy fixes.
+  Rebuilt that exact main commit, not this migration worktree. No Git branch was
+  pushed. The new Production deployment is
+  `dpl_BSS6oAAycPT8GBWCoRpYswSbjqPF` (`friemi-ga2bspozi-friemi.vercel.app`).
+- A project WAF rule gated Production requests, including immutable deployment
+  URLs; Preview was verified unaffected. A random private verification header
+  exempted only migration smoke requests. Requests were drained for over five
+  minutes before the mapping transaction. Website maintenance began at 11:20 UTC;
+  normal access resumed at approximately 11:30 UTC. The header exception was removed.
+- Took a fresh 10,219,292-byte Production dump. Restored it into an isolated,
+  network-disabled PostgreSQL 17 container and repeated forward, retry and reverse
+  mapping tests. All 96 public-table business hashes were unchanged in rehearsal.
+- Re-read both 100-user Clerk instances and all 127 production profiles. The
+  planner found zero blockers. Split the shared Vercel Clerk variables into
+  Preview-only existing keys and Production-only new keys; downloaded both
+  environments again and verified their exact values without logging secrets.
+  Production database settings were unchanged.
+- Applied guarded transactional mapping at `2026-10-05T11:25:55Z`: 100 exact
+  bindings updated, 27 untouched, 127 total profiles. A hash of every live profile
+  field except `clerkUserId` was identical before and after the transaction.
+  No business schema, profile ID, role, balance or relationship was changed.
+- Used the existing, user-completed Google login session, not a newly fabricated
+  user/session. Production `/api/navigation/unread-counts` returned 200 with its
+  refreshed session JWT and 401 anonymously. The production HTML contains the
+  live public key and `clerk.friemi.com`, with no middleware invocation failure.
+- In a disposable private drawing room, the same mapped user was denied before
+  membership was added, then two authenticated connections subscribed. Anonymous
+  and wrong-turn connections were denied. Database `realtime.send` reached both
+  connections; direct client publishing was denied. The real production `/ink`
+  endpoint returned 200 and its message reached both connections. All three
+  temporary room/member/seat rows were removed, and clients disconnected.
+- Final checks: official homepage 200, apex redirect 308, current deployment 200,
+  retired production deployment 403, dev homepage 200, zero-row Data API probe
+  still denied with 503, and 127 profiles. Data API remains disabled.
+
+Private artifacts under the previously documented private directory include
+`cutover-backup.json`, `cutover-restore-rehearsal.json`, `cutover-forward.sql`,
+`cutover-rollback.sql`, `cutover-map-verification.json`,
+`cutover-private-realtime-verification.json`, `cutover-final-http-verification.json`
+and the before/after Vercel configuration snapshots. Do not commit those files.
+
+The retained WAF rule blocks Production hostnames other than the official aliases
+and verified new immutable deployment URL. This prevents old deployments, which
+still embed Development keys, from recreating old-ID profiles. Preview is not
+matched. Future production aliases continue to work; add a newly verified immutable
+deployment hostname to this rule if direct deployment-URL testing is required.
+Do not simply disable this rule while retired deployments remain accessible.
+
+Rollback must first restore the Production maintenance gate and drain requests.
+Reconcile any post-cutover registrations/profile changes; do not blindly run a
+stale reverse map or replace the entire live database with the old dump. Restore
+the original bindings with the guarded reverse SQL, matching Production keys and
+the previous deployment together. Verify access before restoring traffic. Keep
+Preview's separate environment entries and preserve unrelated firewall changes.
+The source Clerk users and private backups have not been deleted.
 
 ## Invariants
 
@@ -194,8 +270,10 @@ for migration checks only; no environment values or deployments were updated.
 - [x] Verify TLS certificates have finished issuing for both Clerk subdomains.
 - [x] Verify actual Production sign-in rendering in a real browser. The separate
       command-line 403 persists; do not confuse it with a failed browser login.
-- [ ] Configure Google Production web OAuth with matching consent/redirect URLs;
-      preserve the existing iOS OAuth client. Test actual Google account linking.
+- [x] Configure Google Production web OAuth with matching consent/redirect URLs;
+      preserve the existing iOS OAuth client. Verify one existing user's Google
+      account links to its exact imported Production user. This does not prove
+      end-to-end application access before the coordinated cutover.
 - [ ] Verify native Apple sign-in and existing relay-email users. The Apple
       Developer account is held by another programmer: web Apple Services ID, key,
       Team ID and relay sender configuration require that person's cooperation.
@@ -212,25 +290,33 @@ for migration checks only; no environment values or deployments were updated.
 - [ ] Password-enabled flags are only a sanity check, not proof that a password
       works. Test a consenting test account
       with its original password and test native/web OAuth on real devices.
-- [ ] Inspect actual database policies and column types before updating any
+- [x] Inspect actual database policies and column types before updating any
       non-Prisma auth references. The private drawing Realtime policy compares JWT
       `sub` with `UserProfile.clerkUserId`. Configure Supabase to trust the Production
       Clerk issuer and ensure `role: authenticated`; test private Realtime access.
+- [x] Close the pre-existing public Data API exposure. The reviewed application
+      uses Prisma for business data and separate Storage/Realtime APIs; only an
+      operational probe uses `/rest/v1`. The user disabled Data API after being
+      informed of the external-client impact. Verified denial of the zero-row
+      anonymous request, public Storage object availability and Realtime continuity.
+      Do not broadly change business-table policies or erase existing grants as
+      an unreviewed migration shortcut.
 - [ ] Inventory `ADMIN_CLERK_USER_IDS`, webhooks, signing secrets, mobile embedded
       keys and any other user-ID allowlists. Do not copy Development secrets to live.
 - [x] Rehearse mapping and rollback on an isolated full production restore.
 - [ ] Run the generated SQL with its default `ROLLBACK` on production as a final
       check during controlled cutover, not while login/profile writes are active.
-- [ ] Arrange a short controlled cutover. Stop signups, profile writes and old/new
+- [x] Arrange a short controlled cutover. Stop signups, profile writes and old/new
       webhook delivery, drain in-flight requests and reconcile source changes since
       export. Take a final snapshot. Old deployments must not write old Clerk IDs
       after remapping, or the current profile upsert code can create duplicates.
-- [ ] Apply mapping, deploy matching Production keys, activate the Production
-      webhook secret and issuer, then reopen traffic only after smoke tests. A rolling
-      key-only deployment without gating writes is unsafe.
+- [x] Apply mapping and deploy matching Production keys and issuer, then reopen
+      traffic only after smoke tests. No webhook signing secret was configured
+      before migration; none was invented or activated during cutover.
+      A rolling key-only deployment without gating writes is unsafe.
 - [ ] Verify old user profile IDs, balances, chats, join history and native login;
       test a new signup. Compare profile counts and business-table integrity.
-- [ ] Keep the original instance and private audit artifacts for rollback. Do not
+- [x] Keep the original instance and private audit artifacts for rollback. Do not
       delete source users. Rollback requires the same write gate and restoration of
       environment/webhook/issuer configuration as well as identity SQL.
 
@@ -383,8 +469,9 @@ node scripts/clerk-migration/rehearse-restore.mjs \
 
 Validation completed: 97 unit tests and one real local PostgreSQL integration test
 (98 passing), plus the separate full-production-dump restore and real 100-account
-mapping rehearsal. No password/OAuth end-to-end login test or production database
-identity write has been performed. Refresh source data again before cutover;
+mapping rehearsal. Google account linking has been verified for one imported user;
+password and end-to-end application login are still unverified. No production
+database identity write has been performed. Refresh source data again before cutover;
 password changes need a fresh CSV export, not a forced reuse of the old hash.
 
 ## OAuth Handoff
@@ -409,7 +496,8 @@ offers brand verification. Data access explicitly requires no verification
 because no sensitive or restricted scopes are requested. Brand review has not
 been submitted. Do not conflate the generic Google user-cap banner with Clerk
 Development's 100-account cap; basic OpenID/email/profile requests have a documented
-exception. Actual sign-in and account linking must still be tested.
+exception. One existing user's sign-in and account linking were subsequently
+verified as described below; the full application flow still needs cutover testing.
 
 The Production account portal successfully rendered in Chrome on October 5.
 The user was asked to sign in there with a previously used Friemi Google account,
@@ -417,6 +505,73 @@ not a new test identity. No account was selected or consent granted on the user'
 behalf. A fresh importer dry run still verified all 100 imported accounts with
 zero pending imports and no writes. Vercel keys and live database bindings remain
 unchanged by this task.
+
+### Google Login Result And Environment Isolation
+
+The user selected their existing Google account on October 5. Production Clerk
+issued a session, but redirected to the still-Development-configured website.
+Vercel logged `jwk-kid-mismatch`: the handshake used the Production instance key
+while middleware expected the Development instance key, resulting in
+`MIDDLEWARE_INVOCATION_FAILED`. Do not bypass signature checks or change only one
+key to hide this mismatch. Testing the new account portal against the old live
+website was insufficiently isolated and must not be repeated before cutover.
+
+Read-only Backend API checks at `2026-10-05T08:23:08Z` confirmed 100 target users,
+zero new or removed accounts, unchanged source markers/primary emails/native
+external IDs, and one successful Google-linked sign-in to an imported account.
+A production database read at `2026-10-05T08:23:49Z` still found the same 127
+profiles with zero new/removed profiles and unchanged bindings/statuses. The
+website rendered its homepage but showed a Login link; do not report this as a
+successful application login. Private aggregate reports are stored outside Git.
+
+### Realtime Security Gate
+
+The user requested Production Supabase Realtime configuration and deferred Apple
+setup on October 5. Deferral does not prove existing Apple-only users can log in;
+keep that residual migration risk explicit without treating iOS usage as equivalent
+to Apple sign-in usage.
+
+The Production Third-Party Auth list was initially empty and the Production Clerk
+Supabase integration switch was off. Both are now configured and verified below.
+The existing `realtime.messages` table has RLS enabled:
+private drawing broadcasts require `draw_guess_can_read_ink_topic()`, which checks
+the active room, phase, deadline, seat, membership and exact Clerk subject. Client
+writes to private drawing topics are restricted; retain these protections.
+
+The separate Data API preflight found the public-table exposure recorded above.
+Source inspection of this branch and the saved `origin/main` found business access
+through Prisma, Realtime clients and Storage clients, but no runtime PostgREST or
+GraphQL consumer. The operational drawing probe's REST check is not a business
+dependency and must not be used after Data API is disabled. Supabase recommends
+disabling Data API when database access uses direct server connections.
+
+The user requested instructions, then reported completing all three settings.
+Read-only dashboard verification confirmed Production Data API disabled and saved,
+the exact Production Clerk Supabase switch enabled, and one enabled Third-Party
+Auth connection for `https://clerk.friemi.com` in the Production Supabase project.
+No Preview setting, live key, account binding or database policy was changed.
+
+Operational verification at `2026-10-05T11:06:08Z`:
+
+- The same publishable-key-only zero-row Data API HEAD request returned HTTP 503,
+  consistent with the disabled Data API, not a failure of the database connection.
+- A known public Storage image returned HTTP 200 and `image/png` to a HEAD request.
+  This checks retrieval only, not a new upload.
+- A read-only direct PostgreSQL connection succeeded: 127 profiles, zero new or
+  removed profiles, and zero changed bindings/statuses against the post-import
+  snapshot.
+- An isolated random public Realtime topic subscribed successfully. The normal
+  server Broadcast endpoint returned HTTP 202, and the subscriber received the
+  matching random nonce. No real-room topic or user payload was used; all test
+  channels were removed and the client disconnected afterward.
+- An anonymous subscription to a random, nonexistent private drawing topic was
+  rejected with an authorization error. No permissive policy was added for tests.
+
+The aggregate report is stored privately as `supabase-integration-verification.json`.
+Full private-channel positive-path testing still requires a valid Production
+session and the coordinated identity mapping; do not relax RLS to make an unmapped
+Production account pass. UI configuration and public transport success alone do
+not prove that real users can receive private drawing events after cutover.
 
 The programmer who owns the existing Apple Developer team must configure the
 same app's Sign in with Apple capability and provide Services ID, Team ID, Key ID
@@ -442,3 +597,5 @@ matching. Keep the Development instance intact until these checks pass.
 - [Production deployment](https://clerk.com/docs/guides/development/deployment/production)
 - [Clerk integration with Supabase](https://supabase.com/docs/guides/auth/third-party/clerk)
 - [Google OAuth audience and basic-profile exception](https://support.google.com/cloud/answer/15549945)
+- [Supabase Data API security](https://supabase.com/docs/guides/api/securing-your-api)
+- [Supabase direct-connection security](https://supabase.com/docs/guides/database/secure-data)
