@@ -77,6 +77,24 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   ]);
 });
 
+test("buildPageShareMetadata preserves a pagination query in canonical metadata", () => {
+  const metadata = buildPageShareMetadata({
+    baseUrl: "https://friemi.example",
+    description: "Browse activities.",
+    path: "/en/activities?page=2",
+    title: "Activities · Friemi",
+  });
+
+  assert.equal(
+    metadata.alternates?.canonical,
+    "https://www.friemi.com/en/activities?page=2",
+  );
+  assert.equal(
+    metadata.openGraph?.url,
+    "https://www.friemi.com/en/activities?page=2",
+  );
+});
+
 test("buildTeamShareMetadata skips hreflang alternates for private token URLs", () => {
   const metadata = buildTeamShareMetadata({
     canonicalUrl:
