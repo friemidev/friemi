@@ -1998,7 +1998,7 @@ export async function leaveWerewolfSeatAction(
 
     if (
       !canLeaveWerewolfOccupancy({
-        hasPrivateToken: Boolean(result.data.privateToken),
+        hasPrivateToken: Boolean(seat),
         memberProfileId: member?.profileId ?? null,
         seatProfileId: targetSeat?.profileId ?? null,
         viewerProfileId: profile?.id ?? null,
