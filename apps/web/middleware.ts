@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { defaultLocale, locales } from "@chill-club/shared";
+import { getActivityPaginationAlternateLinkHeader } from "./lib/activity-pagination-alternates";
 import { getRequestRedirectTarget, getSignInHref } from "./lib/auth-redirect";
 import { hasClerkKeys } from "./lib/clerk";
 import {
@@ -351,6 +352,14 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   const response = intlMiddleware(request);
+  const paginationAlternates = getActivityPaginationAlternateLinkHeader(
+    request.nextUrl,
+  );
+
+  if (paginationAlternates) {
+    response.headers.set("Link", paginationAlternates);
+  }
+
   if (
     /^\/(?:zh-CN|en|fr)\/android-auth-(?:browser|return)\/?$/.test(
       request.nextUrl.pathname,
