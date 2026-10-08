@@ -235,11 +235,11 @@ export async function getUnreadNotificationCount(profileId: string) {
 }
 
 export async function getUnreadInventoryTicketGiftCount(profileId: string) {
-  return prisma.notification.count({
+  return prisma.inventoryItem.count({
     where: {
-      recipientId: profileId,
-      readAt: null,
-      type: "INVENTORY_TICKET_RECEIVED",
+      bagSeenAt: null,
+      definition: { kind: "EVENT_TICKET" },
+      ownerProfileId: profileId,
     },
   });
 }

@@ -1392,26 +1392,29 @@ model InventoryIssueBatch {
 }
 
 model InventoryItem {
-  id             String                  @id @default(cuid())
-  definitionId   String
-  definition     InventoryItemDefinition @relation(fields: [definitionId], references: [id])
-  ownerProfileId String
-  owner          UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
-  issueBatchId   String
-  issueBatch     InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
-  serialNumber   Int
-  giftedAt       DateTime?
-  gift           InventoryItemGift?
+  id                       String                  @id @default(cuid())
+  definitionId             String
+  definition               InventoryItemDefinition @relation(fields: [definitionId], references: [id])
+  ownerProfileId           String
+  owner                    UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
+  issueBatchId             String
+  issueBatch               InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
+  serialNumber             Int
+  giftedAt                 DateTime?
+  gift                     InventoryItemGift?
   redemptionToken          String?      @unique @db.VarChar(64)
+  redemptionCode           String?      @unique @db.VarChar(10)
   redemptionTokenExpiresAt DateTime?
   redeemedAt               DateTime?
   redeemedByProfileId      String?
   redeemedBy               UserProfile? @relation("InventoryItemRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  bagSeenAt                DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   @@unique([definitionId, serialNumber])
   @@index([ownerProfileId, definitionId, giftedAt])
+  @@index([ownerProfileId, bagSeenAt])
   @@index([issueBatchId])
   @@index([redeemedByProfileId, redeemedAt])
   @@index([redemptionTokenExpiresAt])

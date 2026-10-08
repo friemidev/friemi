@@ -432,7 +432,6 @@ export async function sendMobilePushForNotification(notificationId: string) {
       actorId: notification.actorId,
       activityId: notification.activityId,
       conversationId: directMessageConversationId,
-      inventoryItemDefinitionId: notification.inventoryItemDefinitionId,
       momentId: notification.momentId,
       nowInviteId: notification.nowInviteId,
       planetSlug: notification.planet?.slug ?? null,

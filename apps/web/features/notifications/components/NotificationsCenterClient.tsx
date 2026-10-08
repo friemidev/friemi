@@ -220,18 +220,18 @@ function getNotificationText(
     if (locale === "fr") {
       return {
         title: "Billet reçu",
-        body: `${actorName ?? "Quelqu'un"} vous a offert un billet${ticketTitle ? ` : « ${ticketTitle} »` : ""}. Il est dans votre sac.`,
+        body: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac.`,
       };
     }
     if (locale === "en") {
       return {
         title: "Ticket received",
-        body: `${actorName ?? "Someone"} sent you a ticket${ticketTitle ? `: “${ticketTitle}”` : ""}. It's in your bag.`,
+        body: `“${ticketTitle ?? "Ticket"}” is now in your bag.`,
       };
     }
     return {
       title: "收到票券",
-      body: `${actorName ?? "有人"}赠送了「${ticketTitle ?? "票券"}」，已放入物品背包。`,
+      body: `「${ticketTitle ?? "票券"}」已放入物品背包。`,
     };
   }
 

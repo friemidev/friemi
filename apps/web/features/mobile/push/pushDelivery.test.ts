@@ -77,15 +77,7 @@ test("NOW push copy says an interested user must still sign up for the hangout",
   );
 });
 
-test("received tickets open the specific bag item with a safe bag fallback", () => {
-  assert.equal(
-    getNotificationPath({
-      activityId: null,
-      inventoryItemDefinitionId: "ticket-definition-1",
-      type: "INVENTORY_TICKET_RECEIVED",
-    }),
-    "/profile/bag/items/ticket-definition-1",
-  );
+test("received tickets open the single-ticket bag list", () => {
   assert.equal(
     getNotificationPath({
       activityId: null,
@@ -95,7 +87,7 @@ test("received tickets open the specific bag item with a safe bag fallback", () 
   );
 });
 
-test("received ticket push uses its title and the device language", () => {
+test("received ticket push works for gifts and admin batches in each locale", () => {
   assert.deepEqual(
     getNotificationCopy({
       activityTitle: null,
@@ -105,7 +97,7 @@ test("received ticket push uses its title and the device language", () => {
       type: "INVENTORY_TICKET_RECEIVED",
     }),
     {
-      body: "hoting赠送了「酒会票」，已放入物品背包",
+      body: "「酒会票」已放入物品背包",
       title: "收到票券",
     },
   );
@@ -118,8 +110,21 @@ test("received ticket push uses its title and the device language", () => {
       type: "INVENTORY_TICKET_RECEIVED",
     }),
     {
-      body: "Alex sent you a ticket: “Wine tasting ticket”. It's in your bag",
+      body: "“Wine tasting ticket” is now in your bag",
       title: "Ticket received",
+    },
+  );
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: "Administrateur",
+      locale: "fr",
+      ticketTitle: "Soirée dégustation",
+      type: "INVENTORY_TICKET_RECEIVED",
+    }),
+    {
+      body: "« Soirée dégustation » est maintenant dans votre sac",
+      title: "Billet reçu",
     },
   );
 });

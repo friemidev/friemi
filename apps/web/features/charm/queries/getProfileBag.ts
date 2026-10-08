@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getInventoryBagSummary } from "@/features/inventory/services/inventoryService";
+import {
+  getGeneralInventoryBagSummary,
+  getTicketBagPage,
+  type BagTicketFilter,
+} from "@/features/inventory/services/inventoryBagQueries";
 import {
   blindBoxFragmentExchangeCount,
   canRedeemBlindBoxFragments,
@@ -49,8 +53,12 @@ export type ProfileBagCouponItem = {
 };
 
 export type ProfileBagInventoryItem = Awaited<
-  ReturnType<typeof getInventoryBagSummary>
+  ReturnType<typeof getGeneralInventoryBagSummary>
 >[number];
+
+export type ProfileBagTicketItem = Awaited<
+  ReturnType<typeof getTicketBagPage>
+>["items"][number];
 
 export type ProfileBagViewModel = {
   availableCheckCount: number;
@@ -58,6 +66,7 @@ export type ProfileBagViewModel = {
   checks: ProfileBagCheckItem[];
   coupons: ProfileBagCouponItem[];
   inventoryItems: ProfileBagInventoryItem[];
+  ticketPage: Awaited<ReturnType<typeof getTicketBagPage>>;
   coinBalance: {
     balance: number;
     earnedTotal: number;
@@ -146,7 +155,10 @@ async function getFriemiChecksForBag(profileId: string) {
   }
 }
 
-export async function getProfileBag(profileId: string) {
+export async function getProfileBag(
+  profileId: string,
+  options: { ticketFilter?: BagTicketFilter; ticketPage?: number } = {},
+) {
   const now = new Date();
 
   try {
@@ -157,7 +169,7 @@ export async function getProfileBag(profileId: string) {
     }
   }
 
-  const [checks, coupons, fragmentBalance, coinBalance, inventoryItems] =
+  const [checks, coupons, fragmentBalance, coinBalance, inventoryItems, ticketPage] =
     await Promise.all([
       getFriemiChecksForBag(profileId),
       prisma.couponWalletItem.findMany({
@@ -201,7 +213,12 @@ export async function getProfileBag(profileId: string) {
         },
       }),
       getFriemiCoinBalance(profileId),
-      getInventoryBagSummary(profileId),
+      getGeneralInventoryBagSummary(profileId),
+      getTicketBagPage({
+        filter: options.ticketFilter ?? "available",
+        page: options.ticketPage ?? 1,
+        profileId,
+      }),
     ]);
   const mappedChecks = checks.map((check) => {
     const status = resolveFriemiCheckDisplayStatus({
@@ -252,6 +269,7 @@ export async function getProfileBag(profileId: string) {
     checks: mappedChecks,
     coupons: mappedCoupons,
     inventoryItems,
+    ticketPage,
     coinBalance: {
       balance: coinBalance.balance,
       earnedTotal: coinBalance.earnedTotal,

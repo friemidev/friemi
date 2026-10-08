@@ -20,7 +20,6 @@ export function getNotificationPath(input: {
   activityId: string | null;
   actorId?: string | null;
   conversationId?: string | null;
-  inventoryItemDefinitionId?: string | null;
   momentId?: string | null;
   nowInviteId?: string | null;
   planetSlug?: string | null;
@@ -30,9 +29,7 @@ export function getNotificationPath(input: {
     return input.nowInviteId ? `/now/${input.nowInviteId}` : "/now/mine";
   }
   if (input.type === "INVENTORY_TICKET_RECEIVED") {
-    return input.inventoryItemDefinitionId
-      ? `/profile/bag/items/${input.inventoryItemDefinitionId}`
-      : "/profile/bag";
+    return "/profile/bag";
   }
   if (input.type === "COUPON_RECEIVED" || input.type === "COUPON_REDEEMED") {
     return "/profile/bag";
@@ -168,7 +165,7 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
       FRIEND_REQUEST: `${actorName} 关注了你`,
       CHARM_GIFT_RECEIVED: `${actorName} 给你送了礼物`,
-      INVENTORY_TICKET_RECEIVED: `${actorName}赠送了「${ticketTitle ?? "票券"}」，已放入物品背包`,
+      INVENTORY_TICKET_RECEIVED: `「${ticketTitle ?? "票券"}」已放入物品背包`,
       COUPON_RECEIVED: `${merchantName}的优惠券已放入背包`,
       COUPON_CLAIMED: `${actorName}领取了${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle}核销成功`,
@@ -210,7 +207,7 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} sent you a message`,
       FRIEND_REQUEST: `${actorName} started following you`,
       CHARM_GIFT_RECEIVED: `${actorName} sent you a gift`,
-      INVENTORY_TICKET_RECEIVED: `${actorName} sent you a ticket${ticketTitle ? `: “${ticketTitle}”` : ""}. It's in your bag`,
+      INVENTORY_TICKET_RECEIVED: `“${ticketTitle ?? "Ticket"}” is now in your bag`,
       COUPON_RECEIVED: `${merchantName}'s coupon was added to your bag`,
       COUPON_CLAIMED: `${actorName} claimed ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} was redeemed`,
@@ -252,7 +249,7 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
       FRIEND_REQUEST: `${actorName} vous suit`,
       CHARM_GIFT_RECEIVED: `${actorName} vous a envoyé un cadeau`,
-      INVENTORY_TICKET_RECEIVED: `${actorName} vous a offert un billet${ticketTitle ? ` : « ${ticketTitle} »` : ""}. Il est dans votre sac`,
+      INVENTORY_TICKET_RECEIVED: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac`,
       COUPON_RECEIVED: `Le coupon de ${merchantName} est dans votre sac`,
       COUPON_CLAIMED: `${actorName} a reçu ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} a été utilisé`,

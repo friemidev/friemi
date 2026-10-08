@@ -37,6 +37,7 @@ const isProtectedRoute = createRouteMatcher([
   "/:locale/profile/network(.*)",
   "/:locale/profile/shop(.*)",
   "/:locale/profile/visitors(.*)",
+  "/:locale/tickets/redeem(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);

@@ -182,7 +182,6 @@ export default async function AdminTicketHistoryPage({
                   ) : null}
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-ink/70">
                     <span>
-                      {copy.serial} {gift.item.serialNumber} ·{" "}
                       {gift.method === "FRIEND_QR"
                         ? copy.methodQr
                         : copy.methodCode}

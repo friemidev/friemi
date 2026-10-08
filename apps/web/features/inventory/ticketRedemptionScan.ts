@@ -1,11 +1,14 @@
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
+const shortCodePattern = /^(?:\d{6}|\d{10})$/;
 const ticketPathPattern =
-  /^\/(?:zh-CN|en|fr)\/tickets\/redeem\/([A-Za-z0-9_-]{43})\/?$/;
+  /^\/(?:zh-CN|en|fr)\/tickets\/redeem\/([A-Za-z0-9_-]{43}|\d{6}|\d{10})\/?$/;
 
-/** Accept a ticket's temporary token or its Friemi check-in link. */
+/** Accept a QR token, six-digit code, or unexpired legacy ten-digit code. */
 export function parseTicketRedemptionToken(value: string) {
   const trimmed = value.trim();
   if (tokenPattern.test(trimmed)) return trimmed;
+  const compactCode = trimmed.replace(/[\s-]/g, "");
+  if (shortCodePattern.test(compactCode)) return compactCode;
   if (!trimmed.startsWith("/") && !/^https?:\/\//i.test(trimmed)) {
     return null;
   }
