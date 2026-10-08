@@ -411,14 +411,12 @@ function ConversationPreferenceToggle({
 
 export function MessageThread({
   activityContext,
-  nowContext,
   backHref = "/messages",
   conversation,
   locale,
   showMutualFollowNotice = false,
 }: {
   activityContext?: DirectConversationActivityContextViewModel | null;
-  nowContext?: import("@/features/now/now").NowConversationContext | null;
   backHref?: string;
   conversation: DirectConversationThreadViewModel;
   locale: string;
@@ -520,20 +518,13 @@ export function MessageThread({
 
       <MessageThreadClient
         activityContext={activityContext}
-        nowContext={nowContext}
         canSend={conversation.canSend}
         conversationId={conversation.id}
         currentUser={conversation.currentUser}
         initialBody={
           activityContext && !hasMessages
             ? t.activityMessageSuggestion(activityContext.title)
-            : nowContext && !hasMessages
-              ? locale === "zh-CN"
-                ? "要不要一起？"
-                : locale === "fr"
-                  ? "On y va ensemble ?"
-                  : "Want to go together?"
-              : undefined
+            : undefined
         }
         initialMessages={conversation.messages}
         locale={locale}

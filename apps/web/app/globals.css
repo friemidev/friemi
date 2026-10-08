@@ -620,10 +620,6 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   display: none !important;
 }
 
-.app-layout-shell:has(.now-flow-page) > .app-mobile-nav {
-  display: none !important;
-}
-
 .chat-message-scroll {
   min-width: 0;
   overflow-x: hidden;
@@ -693,20 +689,6 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
 }
 
 @media (max-width: 767px) {
-  .app-layout-shell:has(.now-flow-page) {
-    padding-bottom: 0;
-  }
-
-  .app-layout-shell:has(.now-flow-page) > .app-header,
-  .app-layout-shell:has(.now-flow-page) [data-mobile-scroll-progress],
-  .app-layout-shell:has(.now-flow-page) [data-route-progress] {
-    display: none;
-  }
-
-  .now-flow-page.app-mobile-page-shell {
-    padding-bottom: calc(var(--app-bottom-safe-area) + 1.5rem);
-  }
-
   html[data-friemi-viewport-height="short"] {
     --app-mobile-nav-height: 3.5rem;
     --app-mobile-page-top-gap: 0.625rem;

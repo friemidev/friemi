@@ -76,24 +76,3 @@ test("direct message policy waits for a reply after one non-mutual message", () 
   assert.equal(unlocked.canSend, true);
   assert.equal(unlocked.remainingNonFriendMessages, null);
 });
-
-test("a NOW match unlocks a private conversation while retaining the trust gate", () => {
-  const matched = resolveDirectMessageSendPolicy({
-    currentUserProfileId: "host",
-    peerProfileId: "interested",
-    currentUserMessageCount: 4,
-    hasNowMatch: true,
-    trustScore: 80,
-  });
-  assert.equal(matched.canSend, true);
-  assert.equal(matched.remainingNonFriendMessages, null);
-  assert.equal(
-    resolveDirectMessageSendPolicy({
-      currentUserProfileId: "host",
-      peerProfileId: "interested",
-      hasNowMatch: true,
-      trustScore: 59,
-    }).reason,
-    "LOW_TRUST",
-  );
-});

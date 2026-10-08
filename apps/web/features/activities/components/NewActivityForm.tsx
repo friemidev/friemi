@@ -43,7 +43,6 @@ import type { LinkablePlanetOption } from "../queries/getLinkablePlanets";
 
 type NewActivityFormProps = {
   activityId?: string;
-  nowInviteId?: string;
   cancelHref?: string;
   formId?: string;
   initialValues?: ActivityFormValues;
@@ -2251,7 +2250,6 @@ function FormActions({
 
 export function NewActivityForm({
   activityId,
-  nowInviteId,
   cancelHref,
   formId,
   initialValues,
@@ -2518,9 +2516,6 @@ export function NewActivityForm({
           ref={formRef}
         >
           <input name="locale" type="hidden" value={locale} />
-          {nowInviteId ? (
-            <input name="nowInviteId" type="hidden" value={nowInviteId} />
-          ) : null}
           {activityId ? (
             <input name="activityId" type="hidden" value={activityId} />
           ) : null}
