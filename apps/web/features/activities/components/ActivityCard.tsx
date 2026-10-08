@@ -527,6 +527,7 @@ function getSplitPrimaryActionClassName(tone: ActivityCardActionTone) {
 }
 
 function LobbySplitActionButton({
+  neutral = false,
   primaryDetailSource,
   primaryEvent,
   primaryHref,
@@ -536,6 +537,7 @@ function LobbySplitActionButton({
   secondaryHref,
   secondaryLabel,
 }: {
+  neutral?: boolean;
   primaryDetailSource?: DetailSourceInput;
   primaryEvent: AnalyticsLinkEvent;
   primaryHref: string;
@@ -545,7 +547,9 @@ function LobbySplitActionButton({
   secondaryHref: string;
   secondaryLabel: string;
 }) {
-  const primaryToneClassName = getSplitPrimaryActionClassName(primaryTone);
+  const primaryToneClassName = neutral
+    ? "border-ink/15 bg-paper text-forest"
+    : getSplitPrimaryActionClassName(primaryTone);
   const sharedHalfLinkClassName =
     "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-cream";
   const sharedPanelClassName =
@@ -554,7 +558,12 @@ function LobbySplitActionButton({
   return (
     <div className="hidden justify-center sm:flex">
       <div
-        className="relative isolate h-12 w-[12.25rem] overflow-hidden rounded-[1.55rem] border border-rose bg-[linear-gradient(135deg,#FFF5E6_0%,#DEAAB3_52%,#FEFFF9_100%)] shadow-[0_14px_30px_rgba(240,145,130,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] transition-transform duration-250 hover:-translate-y-0.5"
+        className={cn(
+          "relative isolate h-12 w-[12.25rem] overflow-hidden rounded-[1.55rem] border transition-transform duration-250 hover:-translate-y-0.5",
+          neutral
+            ? "border-ink/15 bg-paper"
+            : "border-rose bg-[linear-gradient(135deg,#FFF5E6_0%,#DEAAB3_52%,#FEFFF9_100%)] shadow-[0_14px_30px_rgba(240,145,130,0.14),inset_0_1px_0_rgba(255,255,255,0.94)]",
+        )}
         data-lobby-split-action="desktop"
       >
         <span
@@ -567,13 +576,25 @@ function LobbySplitActionButton({
         />
         <span
           aria-hidden="true"
-          className="absolute left-1/2 top-1/2 z-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sand shadow-[0_0_0_5px_rgba(255,245,230,0.9)]"
+          className={cn(
+            "absolute left-1/2 top-1/2 z-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+            neutral
+              ? "bg-ink/15"
+              : "bg-sand shadow-[0_0_0_5px_rgba(255,245,230,0.9)]",
+          )}
         />
         <span
           aria-hidden="true"
           className="absolute inset-y-0 left-0 z-10 flex w-1/2 items-center justify-center text-white"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-coral text-white shadow-[0_9px_18px_rgba(240,145,130,0.28)]">
+          <span
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full",
+              neutral
+                ? "bg-paper text-forest"
+                : "bg-coral text-white shadow-[0_9px_18px_rgba(240,145,130,0.28)]",
+            )}
+          >
             <PrimaryIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
@@ -581,7 +602,14 @@ function LobbySplitActionButton({
           aria-hidden="true"
           className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-forest"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-sage/70 bg-cream text-forest shadow-[0_9px_18px_rgba(21,98,64,0.08)]">
+          <span
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full text-forest",
+              neutral
+                ? "bg-paper"
+                : "border border-sage/70 bg-cream shadow-[0_9px_18px_rgba(21,98,64,0.08)]",
+            )}
+          >
             <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
@@ -622,6 +650,7 @@ function LobbySplitActionButton({
             className={cn(
               "right-0 border-sage bg-fog text-forest group-hover:shadow-[0_16px_28px_rgba(21,98,64,0.14)] group-focus-visible:shadow-[0_16px_28px_rgba(21,98,64,0.14)]",
               sharedPanelClassName,
+              neutral && "border-ink/15 bg-paper",
             )}
           >
             <CopyPlus
@@ -749,6 +778,7 @@ export function ActivityCard({
     displayStatus !== "ENDED" &&
     displayStatus !== "CANCELLED";
   const isTeamCard = !isActivityInfo;
+  const isLobbyCard = actionContext === "lobby";
   const isProfileCard = actionContext === "profile";
   const isProfileOwnCard = isProfileCard && isOwnActivity;
   const autoCreatedTeam = activity.autoCreatedTeam;
@@ -874,23 +904,31 @@ export function ActivityCard({
       data-detail-source-target={detailSourceTargetKey}
       className={cn(
         "group/card relative flex h-full flex-col overflow-visible rounded-[1.15rem] transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 sm:rounded-[1.55rem]",
-        shouldShowInactiveCardState
-          ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none ring-1 ring-zinc-100 saturate-0 hover:translate-y-0 hover:shadow-none"
-          : isTeamCard
-            ? "border-rose bg-cream shadow-[0_12px_34px_rgba(240,145,130,0.11)] ring-1 ring-rose hover:shadow-[0_18px_46px_rgba(240,145,130,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(240,145,130,0.13)]"
-            : "border-sage bg-paper shadow-[0_10px_30px_rgba(21,98,64,0.08)] ring-1 ring-fog hover:shadow-[0_18px_44px_rgba(21,98,64,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(21,98,64,0.1)]",
-        shouldShowInactiveCardState
-          ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-zinc-300 sm:before:block"
-          : isTeamCard
-          ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
-          : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
-        !isInactiveCard && isTeamCard
+        isLobbyCard
+          ? cn(
+              "border-ink/10 bg-paper shadow-none ring-0 hover:border-ink/20 hover:shadow-sm",
+              shouldShowInactiveCardState &&
+                "text-zinc-500 saturate-0 hover:translate-y-0 hover:shadow-none",
+            )
+          : shouldShowInactiveCardState
+            ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none ring-1 ring-zinc-100 saturate-0 hover:translate-y-0 hover:shadow-none"
+            : isTeamCard
+              ? "border-rose bg-cream shadow-[0_12px_34px_rgba(240,145,130,0.11)] ring-1 ring-rose hover:shadow-[0_18px_46px_rgba(240,145,130,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(240,145,130,0.13)]"
+              : "border-sage bg-paper shadow-[0_10px_30px_rgba(21,98,64,0.08)] ring-1 ring-fog hover:shadow-[0_18px_44px_rgba(21,98,64,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(21,98,64,0.1)]",
+        isLobbyCard
+          ? null
+          : shouldShowInactiveCardState
+            ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-zinc-300 sm:before:block"
+            : isTeamCard
+              ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
+              : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
+        !isLobbyCard && !isInactiveCard && isTeamCard
           ? "hover:border-coral hover:ring-rose"
           : null,
         activityListPreviewClass(
           "max-[639px]:aspect-square max-[639px]:overflow-hidden max-[639px]:rounded-[1rem] max-[639px]:border max-[639px]:border-[#DDE1D8] max-[639px]:bg-white max-[639px]:shadow-none max-[639px]:ring-0 max-[639px]:hover:translate-y-0 max-[639px]:active:scale-[0.985]",
         ),
-        shouldShowInactiveCardState
+        shouldShowInactiveCardState && !isLobbyCard
           ? "max-[639px]:border-zinc-200 max-[639px]:bg-zinc-50"
           : null,
       )}
@@ -1023,9 +1061,11 @@ export function ActivityCard({
                 mobileDenseClass(
                   "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
-                isTeamCard
-                  ? "border-rose bg-cream text-ink"
-                  : "border-sage bg-ice text-forest",
+                isLobbyCard
+                  ? "border-ink/10 bg-paper text-ink"
+                  : isTeamCard
+                    ? "border-rose bg-cream text-ink"
+                    : "border-sage bg-ice text-forest",
                 shouldShowInactiveCardState
                   ? "border-zinc-200 bg-white/90 text-zinc-600"
                   : null,
@@ -1100,6 +1140,7 @@ export function ActivityCard({
                 <span
                   className={cn(
                     "rounded-md bg-[rgba(255,245,230,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
+                    isLobbyCard && "bg-paper text-ink/70 shadow-none",
                     mobileDenseClass(
                       activity.visibility === "PRIVATE"
                         ? "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]"
@@ -1205,7 +1246,9 @@ export function ActivityCard({
               <CalendarDays
                 className={cn(
                   "mt-0.5 h-4 w-4 shrink-0",
-                  isTeamCard ? "text-coral" : "text-sage",
+                  isLobbyCard
+                    ? "text-ink/60"
+                    : isTeamCard ? "text-coral" : "text-sage",
                   mobileDenseClass("max-[639px]:h-3.5 max-[639px]:w-3.5"),
                 )}
               />
@@ -1413,6 +1456,7 @@ export function ActivityCard({
                     locale={locale}
                   />
                   <LobbySplitActionButton
+                    neutral={isLobbyCard}
                     primaryDetailSource={
                       actionHref === cardHref ? detailSource : undefined
                     }

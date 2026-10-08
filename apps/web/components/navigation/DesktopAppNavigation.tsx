@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { DesktopAppNavigationChrome } from "@/components/navigation/DesktopAppNavigationChrome";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
+import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { UserMenu } from "@/components/navigation/UserMenu";
 import {
   GlobalSearchForm,
@@ -45,6 +47,9 @@ export function DesktopAppNavigation({
             variant="header"
           />
           <GlobalSearchIconLink locale={locale} />
+          <Suspense fallback={<span className="size-11 shrink-0" />}>
+            <LocaleSwitcher locale={locale} />
+          </Suspense>
           {showNotificationNav ? (
             <NotificationHeaderLink
               locale={locale}
