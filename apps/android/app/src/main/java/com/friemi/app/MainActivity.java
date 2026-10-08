@@ -63,7 +63,10 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 @SuppressWarnings("deprecation")
 public final class MainActivity extends ComponentActivity {
@@ -86,6 +89,7 @@ public final class MainActivity extends ComponentActivity {
     };
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Set<WebView> popupWebViews = new HashSet<>();
 
     private WebView webView;
     private FrameLayout rootView;
@@ -155,15 +159,54 @@ public final class MainActivity extends ComponentActivity {
         dispatchAppLifecycleEvent("friemi:android-resume");
     }
 
+    @Override
+    protected void onDestroy() {
+        mainHandler.removeCallbacksAndMessages(null);
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
+        }
+        WebView oldWebView = webView;
+        webView = null;
+        for (WebView popupWebView : new ArrayList<>(popupWebViews)) {
+            destroyPopupWebView(popupWebView);
+        }
+        if (oldWebView != null) {
+            oldWebView.stopLoading();
+            oldWebView.removeJavascriptInterface("FriemiAndroid");
+            oldWebView.setWebChromeClient(null);
+            oldWebView.setWebViewClient(null);
+            oldWebView.setDownloadListener(null);
+            if (oldWebView.getParent() instanceof ViewGroup) {
+                ((ViewGroup) oldWebView.getParent()).removeView(oldWebView);
+            }
+            oldWebView.destroy();
+        }
+        super.onDestroy();
+    }
+
+    private void destroyPopupWebView(WebView popupWebView) {
+        if (popupWebView == null || !popupWebViews.remove(popupWebView)) {
+            return;
+        }
+        popupWebView.stopLoading();
+        popupWebView.setWebViewClient(null);
+        popupWebView.destroy();
+    }
+
     private void dispatchAppLifecycleEvent(String eventName) {
         if (webView == null || isBlank(eventName)) {
             return;
         }
 
-        webView.post(() -> webView.evaluateJavascript(
-            "window.dispatchEvent(new CustomEvent('" + eventName + "'))",
-            null
-        ));
+        webView.post(() -> {
+            if (webView != null) {
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('" + eventName + "'))",
+                    null
+                );
+            }
+        });
     }
 
     @Override
@@ -1151,12 +1194,16 @@ public final class MainActivity extends ComponentActivity {
             return;
         }
 
-        mainHandler.post(() -> webView.evaluateJavascript(
-            "window.dispatchEvent(new CustomEvent('friemi:android-qr-scan',{detail:"
-                + JSONObject.quote(payload.toString())
-                + "}))",
-            null
-        ));
+        mainHandler.post(() -> {
+            if (webView != null) {
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('friemi:android-qr-scan',{detail:"
+                        + JSONObject.quote(payload.toString())
+                        + "}))",
+                    null
+                );
+            }
+        });
     }
 
     private void dispatchPushTokenResult(String payloadJson) {
@@ -1164,12 +1211,16 @@ public final class MainActivity extends ComponentActivity {
             return;
         }
 
-        mainHandler.post(() -> webView.evaluateJavascript(
-            "window.dispatchEvent(new CustomEvent('friemi:android-push-token',{detail:"
-                + JSONObject.quote(payloadJson)
-                + "}))",
-            null
-        ));
+        mainHandler.post(() -> {
+            if (webView != null) {
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('friemi:android-push-token',{detail:"
+                        + JSONObject.quote(payloadJson)
+                        + "}))",
+                    null
+                );
+            }
+        });
     }
 
     private void maybeRequestNotificationPermission() {
@@ -1511,32 +1562,40 @@ public final class MainActivity extends ComponentActivity {
             boolean isUserGesture,
             Message resultMsg
         ) {
+            if (isDestroyed()) {
+                return false;
+            }
             WebView popupWebView = new WebView(MainActivity.this);
+            popupWebViews.add(popupWebView);
             popupWebView.setWebViewClient(new WebViewClient() {
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView popupView, WebResourceRequest request) {
+                    if (webView == null) {
+                        destroyPopupWebView(popupView);
+                        return true;
+                    }
                     Uri uri = request.getUrl();
                     if ("friemi".equalsIgnoreCase(uri.getScheme())) {
                         webView.loadUrl(normalizeIncomingUri(uri));
-                        popupView.destroy();
+                        destroyPopupWebView(popupView);
                         return true;
                     }
 
                     if (!isHttp(uri)) {
                         openExternal(uri.toString());
-                        popupView.destroy();
+                        destroyPopupWebView(popupView);
                         return true;
                     }
 
                     if (shouldOpenInAuthBrowser(uri)) {
                         openAuthBrowser(uri.toString());
-                        popupView.destroy();
+                        destroyPopupWebView(popupView);
                         return true;
                     }
 
                     if (shouldLoadClerkHandshakeInWebView(uri)) {
                         webView.loadUrl(uri.toString());
-                        popupView.destroy();
+                        destroyPopupWebView(popupView);
                         return true;
                     }
 
@@ -1545,7 +1604,7 @@ public final class MainActivity extends ComponentActivity {
                     } else {
                         openExternal(uri.toString());
                     }
-                    popupView.destroy();
+                    destroyPopupWebView(popupView);
                     return true;
                 }
             });
@@ -1558,9 +1617,7 @@ public final class MainActivity extends ComponentActivity {
 
         @Override
         public void onCloseWindow(WebView window) {
-            if (window != null) {
-                window.destroy();
-            }
+            destroyPopupWebView(window);
         }
     }
 }
