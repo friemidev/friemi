@@ -44,6 +44,7 @@ type CancelActivityResult =
   | {
       ok: true;
       activityId: string;
+      residencySlot?: { id: string; merchantId: string } | null;
     }
   | {
       ok: false;
@@ -96,6 +97,24 @@ function isPrismaTransactionConflictError(error: unknown) {
   );
 }
 
+function getResidencyActivityError(locale: string) {
+  if (locale === "fr") {
+    return "Cette activité est liée à une réservation de boutique. Annulez-la pour conserver l'historique ; elle ne peut pas être supprimée.";
+  }
+  if (locale === "en") {
+    return "This activity is linked to a store booking. Cancel it to preserve the booking history; it cannot be deleted.";
+  }
+  return "此聚吧关联店铺预约，请取消聚吧以保留预约记录，不能直接删除。";
+}
+
+function getResidencyConflictError(locale: string) {
+  if (locale === "fr")
+    return "L'état de la réservation a changé. Actualisez et réessayez.";
+  if (locale === "en")
+    return "The booking status changed. Refresh and try again.";
+  return "店铺预约状态已变化，请刷新后重试。";
+}
+
 export async function cancelActivityAction(
   _previousState: CancelActivityState,
   formData: FormData,
@@ -119,6 +138,7 @@ export async function cancelActivityAction(
     getActivityDetailPath(result.data.activityId),
   );
   let cancelledActivityId: string;
+  let cancelledResidencySlot: { id: string; merchantId: string } | null = null;
 
   try {
     const cancelResult = await prisma.$transaction(
@@ -132,6 +152,9 @@ export async function cancelActivityAction(
             endAt: true,
             startAt: true,
             status: true,
+            residencySlot: {
+              select: { id: true, merchantId: true, status: true },
+            },
             participants: {
               where: {
                 status: {
@@ -169,6 +192,7 @@ export async function cancelActivityAction(
           return {
             ok: true,
             activityId: activity.id,
+            residencySlot: activity.residencySlot,
           };
         }
 
@@ -186,6 +210,16 @@ export async function cancelActivityAction(
           };
         }
 
+        if (
+          activity.residencySlot &&
+          activity.residencySlot.status !== "PUBLISHED"
+        ) {
+          return {
+            ok: false,
+            error: getResidencyConflictError(result.data.locale),
+          };
+        }
+
         await tx.activity.update({
           where: {
             id: activity.id,
@@ -194,6 +228,25 @@ export async function cancelActivityAction(
             status: "CANCELLED",
           },
         });
+
+        if (activity.residencySlot) {
+          const cancelledAt = new Date();
+          const slotUpdate = await tx.merchantResidencySlot.updateMany({
+            where: {
+              id: activity.residencySlot.id,
+              activityId: activity.id,
+              status: "PUBLISHED",
+            },
+            data: { status: "CANCELLED", cancelledAt },
+          });
+          if (slotUpdate.count !== 1) {
+            throw new Error("Residency changed during activity cancellation");
+          }
+          await tx.merchantResidencySignup.updateMany({
+            where: { slotId: activity.residencySlot.id, status: "ACTIVE" },
+            data: { status: "CANCELLED", cancelledAt },
+          });
+        }
 
         const cancellationLog = await tx.activityManagementLog.create({
           data: {
@@ -223,6 +276,7 @@ export async function cancelActivityAction(
         return {
           ok: true,
           activityId: activity.id,
+          residencySlot: activity.residencySlot,
         };
       },
       {
@@ -237,6 +291,7 @@ export async function cancelActivityAction(
     }
 
     cancelledActivityId = cancelResult.activityId;
+    cancelledResidencySlot = cancelResult.residencySlot ?? null;
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {
       return {
@@ -251,7 +306,24 @@ export async function cancelActivityAction(
     };
   }
 
-  redirect(refreshActivityViews(result.data.locale, cancelledActivityId));
+  const activityPath = refreshActivityViews(
+    result.data.locale,
+    cancelledActivityId,
+  );
+  if (cancelledResidencySlot) {
+    for (const path of [
+      "/profile/store/bookings",
+      `/profile/store/bookings/${cancelledResidencySlot.id}`,
+      "/admin/merchants/bookings",
+      `/admin/merchants/bookings/${cancelledResidencySlot.id}`,
+      `/merchants/${cancelledResidencySlot.merchantId}`,
+      `/merchants/${cancelledResidencySlot.merchantId}/bookings`,
+      `/merchants/${cancelledResidencySlot.merchantId}/bookings/${cancelledResidencySlot.id}`,
+    ]) {
+      revalidatePath(withLocale(result.data.locale, path), "layout");
+    }
+  }
+  redirect(activityPath);
 }
 
 export async function deleteActivityAction(
@@ -297,6 +369,7 @@ export async function deleteActivityAction(
             sourcePayload: true,
             sourceUrl: true,
             type: true,
+            residencySlot: { select: { id: true } },
           },
         });
 
@@ -311,6 +384,13 @@ export async function deleteActivityAction(
           return {
             ok: false,
             error: actionCopy.deletePermissionError,
+          };
+        }
+
+        if (activity.residencySlot) {
+          return {
+            ok: false,
+            error: getResidencyActivityError(result.data.locale),
           };
         }
 

@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PackageOpen, Plus, Store, UserRoundPlus } from "lucide-react";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  PackageOpen,
+  Plus,
+  Store,
+  UserRoundPlus,
+} from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantManagementClient } from "@/components/admin/MerchantManagementClient";
 import { getMerchantAdminCopy } from "@/components/admin/merchantAdminCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminInventoryPanel } from "@/features/inventory/components/AdminInventoryPanel";
+import { getAdminResidencyCopy } from "@/features/merchants/residency/adminCopy";
+import { getAdminResidencySlots } from "@/features/merchants/residency/queries";
 import { isCurrentUserAdmin, requireAdminPageAccess } from "@/lib/admin-auth";
 import { getAdminMerchants } from "@/lib/admin-scraper";
 import { withLocale } from "@/lib/routes";
@@ -49,10 +58,20 @@ export default async function AdminMerchantsPage({
     Math.min(100_000, Number.parseInt(rawPage ?? "1", 10) || 1),
   );
   const merchants = view === "merchants" ? await getAdminMerchants() : [];
+  const pendingResidencies =
+    view === "merchants"
+      ? (await getAdminResidencySlots()).filter(
+          (slot) => slot.status === "PENDING",
+        ).length
+      : 0;
   const merchantCopy = getMerchantAdminCopy(locale);
+  const residencyCopy = getAdminResidencyCopy(locale);
 
   return (
-    <PageContainer mobileSafeTop className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-5 pb-16 max-md:px-4 max-md:py-0 md:py-10">
+    <PageContainer
+      mobileSafeTop
+      className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-5 pb-16 max-md:px-4 max-md:py-0 md:py-10"
+    >
       <MerchantAdminHeader
         backHref={withLocale(locale, "/account/settings")}
         backLabel={merchantCopy.common.backToSettings}
@@ -97,6 +116,31 @@ export default async function AdminMerchantsPage({
         />
       ) : (
         <>
+          <Link
+            className="flex min-h-20 items-center gap-4 rounded-2xl bg-fog/70 px-4 py-3 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/admin/merchants/bookings")}
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest text-white">
+              <CalendarDays aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold sm:text-base">
+                {residencyCopy.entry}
+              </span>
+              <span className="mt-1 block text-xs text-ink/65 sm:text-sm">
+                {residencyCopy.entryHint}
+              </span>
+            </span>
+            {pendingResidencies > 0 ? (
+              <span className="rounded-full bg-coral/30 px-2.5 py-1 text-xs font-bold text-ink">
+                {residencyCopy.requests(pendingResidencies)}
+              </span>
+            ) : null}
+            <ArrowUpRight
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-forest"
+            />
+          </Link>
           <section
             aria-labelledby="merchant-section-title"
             className="flex flex-col gap-5 rounded-2xl bg-ink px-5 py-5 text-paper sm:flex-row sm:items-center sm:justify-between sm:px-6"

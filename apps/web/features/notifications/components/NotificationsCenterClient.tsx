@@ -23,7 +23,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
-import { formatActivityDate } from "@chill-club/shared";
+import {
+  formatActivityDate,
+  formatFloatingActivityDate,
+} from "@chill-club/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -149,6 +152,86 @@ function getNotificationText(
     actorName ??
     "Friemi";
 
+  if (notification.type === "MERCHANT_BOOKING_CANCELLED") {
+    const title =
+      notification.residencySlot?.title ??
+      (locale === "fr"
+        ? "la réservation boutique"
+        : locale === "en"
+          ? "the store booking"
+          : "店铺预约");
+    if (locale === "fr") {
+      return {
+        title: "Réservation annulée",
+        body: `Votre inscription à « ${title} » a été annulée.`,
+      };
+    }
+    if (locale === "en") {
+      return {
+        title: "Store booking cancelled",
+        body: `Your signup for “${title}” was cancelled.`,
+      };
+    }
+    return { title: "店铺预约已取消", body: `你报名的「${title}」已取消。` };
+  }
+  if (notification.type === "MERCHANT_BOOKING_CONFIRMED") {
+    const title = notification.residencySlot?.title ?? "店铺预约";
+    const date = notification.residencySlot?.date ?? "";
+    if (locale === "fr")
+      return {
+        title: "Réservation confirmée",
+        body: `Votre demande « ${title} » du ${date} est confirmée.`,
+      };
+    if (locale === "en")
+      return {
+        title: "Store booking confirmed",
+        body: `Your request “${title}” for ${date} was confirmed.`,
+      };
+    return {
+      title: "店铺预约已确认",
+      body: `你申请的「${title}」（${date}）已确认。`,
+    };
+  }
+  if (notification.type === "MERCHANT_BOOKING_REJECTED") {
+    const title = notification.residencySlot?.title ?? "店铺预约";
+    const reason = notification.residencySlot?.rejectionReason;
+    if (locale === "fr")
+      return {
+        title: "Réservation refusée",
+        body: `Votre demande « ${title} » a été refusée.${reason ? ` Motif : ${reason}` : ""}`,
+      };
+    if (locale === "en")
+      return {
+        title: "Store booking declined",
+        body: `Your request “${title}” was declined.${reason ? ` Reason: ${reason}` : ""}`,
+      };
+    return {
+      title: "店铺预约未通过",
+      body: `你申请的「${title}」未通过。${reason ? `原因：${reason}` : ""}`,
+    };
+  }
+  if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
+    const title = notification.residencySlot?.title ?? "店铺聚吧";
+    const activity = notification.residencySlot?.activity;
+    const schedule = activity
+      ? `${formatFloatingActivityDate(activity.startAt, locale)} · ${activity.address}`
+      : "";
+    if (locale === "fr")
+      return {
+        title: "La rencontre est publiée",
+        body: `« ${title} » a maintenant un horaire et une adresse. ${schedule}`,
+      };
+    if (locale === "en")
+      return {
+        title: "Gathering published",
+        body: `“${title}” now has a time and venue. ${schedule}`,
+      };
+    return {
+      title: "店铺聚吧已发布",
+      body: `你报名的「${title}」已确定时间和地点：${schedule}`,
+    };
+  }
+
   if (notification.type === "INVENTORY_TICKET_RECEIVED") {
     const ticketTitle = notification.inventoryItemDefinition?.title;
     if (locale === "fr") {
@@ -273,7 +356,9 @@ function getNotificationText(
               title: "Désaccord de compte",
             },
             AA_ENTRY_UPDATED: {
-              body: notification.aaTransactionId ? `${by} a modifié une opération de « ${activityTitle} ».` : `${by} a mis à jour le partage des frais de « ${activityTitle} ».`,
+              body: notification.aaTransactionId
+                ? `${by} a modifié une opération de « ${activityTitle} ».`
+                : `${by} a mis à jour le partage des frais de « ${activityTitle} ».`,
               title: "Compte AA mis à jour",
             },
             AA_PAYMENT_REQUEST: {
@@ -296,7 +381,9 @@ function getNotificationText(
                 title: "Ledger dispute",
               },
               AA_ENTRY_UPDATED: {
-                body: notification.aaTransactionId ? `${by} changed an entry in “${activityTitle}”.` : `${by} updated the split bill for “${activityTitle}”.`,
+                body: notification.aaTransactionId
+                  ? `${by} changed an entry in “${activityTitle}”.`
+                  : `${by} updated the split bill for “${activityTitle}”.`,
                 title: "AA ledger updated",
               },
               AA_PAYMENT_REQUEST: {
@@ -318,7 +405,9 @@ function getNotificationText(
                 title: "核算争议待处理",
               },
               AA_ENTRY_UPDATED: {
-                body: notification.aaTransactionId ? `${by}更新了「${activityTitle}」的一笔核算记录。` : `${by}更新了「${activityTitle}」的 AA 账单。`,
+                body: notification.aaTransactionId
+                  ? `${by}更新了「${activityTitle}」的一笔核算记录。`
+                  : `${by}更新了「${activityTitle}」的 AA 账单。`,
                 title: "AA 记录有变更",
               },
               AA_PAYMENT_REQUEST: {
@@ -476,6 +565,16 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (notification.type.startsWith("MERCHANT_BOOKING_")) {
+    if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
+      return t.openActivity;
+    }
+    return locale === "fr"
+      ? "Voir la réservation"
+      : locale === "en"
+        ? "View booking"
+        : "查看预约";
+  }
   if (notification.type === "INVENTORY_TICKET_RECEIVED") {
     return locale === "fr"
       ? "Voir le billet"
@@ -984,6 +1083,15 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
+  if (type === "MERCHANT_BOOKING_CANCELLED") {
+    return {
+      icon: CalendarX2,
+      iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
   if (type.startsWith("COUPON_")) {
     return {
       icon: TicketCheck,
@@ -1002,7 +1110,9 @@ function getNotificationVisual(
     return {
       icon: TicketCheck,
       iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
   if (type.startsWith("AA_")) {
@@ -1195,6 +1305,8 @@ function NotificationCard({
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_ACCESS_INVITED" ||
+        (notification.type.startsWith("MERCHANT_BOOKING_") &&
+          Boolean(notification.residencySlot || notification.activity)) ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||

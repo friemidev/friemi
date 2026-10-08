@@ -423,6 +423,9 @@ export async function openNotificationActivityAction(formData: FormData) {
       activityId: true,
       couponWalletItemId: true,
       momentId: true,
+      residencySlot: {
+        select: { id: true, merchantId: true },
+      },
       planet: {
         select: {
           slug: true,
@@ -431,6 +434,39 @@ export async function openNotificationActivityAction(formData: FormData) {
       type: true,
     },
   });
+
+  if (notification?.type.startsWith("MERCHANT_BOOKING_")) {
+    await prisma.notification.updateMany({
+      where: { id: notificationId, recipientId: profile.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    await invalidateUnreadBadgeCache([profile.id]);
+    revalidatePath(withLocale(locale, "/notifications"));
+    const target =
+      notification.type === "MERCHANT_BOOKING_PUBLISHED" &&
+      notification.activityId
+        ? getActivityDetailPath(notification.activityId)
+        : notification.residencySlot &&
+            (notification.type === "MERCHANT_BOOKING_CONFIRMED" ||
+              notification.type === "MERCHANT_BOOKING_REJECTED")
+          ? `/profile/store/bookings/${notification.residencySlot.id}`
+          : notification.residencySlot
+            ? `/merchants/${notification.residencySlot.merchantId}/bookings/${notification.residencySlot.id}`
+            : "/notifications";
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType:
+        notification.type === "MERCHANT_BOOKING_PUBLISHED"
+          ? "activity"
+          : notification.residencySlot
+            ? "store"
+            : "notifications",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(withLocale(locale, target));
+  }
 
   if (
     notification?.type === "INVENTORY_TICKET_RECEIVED" ||

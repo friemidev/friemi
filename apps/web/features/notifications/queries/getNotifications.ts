@@ -46,6 +46,18 @@ const notificationSelect = {
       title: true,
     },
   },
+  residencySlot: {
+    select: {
+      id: true,
+      title: true,
+      date: true,
+      merchantId: true,
+      rejectionReason: true,
+      activity: {
+        select: { startAt: true, address: true },
+      },
+    },
+  },
   activityAnnouncement: {
     select: {
       id: true,
@@ -128,6 +140,14 @@ export type NotificationViewModel = {
     id: string;
     title: string;
   } | null;
+  residencySlot: {
+    id: string;
+    title: string;
+    date: string;
+    merchantId: string;
+    rejectionReason: string | null;
+    activity: { startAt: string; address: string } | null;
+  } | null;
   activityAnnouncement: {
     id: string;
     content: string;
@@ -191,6 +211,22 @@ function mapNotification(
       ? {
           id: notification.activity.id,
           title: notification.activity.title,
+        }
+      : null,
+    residencySlot: notification.residencySlot
+      ? {
+          id: notification.residencySlot.id,
+          title: notification.residencySlot.title,
+          date: notification.residencySlot.date.toISOString().slice(0, 10),
+          merchantId: notification.residencySlot.merchantId,
+          rejectionReason: notification.residencySlot.rejectionReason,
+          activity: notification.residencySlot.activity
+            ? {
+                startAt:
+                  notification.residencySlot.activity.startAt.toISOString(),
+                address: notification.residencySlot.activity.address,
+              }
+            : null,
         }
       : null,
     activityAnnouncement: notification.activityAnnouncement

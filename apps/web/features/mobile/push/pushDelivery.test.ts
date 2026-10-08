@@ -66,6 +66,58 @@ test("received tickets open the single-ticket bag list", () => {
   );
 });
 
+test("cancelled merchant residency push links to the original date and names it", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencyMerchantId: "merchant-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_CANCELLED",
+    }),
+    "/merchants/merchant-1/bookings/slot-1",
+  );
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: null,
+      locale: "zh-CN",
+      residencyTitle: "周末聚会",
+      type: "MERCHANT_BOOKING_CANCELLED",
+    }),
+    { title: "店铺预约已取消", body: "你报名的「周末聚会」已取消" },
+  );
+});
+
+test("booking review and publication push routes and details stay specific", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_REJECTED",
+    }),
+    "/profile/store/bookings/slot-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "activity-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_PUBLISHED",
+    }),
+    "/lobby/activity-1",
+  );
+  const published = getNotificationCopy({
+    activityTitle: "周末聚吧",
+    actorName: null,
+    locale: "zh-CN",
+    residencyTitle: "周末聚吧",
+    residencyStartAt: "2050-07-20T19:30:00.000Z",
+    residencyAddress: "2 rue de test",
+    type: "MERCHANT_BOOKING_PUBLISHED",
+  });
+  assert.match(published.body, /19:30/);
+  assert.match(published.body, /2 rue de test/);
+});
+
 test("received ticket push works for gifts and admin batches in each locale", () => {
   assert.deepEqual(
     getNotificationCopy({

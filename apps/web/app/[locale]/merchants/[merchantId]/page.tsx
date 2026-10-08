@@ -1,11 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, Globe2, Mail, MapPin, Store } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  ExternalLink,
+  Globe2,
+  Mail,
+  MapPin,
+  Store,
+} from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
+import { getPublicResidencyCopy } from "@/features/merchants/residency/publicCopy";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getCopy } from "@/lib/copy";
@@ -31,6 +40,7 @@ function formatCoordinates(latitude: number, longitude: number) {
 export default async function MerchantPage({ params }: MerchantPageProps) {
   const { locale, merchantId } = await params;
   const t = getCopy(locale);
+  const residencyCopy = getPublicResidencyCopy(locale);
   const merchant = await getMerchantProfile(merchantId);
 
   if (!merchant) {
@@ -144,6 +154,29 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
             ) : null}
           </div>
         </aside>
+      </section>
+
+      <section aria-label={residencyCopy.residency}>
+        <Link
+          className="group flex min-h-24 items-center gap-4 rounded-2xl bg-fog/70 px-4 py-5 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest sm:px-6"
+          href={withLocale(locale, `/merchants/${merchant.id}/bookings`)}
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-forest text-paper">
+            <CalendarDays aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-bold text-ink">
+              {residencyCopy.calendar}
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-ink/70">
+              {residencyCopy.calendarIntro}
+            </span>
+          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-forest transition group-hover:translate-x-0.5"
+          />
+        </Link>
       </section>
 
       <section className="space-y-4">

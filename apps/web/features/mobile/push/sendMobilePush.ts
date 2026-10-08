@@ -324,6 +324,16 @@ export async function sendMobilePushForNotification(notificationId: string) {
         select: { title: true },
       },
       inventoryItemDefinitionId: true,
+      residencySlot: {
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          merchantId: true,
+          rejectionReason: true,
+          activity: { select: { startAt: true, address: true } },
+        },
+      },
       momentId: true,
       planetId: true,
       planet: {
@@ -421,6 +431,13 @@ export async function sendMobilePushForNotification(notificationId: string) {
       messageBody,
       merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
       planetName: notification.planet?.name ?? null,
+      residencyTitle: notification.residencySlot?.title ?? null,
+      residencyDate:
+        notification.residencySlot?.date.toISOString().slice(0, 10) ?? null,
+      residencyRejectionReason:
+        notification.residencySlot?.rejectionReason ?? null,
+      residencyStartAt: notification.residencySlot?.activity?.startAt ?? null,
+      residencyAddress: notification.residencySlot?.activity?.address ?? null,
       ticketTitle: notification.inventoryItemDefinition?.title ?? null,
       type: notification.type,
     });
@@ -431,6 +448,8 @@ export async function sendMobilePushForNotification(notificationId: string) {
       conversationId: directMessageConversationId,
       momentId: notification.momentId,
       planetSlug: notification.planet?.slug ?? null,
+      residencyMerchantId: notification.residencySlot?.merchantId ?? null,
+      residencySlotId: notification.residencySlot?.id ?? null,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {

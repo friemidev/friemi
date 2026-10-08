@@ -70,6 +70,16 @@ function getLockedEditError({
   return "活动已结束，无法编辑。";
 }
 
+function getResidencyEditError(locale: string) {
+  if (locale === "fr") {
+    return "Cette activité provient d’une réservation de boutique. Son horaire et ses informations sont verrouillés.";
+  }
+  if (locale === "en") {
+    return "This activity was created from a store booking. Its schedule and details are locked.";
+  }
+  return "此聚吧由店铺预约生成，时间和内容已锁定，无法在普通编辑中修改。";
+}
+
 export async function updateActivityAction(
   previousState: UpdateActivityState,
   formData: FormData,
@@ -103,6 +113,7 @@ export async function updateActivityAction(
       sourcePayload: true,
       startAt: true,
       status: true,
+      residencySlot: { select: { id: true } },
       participants: {
         where: {
           status: {
@@ -150,6 +161,14 @@ export async function updateActivityAction(
       previousState,
       rawInput,
       "你没有权限编辑这个活动。",
+    );
+  }
+
+  if (editableActivity.residencySlot) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      getResidencyEditError(locale),
     );
   }
 

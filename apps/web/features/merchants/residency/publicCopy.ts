@@ -1,0 +1,118 @@
+export function getPublicResidencyCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      backToMerchant: "Retour à la boutique",
+      backToCalendar: "Retour au calendrier",
+      backToActivities: "Retour aux activités",
+      calendar: "Réservations de la boutique",
+      calendarIntro:
+        "Consultez les dates proposées et inscrivez-vous aux dates confirmées.",
+      calendarDates: "Dates de réservation du mois",
+      cancel: "Annuler mon inscription",
+      cancelled: "Inscription annulée",
+      cancelledDate: "Réservation annulée",
+      cancelledDateHint:
+        "La boutique a annulé cette date de réservation. Les inscriptions sont closes.",
+      confirmed: "Date confirmée",
+      day: "Date",
+      empty: "Aucune date de réservation confirmée ce mois-ci",
+      emptyHint: "Consultez un autre mois pour voir les prochaines dates.",
+      error: "Impossible de mettre à jour votre inscription. Réessayez.",
+      goToActivity: "Voir le groupe",
+      join: "M'inscrire",
+      joined: "Vous êtes inscrit·e",
+      monthDates: "Dates confirmées",
+      nextMonth: "Mois suivant",
+      ownerBookingHint:
+        "Vous gérez cette boutique. Retrouvez cette date dans la gestion de la boutique.",
+      ownerBookingLink: "Gérer cette réservation",
+      participants: (count: number) =>
+        `${count} inscrit${count > 1 ? "s" : ""}`,
+      reservationParticipants: (count: number) =>
+        `${count} inscription${count > 1 ? "s" : ""} à la réservation initiale`,
+      previousMonth: "Mois précédent",
+      published: "Groupe créé",
+      unavailable: "Les inscriptions sont closes pour cette date.",
+      residency: "Réservations de la boutique",
+      residencyAt: (name: string) => `${name} · Dates de réservation`,
+      signIn: "Se connecter pour s'inscrire",
+      viewDate: "Voir cette date",
+      weekdays: ["L", "M", "M", "J", "V", "S", "D"],
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      backToMerchant: "Back to store",
+      backToCalendar: "Back to calendar",
+      backToActivities: "Back to activities",
+      calendar: "Store bookings",
+      calendarIntro: "Browse booking dates and sign up for confirmed dates.",
+      calendarDates: "Booking dates this month",
+      cancel: "Cancel my signup",
+      cancelled: "Signup cancelled",
+      cancelledDate: "Booking cancelled",
+      cancelledDateHint:
+        "The store cancelled this booking date. Signups are closed.",
+      confirmed: "Confirmed date",
+      day: "Date",
+      empty: "No confirmed booking dates this month",
+      emptyHint: "Try another month for upcoming booking dates.",
+      error: "Could not update your signup. Please try again.",
+      goToActivity: "View the group",
+      join: "Sign up",
+      joined: "You're signed up",
+      monthDates: "Confirmed dates",
+      nextMonth: "Next month",
+      ownerBookingHint:
+        "You manage this store. Find this date in Store management.",
+      ownerBookingLink: "Manage this booking",
+      participants: (count: number) => `${count} signed up`,
+      reservationParticipants: (count: number) =>
+        `${count} original booking signup${count === 1 ? "" : "s"}`,
+      previousMonth: "Previous month",
+      published: "Group created",
+      unavailable: "Signups are closed for this date.",
+      residency: "Store bookings",
+      residencyAt: (name: string) => `${name} · Booking dates`,
+      signIn: "Sign in to sign up",
+      viewDate: "View this date",
+      weekdays: ["M", "T", "W", "T", "F", "S", "S"],
+    };
+  }
+
+  return {
+    backToMerchant: "返回门店",
+    backToCalendar: "返回日历",
+    backToActivities: "返回活动大厅",
+    calendar: "店铺预约",
+    calendarIntro: "查看预约日期，选择已确认的日期报名。",
+    calendarDates: "本月预约日期",
+    cancel: "取消报名",
+    cancelled: "已取消报名",
+    cancelledDate: "预约已取消",
+    cancelledDateHint: "店铺已取消这个预约日期，报名已关闭。",
+    confirmed: "日期已确认",
+    day: "预约日期",
+    empty: "本月暂无已确认的预约日期",
+    emptyHint: "可以切换月份查看其他预约日期。",
+    error: "报名状态更新失败，请稍后重试。",
+    goToActivity: "进入聚吧",
+    join: "我要报名",
+    joined: "你已报名",
+    monthDates: "预约日期",
+    nextMonth: "下个月",
+    ownerBookingHint: "你管理这家店铺，可在门店管理查看这个预约日期。",
+    ownerBookingLink: "在门店管理查看",
+    participants: (count: number) => `${count} 人已报名`,
+    reservationParticipants: (count: number) => `原预约报名 ${count} 人`,
+    previousMonth: "上个月",
+    published: "聚吧已创建",
+    unavailable: "这个日期已结束报名。",
+    residency: "店铺预约",
+    residencyAt: (name: string) => `${name} · 预约日期`,
+    signIn: "登录后报名",
+    viewDate: "查看日期详情",
+    weekdays: ["一", "二", "三", "四", "五", "六", "日"],
+  };
+}
