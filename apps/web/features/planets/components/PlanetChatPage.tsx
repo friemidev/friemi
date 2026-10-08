@@ -133,6 +133,7 @@ export function PlanetChatPage({
               planetHref={planetHref}
               planetId={planet.id}
               planetSlug={planet.slug}
+              planetName={name}
               viewerRole={planet.viewerMembership?.role ?? null}
             />
           ) : (

@@ -24,6 +24,9 @@ import { PlanetMomentComposer } from "./PlanetMomentComposer";
 import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
+import { PlanetQrCodeButton } from "./PlanetQrCodeButton";
+import { getPlanetInvitePath } from "../utils/planetInvite";
+import { buildCanonicalSiteUrl } from "@/lib/site-url";
 import type {
   getPlanetMoment,
   getPlanetRoom,
@@ -594,7 +597,14 @@ export function PlanetRoomPage({
               {planet.owner.nickname}
             </p>
           </div>
-          <div className="shrink-0 pt-0.5">
+          <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5 sm:flex-row sm:items-center">
+            {planet.visibility === "PUBLIC" || membership?.status === "APPROVED" ? (
+              <PlanetQrCodeButton
+                inviteUrl={buildCanonicalSiteUrl(getPlanetInvitePath(locale, planet.inviteCode))}
+                locale={locale}
+                planetName={getPlanetName(planet, locale)}
+              />
+            ) : null}
             <MembershipButton locale={locale} planet={planet} />
           </div>
         </div>

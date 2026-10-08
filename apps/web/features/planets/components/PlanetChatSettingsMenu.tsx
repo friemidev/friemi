@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
+import { PlanetQrCodeButton } from "./PlanetQrCodeButton";
 import {
   removePlanetMemberAction,
   reviewPlanetMemberAction,
@@ -44,6 +45,7 @@ type PlanetChatSettingsMenuProps = {
   planetHref: string;
   planetId: string;
   planetSlug: string;
+  planetName: string;
   viewerRole: "OWNER" | "ADMIN" | "MEMBER" | null;
 };
 
@@ -264,6 +266,7 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
             planetId={props.planetId}
             planetSlug={props.planetSlug}
           />
+          <PlanetQrCodeButton inviteUrl={props.inviteUrl} locale={props.locale} planetName={props.planetName} variant="row" />
           {canManage ? (
             <button
               className="flex min-h-14 w-full items-center gap-3 border-b border-[#EFEFEA] px-4 text-left text-sm font-bold active:bg-[#F7F7F2]"
