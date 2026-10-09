@@ -40,6 +40,7 @@ import {
   getWerewolfRoleLabel,
   getWerewolfVariantLabel,
   werewolfRoleAlignments,
+  werewolfRoleKeys,
   werewolfVariants,
   type WerewolfRoleKey,
   type WerewolfVariant,
@@ -423,33 +424,36 @@ function WerewolfVariantModeCard({
   );
 }
 
-const customRoleOptions: WerewolfRoleKey[] = [
-  "werewolf",
-  "wolf_king",
-  "white_wolf_king",
-  "seer",
-  "witch",
-  "guard",
-  "hunter",
-  "knight",
-  "idiot",
-  "cupid",
-  "lovers",
-  "villager",
-];
+const customRoleOptions: readonly WerewolfRoleKey[] = werewolfRoleKeys;
 
 const defaultCustomRoleCounts: Record<WerewolfRoleKey, number> = {
+  bear: 0,
+  big_bad_wolf: 0,
   cupid: 0,
+  dream_catcher: 0,
+  elder: 0,
+  fox: 0,
+  gravedigger: 0,
   guard: 0,
   hunter: 1,
+  hybrid: 0,
   idiot: 0,
   knight: 0,
+  little_girl: 0,
   lovers: 0,
+  magician: 0,
+  mechanical_wolf: 0,
+  nightmare_shadow: 0,
+  pied_piper: 0,
   seer: 1,
+  silencing_elder: 0,
+  thief: 0,
   villager: 3,
+  wild_child: 0,
   werewolf: 3,
   white_wolf_king: 0,
   witch: 1,
+  wolf_beauty: 0,
   wolf_king: 0,
 };
 

@@ -68,7 +68,15 @@ export function IdleRoutePrefetcher({
   const search = searchParams.toString();
 
   useEffect(() => {
-    if (!enabled || !pathname || !isMobileViewport || new URLSearchParams(search).get("sheet") === "1") {
+    // A WebView can freeze an in-flight prefetch while the app is backgrounded.
+    // Native navigation requests should start only when the user actually taps.
+    if (
+      !enabled ||
+      !pathname ||
+      !isMobileViewport ||
+      /\bFriemi(?:Android|IOS)\//i.test(window.navigator.userAgent) ||
+      new URLSearchParams(search).get("sheet") === "1"
+    ) {
       return;
     }
 

@@ -1,12 +1,10 @@
 package com.friemi.app
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -37,21 +35,7 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun showNotification(title: String, body: String, url: String?, badgeCount: Int) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "friemi_activity_updates"
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Friemi",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description = "Friemi notifications"
-                enableLights(true)
-                lightColor = Color.rgb(54, 151, 88)
-                setShowBadge(true)
-            }
-            manager.createNotificationChannel(channel)
-        }
+        FriemiNotificationChannels.ensureDefaultChannel(this)
 
         val targetUri = resolveTargetUri(url)
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -66,7 +50,7 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, channelId)
+            Notification.Builder(this, FriemiNotificationChannels.CHANNEL_ID)
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)

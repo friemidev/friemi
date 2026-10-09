@@ -1,3 +1,4 @@
+import { mergePersistentBookingActivities } from "./persistentBookingActivity";
 import type { ActivityCardViewModel } from "../types";
 import { getActivityTimeState } from "./activityDisplay";
 
@@ -58,13 +59,15 @@ export function sortLobbyActivitiesByStatusAndOwnership(
 ) {
   const reference = options.reference ?? new Date();
 
-  return [...activities].sort(
-    (left, right) =>
-      compareLobbyActivityStatusAndOwnership(left, right, {
-        reference,
-        viewerProfileId: options.viewerProfileId,
-      }) ||
-      options.tieBreaker?.(left, right) ||
-      compareLobbyActivityTime(left, right, reference),
+  return mergePersistentBookingActivities(
+    [...activities].sort(
+      (left, right) =>
+        compareLobbyActivityStatusAndOwnership(left, right, {
+          reference,
+          viewerProfileId: options.viewerProfileId,
+        }) ||
+        options.tieBreaker?.(left, right) ||
+        compareLobbyActivityTime(left, right, reference),
+    ),
   );
 }

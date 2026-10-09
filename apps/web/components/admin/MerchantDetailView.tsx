@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowUpRight,
+  CalendarDays,
   ExternalLink,
   TicketCheck,
   UserRoundPlus,
@@ -8,6 +9,7 @@ import {
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { MerchantSummary } from "@/components/admin/MerchantManagementClient";
 import { getMerchantAdminCopy } from "@/components/admin/merchantAdminCopy";
+import { getMerchantBookingAdminCopy } from "@/components/admin/merchantBookingCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
 import type { AdminMerchantListItem } from "@/lib/admin-scraper";
 import { withLocale } from "@/lib/routes";
@@ -21,6 +23,12 @@ export function MerchantDetailView({
 }) {
   const copy = getMerchantAdminCopy(locale);
   const actions = [
+    {
+      description: getMerchantBookingAdminCopy(locale).entryHint,
+      href: `/admin/merchants/${merchant.id}/bookings`,
+      icon: CalendarDays,
+      label: getMerchantBookingAdminCopy(locale).title,
+    },
     {
       description: copy.detail.couponsHint,
       href: `/admin/merchants/${merchant.id}/coupons`,
@@ -46,7 +54,10 @@ export function MerchantDetailView({
   ];
 
   return (
-    <PageContainer mobileSafeTop className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-6 pb-16 max-md:px-4 max-md:py-0 md:py-10">
+    <PageContainer
+      mobileSafeTop
+      className="merchant-admin-page app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] [--app-mobile-page-bottom-gap:1.1rem] max-w-5xl space-y-6 pb-16 max-md:px-4 max-md:py-0 md:py-10"
+    >
       <MerchantAdminHeader
         backHref={withLocale(locale, "/admin/merchants")}
         backLabel={copy.common.backToList}

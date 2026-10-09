@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { locales } from "@chill-club/shared";
 import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,6 +29,7 @@ import {
 } from "@/features/planets/utils/planetMomentPolicy";
 import { planetCategoryValues } from "@/features/planets/utils/planetCategories";
 import { getPlanetInvitePath } from "@/features/planets/utils/planetInvite";
+import { updatePlanetCategoryInDatabase } from "@/features/planets/services/planetSettings";
 import { isAllowedPlanetVideoUrl } from "@/lib/planet-video-storage";
 import { withLocale } from "@/lib/routes";
 
@@ -102,6 +104,15 @@ const removePlanetMemberSchema = planetIdSchema.extend({
 const planetAnnouncementSchema = planetIdSchema.extend({
   announcement: z.string().trim().max(1000),
 });
+
+const planetCategorySchema = planetIdSchema.extend({
+  category: z.enum(planetCategoryValues),
+});
+
+export type PlanetCategoryActionState = {
+  status?: "saved" | "invalid" | "forbidden" | "failed";
+  category?: string;
+};
 
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -538,6 +549,33 @@ export async function removePlanetMemberAction(formData: FormData) {
     }),
   ]);
   revalidatePlanet(result.data.locale, result.data.planetSlug);
+}
+
+export async function updatePlanetCategoryAction(
+  _previousState: PlanetCategoryActionState,
+  formData: FormData,
+): Promise<PlanetCategoryActionState> {
+  const result = planetCategorySchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+    category: readString(formData, "category"),
+  });
+  if (!result.success) return { status: "invalid" };
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  try {
+    const updated = await updatePlanetCategoryInDatabase(prisma, {
+      planetId: result.data.planetId,
+      profileId: profile.id,
+      category: result.data.category,
+    });
+    if (updated.status !== "saved") return updated;
+    for (const locale of locales) revalidatePlanet(locale, updated.slug);
+    return { status: "saved", category: updated.category };
+  } catch {
+    return { status: "failed" };
+  }
 }
 
 export async function updatePlanetAnnouncementAction(formData: FormData) {

@@ -1,3 +1,4 @@
+import { isPersistentBookingActivity } from "../utils/persistentBookingActivity";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,6 +11,8 @@ import { assertCanManageActivity } from "../utils/activityManagement";
 
 const editableActivitySelect = {
   id: true,
+  source: true,
+  isPersistent: true,
   title: true,
   description: true,
   itinerary: true,
@@ -34,6 +37,7 @@ const editableActivitySelect = {
   ticketLabel: true,
   sourcePayload: true,
   organizerId: true,
+  residencySlot: { select: { id: true } },
 } satisfies Prisma.ActivitySelect;
 
 type EditableActivityQueryResult = Prisma.ActivityGetPayload<{
@@ -51,7 +55,7 @@ export type EditableActivityResult =
     }
   | {
       status: "locked";
-      reason: "cancelled" | "ended";
+      reason: "cancelled" | "ended" | "booking" | "persistent-booking";
     }
   | {
       status: "not-found";
@@ -114,7 +118,14 @@ export async function getEditableActivityById(
     };
   }
 
-  const permission = await assertCanManageActivity(activity.id, viewerProfileId);
+  if (isPersistentBookingActivity(activity)) {
+    return { status: "locked", reason: "persistent-booking" };
+  }
+
+  const permission = await assertCanManageActivity(
+    activity.id,
+    viewerProfileId,
+  );
 
   if (!permission.ok) {
     return {
@@ -122,9 +133,14 @@ export async function getEditableActivityById(
     };
   }
 
-  if (
-    activity.status === "CANCELLED"
-  ) {
+  if (activity.residencySlot) {
+    return {
+      status: "locked",
+      reason: "booking",
+    };
+  }
+
+  if (activity.status === "CANCELLED") {
     return {
       status: "locked",
       reason: "cancelled",

@@ -37,25 +37,42 @@ test("defines every Werewolf role in Chinese, English, and French", () => {
 
 test("keeps the Chinese Werewolf role labels explicit", () => {
   assert.deepEqual(werewolfRoleLabels["zh-CN"], {
+    bear: "熊",
+    big_bad_wolf: "大坏狼",
     cupid: "丘比特",
+    dream_catcher: "摄梦人",
+    elder: "长老",
+    fox: "狐狸",
+    gravedigger: "守墓人",
     guard: "守卫",
     hunter: "猎人",
+    hybrid: "混血儿",
     idiot: "白痴",
     knight: "骑士",
+    little_girl: "小女孩",
     lovers: "情侣",
+    magician: "魔术师",
+    mechanical_wolf: "机械狼",
+    nightmare_shadow: "噩梦之影",
+    pied_piper: "吹笛者",
     seer: "预言家",
+    silencing_elder: "禁言长老",
+    thief: "盗贼",
     villager: "平民",
+    wild_child: "野孩子",
     werewolf: "狼人",
     white_wolf_king: "白狼王",
     witch: "女巫",
+    wolf_beauty: "狼美人",
     wolf_king: "狼王",
   });
 });
 
 test("accepts every available role and recognizes wolf kings as wolves", () => {
-  assert.equal(werewolfRoleKeys.length, 12);
+  assert.equal(werewolfRoleKeys.length, 28);
   assert.equal(werewolfRoleAlignments.wolf_king, "werewolf");
   assert.equal(werewolfRoleAlignments.white_wolf_king, "werewolf");
+  assert.equal(werewolfRoleAlignments.pied_piper, "third_party");
   assert.deepEqual(
     normalizeWerewolfRoleDeck([
       "wolf_king",

@@ -82,9 +82,10 @@ test("database buckets share the Paris floating-time cutoff and do not overlap",
   const day = new Date("2026-10-05T00:00:00Z");
   assert.deepEqual(getLobbyRetentionWhere(false, reference), {
     status: { not: "CANCELLED" },
-    OR: [{ endAt: { gt: cutoff } }, { endAt: null, startAt: { gte: day } }],
+    OR: [{ isPersistent: true }, { endAt: { gt: cutoff } }, { endAt: null, startAt: { gte: day } }],
   });
   assert.deepEqual(getLobbyRetentionWhere(true, reference), {
+    isPersistent: false,
     OR: [
       { status: "CANCELLED" },
       { endAt: { lte: cutoff } },

@@ -1,5 +1,7 @@
 "use client";
 
+import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -172,7 +174,7 @@ function ActivityAgendaRow({
   const href = getAgendaActivityHref(activity, locale);
   const dateLabel = getActivityDateLabel(activity, locale);
   const locationLabel = getActivityLocationLabel(activity);
-  const statusLabel = getStatusLabel(displayStatus, locale);
+  const statusLabel = activity.isPersistent ? getPersistentBookingCopy(locale).kind : getStatusLabel(displayStatus, locale);
   const categoryLabel = getCategoryLabel(activity.category, locale);
   const isInactive =
     displayStatus === "ENDED" || displayStatus === "CANCELLED";

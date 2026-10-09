@@ -21,7 +21,7 @@ function getEmptyCopy(locale: string) {
       back: "Profil",
       emptyTitle: "Aucune boutique liée à ce compte",
       description:
-        "Une fois votre boutique attribuée par un administrateur, vous pourrez gérer ici vos coupons et billets.",
+        "Une fois votre boutique attribuée par un administrateur, vous pourrez gérer ici vos réservations, coupons et billets.",
       adminAction: "Voir les boutiques dans l'administration",
       profileAction: "Retour au profil",
     };
@@ -33,7 +33,7 @@ function getEmptyCopy(locale: string) {
       back: "Profile",
       emptyTitle: "No store is linked to this account",
       description:
-        "Once an admin assigns a store to your account, you can manage its coupons and tickets here.",
+        "Once an admin assigns a store to your account, you can manage booking dates, coupons, and tickets here.",
       adminAction: "View stores in admin",
       profileAction: "Back to profile",
     };
@@ -43,7 +43,8 @@ function getEmptyCopy(locale: string) {
     title: "门店管理",
     back: "个人主页",
     emptyTitle: "此账号还没有关联门店",
-    description: "管理员将门店分配给此账号后，就可以在这里管理优惠券和票券。",
+    description:
+      "管理员将门店分配给此账号后，就可以在这里开放预约日期并管理优惠券、票券。",
     adminAction: "前往后台查看门店",
     profileAction: "返回我的",
   };

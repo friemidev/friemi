@@ -19,6 +19,10 @@
       "schedule": "15 4 * * *"
     },
     {
+      "path": "/api/cron/close-expired-store-bookings",
+      "schedule": "10 2 * * *"
+    },
+    {
       "path": "/api/cron/sync-trust-score",
       "schedule": "45 4 * * *"
     },

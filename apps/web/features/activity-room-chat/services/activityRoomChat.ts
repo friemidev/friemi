@@ -705,6 +705,7 @@ function getActivityRoomAccessWhere(
   profileId: string,
 ): Prisma.ActivityWhereInput {
   return {
+    isPersistent: false,
     status: {
       in: visibleActivityRoomStatuses,
     },
@@ -1070,6 +1071,7 @@ async function getActivityRoomPolicy(
     },
     select: {
       id: true,
+      isPersistent: true,
       endAt: true,
       organizerId: true,
       status: true,
@@ -1096,13 +1098,13 @@ async function getActivityRoomPolicy(
   });
 
   return resolveActivityRoomChatPolicy({
-    activityType: activity?.type ?? null,
+    activityType: activity?.isPersistent ? null : activity?.type ?? null,
     endAt: activity?.endAt ?? null,
-    isCoManager: Boolean(activity?.coManagers.length),
-    isOrganizer: activity?.organizerId === profileId,
+    isCoManager: !activity?.isPersistent && Boolean(activity?.coManagers.length),
+    isOrganizer: !activity?.isPersistent && activity?.organizerId === profileId,
     now,
-    participantStatus: activity?.participants[0]?.status ?? null,
-    status: activity?.status ?? null,
+    participantStatus: activity?.isPersistent ? null : activity?.participants[0]?.status ?? null,
+    status: activity?.isPersistent ? null : activity?.status ?? null,
   });
 }
 

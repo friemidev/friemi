@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { getUnreadBookingCount } from "@/features/merchants/bookings/bookingBadge";
 import { NextResponse } from "next/server";
 import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
@@ -54,6 +55,7 @@ async function getViewerProfileId() {
 
 async function loadUnreadBadgeCounts(profileId: string) {
   const [
+    unreadBookingCount,
     unreadNotificationCount,
     unreadInventoryTicketGiftCount,
     unreadDirectMessageCount,
@@ -61,6 +63,7 @@ async function loadUnreadBadgeCounts(profileId: string) {
     unreadActivityRoomCount,
     unreadPlanetChatCount,
   ] = await Promise.all([
+    getUnreadBookingCount(profileId),
     getUnreadNotificationCount(profileId),
     getUnreadInventoryTicketGiftCount(profileId),
     getUnreadDirectMessageCount(profileId),
@@ -70,6 +73,7 @@ async function loadUnreadBadgeCounts(profileId: string) {
   ]);
 
   return createUnreadBadgeCounts({
+    unreadBookingCount,
     unreadActivityRoomCount,
     unreadDirectMessageCount:
       unreadDirectMessageCount + unreadOfficialMessageCount,

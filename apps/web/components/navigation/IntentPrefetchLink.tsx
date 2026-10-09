@@ -1,8 +1,66 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, type ComponentProps } from "react";
+import {
+  getPendingNavigationRecoveryHref,
+  PENDING_NAVIGATION_RECOVERY_DELAY_MS,
+} from "@/features/navigation/pendingNavigationRecovery";
+
+let latestPendingNavigationAttempt = 0;
+
+function isFriemiNativeApp() {
+  return /\bFriemi(?:Android|IOS)\//i.test(window.navigator.userAgent);
+}
+
+function NativePendingNavigationRecovery({ href }: { href: string }) {
+  const { pending } = useLinkStatus();
+
+  useEffect(() => {
+    if (!pending || !isFriemiNativeApp()) return;
+
+    const attempt = ++latestPendingNavigationAttempt;
+    const startingHref = window.location.href;
+    const startedAt = Date.now();
+    const recover = () => {
+      if (attempt !== latestPendingNavigationAttempt) return;
+
+      const recoveryHref = getPendingNavigationRecoveryHref({
+        currentHref: window.location.href,
+        destinationHref: href,
+        elapsedMs: Date.now() - startedAt,
+        isOnline: window.navigator.onLine,
+        isVisible: document.visibilityState === "visible",
+        startingHref,
+      });
+
+      if (recoveryHref) {
+        console.warn("Recovering stalled native app navigation", recoveryHref);
+        window.location.assign(recoveryHref);
+      }
+    };
+
+    const timer = window.setTimeout(
+      recover,
+      PENDING_NAVIGATION_RECOVERY_DELAY_MS,
+    );
+    window.addEventListener("online", recover);
+    document.addEventListener("visibilitychange", recover);
+    window.addEventListener("friemi:android-resume", recover);
+    window.addEventListener("friemi:ios-resume", recover);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("online", recover);
+      document.removeEventListener("visibilitychange", recover);
+      window.removeEventListener("friemi:android-resume", recover);
+      window.removeEventListener("friemi:ios-resume", recover);
+    };
+  }, [href, pending]);
+
+  return null;
+}
 
 type IntentPrefetchLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
   href: string;
@@ -10,6 +68,7 @@ type IntentPrefetchLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
 };
 
 export function IntentPrefetchLink({
+  children,
   href,
   onFocus,
   onMouseEnter,
@@ -33,7 +92,9 @@ export function IntentPrefetchLink({
   }, [href]);
 
   function prefetchNow() {
-    if (hasPrefetchedRef.current) {
+    // A tap immediately navigates in the native WebView. Prefetching at that
+    // instant can race with the actual route request after a background resume.
+    if (hasPrefetchedRef.current || isFriemiNativeApp()) {
       return;
     }
 
@@ -42,7 +103,11 @@ export function IntentPrefetchLink({
   }
 
   function schedulePrefetch() {
-    if (hasPrefetchedRef.current || prefetchTimerRef.current !== null) {
+    if (
+      hasPrefetchedRef.current ||
+      prefetchTimerRef.current !== null ||
+      isFriemiNativeApp()
+    ) {
       return;
     }
 
@@ -82,6 +147,9 @@ export function IntentPrefetchLink({
         prefetchNow();
         onTouchStart?.(event);
       }}
-    />
+    >
+      {children}
+      <NativePendingNavigationRecovery href={href} />
+    </Link>
   );
 }

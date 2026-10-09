@@ -167,6 +167,7 @@ export async function getPlanetChatPageData(
       nameTranslations: true,
       announcement: true,
       inviteCode: true,
+      tags: true,
     },
   });
 

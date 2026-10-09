@@ -376,6 +376,14 @@ test("reports third-party seer results", () => {
     }),
     "THIRD_PARTY",
   );
+  assert.equal(
+    getWerewolfSeerResult({
+      roleAlignment: "third_party",
+      seatNumber: 8,
+      thirdPartySeatNumbers: [],
+    }),
+    "THIRD_PARTY",
+  );
 });
 
 test("alerts when all werewolves are dead", () => {

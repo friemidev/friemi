@@ -1,3 +1,4 @@
+import { isPersistentBookingActivity } from "./persistentBookingActivity";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -26,6 +27,8 @@ export async function getActivityManagementRole(
     },
     select: {
       organizerId: true,
+      isPersistent: true,
+      source: true,
       coManagers: {
         where: {
           managerProfileId: profileId,
@@ -38,7 +41,7 @@ export async function getActivityManagementRole(
     },
   });
 
-  if (!activity) {
+  if (!activity || isPersistentBookingActivity(activity)) {
     return "NONE";
   }
 

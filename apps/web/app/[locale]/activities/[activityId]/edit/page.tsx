@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
@@ -88,7 +88,33 @@ function EditActivityUnavailablePage({
 function getLockedEditCopy(
   copy: ReturnType<typeof getCopy>["editActivity"],
   editableActivity: Extract<EditableActivityResult, { status: "locked" }>,
+  locale: string,
 ) {
+  if (editableActivity.reason === "persistent-booking") {
+    redirect(withLocale(locale, "/profile/store/bookings"));
+  }
+  if (editableActivity.reason === "booking") {
+    if (locale === "fr") {
+      return {
+        description:
+          "Cette activité provient d’une réservation de boutique. Gérez la réservation depuis votre boutique ou annulez l’activité depuis sa page de détail.",
+        title: "Activité liée à une réservation",
+      };
+    }
+    if (locale === "en") {
+      return {
+        description:
+          "This activity was created from a store booking. Manage the booking in your store, or cancel the activity from its detail page.",
+        title: "Activity linked to a booking",
+      };
+    }
+    return {
+      description:
+        "此聚吧由店铺预约生成。请到店铺管理预约，或在聚吧详情页取消聚吧。",
+      title: "店铺预约聚吧不可编辑",
+    };
+  }
+
   if (editableActivity.reason === "cancelled") {
     return {
       description: copy.lockedCancelledDescription,
@@ -132,7 +158,11 @@ export default async function EditActivityPage({
   }
 
   if (editableActivity.status === "locked") {
-    const lockedCopy = getLockedEditCopy(t.editActivity, editableActivity);
+    const lockedCopy = getLockedEditCopy(
+      t.editActivity,
+      editableActivity,
+      locale,
+    );
 
     return (
       <EditActivityUnavailablePage

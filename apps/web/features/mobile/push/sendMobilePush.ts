@@ -267,6 +267,9 @@ export async function sendMobilePushForNotification(notificationId: string) {
   const apnsConfig = getAPNsConfig();
 
   if (!config && !apnsConfig) {
+    console.error("Mobile push skipped: no Firebase or APNs credentials", {
+      notificationId,
+    });
     return {
       ok: false,
       skipped: true,
@@ -324,6 +327,25 @@ export async function sendMobilePushForNotification(notificationId: string) {
         select: { title: true },
       },
       inventoryItemDefinitionId: true,
+      merchantBooking: {
+        select: {
+          id: true,
+          profileId: true,
+          date: true,
+          partySize: true,
+          settings: { select: { merchant: { select: { name: true } } } },
+        },
+      },
+      residencySlot: {
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          merchantId: true,
+          rejectionReason: true,
+          activity: { select: { startAt: true, address: true } },
+        },
+      },
       momentId: true,
       planetId: true,
       planet: {
@@ -388,7 +410,16 @@ export async function sendMobilePushForNotification(notificationId: string) {
   });
 
   if (devices.length === 0) {
+    console.info("Mobile push skipped: no registered devices", {
+      notificationId,
+    });
     return { ok: true, sentCount: 0 };
+  }
+
+  if (!config && devices.some((device) => device.platform === "ANDROID")) {
+    console.error("Android push skipped: Firebase credentials missing", {
+      notificationId,
+    });
   }
 
   const actorActivityRole =
@@ -405,6 +436,10 @@ export async function sendMobilePushForNotification(notificationId: string) {
   const accessToken = config ? await getFirebaseAccessToken(config) : null;
   const badgeCount = await getTotalBadgeCount(notification.recipientId);
   let sentCount = 0;
+  let androidAttempted = 0;
+  let androidSent = 0;
+  let iosAttempted = 0;
+  let iosSent = 0;
 
   for (const device of devices) {
     const locale = normalizePushLocale(device.locale);
@@ -419,8 +454,21 @@ export async function sendMobilePushForNotification(notificationId: string) {
         : null,
       locale,
       messageBody,
-      merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
+      merchantName:
+        notification.merchantBooking?.settings.merchant.name ??
+        notification.couponWalletItem?.coupon.merchant.name ??
+        null,
+      merchantBookingDate:
+        notification.merchantBooking?.date.toISOString().slice(0, 10) ?? null,
+      merchantBookingPartySize: notification.merchantBooking?.partySize ?? null,
       planetName: notification.planet?.name ?? null,
+      residencyTitle: notification.residencySlot?.title ?? null,
+      residencyDate:
+        notification.residencySlot?.date.toISOString().slice(0, 10) ?? null,
+      residencyRejectionReason:
+        notification.residencySlot?.rejectionReason ?? null,
+      residencyStartAt: notification.residencySlot?.activity?.startAt ?? null,
+      residencyAddress: notification.residencySlot?.activity?.address ?? null,
       ticketTitle: notification.inventoryItemDefinition?.title ?? null,
       type: notification.type,
     });
@@ -431,6 +479,11 @@ export async function sendMobilePushForNotification(notificationId: string) {
       conversationId: directMessageConversationId,
       momentId: notification.momentId,
       planetSlug: notification.planet?.slug ?? null,
+      residencyMerchantId: notification.residencySlot?.merchantId ?? null,
+      residencySlotId: notification.residencySlot?.id ?? null,
+      merchantBookingId: notification.merchantBooking?.id ?? null,
+      merchantBookingForCustomer:
+        notification.merchantBooking?.profileId === notification.recipientId,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {
@@ -438,6 +491,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
         continue;
       }
 
+      androidAttempted += 1;
       const response = await fetch(
         `https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`,
         {
@@ -471,12 +525,17 @@ export async function sendMobilePushForNotification(notificationId: string) {
 
       if (response.ok) {
         sentCount += 1;
+        androidSent += 1;
         continue;
       }
 
       const errorText = await response.text();
 
       if (isInvalidFirebaseTokenResponse(response.status, errorText)) {
+        console.warn("Invalid Firebase push token disabled", {
+          notificationId,
+          status: response.status,
+        });
         await prisma.mobileDevice.updateMany({
           where: {
             fcmToken: device.fcmToken,
@@ -501,6 +560,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       continue;
     }
 
+    iosAttempted += 1;
     const response = await sendIOSPushNotification({
       badge: badgeCount,
       config: apnsConfig,
@@ -513,6 +573,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
 
     if (response.ok) {
       sentCount += 1;
+      iosSent += 1;
       continue;
     }
 
@@ -535,5 +596,12 @@ export async function sendMobilePushForNotification(notificationId: string) {
     }
   }
 
+  console.info("Mobile push delivery", {
+    notificationId,
+    androidAttempted,
+    androidSent,
+    iosAttempted,
+    iosSent,
+  });
   return { ok: true, sentCount };
 }

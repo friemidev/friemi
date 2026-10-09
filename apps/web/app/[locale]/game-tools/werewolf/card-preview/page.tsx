@@ -10,7 +10,7 @@ import {
 } from "@/features/game-tools/werewolfCardAssets";
 import {
   getWerewolfRoleCopy,
-  type WerewolfRoleKey,
+  werewolfRoleKeys,
 } from "@/features/game-tools/werewolfConfig";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -21,21 +21,6 @@ type WerewolfCardPreviewPageProps = {
     locale: string;
   }>;
 };
-
-const previewRoleKeys: WerewolfRoleKey[] = [
-  "werewolf",
-  "wolf_king",
-  "white_wolf_king",
-  "seer",
-  "witch",
-  "guard",
-  "hunter",
-  "knight",
-  "idiot",
-  "cupid",
-  "lovers",
-  "villager",
-];
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -147,7 +132,7 @@ export default async function WerewolfCardPreviewPage({
 
         <SectionTitle>{t.roleGuide}</SectionTitle>
         <div className="divide-y divide-[#D8DCCB]">
-          {previewRoleKeys.map((roleKey) => (
+          {werewolfRoleKeys.map((roleKey) => (
             <RoleGuideRow
               description={roleCopy.roleDescriptions[roleKey]}
               imageSrc={

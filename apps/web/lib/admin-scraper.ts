@@ -493,21 +493,53 @@ export async function updateAdminActivity(
   id: string,
   data: Partial<AdminActivityInput>,
 ) {
-  const activity = await prisma.activity.update({
-    where: { id },
-    data: buildAdminActivityUpdateData(data),
-    include: {
-      organizer: { select: { id: true, nickname: true } },
-      merchant: { select: { id: true, name: true, slug: true } },
-      _count: { select: { participants: true } },
+  const activity = await prisma.$transaction(
+    async (tx) => {
+      await assertAdminActivityIsNotLinkedBooking(tx, id);
+      return tx.activity.update({
+        where: { id },
+        data: buildAdminActivityUpdateData(data),
+        include: {
+          organizer: { select: { id: true, nickname: true } },
+          merchant: { select: { id: true, name: true, slug: true } },
+          _count: { select: { participants: true } },
+        },
+      });
     },
-  });
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
   return serializeAdminActivity(activity);
 }
 
 export async function deleteAdminActivity(id: string) {
-  await prisma.activity.delete({ where: { id } });
+  await prisma.$transaction(
+    async (tx) => {
+      await assertAdminActivityIsNotLinkedBooking(tx, id);
+      await tx.activity.delete({ where: { id } });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
   return { ok: true };
+}
+
+export class AdminBookingActivityLockedError extends Error {
+  constructor() {
+    super(
+      "Booking activities cannot be changed or deleted in generic admin management.",
+    );
+    this.name = "AdminBookingActivityLockedError";
+  }
+}
+
+async function assertAdminActivityIsNotLinkedBooking(
+  tx: Prisma.TransactionClient,
+  activityId: string,
+) {
+  const linkedBooking = await tx.merchantResidencySlot.findUnique({
+    where: { activityId },
+    select: { id: true },
+  });
+  if (linkedBooking) throw new AdminBookingActivityLockedError();
 }
 
 export async function createAdminMerchant(data: AdminMerchantCreateInput) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import {
   ArrowLeft,
+  CalendarDays,
   ChevronRight,
   MapPin,
   PencilLine,
@@ -45,7 +46,11 @@ export function getCopy(locale: string) {
       pageNumber: (page: number, total: number) => `${page} / ${total}`,
       couponManageHint: "Publier, partager et suivre les coupons",
       ticketManage: "Billets d'événement",
-      ticketManageHint: "Contrôler les billets, gérer l'équipe et consulter l'historique",
+      ticketManageHint:
+        "Contrôler les billets, gérer l'équipe et consulter l'historique",
+      residencyManage: "Réservations boutique",
+      residencyManageHint:
+        "Sortie permanente, disponibilités et demandes clients",
       couponHelp: "Montrez le QR au client ou envoyez-lui le lien.",
       description: "Présentation",
       edit: "Modifier la boutique",
@@ -111,6 +116,8 @@ export function getCopy(locale: string) {
       couponManageHint: "Publish, share, and track coupons",
       ticketManage: "Event tickets",
       ticketManageHint: "Check tickets, manage staff, and review history",
+      residencyManage: "Store bookings",
+      residencyManageHint: "Permanent meetup, availability, and guest requests",
       couponHelp: "Show customers the QR code or send them the link.",
       description: "Description",
       edit: "Edit store",
@@ -174,6 +181,8 @@ export function getCopy(locale: string) {
     couponManageHint: "发布、分享与查看领取情况",
     ticketManage: "活动票券",
     ticketManageHint: "核销票券、邀请工作人员、查看记录",
+    residencyManage: "店铺预约",
+    residencyManageHint: "长期聚吧、开放设置与顾客预约",
     couponHelp: "向顾客出示二维码，或把链接发给顾客。",
     description: "门店介绍",
     edit: "编辑门店资料",
@@ -267,10 +276,24 @@ export function MerchantStoreHome({
           ) : null}
         </section>
 
-        <nav
-          className="space-y-1"
-          aria-label={copy.title}
-        >
+        <nav className="space-y-1" aria-label={copy.title}>
+          <Link
+            className="flex min-h-20 items-center gap-4 rounded-2xl px-1 py-4 transition hover:bg-fog/60 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(locale, "/profile/store/bookings")}
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest text-white">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-bold">
+                {copy.residencyManage}
+              </span>
+              <span className="mt-0.5 block text-sm text-ink/65">
+                {copy.residencyManageHint}
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-ink/45" />
+          </Link>
           <Link
             className="flex min-h-20 items-center gap-4 rounded-2xl px-1 py-4 transition hover:bg-fog/60 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
             href={withLocale(locale, "/profile/store/tickets")}
@@ -279,7 +302,9 @@ export function MerchantStoreHome({
               <TicketCheck className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-base font-bold">{copy.ticketManage}</span>
+              <span className="block text-base font-bold">
+                {copy.ticketManage}
+              </span>
               <span className="mt-0.5 block text-sm text-ink/65">
                 {copy.ticketManageHint}
               </span>

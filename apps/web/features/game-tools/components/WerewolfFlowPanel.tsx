@@ -23,6 +23,10 @@ import {
   localizeWerewolfFlowText,
   type WerewolfFlowState,
 } from "@/features/game-tools/werewolfFlow";
+import {
+  getWerewolfRoleCopy,
+  werewolfExtendedRoleKeys,
+} from "@/features/game-tools/werewolfConfig";
 
 type FlowEvent = {
   createdAt: string;
@@ -126,11 +130,20 @@ export function WerewolfFlowPanel({
       en: "Following nights",
       fr: "Nuits suivantes",
     }),
+    extendedRoles: localizeWerewolfFlowText(locale, {
+      "zh-CN": "本板子扩展身份",
+      en: "Additional roles in this setup",
+      fr: "Rôles supplémentaires de cette composition",
+    }),
   };
   const firstNightCues = getWerewolfNightCues(roleDeck, 1, locale);
   const laterNightCues = getWerewolfNightCues(roleDeck, 2, locale);
   const hasFirstNightOnlyCues = firstNightCues.some(
     (cue) => !laterNightCues.some((laterCue) => laterCue.key === cue.key),
+  );
+  const roleCopy = getWerewolfRoleCopy(locale);
+  const extendedRoles = werewolfExtendedRoleKeys.filter((role) =>
+    roleDeck.includes(role),
   );
   const records = events.flatMap((event) => {
     if (
@@ -398,6 +411,25 @@ export function WerewolfFlowPanel({
                         {t.laterNight}
                       </h3>
                       {renderCues(laterNightCues)}
+                    </section>
+                  ) : null}
+                  {extendedRoles.length ? (
+                    <section className="border-t border-[#E5E2D3] pt-6">
+                      <h3 className="mb-4 text-sm font-bold text-[#153B31]">
+                        {t.extendedRoles}
+                      </h3>
+                      <div className="space-y-4">
+                        {extendedRoles.map((role) => (
+                          <div className="border-l-2 border-[#2F7757] pl-4" key={role}>
+                            <p className="text-xs font-bold text-[#1F6E4C]">
+                              {roleCopy.roleLabels[role]}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold leading-6">
+                              {roleCopy.roleDescriptions[role]}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </section>
                   ) : null}
                 </div>

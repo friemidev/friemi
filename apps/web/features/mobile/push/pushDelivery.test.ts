@@ -9,6 +9,91 @@ import {
   normalizePushLocale,
 } from "./pushDelivery";
 
+test("reservation notifications open the recipient's private reservation record", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      type: "MERCHANT_RESERVATION_REQUESTED",
+    }),
+    "/profile/store/bookings/reservations/reservation-1",
+  );
+  for (const type of [
+    "MERCHANT_RESERVATION_ACCEPTED",
+    "MERCHANT_RESERVATION_REJECTED",
+  ] as const) {
+    assert.equal(
+      getNotificationPath({
+        activityId: "permanent-1",
+        merchantBookingId: "reservation-1",
+        type,
+      }),
+      "/profile/bookings/reservation-1",
+    );
+  }
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      merchantBookingForCustomer: false,
+      type: "MERCHANT_RESERVATION_CANCELLED",
+    }),
+    "/profile/store/bookings/reservations/reservation-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      merchantBookingForCustomer: true,
+      type: "MERCHANT_RESERVATION_CANCELLED",
+    }),
+    "/profile/bookings/reservation-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      type: "MERCHANT_RESERVATION_ACCEPTED",
+    }),
+    "/notifications",
+  );
+});
+
+test("reservation push copy identifies the booking without contact details", () => {
+  const copy = getNotificationCopy({
+    type: "MERCHANT_RESERVATION_REQUESTED",
+    locale: "zh-CN",
+    activityTitle: "Long meetup",
+    actorName: "Customer",
+    merchantName: "Gyu Plus",
+    merchantBookingDate: "2026-10-20",
+    merchantBookingPartySize: 3,
+  });
+  assert.deepEqual(copy, {
+    title: "收到新预约",
+    body: "Gyu Plus · 2026-10-20 · 3 人",
+  });
+  assert.match(
+    getNotificationCopy({
+      type: "MERCHANT_RESERVATION_ACCEPTED",
+      locale: "fr",
+      activityTitle: null,
+      actorName: null,
+      merchantName: "Gyu Plus",
+      merchantBookingPartySize: 2,
+    }).title,
+    /acceptée/,
+  );
+  assert.match(
+    getNotificationCopy({
+      type: "MERCHANT_RESERVATION_REJECTED",
+      locale: "en",
+      activityTitle: null,
+      actorName: null,
+    }).title,
+    /declined/,
+  );
+});
+
 test("normalizePushLocale maps supported locales conservatively", () => {
   assert.equal(normalizePushLocale("zh-TW"), "zh-CN");
   assert.equal(normalizePushLocale("en-US"), "en");
@@ -64,6 +149,97 @@ test("received tickets open the single-ticket bag list", () => {
     }),
     "/profile/bag",
   );
+});
+
+test("cancelled merchant residency push links to the original date and names it", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencyMerchantId: "merchant-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_CANCELLED",
+    }),
+    "/merchants/merchant-1/bookings/slot-1",
+  );
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: null,
+      actorName: null,
+      locale: "zh-CN",
+      residencyTitle: "周末聚会",
+      type: "MERCHANT_BOOKING_CANCELLED",
+    }),
+    { title: "店铺预约已取消", body: "你报名的「周末聚会」已取消" },
+  );
+});
+
+test("closed store booking requests notify the applicant and open the date", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencyMerchantId: "merchant-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_REQUEST_CANCELLED",
+    }),
+    "/merchants/merchant-1/bookings/slot-1",
+  );
+
+  const expected = {
+    "zh-CN": {
+      title: "预约申请已关闭",
+      body: "你申请的「周末聚会」已关闭",
+    },
+    en: {
+      title: "Booking request closed",
+      body: "Your request “周末聚会” is closed",
+    },
+    fr: {
+      title: "Demande de réservation clôturée",
+      body: "Votre demande « 周末聚会 » est clôturée",
+    },
+  } as const;
+  for (const locale of ["zh-CN", "en", "fr"] as const) {
+    assert.deepEqual(
+      getNotificationCopy({
+        activityTitle: null,
+        actorName: null,
+        locale,
+        residencyTitle: "周末聚会",
+        type: "MERCHANT_BOOKING_REQUEST_CANCELLED",
+      }),
+      expected[locale],
+    );
+  }
+});
+
+test("booking review and publication push routes and details stay specific", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_REJECTED",
+    }),
+    "/profile/store/bookings/slot-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "activity-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_PUBLISHED",
+    }),
+    "/lobby/activity-1",
+  );
+  const published = getNotificationCopy({
+    activityTitle: "周末聚吧",
+    actorName: null,
+    locale: "zh-CN",
+    residencyTitle: "周末聚吧",
+    residencyStartAt: "2050-07-20T19:30:00.000Z",
+    residencyAddress: "2 rue de test",
+    type: "MERCHANT_BOOKING_PUBLISHED",
+  });
+  assert.match(published.body, /19:30/);
+  assert.match(published.body, /2 rue de test/);
 });
 
 test("received ticket push works for gifts and admin batches in each locale", () => {

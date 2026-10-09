@@ -587,7 +587,11 @@ export function WerewolfPrivateSeatCard({
   const wasDeadRef = useRef(initialIsDead);
   const t = copies[locale] ?? copies.en;
   const currentRoleKey = roleKey ?? payload?.roleKey ?? null;
-  const roleCardImage = getWerewolfRoleCardImage(currentRoleKey, locale);
+  const roleCardImage = getWerewolfRoleCardImage(
+    currentRoleKey,
+    locale,
+    seatNumber,
+  );
   const seatBackImage = getWerewolfSeatBackImage(seatNumber);
   const ambientCardImage =
     revealed && !isDead && roleCardImage ? roleCardImage : seatBackImage;
@@ -601,6 +605,7 @@ export function WerewolfPrivateSeatCard({
           ? t.winnerWerewolf
           : null;
   const isThirdParty =
+    roleAlignment === "third_party" ||
     roomState.flow.thirdPartySeatNumbers.includes(seatNumber);
   const effectiveAlignment =
     currentRoleKey === "cupid" && roomState.flow.cupidSharedAlignment
@@ -1929,6 +1934,7 @@ export function WerewolfPrivateSeatCard({
                         const roleCard = getWerewolfRoleCardImage(
                           seat.roleKey,
                           locale,
+                          seat.seatNumber,
                         );
 
                         return (
