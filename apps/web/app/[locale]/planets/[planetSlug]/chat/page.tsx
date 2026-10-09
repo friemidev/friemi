@@ -8,7 +8,10 @@ import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 
 type PlanetChatRouteProps = {
   params: Promise<{ locale: string; planetSlug: string }>;
-  searchParams?: Promise<{ returnTo?: string | string[] }>;
+  searchParams?: Promise<{
+    manage?: string | string[];
+    returnTo?: string | string[];
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -36,6 +39,7 @@ export default async function PlanetChatRoute({
       ) : null}
       <PlanetChatPage
         fallbackHref={normalizePlanetChatReturnHref(locale, query?.returnTo)}
+        initialManageOpen={query?.manage === "1"}
         locale={locale}
         planet={planet}
         viewerProfileId={profile?.id ?? null}

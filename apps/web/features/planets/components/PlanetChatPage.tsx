@@ -56,11 +56,13 @@ function getPlanetName(planet: PlanetChat, locale: string) {
 
 export function PlanetChatPage({
   fallbackHref,
+  initialManageOpen = false,
   locale,
   planet,
   viewerProfileId,
 }: {
   fallbackHref: string;
+  initialManageOpen?: boolean;
   locale: string;
   planet: PlanetChat;
   viewerProfileId: string | null;
@@ -111,6 +113,7 @@ export function PlanetChatPage({
           </div>
           {planet.canViewChat ? (
             <PlanetChatSettingsMenu
+              key={`${planet.id}:${initialManageOpen}`}
               announcement={planet.announcement}
               approvedMembers={planet.approvedMembers.map((member) => ({
                 avatarUrl: member.profile.avatarUrl,
@@ -121,6 +124,7 @@ export function PlanetChatPage({
               inviteUrl={buildCanonicalSiteUrl(
                 withLocale(locale, `/planets/invite/${planet.inviteCode}`),
               )}
+              initialManageOpen={initialManageOpen}
               isMuted={planet.isMuted}
               isPinned={planet.isPinned}
               locale={locale}
@@ -134,6 +138,7 @@ export function PlanetChatPage({
               planetId={planet.id}
               planetSlug={planet.slug}
               planetName={name}
+              tags={planet.tags}
               viewerRole={planet.viewerMembership?.role ?? null}
             />
           ) : (
