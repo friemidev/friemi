@@ -1088,12 +1088,14 @@ model MerchantBookingReservation {
   reviewedBy          UserProfile?                     @relation("BookingReviewer", fields: [reviewedByProfileId], references: [id], onDelete: SetNull)
   reviewedAt          DateTime?
   cancelledAt         DateTime?
+  customerSeenAt      DateTime?
   notifications       Notification[]
   createdAt           DateTime                         @default(now())
   updatedAt           DateTime                         @updatedAt
 
   @@index([settingsId, date, status])
   @@index([profileId, createdAt])
+  @@index([profileId, customerSeenAt])
 }
 
 model MerchantResidencySlot {

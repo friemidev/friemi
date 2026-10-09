@@ -40,6 +40,7 @@ import {
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ProfileQrScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
@@ -102,6 +103,7 @@ import type {
 } from "../queries/getProfileDashboard";
 
 type ProfileDashboardViewProps = {
+  hasBookingHistory?: boolean;
   dashboard: ProfileDashboardViewModel;
   hasDashboardError?: boolean;
   isAuthenticated?: boolean;
@@ -3127,19 +3129,39 @@ function MobileProfileAvatarSubmitButton({
 function StoreBookingsEntry({
   className,
   locale,
+  hasBookingHistory,
 }: {
   className?: string;
   locale: string;
+  hasBookingHistory: boolean;
 }) {
   const copy = getMobileProfileCopy(locale);
+  const { unreadBookingCount } = useNotificationBadge();
+  const [hasBooked, setHasBooked] = useState(hasBookingHistory);
+  useEffect(() => {
+    if (hasBookingHistory || unreadBookingCount > 0) setHasBooked(true);
+  }, [hasBookingHistory, unreadBookingCount]);
+  if (!hasBooked && !hasBookingHistory && unreadBookingCount === 0) return null;
   return (
     <Link
+      aria-label={
+        unreadBookingCount > 0
+          ? `${copy.bookings}: ${getBookingCopy(locale).unreadBookings}`
+          : undefined
+      }
       className={cn(
-        "flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest",
+        "relative flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest",
         className,
       )}
       href={withLocale(locale, "/profile/bookings")}
     >
+      {unreadBookingCount > 0 ? (
+        <span
+          aria-hidden="true"
+          data-testid="booking-entry-unread-dot"
+          className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-white"
+        />
+      ) : null}
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white">
         <CalendarDays aria-hidden="true" className="h-5 w-5" />
       </span>
@@ -3155,6 +3177,7 @@ function StoreBookingsEntry({
 }
 
 function SelfMobileProfileHome({
+  hasBookingHistory,
   achievementPreviewItems,
   dashboard,
   locale,
@@ -3166,6 +3189,7 @@ function SelfMobileProfileHome({
   profileInitial,
   publicAchievements,
 }: {
+  hasBookingHistory: boolean;
   achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
@@ -3353,7 +3377,11 @@ function SelfMobileProfileHome({
         />
       </section>
 
-      <StoreBookingsEntry className="mt-5" locale={locale} />
+      <StoreBookingsEntry
+        className="mt-5"
+        locale={locale}
+        hasBookingHistory={hasBookingHistory}
+      />
 
       {ticketWorkbenchHref ? (
         <Link
@@ -3444,6 +3472,7 @@ function WerewolfStatsPanel({
 }
 
 export function ProfileDashboardView({
+  hasBookingHistory = false,
   achievementPreviewItems = [],
   dashboard,
   hasDashboardError = false,
@@ -3456,6 +3485,10 @@ export function ProfileDashboardView({
   profile,
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
+  const { refreshUnreadBookingCount } = useNotificationBadge();
+  useEffect(() => {
+    if (isSelf) void refreshUnreadBookingCount();
+  }, [isSelf, refreshUnreadBookingCount]);
   const t = getCopy(locale);
   const mobileCopy = getMobileProfileCopy(locale);
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
@@ -3507,6 +3540,7 @@ export function ProfileDashboardView({
       <div className="friemi-native-app-mobile-only md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
+            hasBookingHistory={hasBookingHistory}
             achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
@@ -3621,7 +3655,10 @@ export function ProfileDashboardView({
                     <ChevronRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
                 ) : null}
-                <StoreBookingsEntry locale={locale} />
+                <StoreBookingsEntry
+                  locale={locale}
+                  hasBookingHistory={hasBookingHistory}
+                />
                 <ProfileOverviewPanel
                   activeActivitySection={activeProfileSection}
                   createdCount={dashboard.createdActivityCount}

@@ -2,8 +2,14 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import {
+  getUnreadBookingCount,
+  markCustomerBookingsSeenInDatabase,
+} from "./bookingBadge";
 import {
   cancelBooking,
   reviewBooking,
@@ -82,6 +88,7 @@ function refresh(result: BookingServiceResult) {
   // The same data appears in all locales, including notification landing pages.
   for (const locale of ["zh-CN", "en", "fr"]) {
     for (const path of [
+      "/profile",
       "/profile/store",
       "/profile/bookings",
       "/admin/merchants",
@@ -112,7 +119,11 @@ async function run(
   try {
     const result = await operation(profile.id);
     const next = state(result, locale);
-    if (next.success) refresh(result);
+    if (next.success) {
+      if (result.customerProfileId)
+        await invalidateUnreadBadgeCache([result.customerProfileId]);
+      refresh(result);
+    }
     return next;
   } catch (error) {
     // Avoid logging submitted contact details from Prisma error context.
@@ -192,4 +203,23 @@ export async function cancelBookingAction(
   return run(data, `/profile/bookings/${bookingId}`, (actorProfileId) =>
     cancelBooking({ actorProfileId, bookingId }),
   );
+}
+
+export async function markBookingsSeenAction(
+  locale: string,
+  pageOpenedAt: string,
+): Promise<{ unreadBookingCount: number }> {
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    "/profile/bookings",
+  );
+  if (profile.status !== "ACTIVE") throw new Error("Forbidden");
+  const now = new Date();
+  await markCustomerBookingsSeenInDatabase(prisma, {
+    profileId: profile.id,
+    openedAt: new Date(pageOpenedAt),
+    now,
+  });
+  await invalidateUnreadBadgeCache([profile.id]);
+  return { unreadBookingCount: await getUnreadBookingCount(profile.id) };
 }

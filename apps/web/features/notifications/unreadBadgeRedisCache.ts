@@ -18,6 +18,7 @@ export function unreadBadgeCountsMatch(
   second: UnreadBadgeCounts,
 ) {
   return (
+    first.unreadBookingCount === second.unreadBookingCount &&
     first.unreadActivityRoomCount === second.unreadActivityRoomCount &&
     first.unreadDirectMessageCount === second.unreadDirectMessageCount &&
     first.unreadInventoryTicketGiftCount ===
@@ -49,7 +50,8 @@ export async function getCachedUnreadBadgeCounts(profileId: string): Promise<{
     if (
       !cached ||
       typeof cached !== "object" ||
-      !("unreadInventoryTicketGiftCount" in cached)
+      !("unreadInventoryTicketGiftCount" in cached) ||
+      !("unreadBookingCount" in cached)
     ) {
       return { counts: null, status: "miss" };
     }

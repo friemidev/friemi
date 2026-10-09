@@ -171,6 +171,147 @@ async function submitPreparedBooking(page, date, guestId) {
   );
 }
 
+async function getNavigationUnreadCounts(page) {
+  const result = await page.evaluate(async () => {
+    const response = await fetch("/api/navigation/unread-counts", {
+      cache: "no-store",
+    });
+    return { status: response.status, counts: await response.json() };
+  });
+  assert.equal(result.status, 200, "Guest unread counts must be available");
+  return result.counts;
+}
+
+async function waitForBookingUnreadCount(page, expected) {
+  return waitForDatabase(async () => {
+    const counts = await getNavigationUnreadCounts(page);
+    assert.equal(
+      counts.unreadInventoryTicketGiftCount,
+      0,
+      "Booking updates must not create an inventory-ticket badge",
+    );
+    return counts.unreadBookingCount === expected ? counts : null;
+  });
+}
+
+async function openProfileFromMobileNav(page) {
+  await page
+    .locator("nav.app-mobile-nav")
+    .getByRole("link", { name: /^我的/ })
+    .click();
+  await page.waitForURL((url) => url.pathname === "/zh-CN/profile");
+  await page
+    .locator('a[href="/zh-CN/profile/bag"]')
+    .filter({ visible: true })
+    .waitFor();
+}
+
+async function assertUnreadBookingProfile(page, bookingId, screenshotName) {
+  await waitForBookingUnreadCount(page, 1);
+  await openProfileFromMobileNav(page);
+  const entry = page
+    .locator('a[href="/zh-CN/profile/bookings"]')
+    .filter({ visible: true });
+  await entry.waitFor();
+  await page
+    .getByTestId("booking-entry-unread-dot")
+    .filter({ visible: true })
+    .waitFor();
+  await page.getByTestId("profile-unread-dot").waitFor();
+  const reservation = await prisma.merchantBookingReservation.findUniqueOrThrow(
+    {
+      where: { id: bookingId },
+    },
+  );
+  assert.equal(
+    reservation.customerSeenAt,
+    null,
+    "Opening the profile must not mark reservations as read",
+  );
+  const prefetch = await page.request.get(`${origin}/zh-CN/profile/bookings`, {
+    headers: { RSC: "1", "Next-Router-Prefetch": "1" },
+  });
+  assert.equal(prefetch.status(), 200);
+  assert.equal(
+    (await getNavigationUnreadCounts(page)).unreadBookingCount,
+    1,
+    "Prefetching the reservation list must not mark reservations as read",
+  );
+  if (screenshotName) {
+    await page.screenshot({
+      path: `${outputDirectory}/${screenshotName}`,
+      fullPage: true,
+    });
+  }
+  return entry;
+}
+
+async function readBookingsFromProfile(page, bookingId, screenshotName) {
+  await page
+    .locator('a[href="/zh-CN/profile/bookings"]')
+    .filter({ visible: true })
+    .click();
+  await page.waitForURL((url) => url.pathname === "/zh-CN/profile/bookings");
+  await page.getByRole("heading", { name: "我的预约", exact: true }).waitFor();
+  await waitForBookingUnreadCount(page, 0);
+  await waitForDatabase(
+    async () =>
+      (
+        await prisma.merchantBookingReservation.findUniqueOrThrow({
+          where: { id: bookingId },
+        })
+      ).customerSeenAt,
+  );
+  await page.getByTestId("profile-unread-dot").waitFor({ state: "hidden" });
+  const currentBooking =
+    await prisma.merchantBookingReservation.findUniqueOrThrow({
+      where: { id: bookingId },
+      select: { status: true },
+    });
+  const tabLabel =
+    currentBooking.status === "PENDING"
+      ? /待确认/
+      : currentBooking.status === "ACCEPTED"
+        ? /已接受/
+        : /历史记录/;
+  await page.getByRole("tab", { name: tabLabel }).click();
+  const currentRow = page.locator(
+    `a[href="/zh-CN/profile/bookings/${bookingId}"]`,
+  );
+  await currentRow.waitFor();
+  if (currentBooking.status === "REJECTED") {
+    await currentRow.getByText("未接受", { exact: true }).waitFor();
+  }
+  await openProfileFromMobileNav(page);
+  await page
+    .locator('a[href="/zh-CN/profile/bookings"]')
+    .filter({ visible: true })
+    .waitFor();
+  await page
+    .getByTestId("booking-entry-unread-dot")
+    .filter({ visible: true })
+    .waitFor({ state: "hidden" });
+  await page.getByTestId("profile-unread-dot").waitFor({ state: "hidden" });
+  await waitForBookingUnreadCount(page, 0);
+  if (screenshotName) {
+    // Also verify persistence once; later reads keep the client route cache intact.
+    await page.reload();
+    await page
+      .locator('a[href="/zh-CN/profile/bookings"]')
+      .filter({ visible: true })
+      .waitFor();
+    await page.getByTestId("profile-unread-dot").waitFor({ state: "hidden" });
+    await page
+      .getByTestId("booking-entry-unread-dot")
+      .filter({ visible: true })
+      .waitFor({ state: "hidden" });
+    await page.screenshot({
+      path: `${outputDirectory}/${screenshotName}`,
+      fullPage: true,
+    });
+  }
+}
+
 async function assertNotice(page, recipientId, bookingId, type, titleText) {
   const notice = await waitForDatabase(() =>
     prisma.notification.findFirst({
@@ -373,6 +514,21 @@ try {
   const adminPage = await signIn(admin, { width: 1280, height: 900 });
   const guestPage = await signIn(guest, { width: 390, height: 844 });
 
+  step = "profile hides the booking entry before the first reservation";
+  await guestPage
+    .locator('a[href="/zh-CN/profile/bag"]')
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(
+    await guestPage.locator('a[href="/zh-CN/profile/bookings"]').count(),
+    0,
+    "A customer with no reservation history has no My bookings entry",
+  );
+  await waitForBookingUnreadCount(guestPage, 0);
+  await guestPage
+    .getByTestId("profile-unread-dot")
+    .waitFor({ state: "hidden" });
+
   step = "a customer without a store cannot configure store bookings";
   await guestPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
   assert.equal(await guestPage.locator("#booking-title").count(), 0);
@@ -523,6 +679,21 @@ try {
   assert.equal(acceptedBooking.partySize, 3);
   assert.equal(acceptedBooking.contactPhone, phone);
   assert.equal(acceptedBooking.contactName, privateContact);
+  assert.equal(acceptedBooking.customerSeenAt, null);
+  step = "first reservation reveals the profile entry and both unread dots";
+  await assertUnreadBookingProfile(
+    guestPage,
+    acceptedBooking.id,
+    "14-profile-booking-unread-mobile.png",
+  );
+  await readBookingsFromProfile(
+    guestPage,
+    acceptedBooking.id,
+    "15-profile-booking-read-mobile.png",
+  );
+  console.log(
+    "First booking reveals its profile entry; profile and prefetch preserve unread state; opening the list clears both dots persistently",
+  );
   step =
     "only the store owner can see reservation review and customer contacts";
   for (const nonOwnerPage of [guestPage, adminPage]) {
@@ -594,6 +765,16 @@ try {
     path: `${outputDirectory}/04-owner-accepted.png`,
     fullPage: true,
   });
+  step = "owner acceptance resets the customer's booking unread state";
+  // The privacy check intentionally left the guest on a forbidden page.
+  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  await guestPage.getByRole("heading", { name: title, exact: true }).waitFor();
+  await assertUnreadBookingProfile(
+    guestPage,
+    acceptedBooking.id,
+    "16-profile-booking-accepted-unread-mobile.png",
+  );
+  await readBookingsFromProfile(guestPage, acceptedBooking.id);
   await assertNotice(
     guestPage,
     guest.profileId,
@@ -698,6 +879,14 @@ try {
     rejectedDate,
     guest.profileId,
   );
+  await assertUnreadBookingProfile(guestPage, rejectedBooking.id);
+  await readBookingsFromProfile(guestPage, rejectedBooking.id);
+  // Keep both visited routes cached while the merchant reviews in another session.
+  await guestPage
+    .locator("nav.app-mobile-nav")
+    .getByRole("link", { name: "聚吧", exact: true })
+    .click();
+  await guestPage.waitForURL((url) => url.pathname === "/zh-CN/lobby");
   await ownerPage.goto(
     `${origin}/zh-CN/profile/store/bookings/reservations/${rejectedBooking.id}`,
   );
@@ -720,6 +909,9 @@ try {
         })
       )?.status === "REJECTED",
   );
+  step = "owner rejection resets a previously read reservation's unread state";
+  await assertUnreadBookingProfile(guestPage, rejectedBooking.id);
+  await readBookingsFromProfile(guestPage, rejectedBooking.id);
   await assertNotice(
     guestPage,
     guest.profileId,
@@ -935,7 +1127,7 @@ try {
   assert.equal(finalActivity.participants.length, 0);
   assert.ok(finalActivity.lastBookingAt);
   console.log(
-    "PASS three-account permanent booking: owner self-service, ownership boundaries, one meetup, date/party/phone, acceptance, rejection, notices, cancellation, privacy, recurring edits, pause and retained history",
+    "PASS three-account permanent booking: owner self-service, ownership boundaries, one meetup, date/party/phone, acceptance, rejection, notices, cancellation, privacy, recurring edits, pause, retained history, first-booking entry visibility and persistent profile/list unread badges",
   );
 } catch (error) {
   console.error(`FAIL preview booking acceptance at ${step}:`, error);

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Minus, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
+import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { submitBookingAction } from "../actions";
 import { getBookingCopy } from "../copy";
 import type { BookingActionState, PublicBookingSpace } from "../types";
@@ -31,6 +32,12 @@ export function CustomerBookingForm({
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
+  const {
+    unreadBookingCount,
+    setUnreadBookingCount,
+    refreshUnreadBookingCount,
+  } = useNotificationBadge();
+  const announcedBookingId = useRef<string | null>(null);
   const [date, setDate] = useState("");
   const [partySize, setPartySize] = useState(2);
   const [contactName, setContactName] = useState(viewerName);
@@ -53,6 +60,24 @@ export function CustomerBookingForm({
         withLocale(locale, `/profile/bookings/${state.bookingId}`),
       );
   }, [state, router, locale]);
+
+  useEffect(() => {
+    if (
+      state.success &&
+      state.bookingId &&
+      !state.alreadyBooked &&
+      announcedBookingId.current !== state.bookingId
+    ) {
+      announcedBookingId.current = state.bookingId;
+      setUnreadBookingCount(unreadBookingCount + 1);
+      void refreshUnreadBookingCount();
+    }
+  }, [
+    state,
+    unreadBookingCount,
+    setUnreadBookingCount,
+    refreshUnreadBookingCount,
+  ]);
 
   if (state.success && state.bookingId && !state.alreadyBooked)
     return (

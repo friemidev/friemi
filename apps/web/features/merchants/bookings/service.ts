@@ -31,6 +31,7 @@ export type BookingServiceResult = {
   status: BookingServiceStatus;
   bookingId?: string;
   activityId?: string;
+  customerProfileId?: string;
 };
 type Outcome = BookingServiceResult & {
   notification?: CreateNotificationInput;
@@ -260,6 +261,7 @@ export async function submitBookingInDatabase(
       status: "ALREADY_BOOKED",
       bookingId: existing.id,
       activityId: settings.activityId,
+      customerProfileId: profile.id,
       ...(settings.merchant.ownerProfileId
         ? {
             notification: notification({
@@ -291,6 +293,7 @@ export async function submitBookingInDatabase(
       contactName: input.contactName?.trim() || profile.nickname.slice(0, 80),
       contactPhone: phone,
       note: input.note?.trim() || null,
+      customerSeenAt: null,
     },
     select: { id: true },
   });
@@ -302,6 +305,7 @@ export async function submitBookingInDatabase(
     status: "CREATED",
     bookingId: booking.id,
     activityId: settings.activityId,
+    customerProfileId: profile.id,
     notification: notification({
       type: "MERCHANT_RESERVATION_REQUESTED",
       actorId: profile.id,
@@ -357,6 +361,7 @@ export async function reviewBookingInDatabase(
       status: nextStatus,
       bookingId: booking.id,
       activityId: booking.settings.activityId,
+      customerProfileId: booking.profileId,
       notification: notification({
         type:
           nextStatus === "ACCEPTED"
@@ -377,6 +382,7 @@ export async function reviewBookingInDatabase(
       rejectionReason: nextStatus === "REJECTED" ? reason : null,
       reviewedByProfileId: input.actorProfileId,
       reviewedAt: new Date(),
+      customerSeenAt: null,
     },
   });
   if (changed.count !== 1) return { status: "STALE" };
@@ -384,6 +390,7 @@ export async function reviewBookingInDatabase(
     status: nextStatus,
     bookingId: booking.id,
     activityId: booking.settings.activityId,
+    customerProfileId: booking.profileId,
     notification: notification({
       type:
         nextStatus === "ACCEPTED"

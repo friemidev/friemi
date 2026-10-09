@@ -32,6 +32,9 @@ const NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS = 1200;
 type UnreadCountRefreshResult = "aborted" | "failed" | "success";
 
 type NotificationBadgeContextValue = {
+  refreshUnreadBookingCount: () => Promise<void>;
+  setUnreadBookingCount: (count: number) => void;
+  unreadBookingCount: number;
   refreshUnreadDirectMessageCount: () => Promise<void>;
   refreshUnreadInventoryTicketGiftCount: () => Promise<void>;
   refreshUnreadNotificationCount: () => Promise<void>;
@@ -59,6 +62,7 @@ export function NotificationBadgeProvider({
   enabled: requestedEnabled,
   freshnessGuardEnabled,
   initialUnreadDirectMessageCount = 0,
+  initialUnreadBookingCount = 0,
   initialUnreadInventoryTicketGiftCount = 0,
   initialUnreadNotificationCount,
   viewerProfileId,
@@ -67,6 +71,7 @@ export function NotificationBadgeProvider({
   enabled: boolean;
   freshnessGuardEnabled: boolean;
   initialUnreadDirectMessageCount?: number;
+  initialUnreadBookingCount?: number;
   initialUnreadInventoryTicketGiftCount?: number;
   initialUnreadNotificationCount: number;
   viewerProfileId: string | null;
@@ -90,8 +95,20 @@ export function NotificationBadgeProvider({
   const [unreadDirectMessageCount, setUnreadDirectMessageCountState] = useState(
     () => normalizeUnreadCount(initialUnreadDirectMessageCount),
   );
-  const [unreadInventoryTicketGiftCount, setUnreadInventoryTicketGiftCountState] =
-    useState(() => normalizeUnreadCount(initialUnreadInventoryTicketGiftCount));
+  const [
+    unreadInventoryTicketGiftCount,
+    setUnreadInventoryTicketGiftCountState,
+  ] = useState(() =>
+    normalizeUnreadCount(initialUnreadInventoryTicketGiftCount),
+  );
+  const [unreadBookingCount, setUnreadBookingCountState] = useState(() =>
+    normalizeUnreadCount(initialUnreadBookingCount),
+  );
+  const bookingCountRevision = useRef(0);
+  const setUnreadBookingCount = useCallback((count: number) => {
+    bookingCountRevision.current += 1;
+    setUnreadBookingCountState(normalizeUnreadCount(count));
+  }, []);
 
   const setUnreadNotificationCount = useCallback((count: number) => {
     setUnreadNotificationCountState(normalizeUnreadCount(count));
@@ -111,6 +128,7 @@ export function NotificationBadgeProvider({
       setUnreadNotificationCountState(0);
       setUnreadDirectMessageCountState(0);
       setUnreadInventoryTicketGiftCountState(0);
+      setUnreadBookingCountState(0);
       return Promise.resolve<UnreadCountRefreshResult>("success");
     }
 
@@ -119,6 +137,7 @@ export function NotificationBadgeProvider({
     }
 
     const abortController = new AbortController();
+    const bookingRevisionAtStart = bookingCountRevision.current;
     abortControllerRef.current = abortController;
 
     const refreshPromise = (async (): Promise<UnreadCountRefreshResult> => {
@@ -131,6 +150,7 @@ export function NotificationBadgeProvider({
         });
 
         if (response.status === 401) {
+          setUnreadBookingCountState(0);
           setUnreadNotificationCountState(0);
           setUnreadDirectMessageCountState(0);
           setUnreadInventoryTicketGiftCountState(0);
@@ -139,6 +159,10 @@ export function NotificationBadgeProvider({
           const counts = parseUnreadBadgeCountsPayload(await response.json());
 
           if (counts) {
+            // A response started before opening bookings must not restore its dot.
+            if (bookingCountRevision.current === bookingRevisionAtStart) {
+              setUnreadBookingCountState(counts.unreadBookingCount);
+            }
             setUnreadNotificationCountState(counts.unreadNotificationCount);
             setUnreadDirectMessageCountState(counts.unreadMessageCount);
             setUnreadInventoryTicketGiftCountState(
@@ -230,6 +254,7 @@ export function NotificationBadgeProvider({
   const refreshUnreadNotificationCount = refreshUnreadCounts;
   const refreshUnreadDirectMessageCount = refreshUnreadCounts;
   const refreshUnreadInventoryTicketGiftCount = refreshUnreadCounts;
+  const refreshUnreadBookingCount = refreshUnreadCounts;
   const handleChatInboxChanged = useCallback(
     (payload: ChatRealtimePayload | null) => {
       window.dispatchEvent(
@@ -280,6 +305,7 @@ export function NotificationBadgeProvider({
       setUnreadNotificationCountState(0);
       setUnreadDirectMessageCountState(0);
       setUnreadInventoryTicketGiftCountState(0);
+      setUnreadBookingCountState(0);
       return;
     }
 
@@ -393,6 +419,11 @@ export function NotificationBadgeProvider({
       if (event instanceof CustomEvent) {
         let handledPayload = false;
 
+        if (typeof event.detail?.unreadBookingCount === "number") {
+          setUnreadBookingCount(event.detail.unreadBookingCount);
+          handledPayload = true;
+        }
+
         if (typeof event.detail?.unreadCount === "number") {
           setUnreadNotificationCountState(
             normalizeUnreadCount(event.detail.unreadCount),
@@ -468,7 +499,13 @@ export function NotificationBadgeProvider({
         handleNotificationsRefresh,
       );
     };
-  }, [enabled, freshnessGuardEnabled, pathname, runUnreadCountRefresh]);
+  }, [
+    enabled,
+    freshnessGuardEnabled,
+    pathname,
+    runUnreadCountRefresh,
+    setUnreadBookingCount,
+  ]);
 
   useEffect(
     () => () => {
@@ -498,6 +535,9 @@ export function NotificationBadgeProvider({
 
   const value = useMemo(
     () => ({
+      refreshUnreadBookingCount,
+      setUnreadBookingCount,
+      unreadBookingCount,
       refreshUnreadDirectMessageCount,
       refreshUnreadInventoryTicketGiftCount,
       refreshUnreadNotificationCount,
@@ -509,6 +549,9 @@ export function NotificationBadgeProvider({
       unreadNotificationCount,
     }),
     [
+      refreshUnreadBookingCount,
+      setUnreadBookingCount,
+      unreadBookingCount,
       refreshUnreadDirectMessageCount,
       refreshUnreadInventoryTicketGiftCount,
       refreshUnreadNotificationCount,
@@ -536,6 +579,9 @@ export function useNotificationBadge(fallbackUnreadCount = 0) {
   }
 
   return {
+    refreshUnreadBookingCount: async () => undefined,
+    setUnreadBookingCount: () => undefined,
+    unreadBookingCount: 0,
     refreshUnreadDirectMessageCount: async () => undefined,
     refreshUnreadInventoryTicketGiftCount: async () => undefined,
     refreshUnreadNotificationCount: async () => undefined,

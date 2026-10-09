@@ -101,6 +101,7 @@ test("a store with the legacy access flag off receives private reservations with
       contactName: "Guest",
       contactPhone: "+33612345678",
       note: null,
+      customerSeenAt: null,
     },
     select: { id: true },
   });
@@ -205,6 +206,11 @@ test("only current owner reviews; review remains possible after schedule pause",
   assert.equal(result.notification?.recipientId, "customer");
   assert.equal(result.notification?.type, "MERCHANT_RESERVATION_ACCEPTED");
   assert.equal(changes.length, 1);
+  assert.equal(result.customerProfileId, "customer");
+  assert.equal(
+    (changes[0] as { data: { customerSeenAt: unknown } }).data.customerSeenAt,
+    null,
+  );
 });
 
 test("reject requires a reason and cannot overwrite cancelled or accepted reservations", async () => {
@@ -268,6 +274,41 @@ test("customer cancellation checks ownership and remains independent of meetup c
   });
   assert.equal(result.status, "CANCELLED");
   assert.equal(result.notification?.recipientId, "owner");
+  assert.equal(changes.length, 1);
+  assert.equal(
+    "customerSeenAt" in (changes[0] as { data: object }).data,
+    false,
+  );
+});
+
+test("a rejection becomes unread while a repeated review preserves the existing read state", async () => {
+  const changes: Array<{ data: Record<string, unknown> }> = [];
+  let status = "PENDING";
+  const db = {
+    merchantBookingReservation: {
+      findUnique: async () => ({
+        ...row,
+        status,
+        customerSeenAt: new Date(),
+      }),
+      updateMany: async (args: { data: Record<string, unknown> }) => {
+        changes.push(args);
+        status = String(args.data.status);
+        return { count: 1 };
+      },
+    },
+  } as unknown as Prisma.TransactionClient;
+  const input = {
+    actorProfileId: "owner",
+    bookingId: "booking",
+    decision: "reject" as const,
+    reason: "Closed",
+  };
+  assert.equal((await reviewBookingInDatabase(db, input)).status, "REJECTED");
+  assert.equal(changes[0].data.customerSeenAt, null);
+  const repeated = await reviewBookingInDatabase(db, input);
+  assert.equal(repeated.status, "REJECTED");
+  assert.equal(repeated.customerProfileId, "customer");
   assert.equal(changes.length, 1);
 });
 
