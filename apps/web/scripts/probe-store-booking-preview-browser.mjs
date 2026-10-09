@@ -369,43 +369,23 @@ try {
   const adminPage = await signIn(admin, { width: 1280, height: 900 });
   const guestPage = await signIn(guest, { width: 390, height: 844 });
 
-  step = "authorization boundaries before grant";
-  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
-  await ownerPage.getByRole("heading", { name: "预约功能尚未开通" }).waitFor();
-  await guestPage.goto(
-    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
-  );
+  step = "a customer without a store cannot configure store bookings";
+  await guestPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
+  assert.equal(await guestPage.locator("#booking-title").count(), 0);
   assert.equal(
-    await guestPage.getByRole("button", { name: "授予预约权限" }).count(),
+    await guestPage
+      .getByRole("button", { name: "创建并开启预约", exact: true })
+      .count(),
     0,
   );
   assert.equal(
     (await prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } }))
       .bookingAccessEnabled,
     false,
+    "Legacy admin-access flag stays false; ownership is sufficient for bookings",
   );
-
-  step = "admin grants booking access";
-  await adminPage.goto(
-    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
-  );
-  await adminPage
-    .getByRole("heading", { name: merchantName, exact: true })
-    .waitFor();
-  await adminPage
-    .getByRole("button", { name: "授予预约权限", exact: true })
-    .click();
-  await waitForDatabase(
-    async () =>
-      (await prisma.merchant.findUnique({ where: { id: merchantId } }))
-        ?.bookingAccessEnabled,
-  );
-  await adminPage.getByText("权限已更新", { exact: true }).waitFor();
-  await adminPage.screenshot({
-    path: `${outputDirectory}/01-admin-access.png`,
-  });
   console.log(
-    "Admin granted access; owner and customer cannot grant it themselves",
+    "No-store customer cannot configure bookings; owner needs no administrator authorization",
   );
 
   step = "owner creates one permanent meetup";
@@ -431,6 +411,28 @@ try {
   settingsId = settings.id;
   activityId = settings.activityId;
   assert.equal(settings.scheduleMode, "DAILY");
+  assert.equal(
+    (await prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } }))
+      .bookingAccessEnabled,
+    false,
+    "Creating a permanent meetup must not depend on or mutate the legacy authorization flag",
+  );
+  await adminPage.goto(
+    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
+  );
+  await adminPage
+    .getByRole("heading", { name: merchantName, exact: true })
+    .waitFor();
+  assert.equal(
+    await adminPage
+      .getByRole("button", { name: /授予预约权限|关闭预约权限/ })
+      .count(),
+    0,
+  );
+  await adminPage.screenshot({
+    path: `${outputDirectory}/01-admin-overview.png`,
+    fullPage: true,
+  });
   const permanent = await prisma.activity.findUniqueOrThrow({
     where: { id: activityId },
   });
@@ -478,6 +480,32 @@ try {
   assert.equal(acceptedBooking.partySize, 3);
   assert.equal(acceptedBooking.contactPhone, phone);
   assert.equal(acceptedBooking.contactName, privateContact);
+  step =
+    "only the store owner can see reservation review and customer contacts";
+  for (const nonOwnerPage of [guestPage, adminPage]) {
+    await nonOwnerPage.goto(
+      `${origin}/zh-CN/profile/store/bookings/reservations/${acceptedBooking.id}`,
+    );
+    assert.equal(
+      await nonOwnerPage
+        .getByRole("button", { name: "接受预约", exact: true })
+        .count(),
+      0,
+    );
+    assert.equal(
+      (await nonOwnerPage.content()).includes(phone),
+      false,
+      "Owner detail is unavailable to another account, including site administrators",
+    );
+  }
+  assert.equal(
+    (
+      await prisma.merchantBookingReservation.findUniqueOrThrow({
+        where: { id: acceptedBooking.id },
+      })
+    ).status,
+    "PENDING",
+  );
   await assertNotice(
     ownerPage,
     owner.profileId,
@@ -783,29 +811,7 @@ try {
     1,
   );
 
-  step =
-    "revoke blocks new requests but owner may process an existing reservation";
-  await adminPage.goto(
-    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
-  );
-  await adminPage
-    .getByRole("button", { name: "关闭预约权限", exact: true })
-    .click();
-  await waitForDatabase(
-    async () =>
-      !(await prisma.merchant.findUnique({ where: { id: merchantId } }))
-        ?.bookingAccessEnabled,
-  );
-  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
-  await guestPage
-    .getByRole("heading", { name: "已暂停新预约", exact: true })
-    .waitFor();
-  assert.equal(
-    await guestPage
-      .getByRole("button", { name: "提交预约", exact: true })
-      .count(),
-    0,
-  );
+  step = "owner accepts another booking without administrator intervention";
   await ownerPage.goto(
     `${origin}/zh-CN/profile/store/bookings/reservations/${preservedBooking.id}`,
   );
@@ -820,16 +826,10 @@ try {
         })
       )?.status === "ACCEPTED",
   );
-  await adminPage.goto(
-    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
-  );
-  await adminPage
-    .getByRole("button", { name: "授予预约权限", exact: true })
-    .click();
-  await waitForDatabase(
-    async () =>
-      (await prisma.merchant.findUnique({ where: { id: merchantId } }))
-        ?.bookingAccessEnabled,
+  assert.equal(
+    (await prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } }))
+      .bookingAccessEnabled,
+    false,
   );
 
   step = "pause rejects a stale customer form and preserves prior reservations";
@@ -881,7 +881,7 @@ try {
   assert.equal(finalActivity.participants.length, 0);
   assert.ok(finalActivity.lastBookingAt);
   console.log(
-    "PASS three-account permanent booking: grant, one meetup, date/party/phone, acceptance, rejection, notices, cancellation, privacy, recurring edits, revoke, pause and retained history",
+    "PASS three-account permanent booking: owner self-service, ownership boundaries, one meetup, date/party/phone, acceptance, rejection, notices, cancellation, privacy, recurring edits, pause and retained history",
   );
 } catch (error) {
   console.error(`FAIL preview booking acceptance at ${step}:`, error);
