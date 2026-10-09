@@ -138,14 +138,19 @@ function getWerewolfCardLocale(locale: string) {
 export function getWerewolfRoleCardImage(
   roleKey: string | null | undefined,
   locale: string,
+  seatNumber?: number,
 ) {
   if (!isWerewolfRoleKey(roleKey)) {
     return null;
   }
 
   const cardLocale = getWerewolfCardLocale(locale);
+  const cardKey =
+    roleKey === "villager" && seatNumber && seatNumber % 2 === 0
+      ? "villager_female"
+      : roleKey;
 
-  return `${WEREWOLF_CARD_ASSET_BASE}/recto/${roleKey}_${cardLocale}.png`;
+  return `${WEREWOLF_CARD_ASSET_BASE}/recto/${cardKey}_${cardLocale}.png`;
 }
 
 export function getWerewolfSeatBackImage(seatNumber: number) {

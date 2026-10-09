@@ -488,13 +488,24 @@ export function canUseWerewolfAntidote({
 }
 
 const godRoleKeys = new Set<WerewolfRoleKey>([
+  "bear",
   "cupid",
+  "dream_catcher",
+  "elder",
+  "fox",
+  "gravedigger",
   "guard",
   "hunter",
+  "hybrid",
   "idiot",
   "knight",
+  "little_girl",
   "lovers",
+  "magician",
   "seer",
+  "silencing_elder",
+  "thief",
+  "wild_child",
   "witch",
 ]);
 
@@ -991,7 +1002,10 @@ export function getWerewolfSeerResult({
   seatNumber: number;
   thirdPartySeatNumbers: number[];
 }) {
-  if (thirdPartySeatNumbers.includes(seatNumber)) {
+  if (
+    thirdPartySeatNumbers.includes(seatNumber) ||
+    roleAlignment === "third_party"
+  ) {
     return "THIRD_PARTY" as const;
   }
 

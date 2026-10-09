@@ -3286,7 +3286,10 @@ export function WerewolfRoomOverview({
                 label={t.finishWerewolf}
                 value="WEREWOLF"
               />
-              {room.state.flow.thirdPartySeatNumbers.length > 0 ? (
+              {room.state.flow.thirdPartySeatNumbers.length > 0 ||
+              room.seats.some(
+                (seat) => seat.roleKey === "pied_piper",
+              ) ? (
                 <FinishOutcomeButton
                   className="h-12 rounded-full bg-[#B77A22] px-4 text-sm font-bold text-white transition hover:bg-[#996319] disabled:cursor-not-allowed disabled:opacity-55"
                   label={t.finishThirdParty}
