@@ -1,6 +1,10 @@
 import type { NotificationType } from "@prisma/client";
 import { formatFloatingActivityDate } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import {
+  getMerchantReservationNoticeCopy,
+  getMerchantReservationNoticePath,
+} from "@/features/merchants/bookings/notifications";
 
 export type PushCopyLocale = "zh-CN" | "en" | "fr";
 
@@ -25,8 +29,16 @@ export function getNotificationPath(input: {
   planetSlug?: string | null;
   residencyMerchantId?: string | null;
   residencySlotId?: string | null;
+  merchantBookingId?: string | null;
+  merchantBookingForCustomer?: boolean;
   type: NotificationType;
 }) {
+  const reservationPath = getMerchantReservationNoticePath({
+    type: input.type,
+    bookingId: input.merchantBookingId,
+    forCustomer: input.merchantBookingForCustomer,
+  });
+  if (reservationPath) return reservationPath;
   if (
     input.type === "MERCHANT_BOOKING_CANCELLED" ||
     input.type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
@@ -133,6 +145,8 @@ export function getNotificationCopy(input: {
   locale: PushCopyLocale;
   messageBody?: string | null;
   merchantName?: string | null;
+  merchantBookingDate?: string | null;
+  merchantBookingPartySize?: number | null;
   residencyTitle?: string | null;
   residencyDate?: string | null;
   residencyRejectionReason?: string | null;
@@ -142,6 +156,14 @@ export function getNotificationCopy(input: {
   ticketTitle?: string | null;
   type: NotificationType;
 }) {
+  const reservationCopy = getMerchantReservationNoticeCopy({
+    type: input.type,
+    locale: input.locale,
+    merchantName: input.merchantName,
+    date: input.merchantBookingDate,
+    partySize: input.merchantBookingPartySize,
+  });
+  if (reservationCopy) return reservationCopy;
   const activityTitle =
     input.activityTitle ||
     (input.locale === "zh-CN"

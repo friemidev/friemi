@@ -26,6 +26,7 @@ export type CreateNotificationInput = {
   occurrenceId?: string | null;
   planetId?: string | null;
   residencySlotId?: string | null;
+  merchantBookingId?: string | null;
   recipientId: string;
   type: NotificationType;
 };
@@ -54,6 +55,7 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.momentId ?? "",
         input.planetId ?? "",
         ...(input.residencySlotId ? [input.residencySlotId] : []),
+        ...(input.merchantBookingId ? [input.merchantBookingId] : []),
       ].join("\n"),
     )
     .digest("hex")}`;
@@ -74,6 +76,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     momentId: input.momentId ?? null,
     planetId: input.planetId ?? null,
     residencySlotId: input.residencySlotId ?? null,
+    merchantBookingId: input.merchantBookingId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };

@@ -9,6 +9,91 @@ import {
   normalizePushLocale,
 } from "./pushDelivery";
 
+test("reservation notifications open the recipient's private reservation record", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      type: "MERCHANT_RESERVATION_REQUESTED",
+    }),
+    "/profile/store/bookings/reservations/reservation-1",
+  );
+  for (const type of [
+    "MERCHANT_RESERVATION_ACCEPTED",
+    "MERCHANT_RESERVATION_REJECTED",
+  ] as const) {
+    assert.equal(
+      getNotificationPath({
+        activityId: "permanent-1",
+        merchantBookingId: "reservation-1",
+        type,
+      }),
+      "/profile/bookings/reservation-1",
+    );
+  }
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      merchantBookingForCustomer: false,
+      type: "MERCHANT_RESERVATION_CANCELLED",
+    }),
+    "/profile/store/bookings/reservations/reservation-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      merchantBookingId: "reservation-1",
+      merchantBookingForCustomer: true,
+      type: "MERCHANT_RESERVATION_CANCELLED",
+    }),
+    "/profile/bookings/reservation-1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: "permanent-1",
+      type: "MERCHANT_RESERVATION_ACCEPTED",
+    }),
+    "/notifications",
+  );
+});
+
+test("reservation push copy identifies the booking without contact details", () => {
+  const copy = getNotificationCopy({
+    type: "MERCHANT_RESERVATION_REQUESTED",
+    locale: "zh-CN",
+    activityTitle: "Long meetup",
+    actorName: "Customer",
+    merchantName: "Gyu Plus",
+    merchantBookingDate: "2026-10-20",
+    merchantBookingPartySize: 3,
+  });
+  assert.deepEqual(copy, {
+    title: "收到新预约",
+    body: "Gyu Plus · 2026-10-20 · 3 人",
+  });
+  assert.match(
+    getNotificationCopy({
+      type: "MERCHANT_RESERVATION_ACCEPTED",
+      locale: "fr",
+      activityTitle: null,
+      actorName: null,
+      merchantName: "Gyu Plus",
+      merchantBookingPartySize: 2,
+    }).title,
+    /acceptée/,
+  );
+  assert.match(
+    getNotificationCopy({
+      type: "MERCHANT_RESERVATION_REJECTED",
+      locale: "en",
+      activityTitle: null,
+      actorName: null,
+    }).title,
+    /declined/,
+  );
+});
+
 test("normalizePushLocale maps supported locales conservatively", () => {
   assert.equal(normalizePushLocale("zh-TW"), "zh-CN");
   assert.equal(normalizePushLocale("en-US"), "en");

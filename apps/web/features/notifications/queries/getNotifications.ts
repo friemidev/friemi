@@ -28,6 +28,7 @@ export function getVisibleNotificationWhere(
 
 const notificationSelect = {
   id: true,
+  recipientId: true,
   aaTransactionId: true,
   type: true,
   readAt: true,
@@ -44,6 +45,15 @@ const notificationSelect = {
       id: true,
       organizerId: true,
       title: true,
+    },
+  },
+  merchantBooking: {
+    select: {
+      id: true,
+      profileId: true,
+      date: true,
+      partySize: true,
+      settings: { select: { merchant: { select: { name: true } } } },
     },
   },
   residencySlot: {
@@ -124,6 +134,13 @@ type NotificationQueryResult = Prisma.NotificationGetPayload<{
 
 export type NotificationViewModel = {
   id: string;
+  merchantBooking: {
+    id: string;
+    date: string;
+    partySize: number;
+    merchantName: string;
+    forCustomer: boolean;
+  } | null;
   aaTransactionId: string | null;
   type: NotificationType;
   readAt: string | null;
@@ -198,6 +215,16 @@ function mapNotification(
 ): NotificationViewModel {
   return {
     id: notification.id,
+    merchantBooking: notification.merchantBooking
+      ? {
+          id: notification.merchantBooking.id,
+          date: notification.merchantBooking.date.toISOString().slice(0, 10),
+          partySize: notification.merchantBooking.partySize,
+          merchantName: notification.merchantBooking.settings.merchant.name,
+          forCustomer:
+            notification.merchantBooking.profileId === notification.recipientId,
+        }
+      : null,
     aaTransactionId: notification.aaTransactionId,
     type: notification.type,
     readAt: notification.readAt?.toISOString() ?? null,

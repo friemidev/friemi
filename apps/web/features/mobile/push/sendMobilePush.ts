@@ -324,6 +324,15 @@ export async function sendMobilePushForNotification(notificationId: string) {
         select: { title: true },
       },
       inventoryItemDefinitionId: true,
+      merchantBooking: {
+        select: {
+          id: true,
+          profileId: true,
+          date: true,
+          partySize: true,
+          settings: { select: { merchant: { select: { name: true } } } },
+        },
+      },
       residencySlot: {
         select: {
           id: true,
@@ -429,7 +438,13 @@ export async function sendMobilePushForNotification(notificationId: string) {
         : null,
       locale,
       messageBody,
-      merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
+      merchantName:
+        notification.merchantBooking?.settings.merchant.name ??
+        notification.couponWalletItem?.coupon.merchant.name ??
+        null,
+      merchantBookingDate:
+        notification.merchantBooking?.date.toISOString().slice(0, 10) ?? null,
+      merchantBookingPartySize: notification.merchantBooking?.partySize ?? null,
       planetName: notification.planet?.name ?? null,
       residencyTitle: notification.residencySlot?.title ?? null,
       residencyDate:
@@ -450,6 +465,9 @@ export async function sendMobilePushForNotification(notificationId: string) {
       planetSlug: notification.planet?.slug ?? null,
       residencyMerchantId: notification.residencySlot?.merchantId ?? null,
       residencySlotId: notification.residencySlot?.id ?? null,
+      merchantBookingId: notification.merchantBooking?.id ?? null,
+      merchantBookingForCustomer:
+        notification.merchantBooking?.profileId === notification.recipientId,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {

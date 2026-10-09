@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Bell,
+  CalendarDays,
   CalendarX2,
   Check,
   CheckCheck,
@@ -52,6 +53,10 @@ import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "./NotificationBadgeProvider";
+import {
+  getMerchantReservationNoticeCopy,
+  isMerchantReservationNotice,
+} from "@/features/merchants/bookings/notifications";
 
 type NotificationCategory = "activity" | "friends" | "gift" | "system";
 
@@ -63,6 +68,7 @@ function getNotificationCategory(
   type: NotificationType | string,
 ): NotificationCategory {
   if (
+    isMerchantReservationNotice(type) ||
     type === "PARTICIPATION_PENDING" ||
     type === "PARTICIPATION_CONFIRMED" ||
     type === "PARTICIPATION_CANCELLED" ||
@@ -139,6 +145,14 @@ function getNotificationText(
   notification: NotificationViewModel,
   locale: string,
 ) {
+  const reservationCopy = getMerchantReservationNoticeCopy({
+    type: notification.type,
+    locale,
+    merchantName: notification.merchantBooking?.merchantName,
+    date: notification.merchantBooking?.date,
+    partySize: notification.merchantBooking?.partySize,
+  });
+  if (reservationCopy) return reservationCopy;
   const t = getCopy(locale).notifications;
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
   const actorName = getNotificationActorName(notification, locale) ?? undefined;
@@ -585,6 +599,13 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (isMerchantReservationNotice(notification.type)) {
+    return locale === "fr"
+      ? "Voir la réservation"
+      : locale === "en"
+        ? "View reservation"
+        : "查看预约";
+  }
   if (notification.type.startsWith("MERCHANT_BOOKING_")) {
     if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
       return t.openActivity;
@@ -1110,6 +1131,17 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
+  if (isMerchantReservationNotice(type)) {
+    return {
+      icon:
+        type === "MERCHANT_RESERVATION_CANCELLED" ||
+        type === "MERCHANT_RESERVATION_REJECTED"
+          ? CalendarX2
+          : CalendarDays,
+      iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-forest",
+      cardClassName: "bg-paper",
+    };
+  }
   if (
     type === "MERCHANT_BOOKING_CANCELLED" ||
     type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
@@ -1335,6 +1367,8 @@ function NotificationCard({
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_ACCESS_INVITED" ||
+        (isMerchantReservationNotice(notification.type) &&
+          Boolean(notification.merchantBooking)) ||
         (notification.type.startsWith("MERCHANT_BOOKING_") &&
           Boolean(notification.residencySlot || notification.activity)) ||
         notification.type === "MOMENT_LIKED" ||

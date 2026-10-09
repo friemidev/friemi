@@ -11,10 +11,6 @@ import {
   cancelResidencySignup,
   cancelResidencySlot,
   cancelResidencySlotAsAdmin,
-  publishResidencySlot,
-  requestResidencySlot,
-  reviewResidencySlot,
-  signupForResidencySlot,
   type ResidencyServiceResult,
   type ResidencyServiceStatus,
 } from "./service";
@@ -169,25 +165,14 @@ export async function submitResidencyRequestAction(
   formData: FormData,
 ): Promise<ResidencyActionState> {
   const locale = getLocale(formData);
-  const profile = await currentActiveProfile(
-    locale,
-    "/profile/store/bookings/new",
-  );
-  if (!profile) return toActionState({ status: "FORBIDDEN" }, locale);
-  try {
-    const result = await requestResidencySlot({
-      actorProfileId: profile.id,
-      date: readString(formData, "date"),
-      title: readString(formData, "title"),
-      description: readString(formData, "description"),
-    });
-    if (result.status === "CREATED")
-      await refreshResidencyPaths(locale, result.slotId);
-    return toActionState(result, locale);
-  } catch (error) {
-    console.error("Failed to request merchant residency", error);
-    return { error: errors[locale].FAILED };
-  }
+  return {
+    error:
+      locale === "en"
+        ? "Reservations have moved. Return to the store’s booking page."
+        : locale === "fr"
+          ? "Le parcours a changé. Revenez à la page de réservation de la boutique."
+          : "预约流程已更新，请返回门店预约入口。",
+  };
 }
 
 export async function reviewResidencyRequestAction(
@@ -195,35 +180,14 @@ export async function reviewResidencyRequestAction(
   formData: FormData,
 ): Promise<ResidencyActionState> {
   const locale = getLocale(formData);
-  const slotId = readString(formData, "slotId");
-  const decision = readString(formData, "decision");
-  if (!slotId || (decision !== "approve" && decision !== "reject")) {
-    return toActionState({ status: "INVALID" }, locale);
-  }
-  if (!(await isCurrentUserAdmin())) {
-    return toActionState({ status: "FORBIDDEN" }, locale);
-  }
-  const profile = await currentActiveProfile(
-    locale,
-    "/admin/merchants/bookings",
-  );
-  if (!profile) return toActionState({ status: "FORBIDDEN" }, locale);
-  try {
-    const result = await reviewResidencySlot({
-      actorProfileId: profile.id,
-      isAdmin: true,
-      slotId,
-      decision,
-      reason: readString(formData, "reason"),
-    });
-    if (result.status === "CONFIRMED" || result.status === "REJECTED") {
-      await refreshResidencyPaths(locale, result.slotId);
-    }
-    return toActionState(result, locale);
-  } catch (error) {
-    console.error("Failed to review merchant residency", error);
-    return { error: errors[locale].FAILED };
-  }
+  return {
+    error:
+      locale === "en"
+        ? "Reservations have moved. Return to the store’s booking page."
+        : locale === "fr"
+          ? "Le parcours a changé. Revenez à la page de réservation de la boutique."
+          : "预约流程已更新，请返回门店预约入口。",
+  };
 }
 
 export async function cancelResidencyRequestAction(
@@ -288,27 +252,14 @@ export async function signupResidencyAction(
   formData: FormData,
 ): Promise<ResidencyActionState> {
   const locale = getLocale(formData);
-  const slotId = readString(formData, "slotId");
-  if (!slotId) return toActionState({ status: "INVALID" }, locale);
-  const slot = await getPublicResidencySlot(slotId);
-  if (!slot) return toActionState({ status: "NOT_FOUND" }, locale);
-  const profile = await currentActiveProfile(
-    locale,
-    `/merchants/${slot.merchant.id}/bookings/${slotId}`,
-  );
-  if (!profile) return toActionState({ status: "FORBIDDEN" }, locale);
-  try {
-    const result = await signupForResidencySlot({
-      actorProfileId: profile.id,
-      slotId,
-    });
-    if (result.status === "SIGNED_UP")
-      await refreshResidencyPaths(locale, result.slotId);
-    return toActionState(result, locale);
-  } catch (error) {
-    console.error("Failed to sign up for merchant residency", error);
-    return { error: errors[locale].FAILED };
-  }
+  return {
+    error:
+      locale === "en"
+        ? "Reservations have moved. Return to the store’s booking page."
+        : locale === "fr"
+          ? "Le parcours a changé. Revenez à la page de réservation de la boutique."
+          : "预约流程已更新，请返回门店预约入口。",
+  };
 }
 
 export async function cancelResidencySignupAction(
@@ -341,23 +292,12 @@ export async function publishResidencyActivityAction(
   formData: FormData,
 ): Promise<ResidencyActionState> {
   const locale = getLocale(formData);
-  const slotId = readString(formData, "slotId");
-  if (!slotId) return toActionState({ status: "INVALID" }, locale);
-  const profile = await currentActiveProfile(locale, "/profile/store/bookings");
-  if (!profile) return toActionState({ status: "FORBIDDEN" }, locale);
-  try {
-    const result = await publishResidencySlot({
-      actorProfileId: profile.id,
-      slotId,
-      startTime: readString(formData, "startTime"),
-      address: readString(formData, "address"),
-    });
-    if (result.status === "PUBLISHED") {
-      await refreshResidencyPaths(locale, result.slotId, result.activityId);
-    }
-    return toActionState(result, locale);
-  } catch (error) {
-    console.error("Failed to publish merchant residency activity", error);
-    return { error: errors[locale].FAILED };
-  }
+  return {
+    error:
+      locale === "en"
+        ? "Reservations have moved. Return to the store’s booking page."
+        : locale === "fr"
+          ? "Le parcours a changé. Revenez à la page de réservation de la boutique."
+          : "预约流程已更新，请返回门店预约入口。",
+  };
 }

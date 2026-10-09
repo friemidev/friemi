@@ -13,6 +13,7 @@ import { withLocale } from "@/lib/routes";
 import { getVisibleNotificationWhere } from "../queries/getNotifications";
 import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { getMerchantReservationNoticePath } from "@/features/merchants/bookings/notifications";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -423,6 +424,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       activityId: true,
       couponWalletItemId: true,
       momentId: true,
+      merchantBooking: { select: { id: true, profileId: true } },
       residencySlot: {
         select: { id: true, merchantId: true },
       },
@@ -434,6 +436,23 @@ export async function openNotificationActivityAction(formData: FormData) {
       type: true,
     },
   });
+
+  const reservationTarget = notification
+    ? getMerchantReservationNoticePath({
+        type: notification.type,
+        bookingId: notification.merchantBooking?.id,
+        forCustomer: notification.merchantBooking?.profileId === profile.id,
+      })
+    : null;
+  if (reservationTarget) {
+    await prisma.notification.updateMany({
+      where: { id: notificationId, recipientId: profile.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    await invalidateUnreadBadgeCache([profile.id]);
+    revalidatePath(withLocale(locale, "/notifications"));
+    redirect(withLocale(locale, reservationTarget));
+  }
 
   if (notification?.type.startsWith("MERCHANT_BOOKING_")) {
     await prisma.notification.updateMany({

@@ -14,8 +14,7 @@ import { getMerchantAdminCopy } from "@/components/admin/merchantAdminCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminInventoryPanel } from "@/features/inventory/components/AdminInventoryPanel";
-import { getAdminResidencyCopy } from "@/features/merchants/residency/adminCopy";
-import { getAdminResidencySlots } from "@/features/merchants/residency/queries";
+import { getMerchantBookingAdminCopy } from "@/components/admin/merchantBookingCopy";
 import { isCurrentUserAdmin, requireAdminPageAccess } from "@/lib/admin-auth";
 import { getAdminMerchants } from "@/lib/admin-scraper";
 import { withLocale } from "@/lib/routes";
@@ -58,14 +57,8 @@ export default async function AdminMerchantsPage({
     Math.min(100_000, Number.parseInt(rawPage ?? "1", 10) || 1),
   );
   const merchants = view === "merchants" ? await getAdminMerchants() : [];
-  const pendingResidencies =
-    view === "merchants"
-      ? (await getAdminResidencySlots()).filter(
-          (slot) => slot.status === "PENDING",
-        ).length
-      : 0;
   const merchantCopy = getMerchantAdminCopy(locale);
-  const residencyCopy = getAdminResidencyCopy(locale);
+  const bookingCopy = getMerchantBookingAdminCopy(locale);
 
   return (
     <PageContainer
@@ -125,17 +118,12 @@ export default async function AdminMerchantsPage({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold sm:text-base">
-                {residencyCopy.entry}
+                {bookingCopy.title}
               </span>
               <span className="mt-1 block text-xs text-ink/65 sm:text-sm">
-                {residencyCopy.entryHint}
+                {bookingCopy.entryHint}
               </span>
             </span>
-            {pendingResidencies > 0 ? (
-              <span className="rounded-full bg-coral/30 px-2.5 py-1 text-xs font-bold text-ink">
-                {residencyCopy.requests(pendingResidencies)}
-              </span>
-            ) : null}
             <ArrowUpRight
               aria-hidden="true"
               className="h-5 w-5 shrink-0 text-forest"

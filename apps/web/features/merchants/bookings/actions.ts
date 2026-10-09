@@ -74,6 +74,7 @@ function state(
   const error = messages[locale][result.status as keyof typeof messages.en];
   return {
     ...(error ? { error } : { success: true }),
+    alreadyBooked: result.status === "ALREADY_BOOKED",
     bookingId: result.bookingId,
     activityId: result.activityId,
   };

@@ -8,7 +8,6 @@ import { getAdminResidencyCopy } from "@/features/merchants/residency/adminCopy"
 import {
   AdminResidencyCancelForm,
   AdminResidencyPublishedCancelForm,
-  AdminResidencyReviewForm,
 } from "@/features/merchants/residency/components/AdminResidencyReviewForm";
 import { formatResidencyDate } from "@/features/merchants/residency/components/ResidencyCalendar";
 import { getAdminResidencySlot } from "@/features/merchants/residency/queries";
@@ -51,7 +50,7 @@ export default async function AdminResidencyDetailPage({
       className="app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] max-w-2xl pb-16 max-md:px-4 max-md:py-0 md:py-10"
     >
       <MerchantAdminHeader
-        backHref={withLocale(locale, "/admin/merchants/bookings")}
+        backHref={withLocale(locale, "/admin/merchants/bookings/legacy")}
         backLabel={copy.backList}
         title={copy.title}
       />
@@ -98,9 +97,6 @@ export default async function AdminResidencyDetailPage({
           </Link>
         ) : null}
       </article>
-      {slot.status === "PENDING" ? (
-        <AdminResidencyReviewForm locale={locale} slotId={slot.id} />
-      ) : null}
       {slot.status === "PENDING" || slot.status === "CONFIRMED" ? (
         <AdminResidencyCancelForm
           locale={locale}
