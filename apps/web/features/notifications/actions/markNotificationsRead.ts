@@ -442,15 +442,19 @@ export async function openNotificationActivityAction(formData: FormData) {
     });
     await invalidateUnreadBadgeCache([profile.id]);
     revalidatePath(withLocale(locale, "/notifications"));
+    const opensOwnerBooking =
+      notification.type === "MERCHANT_BOOKING_CONFIRMED" ||
+      notification.type === "MERCHANT_BOOKING_REJECTED";
+    const opensCancelledDate =
+      notification.type === "MERCHANT_BOOKING_CANCELLED" ||
+      notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED";
     const target =
       notification.type === "MERCHANT_BOOKING_PUBLISHED" &&
       notification.activityId
         ? getActivityDetailPath(notification.activityId)
-        : notification.residencySlot &&
-            (notification.type === "MERCHANT_BOOKING_CONFIRMED" ||
-              notification.type === "MERCHANT_BOOKING_REJECTED")
+        : notification.residencySlot && opensOwnerBooking
           ? `/profile/store/bookings/${notification.residencySlot.id}`
-          : notification.residencySlot
+          : notification.residencySlot && opensCancelledDate
             ? `/merchants/${notification.residencySlot.merchantId}/bookings/${notification.residencySlot.id}`
             : "/notifications";
     trackNotificationOpened({

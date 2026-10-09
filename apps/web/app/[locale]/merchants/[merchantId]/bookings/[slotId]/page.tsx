@@ -11,10 +11,15 @@ export const dynamic = "force-dynamic";
 
 export default async function MerchantResidencyDateRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; merchantId: string; slotId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
-  const { locale, merchantId, slotId } = await params;
+  const [{ locale, merchantId, slotId }, { from }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const viewer = await getOptionalCurrentUserProfileSnapshot();
   const slot = await getPublicResidencySlot(slotId, viewer?.id);
   if (
@@ -24,10 +29,14 @@ export default async function MerchantResidencyDateRoute({
     notFound();
   }
   const merchant = await getMerchantProfile(merchantId);
-  const isFormerSignupToCancelledDate =
-    slot.status === "CANCELLED" && slot.viewerHadSignup;
+  const canViewCancelledDate =
+    slot.status === "CANCELLED" &&
+    (slot.viewerHadSignup || slot.viewerRequested);
+  const canViewInactiveBookedDate =
+    (slot.status === "CONFIRMED" || slot.status === "PUBLISHED") &&
+    slot.viewerHadSignup;
   if (
-    (!merchant && !isFormerSignupToCancelledDate) ||
+    (!merchant && !canViewCancelledDate && !canViewInactiveBookedDate) ||
     (merchant && merchant.id !== slot.merchant.id)
   ) {
     notFound();
@@ -50,6 +59,7 @@ export default async function MerchantResidencyDateRoute({
       isAuthenticated={Boolean(viewer)}
       isMerchantOwner={isMerchantOwner}
       calendarAvailable={Boolean(merchant)}
+      fromProfileBookings={from === "profile-bookings"}
       locale={locale}
       signInHref={getSignInHref(locale, target)}
       slot={slot}

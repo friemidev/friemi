@@ -7,11 +7,13 @@ import { getLocalizedActivityDetailPath } from "@/features/activities/utils/acti
 import { getAdminResidencyCopy } from "@/features/merchants/residency/adminCopy";
 import {
   AdminResidencyCancelForm,
+  AdminResidencyPublishedCancelForm,
   AdminResidencyReviewForm,
 } from "@/features/merchants/residency/components/AdminResidencyReviewForm";
 import { formatResidencyDate } from "@/features/merchants/residency/components/ResidencyCalendar";
 import { getAdminResidencySlot } from "@/features/merchants/residency/queries";
 import { isCurrentUserAdmin, requireAdminPageAccess } from "@/lib/admin-auth";
+import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -29,6 +31,19 @@ export default async function AdminResidencyDetailPage({
   const slot = await getAdminResidencySlot(slotId);
   if (!slot) notFound();
   const copy = getAdminResidencyCopy(locale);
+  const publishedActivity =
+    slot.status === "PUBLISHED" && slot.activityId
+      ? await prisma.activity.findUnique({
+          where: { id: slot.activityId },
+          select: { status: true, startAt: true, endAt: true },
+        })
+      : null;
+  const canCancelPublished =
+    publishedActivity &&
+    ["OPEN", "FULL", "RECRUITING", "CONFIRMED"].includes(
+      publishedActivity.status,
+    ) &&
+    (publishedActivity.endAt ?? publishedActivity.startAt) > new Date();
 
   return (
     <PageContainer
@@ -90,6 +105,13 @@ export default async function AdminResidencyDetailPage({
         <AdminResidencyCancelForm
           locale={locale}
           pendingRequest={slot.status === "PENDING"}
+          slotId={slot.id}
+        />
+      ) : null}
+      {canCancelPublished && slot.activityId ? (
+        <AdminResidencyPublishedCancelForm
+          activityId={slot.activityId}
+          locale={locale}
           slotId={slot.id}
         />
       ) : null}

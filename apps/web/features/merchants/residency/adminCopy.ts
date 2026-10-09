@@ -30,6 +30,10 @@ export function getAdminResidencyCopy(locale: string) {
         "Cette demande sera clôturée. Le commerçant pourra proposer une autre date.",
       cancelConfirm: "Confirmer l'annulation",
       cancelSuccess: "Date annulée.",
+      cancelPublished: "Annuler la sortie et la réservation",
+      cancelPublishedHint:
+        "La sortie et la réservation seront annulées ensemble. Les participants recevront une notification.",
+      cancelPublishedConfirm: "Annuler la sortie",
       status: {
         PENDING: "En attente",
         CONFIRMED: "Validée",
@@ -70,6 +74,10 @@ export function getAdminResidencyCopy(locale: string) {
         "This request will be closed. The merchant can propose another date.",
       cancelConfirm: "Confirm cancellation",
       cancelSuccess: "Date cancelled.",
+      cancelPublished: "Cancel meetup and booking",
+      cancelPublishedHint:
+        "The meetup and booking will be cancelled together. Participants will be notified.",
+      cancelPublishedConfirm: "Cancel meetup",
       status: {
         PENDING: "Pending",
         CONFIRMED: "Confirmed",
@@ -106,6 +114,9 @@ export function getAdminResidencyCopy(locale: string) {
     cancelPendingHint: "这条申请将被关闭，商家可以重新申请日期。",
     cancelConfirm: "确认取消日期",
     cancelSuccess: "日期已取消。",
+    cancelPublished: "取消聚吧与预约",
+    cancelPublishedHint: "聚吧和预约会一并取消，并通知参与者。",
+    cancelPublishedConfirm: "确认取消聚吧",
     status: {
       PENDING: "待审核",
       CONFIRMED: "已确认",

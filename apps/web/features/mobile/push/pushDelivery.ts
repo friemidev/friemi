@@ -27,7 +27,10 @@ export function getNotificationPath(input: {
   residencySlotId?: string | null;
   type: NotificationType;
 }) {
-  if (input.type === "MERCHANT_BOOKING_CANCELLED") {
+  if (
+    input.type === "MERCHANT_BOOKING_CANCELLED" ||
+    input.type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
+  ) {
     return input.residencyMerchantId && input.residencySlotId
       ? `/merchants/${input.residencyMerchantId}/bookings/${input.residencySlotId}`
       : "/notifications";
@@ -199,6 +202,7 @@ export function getNotificationCopy(input: {
       INVENTORY_TICKET_RECEIVED: `「${ticketTitle ?? "票券"}」已放入物品背包`,
       INVENTORY_TICKET_ACCESS_INVITED: `${actorName} 邀请你核销「${ticketTitle ?? "票券"}」`,
       MERCHANT_BOOKING_CANCELLED: `你报名的「${residencyTitle}」已取消`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `你申请的「${residencyTitle}」已关闭`,
       MERCHANT_BOOKING_CONFIRMED: `你申请的「${residencyTitle}」${input.residencyDate ?? ""}已确认`,
       MERCHANT_BOOKING_REJECTED: `你申请的「${residencyTitle}」未通过${rejectionReason ? `：${rejectionReason}` : ""}`,
       MERCHANT_BOOKING_PUBLISHED: `你报名的「${residencyTitle}」已确定时间地点：${bookingSchedule}`,
@@ -242,6 +246,7 @@ export function getNotificationCopy(input: {
       INVENTORY_TICKET_RECEIVED: `“${ticketTitle ?? "Ticket"}” is now in your bag`,
       INVENTORY_TICKET_ACCESS_INVITED: `${actorName} invited you to check in “${ticketTitle ?? "tickets"}”`,
       MERCHANT_BOOKING_CANCELLED: `Your signup for “${residencyTitle}” was cancelled`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `Your request “${residencyTitle}” is closed`,
       MERCHANT_BOOKING_CONFIRMED: `Your request “${residencyTitle}” for ${input.residencyDate ?? "the selected date"} was confirmed`,
       MERCHANT_BOOKING_REJECTED: `Your request “${residencyTitle}” was declined${rejectionReason ? `: ${rejectionReason}` : ""}`,
       MERCHANT_BOOKING_PUBLISHED: `“${residencyTitle}” now has a time and venue: ${bookingSchedule}`,
@@ -285,6 +290,7 @@ export function getNotificationCopy(input: {
       INVENTORY_TICKET_RECEIVED: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac`,
       INVENTORY_TICKET_ACCESS_INVITED: `${actorName} vous invite à contrôler « ${ticketTitle ?? "billet"} »`,
       MERCHANT_BOOKING_CANCELLED: `Votre inscription à « ${residencyTitle} » a été annulée`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `Votre demande « ${residencyTitle} » est clôturée`,
       MERCHANT_BOOKING_CONFIRMED: `Votre demande « ${residencyTitle} » du ${input.residencyDate ?? "jour choisi"} est confirmée`,
       MERCHANT_BOOKING_REJECTED: `Votre demande « ${residencyTitle} » a été refusée${rejectionReason ? ` : ${rejectionReason}` : ""}`,
       MERCHANT_BOOKING_PUBLISHED: `« ${residencyTitle} » a maintenant un horaire et une adresse : ${bookingSchedule}`,
@@ -357,18 +363,21 @@ export function getNotificationCopy(input: {
     const title: Record<PushCopyLocale, Record<string, string>> = {
       "zh-CN": {
         MERCHANT_BOOKING_CANCELLED: "店铺预约已取消",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "预约申请已关闭",
         MERCHANT_BOOKING_CONFIRMED: "店铺预约已确认",
         MERCHANT_BOOKING_REJECTED: "店铺预约未通过",
         MERCHANT_BOOKING_PUBLISHED: "店铺聚吧已发布",
       },
       en: {
         MERCHANT_BOOKING_CANCELLED: "Store booking cancelled",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "Booking request closed",
         MERCHANT_BOOKING_CONFIRMED: "Store booking confirmed",
         MERCHANT_BOOKING_REJECTED: "Store booking declined",
         MERCHANT_BOOKING_PUBLISHED: "Gathering published",
       },
       fr: {
         MERCHANT_BOOKING_CANCELLED: "Réservation annulée",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "Demande de réservation clôturée",
         MERCHANT_BOOKING_CONFIRMED: "Réservation confirmée",
         MERCHANT_BOOKING_REJECTED: "Réservation refusée",
         MERCHANT_BOOKING_PUBLISHED: "Rencontre publiée",

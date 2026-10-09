@@ -46,6 +46,14 @@ export function isCurrentOrFutureResidencyDate(date: Date, now = new Date()) {
   return formatResidencyDate(date) >= getParisDateString(now);
 }
 
+export function canPublishResidencySlot(
+  status: string,
+  date: string,
+  now = new Date(),
+) {
+  return status === "CONFIRMED" && date >= getParisDateString(now);
+}
+
 function formatParisDateTime(date: Date) {
   const parts = parisDateTimeFormatter.formatToParts(date);
   const get = (type: string) =>

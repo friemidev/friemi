@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -125,6 +126,7 @@ async function refreshResidencyPaths(
   activityId?: string,
 ) {
   for (const path of [
+    "/profile/bookings",
     "/profile/store/bookings",
     "/admin/merchants/bookings",
     "/merchants",
@@ -150,6 +152,7 @@ async function refreshResidencyPaths(
     }
   }
   if (activityId) {
+    revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
     revalidatePath(withLocale(locale, `/activities/${activityId}`), "layout");
     revalidatePath(withLocale(locale, "/activities"), "layout");
     revalidatePath(withLocale(locale, "/lobby"), "layout");
@@ -315,13 +318,10 @@ export async function cancelResidencySignupAction(
   const locale = getLocale(formData);
   const slotId = readString(formData, "slotId");
   if (!slotId) return toActionState({ status: "INVALID" }, locale);
-  const slot = await getPublicResidencySlot(slotId);
-  if (!slot) return toActionState({ status: "NOT_FOUND" }, locale);
-  const profile = await currentActiveProfile(
-    locale,
-    `/merchants/${slot.merchant.id}/bookings/${slotId}`,
-  );
+  const profile = await currentActiveProfile(locale, "/profile/bookings");
   if (!profile) return toActionState({ status: "FORBIDDEN" }, locale);
+  const slot = await getPublicResidencySlot(slotId, profile.id);
+  if (!slot) return toActionState({ status: "NOT_FOUND" }, locale);
   try {
     const result = await cancelResidencySignup({
       actorProfileId: profile.id,

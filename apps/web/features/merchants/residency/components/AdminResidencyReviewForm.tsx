@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { cancelActivityAction } from "@/features/activities/actions/cancelActivity";
 import {
   cancelResidencyRequestAdminAction,
   reviewResidencyRequestAction,
@@ -132,6 +133,47 @@ export function AdminResidencyCancelForm({
           type="submit"
         >
           {copy.cancelConfirm}
+        </button>
+      </form>
+    </details>
+  );
+}
+
+export function AdminResidencyPublishedCancelForm({
+  activityId,
+  locale,
+  slotId,
+}: {
+  activityId: string;
+  locale: string;
+  slotId: string;
+}) {
+  const copy = getAdminResidencyCopy(locale);
+  const [state, action, pending] = useActionState(cancelActivityAction, {});
+
+  return (
+    <details className="mt-12 rounded-2xl bg-fog/70 px-5 py-4">
+      <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-ink/70">
+        {copy.cancelPublished}
+      </summary>
+      <form action={action} className="grid gap-4 pb-2 pt-3">
+        <input name="locale" type="hidden" value={locale} />
+        <input name="activityId" type="hidden" value={activityId} />
+        <input name="adminBookingSlotId" type="hidden" value={slotId} />
+        <p className="text-sm leading-6 text-ink/65">
+          {copy.cancelPublishedHint}
+        </p>
+        {state.formError ? (
+          <p className="text-sm text-danger" role="alert">
+            {state.formError}
+          </p>
+        ) : null}
+        <button
+          className="min-h-11 justify-self-start rounded-xl bg-ink px-5 text-sm font-bold text-white disabled:opacity-60"
+          disabled={pending}
+          type="submit"
+        >
+          {copy.cancelPublishedConfirm}
         </button>
       </form>
     </details>

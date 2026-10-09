@@ -12,6 +12,7 @@ import type {
   ResidencySlotDetail,
   ResidencySlotSummary,
 } from "@/features/merchants/residency/queries";
+import { canPublishResidencySlot } from "@/features/merchants/residency/validation";
 import { withLocale } from "@/lib/routes";
 import { formatResidencyDate } from "./ResidencyCalendar";
 import {
@@ -183,6 +184,7 @@ export function OwnerResidencyDetail({
 }) {
   const copy = getResidencyOwnerCopy(locale);
   const canCancel = slot.status === "PENDING" || slot.status === "CONFIRMED";
+  const canPublish = canPublishResidencySlot(slot.status, slot.date);
   return (
     <Shell>
       <Header
@@ -213,7 +215,7 @@ export function OwnerResidencyDetail({
             <p className="mt-2 text-sm leading-6">{slot.rejectionReason}</p>
           </div>
         ) : null}
-        {slot.status === "CONFIRMED" ? (
+        {canPublish ? (
           <Link
             className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-forest px-6 text-sm font-bold text-white"
             href={withLocale(
@@ -224,6 +226,9 @@ export function OwnerResidencyDetail({
             {copy.createActivity}
             <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
           </Link>
+        ) : null}
+        {slot.status === "CONFIRMED" && !canPublish ? (
+          <p className="mt-7 text-sm text-ink/65">{copy.expiredDate}</p>
         ) : null}
         {slot.status === "PUBLISHED" && slot.activityId ? (
           <Link

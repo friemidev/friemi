@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import {
   isCurrentOrFutureResidencyDate,
   isFutureResidencyDate,
+  getParisDateString,
   parseResidencyActivityTime,
   parseResidencyDate,
 } from "./validation";
@@ -37,7 +38,7 @@ export type ResidencyServiceResult = {
 };
 
 export function buildResidencyCancellationNotifications(input: {
-  actorProfileId: string;
+  actorProfileId: string | null;
   slotId: string;
   recipientIds: string[];
 }): CreateNotificationInput[] {
@@ -49,6 +50,21 @@ export function buildResidencyCancellationNotifications(input: {
     residencySlotId: input.slotId,
     type: "MERCHANT_BOOKING_CANCELLED",
   }));
+}
+
+export function buildResidencyRequestCancelledNotification(input: {
+  actorProfileId: string | null;
+  recipientId: string;
+  slotId: string;
+}): CreateNotificationInput {
+  return {
+    actorId: input.actorProfileId,
+    dedupeIncludingRead: true,
+    occurrenceId: `residency-request-cancel:${input.slotId}`,
+    recipientId: input.recipientId,
+    residencySlotId: input.slotId,
+    type: "MERCHANT_BOOKING_REQUEST_CANCELLED",
+  };
 }
 
 export function buildResidencyReviewNotification(input: {
@@ -245,20 +261,23 @@ export async function cancelResidencySlotAsAdmin(input: {
 
 export async function cancelResidencySlotInDatabase(
   tx: Prisma.TransactionClient,
-  input: { actorProfileId: string; slotId: string; isAdmin?: boolean },
+  input: { actorProfileId: string | null; slotId: string; isAdmin?: boolean },
+  notifyRequester: typeof createNotification = createNotification,
 ): Promise<ResidencyServiceResult> {
   const slot = await tx.merchantResidencySlot.findUnique({
     where: { id: input.slotId },
     select: {
       id: true,
       status: true,
+      requestedByProfileId: true,
       merchant: { select: { isActive: true, ownerProfileId: true } },
     },
   });
   if (!slot) return { status: "NOT_FOUND" };
   if (
     !input.isAdmin &&
-    (!slot.merchant.isActive ||
+    (!input.actorProfileId ||
+      !slot.merchant.isActive ||
       slot.merchant.ownerProfileId !== input.actorProfileId)
   ) {
     return { status: "FORBIDDEN" };
@@ -297,7 +316,59 @@ export async function cancelResidencySlotInDatabase(
       }),
     );
   }
+  if (
+    slot.requestedByProfileId &&
+    slot.requestedByProfileId !== input.actorProfileId
+  ) {
+    await notifyRequester(
+      tx,
+      buildResidencyRequestCancelledNotification({
+        actorProfileId: input.actorProfileId,
+        recipientId: slot.requestedByProfileId,
+        slotId: slot.id,
+      }),
+    );
+  }
   return { status: "CANCELLED", slotId: slot.id };
+}
+
+/** Closes unanswered requests after their Paris calendar date. */
+export async function expirePastResidencySlots(now = new Date()) {
+  const today = parseResidencyDate(getParisDateString(now));
+  if (!today) throw new Error("Invalid Paris calendar date");
+
+  let cancelled = 0;
+  let examined = 0;
+  for (let batch = 0; batch < 5; batch += 1) {
+    const slots = await prisma.merchantResidencySlot.findMany({
+      where: {
+        date: { lt: today },
+        status: "PENDING",
+      },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+      take: 100,
+      select: { id: true },
+    });
+    if (slots.length === 0) break;
+    for (const slot of slots) {
+      examined += 1;
+      const result = await serializable((tx) =>
+        cancelResidencySlotInDatabase(tx, {
+          actorProfileId: null,
+          isAdmin: true,
+          slotId: slot.id,
+        }),
+      );
+      if (result.status === "CANCELLED") cancelled += 1;
+    }
+  }
+  const remaining = await prisma.merchantResidencySlot.count({
+    where: {
+      date: { lt: today },
+      status: "PENDING",
+    },
+  });
+  return { cancelled, examined, remaining };
 }
 
 export async function signupForResidencySlot(input: {
@@ -372,27 +443,35 @@ export async function cancelResidencySignup(input: {
   actorProfileId: string;
   slotId: string;
 }): Promise<ResidencyServiceResult> {
-  return serializable(async (tx) => {
-    const slot = await tx.merchantResidencySlot.findUnique({
-      where: { id: input.slotId },
-      select: { id: true, status: true },
-    });
-    if (!slot) return { status: "NOT_FOUND" };
-    if (slot.status !== "CONFIRMED") {
-      return { status: "CLOSED", slotId: slot.id };
-    }
-    const updated = await tx.merchantResidencySignup.updateMany({
-      where: {
-        slotId: slot.id,
-        profileId: input.actorProfileId,
-        status: "ACTIVE",
-      },
-      data: { status: "CANCELLED", cancelledAt: new Date() },
-    });
-    return updated.count === 1
-      ? { status: "SIGNUP_CANCELLED", slotId: slot.id }
-      : { status: "NOT_FOUND", slotId: slot.id };
+  return serializable((tx) => cancelResidencySignupInDatabase(tx, input));
+}
+
+export async function cancelResidencySignupInDatabase(
+  tx: Prisma.TransactionClient,
+  input: { actorProfileId: string; slotId: string },
+): Promise<ResidencyServiceResult> {
+  const slot = await tx.merchantResidencySlot.findUnique({
+    where: { id: input.slotId },
+    select: { id: true, date: true, status: true },
   });
+  if (!slot) return { status: "NOT_FOUND" };
+  if (
+    slot.status !== "CONFIRMED" ||
+    !isCurrentOrFutureResidencyDate(slot.date)
+  ) {
+    return { status: "CLOSED", slotId: slot.id };
+  }
+  const updated = await tx.merchantResidencySignup.updateMany({
+    where: {
+      slotId: slot.id,
+      profileId: input.actorProfileId,
+      status: "ACTIVE",
+    },
+    data: { status: "CANCELLED", cancelledAt: new Date() },
+  });
+  return updated.count === 1
+    ? { status: "SIGNUP_CANCELLED", slotId: slot.id }
+    : { status: "NOT_FOUND", slotId: slot.id };
 }
 
 export async function publishResidencySlot(input: {

@@ -19,6 +19,8 @@ const summarySelect = (viewerProfileId?: string) =>
     description: true,
     status: true,
     activityId: true,
+    activity: { select: { startAt: true, address: true } },
+    requestedByProfileId: true,
     reviewedAt: true,
     rejectionReason: true,
     createdAt: true,
@@ -41,6 +43,8 @@ const detailSelect = {
   description: true,
   status: true,
   activityId: true,
+  activity: { select: { startAt: true, address: true } },
+  requestedByProfileId: true,
   reviewedAt: true,
   rejectionReason: true,
   createdAt: true,
@@ -75,6 +79,8 @@ type SummaryBase = Pick<
   | "description"
   | "status"
   | "activityId"
+  | "activity"
+  | "requestedByProfileId"
   | "reviewedAt"
   | "rejectionReason"
   | "createdAt"
@@ -95,7 +101,9 @@ export type ResidencySlotSummary = {
   signupCount: number;
   viewerSignedUp: boolean;
   viewerHadSignup: boolean;
+  viewerRequested: boolean;
   activityId: string | null;
+  activity: { startAt: Date; address: string } | null;
   merchant: ResidencyMerchant;
   reviewedAt: Date | null;
   rejectionReason: string | null;
@@ -117,6 +125,7 @@ function toSummary(
   slot: SummaryBase,
   viewerSignedUp = false,
   viewerHadSignup = false,
+  viewerProfileId?: string,
 ): ResidencySlotSummary {
   return {
     id: slot.id,
@@ -127,7 +136,11 @@ function toSummary(
     signupCount: slot._count.signups,
     viewerSignedUp,
     viewerHadSignup,
+    viewerRequested: Boolean(
+      viewerProfileId && slot.requestedByProfileId === viewerProfileId,
+    ),
     activityId: slot.activityId,
+    activity: slot.activity,
     merchant: slot.merchant,
     reviewedAt: slot.reviewedAt,
     rejectionReason: slot.rejectionReason,
@@ -147,6 +160,7 @@ function toDetail(
           signup.profileId === viewerProfileId && signup.status === "ACTIVE",
       ),
       slot.signups.some((signup) => signup.profileId === viewerProfileId),
+      viewerProfileId,
     ),
     signups: slot.signups.map((signup) => ({
       id: signup.id,
@@ -191,6 +205,25 @@ export async function getOwnerResidencySlot(
   return slot ? toDetail(slot, profileId) : null;
 }
 
+/** The original applicant keeps access to their request after store ownership changes. */
+export async function getRequesterResidencySlot(
+  slotId: string,
+  profileId: string,
+): Promise<ResidencySlotSummary | null> {
+  const slot = await prisma.merchantResidencySlot.findFirst({
+    where: { id: slotId, requestedByProfileId: profileId },
+    select: summarySelect(profileId),
+  });
+  return slot
+    ? toSummary(
+        slot,
+        slot.signups.some((signup) => signup.status === "ACTIVE"),
+        slot.signups.length > 0,
+        profileId,
+      )
+    : null;
+}
+
 export async function getAdminResidencySlots(): Promise<
   ResidencySlotSummary[]
 > {
@@ -232,7 +265,10 @@ export async function getPublicResidencySlots(
           ? [
               {
                 status: "CANCELLED" as const,
-                signups: { some: { profileId: viewerProfileId } },
+                OR: [
+                  { signups: { some: { profileId: viewerProfileId } } },
+                  { requestedByProfileId: viewerProfileId },
+                ],
               },
             ]
           : []),
@@ -246,6 +282,7 @@ export async function getPublicResidencySlots(
       slot,
       slot.signups.some((signup) => signup.status === "ACTIVE"),
       slot.signups.length > 0,
+      viewerProfileId,
     ),
   );
 }
@@ -265,8 +302,18 @@ export async function getPublicResidencySlot(
         ...(viewerProfileId
           ? [
               {
-                status: "CANCELLED" as const,
+                status: {
+                  in: ["CONFIRMED", "PUBLISHED"] as MerchantResidencyStatus[],
+                },
+                merchant: { isActive: false },
                 signups: { some: { profileId: viewerProfileId } },
+              },
+              {
+                status: "CANCELLED" as const,
+                OR: [
+                  { signups: { some: { profileId: viewerProfileId } } },
+                  { requestedByProfileId: viewerProfileId },
+                ],
               },
             ]
           : []),
@@ -279,6 +326,7 @@ export async function getPublicResidencySlot(
         slot,
         slot.signups.some((signup) => signup.status === "ACTIVE"),
         slot.signups.length > 0,
+        viewerProfileId,
       )
     : null;
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canPublishResidencySlot,
   formatResidencyDate,
   getParisDateString,
   isFutureResidencyDate,
@@ -26,6 +27,14 @@ test("residency dates are calendar dates in Paris, not browser instants", () => 
     ),
     false,
   );
+});
+
+test("only confirmed dates that have not passed can open the publish form", () => {
+  const now = new Date("2026-10-07T22:30:00Z"); // October 8 in Paris
+  assert.equal(canPublishResidencySlot("CONFIRMED", "2026-10-07", now), false);
+  assert.equal(canPublishResidencySlot("CONFIRMED", "2026-10-08", now), true);
+  assert.equal(canPublishResidencySlot("CONFIRMED", "2026-10-09", now), true);
+  assert.equal(canPublishResidencySlot("REJECTED", "2026-10-09", now), false);
 });
 
 test("LOCAL activity time keeps the selected wall clock through Paris summer time", () => {

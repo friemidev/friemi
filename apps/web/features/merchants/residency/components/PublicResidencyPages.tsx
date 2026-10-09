@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   CalendarDays,
+  Clock3,
   MapPin,
   UsersRound,
 } from "lucide-react";
@@ -101,6 +102,7 @@ export function PublicResidencyCalendarPage({
 
 export function PublicResidencyDatePage({
   calendarAvailable = true,
+  fromProfileBookings = false,
   isAuthenticated,
   isMerchantOwner = false,
   locale,
@@ -108,6 +110,7 @@ export function PublicResidencyDatePage({
   slot,
 }: {
   calendarAvailable?: boolean;
+  fromProfileBookings?: boolean;
   isAuthenticated: boolean;
   isMerchantOwner?: boolean;
   locale: string;
@@ -119,16 +122,26 @@ export function PublicResidencyDatePage({
   const isPublished = slot.status === "PUBLISHED";
   const isCancelled = slot.status === "CANCELLED";
   const dateHasPassed = slot.date < getParisDateString();
+  const bookingPaused =
+    !calendarAvailable && slot.status === "CONFIRMED" && !dateHasPassed;
+  const backToMyBookings =
+    fromProfileBookings || (!calendarAvailable && slot.viewerHadSignup);
 
   return (
     <ResidencyPageFrame
       backHref={
-        calendarAvailable
-          ? `${basePath}?month=${slot.date.slice(0, 7)}`
-          : "/activities"
+        backToMyBookings
+          ? "/profile/bookings"
+          : calendarAvailable
+            ? `${basePath}?month=${slot.date.slice(0, 7)}`
+            : "/activities"
       }
       backLabel={
-        calendarAvailable ? copy.backToCalendar : copy.backToActivities
+        backToMyBookings
+          ? copy.backToMyBookings
+          : calendarAvailable
+            ? copy.backToCalendar
+            : copy.backToActivities
       }
       locale={locale}
       title={copy.residency}
@@ -138,9 +151,13 @@ export function PublicResidencyDatePage({
           <span className="rounded-full bg-paper/15 px-3 py-1.5 text-paper">
             {isCancelled
               ? copy.cancelledDate
-              : isPublished
-                ? copy.published
-                : copy.confirmed}
+              : bookingPaused
+                ? copy.bookingPaused
+                : isPublished
+                  ? copy.published
+                  : dateHasPassed
+                    ? copy.datePassed
+                    : copy.confirmed}
           </span>
           <span>{slot.merchant.name}</span>
         </div>
@@ -156,22 +173,54 @@ export function PublicResidencyDatePage({
         </p>
       </section>
 
-      <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/70">
-        {!isCancelled ? (
-          <span className="inline-flex items-center gap-2">
-            <UsersRound aria-hidden="true" className="h-4 w-4 text-forest" />
-            {isPublished
-              ? copy.reservationParticipants(slot.signupCount)
-              : copy.participants(slot.signupCount)}
-          </span>
-        ) : null}
-        <span className="inline-flex items-center gap-2">
-          <MapPin aria-hidden="true" className="h-4 w-4 text-forest" />
-          {[slot.merchant.city, slot.merchant.address]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-      </div>
+      {!isCancelled ? (
+        <p className="mt-6 inline-flex items-center gap-2 text-sm text-ink/70">
+          <UsersRound aria-hidden="true" className="h-4 w-4 text-forest" />
+          {isPublished
+            ? copy.reservationParticipants(slot.signupCount)
+            : copy.participants(slot.signupCount)}
+        </p>
+      ) : null}
+
+      {isPublished && slot.activity ? (
+        <section
+          aria-label={copy.meetingDetails}
+          className="mt-6 rounded-2xl bg-fog/70 px-5 py-5"
+        >
+          <h2 className="text-base font-bold text-ink">
+            {copy.meetingDetails}
+          </h2>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="flex items-center gap-2 text-xs font-semibold text-ink/65">
+                <Clock3 aria-hidden="true" className="h-4 w-4 text-forest" />
+                {copy.meetingTime}
+              </dt>
+              <dd className="mt-1 break-words pl-6 text-sm font-bold text-ink">
+                {new Intl.DateTimeFormat(locale, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hourCycle: "h23",
+                  timeZone: "UTC",
+                }).format(slot.activity.startAt)}
+              </dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-2 text-xs font-semibold text-ink/65">
+                <MapPin aria-hidden="true" className="h-4 w-4 text-forest" />
+                {copy.meetingAddress}
+              </dt>
+              <dd className="mt-1 break-words pl-6 text-sm font-bold text-ink">
+                {slot.activity.address}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : !isCancelled && !isPublished && !bookingPaused && !dateHasPassed ? (
+        <p className="mt-5 text-sm leading-6 text-ink/65">
+          {copy.meetingDetailsPending}
+        </p>
+      ) : null}
 
       <div className="mt-9 max-w-md">
         {isCancelled ? (
@@ -202,6 +251,20 @@ export function PublicResidencyDatePage({
               {copy.ownerBookingLink}
               <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </Link>
+          </div>
+        ) : bookingPaused ? (
+          <div className="space-y-4">
+            <p className="rounded-xl bg-fog px-4 py-4 text-sm leading-6 text-ink/75">
+              {copy.bookingPausedHint}
+            </p>
+            {slot.viewerSignedUp ? (
+              <PublicResidencySignupForm
+                key="signed-up"
+                locale={locale}
+                signedUp
+                slotId={slot.id}
+              />
+            ) : null}
           </div>
         ) : dateHasPassed ? (
           <p className="text-sm text-ink/70">{copy.unavailable}</p>

@@ -4,7 +4,9 @@ import type { Prisma } from "@prisma/client";
 import {
   buildResidencyCancellationNotifications,
   buildResidencyPublishedNotifications,
+  buildResidencyRequestCancelledNotification,
   buildResidencyReviewNotification,
+  cancelResidencySignupInDatabase,
   cancelResidencySlotAsAdmin,
   cancelResidencySlotInDatabase,
   publishResidencySlotInDatabase,
@@ -31,6 +33,34 @@ const confirmedSlot = {
     logoUrl: null,
   },
 };
+
+test("a past confirmed booking keeps its historical signup", async () => {
+  let changedSignup = false;
+  const tx = {
+    merchantResidencySlot: {
+      findUnique: async () => ({
+        id: "past-slot",
+        status: "CONFIRMED",
+        date: new Date("2020-01-01T00:00:00.000Z"),
+      }),
+    },
+    merchantResidencySignup: {
+      updateMany: async () => {
+        changedSignup = true;
+        return { count: 1 };
+      },
+    },
+  } as unknown as Prisma.TransactionClient;
+
+  assert.deepEqual(
+    await cancelResidencySignupInDatabase(tx, {
+      actorProfileId: "guest-1",
+      slotId: "past-slot",
+    }),
+    { status: "CLOSED", slotId: "past-slot" },
+  );
+  assert.equal(changedSignup, false);
+});
 
 test("publishing transfers only active signups and includes the merchant owner once", async () => {
   const captured: {
@@ -336,6 +366,75 @@ test("admin can release a pending date after the store is disabled or reowned", 
     }),
     { status: "CANCELLED", slotId: "slot-1" },
   );
+});
+
+test("cancelling another merchant's request notifies its original applicant", async () => {
+  const notices: Array<{
+    recipientId: string;
+    residencySlotId?: string | null;
+    type: string;
+  }> = [];
+  const tx = {
+    merchantResidencySlot: {
+      findUnique: async () => ({
+        ...confirmedSlot,
+        status: "PENDING",
+        requestedByProfileId: "original-owner",
+        merchant: { ...confirmedSlot.merchant, ownerProfileId: "new-owner" },
+      }),
+      updateMany: async () => ({ count: 1 }),
+    },
+    merchantResidencySignup: {
+      updateMany: async () => ({ count: 0 }),
+    },
+  } as unknown as Prisma.TransactionClient;
+  const result = await cancelResidencySlotInDatabase(
+    tx,
+    { actorProfileId: "admin-1", slotId: "slot-1", isAdmin: true },
+    async (_tx, notice) => {
+      notices.push(notice);
+      return null;
+    },
+  );
+  assert.deepEqual(result, { status: "CANCELLED", slotId: "slot-1" });
+  assert.deepEqual(notices, [
+    buildResidencyRequestCancelledNotification({
+      actorProfileId: "admin-1",
+      recipientId: "original-owner",
+      slotId: "slot-1",
+    }),
+  ]);
+});
+
+test("scheduled closure can cancel an ownerless past request and notify its applicant", async () => {
+  let noticeType = "";
+  let noticeActor: string | null | undefined;
+  const tx = {
+    merchantResidencySlot: {
+      findUnique: async () => ({
+        ...confirmedSlot,
+        status: "PENDING",
+        requestedByProfileId: "original-owner",
+        merchant: { ...confirmedSlot.merchant, ownerProfileId: null },
+      }),
+      updateMany: async () => ({ count: 1 }),
+    },
+    merchantResidencySignup: {
+      updateMany: async () => ({ count: 0 }),
+    },
+  } as unknown as Prisma.TransactionClient;
+  const result = await cancelResidencySlotInDatabase(
+    tx,
+    { actorProfileId: null, slotId: "slot-1", isAdmin: true },
+    async (_tx, notice) => {
+      noticeType = notice.type;
+      noticeActor = notice.actorId;
+      return null;
+    },
+  );
+  assert.equal(result.status, "CANCELLED");
+  assert.equal(noticeType, "MERCHANT_BOOKING_REQUEST_CANCELLED");
+  assert.equal(noticeActor, null);
 });
 
 test("admin cancellation requires admin access and never cancels a published activity", async () => {

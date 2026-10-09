@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { OwnerResidencyDetail } from "@/features/merchants/residency/components/OwnerResidencyPages";
-import { getOwnerResidencySlot } from "@/features/merchants/residency/queries";
+import { RequesterResidencyDetail } from "@/features/merchants/residency/components/RequesterResidencyDetail";
+import {
+  getOwnerResidencySlot,
+  getRequesterResidencySlot,
+} from "@/features/merchants/residency/queries";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -17,7 +21,11 @@ export default async function OwnerResidencyDetailPage({
     locale,
     `/profile/store/bookings/${slotId}`,
   );
-  const slot = await getOwnerResidencySlot(slotId, profile.id);
-  if (!slot) notFound();
-  return <OwnerResidencyDetail locale={locale} slot={slot} />;
+  const ownerSlot = await getOwnerResidencySlot(slotId, profile.id);
+  if (ownerSlot)
+    return <OwnerResidencyDetail locale={locale} slot={ownerSlot} />;
+
+  const applicantSlot = await getRequesterResidencySlot(slotId, profile.id);
+  if (!applicantSlot) notFound();
+  return <RequesterResidencyDetail locale={locale} slot={applicantSlot} />;
 }

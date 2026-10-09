@@ -2,8 +2,14 @@ export function getResidencyOwnerCopy(locale: string) {
   if (locale === "fr") {
     return {
       backStore: "Boutique",
+      backProfile: "Mon profil",
       backReservations: "Réservations boutique",
       title: "Réservations boutique",
+      requestHistory: "Ma demande de réservation",
+      readOnlyRequest:
+        "Cette demande reste consultable. Après la fermeture ou le changement de propriétaire de la boutique, vous ne pouvez plus la gérer.",
+      expiredDate:
+        "Cette date est passée. Il n'est plus possible de créer une sortie.",
       description:
         "Proposez une date. Elle sera ouverte aux inscriptions après validation.",
       requestDate: "Proposer une date",
@@ -61,8 +67,13 @@ export function getResidencyOwnerCopy(locale: string) {
   if (locale === "en") {
     return {
       backStore: "Store",
+      backProfile: "My profile",
       backReservations: "Store bookings",
       title: "Store bookings",
+      requestHistory: "My booking request",
+      readOnlyRequest:
+        "You can still view this request. After the store closes or changes owners, you can no longer manage it.",
+      expiredDate: "This date has passed. A meetup can no longer be created.",
       description:
         "Propose a date. People can sign up after an admin confirms it.",
       requestDate: "Propose a date",
@@ -115,8 +126,13 @@ export function getResidencyOwnerCopy(locale: string) {
 
   return {
     backStore: "门店管理",
+    backProfile: "我的",
     backReservations: "店铺预约",
     title: "店铺预约",
+    requestHistory: "我的预约申请",
+    readOnlyRequest:
+      "这条申请仍可查看；门店停用或更换店主后，原申请者不能继续管理。",
+    expiredDate: "预约日期已过，不能再生成聚吧。",
     description: "开放店铺预约日期，管理员确认后用户即可报名。",
     requestDate: "申请预约日期",
     requestTitle: "申请新日期",

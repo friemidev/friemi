@@ -88,6 +88,45 @@ test("cancelled merchant residency push links to the original date and names it"
   );
 });
 
+test("closed store booking requests notify the applicant and open the date", () => {
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
+      residencyMerchantId: "merchant-1",
+      residencySlotId: "slot-1",
+      type: "MERCHANT_BOOKING_REQUEST_CANCELLED",
+    }),
+    "/merchants/merchant-1/bookings/slot-1",
+  );
+
+  const expected = {
+    "zh-CN": {
+      title: "预约申请已关闭",
+      body: "你申请的「周末聚会」已关闭",
+    },
+    en: {
+      title: "Booking request closed",
+      body: "Your request “周末聚会” is closed",
+    },
+    fr: {
+      title: "Demande de réservation clôturée",
+      body: "Votre demande « 周末聚会 » est clôturée",
+    },
+  } as const;
+  for (const locale of ["zh-CN", "en", "fr"] as const) {
+    assert.deepEqual(
+      getNotificationCopy({
+        activityTitle: null,
+        actorName: null,
+        locale,
+        residencyTitle: "周末聚会",
+        type: "MERCHANT_BOOKING_REQUEST_CANCELLED",
+      }),
+      expected[locale],
+    );
+  }
+});
+
 test("booking review and publication push routes and details stay specific", () => {
   assert.equal(
     getNotificationPath({

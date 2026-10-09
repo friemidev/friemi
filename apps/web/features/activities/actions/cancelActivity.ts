@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
@@ -133,10 +134,17 @@ export async function cancelActivityAction(
   }
 
   const actionCopy = getCopy(result.data.locale).activityOwner;
+  const adminBookingSlotId = getString(formData, "adminBookingSlotId");
+  if (adminBookingSlotId && !(await isCurrentUserAdmin())) {
+    return { formError: actionCopy.permissionError };
+  }
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
     getActivityDetailPath(result.data.activityId),
   );
+  if (adminBookingSlotId && profile.status !== "ACTIVE") {
+    return { formError: actionCopy.permissionError };
+  }
   let cancelledActivityId: string;
   let cancelledResidencySlot: { id: string; merchantId: string } | null = null;
 
@@ -175,11 +183,19 @@ export async function cancelActivityAction(
           };
         }
 
-        const permission = await assertCanManageActivity(
-          activity.id,
-          profile.id,
-          tx,
-        );
+        // A site administrator may cancel a published booking activity from
+        // its booking detail. The slot identifier must match the activity;
+        // the ordinary activity cancellation path keeps its existing role check.
+        const permission = adminBookingSlotId
+          ? {
+              ok:
+                activity.residencySlot?.id === adminBookingSlotId &&
+                (activity.residencySlot.status === "PUBLISHED" ||
+                  (activity.status === "CANCELLED" &&
+                    activity.residencySlot.status === "CANCELLED")),
+              role: "ADMIN" as const,
+            }
+          : await assertCanManageActivity(activity.id, profile.id, tx);
 
         if (!permission.ok) {
           return {
@@ -312,6 +328,7 @@ export async function cancelActivityAction(
   );
   if (cancelledResidencySlot) {
     for (const path of [
+      "/profile/bookings",
       "/profile/store/bookings",
       `/profile/store/bookings/${cancelledResidencySlot.id}`,
       "/admin/merchants/bookings",
@@ -323,7 +340,14 @@ export async function cancelActivityAction(
       revalidatePath(withLocale(result.data.locale, path), "layout");
     }
   }
-  redirect(activityPath);
+  redirect(
+    adminBookingSlotId
+      ? withLocale(
+          result.data.locale,
+          `/admin/merchants/bookings/${adminBookingSlotId}`,
+        )
+      : activityPath,
+  );
 }
 
 export async function deleteActivityAction(

@@ -57,10 +57,7 @@ type NotificationCategory = "activity" | "friends" | "gift" | "system";
 
 type NotificationFilter = "all" | NotificationCategory;
 type NotificationBulkAction =
-  | "delete-read"
-  | "delete-selected"
-  | "mark-all-read"
-  | "mark-selected-read";
+  "delete-read" | "delete-selected" | "mark-all-read" | "mark-selected-read";
 
 function getNotificationCategory(
   type: NotificationType | string,
@@ -173,6 +170,29 @@ function getNotificationText(
       };
     }
     return { title: "店铺预约已取消", body: `你报名的「${title}」已取消。` };
+  }
+  if (notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED") {
+    const title =
+      notification.residencySlot?.title ??
+      (locale === "fr"
+        ? "la réservation boutique"
+        : locale === "en"
+          ? "the store booking"
+          : "店铺预约");
+    if (locale === "fr")
+      return {
+        title: "Demande de réservation clôturée",
+        body: `Votre demande « ${title} » est clôturée.`,
+      };
+    if (locale === "en")
+      return {
+        title: "Booking request closed",
+        body: `Your request “${title}” is closed.`,
+      };
+    return {
+      title: "预约申请已关闭",
+      body: `你申请的「${title}」已关闭。`,
+    };
   }
   if (notification.type === "MERCHANT_BOOKING_CONFIRMED") {
     const title = notification.residencySlot?.title ?? "店铺预约";
@@ -568,6 +588,13 @@ function getNotificationActionLabel(
   if (notification.type.startsWith("MERCHANT_BOOKING_")) {
     if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
       return t.openActivity;
+    }
+    if (notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED") {
+      return locale === "fr"
+        ? "Voir la demande"
+        : locale === "en"
+          ? "View request"
+          : "查看申请";
     }
     return locale === "fr"
       ? "Voir la réservation"
@@ -1083,7 +1110,10 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
-  if (type === "MERCHANT_BOOKING_CANCELLED") {
+  if (
+    type === "MERCHANT_BOOKING_CANCELLED" ||
+    type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
+  ) {
     return {
       icon: CalendarX2,
       iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
