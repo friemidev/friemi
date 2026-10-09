@@ -400,9 +400,25 @@ try {
     .fill(
       "长期聚吧预约验收：选日期与人数，门店确认。联系方式仅门店和本人可见。",
     );
+  await ownerPage.screenshot({
+    path: `${outputDirectory}/12-settings-content-mobile.png`,
+    fullPage: true,
+  });
   await ownerPage
     .getByRole("button", { name: "下一步：开放日期", exact: true })
     .click();
+  assert.equal(
+    await ownerPage
+      .getByRole("button", { name: "创建并开启预约", exact: true })
+      .isEnabled(),
+    true,
+    "Moving to availability must not submit the setup form",
+  );
+  assert.equal(
+    await prisma.merchantBookingSettings.findUnique({ where: { merchantId } }),
+    null,
+    "Moving to availability must not create booking settings before explicit submission",
+  );
   await ownerPage
     .getByRole("button", { name: "聚吧内容", exact: true })
     .click();
@@ -421,6 +437,10 @@ try {
     .click();
   await ownerPage.getByText("每天", { exact: true }).click();
   await ownerPage.locator("#booking-start").fill(today);
+  await ownerPage.screenshot({
+    path: `${outputDirectory}/13-settings-dates-mobile.png`,
+    fullPage: true,
+  });
   await ownerPage
     .getByRole("button", { name: "创建并开启预约", exact: true })
     .click();

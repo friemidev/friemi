@@ -129,17 +129,19 @@ export function OwnerBookingSettings({
   const copy = getBookingCopy(locale);
   return (
     <BookingShell>
-      <BookingHeader
-        backHref="/profile/store/bookings"
-        backLabel={copy.backBookings}
-        locale={locale}
-        title={settings ? copy.settings : copy.createSpace}
-      />
-      <BookingSettingsForm
-        locale={locale}
-        merchant={merchant}
-        settings={settings}
-      />
+      <div className="md:pt-6">
+        <BookingHeader
+          backHref="/profile/store/bookings"
+          backLabel={copy.backBookings}
+          locale={locale}
+          title={settings ? copy.settings : copy.createSpace}
+        />
+        <BookingSettingsForm
+          locale={locale}
+          merchant={merchant}
+          settings={settings}
+        />
+      </div>
     </BookingShell>
   );
 }
