@@ -10,10 +10,30 @@ export const primaryClass =
 export const secondaryClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-fog px-4 text-sm font-semibold text-forest transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
 
-export function BookingShell({ children }: { children: React.ReactNode }) {
+export function BookingShell({
+  children,
+  embedded = false,
+}: {
+  children: React.ReactNode;
+  embedded?: boolean;
+}) {
   return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] min-h-svh bg-white text-ink selection:bg-meadow/20 selection:text-forest">
-      <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-6">{children}</div>
+    <main
+      className={
+        embedded
+          ? "booking-embedded-page min-h-full bg-white text-ink selection:bg-meadow/20 selection:text-forest"
+          : "app-mobile-page-shell [--app-mobile-page-top-gap:1.5rem] min-h-svh bg-white text-ink selection:bg-meadow/20 selection:text-forest"
+      }
+    >
+      <div
+        className={
+          embedded
+            ? "mx-auto max-w-3xl px-5 pb-8 sm:px-6"
+            : "mx-auto max-w-3xl px-4 pb-24 sm:px-6"
+        }
+      >
+        {children}
+      </div>
     </main>
   );
 }
