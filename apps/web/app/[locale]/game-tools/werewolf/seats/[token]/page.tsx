@@ -10,13 +10,13 @@ import {
 import {
   getWerewolfVariantFromRoomConfig,
   getWerewolfVariantLabel,
+  getWerewolfRoleCopy,
   getWerewolfRoleLabel,
   isActiveWerewolfSeatOccupant,
-  isWerewolfRoleKey,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
+  normalizeWerewolfRoleKey,
   type WerewolfPrivatePayload,
-  type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 import {
   canViewWerewolfVoteSubmission,
@@ -36,10 +36,12 @@ type WerewolfSeatPageProps = {
 };
 
 function parsePrivatePayload({
+  locale,
   roleKey,
   value,
 }: {
-  roleKey: WerewolfRoleKey | null;
+  locale: string;
+  roleKey: string | null;
   value: unknown;
 }): WerewolfPrivatePayload | null {
   if (!value || typeof value !== "object") {
@@ -57,13 +59,22 @@ function parsePrivatePayload({
     return null;
   }
 
+  const payloadRoleKey = (payload as { roleKey?: string }).roleKey;
+  const wasStandaloneLovers =
+    roleKey === "lovers" || payloadRoleKey === "lovers";
+  const villagerCopy = wasStandaloneLovers
+    ? getWerewolfRoleCopy(locale)
+    : null;
+
   return {
     alignmentLabel: payload.alignmentLabel,
-    roleDescription: payload.roleDescription,
-    roleKey: isWerewolfRoleKey(payload.roleKey)
-      ? payload.roleKey
-      : (roleKey ?? "villager"),
-    roleLabel: payload.roleLabel,
+    roleDescription:
+      villagerCopy?.roleDescriptions.villager ?? payload.roleDescription,
+    roleKey:
+      normalizeWerewolfRoleKey(payloadRoleKey) ??
+      normalizeWerewolfRoleKey(roleKey) ??
+      "villager",
+    roleLabel: villagerCopy?.roleLabels.villager ?? payload.roleLabel,
     variantLabel: payload.variantLabel,
   };
 }
@@ -264,11 +275,12 @@ export default async function WerewolfSeatPage({
             seatMember && !seatMember.profileId ? seatMember.memberToken : null
           }
           payload={parsePrivatePayload({
-            roleKey: seat.roleKey as WerewolfRoleKey | null,
+            locale,
+            roleKey: seat.roleKey,
             value: seat.privatePayload,
           })}
           privateToken={seat.privateToken}
-          roleKey={seat.roleKey as WerewolfRoleKey | null}
+          roleKey={normalizeWerewolfRoleKey(seat.roleKey)}
           roleAlignment={seat.roleAlignment}
           roleDeck={variant.roles}
           roomUpdatedAt={seat.room.updatedAt.toISOString()}
@@ -286,7 +298,7 @@ export default async function WerewolfSeatPage({
             isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),
             readyAt: roomSeat.readyAt?.toISOString() ?? null,
             roleKey: isCurrentSeatJudge
-              ? (roomSeat.roleKey as WerewolfRoleKey | null)
+              ? normalizeWerewolfRoleKey(roomSeat.roleKey)
               : null,
             roleLabel: isCurrentSeatJudge
               ? getWerewolfRoleLabel(locale, roomSeat.roleKey)

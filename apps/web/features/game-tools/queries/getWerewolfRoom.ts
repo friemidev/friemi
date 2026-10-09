@@ -6,6 +6,7 @@ import {
   isActiveWerewolfSeatOccupant,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
+  normalizeWerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 import {
   canViewWerewolfVoteSubmission,
@@ -333,7 +334,9 @@ export const getWerewolfRoomById = cache(
           profileId: seat.profileId,
           readyAt: seat.readyAt,
           roleAlignment: canViewRole ? seat.roleAlignment : null,
-          roleKey: canViewRole ? seat.roleKey : null,
+          roleKey: canViewRole
+            ? normalizeWerewolfRoleKey(seat.roleKey)
+            : null,
           roleLabel,
           seatNumber: seat.seatNumber,
         };

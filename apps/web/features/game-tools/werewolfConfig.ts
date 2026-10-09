@@ -12,7 +12,6 @@ export const werewolfRoleKeys = [
   "idiot",
   "knight",
   "little_girl",
-  "lovers",
   "magician",
   "mechanical_wolf",
   "nightmare_shadow",
@@ -305,7 +304,9 @@ export function normalizeWerewolfRoleDeck(value: unknown) {
     return null;
   }
 
-  const roles = value.filter(isWerewolfRoleKey);
+  const roles = value
+    .map((role) => normalizeWerewolfRoleKey(role))
+    .filter((role): role is WerewolfRoleKey => role !== null);
 
   if (roles.length < 5 || roles.length > 15) {
     return null;
@@ -512,7 +513,6 @@ export const werewolfRoleAlignments: Record<
   idiot: "good",
   knight: "good",
   little_girl: "good",
-  lovers: "good",
   magician: "good",
   mechanical_wolf: "werewolf",
   nightmare_shadow: "werewolf",
@@ -544,7 +544,6 @@ export const werewolfRoleLabels = {
     idiot: "白痴",
     knight: "骑士",
     little_girl: "小女孩",
-    lovers: "情侣",
     magician: "魔术师",
     mechanical_wolf: "机械狼",
     nightmare_shadow: "噩梦之影",
@@ -574,7 +573,6 @@ export const werewolfRoleLabels = {
     idiot: "Idiot",
     knight: "Knight",
     little_girl: "Little Girl",
-    lovers: "Lovers",
     magician: "Magician",
     mechanical_wolf: "Mechanical Wolf",
     nightmare_shadow: "Nightmare Shadow",
@@ -604,7 +602,6 @@ export const werewolfRoleLabels = {
     idiot: "Idiot",
     knight: "Chevalier",
     little_girl: "Petite fille",
-    lovers: "Amoureux",
     magician: "Magicien",
     mechanical_wolf: "Loup mécanique",
     nightmare_shadow: "Ombre du cauchemar",
@@ -643,7 +640,6 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       idiot: "你是白痴。被票出时按现场规则翻牌。",
       knight: "你是骑士。白天可按现场规则决斗一名玩家，判断错误则自己出局。",
       little_girl: "你是小女孩。夜晚可偷看狼人行动；被发现时按现场规则处理。",
-      lovers: "你是情侣。任一情侣出局时，另一人按现场规则一同出局。",
       magician: "你是魔术师。每晚交换两名玩家的行动目标，由法官按卡牌规则结算。",
       mechanical_wolf: "你是机械狼。开局选择一个身份并获得其能力，由法官按现场规则主持。",
       nightmare_shadow: "你是噩梦之影。每晚使一名玩家无法使用能力，由法官按卡牌规则结算。",
@@ -685,8 +681,6 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       knight:
         "You are the knight. Once during the day, challenge a player; if wrong, you are eliminated.",
       little_girl: "You are the Little Girl. Secretly watch the wolves at night; follow table rules if caught.",
-      lovers:
-        "You are one of the lovers. If either lover goes out, the other follows by table rules.",
       magician: "You are the Magician. Swap two players' night targets; the judge resolves the redirected powers.",
       mechanical_wolf: "You are the Mechanical Wolf. Choose a role at the start and gain its power under the judge's direction.",
       nightmare_shadow: "You are the Nightmare Shadow. Block one player's ability each night; the judge resolves its effect.",
@@ -734,8 +728,6 @@ const roleCopy: Record<WerewolfRoleLocale, WerewolfRoleCopy> = {
       knight:
         "Vous êtes chevalier. Une fois le jour, défiez un joueur ; si vous vous trompez, vous êtes éliminé.",
       little_girl: "Vous êtes la petite fille. Observez discrètement les loups la nuit ; si vous êtes repérée, suivez les règles de table.",
-      lovers:
-        "Vous êtes amoureux. Si l'un des amoureux sort, l'autre le suit selon les règles de table.",
       magician: "Vous êtes le magicien. Échangez les cibles de deux joueurs la nuit ; le maître arbitre les pouvoirs redirigés.",
       mechanical_wolf: "Vous êtes le loup mécanique. Choisissez un rôle au début et gagnez son pouvoir sous la direction du maître.",
       nightmare_shadow: "Vous êtes l'ombre du cauchemar. Bloquez le pouvoir d'un joueur chaque nuit ; le maître en arbitre l'effet.",
@@ -772,15 +764,28 @@ export function isWerewolfRoleKey(
   );
 }
 
+export function normalizeWerewolfRoleKey(
+  value: string | null | undefined,
+): WerewolfRoleKey | null {
+  // Older custom-room snapshots may still contain the removed standalone role.
+  if (value === "lovers") {
+    return "villager";
+  }
+
+  return isWerewolfRoleKey(value) ? value : null;
+}
+
 export function getWerewolfRoleLabel(
   locale: string,
   roleKey: string | null | undefined,
 ) {
-  if (!isWerewolfRoleKey(roleKey)) {
+  const normalizedRoleKey = normalizeWerewolfRoleKey(roleKey);
+
+  if (!normalizedRoleKey) {
     return null;
   }
 
-  return getWerewolfRoleCopy(locale).roleLabels[roleKey];
+  return getWerewolfRoleCopy(locale).roleLabels[normalizedRoleKey];
 }
 
 export function createWerewolfPrivatePayload({
