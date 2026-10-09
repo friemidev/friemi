@@ -569,6 +569,11 @@ try {
     path: `${outputDirectory}/09-public-fr-mobile.png`,
     fullPage: true,
   });
+  await publicPage
+    .getByRole("link", { name: "Se connecter pour réserver", exact: true })
+    .click();
+  await publicPage.waitForURL((url) => url.pathname.startsWith("/fr/sign-in"));
+  await publicPage.getByRole("textbox", { name: "Email address" }).waitFor();
   await publicPage.setViewportSize({ width: 1280, height: 900 });
   await publicPage.goto(`${origin}/en/lobby/${activityId}`);
   await publicPage
@@ -614,7 +619,11 @@ try {
   await ownerPage.goto(
     `${origin}/zh-CN/profile/store/bookings/reservations/${rejectedBooking.id}`,
   );
-  await ownerPage.getByText("拒绝预约", { exact: true }).click();
+  await ownerPage
+    .getByText("拒绝预约", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await ownerPage
     .locator("#booking-reject-reason")
     .fill("验收：这一天暂时无法接待，请重新选择日期。");
@@ -641,13 +650,19 @@ try {
   );
   await guestPage
     .getByText("验收：这一天暂时无法接待，请重新选择日期。", { exact: true })
+    .filter({ visible: true })
+    .first()
     .waitFor();
 
   step = "guest cancels accepted reservation; owner sees history";
   await guestPage.goto(
     `${origin}/zh-CN/profile/bookings/${acceptedBooking.id}`,
   );
-  await guestPage.getByText("取消预约", { exact: true }).click();
+  await guestPage
+    .getByText("取消预约", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await guestPage
     .getByRole("button", { name: "确认取消", exact: true })
     .click();
@@ -668,8 +683,16 @@ try {
   );
   await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings`);
   await ownerPage.getByRole("tab", { name: /历史记录/ }).click();
-  await ownerPage.getByText("已取消", { exact: true }).waitFor();
-  await ownerPage.getByText("未接受", { exact: true }).waitFor();
+  await ownerPage
+    .getByText("已取消", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor();
+  await ownerPage
+    .getByText("未接受", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor();
   await ownerPage.screenshot({
     path: `${outputDirectory}/07-owner-history.png`,
     fullPage: true,
