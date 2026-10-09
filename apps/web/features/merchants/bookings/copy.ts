@@ -12,14 +12,11 @@ const zh = {
   backLobby: "返回聚吧",
   viewSpace: "查看长期聚吧",
   browse: "去看看聚吧",
-  noAccess: "预约功能尚未开通",
-  noAccessHint: "网站管理员开通后，你可以创建长期聚吧，持续接收用户预约。",
   setupTitle: "用一个长期聚吧接收预约",
   setupHint: "设置开放日期后，用户可在聚吧里选择日期和人数，你来确认每笔预约。",
   open: "接收预约中",
   paused: "已暂停新预约",
   pausedHint: "门店暂时不接受新预约。已有预约仍可在「我的预约」中查看。",
-  accessPaused: "预约权限已暂停，已有预约仍可处理。",
   pending: "待处理",
   awaiting: "待确认",
   upcoming: "已接受",
@@ -135,9 +132,6 @@ const en: typeof zh = {
   backLobby: "Back to meetups",
   viewSpace: "View permanent meetup",
   browse: "Explore meetups",
-  noAccess: "Bookings are not enabled yet",
-  noAccessHint:
-    "An administrator can enable bookings so you can create a permanent meetup and receive reservations.",
   setupTitle: "Receive bookings through one permanent meetup",
   setupHint:
     "Set your available dates. Guests choose a date and party size, and you confirm each booking.",
@@ -145,8 +139,6 @@ const en: typeof zh = {
   paused: "New bookings paused",
   pausedHint:
     "This store is not accepting new bookings. Existing reservations remain available in My bookings.",
-  accessPaused:
-    "Booking access is paused. You can still manage existing reservations.",
   pending: "To review",
   awaiting: "Pending",
   upcoming: "Accepted",
@@ -269,9 +261,6 @@ const fr: typeof zh = {
   backLobby: "Retour aux sorties",
   viewSpace: "Voir la sortie permanente",
   browse: "Découvrir les sorties",
-  noAccess: "Les réservations ne sont pas encore activées",
-  noAccessHint:
-    "Un administrateur peut activer la fonction pour vous permettre de créer une sortie permanente et de recevoir des réservations.",
   setupTitle: "Une sortie permanente pour vos réservations",
   setupHint:
     "Définissez vos jours d'ouverture. Les clients choisissent une date et un nombre de personnes ; vous confirmez chaque demande.",
@@ -279,8 +268,6 @@ const fr: typeof zh = {
   paused: "Nouvelles réservations en pause",
   pausedHint:
     "La boutique ne reçoit pas de nouvelles réservations. Retrouvez vos demandes existantes dans Mes réservations.",
-  accessPaused:
-    "L'accès aux réservations est suspendu. Les demandes existantes restent accessibles.",
   pending: "À traiter",
   awaiting: "En attente",
   upcoming: "Acceptées",

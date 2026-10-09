@@ -12,7 +12,7 @@ import { noIndexMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
 
-export default async function BookingPermissionsPage({
+export default async function MerchantBookingsOverviewPage({
   params,
   searchParams,
 }: {
@@ -41,7 +41,7 @@ export default async function BookingPermissionsPage({
         id: true,
         name: true,
         city: true,
-        bookingAccessEnabled: true,
+        isActive: true,
         bookingSettings: { select: { enabled: true } },
       },
     }),
@@ -98,13 +98,13 @@ export default async function BookingPermissionsPage({
                 </span>
                 <span className="mt-1 block text-sm text-ink/70">
                   {merchant.city} ·{" "}
-                  {merchant.bookingAccessEnabled
-                    ? merchant.bookingSettings
+                  {!merchant.isActive
+                    ? copy.inactive
+                    : merchant.bookingSettings
                       ? merchant.bookingSettings.enabled
                         ? copy.enabled
                         : copy.paused
-                      : copy.unconfigured
-                    : copy.denied}
+                      : copy.unconfigured}
                 </span>
               </span>
               <ArrowUpRight
