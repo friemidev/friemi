@@ -179,7 +179,11 @@ async function assertNotice(page, recipientId, bookingId, type, titleText) {
     }),
   );
   await page.goto(`${origin}/zh-CN/notifications`);
-  await page.getByText(titleText, { exact: true }).first().waitFor();
+  await page
+    .getByText(titleText, { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor();
   const text = await page.locator("body").innerText();
   assert.equal(
     text.includes(phone),
@@ -521,7 +525,10 @@ try {
   await ownerPage.goto(
     `${origin}/zh-CN/profile/store/bookings/reservations/${acceptedBooking.id}`,
   );
-  await ownerPage.getByText(phone, { exact: true }).waitFor();
+  await ownerPage
+    .getByText(phone, { exact: true })
+    .filter({ visible: true })
+    .waitFor();
   assert.equal(
     await ownerPage
       .getByRole("link", { name: "联系顾客" })
@@ -539,7 +546,11 @@ try {
         })
       )?.status === "ACCEPTED",
   );
-  await ownerPage.getByText("已接受", { exact: true }).first().waitFor();
+  await ownerPage
+    .getByText("已接受", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor();
   await ownerPage.screenshot({
     path: `${outputDirectory}/04-owner-accepted.png`,
     fullPage: true,
@@ -554,7 +565,11 @@ try {
   await guestPage.goto(
     `${origin}/zh-CN/profile/bookings/${acceptedBooking.id}`,
   );
-  await guestPage.getByText("已接受", { exact: true }).first().waitFor();
+  await guestPage
+    .getByText("已接受", { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor();
   await guestPage.screenshot({
     path: `${outputDirectory}/05-guest-accepted.png`,
     fullPage: true,
