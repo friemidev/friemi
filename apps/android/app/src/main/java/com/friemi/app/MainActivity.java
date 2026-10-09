@@ -124,6 +124,7 @@ public final class MainActivity extends ComponentActivity {
             }
         });
         preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        FriemiNotificationChannels.ensureDefaultChannel(this);
         configureWindow();
         setupViews();
         setupWebView();

@@ -134,3 +134,11 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        check(file("google-services.json").isFile) {
+            "Release build requires app/google-services.json for Firebase push notifications."
+        }
+    }
+}

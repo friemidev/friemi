@@ -49,6 +49,7 @@ declare global {
 
 type AndroidAppBridgeProps = {
   locale: string;
+  viewerProfileId: string | null;
 };
 
 const dialogSelectors = [
@@ -228,6 +229,10 @@ async function registerMobileDevice(payload: AndroidPushTokenPayload) {
       method: "POST",
     });
 
+    if (!response.ok) {
+      console.warn("Failed to register Android push token", response.status);
+    }
+
     return response.ok;
   } catch (error) {
     console.error("Failed to register Android push token", error);
@@ -235,9 +240,13 @@ async function registerMobileDevice(payload: AndroidPushTokenPayload) {
   }
 }
 
-export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
+export function AndroidAppBridge({
+  locale,
+  viewerProfileId,
+}: AndroidAppBridgeProps) {
   const pathname = usePathname();
-  const lastRegisteredTokenRef = useRef<string | null>(null);
+  const lastRegisteredKeyRef = useRef<string | null>(null);
+  const registeringKeyRef = useRef<string | null>(null);
   const updateTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -267,13 +276,19 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
       updateTimerRef.current = window.setTimeout(sendBackBehavior, 80);
     };
 
+    const requestPushToken = () => {
+      if (viewerProfileId) {
+        window.FriemiAndroid?.registerPushToken?.();
+      }
+    };
+
     const handleAndroidReady = (event: Event) => {
       applyAndroidSafeArea(
         parseAndroidAppInfoPayload((event as CustomEvent<unknown>).detail) ??
           readAndroidAppInfo(),
       );
       window.FriemiAndroid?.saveLocale?.(locale);
-      window.FriemiAndroid?.registerPushToken?.();
+      requestPushToken();
       sendBackBehavior();
     };
     const handleAndroidSafeArea = (event: Event) => {
@@ -296,16 +311,28 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
         (event as CustomEvent<unknown>).detail,
       );
 
+      if (!payload?.ok || !payload.fcmToken || !viewerProfileId) {
+        if (payload?.reason) {
+          console.warn("Android push token unavailable", payload.reason);
+        }
+        return;
+      }
+
+      const registrationKey = `${viewerProfileId}:${payload.fcmToken}`;
       if (
-        !payload?.fcmToken ||
-        payload.fcmToken === lastRegisteredTokenRef.current
+        registrationKey === lastRegisteredKeyRef.current ||
+        registrationKey === registeringKeyRef.current
       ) {
         return;
       }
 
+      registeringKeyRef.current = registrationKey;
       void registerMobileDevice(payload).then((ok) => {
         if (ok) {
-          lastRegisteredTokenRef.current = payload.fcmToken ?? null;
+          lastRegisteredKeyRef.current = registrationKey;
+        }
+        if (registeringKeyRef.current === registrationKey) {
+          registeringKeyRef.current = null;
         }
       });
     };
@@ -317,6 +344,8 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
       "friemi:android-push-token",
       handleAndroidPushToken,
     );
+    window.addEventListener("friemi:android-resume", requestPushToken);
+    window.addEventListener("online", requestPushToken);
     document.addEventListener("click", scheduleBackBehaviorUpdate, true);
     document.addEventListener("keyup", scheduleBackBehaviorUpdate, true);
 
@@ -328,7 +357,7 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
     });
 
     sendBackBehavior();
-    window.FriemiAndroid?.registerPushToken?.();
+    requestPushToken();
 
     return () => {
       if (updateTimerRef.current !== null) {
@@ -352,11 +381,13 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
         "friemi:android-push-token",
         handleAndroidPushToken,
       );
+      window.removeEventListener("friemi:android-resume", requestPushToken);
+      window.removeEventListener("online", requestPushToken);
       document.removeEventListener("click", scheduleBackBehaviorUpdate, true);
       document.removeEventListener("keyup", scheduleBackBehaviorUpdate, true);
       delete document.documentElement.dataset.friemiAndroidApp;
     };
-  }, [locale, pathname]);
+  }, [locale, pathname, viewerProfileId]);
 
   return null;
 }

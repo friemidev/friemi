@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Friemi</string>
+    <string name="friemi_notification_channel_id">friemi_activity_updates</string>
     <string name="loading_friemi">Friemi is loading</string>
     <string name="loading_slow_network">Still opening Friemi. You can keep waiting or try again.</string>
     <string name="web_error_title">Cannot open Friemi</string>

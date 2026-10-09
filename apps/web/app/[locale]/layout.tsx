@@ -146,7 +146,10 @@ export default async function LocaleLayout({
               <RouteMotion />
               <RouteTransitionMetrics locale={locale} />
               <ModalViewportGuard />
-              <AndroidAppBridge locale={locale} />
+              <AndroidAppBridge
+                locale={locale}
+                viewerProfileId={viewerProfile?.id ?? null}
+              />
               {clerkEnabled ? <IOSAppBridge /> : null}
               <DesktopAppNavigation
                 locale={locale}
