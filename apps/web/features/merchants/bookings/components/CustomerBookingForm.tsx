@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Minus, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { submitBookingAction } from "../actions";
@@ -29,8 +30,12 @@ export function CustomerBookingForm({
   viewerName?: string;
 }) {
   const copy = getBookingCopy(locale);
+  const router = useRouter();
   const [date, setDate] = useState("");
   const [partySize, setPartySize] = useState(2);
+  const [contactName, setContactName] = useState(viewerName);
+  const [contactPhone, setContactPhone] = useState("");
+  const [note, setNote] = useState("");
   const [state, action, pending] = useActionState(
     submitBookingAction,
     {} as BookingActionState,
@@ -42,8 +47,14 @@ export function CustomerBookingForm({
   );
   const people =
     data.acceptedCounts.find((entry) => entry.date === date)?.people ?? 0;
+  useEffect(() => {
+    if (state.alreadyBooked && state.bookingId)
+      router.replace(
+        withLocale(locale, `/profile/bookings/${state.bookingId}`),
+      );
+  }, [state, router, locale]);
 
-  if (state.success && state.bookingId)
+  if (state.success && state.bookingId && !state.alreadyBooked)
     return (
       <section className="py-10 text-center" role="status">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-meadow/15 text-forest">
@@ -169,7 +180,8 @@ export function CustomerBookingForm({
                 <input
                   autoComplete="name"
                   className={inputClass}
-                  defaultValue={viewerName}
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
                   id="booking-contact-name"
                   maxLength={80}
                   name="contactName"
@@ -192,6 +204,8 @@ export function CustomerBookingForm({
                   id="booking-contact-phone"
                   maxLength={30}
                   name="contactPhone"
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
                   required
                   type="tel"
                 />
@@ -215,6 +229,8 @@ export function CustomerBookingForm({
                 id="booking-note"
                 maxLength={1000}
                 name="note"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
                 placeholder={copy.notePlaceholder}
               />
             </div>

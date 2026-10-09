@@ -50,7 +50,7 @@ export function ViewerBookingsPage({
           </p>
           <Link
             className={`${primaryClass} mt-6`}
-            href={withLocale(locale, "/activities")}
+            href={withLocale(locale, "/lobby")}
           >
             {copy.browse}
           </Link>

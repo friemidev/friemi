@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cancelBookingAction, reviewBookingAction } from "../actions";
 import { getBookingCopy } from "../copy";
@@ -16,6 +16,7 @@ export function ReviewBookingForm({
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
+  const [reason, setReason] = useState("");
   const [state, action, pending] = useActionState(
     reviewBookingAction,
     {} as BookingActionState,
@@ -66,6 +67,8 @@ export function ReviewBookingForm({
             id="booking-reject-reason"
             maxLength={500}
             name="reason"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
             placeholder={copy.rejectHint}
             required
           />

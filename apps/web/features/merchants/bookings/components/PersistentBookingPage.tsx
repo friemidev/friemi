@@ -30,7 +30,7 @@ export function PersistentBookingPage({
   return (
     <BookingShell>
       <BookingHeader
-        backHref="/activities"
+        backHref="/lobby"
         backLabel={copy.backLobby}
         locale={locale}
         title={copy.permanent}
@@ -48,7 +48,9 @@ export function PersistentBookingPage({
             <h2 className="break-words text-2xl font-bold leading-tight tracking-tight text-forest">
               {data.settings.title}
             </h2>
-            <p className="mt-2 text-sm font-semibold">{data.merchant.name}</p>
+            {data.settings.title.trim() !== data.merchant.name.trim() ? (
+              <p className="mt-2 text-sm font-semibold">{data.merchant.name}</p>
+            ) : null}
             <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-ink/70">
               <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
               {[data.merchant.city, data.merchant.address]
