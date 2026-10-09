@@ -1,5 +1,7 @@
 "use server";
 
+import { isPersistentBookingActivity, getPersistentBookingCopy } from "@/features/activities/utils/persistentBookingActivity";
+
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import type {
@@ -199,6 +201,8 @@ export async function joinActivityAsGuestAction(
           select: {
             id: true,
             organizerId: true,
+            isPersistent: true,
+            source: true,
             status: true,
             visibility: true,
             startAt: true,
@@ -240,6 +244,10 @@ export async function joinActivityAsGuestAction(
           !activeOrganizerStatuses.includes(activity.organizer.status)
         ) {
           return { ok: false as const, error: "活动不存在或已不可见。" };
+        }
+
+        if (isPersistentBookingActivity(activity)) {
+          return { ok: false as const, error: getPersistentBookingCopy(result.data.locale).bookingRequired };
         }
 
         if (activity.status === "CANCELLED" || activity.status === "ENDED") {

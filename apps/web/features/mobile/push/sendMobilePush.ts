@@ -324,6 +324,25 @@ export async function sendMobilePushForNotification(notificationId: string) {
         select: { title: true },
       },
       inventoryItemDefinitionId: true,
+      merchantBooking: {
+        select: {
+          id: true,
+          profileId: true,
+          date: true,
+          partySize: true,
+          settings: { select: { merchant: { select: { name: true } } } },
+        },
+      },
+      residencySlot: {
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          merchantId: true,
+          rejectionReason: true,
+          activity: { select: { startAt: true, address: true } },
+        },
+      },
       momentId: true,
       planetId: true,
       planet: {
@@ -419,8 +438,21 @@ export async function sendMobilePushForNotification(notificationId: string) {
         : null,
       locale,
       messageBody,
-      merchantName: notification.couponWalletItem?.coupon.merchant.name ?? null,
+      merchantName:
+        notification.merchantBooking?.settings.merchant.name ??
+        notification.couponWalletItem?.coupon.merchant.name ??
+        null,
+      merchantBookingDate:
+        notification.merchantBooking?.date.toISOString().slice(0, 10) ?? null,
+      merchantBookingPartySize: notification.merchantBooking?.partySize ?? null,
       planetName: notification.planet?.name ?? null,
+      residencyTitle: notification.residencySlot?.title ?? null,
+      residencyDate:
+        notification.residencySlot?.date.toISOString().slice(0, 10) ?? null,
+      residencyRejectionReason:
+        notification.residencySlot?.rejectionReason ?? null,
+      residencyStartAt: notification.residencySlot?.activity?.startAt ?? null,
+      residencyAddress: notification.residencySlot?.activity?.address ?? null,
       ticketTitle: notification.inventoryItemDefinition?.title ?? null,
       type: notification.type,
     });
@@ -431,6 +463,11 @@ export async function sendMobilePushForNotification(notificationId: string) {
       conversationId: directMessageConversationId,
       momentId: notification.momentId,
       planetSlug: notification.planet?.slug ?? null,
+      residencyMerchantId: notification.residencySlot?.merchantId ?? null,
+      residencySlotId: notification.residencySlot?.id ?? null,
+      merchantBookingId: notification.merchantBooking?.id ?? null,
+      merchantBookingForCustomer:
+        notification.merchantBooking?.profileId === notification.recipientId,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {

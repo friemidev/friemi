@@ -1,11 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, Globe2, Mail, MapPin, Store } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  ExternalLink,
+  Globe2,
+  Mail,
+  MapPin,
+  Store,
+} from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
+import { getMerchantBookingSpace } from "@/features/merchants/bookings/queries";
+import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getCopy } from "@/lib/copy";
@@ -31,11 +42,14 @@ function formatCoordinates(latitude: number, longitude: number) {
 export default async function MerchantPage({ params }: MerchantPageProps) {
   const { locale, merchantId } = await params;
   const t = getCopy(locale);
+  const bookingCopy = getBookingCopy(locale);
   const merchant = await getMerchantProfile(merchantId);
 
   if (!merchant) {
     notFound();
   }
+
+  const bookingSpace = await getMerchantBookingSpace(merchant.id);
 
   return (
     <PageContainer mobileSafeTop mobileSafeBottom className="space-y-7 pb-10">
@@ -145,6 +159,34 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
           </div>
         </aside>
       </section>
+
+      {bookingSpace ? (
+        <section aria-label={bookingCopy.permanent}>
+          <Link
+            className="group flex min-h-24 items-center gap-4 rounded-2xl bg-fog/70 px-4 py-5 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest sm:px-6"
+            href={getLocalizedActivityDetailPath(
+              locale,
+              bookingSpace.settings.activityId,
+            )}
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-forest text-paper">
+              <CalendarDays aria-hidden="true" className="h-6 w-6" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-bold text-ink">
+                {bookingCopy.viewSpace}
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-ink/70">
+                {bookingSpace.settings.title}
+              </span>
+            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-forest transition group-hover:translate-x-0.5"
+            />
+          </Link>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div>

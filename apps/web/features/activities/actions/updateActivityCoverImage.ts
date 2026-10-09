@@ -1,5 +1,7 @@
 "use server";
 
+import { isPersistentBookingActivity } from "../utils/persistentBookingActivity";
+
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
@@ -114,6 +116,7 @@ export async function updateActivityCoverImageAction(
       organizerId: true,
       publicEventId: true,
       source: true,
+      isPersistent: true,
       sourcePayload: true,
       sourceUrl: true,
       type: true,
@@ -122,6 +125,7 @@ export async function updateActivityCoverImageAction(
 
   if (
     !activity ||
+    isPersistentBookingActivity(activity) ||
     activity.type === "PUBLIC_EVENT" ||
     isLegacyActivityInfoSource(activity)
   ) {

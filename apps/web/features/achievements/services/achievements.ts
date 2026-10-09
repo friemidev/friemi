@@ -95,6 +95,7 @@ function getEndedActivityWhere(now: Date): Prisma.ActivityWhereInput {
   floatingDayStart.setUTCHours(0, 0, 0, 0);
 
   return {
+    isPersistent: false,
     OR: [
       {
         status: "ENDED",
@@ -262,6 +263,7 @@ function getCompletedActivityWhere(
   floatingDayStart.setUTCHours(0, 0, 0, 0);
 
   return {
+    isPersistent: false,
     OR: [
       { status: "ENDED" },
       { endAt: { lte: floatingNow } },

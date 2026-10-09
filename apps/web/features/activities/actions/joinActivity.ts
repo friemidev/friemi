@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  isPersistentBookingActivity,
+  getPersistentBookingCopy,
+} from "../utils/persistentBookingActivity";
+
 import type {
   ActivityStatus,
   ActivityVisibility,
@@ -56,12 +61,7 @@ export type JoinActivityState = {
   formError?: string;
   fieldErrors?: Record<string, string[]>;
   participantStatus?:
-    | "JOINED"
-    | "PENDING"
-    | "APPROVED"
-    | "REJECTED"
-    | "CANCELLED"
-    | null;
+    "JOINED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
   success?: boolean;
   values?: {
     message: string;
@@ -259,6 +259,8 @@ export async function joinActivityAction(
             select: {
               id: true,
               organizerId: true,
+              isPersistent: true,
+              source: true,
               status: true,
               visibility: true,
               startAt: true,
@@ -307,6 +309,13 @@ export async function joinActivityAction(
           ) {
             return getJoinFailure(
               "活动不存在或已不可见。",
+              "activity_unavailable",
+            );
+          }
+
+          if (isPersistentBookingActivity(activity)) {
+            return getJoinFailure(
+              getPersistentBookingCopy(result.data.locale).bookingRequired,
               "activity_unavailable",
             );
           }

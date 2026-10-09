@@ -1,3 +1,4 @@
+import { isPersistentBookingActivity } from "../utils/persistentBookingActivity";
 import { prisma } from "@/lib/prisma";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import type { ActivityStatus, ParticipantStatus, Prisma } from "@prisma/client";
@@ -148,6 +149,9 @@ const activityDetailSelect = {
   },
   organizerId: true,
   source: true,
+  isPersistent: true,
+  lastBookingAt: true,
+  createdAt: true,
   sourcePayload: true,
   ticketUrl: true,
   ticketLabel: true,
@@ -399,6 +403,9 @@ function getActivityDetailViewModel(
         }
       : null,
     id: activity.id,
+    isPersistent: isPersistentBookingActivity(activity),
+    lastBookingAt: toIsoString(activity.lastBookingAt),
+    createdAt: toIsoString(activity.createdAt) ?? undefined,
     title: activity.title,
     description: activity.description,
     itinerary: activity.itinerary,
@@ -650,7 +657,7 @@ export async function getActivityCopyValuesById(
 ): Promise<ActivityFormValues | null> {
   const activity = await getActivityById(activityId, viewerProfileId);
 
-  if (!activity) {
+  if (!activity || activity.isPersistent) {
     return null;
   }
 

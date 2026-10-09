@@ -1,5 +1,7 @@
 "use client";
 
+import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -709,9 +711,10 @@ export function ActivitySwipeDiscovery({
             const dateLabel = getActivityDateLabel(activity, locale);
             const locationLabel = getActivityLocationLabel(activity);
             const categoryLabel = getCategoryLabel(activity.category, locale);
-            const statusLabel = getStatusLabel(displayStatus, locale);
+            const bookingCopy = getPersistentBookingCopy(locale);
+            const statusLabel = activity.isPersistent ? bookingCopy.open : getStatusLabel(displayStatus, locale);
             const href = getSwipeActivityHref(activity, locale);
-            const kindCopy = getSwipeKindCopy(locale, isActivityInfo);
+            const kindCopy = activity.isPersistent ? { label: bookingCopy.kind, note: bookingCopy.action } : getSwipeKindCopy(locale, isActivityInfo);
             const KindIcon = isActivityInfo ? Compass : UsersRound;
             const analyticsEntity = isTopCard
               ? getAnalyticsEntityForActivity(activity)

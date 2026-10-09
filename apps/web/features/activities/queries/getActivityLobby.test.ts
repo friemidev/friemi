@@ -36,7 +36,7 @@ function activity(
   } as ActivityCardViewModel;
 }
 
-test("mobile history filtering happens in the database before pagination", async (t) => {
+test("mobile history filtering scopes the complete lightweight index before pagination", async (t) => {
   const calls: Prisma.ActivityFindManyArgs[] = [];
   const original = prisma.activity.findMany;
   prisma.activity.findMany = (async (args: Prisma.ActivityFindManyArgs) => {
@@ -58,9 +58,10 @@ test("mobile history filtering happens in the database before pagination", async
     viewerProfileId: null,
   });
   assert.equal(calls.length, 2);
-  assert.equal(calls[0].skip, 0);
-  assert.equal(calls[1].skip, 16);
-  assert.equal(calls[1].take, 9);
+  assert.equal(calls[0].skip, undefined);
+  assert.equal(calls[1].skip, undefined);
+  assert.equal(calls[1].take, undefined);
+  assert.deepEqual(calls[1].select, { id: true, isPersistent: true, lastBookingAt: true, createdAt: true });
   const activeFilters = calls[0].where?.AND as Prisma.ActivityWhereInput[];
   const archivedFilters = calls[1].where?.AND as Prisma.ActivityWhereInput[];
   assert.deepEqual(activeFilters[1].status, { not: "CANCELLED" });

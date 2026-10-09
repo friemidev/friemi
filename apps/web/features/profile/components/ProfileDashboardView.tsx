@@ -8,6 +8,7 @@ import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   BadgeCheck,
+  CalendarDays,
   ChevronRight,
   Copy,
   Crown,
@@ -349,6 +350,8 @@ function getMobileProfileCopy(locale: string) {
       addFriend: "Suivre",
       available: "Ouvert",
       bag: "Sac",
+      bookings: "Mes réservations",
+      bookingsHint: "Demandes et confirmations des boutiques",
       charm: "Aura",
       charmLevelsClose: "Compris",
       charmLevelsCurrent: "Niveau actuel",
@@ -417,6 +420,8 @@ function getMobileProfileCopy(locale: string) {
       addFriend: "Follow",
       available: "Open",
       bag: "Bag",
+      bookings: "My bookings",
+      bookingsHint: "Booking requests and store confirmations",
       charm: "Charm",
       charmLevelsClose: "Got it",
       charmLevelsCurrent: "Current level",
@@ -484,6 +489,8 @@ function getMobileProfileCopy(locale: string) {
     addFriend: "关注",
     available: "可进入",
     bag: "背包",
+    bookings: "我的预约",
+    bookingsHint: "查看预约和门店确认结果",
     charm: "魅力值",
     charmLevelsClose: "知道了",
     charmLevelsCurrent: "当前等级",
@@ -3117,6 +3124,36 @@ function MobileProfileAvatarSubmitButton({
   );
 }
 
+function StoreBookingsEntry({
+  className,
+  locale,
+}: {
+  className?: string;
+  locale: string;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  return (
+    <Link
+      className={cn(
+        "flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest",
+        className,
+      )}
+      href={withLocale(locale, "/profile/bookings")}
+    >
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white">
+        <CalendarDays aria-hidden="true" className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{copy.bookings}</span>
+        <span className="mt-0.5 block text-xs text-ink/70">
+          {copy.bookingsHint}
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+    </Link>
+  );
+}
+
 function SelfMobileProfileHome({
   achievementPreviewItems,
   dashboard,
@@ -3316,6 +3353,8 @@ function SelfMobileProfileHome({
         />
       </section>
 
+      <StoreBookingsEntry className="mt-5" locale={locale} />
+
       {ticketWorkbenchHref ? (
         <Link
           className="mt-5 flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
@@ -3325,7 +3364,9 @@ function SelfMobileProfileHome({
             <ScanLine aria-hidden="true" className="h-5 w-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold">{copy.ticketWorkbench}</span>
+            <span className="block text-sm font-bold">
+              {copy.ticketWorkbench}
+            </span>
             <span className="mt-0.5 block text-xs text-ink/70">
               {copy.ticketWorkbenchHint}
             </span>
@@ -3580,6 +3621,7 @@ export function ProfileDashboardView({
                     <ChevronRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
                 ) : null}
+                <StoreBookingsEntry locale={locale} />
                 <ProfileOverviewPanel
                   activeActivitySection={activeProfileSection}
                   createdCount={dashboard.createdActivityCount}
