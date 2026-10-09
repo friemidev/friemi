@@ -402,6 +402,21 @@ test("alerts when all werewolves are dead", () => {
   );
 });
 
+test("counts a legacy Lovers seat as a villager in faction alerts", () => {
+  assert.equal(
+    getWerewolfFactionAlert({
+      deadSeatNumbers: [3],
+      seats: [
+        { roleAlignment: "werewolf", roleKey: "werewolf", seatNumber: 1 },
+        { roleAlignment: "good", roleKey: "seer", seatNumber: 2 },
+        { roleAlignment: "good", roleKey: "lovers", seatNumber: 3 },
+      ],
+      thirdPartySeatNumbers: [],
+    })?.kind,
+    "VILLAGERS_ELIMINATED",
+  );
+});
+
 test("keeps the werewolf faction alive while Cupid follows that faction", () => {
   assert.equal(
     getWerewolfFactionAlert({

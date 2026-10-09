@@ -10,7 +10,9 @@ import {
   getWerewolfVariantLabel,
   isActiveWerewolfJudgeSeat,
   isActiveWerewolfPlayerSeat,
+  isWerewolfRoleKey,
   normalizeWerewolfRoleDeck,
+  normalizeWerewolfRoleKey,
   werewolfRoleAlignments,
   werewolfRoleKeys,
   werewolfRoleLabels,
@@ -50,7 +52,6 @@ test("keeps the Chinese Werewolf role labels explicit", () => {
     idiot: "白痴",
     knight: "骑士",
     little_girl: "小女孩",
-    lovers: "情侣",
     magician: "魔术师",
     mechanical_wolf: "机械狼",
     nightmare_shadow: "噩梦之影",
@@ -69,7 +70,10 @@ test("keeps the Chinese Werewolf role labels explicit", () => {
 });
 
 test("accepts every available role and recognizes wolf kings as wolves", () => {
-  assert.equal(werewolfRoleKeys.length, 28);
+  assert.equal(werewolfRoleKeys.length, 27);
+  assert.equal(isWerewolfRoleKey("lovers"), false);
+  assert.equal(normalizeWerewolfRoleKey("lovers"), "villager");
+  assert.equal(getWerewolfRoleLabel("zh-CN", "lovers"), "平民");
   assert.equal(werewolfRoleAlignments.wolf_king, "werewolf");
   assert.equal(werewolfRoleAlignments.white_wolf_king, "werewolf");
   assert.equal(werewolfRoleAlignments.pied_piper, "third_party");
@@ -82,6 +86,35 @@ test("accepts every available role and recognizes wolf kings as wolves", () => {
       "villager",
     ]),
     ["wolf_king", "guard", "knight", "cupid", "villager"],
+  );
+});
+
+test("keeps legacy custom room seat counts when Lovers is removed", () => {
+  const roleDeck = [
+    "werewolf",
+    "werewolf",
+    "seer",
+    "lovers",
+    "villager",
+  ];
+  const expectedRoles = [
+    "werewolf",
+    "werewolf",
+    "seer",
+    "villager",
+    "villager",
+  ];
+
+  assert.deepEqual(normalizeWerewolfRoleDeck(roleDeck), expectedRoles);
+  assert.deepEqual(
+    getWerewolfVariantFromRoomConfig({
+      judgeSeatNumber: 6,
+      playerSeatCount: 5,
+      roleDeck,
+      totalSeats: 6,
+      variantKey: "custom",
+    }).roles,
+    expectedRoles,
   );
 });
 

@@ -267,7 +267,6 @@ function getVariantCoreRoleLabels(locale: string, variant: WerewolfVariant) {
     "knight",
     "idiot",
     "cupid",
-    "lovers",
     "werewolf",
     "wolf_king",
     "white_wolf_king",
@@ -440,7 +439,6 @@ const defaultCustomRoleCounts: Record<WerewolfRoleKey, number> = {
   idiot: 0,
   knight: 0,
   little_girl: 0,
-  lovers: 0,
   magician: 0,
   mechanical_wolf: 0,
   nightmare_shadow: 0,
@@ -532,7 +530,10 @@ function CustomModeCard({
           alt=""
           className="pointer-events-none absolute bottom-0 -left-3 top-0 h-full w-[7.25rem] object-contain object-top opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
           height={360}
-          src="/game-tools/werewolf/recto/villager_en.png"
+          src={
+            getWerewolfRoleCardImage("villager", locale) ??
+            "/game-tools/werewolf/recto/english/villager.png"
+          }
           width={252}
         />
         <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">

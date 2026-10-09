@@ -83,7 +83,7 @@ export default async function WerewolfCardPreviewPage({
   const roleCopy = getWerewolfRoleCopy(locale);
   const seerImage =
     getWerewolfRoleCardImage("seer", locale) ??
-    "/game-tools/werewolf/recto/seer_en.png";
+    "/game-tools/werewolf/recto/english/seer.png";
 
   return (
     <PageContainer
@@ -137,7 +137,7 @@ export default async function WerewolfCardPreviewPage({
               description={roleCopy.roleDescriptions[roleKey]}
               imageSrc={
                 getWerewolfRoleCardImage(roleKey, locale) ??
-                `/game-tools/werewolf/recto/${roleKey}_en.png`
+                `/game-tools/werewolf/recto/english/${roleKey}.png`
               }
               key={roleKey}
               label={roleCopy.roleLabels[roleKey]}

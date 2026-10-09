@@ -8,24 +8,44 @@ import {
   werewolfAtmospheres,
 } from "./werewolfCardAssets";
 
-test("every Werewolf role has an English-named card face", () => {
+test("every active role has a localized card face", () => {
   for (const role of werewolfRoleKeys) {
-    const image = getWerewolfRoleCardImage(role, "zh-CN");
-    assert.ok(image?.endsWith("_en.png"));
-    assert.ok(existsSync(new URL(`../../public${image}`, import.meta.url)), role);
+    for (const locale of ["zh-CN", "en", "fr"]) {
+      const image = getWerewolfRoleCardImage(role, locale);
+      const language = locale === "zh-CN" ? "chinese" : "english";
+      assert.equal(
+        image,
+        `/game-tools/werewolf/recto/${language}/${role}.png`,
+      );
+      assert.ok(
+        existsSync(new URL(`../../public${image}`, import.meta.url)),
+        image ?? role,
+      );
+    }
   }
 
-  const femaleVillagerImage = getWerewolfRoleCardImage("villager", "en", 2);
-  assert.equal(
-    femaleVillagerImage,
-    "/game-tools/werewolf/recto/villager_female_en.png",
-  );
-  assert.ok(
-    existsSync(new URL(`../../public${femaleVillagerImage}`, import.meta.url)),
-  );
+  for (const locale of ["zh-CN", "en", "fr"]) {
+    const language = locale === "zh-CN" ? "chinese" : "english";
+    const femaleVillagerImage = getWerewolfRoleCardImage(
+      "villager",
+      locale,
+      2,
+    );
+    assert.equal(
+      femaleVillagerImage,
+      `/game-tools/werewolf/recto/${language}/villager_female.png`,
+    );
+    assert.ok(
+      existsSync(new URL(`../../public${femaleVillagerImage}`, import.meta.url)),
+    );
+  }
   assert.equal(
     getWerewolfRoleCardImage("villager", "fr", 1),
-    "/game-tools/werewolf/recto/villager_en.png",
+    "/game-tools/werewolf/recto/english/villager.png",
+  );
+  assert.equal(
+    getWerewolfRoleCardImage("lovers", "zh-CN"),
+    "/game-tools/werewolf/recto/chinese/villager.png",
   );
 });
 
