@@ -22,7 +22,6 @@ export function getPersistentBookingActivityWhere(): Prisma.ActivityWhereInput {
     merchant: {
       is: {
         isActive: true,
-        bookingAccessEnabled: true,
         owner: { is: { status: "ACTIVE" } },
       },
     },

@@ -114,15 +114,71 @@ test("equal booking times use stable ids and pagination does not repeat or omit 
   assert.deepEqual(persistent, [...persistent].sort());
 });
 
-test("persistent eligibility requires current store access and enabled booking settings", () => {
+test("active store owners remain discoverable with a legacy false booking-access flag", () => {
+  // Match the scalar and relation requirements of the actual discovery query
+  // against records, including historical values that must no longer gate access.
+  const matchesRequirements = (
+    record: Record<string, unknown>,
+    requirements: Record<string, unknown>,
+  ): boolean =>
+    Object.entries(requirements).every(([field, expected]) => {
+      if (field === "is")
+        return matchesRequirements(record, expected as Record<string, unknown>);
+      const actual = record[field];
+      return expected && typeof expected === "object"
+        ? Boolean(
+            actual &&
+            typeof actual === "object" &&
+            matchesRequirements(
+              actual as Record<string, unknown>,
+              expected as Record<string, unknown>,
+            ),
+          )
+        : actual === expected;
+    });
+  const activity = {
+    isPersistent: true,
+    source: "MERCHANT_BOOKING",
+    status: "RECRUITING",
+    visibility: "PUBLIC",
+    organizer: { status: "ACTIVE" },
+    merchant: {
+      isActive: true,
+      bookingAccessEnabled: false,
+      owner: { status: "ACTIVE" },
+    },
+    merchantBookingSettings: { enabled: true },
+  };
   const where = getPersistentBookingActivityWhere();
-  assert.equal(where.source, "MERCHANT_BOOKING");
-  assert.equal(where.status, "RECRUITING");
-  assert.equal(where.visibility, "PUBLIC");
-  assert.deepEqual(where.merchantBookingSettings, { is: { enabled: true } });
-  const merchant = (where.merchant as Prisma.MerchantScalarRelationFilter).is;
-  assert.equal(merchant?.isActive, true);
-  assert.equal(merchant?.bookingAccessEnabled, true);
+  assert.equal(matchesRequirements(activity, where), true);
+  assert.equal(
+    matchesRequirements(
+      { ...activity, merchant: { ...activity.merchant, isActive: false } },
+      where,
+    ),
+    false,
+  );
+  assert.equal(
+    matchesRequirements(
+      {
+        ...activity,
+        merchant: { ...activity.merchant, owner: { status: "SUSPENDED" } },
+      },
+      where,
+    ),
+    false,
+  );
+  assert.equal(
+    matchesRequirements(
+      { ...activity, merchantBookingSettings: { enabled: false } },
+      where,
+    ),
+    false,
+  );
+  assert.equal(
+    matchesRequirements({ ...activity, visibility: "PRIVATE" }, where),
+    false,
+  );
 });
 
 test("ordinary activity management cannot mutate a persistent store space", async () => {
