@@ -32,14 +32,18 @@ const dateFormat = new Intl.DateTimeFormat("sv-SE", {
 const bookingDate = dateFormat.format(new Date(Date.now() + 10 * 86_400_000));
 const rejectedDate = dateFormat.format(new Date(Date.now() + 11 * 86_400_000));
 const title = `验收预约 ${stamp}`;
-const rejectedTitle = `验收拒绝 ${stamp}`;
 const merchantName = `验收门店 ${stamp}`;
-const meetingAddress = `验收地点 ${stamp}，巴黎`;
+const phone = "+33600001234";
+const privateContact = `预约联系人 ${stamp}`;
+const thirdDate = dateFormat.format(new Date(Date.now() + 12 * 86_400_000));
+const today = dateFormat.format(new Date());
 const outputDirectory =
   "../../output/playwright/store-booking-preview-acceptance";
 const users = [];
 const sessions = {};
 let merchantId = null;
+let settingsId = null;
+let activityId = null;
 let browser;
 let step = "setup";
 
@@ -118,71 +122,148 @@ async function signIn(record, viewport) {
   return page;
 }
 
-async function requestDate(page, date, requestTitle) {
-  await page.goto(`${origin}/zh-CN/profile/store/bookings/new`);
-  await page.getByLabel("预约日期").fill(date);
-  await page.getByLabel("公开标题").fill(requestTitle);
+function calendarLabel(date) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
+async function openCalendarDate(page, date) {
+  const label = calendarLabel(date);
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const button = page.getByRole("button", { name: new RegExp(`^${label}`) });
+    if (await button.count()) return button;
+    await page.getByRole("button", { name: "下个月", exact: true }).click();
+  }
+  throw new Error(`Date not found in calendar: ${date}`);
+}
+
+async function prepareBooking(page, date, partySize = 3) {
+  await page.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  await page.getByRole("heading", { name: title, exact: true }).waitFor();
   await page
-    .getByLabel("公开介绍")
-    .fill("临时验收记录：商家申请日期，管理员审核，用户报名后生成聚吧。");
-  await page.getByRole("button", { name: "提交审核" }).click();
-  await page.getByRole("status").getByText("已提交").waitFor();
+    .getByRole("spinbutton", { name: "预约人数", exact: true })
+    .fill(String(partySize));
+  await (await openCalendarDate(page, date)).click();
+  await page.locator("#booking-contact-name").fill(privateContact);
+  await page.locator("#booking-contact-phone").fill(phone);
+  await page.locator("#booking-note").fill(`私人备注 ${stamp}`);
+}
+
+async function submitPreparedBooking(page, date, guestId) {
+  await page.getByRole("button", { name: "提交预约", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "预约已提交", exact: true })
+    .waitFor();
   return waitForDatabase(() =>
-    prisma.merchantResidencySlot.findFirst({
-      where: { merchantId, title: requestTitle },
-      select: { id: true, status: true },
+    prisma.merchantBookingReservation.findFirst({
+      where: {
+        settingsId,
+        profileId: guestId,
+        date: new Date(`${date}T00:00:00Z`),
+        status: "PENDING",
+      },
     }),
   );
 }
 
+async function assertNotice(page, recipientId, bookingId, type, titleText) {
+  await waitForDatabase(() =>
+    prisma.notification.findFirst({
+      where: { recipientId, merchantBookingId: bookingId, type },
+      select: { id: true },
+    }),
+  );
+  await page.goto(`${origin}/zh-CN/notifications`);
+  await page.getByText(titleText, { exact: true }).first().waitFor();
+  const text = await page.locator("body").innerText();
+  assert.equal(
+    text.includes(phone),
+    false,
+    "Notifications must not contain phone numbers",
+  );
+}
+
+async function saveSettings(page, mutation, expected) {
+  await page.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
+  await mutation(page);
+  await page.getByRole("button", { name: "保存设置", exact: true }).click();
+  await page
+    .getByRole("status")
+    .getByText("设置已保存", { exact: true })
+    .waitFor();
+  return waitForDatabase(async () => {
+    const settings = await prisma.merchantBookingSettings.findUnique({
+      where: { id: settingsId },
+    });
+    assert.equal(
+      settings?.activityId,
+      activityId,
+      "Settings edits must reuse the same permanent meetup",
+    );
+    return settings && expected(settings) ? settings : null;
+  });
+}
+
 async function cleanup() {
   await browser?.close();
-  const slotRows = merchantId
-    ? await prisma.merchantResidencySlot.findMany({
-        where: { merchantId },
-        select: { id: true, activityId: true },
-      })
-    : [];
-  const slotIds = slotRows.map((slot) => slot.id);
-  const activityIds = slotRows.map((slot) => slot.activityId).filter(Boolean);
   const profileIds = users.map((user) => user.profileId).filter(Boolean);
-
-  if (slotIds.length || activityIds.length || profileIds.length) {
+  const fixture = merchantId
+    ? await prisma.merchant.findUnique({
+        where: { id: merchantId },
+        select: {
+          id: true,
+          slug: true,
+          bookingSettings: { select: { id: true, activityId: true } },
+        },
+      })
+    : null;
+  if (fixture)
+    assert.equal(
+      fixture.slug,
+      `booking-acceptance-${stamp}`,
+      "Cleanup only owns this run's merchant",
+    );
+  const cleanupSettingsId = fixture?.bookingSettings?.id;
+  const cleanupActivityId = fixture?.bookingSettings?.activityId;
+  const reservationIds = cleanupSettingsId
+    ? (
+        await prisma.merchantBookingReservation.findMany({
+          where: { settingsId: cleanupSettingsId },
+          select: { id: true },
+        })
+      ).map((row) => row.id)
+    : [];
+  if (profileIds.length || reservationIds.length || cleanupActivityId) {
     await prisma.notification.deleteMany({
       where: {
         OR: [
-          { residencySlotId: { in: slotIds } },
-          { activityId: { in: activityIds } },
+          { merchantBookingId: { in: reservationIds } },
+          ...(cleanupActivityId ? [{ activityId: cleanupActivityId }] : []),
           { recipientId: { in: profileIds } },
           { actorId: { in: profileIds } },
         ],
       },
     });
   }
-  if (slotIds.length) {
-    await prisma.merchantResidencySignup.deleteMany({
-      where: { slotId: { in: slotIds } },
+  if (cleanupSettingsId) {
+    await prisma.merchantBookingReservation.deleteMany({
+      where: { settingsId: cleanupSettingsId },
     });
-    await prisma.merchantResidencySlot.deleteMany({
-      where: { id: { in: slotIds } },
-    });
-  }
-  if (activityIds.length) {
-    await prisma.activity.deleteMany({
-      where: { id: { in: activityIds } },
+    await prisma.merchantBookingSettings.delete({
+      where: { id: cleanupSettingsId },
     });
   }
-  if (merchantId) {
-    await prisma.merchant.deleteMany({ where: { id: merchantId } });
-  }
-  if (profileIds.length) {
-    await prisma.userProfile.deleteMany({
-      where: { id: { in: profileIds } },
-    });
-  }
-  for (const user of users) {
-    await clerk.users.deleteUser(user.clerkUserId);
-  }
+  if (cleanupActivityId)
+    await prisma.activity.delete({ where: { id: cleanupActivityId } });
+  if (fixture) await prisma.merchant.delete({ where: { id: fixture.id } });
+  if (profileIds.length)
+    await prisma.userProfile.deleteMany({ where: { id: { in: profileIds } } });
+  for (const user of users) await clerk.users.deleteUser(user.clerkUserId);
   const residue = {
     merchant: merchantId
       ? await prisma.merchant.count({ where: { id: merchantId } })
@@ -190,17 +271,23 @@ async function cleanup() {
     profiles: await prisma.userProfile.count({
       where: { id: { in: profileIds } },
     }),
-    slots: await prisma.merchantResidencySlot.count({
-      where: { id: { in: slotIds } },
+    settings: cleanupSettingsId
+      ? await prisma.merchantBookingSettings.count({
+          where: { id: cleanupSettingsId },
+        })
+      : 0,
+    reservations: await prisma.merchantBookingReservation.count({
+      where: { id: { in: reservationIds } },
     }),
-    activities: await prisma.activity.count({
-      where: { id: { in: activityIds } },
-    }),
+    activities: cleanupActivityId
+      ? await prisma.activity.count({ where: { id: cleanupActivityId } })
+      : 0,
   };
   assert.deepEqual(residue, {
     merchant: 0,
     profiles: 0,
-    slots: 0,
+    settings: 0,
+    reservations: 0,
     activities: 0,
   });
   await prisma.$disconnect();
@@ -220,7 +307,7 @@ try {
     data: {
       slug: `booking-acceptance-${stamp}`,
       name: merchantName,
-      description: "临时店铺预约浏览器验收，结束后删除。",
+      description: "临时长期聚吧预约验收，结束后删除。",
       city: "Paris",
       address: "1 rue de Test, Paris",
       isActive: true,
@@ -230,281 +317,463 @@ try {
   merchantId = merchant.id;
 
   browser = await chromium.launch({ headless: true });
-  step = "confirm local app reads the same preview database";
-  const publicPage = await browser.newPage();
-  try {
-    await publicPage.goto(`${origin}/zh-CN/merchants/${merchantId}/bookings`);
-    await publicPage
-      .getByRole("heading", { name: new RegExp(merchantName) })
-      .waitFor();
-  } finally {
-    await publicPage.close();
-  }
+  const publicContext = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+  });
+  const publicPage = await publicContext.newPage();
+  publicPage.setDefaultTimeout(25_000);
+  step = "confirm local app reads this run's preview merchant before UI writes";
+  await publicPage.goto(`${origin}/zh-CN/merchants/${merchantId}`);
+  await publicPage
+    .getByRole("heading", { name: merchantName, exact: true })
+    .waitFor();
 
   step = "sign in owner, admin and guest";
   const ownerPage = await signIn(owner, { width: 390, height: 844 });
   const adminPage = await signIn(admin, { width: 1280, height: 900 });
   const guestPage = await signIn(guest, { width: 390, height: 844 });
 
-  step = "owner submits booking date";
-  const requested = await requestDate(ownerPage, bookingDate, title);
-  assert.equal(requested.status, "PENDING");
-  const slotId = requested.id;
-  console.log("Owner submitted a pending date through the UI");
-  await ownerPage.screenshot({
-    path: `${outputDirectory}/01-owner-request.png`,
-  });
-
-  step = "admin reviews and confirms";
-  await adminPage.goto(`${origin}/zh-CN/admin/merchants/bookings`);
-  await adminPage.getByRole("link", { name: new RegExp(title) }).click();
-  await adminPage.getByRole("button", { name: "确认这个日期" }).click();
-  await waitForDatabase(async () => {
-    const slot = await prisma.merchantResidencySlot.findUnique({
-      where: { id: slotId },
-      select: { status: true, reviewedByProfileId: true },
-    });
-    return (
-      slot?.status === "CONFIRMED" &&
-      slot.reviewedByProfileId === admin.profileId
-    );
-  });
-  await waitForDatabase(() =>
-    prisma.notification.findFirst({
-      where: {
-        residencySlotId: slotId,
-        recipientId: owner.profileId,
-        type: "MERCHANT_BOOKING_CONFIRMED",
-      },
-      select: { id: true },
-    }),
-  );
-  await ownerPage.goto(`${origin}/zh-CN/notifications`);
-  await ownerPage.getByText(title, { exact: false }).first().waitFor();
-  console.log("Admin confirmed the date; owner received a notification");
-  await adminPage.screenshot({
-    path: `${outputDirectory}/02-admin-confirmed.png`,
-  });
-
-  step = "guest signs up from public calendar";
+  step = "authorization boundaries before grant";
+  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
+  await ownerPage.getByRole("heading", { name: "预约功能尚未开通" }).waitFor();
   await guestPage.goto(
-    `${origin}/zh-CN/merchants/${merchantId}/bookings?month=${bookingDate.slice(0, 7)}`,
+    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
   );
-  await guestPage.getByRole("link", { name: `查看日期详情：${title}` }).click();
-  await guestPage.getByRole("button", { name: "我要报名" }).click();
-  const signup = await waitForDatabase(() =>
-    prisma.merchantResidencySignup.findFirst({
-      where: { slotId, profileId: guest.profileId, status: "ACTIVE" },
-      select: { id: true },
-    }),
-  );
-  await guestPage.getByText("1 人已报名").waitFor();
-  await guestPage.goto(`${origin}/zh-CN/profile/bookings`);
-  await guestPage.getByText(title).waitFor();
-  console.log("Guest signed up; public count and personal list updated");
-  await guestPage.screenshot({
-    path: `${outputDirectory}/03-guest-bookings.png`,
-  });
-
-  step = "guest cancels and resumes signup";
-  await guestPage.goto(
-    `${origin}/zh-CN/merchants/${merchantId}/bookings/${slotId}`,
-  );
-  await guestPage.getByRole("button", { name: "取消报名" }).click();
-  await waitForDatabase(async () => {
-    const row = await prisma.merchantResidencySignup.findUnique({
-      where: { id: signup.id },
-      select: { status: true },
-    });
-    return row?.status === "CANCELLED";
-  });
-  await guestPage.getByRole("button", { name: "我要报名" }).click();
-  await waitForDatabase(async () => {
-    const row = await prisma.merchantResidencySignup.findUnique({
-      where: { id: signup.id },
-      select: { status: true },
-    });
-    return row?.status === "ACTIVE";
-  });
   assert.equal(
-    await prisma.merchantResidencySignup.count({
-      where: { slotId, profileId: guest.profileId },
+    await guestPage.getByRole("button", { name: "授予预约权限" }).count(),
+    0,
+  );
+  assert.equal(
+    (await prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } }))
+      .bookingAccessEnabled,
+    false,
+  );
+
+  step = "admin grants booking access";
+  await adminPage.goto(
+    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
+  );
+  await adminPage
+    .getByRole("heading", { name: merchantName, exact: true })
+    .waitFor();
+  await adminPage
+    .getByRole("button", { name: "授予预约权限", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (await prisma.merchant.findUnique({ where: { id: merchantId } }))
+        ?.bookingAccessEnabled,
+  );
+  await adminPage.getByText("权限已更新", { exact: true }).waitFor();
+  await adminPage.screenshot({
+    path: `${outputDirectory}/01-admin-access.png`,
+  });
+  console.log(
+    "Admin granted access; owner and customer cannot grant it themselves",
+  );
+
+  step = "owner creates one permanent meetup";
+  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
+  await ownerPage.locator("#booking-title").fill(title);
+  await ownerPage
+    .locator("#booking-description")
+    .fill(
+      "长期聚吧预约验收：选日期与人数，门店确认。联系方式仅门店和本人可见。",
+    );
+  await ownerPage.getByText("每天", { exact: true }).click();
+  await ownerPage.locator("#booking-start").fill(today);
+  await ownerPage
+    .getByRole("button", { name: "创建并开启预约", exact: true })
+    .click();
+  await ownerPage
+    .getByRole("status")
+    .getByText("设置已保存", { exact: true })
+    .waitFor();
+  const settings = await waitForDatabase(() =>
+    prisma.merchantBookingSettings.findUnique({ where: { merchantId } }),
+  );
+  settingsId = settings.id;
+  activityId = settings.activityId;
+  assert.equal(settings.scheduleMode, "DAILY");
+  const permanent = await prisma.activity.findUniqueOrThrow({
+    where: { id: activityId },
+  });
+  assert.equal(permanent.isPersistent, true);
+  assert.equal(permanent.source, "MERCHANT_BOOKING");
+  assert.equal(permanent.status, "RECRUITING");
+  assert.ok(
+    permanent.startAt <= new Date(),
+    "Permanent meetup start midnight has already passed",
+  );
+  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings`);
+  await ownerPage.screenshot({
+    path: `${outputDirectory}/02-owner-management.png`,
+  });
+  console.log(
+    "Owner created one permanent meetup with ongoing daily availability",
+  );
+
+  step = "guest books date and party with required private phone";
+  await prepareBooking(guestPage, bookingDate);
+  await guestPage.locator("#booking-contact-phone").fill("");
+  await guestPage
+    .getByRole("button", { name: "提交预约", exact: true })
+    .click();
+  assert.equal(
+    await guestPage
+      .locator("#booking-contact-phone")
+      .evaluate((element) => element.validity.valueMissing),
+    true,
+  );
+  assert.equal(
+    await prisma.merchantBookingReservation.count({ where: { settingsId } }),
+    0,
+  );
+  await guestPage.locator("#booking-contact-phone").fill(phone);
+  await guestPage.screenshot({
+    path: `${outputDirectory}/03-guest-booking-form.png`,
+    fullPage: true,
+  });
+  const acceptedBooking = await submitPreparedBooking(
+    guestPage,
+    bookingDate,
+    guest.profileId,
+  );
+  assert.equal(acceptedBooking.partySize, 3);
+  assert.equal(acceptedBooking.contactPhone, phone);
+  assert.equal(acceptedBooking.contactName, privateContact);
+  await assertNotice(
+    ownerPage,
+    owner.profileId,
+    acceptedBooking.id,
+    "MERCHANT_RESERVATION_REQUESTED",
+    "收到新预约",
+  );
+  console.log(
+    "Guest submitted a date and three people; mandatory phone and owner notice verified",
+  );
+
+  step = "owner sees phone and accepts; guest receives result";
+  await ownerPage.goto(
+    `${origin}/zh-CN/profile/store/bookings/reservations/${acceptedBooking.id}`,
+  );
+  await ownerPage.getByText(phone, { exact: true }).waitFor();
+  assert.equal(
+    await ownerPage
+      .getByRole("link", { name: "联系顾客" })
+      .getAttribute("href"),
+    `tel:${phone}`,
+  );
+  await ownerPage
+    .getByRole("button", { name: "接受预约", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (
+        await prisma.merchantBookingReservation.findUnique({
+          where: { id: acceptedBooking.id },
+        })
+      )?.status === "ACCEPTED",
+  );
+  await ownerPage.getByText("已接受", { exact: true }).first().waitFor();
+  await ownerPage.screenshot({
+    path: `${outputDirectory}/04-owner-accepted.png`,
+    fullPage: true,
+  });
+  await assertNotice(
+    guestPage,
+    guest.profileId,
+    acceptedBooking.id,
+    "MERCHANT_RESERVATION_ACCEPTED",
+    "门店已接受预约",
+  );
+  await guestPage.goto(
+    `${origin}/zh-CN/profile/bookings/${acceptedBooking.id}`,
+  );
+  await guestPage.getByText("已接受", { exact: true }).first().waitFor();
+  await guestPage.screenshot({
+    path: `${outputDirectory}/05-guest-accepted.png`,
+    fullPage: true,
+  });
+
+  step = "public counts and private-contact protection";
+  await publicPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  await publicPage.getByRole("heading", { name: title, exact: true }).waitFor();
+  const acceptedDay = await openCalendarDate(publicPage, bookingDate);
+  assert.ok(
+    (await acceptedDay.getAttribute("aria-label")).includes("已确认 3 人"),
+  );
+  await acceptedDay.click();
+  await publicPage.getByText("已确认 3 人", { exact: true }).waitFor();
+  const publicHtml = await publicPage.content();
+  for (const privateValue of [phone, privateContact, `私人备注 ${stamp}`])
+    assert.equal(
+      publicHtml.includes(privateValue),
+      false,
+      "Public HTML/serialized props must not contain customer contact details",
+    );
+  const rawPublicHtml = await (
+    await fetch(`${origin}/zh-CN/lobby/${activityId}`)
+  ).text();
+  assert.equal(rawPublicHtml.includes(phone), false);
+  await publicPage.screenshot({
+    path: `${outputDirectory}/06-public-desktop.png`,
+    fullPage: true,
+  });
+  await publicPage.goto(`${origin}/zh-CN/lobby`);
+  await publicPage
+    .getByRole("link", { name: new RegExp(title) })
+    .first()
+    .waitFor();
+  console.log(
+    "Acceptance visible to guest; public confirmed count is three with no personal data",
+  );
+
+  step = "owner rejects a second date and guest receives reason";
+  await prepareBooking(guestPage, rejectedDate, 2);
+  const rejectedBooking = await submitPreparedBooking(
+    guestPage,
+    rejectedDate,
+    guest.profileId,
+  );
+  await ownerPage.goto(
+    `${origin}/zh-CN/profile/store/bookings/reservations/${rejectedBooking.id}`,
+  );
+  await ownerPage.getByText("拒绝预约", { exact: true }).click();
+  await ownerPage
+    .locator("#booking-reject-reason")
+    .fill("验收：这一天暂时无法接待，请重新选择日期。");
+  await ownerPage
+    .getByRole("button", { name: "确认拒绝", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (
+        await prisma.merchantBookingReservation.findUnique({
+          where: { id: rejectedBooking.id },
+        })
+      )?.status === "REJECTED",
+  );
+  await assertNotice(
+    guestPage,
+    guest.profileId,
+    rejectedBooking.id,
+    "MERCHANT_RESERVATION_REJECTED",
+    "门店未接受预约",
+  );
+  await guestPage.goto(
+    `${origin}/zh-CN/profile/bookings/${rejectedBooking.id}`,
+  );
+  await guestPage
+    .getByText("验收：这一天暂时无法接待，请重新选择日期。", { exact: true })
+    .waitFor();
+
+  step = "guest cancels accepted reservation; owner sees history";
+  await guestPage.goto(
+    `${origin}/zh-CN/profile/bookings/${acceptedBooking.id}`,
+  );
+  await guestPage.getByText("取消预约", { exact: true }).click();
+  await guestPage
+    .getByRole("button", { name: "确认取消", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (
+        await prisma.merchantBookingReservation.findUnique({
+          where: { id: acceptedBooking.id },
+        })
+      )?.status === "CANCELLED",
+  );
+  await assertNotice(
+    ownerPage,
+    owner.profileId,
+    acceptedBooking.id,
+    "MERCHANT_RESERVATION_CANCELLED",
+    "预约已取消",
+  );
+  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings`);
+  await ownerPage.getByRole("tab", { name: /历史记录/ }).click();
+  await ownerPage.getByText("已取消", { exact: true }).waitFor();
+  await ownerPage.getByText("未接受", { exact: true }).waitFor();
+  await ownerPage.screenshot({
+    path: `${outputDirectory}/07-owner-history.png`,
+    fullPage: true,
+  });
+  console.log(
+    "Second date rejection and accepted booking cancellation notify both sides; history retained",
+  );
+
+  step = "owner edits weekly and specific dates on the same meetup";
+  const chosenWeekday = new Date(`${thirdDate}T12:00:00Z`).getUTCDay();
+  await saveSettings(
+    ownerPage,
+    async (page) => {
+      await page.getByText("每周", { exact: true }).click();
+      for (const checkbox of await page
+        .locator('input[name="weekdays"]')
+        .all()) {
+        const desired =
+          (await checkbox.getAttribute("value")) === String(chosenWeekday);
+        if ((await checkbox.isChecked()) !== desired)
+          await checkbox.locator("..").click();
+      }
+    },
+    (value) =>
+      value.scheduleMode === "WEEKLY" &&
+      value.weekdays.length === 1 &&
+      value.weekdays[0] === chosenWeekday,
+  );
+  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  assert.equal(
+    await (await openCalendarDate(guestPage, thirdDate)).isEnabled(),
+    true,
+  );
+  assert.equal(
+    await (await openCalendarDate(guestPage, rejectedDate)).isDisabled(),
+    true,
+  );
+  await saveSettings(
+    ownerPage,
+    async (page) => {
+      await page.getByText("指定日期", { exact: true }).click();
+      await page.getByLabel("选择开放日期", { exact: true }).fill(thirdDate);
+      await page
+        .getByRole("button", { name: "添加日期", exact: true })
+        .first()
+        .click();
+    },
+    (value) =>
+      value.scheduleMode === "DATES" &&
+      value.specificDates.some(
+        (date) => date.toISOString().slice(0, 10) === thirdDate,
+      ),
+  );
+  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  assert.equal(
+    await (await openCalendarDate(guestPage, rejectedDate)).isDisabled(),
+    true,
+  );
+  await prepareBooking(guestPage, thirdDate, 4);
+  const preservedBooking = await submitPreparedBooking(
+    guestPage,
+    thirdDate,
+    guest.profileId,
+  );
+  assert.equal(
+    await prisma.activity.count({
+      where: { merchantId, source: "MERCHANT_BOOKING" },
     }),
     1,
   );
-  console.log("Guest cancelled and resumed the same signup row");
 
-  step = "owner publishes a meetup";
-  await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings/${slotId}`);
-  const guestProfile = await prisma.userProfile.findUniqueOrThrow({
-    where: { id: guest.profileId },
-    select: { nickname: true },
-  });
-  await ownerPage.waitForFunction(
-    (nickname) => document.body.innerText.includes(nickname),
-    guestProfile.nickname,
-  );
-  await ownerPage.getByRole("link", { name: "生成聚吧" }).click();
-  await ownerPage.getByLabel("开始时间").fill("19:30");
-  await ownerPage.getByLabel("聚吧地点").fill(meetingAddress);
-  await ownerPage.getByRole("button", { name: "确认生成聚吧" }).click();
-  const published = await waitForDatabase(async () => {
-    const slot = await prisma.merchantResidencySlot.findUnique({
-      where: { id: slotId },
-      select: { status: true, activityId: true },
-    });
-    return slot?.status === "PUBLISHED" && slot.activityId ? slot : null;
-  });
-  const activity = await prisma.activity.findUniqueOrThrow({
-    where: { id: published.activityId },
-    select: {
-      source: true,
-      status: true,
-      merchantId: true,
-      address: true,
-      participants: {
-        select: { userProfileId: true, status: true },
-      },
-    },
-  });
-  assert.equal(activity.source, "MERCHANT_RESIDENCY");
-  assert.equal(activity.status, "RECRUITING");
-  assert.equal(activity.merchantId, merchantId);
-  assert.equal(activity.address, meetingAddress);
-  assert.deepEqual(
-    activity.participants
-      .map((participant) => [participant.userProfileId, participant.status])
-      .sort((a, b) => a[0].localeCompare(b[0])),
-    [
-      [owner.profileId, "APPROVED"],
-      [guest.profileId, "APPROVED"],
-    ].sort((a, b) => a[0].localeCompare(b[0])),
-  );
-  await waitForDatabase(() =>
-    prisma.notification.findFirst({
-      where: {
-        residencySlotId: slotId,
-        recipientId: guest.profileId,
-        type: "MERCHANT_BOOKING_PUBLISHED",
-      },
-      select: { id: true },
-    }),
-  );
-  await guestPage.goto(`${origin}/zh-CN/notifications`);
-  await guestPage.getByText(title, { exact: false }).first().waitFor();
-  await guestPage.goto(
-    `${origin}/zh-CN/merchants/${merchantId}/bookings/${slotId}`,
-  );
-  await guestPage.getByRole("link", { name: "进入聚吧" }).waitFor();
-  const bookingDetail = await guestPage.locator("main").first().innerText();
-  assert.ok(bookingDetail.includes(meetingAddress));
-  assert.ok(bookingDetail.includes("19:30"));
-  console.log("Meetup published; guest was transferred and notified");
-  await guestPage.screenshot({
-    path: `${outputDirectory}/04-guest-published.png`,
-  });
-
-  step = "admin cancels published meetup and booking";
-  await adminPage.goto(`${origin}/zh-CN/admin/merchants/bookings/${slotId}`);
-  await adminPage.getByText("取消聚吧与预约").click();
-  await adminPage.getByRole("button", { name: "确认取消聚吧" }).click();
-  await waitForDatabase(async () => {
-    const [slot, currentActivity, currentSignup] = await Promise.all([
-      prisma.merchantResidencySlot.findUnique({
-        where: { id: slotId },
-        select: { status: true },
-      }),
-      prisma.activity.findUnique({
-        where: { id: published.activityId },
-        select: { status: true },
-      }),
-      prisma.merchantResidencySignup.findUnique({
-        where: { id: signup.id },
-        select: { status: true },
-      }),
-    ]);
-    return (
-      slot?.status === "CANCELLED" &&
-      currentActivity?.status === "CANCELLED" &&
-      currentSignup?.status === "CANCELLED"
-    );
-  });
-  await waitForDatabase(() =>
-    prisma.notification.findFirst({
-      where: {
-        activityId: published.activityId,
-        recipientId: guest.profileId,
-        type: "ACTIVITY_CANCELLED",
-      },
-      select: { id: true },
-    }),
-  );
-  await guestPage.goto(`${origin}/zh-CN/profile/bookings`);
-  await guestPage.waitForFunction(
-    (expectedTitle) =>
-      document.body.innerText.includes(expectedTitle) &&
-      document.body.innerText.includes("已关闭"),
-    title,
-  );
-  console.log(
-    "Admin cancelled meetup; booking, signup and guest history agree",
-  );
-  await guestPage.screenshot({
-    path: `${outputDirectory}/05-guest-closed.png`,
-  });
-
-  step = "admin rejects a separate request";
-  const rejectedRequest = await requestDate(
-    ownerPage,
-    rejectedDate,
-    rejectedTitle,
-  );
-  assert.equal(rejectedRequest.status, "PENDING");
+  step =
+    "revoke blocks new requests but owner may process an existing reservation";
   await adminPage.goto(
-    `${origin}/zh-CN/admin/merchants/bookings/${rejectedRequest.id}`,
+    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
   );
-  await adminPage.getByLabel("拒绝原因").fill("验收测试：本次日期不合适。");
-  await adminPage.getByRole("button", { name: "拒绝这个日期" }).click();
-  await waitForDatabase(async () => {
-    const slot = await prisma.merchantResidencySlot.findUnique({
-      where: { id: rejectedRequest.id },
-      select: { status: true, rejectionReason: true },
-    });
-    return slot?.status === "REJECTED" && Boolean(slot.rejectionReason);
-  });
-  await waitForDatabase(() =>
-    prisma.notification.findFirst({
-      where: {
-        residencySlotId: rejectedRequest.id,
-        recipientId: owner.profileId,
-        type: "MERCHANT_BOOKING_REJECTED",
-      },
-      select: { id: true },
-    }),
+  await adminPage
+    .getByRole("button", { name: "关闭预约权限", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      !(await prisma.merchant.findUnique({ where: { id: merchantId } }))
+        ?.bookingAccessEnabled,
+  );
+  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  await guestPage
+    .getByRole("heading", { name: "已暂停新预约", exact: true })
+    .waitFor();
+  assert.equal(
+    await guestPage
+      .getByRole("button", { name: "提交预约", exact: true })
+      .count(),
+    0,
   );
   await ownerPage.goto(
-    `${origin}/zh-CN/profile/store/bookings/${rejectedRequest.id}`,
+    `${origin}/zh-CN/profile/store/bookings/reservations/${preservedBooking.id}`,
   );
-  await ownerPage.waitForFunction(() =>
-    document.body.innerText.includes("验收测试：本次日期不合适。"),
+  await ownerPage
+    .getByRole("button", { name: "接受预约", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (
+        await prisma.merchantBookingReservation.findUnique({
+          where: { id: preservedBooking.id },
+        })
+      )?.status === "ACCEPTED",
   );
-  assert.ok(
-    (await ownerPage.locator("main").first().innerText()).includes(
-      "重新申请这个日期",
-    ),
+  await adminPage.goto(
+    `${origin}/zh-CN/admin/merchants/${merchantId}/bookings`,
   );
-  console.log(
-    "Admin rejected a second date; owner saw the reason and retry path",
+  await adminPage
+    .getByRole("button", { name: "授予预约权限", exact: true })
+    .click();
+  await waitForDatabase(
+    async () =>
+      (await prisma.merchant.findUnique({ where: { id: merchantId } }))
+        ?.bookingAccessEnabled,
   );
 
+  step = "pause rejects a stale customer form and preserves prior reservations";
+  await saveSettings(
+    ownerPage,
+    async (page) => {
+      await page.getByText("每天", { exact: true }).click();
+    },
+    (value) => value.scheduleMode === "DAILY",
+  );
+  await prepareBooking(guestPage, bookingDate, 1);
+  await saveSettings(
+    ownerPage,
+    async (page) => {
+      await page.getByLabel("接收新预约", { exact: false }).uncheck();
+    },
+    (value) => !value.enabled,
+  );
+  await guestPage
+    .getByRole("button", { name: "提交预约", exact: true })
+    .click();
+  await guestPage.getByRole("alert").waitFor();
+  assert.equal(
+    await prisma.merchantBookingReservation.count({ where: { settingsId } }),
+    3,
+  );
+  await guestPage.goto(`${origin}/zh-CN/lobby/${activityId}`);
+  await guestPage
+    .getByRole("heading", { name: "已暂停新预约", exact: true })
+    .waitFor();
+  await guestPage.screenshot({
+    path: `${outputDirectory}/08-paused-mobile.png`,
+    fullPage: true,
+  });
+  assert.equal(
+    (
+      await prisma.merchantBookingReservation.findUniqueOrThrow({
+        where: { id: preservedBooking.id },
+      })
+    ).status,
+    "ACCEPTED",
+  );
+  const finalActivity = await prisma.activity.findUniqueOrThrow({
+    where: { id: activityId },
+    include: { participants: true },
+  });
+  assert.equal(finalActivity.isPersistent, true);
+  assert.equal(finalActivity.status, "RECRUITING");
+  assert.equal(finalActivity.participants.length, 0);
+  assert.ok(finalActivity.lastBookingAt);
   console.log(
-    "PASS real three-account preview booking flow: request, review, signup, cancel and resume, publish, notification, cancellation, history, rejection",
+    "PASS three-account permanent booking: grant, one meetup, date/party/phone, acceptance, rejection, notices, cancellation, privacy, recurring edits, revoke, pause and retained history",
   );
 } catch (error) {
   console.error(`FAIL preview booking acceptance at ${step}:`, error);
   for (const [role, session] of Object.entries(sessions)) {
     await session.page
-      .screenshot({ path: `${outputDirectory}/failure-${role}.png` })
+      .screenshot({
+        path: `${outputDirectory}/failure-${role}.png`,
+        fullPage: true,
+      })
       .catch(() => undefined);
   }
   process.exitCode = 1;
