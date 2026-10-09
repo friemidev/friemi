@@ -9,5 +9,6 @@ export default async function NowPreview({
 }) {
   if (!isNowPreviewEnabled()) notFound();
   const { locale } = await params;
+  // Keep the shareable preview entry point anchored to the mobile Home V2 route.
   redirect(withLocale(locale, "/mobile-home?previewNow=1"));
 }
