@@ -172,7 +172,7 @@ async function submitPreparedBooking(page, date, guestId) {
 }
 
 async function assertNotice(page, recipientId, bookingId, type, titleText) {
-  await waitForDatabase(() =>
+  const notice = await waitForDatabase(() =>
     prisma.notification.findFirst({
       where: { recipientId, merchantBookingId: bookingId, type },
       select: { id: true },
@@ -185,6 +185,42 @@ async function assertNotice(page, recipientId, bookingId, type, titleText) {
     text.includes(phone),
     false,
     "Notifications must not contain phone numbers",
+  );
+  const noticeCard = page.locator("article").filter({
+    has: page.locator(`input[name="notificationId"][value="${notice.id}"]`),
+  });
+  await noticeCard
+    .getByRole("button", { name: "查看预约", exact: true })
+    .click();
+  const recipientRole = users.find(
+    (user) => user.profileId === recipientId,
+  )?.role;
+  const expectedPath =
+    recipientRole === "owner"
+      ? `/zh-CN/profile/store/bookings/reservations/${bookingId}`
+      : `/zh-CN/profile/bookings/${bookingId}`;
+  await page.waitForURL((url) => url.pathname === expectedPath);
+  await page.getByRole("heading", { name: "预约详情", exact: true }).waitFor();
+  await waitForDatabase(async () =>
+    Boolean(
+      (
+        await prisma.notification.findUnique({
+          where: { id: notice.id },
+          select: { readAt: true },
+        })
+      )?.readAt,
+    ),
+  );
+}
+
+async function assertNoHorizontalOverflow(page) {
+  const measurements = await page.evaluate(() => ({
+    width: window.innerWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  assert.ok(
+    measurements.content <= measurements.width + 1,
+    `Horizontal overflow: ${JSON.stringify(measurements)}`,
   );
 }
 
@@ -520,11 +556,50 @@ try {
     path: `${outputDirectory}/06-public-desktop.png`,
     fullPage: true,
   });
-  await publicPage.goto(`${origin}/zh-CN/lobby`);
+  await publicPage.setViewportSize({ width: 390, height: 844 });
+  await publicPage.goto(`${origin}/fr/lobby/${activityId}`);
   await publicPage
-    .getByRole("link", { name: new RegExp(title) })
-    .first()
+    .getByRole("heading", { name: "Sortie permanente", exact: true })
     .waitFor();
+  await publicPage
+    .getByRole("link", { name: "Se connecter pour réserver", exact: true })
+    .waitFor();
+  await assertNoHorizontalOverflow(publicPage);
+  await publicPage.screenshot({
+    path: `${outputDirectory}/09-public-fr-mobile.png`,
+    fullPage: true,
+  });
+  await publicPage.setViewportSize({ width: 1280, height: 900 });
+  await publicPage.goto(`${origin}/en/lobby/${activityId}`);
+  await publicPage
+    .getByRole("heading", { name: "Permanent meetup", exact: true })
+    .waitFor();
+  await publicPage
+    .getByRole("link", { name: "Sign in to book", exact: true })
+    .waitFor();
+  await assertNoHorizontalOverflow(publicPage);
+  await publicPage.screenshot({
+    path: `${outputDirectory}/10-public-en-desktop.png`,
+    fullPage: true,
+  });
+  await publicPage.goto(`${origin}/zh-CN/lobby`);
+  const lobbyCard = publicPage
+    .locator("article")
+    .filter({ has: publicPage.getByRole("link", { name: new RegExp(title) }) })
+    .first();
+  await lobbyCard.waitFor();
+  const cardText = await lobbyCard.innerText();
+  assert.ok(cardText.includes("长期聚吧"));
+  assert.ok(cardText.includes("开放预约"));
+  assert.equal(
+    /已结束|已取消|0\s*\/\s*0|\d{1,2}:\d{2}/.test(cardText),
+    false,
+    "Permanent card must not expose stale start time or capacity",
+  );
+  await lobbyCard.screenshot({
+    path: `${outputDirectory}/11-lobby-permanent-card.png`,
+  });
+  await assertNoHorizontalOverflow(publicPage);
   console.log(
     "Acceptance visible to guest; public confirmed count is three with no personal data",
   );
