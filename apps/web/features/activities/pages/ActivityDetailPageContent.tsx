@@ -857,17 +857,20 @@ export async function ActivityDetailPageContent({
         })
       : null;
     return (
-      <PersistentBookingPage
-        data={bookingSpace}
-        locale={locale}
-        isAuthenticated={Boolean(viewerProfile)}
-        isMerchantOwner={Boolean(owner)}
-        viewerName={viewerProfile?.nickname}
-        signInHref={withLocale(
-          locale,
-          `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, getActivityDetailPath(activityId)))}`,
-        )}
-      />
+      <>
+        <ActivityDetailRefresh validatedAt={Date.now()} />
+        <PersistentBookingPage
+          data={bookingSpace}
+          locale={locale}
+          isAuthenticated={Boolean(viewerProfile)}
+          isMerchantOwner={Boolean(owner)}
+          viewerName={viewerProfile?.nickname}
+          signInHref={withLocale(
+            locale,
+            `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, getActivityDetailPath(activityId)))}`,
+          )}
+        />
+      </>
     );
   }
   const [viewerFriendIds, viewerFollowedProfileIds]: [string[], string[]] =

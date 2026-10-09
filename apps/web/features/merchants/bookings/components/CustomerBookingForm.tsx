@@ -8,6 +8,7 @@ import { withLocale } from "@/lib/routes";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { submitBookingAction } from "../actions";
 import { getBookingCopy } from "../copy";
+import { notifyBookingUpdated } from "../bookingUpdates";
 import type { BookingActionState, PublicBookingSpace } from "../types";
 import { BookingCalendar } from "./BookingCalendar";
 import {
@@ -69,6 +70,7 @@ export function CustomerBookingForm({
       announcedBookingId.current !== state.bookingId
     ) {
       announcedBookingId.current = state.bookingId;
+      notifyBookingUpdated(data.settings.activityId);
       setUnreadBookingCount(unreadBookingCount + 1);
       void refreshUnreadBookingCount();
     }
@@ -77,6 +79,7 @@ export function CustomerBookingForm({
     unreadBookingCount,
     setUnreadBookingCount,
     refreshUnreadBookingCount,
+    data.settings.activityId,
   ]);
 
   if (state.success && state.bookingId && !state.alreadyBooked)

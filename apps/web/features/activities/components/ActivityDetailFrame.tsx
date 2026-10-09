@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
+import { bookingUpdatedMessage } from "@/features/merchants/bookings/bookingUpdates";
 import {
   detailSheetReadyMessage,
   detailSheetVisibilityMessage,
@@ -36,12 +37,14 @@ export function ActivityDetailFrame({
   locale,
   open,
   onNavigate,
+  onBookingUpdated,
 }: {
   href: string;
   label: string;
   locale: string;
   open: boolean;
   onNavigate: () => void;
+  onBookingUpdated?: () => void;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [attempt, setAttempt] = useState(0);
@@ -52,15 +55,18 @@ export function ActivityDetailFrame({
     const onMessage = (event: MessageEvent) => {
       if (
         event.origin === window.location.origin &&
-        event.source === frameRef.current?.contentWindow &&
-        event.data?.type === detailSheetReadyMessage
+        event.source === frameRef.current?.contentWindow
       ) {
-        setStatus("ready");
+        if (event.data?.type === detailSheetReadyMessage) {
+          setStatus("ready");
+        } else if (event.data?.type === bookingUpdatedMessage) {
+          onBookingUpdated?.();
+        }
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [onBookingUpdated]);
 
   useEffect(() => {
     if (status !== "loading" || !open) return;

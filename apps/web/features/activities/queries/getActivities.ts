@@ -11,6 +11,7 @@ import { getViewerFollowedProfileIds } from "@/features/friends/queries/getViewe
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
+import { attachPersistentBookingParticipantCounts } from "@/features/merchants/bookings/activityParticipantCounts";
 import { Prisma } from "@prisma/client";
 import {
   compareActivityPriorityCards,
@@ -176,6 +177,7 @@ export const activityCardSelect = {
       isActive: true,
     },
   },
+  merchantBookingSettings: { select: { id: true } },
   participants: {
     where: {
       status: {
@@ -674,7 +676,7 @@ export function getActivityCoverTone(activityId: string) {
 
 type ActivityQueryResult = Prisma.ActivityGetPayload<{
   select: typeof activityCardSelect;
-}>;
+}> & { bookingParticipantCount?: number };
 
 type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventCardSelect;
@@ -1376,7 +1378,9 @@ export function getActivityCardViewModel(
   ).hideFromNonParticipants;
   const participantCount = isActivityInfo
     ? 0
-    : activity._count.participants + activity._count.guestParticipants;
+    : activity.isPersistent
+      ? activity.bookingParticipantCount ?? 0
+      : activity._count.participants + activity._count.guestParticipants;
   const participantPreview = isActivityInfo
     ? []
     : [
@@ -3229,8 +3233,9 @@ export async function findDiscoveryActivityCards(args: {
     select: activityCardSelect,
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
-  return selected.flatMap((item) => {
+  const orderedRows = selected.flatMap((item) => {
     const row = byId.get(item.id);
     return row ? [row] : [];
   });
+  return attachPersistentBookingParticipantCounts(orderedRows);
 }

@@ -43,7 +43,7 @@ const messages = {
   "zh-CN": {
     INVALID: "请检查日期、人数、联系电话和填写内容。",
     PAST_DATE: "请选择今天或未来的日期。",
-    NOT_FOUND: "这笔预约不存在或不可访问。",
+    NOT_FOUND: "这次预约不存在或不可访问。",
     FORBIDDEN: "当前账户没有操作权限。",
     CLOSED: "当前日期暂不开放预约，请选择其他日期。",
     STALE: "预约状态已变化，请刷新页面。",
@@ -93,11 +93,13 @@ function refresh(result: BookingServiceResult) {
       "/profile/bookings",
       "/admin/merchants",
       "/merchants",
+      "/mobile-home",
       "/activities",
       "/lobby",
     ]) {
       revalidatePath(withLocale(locale, path), "layout");
     }
+    revalidatePath(withLocale(locale, "/"), "page");
     if (result.activityId)
       revalidatePath(
         withLocale(locale, `/activities/${result.activityId}`),

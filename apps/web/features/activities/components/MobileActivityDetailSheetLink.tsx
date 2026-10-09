@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
@@ -15,6 +23,7 @@ type MobileActivityDetailSheetLinkProps = {
   label: string;
   locale?: string;
   locked?: boolean;
+  onBookingUpdated?: () => void;
 };
 
 function getLockedCopy(locale: string) {
@@ -74,6 +83,7 @@ export function MobileActivityDetailSheetLink({
   label,
   locale = "zh-CN",
   locked = false,
+  onBookingUpdated,
 }: MobileActivityDetailSheetLinkProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -82,6 +92,13 @@ export function MobileActivityDetailSheetLink({
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
+  const handleBookingUpdated = useCallback(() => {
+    if (onBookingUpdated) {
+      onBookingUpdated();
+    } else {
+      startTransition(() => router.refresh());
+    }
+  }, [onBookingUpdated, router]);
 
   useEffect(() => {
     const key = retentionKey.current;
@@ -157,6 +174,7 @@ export function MobileActivityDetailSheetLink({
             label={label}
             locale={locale}
             open={open}
+            onBookingUpdated={handleBookingUpdated}
             onNavigate={() => {
               detailSheetRetention.release(retentionKey.current);
               setRetained(false);

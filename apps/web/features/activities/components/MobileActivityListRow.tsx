@@ -33,6 +33,7 @@ type MobileActivityListRowProps = {
   activity: ActivityCardViewModel;
   className?: string;
   locale: string;
+  onBookingUpdated?: () => void;
   prioritizeImage?: boolean;
   showHostedBadge?: boolean;
 };
@@ -128,6 +129,7 @@ export function MobileActivityListRow({
   activity,
   className,
   locale,
+  onBookingUpdated,
   prioritizeImage = false,
   showHostedBadge = false,
 }: MobileActivityListRowProps) {
@@ -163,6 +165,7 @@ export function MobileActivityListRow({
       label={activity.title}
       locale={locale}
       locked={isPrivateLocked}
+      onBookingUpdated={onBookingUpdated}
     >
       <div
         className={cn(
