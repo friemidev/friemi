@@ -400,6 +400,25 @@ try {
     .fill(
       "长期聚吧预约验收：选日期与人数，门店确认。联系方式仅门店和本人可见。",
     );
+  await ownerPage
+    .getByRole("button", { name: "下一步：开放日期", exact: true })
+    .click();
+  await ownerPage
+    .getByRole("button", { name: "聚吧内容", exact: true })
+    .click();
+  assert.equal(
+    await ownerPage.locator("#booking-title").inputValue(),
+    title,
+    "Content title draft survives moving between setup steps",
+  );
+  assert.equal(
+    await ownerPage.locator("#booking-description").inputValue(),
+    "长期聚吧预约验收：选日期与人数，门店确认。联系方式仅门店和本人可见。",
+    "Description draft survives moving between setup steps",
+  );
+  await ownerPage
+    .getByRole("button", { name: "下一步：开放日期", exact: true })
+    .click();
   await ownerPage.getByText("每天", { exact: true }).click();
   await ownerPage.locator("#booking-start").fill(today);
   await ownerPage
