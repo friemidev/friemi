@@ -584,7 +584,7 @@ try {
   });
   await publicPage.goto(`${origin}/zh-CN/lobby`);
   const lobbyCard = publicPage
-    .locator("article")
+    .locator("[data-detail-source-target]")
     .filter({ has: publicPage.getByRole("link", { name: new RegExp(title) }) })
     .first();
   await lobbyCard.waitFor();
@@ -692,6 +692,16 @@ try {
         if ((await checkbox.isChecked()) !== desired)
           await checkbox.locator("..").click();
       }
+      await page.getByText("每天", { exact: true }).click();
+      await page.getByText("每周", { exact: true }).click();
+      const checkedDays = await page
+        .locator('input[name="weekdays"]:checked')
+        .evaluateAll((elements) => elements.map((element) => element.value));
+      assert.deepEqual(
+        checkedDays,
+        [String(chosenWeekday)],
+        "Unsaved weekday choices survive mode switching",
+      );
     },
     (value) =>
       value.scheduleMode === "WEEKLY" &&
@@ -716,6 +726,15 @@ try {
         .getByRole("button", { name: "添加日期", exact: true })
         .first()
         .click();
+      await page.getByText("每天", { exact: true }).click();
+      await page.getByText("指定日期", { exact: true }).click();
+      assert.equal(
+        await page
+          .locator(`input[name="specificDates"][value="${thirdDate}"]`)
+          .count(),
+        1,
+        "Unsaved specific dates survive mode switching",
+      );
     },
     (value) =>
       value.scheduleMode === "DATES" &&
