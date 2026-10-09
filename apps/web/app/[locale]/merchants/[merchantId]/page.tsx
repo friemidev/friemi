@@ -14,7 +14,9 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
-import { getPublicResidencyCopy } from "@/features/merchants/residency/publicCopy";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
+import { getMerchantBookingSpace } from "@/features/merchants/bookings/queries";
+import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getCopy } from "@/lib/copy";
@@ -40,12 +42,14 @@ function formatCoordinates(latitude: number, longitude: number) {
 export default async function MerchantPage({ params }: MerchantPageProps) {
   const { locale, merchantId } = await params;
   const t = getCopy(locale);
-  const residencyCopy = getPublicResidencyCopy(locale);
+  const bookingCopy = getBookingCopy(locale);
   const merchant = await getMerchantProfile(merchantId);
 
   if (!merchant) {
     notFound();
   }
+
+  const bookingSpace = await getMerchantBookingSpace(merchant.id);
 
   return (
     <PageContainer mobileSafeTop mobileSafeBottom className="space-y-7 pb-10">
@@ -156,28 +160,33 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
         </aside>
       </section>
 
-      <section aria-label={residencyCopy.residency}>
-        <Link
-          className="group flex min-h-24 items-center gap-4 rounded-2xl bg-fog/70 px-4 py-5 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest sm:px-6"
-          href={withLocale(locale, `/merchants/${merchant.id}/bookings`)}
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-forest text-paper">
-            <CalendarDays aria-hidden="true" className="h-6 w-6" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-base font-bold text-ink">
-              {residencyCopy.calendar}
+      {bookingSpace ? (
+        <section aria-label={bookingCopy.permanent}>
+          <Link
+            className="group flex min-h-24 items-center gap-4 rounded-2xl bg-fog/70 px-4 py-5 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest sm:px-6"
+            href={getLocalizedActivityDetailPath(
+              locale,
+              bookingSpace.settings.activityId,
+            )}
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-forest text-paper">
+              <CalendarDays aria-hidden="true" className="h-6 w-6" />
             </span>
-            <span className="mt-1 block text-sm leading-5 text-ink/70">
-              {residencyCopy.calendarIntro}
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-bold text-ink">
+                {bookingCopy.viewSpace}
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-ink/70">
+                {bookingSpace.settings.title}
+              </span>
             </span>
-          </span>
-          <ChevronRight
-            aria-hidden="true"
-            className="h-5 w-5 shrink-0 text-forest transition group-hover:translate-x-0.5"
-          />
-        </Link>
-      </section>
+            <ChevronRight
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-forest transition group-hover:translate-x-0.5"
+            />
+          </Link>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div>

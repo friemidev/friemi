@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { OwnerResidencyOverview } from "@/features/merchants/residency/components/OwnerResidencyPages";
+import { OwnerBookingDashboard } from "@/features/merchants/bookings/components/OwnerBookingPages";
+import { getOwnerBookingDashboard } from "@/features/merchants/bookings/queries";
 import { getOwnerResidencySlots } from "@/features/merchants/residency/queries";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
@@ -17,13 +18,18 @@ export default async function OwnerResidencyPage({
     locale,
     "/profile/store/bookings",
   );
-  const overview = await getOwnerResidencySlots(profile.id);
+  const [overview, legacy] = await Promise.all([
+    getOwnerBookingDashboard(profile.id),
+    getOwnerResidencySlots(profile.id),
+  ]);
   if (!overview.merchant) notFound();
   return (
-    <OwnerResidencyOverview
+    <OwnerBookingDashboard
       locale={locale}
-      merchantName={overview.merchant.name}
-      slots={overview.slots}
+      merchant={overview.merchant}
+      settings={overview.settings}
+      bookings={overview.bookings}
+      hasLegacy={legacy.slots.length > 0}
     />
   );
 }

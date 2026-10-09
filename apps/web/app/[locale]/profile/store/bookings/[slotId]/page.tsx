@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { OwnerResidencyDetail } from "@/features/merchants/residency/components/OwnerResidencyPages";
 import { RequesterResidencyDetail } from "@/features/merchants/residency/components/RequesterResidencyDetail";
 import {
   getOwnerResidencySlot,
@@ -23,7 +22,7 @@ export default async function OwnerResidencyDetailPage({
   );
   const ownerSlot = await getOwnerResidencySlot(slotId, profile.id);
   if (ownerSlot)
-    return <OwnerResidencyDetail locale={locale} slot={ownerSlot} />;
+    return <RequesterResidencyDetail locale={locale} slot={ownerSlot} />;
 
   const applicantSlot = await getRequesterResidencySlot(slotId, profile.id);
   if (!applicantSlot) notFound();

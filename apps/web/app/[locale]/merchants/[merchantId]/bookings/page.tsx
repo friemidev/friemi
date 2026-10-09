@@ -1,35 +1,16 @@
-import { notFound } from "next/navigation";
-import { PublicResidencyCalendarPage } from "@/features/merchants/residency/components/PublicResidencyPages";
-import { getPublicResidencySlots } from "@/features/merchants/residency/queries";
-import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { notFound, redirect } from "next/navigation";
+import { getMerchantBookingSpace } from "@/features/merchants/bookings/queries";
+import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 export const dynamic = "force-dynamic";
 
-export default async function MerchantResidencyCalendarRoute({
+export default async function MerchantBookingRoute({
   params,
-  searchParams,
 }: {
   params: Promise<{ locale: string; merchantId: string }>;
-  searchParams: Promise<{ month?: string }>;
 }) {
-  const [{ locale, merchantId }, { month }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
-  const [merchant, viewer] = await Promise.all([
-    getMerchantProfile(merchantId),
-    getOptionalCurrentUserProfileSnapshot(),
-  ]);
-  if (!merchant) notFound();
-  const slots = await getPublicResidencySlots(merchant.id, viewer?.id);
-
-  return (
-    <PublicResidencyCalendarPage
-      locale={locale}
-      merchant={merchant}
-      month={month}
-      slots={slots}
-    />
-  );
+  const { locale, merchantId } = await params;
+  const space = await getMerchantBookingSpace(merchantId);
+  if (!space) notFound();
+  redirect(getLocalizedActivityDetailPath(locale, space.settings.activityId));
 }

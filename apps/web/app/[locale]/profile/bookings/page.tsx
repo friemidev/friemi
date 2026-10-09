@@ -1,5 +1,6 @@
-import { ViewerBookingsPage } from "@/features/merchants/residency/components/ViewerBookingsPage";
-import { getViewerBookings } from "@/features/merchants/residency/viewerQueries";
+import { ViewerBookingsPage } from "@/features/merchants/bookings/components/ViewerBookingsPage";
+import { getViewerBookings } from "@/features/merchants/bookings/queries";
+import { getViewerBookings as getLegacyBookings } from "@/features/merchants/residency/viewerQueries";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -13,6 +14,15 @@ export default async function ProfileBookingsPage({
 }) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/bookings");
-  const bookings = await getViewerBookings(profile.id);
-  return <ViewerBookingsPage locale={locale} {...bookings} />;
+  const [bookings, legacy] = await Promise.all([
+    getViewerBookings(profile.id),
+    getLegacyBookings(profile.id),
+  ]);
+  return (
+    <ViewerBookingsPage
+      locale={locale}
+      bookings={bookings}
+      legacy={[...legacy.upcoming, ...legacy.history]}
+    />
+  );
 }

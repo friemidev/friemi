@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
-import { getSignInHref } from "@/lib/auth-redirect";
+import Link from "next/link";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import {
+  BookingHeader,
+  BookingShell,
+  formatBookingDate,
+  secondaryClass,
+} from "@/features/merchants/bookings/components/BookingPrimitives";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
+import { getResidencyOwnerCopy } from "@/features/merchants/residency/ownerCopy";
+import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
-import { PublicResidencyDatePage } from "@/features/merchants/residency/components/PublicResidencyPages";
 import { getPublicResidencySlot } from "@/features/merchants/residency/queries";
 
 export const dynamic = "force-dynamic";
@@ -41,28 +48,47 @@ export default async function MerchantResidencyDateRoute({
   ) {
     notFound();
   }
-  const isMerchantOwner = Boolean(
-    viewer &&
-    (await prisma.merchant.findFirst({
-      where: { id: slot.merchant.id, ownerProfileId: viewer.id },
-      select: { id: true },
-    })),
-  );
-
-  const target = withLocale(
-    locale,
-    `/merchants/${slot.merchant.id}/bookings/${slot.id}`,
-  );
+  const copy = getBookingCopy(locale);
+  const legacyCopy = getResidencyOwnerCopy(locale);
 
   return (
-    <PublicResidencyDatePage
-      isAuthenticated={Boolean(viewer)}
-      isMerchantOwner={isMerchantOwner}
-      calendarAvailable={Boolean(merchant)}
-      fromProfileBookings={from === "profile-bookings"}
-      locale={locale}
-      signInHref={getSignInHref(locale, target)}
-      slot={slot}
-    />
+    <BookingShell>
+      <BookingHeader
+        backHref={
+          from === "profile-bookings"
+            ? "/profile/bookings"
+            : `/merchants/${slot.merchant.id}`
+        }
+        locale={locale}
+        title={copy.legacy}
+      />
+      <article className="pt-8">
+        <h2 className="text-2xl font-bold text-forest">{slot.title}</h2>
+        <p className="mt-3 text-sm font-semibold">
+          {formatBookingDate(slot.date, locale)}
+        </p>
+        <p className="mt-2 text-sm text-ink/70">{slot.merchant.name}</p>
+        <p className="mt-3 text-sm font-semibold text-ink/70">
+          {legacyCopy.status[slot.status]}
+        </p>
+        <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-ink/75">
+          {slot.description}
+        </p>
+        {slot.activityId ? (
+          <Link
+            className={`${secondaryClass} mt-6`}
+            href={getLocalizedActivityDetailPath(locale, slot.activityId)}
+          >
+            {copy.backLobby}
+          </Link>
+        ) : null}
+        <Link
+          className="mt-6 flex min-h-11 items-center text-sm font-semibold text-forest"
+          href={withLocale(locale, "/profile/bookings")}
+        >
+          {copy.myBookings}
+        </Link>
+      </article>
+    </BookingShell>
   );
 }
