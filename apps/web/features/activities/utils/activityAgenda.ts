@@ -1,4 +1,5 @@
 export type ActivityAgendaItem = {
+  isPersistent?: boolean;
   endAt?: string | null;
   startAt: string;
   type?: string;
@@ -142,6 +143,7 @@ export function formatActivityAgendaDateKey(dateKey: string, locale: string) {
 }
 
 export function isLongRunningAgendaActivity(activity: ActivityAgendaItem) {
+  if (activity.isPersistent) return true;
   if (!activity.endAt) {
     return false;
   }

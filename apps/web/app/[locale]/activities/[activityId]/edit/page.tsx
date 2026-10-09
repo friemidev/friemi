@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
@@ -90,6 +90,9 @@ function getLockedEditCopy(
   editableActivity: Extract<EditableActivityResult, { status: "locked" }>,
   locale: string,
 ) {
+  if (editableActivity.reason === "persistent-booking") {
+    redirect(withLocale(locale, "/profile/store/bookings"));
+  }
   if (editableActivity.reason === "booking") {
     if (locale === "fr") {
       return {

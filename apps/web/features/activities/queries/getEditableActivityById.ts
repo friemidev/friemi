@@ -1,3 +1,4 @@
+import { isPersistentBookingActivity } from "../utils/persistentBookingActivity";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,6 +11,8 @@ import { assertCanManageActivity } from "../utils/activityManagement";
 
 const editableActivitySelect = {
   id: true,
+  source: true,
+  isPersistent: true,
   title: true,
   description: true,
   itinerary: true,
@@ -52,7 +55,7 @@ export type EditableActivityResult =
     }
   | {
       status: "locked";
-      reason: "cancelled" | "ended" | "booking";
+      reason: "cancelled" | "ended" | "booking" | "persistent-booking";
     }
   | {
       status: "not-found";
@@ -113,6 +116,10 @@ export async function getEditableActivityById(
     return {
       status: "not-found",
     };
+  }
+
+  if (isPersistentBookingActivity(activity)) {
+    return { status: "locked", reason: "persistent-booking" };
   }
 
   const permission = await assertCanManageActivity(

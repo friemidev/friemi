@@ -1,3 +1,4 @@
+import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
 import {
   CalendarDays,
   CirclePlus,
@@ -71,12 +72,7 @@ type ActivityCardProps = {
 };
 
 type ActivityCardActionTone =
-  | "activity"
-  | "joined"
-  | "muted"
-  | "neutral"
-  | "pending"
-  | "team";
+  "activity" | "joined" | "muted" | "neutral" | "pending" | "team";
 
 type AnalyticsLinkEvent = ComponentProps<typeof AnalyticsLink>["event"];
 
@@ -658,6 +654,8 @@ export function ActivityCard({
   titleContent,
 }: ActivityCardProps) {
   const t = getCopy(locale);
+  const isPersistent = Boolean(activity.isPersistent);
+  const bookingCopy = getPersistentBookingCopy(locale);
   const isActivityInfo = Boolean(
     activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
   );
@@ -685,7 +683,10 @@ export function ActivityCard({
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
   const copyActivityHref =
-    !isPrivateLocked && !isActivityInfo && actionContext === "lobby"
+    !isPersistent &&
+    !isPrivateLocked &&
+    !isActivityInfo &&
+    actionContext === "lobby"
       ? withLocale(locale, `/activities/new?copyActivityId=${activity.id}`)
       : null;
   const cardActionCopy = getCardActionCopy(locale);
@@ -693,30 +694,36 @@ export function ActivityCard({
     t,
     activity.viewerParticipationStatus ?? null,
   );
-  const primaryActionLabel = isActivityInfo
-    ? locale === "fr"
-      ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
-        ? "Voir l'événement"
-        : "Former une équipe"
-      : locale === "en"
+  const primaryActionLabel = isPersistent
+    ? bookingCopy.action
+    : isActivityInfo
+      ? locale === "fr"
         ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
-          ? "View event"
-          : "Team up now"
-        : displayStatus === "ENDED" || displayStatus === "CANCELLED"
-          ? "查看活动"
-          : "立刻聚聚"
-    : locale === "fr"
-      ? "Rejoindre maintenant"
-      : locale === "en"
-        ? "Join now"
-        : "立刻报名";
+          ? "Voir l'événement"
+          : "Former une équipe"
+        : locale === "en"
+          ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
+            ? "View event"
+            : "Team up now"
+          : displayStatus === "ENDED" || displayStatus === "CANCELLED"
+            ? "查看活动"
+            : "立刻聚聚"
+      : locale === "fr"
+        ? "Rejoindre maintenant"
+        : locale === "en"
+          ? "Join now"
+          : "立刻报名";
   const ownActivityLabels = getOwnActivityLabels(locale);
-  const actionLabel = isOwnActivity
-    ? ownActivityLabels.action
-    : (participationActionLabel ??
-      (!isActivityInfo && displayStatus === "FULL"
-        ? t.join.fullAction
-        : primaryActionLabel));
+  const actionLabel = isPersistent
+    ? isOwnActivity
+      ? bookingCopy.manage
+      : bookingCopy.action
+    : isOwnActivity
+      ? ownActivityLabels.action
+      : (participationActionLabel ??
+        (!isActivityInfo && displayStatus === "FULL"
+          ? t.join.fullAction
+          : primaryActionLabel));
   const resolvedActionConfig = getCardActionConfig({
     actionContext,
     activityCopy: t,
@@ -726,7 +733,11 @@ export function ActivityCard({
     isOwnActivity,
     viewerParticipationStatus: activity.viewerParticipationStatus ?? null,
   });
-  const buttonLabel = resolvedActionConfig.label;
+  const buttonLabel = isPersistent
+    ? isOwnActivity
+      ? bookingCopy.manage
+      : bookingCopy.action
+    : resolvedActionConfig.label;
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -754,15 +765,14 @@ export function ActivityCard({
   const autoCreatedTeam = activity.autoCreatedTeam;
   const showCoverKindBadge = !isProfileOwnCard;
   const showCoverVisibilityBadge = !isProfileCard && !isActivityInfo;
-  const shouldShowParticipantCount = !isActivityInfo;
+  const shouldShowParticipantCount = !isActivityInfo && !isPersistent;
   const participantLabels = getTeamParticipantLabels({
     capacity: activity.capacity,
     count: activity.participantCount,
     locale,
   });
-  const participantPreview = isTeamCard
-    ? (activity.participantPreview ?? [])
-    : [];
+  const participantPreview =
+    isTeamCard && !isPersistent ? (activity.participantPreview ?? []) : [];
   const participantExtraCount = Math.max(
     activity.participantCount - participantPreview.length,
     0,
@@ -781,9 +791,10 @@ export function ActivityCard({
     !isInactiveCard
       ? getCountdownLabel(activity, locale)
       : null;
-  const relativeTimingLabel = activityListPreview && !searchResultStyle
-    ? getActivityRelativeTimingLabel(activity, locale)
-    : null;
+  const relativeTimingLabel =
+    !isPersistent && activityListPreview && !searchResultStyle
+      ? getActivityRelativeTimingLabel(activity, locale)
+      : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
   const actionEventName: AnalyticsEventName =
     canCreateTeam && !isOwnActivity
@@ -857,11 +868,13 @@ export function ActivityCard({
             : resolvedActionConfig.tone === "activity"
               ? "bg-ice text-forest ring-1 ring-sage shadow-[0_8px_18px_rgba(21,98,64,0.1)] hover:bg-fog"
               : "bg-coral text-white shadow-[0_10px_22px_rgba(240,145,130,0.24)] hover:bg-coral-dark";
-  const PrimaryActionIcon = getPrimaryActionIcon({
-    isActivityInfo,
-    isOwnActivity,
-    tone: resolvedActionConfig.tone,
-  });
+  const PrimaryActionIcon = isPersistent
+    ? CalendarDays
+    : getPrimaryActionIcon({
+        isActivityInfo,
+        isOwnActivity,
+        tone: resolvedActionConfig.tone,
+      });
   const canShowPrimaryAction = showPrimaryAction && !isPrivateLocked;
   const useCompactDualActions =
     canShowPrimaryAction && Boolean(copyActivityHref);
@@ -882,8 +895,8 @@ export function ActivityCard({
         shouldShowInactiveCardState
           ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-zinc-300 sm:before:block"
           : isTeamCard
-          ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
-          : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
+            ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
+            : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
         !isInactiveCard && isTeamCard
           ? "hover:border-coral hover:ring-rose"
           : null,
@@ -1006,8 +1019,8 @@ export function ActivityCard({
               shouldShowInactiveCardState
                 ? "bg-gradient-to-t from-zinc-900/52 via-zinc-800/16 to-zinc-700/10"
                 : isTeamCard
-                ? "bg-gradient-to-t from-black/62 via-black/20 to-ink/12"
-                : "bg-gradient-to-t from-black/46 via-black/10 to-transparent",
+                  ? "bg-gradient-to-t from-black/62 via-black/20 to-ink/12"
+                  : "bg-gradient-to-t from-black/46 via-black/10 to-transparent",
             )}
           />
           <div
@@ -1043,7 +1056,9 @@ export function ActivityCard({
                 aria-hidden="true"
               />
               <span className="min-w-0 truncate">
-                {getCardKindLabel(isActivityInfo, locale)}
+                {isPersistent
+                  ? bookingCopy.kind
+                  : getCardKindLabel(isActivityInfo, locale)}
               </span>
             </span>
           ) : null}
@@ -1218,7 +1233,7 @@ export function ActivityCard({
                 {getActivityDateLabel(activity, locale)}
               </span>
             </span>
-            {isActivityInfo ? (
+            {isActivityInfo || isPersistent ? (
               <span
                 className={cn(
                   "flex items-start gap-2",
@@ -1231,7 +1246,11 @@ export function ActivityCard({
                     mobileDenseClass("max-[639px]:h-3.5 max-[639px]:w-3.5"),
                   )}
                 />
-                <span className="min-w-0 line-clamp-1">{activity.city}</span>
+                <span className="min-w-0 line-clamp-1">
+                  {isPersistent
+                    ? (activity.merchant?.name ?? activity.city)
+                    : activity.city}
+                </span>
               </span>
             ) : null}
             {shouldShowParticipantCount ? (

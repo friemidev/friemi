@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  isPersistentBookingActivity,
+  getPersistentBookingCopy,
+} from "../utils/persistentBookingActivity";
+
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
@@ -114,6 +119,8 @@ export async function updateActivityAction(
       startAt: true,
       status: true,
       residencySlot: { select: { id: true } },
+      isPersistent: true,
+      source: true,
       participants: {
         where: {
           status: {
@@ -161,6 +168,14 @@ export async function updateActivityAction(
       previousState,
       rawInput,
       "你没有权限编辑这个活动。",
+    );
+  }
+
+  if (isPersistentBookingActivity(editableActivity)) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      getPersistentBookingCopy(locale).settings,
     );
   }
 

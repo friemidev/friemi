@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  isPersistentBookingActivity,
+  getPersistentBookingCopy,
+} from "../utils/persistentBookingActivity";
+
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
@@ -157,6 +162,8 @@ export async function cancelActivityAction(
           },
           select: {
             id: true,
+            isPersistent: true,
+            source: true,
             endAt: true,
             startAt: true,
             status: true,
@@ -180,6 +187,13 @@ export async function cancelActivityAction(
           return {
             ok: false,
             error: actionCopy.permissionError,
+          };
+        }
+
+        if (isPersistentBookingActivity(activity)) {
+          return {
+            ok: false,
+            error: getPersistentBookingCopy(result.data.locale).settings,
           };
         }
 
@@ -387,6 +401,7 @@ export async function deleteActivityAction(
             externalSource: true,
             externalUrl: true,
             importedAt: true,
+            isPersistent: true,
             organizerId: true,
             publicEventId: true,
             source: true,
@@ -408,6 +423,13 @@ export async function deleteActivityAction(
           return {
             ok: false,
             error: actionCopy.deletePermissionError,
+          };
+        }
+
+        if (isPersistentBookingActivity(activity)) {
+          return {
+            ok: false,
+            error: getPersistentBookingCopy(result.data.locale).settings,
           };
         }
 

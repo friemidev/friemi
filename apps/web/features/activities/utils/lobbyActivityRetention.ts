@@ -11,6 +11,7 @@ export function isArchivedLobbyActivity(
   activity: ActivityCardViewModel,
   reference = new Date(),
 ) {
+  if (activity.isPersistent) return false;
   if (activity.status === "CANCELLED") return true;
   const now =
     activity.type === "PUBLIC_EVENT"
@@ -40,6 +41,7 @@ export function getLobbyRetentionWhere(
 
   if (archived) {
     return {
+      isPersistent: false,
       OR: [
         { status: "CANCELLED" },
         { endAt: { lte: cutoff } },
@@ -51,6 +53,7 @@ export function getLobbyRetentionWhere(
   return {
     status: { not: "CANCELLED" },
     OR: [
+      { isPersistent: true },
       { endAt: { gt: cutoff } },
       { endAt: null, startAt: { gte: cutoffDay } },
     ],
