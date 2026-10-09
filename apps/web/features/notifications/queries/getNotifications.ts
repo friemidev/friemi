@@ -1,4 +1,4 @@
-import type { NotificationType, Prisma } from "@prisma/client";
+import { NotificationType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const notificationCenterExcludedTypes = [
@@ -11,6 +11,16 @@ export const notificationCenterExcludedTypes = [
   "ACTIVITY_ROOM_MESSAGE",
 ] satisfies NotificationType[];
 
+const excludedNotificationTypes = new Set<NotificationType>(
+  notificationCenterExcludedTypes,
+);
+
+// A rollback can leave newer enum values (and rows) in the database. Filter
+// before Prisma decodes the result, so unsupported types cannot break the page.
+export const notificationCenterVisibleTypes = Object.values(
+  NotificationType,
+).filter((type) => !excludedNotificationTypes.has(type));
+
 export function getVisibleNotificationWhere(
   where: Prisma.NotificationWhereInput = {},
 ): Prisma.NotificationWhereInput {
@@ -19,7 +29,7 @@ export function getVisibleNotificationWhere(
       where,
       {
         type: {
-          notIn: notificationCenterExcludedTypes,
+          in: notificationCenterVisibleTypes,
         },
       },
     ],
