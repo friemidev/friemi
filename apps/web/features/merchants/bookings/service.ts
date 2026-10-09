@@ -124,8 +124,7 @@ export async function saveBookingSettingsInDatabase(
     },
     include: { bookingSettings: { include: { activity: true } } },
   });
-  if (!merchant || !merchant.bookingAccessEnabled)
-    return { status: "FORBIDDEN" };
+  if (!merchant) return { status: "FORBIDDEN" };
   if (
     merchant.bookingSettings &&
     ["CANCELLED", "ENDED"].includes(merchant.bookingSettings.activity.status)
@@ -194,45 +193,6 @@ export async function saveBookingSettingsInDatabase(
     });
   }
   return { status: "SAVED", activityId: activity.id };
-}
-
-export function setBookingAccess(input: {
-  actorProfileId: string;
-  merchantId: string;
-  enabled: boolean;
-  isAdmin?: boolean;
-}) {
-  return serializable((tx) => setBookingAccessInDatabase(tx, input));
-}
-
-export async function setBookingAccessInDatabase(
-  tx: Tx,
-  input: {
-    actorProfileId: string;
-    merchantId: string;
-    enabled: boolean;
-    isAdmin?: boolean;
-  },
-): Promise<Outcome> {
-  const admin = await tx.userProfile.findFirst({
-    where: {
-      id: input.actorProfileId,
-      status: "ACTIVE",
-      ...(input.isAdmin ? {} : { role: "ADMIN" }),
-    },
-    select: { id: true },
-  });
-  if (!admin) return { status: "FORBIDDEN" };
-  const merchant = await tx.merchant.findUnique({
-    where: { id: input.merchantId },
-    select: { id: true, bookingSettings: { select: { activityId: true } } },
-  });
-  if (!merchant) return { status: "NOT_FOUND" };
-  await tx.merchant.update({
-    where: { id: merchant.id },
-    data: { bookingAccessEnabled: input.enabled },
-  });
-  return { status: "SAVED", activityId: merchant.bookingSettings?.activityId };
 }
 
 export type SubmitBookingInput = {
@@ -313,7 +273,6 @@ export async function submitBookingInDatabase(
     };
   if (
     !settings.merchant.isActive ||
-    !settings.merchant.bookingAccessEnabled ||
     !settings.merchant.ownerProfileId ||
     settings.merchant.owner?.status !== "ACTIVE" ||
     settings.activity.status !== "RECRUITING" ||

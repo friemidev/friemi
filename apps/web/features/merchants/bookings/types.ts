@@ -8,7 +8,6 @@ export type BookingMerchant = {
   city: string;
   address: string | null;
   logoUrl: string | null;
-  bookingAccessEnabled: boolean;
 };
 
 export type BookingSettingsView = {

@@ -5,7 +5,6 @@ import {
   cancelBookingInDatabase,
   reviewBookingInDatabase,
   saveBookingSettingsInDatabase,
-  setBookingAccessInDatabase,
   submitBookingInDatabase,
 } from "./service";
 
@@ -14,7 +13,7 @@ const merchant = {
   id: "merchant",
   ownerProfileId: "owner",
   isActive: true,
-  bookingAccessEnabled: true,
+  bookingAccessEnabled: false,
   owner: { status: "ACTIVE" },
   name: "Shop",
   city: "Paris",
@@ -88,7 +87,7 @@ function submitDb(
   return { db, created, updated };
 }
 
-test("submission stores a pending reservation and contact privately, without activity participation", async () => {
+test("a store with the legacy access flag off receives private reservations without activity participation", async () => {
   const { db, created, updated } = submitDb();
   const result = await submitBookingInDatabase(db, input);
   assert.equal(result.status, "CREATED");
@@ -125,10 +124,9 @@ test("duplicate live booking is idempotent even if store pauses afterward", asyn
   assert.equal(updated.length, 0);
 });
 
-test("new bookings enforce grant, store/owner state and schedule on server", async () => {
+test("new bookings enforce store/owner state and schedule on server", async () => {
   for (const value of [
     { ...settings, enabled: false },
-    { ...settings, merchant: { ...merchant, bookingAccessEnabled: false } },
     { ...settings, merchant: { ...merchant, isActive: false } },
     { ...settings, merchant: { ...merchant, owner: { status: "SUSPENDED" } } },
     { ...settings, merchant: { ...merchant, ownerProfileId: null } },
@@ -169,7 +167,7 @@ test("invalid contact, party and old dates cannot reach persistence", async () =
   );
 });
 
-test("only current owner reviews; review remains possible after grant or schedule pause", async () => {
+test("only current owner reviews; review remains possible after schedule pause", async () => {
   const changes: unknown[] = [];
   const db = {
     merchantBookingReservation: {
@@ -273,18 +271,36 @@ test("customer cancellation checks ownership and remains independent of meetup c
   assert.equal(changes.length, 1);
 });
 
-test("only active site admins can change booking access", async () => {
+test("an account without an active owned store cannot create booking settings", async () => {
+  let merchantWhere: unknown;
   const db = {
-    userProfile: { findFirst: async () => null },
+    merchant: {
+      findFirst: async ({ where }: { where: unknown }) => {
+        merchantWhere = where;
+        return null;
+      },
+    },
   } as unknown as Prisma.TransactionClient;
   assert.deepEqual(
-    await setBookingAccessInDatabase(db, {
-      actorProfileId: "owner",
-      merchantId: "merchant",
+    await saveBookingSettingsInDatabase(db, {
+      actorProfileId: "customer",
       enabled: true,
+      scheduleMode: "DAILY",
+      startDate: "2050-01-01",
+      endDate: null,
+      weekdays: [],
+      specificDates: [],
+      closedDates: [],
+      title: "Visit us",
+      description: "",
     }),
     { status: "FORBIDDEN" },
   );
+  assert.deepEqual(merchantWhere, {
+    ownerProfileId: "customer",
+    isActive: true,
+    owner: { status: "ACTIVE" },
+  });
 });
 
 test("editing a schedule reuses its permanent meetup and leaves reservation history untouched", async () => {
@@ -324,7 +340,7 @@ test("editing a schedule reuses its permanent meetup and leaves reservation hist
   assert.equal(settingUpdates.length, 1);
 });
 
-test("first activation creates exactly one persistent public meetup and settings", async () => {
+test("an owner creates one persistent meetup without a separate admin grant", async () => {
   const activities: Array<{ data: Record<string, unknown> }> = [];
   const configurations: Array<{ data: Record<string, unknown> }> = [];
   const db = {
@@ -381,35 +397,4 @@ test("a stale review cannot emit an acceptance notice", async () => {
     }),
     { status: "STALE" },
   );
-});
-
-test("server-verified platform admins can grant access without a database admin role", async () => {
-  let profileWhere: unknown;
-  let merchantUpdate: unknown;
-  const db = {
-    userProfile: {
-      findFirst: async ({ where }: { where: unknown }) => {
-        profileWhere = where;
-        return { id: "admin" };
-      },
-    },
-    merchant: {
-      findUnique: async () => ({ id: "merchant", bookingSettings: null }),
-      update: async (args: unknown) => {
-        merchantUpdate = args;
-      },
-    },
-  } as unknown as Prisma.TransactionClient;
-  const result = await setBookingAccessInDatabase(db, {
-    actorProfileId: "admin",
-    merchantId: "merchant",
-    enabled: true,
-    isAdmin: true,
-  });
-  assert.equal(result.status, "SAVED");
-  assert.deepEqual(profileWhere, { id: "admin", status: "ACTIVE" });
-  assert.deepEqual(merchantUpdate, {
-    where: { id: "merchant" },
-    data: { bookingAccessEnabled: true },
-  });
 });

@@ -15,7 +15,6 @@ const merchantSelect = {
   city: true,
   address: true,
   logoUrl: true,
-  bookingAccessEnabled: true,
 } as const satisfies Prisma.MerchantSelect;
 
 const settingsInclude = {
@@ -170,7 +169,6 @@ async function publicBookingSpace(
     isActive &&
     ownerProfileId &&
     owner?.status === "ACTIVE" &&
-    merchant.bookingAccessEnabled &&
     settings.enabled &&
     settings.activity.isPersistent &&
     settings.activity.source === "MERCHANT_BOOKING" &&

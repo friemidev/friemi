@@ -1034,6 +1034,7 @@ model Merchant {
   ownerProfileId  String?                  @unique
   owner           UserProfile?             @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
   activities      Activity[]
+  // Legacy rollout flag retained for database compatibility; store ownership now grants booking access.
   bookingAccessEnabled Boolean                   @default(false)
   bookingSettings      MerchantBookingSettings?
   residencySlots  MerchantResidencySlot[]

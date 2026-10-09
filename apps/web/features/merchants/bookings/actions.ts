@@ -2,14 +2,12 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
-import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import {
   cancelBooking,
   reviewBooking,
   saveBookingSettings,
-  setBookingAccess,
   submitBooking,
   type BookingServiceResult,
 } from "./service";
@@ -143,25 +141,6 @@ export async function saveBookingSettingsAction(
       weekdays: values(data, "weekdays").map(Number),
       specificDates: values(data, "specificDates"),
       closedDates: values(data, "closedDates"),
-    }),
-  );
-}
-
-export async function setBookingAccessAction(
-  _previous: BookingActionState,
-  data: FormData,
-): Promise<BookingActionState> {
-  const locale = localeOf(data);
-  if (!(await isCurrentUserAdmin()))
-    return state({ status: "FORBIDDEN" }, locale);
-  if (!["true", "false"].includes(field(data, "enabled")))
-    return state({ status: "INVALID" }, locale);
-  return run(data, "/admin/merchants", (actorProfileId) =>
-    setBookingAccess({
-      actorProfileId,
-      isAdmin: true,
-      merchantId: field(data, "merchantId"),
-      enabled: field(data, "enabled") === "true",
     }),
   );
 }
