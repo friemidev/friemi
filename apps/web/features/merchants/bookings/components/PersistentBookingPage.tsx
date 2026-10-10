@@ -6,9 +6,15 @@ import { getBookingCopy } from "../copy";
 import {
   BookingHeader,
   BookingShell,
+  BookingStatus,
+  formatBookingDate,
   secondaryClass,
 } from "./BookingPrimitives";
 import { CustomerBookingForm } from "./CustomerBookingForm";
+import {
+  BookingSheetBridge,
+  BookingSheetCloseButton,
+} from "./BookingSheetBridge";
 
 export function PersistentBookingPage({
   data,
@@ -16,6 +22,7 @@ export function PersistentBookingPage({
   isAuthenticated,
   signInHref,
   isMerchantOwner = false,
+  embedded = false,
   viewerName,
 }: {
   data: PublicBookingSpace;
@@ -23,18 +30,35 @@ export function PersistentBookingPage({
   isAuthenticated: boolean;
   signInHref: string;
   isMerchantOwner?: boolean;
+  embedded?: boolean;
   viewerName?: string;
 }) {
   const copy = getBookingCopy(locale);
   const cover = data.settings.coverImageUrl || data.merchant.logoUrl;
+  const latestUpcomingBooking = data.viewerBookings.find(
+    (booking) =>
+      booking.date >= data.today &&
+      (booking.status === "PENDING" || booking.status === "ACCEPTED"),
+  );
   return (
-    <BookingShell>
-      <BookingHeader
-        backHref="/lobby"
-        backLabel={copy.backLobby}
-        locale={locale}
-        title={copy.permanent}
-      />
+    <BookingShell embedded={embedded}>
+      {embedded ? <BookingSheetBridge /> : null}
+      {embedded ? (
+        <header className="flex min-h-14 items-center gap-3">
+          <BookingSheetCloseButton
+            fallbackHref={withLocale(locale, "/lobby")}
+            label={copy.backLobby}
+          />
+          <h1 className="text-base font-bold">{copy.permanent}</h1>
+        </header>
+      ) : (
+        <BookingHeader
+          backHref="/lobby"
+          backLabel={copy.backLobby}
+          locale={locale}
+          title={copy.permanent}
+        />
+      )}
       <article className="pt-6">
         <div className="flex items-start gap-4">
           {cover ? (
@@ -65,6 +89,34 @@ export function PersistentBookingPage({
           </p>
         ) : null}
       </article>
+      {latestUpcomingBooking ? (
+        <section
+          className="mt-7 rounded-2xl bg-fog px-4 py-4"
+          aria-label={copy.myBookings}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-ink">{copy.myBookings}</h2>
+            <BookingStatus
+              locale={locale}
+              status={latestUpcomingBooking.status}
+            />
+          </div>
+          <p className="mt-3 text-sm font-semibold text-forest">
+            {copy.people(latestUpcomingBooking.partySize)} ·{" "}
+            {formatBookingDate(latestUpcomingBooking.date, locale)}
+          </p>
+          <Link
+            className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            href={withLocale(
+              locale,
+              `/profile/bookings/${latestUpcomingBooking.id}${embedded ? "?sheet=1" : ""}`,
+            )}
+          >
+            {copy.viewBooking}
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </section>
+      ) : null}
       {isMerchantOwner ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-fog px-4 py-3">
           <p className="text-sm text-ink/70">{copy.ownerHint}</p>
@@ -81,6 +133,7 @@ export function PersistentBookingPage({
         {data.canBook ? (
           <CustomerBookingForm
             data={data}
+            embedded={embedded}
             isAuthenticated={isAuthenticated}
             locale={locale}
             signInHref={signInHref}

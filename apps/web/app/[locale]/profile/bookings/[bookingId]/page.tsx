@@ -9,8 +9,10 @@ export const metadata = noIndexMetadata;
 
 export default async function ViewerBookingRecordRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; bookingId: string }>;
+  searchParams: Promise<{ sheet?: string }>;
 }) {
   const { locale, bookingId } = await params;
   const profile = await ensureCurrentUserProfile(
@@ -19,5 +21,8 @@ export default async function ViewerBookingRecordRoute({
   );
   const booking = await getViewerBooking(profile.id, bookingId);
   if (!booking) notFound();
-  return <BookingRecordPage booking={booking} locale={locale} />;
+  const embedded = (await searchParams).sheet === "1";
+  return (
+    <BookingRecordPage booking={booking} embedded={embedded} locale={locale} />
+  );
 }

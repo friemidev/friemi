@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cancelBookingAction, reviewBookingAction } from "../actions";
 import { getBookingCopy } from "../copy";
+import { notifyBookingUpdated } from "../bookingUpdates";
 import type { BookingActionState } from "../types";
 import { inputClass, primaryClass, secondaryClass } from "./BookingPrimitives";
 
@@ -16,13 +17,18 @@ export function ReviewBookingForm({
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
+  const announcedResult = useRef<BookingActionState | null>(null);
   const [reason, setReason] = useState("");
   const [state, action, pending] = useActionState(
     reviewBookingAction,
     {} as BookingActionState,
   );
   useEffect(() => {
-    if (state.success) router.refresh();
+    if (state.success && announcedResult.current !== state) {
+      announcedResult.current = state;
+      if (state.activityId) notifyBookingUpdated(state.activityId);
+      router.refresh();
+    }
   }, [state, router]);
   return (
     <div className="mt-8 space-y-4">
@@ -94,12 +100,17 @@ export function CancelBookingForm({
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
+  const announcedResult = useRef<BookingActionState | null>(null);
   const [state, action, pending] = useActionState(
     cancelBookingAction,
     {} as BookingActionState,
   );
   useEffect(() => {
-    if (state.success) router.refresh();
+    if (state.success && announcedResult.current !== state) {
+      announcedResult.current = state;
+      if (state.activityId) notifyBookingUpdated(state.activityId);
+      router.refresh();
+    }
   }, [state, router]);
   return (
     <details className="mt-9">

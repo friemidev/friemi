@@ -34,6 +34,7 @@ export type ActivityContactableParticipantViewModel = {
 
 export type ActivityCardViewModel = ActivitySummary & {
   isPersistent?: boolean;
+  viewerPendingBookingPartySize?: number;
   lastBookingAt?: string | null;
   createdAt?: string;
   autoCreatedTeam: {

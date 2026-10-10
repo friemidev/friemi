@@ -29,6 +29,7 @@ type MobileBottomSheetProps = {
   keepMounted?: boolean;
   onClose: () => void;
   open: boolean;
+  overlayClassName?: string;
   zIndexClassName?: string;
 };
 
@@ -44,6 +45,7 @@ export function MobileBottomSheet({
   keepMounted = false,
   onClose,
   open,
+  overlayClassName,
   zIndexClassName = "z-[70]",
 }: MobileBottomSheetProps) {
   const clickResetTimeoutRef = useRef<number | null>(null);
@@ -276,6 +278,7 @@ export function MobileBottomSheet({
       inert={!open}
       className={cn(
         "friemi-sheet-overlay fixed inset-x-0 flex items-end bg-[#111210]/42",
+        overlayClassName,
         zIndexClassName,
       )}
       data-state={isClosing ? "closing" : "open"}

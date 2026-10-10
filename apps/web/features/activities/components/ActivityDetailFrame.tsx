@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
+import { bookingUpdatedMessage } from "@/features/merchants/bookings/bookingUpdates";
 import {
+  detailSheetCloseMessage,
   detailSheetReadyMessage,
   detailSheetVisibilityMessage,
 } from "../detailSheetRetention";
@@ -36,31 +38,42 @@ export function ActivityDetailFrame({
   locale,
   open,
   onNavigate,
+  onBookingUpdated,
+  onCloseRequested,
+  copyOverride,
 }: {
   href: string;
   label: string;
   locale: string;
   open: boolean;
   onNavigate: () => void;
+  onBookingUpdated?: () => void;
+  onCloseRequested?: () => void;
+  copyOverride?: ReturnType<typeof getDetailFrameCopy>;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "slow">("loading");
-  const copy = getDetailFrameCopy(locale);
+  const copy = copyOverride ?? getDetailFrameCopy(locale);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (
         event.origin === window.location.origin &&
-        event.source === frameRef.current?.contentWindow &&
-        event.data?.type === detailSheetReadyMessage
+        event.source === frameRef.current?.contentWindow
       ) {
-        setStatus("ready");
+        if (event.data?.type === detailSheetReadyMessage) {
+          setStatus("ready");
+        } else if (event.data?.type === bookingUpdatedMessage) {
+          onBookingUpdated?.();
+        } else if (event.data?.type === detailSheetCloseMessage) {
+          onCloseRequested?.();
+        }
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [onBookingUpdated, onCloseRequested]);
 
   useEffect(() => {
     if (status !== "loading" || !open) return;

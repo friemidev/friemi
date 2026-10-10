@@ -2,6 +2,7 @@ import { mergePersistentBookingActivities } from "../utils/persistentBookingActi
 import { unstable_cache } from "next/cache";
 import type { ActivityCategory } from "@chill-club/shared";
 import { prisma } from "@/lib/prisma";
+import { attachViewerPendingBookingPartySizes } from "@/features/merchants/bookings/activityParticipantCounts";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
@@ -95,12 +96,21 @@ const getCachedOpenLobbyActivities = unstable_cache(
 );
 
 export type ActivityLobbySectionId =
-  "open" | "created" | "joined" | "favorites" | "friendHosted" | "friendJoined";
+  | "open"
+  | "created"
+  | "joined"
+  | "favorites"
+  | "friendHosted"
+  | "friendJoined";
 
 export type ActivityLobbyFeedStatus = "all" | "ongoing" | "ended";
 
 export type MobileActivityLobbyTabId =
-  "nearby" | "mine" | "friends" | "today" | "popular";
+  | "nearby"
+  | "mine"
+  | "friends"
+  | "today"
+  | "popular";
 
 export type MobileActivityLobbyPage = {
   activities: ActivityCardViewModel[];
@@ -266,7 +276,12 @@ async function decorateLobbyActivities(
     return teamActivityById.get(activity.id) ?? activity;
   });
 
-  return applyOrganizerParticipationDefaults(activitiesWithViewerState);
+  return applyOrganizerParticipationDefaults(
+    await attachViewerPendingBookingPartySizes(
+      activitiesWithViewerState,
+      viewerProfileId,
+    ),
+  );
 }
 
 function mapPublicEventToActivityCard(

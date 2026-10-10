@@ -620,6 +620,16 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   display: none !important;
 }
 
+.app-layout-shell:has(.booking-embedded-page) {
+  padding-bottom: 0 !important;
+}
+
+.app-layout-shell:has(.booking-embedded-page) > .app-desktop-navigation,
+.app-layout-shell:has(.booking-embedded-page) > .app-mobile-nav,
+.app-layout-shell:has(.booking-embedded-page) [data-mobile-scroll-progress] {
+  display: none !important;
+}
+
 .chat-message-scroll {
   min-width: 0;
   overflow-x: hidden;

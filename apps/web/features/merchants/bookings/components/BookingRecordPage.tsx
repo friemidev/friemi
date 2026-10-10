@@ -12,15 +12,18 @@ import {
   secondaryClass,
 } from "./BookingPrimitives";
 import { CancelBookingForm, ReviewBookingForm } from "./BookingRecordForms";
+import { BookingSheetBridge } from "./BookingSheetBridge";
 
 export function BookingRecordPage({
   locale,
   booking,
   owner = false,
+  embedded = false,
 }: {
   locale: string;
   booking: BookingRecord;
   owner?: boolean;
+  embedded?: boolean;
 }) {
   const copy = getBookingCopy(locale);
   const statusHint = {
@@ -40,14 +43,19 @@ export function BookingRecordPage({
     booking.date >= getBookingToday() &&
     (booking.status === "PENDING" || booking.status === "ACCEPTED");
   return (
-    <BookingShell>
-      <BookingHeader
-        backHref={owner ? "/profile/store/bookings" : "/profile/bookings"}
-        backLabel={copy.backBookings}
-        locale={locale}
-        title={copy.details}
-      />
-      <section className="pt-8">
+    <BookingShell embedded={embedded}>
+      {embedded ? <BookingSheetBridge /> : null}
+      {embedded ? (
+        <h1 className="pt-2 text-base font-bold text-ink">{copy.details}</h1>
+      ) : (
+        <BookingHeader
+          backHref={owner ? "/profile/store/bookings" : "/profile/bookings"}
+          backLabel={copy.backBookings}
+          locale={locale}
+          title={copy.details}
+        />
+      )}
+      <section className={embedded ? "pt-5" : "pt-8"}>
         <BookingStatus locale={locale} status={booking.status} />
         <h2 className="mt-5 text-2xl font-bold leading-tight tracking-tight text-forest">
           {formatBookingDate(booking.date, locale)}
@@ -133,13 +141,15 @@ export function BookingRecordPage({
           </div>
         ) : null}
       </dl>
-      <Link
-        className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-        href={getLocalizedActivityDetailPath(locale, booking.activityId)}
-      >
-        {copy.viewSpace}
-        <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-      </Link>
+      {!embedded ? (
+        <Link
+          className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={getLocalizedActivityDetailPath(locale, booking.activityId)}
+        >
+          {copy.viewSpace}
+          <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+        </Link>
+      ) : null}
       {canCancel ? (
         <>
           <p className="mt-5 text-xs leading-5 text-ink/70">
