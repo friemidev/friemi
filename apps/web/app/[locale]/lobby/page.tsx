@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
@@ -224,6 +225,17 @@ export default async function ActivityLobbyPage({
 
     return (
       <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
+        <Link
+          href={withLocale(locale, "/now/new")}
+          className="flex items-center gap-3 rounded-2xl border border-[#DCEBDD] bg-[#F2FAF3] px-4 py-3 text-sm font-semibold text-[#156240]"
+        >
+          🎈{" "}
+          {locale === "zh-CN"
+            ? "还没找到合适的？发布一个此刻"
+            : locale === "fr"
+              ? "Pas trouvé votre sortie ? Partagez une envie"
+              : "Nothing quite right? Post a NOW"}
+        </Link>
         <ActivityLobbyPreviewView
           activities={previewActivities}
           initialCategoryFilter={initialCategoryFilter}
@@ -267,6 +279,17 @@ export default async function ActivityLobbyPage({
 
   return (
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
+      <Link
+        href={withLocale(locale, "/now/new")}
+        className="flex items-center gap-3 rounded-2xl border border-[#DCEBDD] bg-[#F2FAF3] px-4 py-3 text-sm font-semibold text-[#156240]"
+      >
+        🎈{" "}
+        {locale === "zh-CN"
+          ? "还没找到合适的？发布一个此刻"
+          : locale === "fr"
+            ? "Pas trouvé votre sortie ? Partagez une envie"
+            : "Nothing quite right? Post a NOW"}
+      </Link>
       <ActivityLobbyView
         allActivities={lobby.allActivities}
         allActivityFeed={lobby.allActivityFeed}

@@ -1,0 +1,1 @@
+ALTER TABLE "NowInvite" ADD COLUMN "intentWindow" TEXT NOT NULL DEFAULT 'NOW';

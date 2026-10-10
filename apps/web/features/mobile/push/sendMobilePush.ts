@@ -347,6 +347,8 @@ export async function sendMobilePushForNotification(notificationId: string) {
         },
       },
       momentId: true,
+      nowInviteId: true,
+      nowInvite: { select: { title: true } },
       planetId: true,
       planet: {
         select: {
@@ -461,6 +463,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       merchantBookingDate:
         notification.merchantBooking?.date.toISOString().slice(0, 10) ?? null,
       merchantBookingPartySize: notification.merchantBooking?.partySize ?? null,
+      nowTitle: notification.nowInvite?.title ?? null,
       planetName: notification.planet?.name ?? null,
       residencyTitle: notification.residencySlot?.title ?? null,
       residencyDate:
@@ -478,6 +481,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
       activityId: notification.activityId,
       conversationId: directMessageConversationId,
       momentId: notification.momentId,
+      nowInviteId: notification.nowInviteId,
       planetSlug: notification.planet?.slug ?? null,
       residencyMerchantId: notification.residencySlot?.merchantId ?? null,
       residencySlotId: notification.residencySlot?.id ?? null,

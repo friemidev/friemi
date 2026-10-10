@@ -60,14 +60,10 @@ test("notification center visible where keeps caller type filters", () => {
   );
 });
 
-test("notification center only reads supported non-chat types after a rollback", () => {
+test("notification center only reads supported non-chat types", () => {
   const visible = new Set<string>(notificationCenterVisibleTypes);
   for (const type of [
     ...notificationCenterExcludedTypes,
-    "NOW_INTERESTED",
-    "NOW_SELECTED",
-    "NOW_MESSAGE",
-    "NOW_CONVERTED",
     "FUTURE_NOTIFICATION_TYPE",
   ]) {
     assert.equal(
@@ -83,6 +79,10 @@ test("notification center only reads supported non-chat types after a rollback",
     "ACTIVITY_ANNOUNCEMENT",
     "COUPON_RECEIVED",
     "INVENTORY_TICKET_RECEIVED",
+    "NOW_INTERESTED",
+    "NOW_SELECTED",
+    "NOW_MESSAGE",
+    "NOW_CONVERTED",
   ]) {
     assert.equal(visible.has(type), true, `${type} must remain visible`);
   }

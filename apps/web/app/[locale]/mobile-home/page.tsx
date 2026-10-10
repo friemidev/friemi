@@ -8,6 +8,7 @@ import {
   CalendarPlus,
   Clock3,
   MapPin,
+  Search,
   UsersRound,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
@@ -38,6 +39,14 @@ import {
   getMobileHomeTopNewsItems,
   type MobileHomeTopNewsItem,
 } from "@/features/home/queries/getMobileHomeTopNews";
+import {
+  NowBubbleField,
+  type NowBubbleItem,
+} from "@/features/now/NowBubbleField";
+import { getNowHomeFeed } from "@/features/now/queries";
+import { getNowPreviewLabel, nowOpenCity } from "@/features/now/now";
+import { getNowPreviewInvites } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
@@ -60,6 +69,7 @@ type MobileHomePageProps = {
   }>;
   searchParams?: Promise<{
     ref?: string | string[];
+    previewNow?: string | string[];
   }>;
 };
 
@@ -98,7 +108,10 @@ type MobileHomeCopy = {
 
 type MobileHomeExperienceProps = {
   locale: string;
+  isNowPreview: boolean;
   swipeActivities: ActivityCardViewModel[];
+  nowInvites: NowBubbleItem[];
+  nowInitialTime: number;
 };
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
@@ -440,6 +453,7 @@ export default async function MobileHomePage({
 }: MobileHomePageProps) {
   const [{ locale }, requestHeaders] = await Promise.all([params, headers()]);
   const query = (await searchParams) ?? {};
+  const isNowPreview = isNowPreviewEnabled() && query.previewNow === "1";
   const rawReferralCode = Array.isArray(query.ref) ? query.ref[0] : query.ref;
   const showIOSReferralBanner = Boolean(
     normalizeReferralCode(rawReferralCode) &&
@@ -490,6 +504,40 @@ export default async function MobileHomePage({
     trendingCount: trendingActivitiesResult.trendingActivities.length,
   });
 
+  const nowInitialTime = Date.now();
+  const liveNowInvites: NowBubbleItem[] = isNowPreview
+    ? []
+    : await getNowHomeFeed(nowOpenCity, new Date(nowInitialTime))
+        .then((items) =>
+          items.map((invite) => ({
+            id: invite.id,
+            category: invite.category,
+            intentWindow: invite.intentWindow,
+            title: invite.title,
+            area: invite.area,
+            createdAt: invite.createdAt.toISOString(),
+            expiresAt: invite.expiresAt.toISOString(),
+            interestCount: invite._count.interests,
+            size: invite.priority.size,
+            avatars: [
+              invite.organizer,
+              ...invite.interests.map((interest) => interest.profile),
+            ]
+              .slice(0, 3)
+              .map((person) => ({
+                name: person.nickname,
+                url: person.avatarUrl,
+              })),
+          })),
+        )
+        .catch((error: unknown) => {
+          console.error("Failed to load home now invites", error);
+          return [];
+        });
+  const nowInvites = isNowPreview
+    ? getNowPreviewInvites(nowInitialTime)
+    : liveNowInvites;
+
   return (
     <>
       <ImageResourcePreloader
@@ -505,16 +553,22 @@ export default async function MobileHomePage({
       <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
           locale={locale}
+          isNowPreview={isNowPreview}
           showIOSReferralBanner={showIOSReferralBanner}
           swipeActivities={activitiesResult.swipeActivities}
           topNewsItems={topNewsItems}
           trendingActivities={trendingActivitiesResult.trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
+          nowInvites={nowInvites}
+          nowInitialTime={nowInitialTime}
         />
         <div className="friemi-native-app-desktop-only hidden md:block">
           <MobileHomeExperience
             locale={locale}
+            isNowPreview={isNowPreview}
             swipeActivities={activitiesResult.swipeActivities}
+            nowInvites={nowInvites}
+            nowInitialTime={nowInitialTime}
           />
         </div>
       </main>
@@ -538,10 +592,13 @@ function getMobileHomeActivityHref(
 
 function MobileHomeV23Experience({
   locale,
+  isNowPreview,
   showIOSReferralBanner,
   topNewsItems,
   trendingActivities,
   viewerName,
+  nowInvites,
+  nowInitialTime,
 }: MobileHomeV23ExperienceProps) {
   const copy = getMobileHomeV23Copy(locale, viewerName);
   const categories = getMobileHomeCopy(locale).categories;
@@ -560,63 +617,63 @@ function MobileHomeV23Experience({
         />
       ) : null}
       <div className="mx-auto flex w-full max-w-[430px] flex-col pl-5 pr-0">
-        <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pr-5 pt-1">
+        <header className="flex min-h-[3.8rem] items-start justify-between gap-3 pr-5 pt-1">
           <Link
             href={withLocale(locale, "/home?view=desktop")}
             className="mt-1.5 inline-flex shrink-0"
             aria-label="Friemi"
           >
-            <BrandLockup className="h-9 w-[7.55rem]" priority size="md" />
+            <BrandLockup
+              className="h-8 w-[6.25rem] min-[390px]:h-9 min-[390px]:w-[7.55rem]"
+              priority
+              size="sm"
+            />
           </Link>
 
-          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-3">
+          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-1.5">
             <MobileHomeV23CitySelector
               currentCity={copy.location}
               locale={locale}
             />
+            <Link
+              href={withLocale(locale, "/search")}
+              aria-label={
+                locale === "zh-CN"
+                  ? "搜索"
+                  : locale === "fr"
+                    ? "Rechercher"
+                    : "Search"
+              }
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
+            >
+              <Search size={18} aria-hidden="true" />
+            </Link>
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
 
         <section className="pr-5">
-          <h1 className="text-[31px] font-bold leading-tight tracking-normal text-[#111210]">
+          {isNowPreview ? (
+            <p className="mb-1 text-[10px] font-semibold text-[#778A7D]">
+              {getNowPreviewLabel(locale)}
+            </p>
+          ) : null}
+          <h1 className="text-[24px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
-          <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
+          <p className="mt-0.5 text-[12px] font-medium leading-5 text-[#111210]/72">
             {copy.subtitle}
           </p>
-
-          <GlobalSearchForm
-            inputId="mobile-home-v23-search"
-            locale={locale}
-            placeholder={copy.searchPlaceholder}
-            variant="page"
-            className="mt-4 w-full [&_button]:right-1.5 [&_button]:h-9 [&_button]:w-9 [&_input]:h-12 [&_input]:rounded-[0.95rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-12 [&_input]:text-[14px] [&_input]:font-semibold [&_input]:shadow-none [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
-          />
-
-          <div className="mt-4 flex items-end justify-between gap-3">
-            <h2 className="text-[16px] font-bold tracking-normal text-[#111210]">
-              {copy.activityCategoriesTitle}
-            </h2>
-          </div>
-
-          <div
-            className="mobile-home-activity-filters mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            data-mobile-activity-filters
-          >
-            {copy.filters.map((filter) => (
-              <Link
-                key={filter.label}
-                href={withLocale(locale, filter.href)}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-3.5 text-[13px] font-semibold text-[#123D31] transition active:scale-[0.96]"
-              >
-                {filter.label}
-              </Link>
-            ))}
-          </div>
         </section>
 
-        <section className="mt-5 pr-5">
+        <NowBubbleField
+          initialNow={nowInitialTime}
+          invites={nowInvites}
+          locale={locale}
+          preview={isNowPreview}
+        />
+
+        <section className="mt-3 pr-5">
           <h2 className="text-[16px] font-bold tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
@@ -625,24 +682,6 @@ function MobileHomeV23Experience({
             locale={locale}
           />
         </section>
-
-        {topNewsItems.length > 0 ? (
-          <section className="mt-3">
-            <h2 className="text-[17px] font-bold tracking-normal text-[#064133]">
-              {copy.topNewsTitle}
-            </h2>
-            <div className="mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {topNewsItems.map((item) => (
-                <MobileHomeV23NewsCard
-                  href={withLocale(locale, item.href)}
-                  image={item.image}
-                  key={item.id}
-                  title={item.title}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         <section className="mt-4">
           <div className="flex items-center justify-between gap-3 pr-5">
@@ -676,6 +715,24 @@ function MobileHomeV23Experience({
                 ))}
           </div>
         </section>
+
+        {topNewsItems.length > 0 ? (
+          <section className="mt-3">
+            <h2 className="text-[17px] font-bold tracking-normal text-[#064133]">
+              {copy.topNewsTitle}
+            </h2>
+            <div className="mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {topNewsItems.map((item) => (
+                <MobileHomeV23NewsCard
+                  href={withLocale(locale, item.href)}
+                  image={item.image}
+                  key={item.id}
+                  title={item.title}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );
@@ -820,7 +877,10 @@ function MobileHomeV23FallbackCard({
 
 function MobileHomeExperience({
   locale,
+  isNowPreview,
   swipeActivities,
+  nowInvites,
+  nowInitialTime,
 }: MobileHomeExperienceProps) {
   const mobile = getMobileHomeCopy(locale);
 
@@ -877,6 +937,23 @@ function MobileHomeExperience({
                 {mobile.createPlanLabel}
               </span>
             </Link>
+          </div>
+
+          <div
+            className="order-3 w-full max-w-[430px] md:order-none"
+            data-home-reveal="up"
+          >
+            {isNowPreview ? (
+              <p className="ml-5 text-[11px] font-semibold text-[#778A7D]">
+                {getNowPreviewLabel(locale)}
+              </p>
+            ) : null}
+            <NowBubbleField
+              initialNow={nowInitialTime}
+              invites={nowInvites}
+              locale={locale}
+              preview={isNowPreview}
+            />
           </div>
 
           <section

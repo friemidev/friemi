@@ -281,6 +281,10 @@ enum CommentType {
 }
 
 enum NotificationType {
+  NOW_INTERESTED
+  NOW_SELECTED
+  NOW_MESSAGE
+  NOW_CONVERTED
   PARTICIPATION_PENDING
   PARTICIPATION_CONFIRMED
   PARTICIPATION_CANCELLED
@@ -596,6 +600,9 @@ model UserProfile {
   createdAt               DateTime                      @default(now())
   updatedAt               DateTime                      @updatedAt
   publicEventFavorites    PublicEventFavorite[]
+  nowInvites               NowInvite[]               @relation("NowInviteOrganizer")
+  nowInterests             NowInterest[]
+  nowInviteMessages        NowInviteMessage[]
 
   @@index([nickname])
   @@index([normalizedContactEmail])
@@ -842,6 +849,7 @@ model Activity {
   polls             ActivityPoll[]
   planetLinks       PlanetActivity[]
   moments           Moment[]
+  nowInvites        NowInvite[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -855,6 +863,60 @@ model Activity {
   @@index([externalUrl])
   @@index([ticketUrl])
   @@index([importedAt])
+}
+
+model NowInvite {
+  id               String             @id @default(cuid())
+  organizerId      String
+  organizer        UserProfile        @relation("NowInviteOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  category         String
+  intentWindow     String             @default("NOW")
+  title            String
+  city             String             @default("Paris")
+  area             String
+  note             String?
+  visibilityHours  Int                @default(12)
+  expiresAt        DateTime
+  linkedActivityId String?
+  linkedActivity   Activity?          @relation(fields: [linkedActivityId], references: [id], onDelete: SetNull)
+  interests        NowInterest[]
+  messages         NowInviteMessage[]
+  notifications    Notification[]
+  conversations    Conversation[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([city, expiresAt, createdAt])
+  @@index([organizerId, createdAt])
+  @@index([linkedActivityId])
+}
+
+model NowInterest {
+  id           String      @id @default(cuid())
+  inviteId     String
+  invite       NowInvite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  profileId    String
+  profile      UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  note         String?
+  withdrawnAt  DateTime?
+  selectedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([inviteId, profileId])
+  @@index([profileId, withdrawnAt, createdAt])
+}
+
+model NowInviteMessage {
+  id        String      @id @default(cuid())
+  inviteId  String
+  invite    NowInvite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([inviteId, createdAt])
 }
 
 model ActivityCoManager {
@@ -1840,6 +1902,8 @@ model Notification {
   merchantBooking           MerchantBookingReservation? @relation(fields: [merchantBookingId], references: [id], onDelete: SetNull)
   residencySlotId        String?
   residencySlot          MerchantResidencySlot? @relation(fields: [residencySlotId], references: [id], onDelete: SetNull)
+  nowInviteId            String?
+  nowInvite              NowInvite?            @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
   charmGiftEventId       String?
@@ -1865,6 +1929,7 @@ model Notification {
   @@index([activityId])
   @@index([merchantBookingId])
   @@index([residencySlotId])
+  @@index([nowInviteId])
   @@index([activityAnnouncementId])
   @@index([charmGiftEventId])
   @@index([momentId])
@@ -2428,6 +2493,8 @@ model Conversation {
   preferences      ConversationPreference[]
   lastMessageAt    DateTime?
   nonFriendResetAt DateTime?
+  nowInviteId      String?
+  nowInvite        NowInvite?               @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
@@ -2435,6 +2502,7 @@ model Conversation {
   @@index([userAId, lastMessageAt])
   @@index([userBId, lastMessageAt])
   @@index([lastMessageAt])
+  @@index([nowInviteId])
 }
 
 model ConversationPreference {
