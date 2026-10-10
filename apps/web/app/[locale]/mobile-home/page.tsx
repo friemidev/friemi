@@ -15,6 +15,8 @@ import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloade
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
+import { attachViewerPendingBookingPartySizes } from "@/features/merchants/bookings/activityParticipantCounts";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import {
   getLobbySwipePublicEventActivities,
@@ -482,12 +484,17 @@ export default async function MobileHomePage({
     ]),
   );
 
+  const trendingActivities = await attachViewerPendingBookingPartySizes(
+    trendingActivitiesResult.trendingActivities,
+    viewerProfile?.id,
+  );
+
   perf.finish({
     hasActivityError: Boolean(activitiesResult.error),
     hasTrendingError: Boolean(trendingActivitiesResult.error),
     hasViewer: Boolean(viewerProfile),
     swipeCount: activitiesResult.swipeActivities.length,
-    trendingCount: trendingActivitiesResult.trendingActivities.length,
+    trendingCount: trendingActivities.length,
   });
 
   return (
@@ -496,9 +503,7 @@ export default async function MobileHomePage({
         limit={5}
         sources={[
           ...topNewsItems.map((item) => item.image),
-          ...trendingActivitiesResult.trendingActivities.map(
-            (activity) => activity.coverImageUrl,
-          ),
+          ...trendingActivities.map((activity) => activity.coverImageUrl),
         ]}
       />
       <HomeLuxuryMotion />
@@ -508,7 +513,7 @@ export default async function MobileHomePage({
           showIOSReferralBanner={showIOSReferralBanner}
           swipeActivities={activitiesResult.swipeActivities}
           topNewsItems={topNewsItems}
-          trendingActivities={trendingActivitiesResult.trendingActivities}
+          trendingActivities={trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
         />
         <div className="friemi-native-app-desktop-only hidden md:block">
@@ -730,10 +735,13 @@ function MobileHomeV23ActivityCard({
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity}`
       : `${activity.participantCount}`;
+  const bookingCopy = getBookingCopy(locale);
   return (
     <MobileActivityDetailSheetLink
       href={getMobileHomeActivityHref(activity, locale)}
       label={activity.title}
+      locale={locale}
+      retainOnClose={!activity.isPersistent}
       className="friemi-interactive-card group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -760,7 +768,9 @@ function MobileHomeV23ActivityCard({
           <span className="truncate">
             {isPublicEvent
               ? activity.city || activity.address
-              : `${participantLabel} ${participantsLabel}`}
+              : activity.isPersistent
+                ? bookingCopy.publicCount(activity.participantCount)
+                : `${participantLabel} ${participantsLabel}`}
           </span>
         </p>
         <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
@@ -769,6 +779,11 @@ function MobileHomeV23ActivityCard({
             {getActivityDateLabel(activity, locale)}
           </span>
         </p>
+        {activity.isPersistent && activity.viewerPendingBookingPartySize ? (
+          <p className="mt-1.5 rounded-md bg-sand/40 px-1.5 py-1 text-[10px] font-bold leading-tight text-forest">
+            {bookingCopy.pendingCard(activity.viewerPendingBookingPartySize)}
+          </p>
+        ) : null}
       </div>
     </MobileActivityDetailSheetLink>
   );

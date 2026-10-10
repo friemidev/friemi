@@ -23,6 +23,7 @@ type MobileActivityDetailSheetLinkProps = {
   label: string;
   locale?: string;
   locked?: boolean;
+  retainOnClose?: boolean;
   onBookingUpdated?: () => void;
 };
 
@@ -83,6 +84,7 @@ export function MobileActivityDetailSheetLink({
   label,
   locale = "zh-CN",
   locked = false,
+  retainOnClose = true,
   onBookingUpdated,
 }: MobileActivityDetailSheetLinkProps) {
   const router = useRouter();
@@ -104,16 +106,16 @@ export function MobileActivityDetailSheetLink({
     const key = retentionKey.current;
     setRetained(false);
     return () => detailSheetRetention.release(key);
-  }, [href, locked]);
+  }, [href, locked, retainOnClose]);
 
   useEffect(() => {
-    if (open && !locked) {
+    if (open && !locked && retainOnClose) {
       detailSheetRetention.retain(retentionKey.current, () =>
         setRetained(false),
       );
       setRetained(true);
     }
-  }, [href, locked, open]);
+  }, [href, locked, open, retainOnClose]);
 
   function openFullPage() {
     setOpen(false);
@@ -175,6 +177,7 @@ export function MobileActivityDetailSheetLink({
             locale={locale}
             open={open}
             onBookingUpdated={handleBookingUpdated}
+            onCloseRequested={() => setOpen(false)}
             onNavigate={() => {
               detailSheetRetention.release(retentionKey.current);
               setRetained(false);

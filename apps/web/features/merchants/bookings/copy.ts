@@ -32,6 +32,7 @@ const zh = {
   records: "预约记录",
   count: (n: number) => `${n} 次`,
   people: (n: number) => `${n} 人`,
+  pendingCard: (n: number) => `${n}人预约 · 待确认`,
   publicCount: (n: number) => `已确认 ${n} 人`,
   submittedAt: "提交时间",
   reviewedAt: "处理时间",
@@ -156,6 +157,7 @@ const en: typeof zh = {
   records: "Bookings",
   count: (n: number) => `${n} booking${n === 1 ? "" : "s"}`,
   people: (n: number) => `${n} guest${n === 1 ? "" : "s"}`,
+  pendingCard: (n: number) => `Booking for ${n} · Pending`,
   publicCount: (n: number) => `${n} confirmed guest${n === 1 ? "" : "s"}`,
   submittedAt: "Submitted",
   reviewedAt: "Reviewed",
@@ -286,6 +288,7 @@ const fr: typeof zh = {
   records: "Réservations",
   count: (n: number) => `${n} réservation${n > 1 ? "s" : ""}`,
   people: (n: number) => `${n} personne${n > 1 ? "s" : ""}`,
+  pendingCard: (n: number) => `Réservation pour ${n} · En attente`,
   publicCount: (n: number) =>
     `${n} personne${n > 1 ? "s" : ""} confirmée${n > 1 ? "s" : ""}`,
   submittedAt: "Demande envoyée",

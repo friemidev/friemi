@@ -24,12 +24,14 @@ export function CustomerBookingForm({
   isAuthenticated,
   signInHref,
   viewerName = "",
+  embedded = false,
 }: {
   data: PublicBookingSpace;
   locale: string;
   isAuthenticated: boolean;
   signInHref: string;
   viewerName?: string;
+  embedded?: boolean;
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
@@ -48,6 +50,12 @@ export function CustomerBookingForm({
     submitBookingAction,
     {} as BookingActionState,
   );
+  const bookingRecordHref = state.bookingId
+    ? withLocale(
+        locale,
+        `/profile/bookings/${state.bookingId}${embedded ? "?sheet=1" : ""}`,
+      )
+    : "";
   const existing = data.viewerBookings.find(
     (booking) =>
       booking.date === date &&
@@ -58,9 +66,12 @@ export function CustomerBookingForm({
   useEffect(() => {
     if (state.alreadyBooked && state.bookingId)
       router.replace(
-        withLocale(locale, `/profile/bookings/${state.bookingId}`),
+        withLocale(
+          locale,
+          `/profile/bookings/${state.bookingId}${embedded ? "?sheet=1" : ""}`,
+        ),
       );
-  }, [state, router, locale]);
+  }, [state, router, locale, embedded]);
 
   useEffect(() => {
     if (
@@ -89,13 +100,13 @@ export function CustomerBookingForm({
           <Check aria-hidden="true" className="h-7 w-7" />
         </span>
         <h2 className="mt-5 text-xl font-bold">{copy.submitted}</h2>
-        <p className="mt-3 text-sm leading-6 text-ink/70">
+        <p className="mt-3 text-sm font-semibold text-forest">
+          {copy.pendingCard(partySize)}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-ink/70">
           {copy.waitConfirmation}
         </p>
-        <Link
-          className={`${primaryClass} mt-6`}
-          href={withLocale(locale, `/profile/bookings/${state.bookingId}`)}
-        >
+        <Link className={`${primaryClass} mt-6`} href={bookingRecordHref}>
           {copy.viewBooking}
         </Link>
       </section>
@@ -181,7 +192,10 @@ export function CustomerBookingForm({
           </p>
           <Link
             className={primaryClass}
-            href={withLocale(locale, `/profile/bookings/${existing.id}`)}
+            href={withLocale(
+              locale,
+              `/profile/bookings/${existing.id}${embedded ? "?sheet=1" : ""}`,
+            )}
           >
             {copy.viewBooking}
           </Link>

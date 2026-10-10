@@ -231,7 +231,12 @@ function ActivityLayerHeader({
 }
 
 type DetailViewerParticipationStatus =
-  "JOINED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
+  | "JOINED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED"
+  | null;
 
 const participantAvatarTones = [
   "bg-coral text-white",
@@ -861,6 +866,7 @@ export async function ActivityDetailPageContent({
         <ActivityDetailRefresh validatedAt={Date.now()} />
         <PersistentBookingPage
           data={bookingSpace}
+          embedded={isSheetPresentation}
           locale={locale}
           isAuthenticated={Boolean(viewerProfile)}
           isMerchantOwner={Boolean(owner)}

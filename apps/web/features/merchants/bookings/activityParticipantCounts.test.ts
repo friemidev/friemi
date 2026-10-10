@@ -7,7 +7,10 @@ import {
   findDiscoveryActivityCards,
   getActivityCardViewModel,
 } from "@/features/activities/queries/getActivities";
-import { attachPersistentBookingParticipantCounts } from "./activityParticipantCounts";
+import {
+  attachPersistentBookingParticipantCounts,
+  attachViewerPendingBookingPartySizes,
+} from "./activityParticipantCounts";
 
 test("ordinary activities do not request or replace booking participation", async (t) => {
   const original = prisma.merchantBookingReservation.groupBy;
@@ -69,6 +72,79 @@ test("booking counts sum people in accepted, current or future visits only", asy
   assert.deepEqual(
     rows.map((row) => row.bookingParticipantCount),
     [7, 7, 0, undefined],
+  );
+});
+
+test("anonymous and ordinary cards never query personal pending bookings", async (t) => {
+  const original = prisma.merchantBookingReservation.findMany;
+  prisma.merchantBookingReservation.findMany = (() => {
+    assert.fail("no personal booking query was expected");
+  }) as typeof original;
+  t.after(() => {
+    prisma.merchantBookingReservation.findMany = original;
+  });
+
+  const persistent = [{ id: "space", isPersistent: true }];
+  assert.equal(
+    await attachViewerPendingBookingPartySizes(persistent),
+    persistent,
+  );
+  const ordinary = [{ id: "ordinary", isPersistent: false }];
+  assert.equal(
+    await attachViewerPendingBookingPartySizes(ordinary, "viewer"),
+    ordinary,
+  );
+});
+
+test("only the viewer sees pending party size; public accepted count stays separate", async (t) => {
+  const original = prisma.merchantBookingReservation.findMany;
+  const calls: Prisma.MerchantBookingReservationFindManyArgs[] = [];
+  prisma.merchantBookingReservation.findMany = (async (
+    args: Prisma.MerchantBookingReservationFindManyArgs,
+  ) => {
+    calls.push(args);
+    return [
+      { partySize: 2, settings: { activityId: "space" } },
+      { partySize: 1, settings: { activityId: "space" } },
+    ];
+  }) as unknown as typeof original;
+  t.after(() => {
+    prisma.merchantBookingReservation.findMany = original;
+  });
+
+  const rows = await attachViewerPendingBookingPartySizes(
+    [
+      { id: "space", isPersistent: true, participantCount: 0 },
+      { id: "another", isPersistent: true, participantCount: 2 },
+      { id: "ordinary", isPersistent: false, participantCount: 4 },
+    ],
+    "viewer",
+    new Date("2026-10-09T22:30:00Z"),
+  );
+  assert.deepEqual(calls, [
+    {
+      where: {
+        profileId: "viewer",
+        status: "PENDING",
+        date: { gte: new Date("2026-10-10T00:00:00Z") },
+        settings: { activityId: { in: ["space", "another"] } },
+      },
+      select: {
+        partySize: true,
+        settings: { select: { activityId: true } },
+      },
+    },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => [
+      row.participantCount,
+      row.viewerPendingBookingPartySize,
+    ]),
+    [
+      [0, 3],
+      [2, 0],
+      [4, undefined],
+    ],
   );
 });
 
