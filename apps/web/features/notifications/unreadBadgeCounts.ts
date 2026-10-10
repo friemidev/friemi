@@ -1,4 +1,5 @@
 export type UnreadBadgeCounts = {
+  unreadBookingCount: number;
   unreadActivityRoomCount: number;
   unreadDirectMessageCount: number;
   unreadInventoryTicketGiftCount: number;
@@ -16,6 +17,7 @@ function parseUnreadCount(value: unknown) {
 }
 
 export function createUnreadBadgeCounts({
+  unreadBookingCount = 0,
   unreadActivityRoomCount,
   unreadDirectMessageCount,
   unreadInventoryTicketGiftCount = 0,
@@ -23,12 +25,17 @@ export function createUnreadBadgeCounts({
   unreadPlanetChatCount = 0,
 }: Omit<
   UnreadBadgeCounts,
-  "unreadInventoryTicketGiftCount" | "unreadMessageCount" | "unreadPlanetChatCount"
+  | "unreadBookingCount"
+  | "unreadInventoryTicketGiftCount"
+  | "unreadMessageCount"
+  | "unreadPlanetChatCount"
 > & {
+  unreadBookingCount?: number;
   unreadInventoryTicketGiftCount?: number;
   unreadPlanetChatCount?: number;
 }): UnreadBadgeCounts {
   return {
+    unreadBookingCount,
     unreadActivityRoomCount,
     unreadDirectMessageCount,
     unreadInventoryTicketGiftCount,
@@ -49,6 +56,10 @@ export function parseUnreadBadgeCountsPayload(
   }
 
   const candidate = payload as Record<string, unknown>;
+  const unreadBookingCount =
+    candidate.unreadBookingCount === undefined
+      ? 0
+      : parseUnreadCount(candidate.unreadBookingCount);
   const unreadActivityRoomCount = parseUnreadCount(
     candidate.unreadActivityRoomCount,
   );
@@ -68,6 +79,7 @@ export function parseUnreadBadgeCountsPayload(
       : parseUnreadCount(candidate.unreadPlanetChatCount);
 
   if (
+    unreadBookingCount === null ||
     unreadActivityRoomCount === null ||
     unreadDirectMessageCount === null ||
     unreadInventoryTicketGiftCount === null ||
@@ -78,6 +90,7 @@ export function parseUnreadBadgeCountsPayload(
   }
 
   return createUnreadBadgeCounts({
+    unreadBookingCount,
     unreadActivityRoomCount,
     unreadDirectMessageCount,
     unreadInventoryTicketGiftCount,

@@ -39,7 +39,6 @@ import {
   DESKTOP_LOBBY_CANDIDATE_CONTEXT,
 } from "@/features/activities/utils/desktopLobbyCandidates";
 import { canLinkAllPlanets } from "@/features/activities/queries/getLinkablePlanets";
-import { createNotifications } from "@/features/notifications/utils/createNotification";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -107,7 +106,6 @@ export async function createActivityAction(
   const locale = getString(formData, "locale") || "zh-CN";
   const publicEventCopy = getPublicEventCopy(locale);
   const rawInput = getActivityFormValues(formData);
-  const nowInviteId = getString(formData, "nowInviteId").trim();
   const recordLatency = ({
     activityId,
     properties,
@@ -464,51 +462,54 @@ export async function createActivityAction(
 
   try {
     const activityData = {
-      title: result.data.title,
-      description,
-      itinerary: result.data.itinerary,
-      coverImageUrl: result.data.coverImageUrl,
-      type: result.data.type,
-      category: result.data.category,
-      city: result.data.city,
-      destination: result.data.destination,
-      address: result.data.address,
-      latitude: result.data.latitude ?? null,
-      longitude: result.data.longitude ?? null,
-      startAt,
-      endAt,
-      capacity: submittedCapacity,
-      minParticipants: submittedMinParticipants,
-      requiresApproval: result.data.requiresApproval,
-      priceType: result.data.priceType,
-      priceText: result.data.priceText,
-      ticketUrl: result.data.ticketUrl ?? publicEvent?.ticketUrl ?? null,
-      ticketLabel: result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
-      source: importSourceHost,
-      sourceUrl: importSourceUrl,
-      sourcePayload: mergeActivityAddressPrivacy(
-        null,
-        result.data.hideAddressFromNonParticipants,
-      ),
-      publicEventId: publicEvent?.id ?? null,
-      status: "RECRUITING",
-      visibility: activityVisibility,
-      shareEnabled: activityVisibility === "PRIVATE",
-      shareToken:
-        activityVisibility === "PRIVATE" ? generateActivityShareToken() : null,
-      organizerId: profile.id,
-      participants: {
-        create: {
-          userProfileId: profile.id,
-          status: "APPROVED",
+        title: result.data.title,
+        description,
+        itinerary: result.data.itinerary,
+        coverImageUrl: result.data.coverImageUrl,
+        type: result.data.type,
+        category: result.data.category,
+        city: result.data.city,
+        destination: result.data.destination,
+        address: result.data.address,
+        latitude: result.data.latitude ?? null,
+        longitude: result.data.longitude ?? null,
+        startAt,
+        endAt,
+        capacity: submittedCapacity,
+        minParticipants: submittedMinParticipants,
+        requiresApproval: result.data.requiresApproval,
+        priceType: result.data.priceType,
+        priceText: result.data.priceText,
+        ticketUrl: result.data.ticketUrl ?? publicEvent?.ticketUrl ?? null,
+        ticketLabel:
+          result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
+        source: importSourceHost,
+        sourceUrl: importSourceUrl,
+        sourcePayload: mergeActivityAddressPrivacy(
+          null,
+          result.data.hideAddressFromNonParticipants,
+        ),
+        publicEventId: publicEvent?.id ?? null,
+        status: "RECRUITING",
+        visibility: activityVisibility,
+        shareEnabled: activityVisibility === "PRIVATE",
+        shareToken:
+          activityVisibility === "PRIVATE"
+            ? generateActivityShareToken()
+            : null,
+        organizerId: profile.id,
+        participants: {
+          create: {
+            userProfileId: profile.id,
+            status: "APPROVED",
+          },
         },
-      },
-      planetLinks: result.data.planetIds.length
-        ? {
-            create: result.data.planetIds.map((planetId) => ({ planetId })),
-          }
-        : undefined,
-    } satisfies Prisma.ActivityUncheckedCreateInput;
+        planetLinks: result.data.planetIds.length
+          ? {
+              create: result.data.planetIds.map((planetId) => ({ planetId })),
+            }
+          : undefined,
+      } satisfies Prisma.ActivityUncheckedCreateInput;
     const activity = lobbyCandidateSourceUrl
       ? await prisma.$transaction(async (transaction) => {
           const createdActivity = await transaction.activity.create({
@@ -528,44 +529,12 @@ export async function createActivityAction(
 
           return createdActivity;
         })
-      : nowInviteId
-        ? await prisma.$transaction(async (transaction) => {
-            const createdActivity = await transaction.activity.create({
-              data: activityData,
-              select: { id: true },
-            });
-            const linked = await transaction.nowInvite.updateMany({
-              where: {
-                id: nowInviteId,
-                organizerId: profile.id,
-                linkedActivityId: null,
-              },
-              data: {
-                linkedActivityId: createdActivity.id,
-                expiresAt: new Date(),
-              },
-            });
-            if (linked.count !== 1) throw new Error("NOW_INVITE_UNAVAILABLE");
-            const interested = await transaction.nowInterest.findMany({
-              where: { inviteId: nowInviteId, withdrawnAt: null },
-              select: { profileId: true },
-            });
-            await createNotifications(
-              transaction,
-              interested.map(({ profileId }) => ({
-                actorId: profile.id,
-                nowInviteId,
-                occurrenceId: createdActivity.id,
-                recipientId: profileId,
-                type: "NOW_CONVERTED" as const,
-              })),
-            );
-            return createdActivity;
-          })
-        : await prisma.activity.create({
-            data: activityData,
-            select: { id: true },
-          });
+      : await prisma.activity.create({
+          data: activityData,
+          select: {
+            id: true,
+          },
+        });
 
     activityId = activity.id;
   } catch (error) {
@@ -674,12 +643,6 @@ export async function createActivityAction(
   await syncProfileAchievements(profile.id).catch((error) => {
     console.error("Failed to sync organizer achievements after create", error);
   });
-
-  if (nowInviteId) {
-    revalidatePath(withLocale(locale, `/now/${nowInviteId}`));
-    revalidatePath(withLocale(locale, "/now/mine"));
-    revalidatePath(withLocale(locale, "/mobile-home"));
-  }
 
   revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
   revalidatePath(withLocale(locale, "/lobby"));

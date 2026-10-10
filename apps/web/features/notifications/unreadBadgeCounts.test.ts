@@ -8,6 +8,7 @@ import {
 test("creates the combined chat badge from direct, room, and planet counts", () => {
   assert.deepEqual(
     createUnreadBadgeCounts({
+      unreadBookingCount: 2,
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
       unreadInventoryTicketGiftCount: 1,
@@ -15,6 +16,7 @@ test("creates the combined chat badge from direct, room, and planet counts", () 
       unreadPlanetChatCount: 5,
     }),
     {
+      unreadBookingCount: 2,
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
       unreadInventoryTicketGiftCount: 1,
@@ -28,6 +30,7 @@ test("creates the combined chat badge from direct, room, and planet counts", () 
 test("parses badge payloads and recomputes the combined message count", () => {
   assert.deepEqual(
     parseUnreadBadgeCountsPayload({
+      unreadBookingCount: 2.8,
       unreadActivityRoomCount: 4.9,
       unreadDirectMessageCount: 3.8,
       unreadInventoryTicketGiftCount: 1.9,
@@ -36,6 +39,7 @@ test("parses badge payloads and recomputes the combined message count", () => {
       unreadPlanetChatCount: 5.7,
     }),
     {
+      unreadBookingCount: 2,
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
       unreadInventoryTicketGiftCount: 1,
@@ -57,6 +61,7 @@ test("keeps old unread badge payloads compatible during rolling deploys", () => 
       unreadActivityRoomCount: 4,
       unreadDirectMessageCount: 3,
       unreadInventoryTicketGiftCount: 0,
+      unreadBookingCount: 0,
       unreadMessageCount: 7,
       unreadNotificationCount: 2,
       unreadPlanetChatCount: 0,
@@ -65,6 +70,17 @@ test("keeps old unread badge payloads compatible during rolling deploys", () => 
 });
 
 test("rejects incomplete or invalid badge payloads", () => {
+  for (const unreadBookingCount of [-1, NaN, "2", null]) {
+    assert.equal(
+      parseUnreadBadgeCountsPayload({
+        unreadActivityRoomCount: 0,
+        unreadDirectMessageCount: 0,
+        unreadNotificationCount: 0,
+        unreadBookingCount,
+      }),
+      null,
+    );
+  }
   assert.equal(
     parseUnreadBadgeCountsPayload({
       unreadActivityRoomCount: 1,

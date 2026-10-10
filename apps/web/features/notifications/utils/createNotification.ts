@@ -23,9 +23,10 @@ export type CreateNotificationInput = {
   dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
   momentId?: string | null;
-  nowInviteId?: string | null;
   occurrenceId?: string | null;
   planetId?: string | null;
+  residencySlotId?: string | null;
+  merchantBookingId?: string | null;
   recipientId: string;
   type: NotificationType;
 };
@@ -52,8 +53,9 @@ export function getNotificationDedupeKey(input: CreateNotificationInput) {
         input.inventoryItemDefinitionId ?? "",
         input.momentCommentId ?? "",
         input.momentId ?? "",
-        input.nowInviteId ?? "",
         input.planetId ?? "",
+        ...(input.residencySlotId ? [input.residencySlotId] : []),
+        ...(input.merchantBookingId ? [input.merchantBookingId] : []),
       ].join("\n"),
     )
     .digest("hex")}`;
@@ -72,8 +74,9 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     dedupeKey: getNotificationDedupeKey(input),
     momentCommentId: input.momentCommentId ?? null,
     momentId: input.momentId ?? null,
-    nowInviteId: input.nowInviteId ?? null,
     planetId: input.planetId ?? null,
+    residencySlotId: input.residencySlotId ?? null,
+    merchantBookingId: input.merchantBookingId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };

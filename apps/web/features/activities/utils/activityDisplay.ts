@@ -1,3 +1,4 @@
+import { getPersistentBookingCopy } from "./persistentBookingActivity";
 import {
   formatActivityDate,
   formatActivityDateOnly,
@@ -158,6 +159,8 @@ export function getActivityTimeState(
     return "ENDED";
   }
 
+  if (activity.isPersistent) return "ONGOING";
+
   const startAt = new Date(activity.startAt);
 
   if (startAt > comparisonNow) {
@@ -182,6 +185,8 @@ export function getActivityDisplayStatus(
   if (activity.status === "ENDED") {
     return "ENDED";
   }
+
+  if (activity.isPersistent) return "OPEN";
 
   const activityEndBoundary = getActivityEndBoundary(activity);
   const comparisonNow = getActivityComparisonNow(activity, reference);
@@ -213,6 +218,7 @@ export function getActivityDateLabel(
   activity: ActivityCardViewModel,
   locale: string,
 ) {
+  if (activity.isPersistent) return getPersistentBookingCopy(locale).open;
   const formatDate = usesFloatingActivityTime(activity)
     ? formatFloatingActivityDate
     : formatActivityDate;

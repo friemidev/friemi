@@ -33,6 +33,9 @@ export type ActivityContactableParticipantViewModel = {
 };
 
 export type ActivityCardViewModel = ActivitySummary & {
+  isPersistent?: boolean;
+  lastBookingAt?: string | null;
+  createdAt?: string;
   autoCreatedTeam: {
     autoCreatedAt: string | null;
     claimableUntil: string | null;

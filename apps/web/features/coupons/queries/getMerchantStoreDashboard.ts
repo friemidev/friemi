@@ -28,7 +28,6 @@ export async function getMerchantStoreDashboard(profileId: string) {
         merchantId: merchant.id,
       },
       orderBy: [{ createdAt: "desc" }],
-      take: 100,
       select: {
         accentColor: true,
         backgroundColor: true,

@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileActivityListRow } from "@/features/activities/components/MobileActivityListRow";
 import { retainImageSources } from "@/components/media/RetainedImage";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { getActivityDisplayStatus } from "@/features/activities/utils/activityDisplay";
+import { isArchivedLobbyActivity } from "@/features/activities/utils/lobbyActivityRetention";
 import {
   dedupeActivityCards,
   filterUniqueActivityCards,
@@ -40,7 +40,6 @@ import { brand } from "@/lib/brand";
 import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { getCategoryLabel } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-import { withLocale } from "@/lib/routes";
 
 export type MobileLobbyV23TabId =
   | "nearby"
@@ -311,7 +310,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Créé",
       participants: "pers.",
       retryLabel: "Réessayer",
-      showEndedLabel: "Afficher les sorties terminées",
+      showEndedLabel: "Afficher les sorties plus anciennes",
       tabs: {
         nearby: "Proche",
         friends: "Suivis",
@@ -341,7 +340,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       hostedBadge: "Host",
       participants: "people",
       retryLabel: "Retry",
-      showEndedLabel: "Show ended plans",
+      showEndedLabel: "Show older plans",
       tabs: {
         nearby: "Nearby",
         friends: "Following",
@@ -368,7 +367,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     hostedBadge: "我发起的",
     participants: "人",
     retryLabel: "重试",
-    showEndedLabel: "显示已结束",
+    showEndedLabel: "展开更早结束的聚吧",
     tabs: {
       nearby: "附近",
       friends: "关注",
@@ -775,10 +774,7 @@ export function MobileLobbyV23View({
   const showEnded = Boolean(showEndedTabs[displayedActiveTab]);
   const visibleActiveActivities = filterMobileLobbyActivitiesByPrice(
     filterMobileLobbyActivitiesByCategory(
-      (activePage?.activities ?? []).filter((activity) => {
-        const status = getActivityDisplayStatus(activity);
-        return status !== "ENDED" && status !== "CANCELLED";
-      }),
+      (activePage?.activities ?? []).filter((activity) => !isArchivedLobbyActivity(activity)),
       activeCategory,
     ),
     initialFreeOnly,
@@ -786,10 +782,7 @@ export function MobileLobbyV23View({
   const visibleEndedActivities = showEnded
     ? filterMobileLobbyActivitiesByPrice(
         filterMobileLobbyActivitiesByCategory(
-          (endedPage?.activities ?? []).filter((activity) => {
-            const status = getActivityDisplayStatus(activity);
-            return status === "ENDED" || status === "CANCELLED";
-          }),
+          (endedPage?.activities ?? []).filter((activity) => isArchivedLobbyActivity(activity)),
           activeCategory,
         ),
         initialFreeOnly,
@@ -1254,39 +1247,6 @@ export function MobileLobbyV23View({
             </button>
           ))}
         </nav>
-
-        <Link
-          href={withLocale(locale, "/now/new")}
-          className="mt-4 flex min-h-14 items-center gap-3 rounded-[1.15rem] border border-[#DCEBDD] bg-[linear-gradient(105deg,#F1FAF3,#FFF4F5)] px-3.5 py-2.5 text-left transition active:scale-[.99]"
-        >
-          <span
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-xl shadow-[0_4px_12px_rgba(44,112,72,.08)]"
-            aria-hidden="true"
-          >
-            🎈
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[12px] font-bold text-[#184C35]">
-              {locale === "zh-CN"
-                ? "还没找到合适的聚吧？"
-                : locale === "fr"
-                  ? "Pas trouvé votre sortie ?"
-                  : "Nothing quite right yet?"}
-            </span>
-            <span className="block text-[11px] text-[#587563]">
-              {locale === "zh-CN"
-                ? "发布一个「此刻想做」"
-                : locale === "fr"
-                  ? "Partagez une envie du moment"
-                  : "Post what you feel like doing now"}
-            </span>
-          </span>
-          <ChevronRight
-            size={17}
-            className="shrink-0 text-[#257857]"
-            aria-hidden="true"
-          />
-        </Link>
 
         {shouldShowTabLoading ? (
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">

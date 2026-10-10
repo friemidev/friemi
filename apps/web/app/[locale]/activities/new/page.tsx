@@ -10,16 +10,10 @@ import { ActivityCreateCancelControl } from "@/features/activities/components/Ac
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
 import { MobileNewActivityEntryView } from "@/features/activities/components/MobileNewActivityEntryView";
 import { getActivityList } from "@/features/activities/queries/getActivities";
-import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
-import {
-  getNowActivityCategory,
-  getNowIntentWindowLabel,
-  getNowKindLabel,
-} from "@/features/now/now";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import {
   canCreateActivityWithTrustScore,
@@ -34,7 +28,6 @@ type NewActivityPageProps = {
   }>;
   searchParams: Promise<{
     copyActivityId?: string | string[];
-    fromNow?: string | string[];
     mode?: string | string[];
     return?: string | string[];
   }>;
@@ -83,9 +76,6 @@ export default async function NewActivityPage({
   const copyActivityId = Array.isArray(resolvedSearchParams.copyActivityId)
     ? resolvedSearchParams.copyActivityId[0]
     : resolvedSearchParams.copyActivityId;
-  const fromNow = Array.isArray(resolvedSearchParams.fromNow)
-    ? resolvedSearchParams.fromNow[0]
-    : resolvedSearchParams.fromNow;
   const mode = Array.isArray(resolvedSearchParams.mode)
     ? resolvedSearchParams.mode[0]
     : resolvedSearchParams.mode;
@@ -93,8 +83,7 @@ export default async function NewActivityPage({
     ? resolvedSearchParams.return[0]
     : resolvedSearchParams.return;
   const cancelReturnMode = returnModeParam === "history" ? "history" : "path";
-  const showForm =
-    mode === "form" || Boolean(copyActivityId) || Boolean(fromNow);
+  const showForm = mode === "form" || Boolean(copyActivityId);
   const profile = await (copyActivityId
     ? ensureCurrentUserProfile(
         locale,
@@ -102,68 +91,14 @@ export default async function NewActivityPage({
           cancelReturnMode === "history" ? "&return=history" : ""
         }`,
       )
-    : fromNow
-      ? ensureCurrentUserProfile(
-          locale,
-          `/activities/new?mode=form&fromNow=${encodeURIComponent(fromNow)}`,
-        )
-      : getOptionalCurrentUserProfileSnapshot());
-  const nowInvite =
-    fromNow && profile
-      ? await prisma.nowInvite.findFirst({
-          where: {
-            id: fromNow,
-            organizerId: profile.id,
-            linkedActivityId: null,
-          },
-          select: {
-            id: true,
-            title: true,
-            note: true,
-            category: true,
-            intentWindow: true,
-            city: true,
-            area: true,
-            _count: { select: { interests: { where: { withdrawnAt: null } } } },
-          },
-        })
-      : null;
-  const nowPrefill: ActivityFormValues | undefined = nowInvite
-    ? {
-        title: nowInvite.title,
-        description: nowInvite.note || nowInvite.title,
-        itinerary: "",
-        coverImageUrl: "",
-        type: "LOCAL",
-        category: getNowActivityCategory(nowInvite.category),
-        visibility: "PUBLIC",
-        otherCategoryText:
-          getNowActivityCategory(nowInvite.category) === "OTHER"
-            ? getNowKindLabel(nowInvite.category, locale)
-            : "",
-        city: nowInvite.city,
-        destination: nowInvite.area,
-        address: "",
-        hideAddressFromNonParticipants: false,
-        latitude: "",
-        longitude: "",
-        startAt: "",
-        endAt: "",
-        capacity: "",
-        capacityLimitEnabled: false,
-        minParticipants: "",
-        requiresApproval: false,
-        priceType: "FREE",
-        priceText: "",
-        ticketUrl: "",
-        ticketLabel: "",
-      }
-    : undefined;
+    : getOptionalCurrentUserProfileSnapshot());
   const initialValues =
     copyActivityId && profile
       ? await getActivityCopyValuesById(copyActivityId, profile.id)
-      : nowPrefill;
-  const trustScore = profile ? await getTrustScore(prisma, profile.id) : null;
+      : undefined;
+  const trustScore = profile
+    ? await getTrustScore(prisma, profile.id)
+    : null;
   const creationRestricted =
     trustScore !== null && !canCreateActivityWithTrustScore(trustScore);
   const creationRestrictionMessage = creationRestricted
@@ -232,36 +167,7 @@ export default async function NewActivityPage({
         </div>
       ) : null}
 
-      {nowInvite ? (
-        <section className="rounded-[1.25rem] border border-[#CDEBD6] bg-[linear-gradient(120deg,#EFF9F1,#FFF4F5)] px-4 py-3 text-[#204D38]">
-          <p className="text-[14px] font-bold">
-            ✨{" "}
-            {locale === "zh-CN"
-              ? "由此刻变成聚吧"
-              : locale === "fr"
-                ? "Transformer cette envie en sortie"
-                : "Turn this NOW into a hangout"}
-          </p>
-          <p className="mt-1 text-[12px] leading-5 text-[#587263]">
-            {nowInvite._count.interests}{" "}
-            {locale === "zh-CN"
-              ? `人已表达兴趣 · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`
-              : locale === "fr"
-                ? `personnes intéressées · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`
-                : `interested · ${getNowIntentWindowLabel(nowInvite.intentWindow, locale)} · ${nowInvite.area}`}
-          </p>
-          <p className="mt-1 text-[11px] leading-5 text-[#647B69]">
-            {locale === "zh-CN"
-              ? "标题、类型和区域已带入；请确认具体时间与地点。感兴趣的人仍需正式报名。"
-              : locale === "fr"
-                ? "Le sujet et le quartier sont repris. Confirmez l'heure et le lieu ; chacun doit encore s'inscrire."
-                : "The idea and area are carried over. Confirm the exact time and place; everyone still signs up separately."}
-          </p>
-        </section>
-      ) : null}
-
       <NewActivityForm
-        nowInviteId={nowInvite?.id}
         formId={formId}
         isAuthenticated={Boolean(profile)}
         locale={locale}

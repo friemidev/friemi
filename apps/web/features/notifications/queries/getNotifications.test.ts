@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   getVisibleNotificationWhere,
   notificationCenterExcludedTypes,
+  notificationCenterVisibleTypes,
 } from "./getNotifications";
 
 test("notification center excludes chat and moment notifications", () => {
@@ -29,7 +30,7 @@ test("notification center excludes chat and moment notifications", () => {
         },
         {
           type: {
-            notIn: notificationCenterExcludedTypes,
+            in: notificationCenterVisibleTypes,
           },
         },
       ],
@@ -51,10 +52,38 @@ test("notification center visible where keeps caller type filters", () => {
         },
         {
           type: {
-            notIn: notificationCenterExcludedTypes,
+            in: notificationCenterVisibleTypes,
           },
         },
       ],
     },
   );
+});
+
+test("notification center only reads supported non-chat types after a rollback", () => {
+  const visible = new Set<string>(notificationCenterVisibleTypes);
+  for (const type of [
+    ...notificationCenterExcludedTypes,
+    "NOW_INTERESTED",
+    "NOW_SELECTED",
+    "NOW_MESSAGE",
+    "NOW_CONVERTED",
+    "FUTURE_NOTIFICATION_TYPE",
+  ]) {
+    assert.equal(
+      visible.has(type),
+      false,
+      `${type} must not reach Prisma decoding`,
+    );
+  }
+
+  for (const type of [
+    "FRIEND_REQUEST",
+    "PARTICIPATION_CONFIRMED",
+    "ACTIVITY_ANNOUNCEMENT",
+    "COUPON_RECEIVED",
+    "INVENTORY_TICKET_RECEIVED",
+  ]) {
+    assert.equal(visible.has(type), true, `${type} must remain visible`);
+  }
 });

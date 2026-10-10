@@ -21,6 +21,7 @@ import {
   getActiveActivityFilterCount,
   getActiveActivityFilterNames,
   getActivityFilterHref,
+  getActivityListCanonicalPath,
   getDefaultActivitySort,
   formatActivityTimeStatesQueryValue,
   hasActiveActivityFilters,
@@ -66,8 +67,13 @@ const agendaDatePageSize = 7;
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: ActivitiesPageProps): Promise<Metadata> {
   const { locale } = await params;
+  const canonicalPath = getActivityListCanonicalPath(
+    withLocale(locale, "/activities"),
+    (await searchParams) ?? {},
+  );
   const t = getCopy(locale);
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders);
@@ -75,7 +81,7 @@ export async function generateMetadata({
   return buildPageShareMetadata({
     baseUrl,
     description: getGeneralPageShareDescription(locale),
-    path: withLocale(locale, "/activities"),
+    path: canonicalPath,
     title: `${t.activities.title} · ${brand.name}`,
   });
 }

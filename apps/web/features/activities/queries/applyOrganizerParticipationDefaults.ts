@@ -14,7 +14,7 @@ export async function applyOrganizerParticipationDefaults(
     (activity) =>
       activity.type !== "PUBLIC_EVENT" &&
       Boolean(activity.organizerId) &&
-      !activity.isActivityInfo,
+      !activity.isActivityInfo && !activity.isPersistent,
   );
 
   if (teamActivities.length === 0) {
@@ -68,7 +68,7 @@ export async function applyOrganizerParticipationDefaults(
     if (
       activity.type === "PUBLIC_EVENT" ||
       !activity.organizerId ||
-      activity.isActivityInfo
+      activity.isActivityInfo || activity.isPersistent
     ) {
       return activity;
     }

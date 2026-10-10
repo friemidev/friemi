@@ -2,7 +2,6 @@ import java.net.URI
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 if (file("google-services.json").exists()) {
@@ -102,6 +101,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             manifestPlaceholders["friemiUsesCleartextTraffic"] = "false"
             if (hasFriemiReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
@@ -121,10 +123,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }
 
 dependencies {
@@ -135,4 +133,12 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        check(file("google-services.json").isFile) {
+            "Release build requires app/google-services.json for Firebase push notifications."
+        }
+    }
 }

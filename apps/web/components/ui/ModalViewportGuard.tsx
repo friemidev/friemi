@@ -109,7 +109,11 @@ export function ModalViewportGuard() {
       const activeOverlay = getModalOverlay(activeDialog);
 
       activeDialog.dataset.friemiDialogActive = "true";
-      activeOverlay.dataset.friemiModalOverlayActive = "true";
+      // Native dialogs own their backdrop; stretching the dialog itself would
+      // turn a compact, centered panel into a full-height overlay on phones.
+      if (!(activeOverlay instanceof HTMLDialogElement)) {
+        activeOverlay.dataset.friemiModalOverlayActive = "true";
+      }
 
       for (const dialog of dialogs) {
         if (dialog === activeDialog) continue;

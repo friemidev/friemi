@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import {
   localeMeta,
@@ -17,6 +17,7 @@ type LocaleSwitcherProps = {
 
 export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const currentLocale = getSupportedLocale(locale);
   const currentMeta = localeMeta[currentLocale];
   const t = getCopy(currentLocale);
@@ -33,15 +34,17 @@ export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
       segments.splice(1, 0, nextLocale);
     }
 
-    return segments.join("/") || `/${nextLocale}`;
+    const nextPathname = segments.join("/") || `/${nextLocale}`;
+    const query = searchParams.toString();
+    return query ? `${nextPathname}?${query}` : nextPathname;
   }
 
   return (
-    <details className="group relative">
+    <details key={currentLocale} className="group relative shrink-0">
       <summary
         aria-label={t.common.switchLanguage(currentMeta.label)}
         title={currentMeta.label}
-        className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-black/10 bg-white/85 text-base leading-none shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 [&::-webkit-details-marker]:hidden"
+        className="flex size-11 cursor-pointer list-none items-center justify-center rounded-full border border-ink/10 bg-paper text-base leading-none transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest [&::-webkit-details-marker]:hidden"
       >
         <LocaleFlagIcon
           flag={currentMeta.flag}
@@ -49,7 +52,7 @@ export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
           size="md"
         />
       </summary>
-      <div className="absolute right-0 top-12 z-50 flex w-max items-center gap-2 rounded-xl border border-black/10 bg-white/95 p-2 shadow-lg backdrop-blur">
+      <div className="absolute right-0 top-12 z-50 flex w-max items-center gap-2 rounded-lg border border-ink/10 bg-paper p-2 shadow-lg">
         {locales.map((nextLocale) => {
           const meta = localeMeta[nextLocale as AppLocale];
           const active = nextLocale === currentLocale;
@@ -58,12 +61,13 @@ export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
             <Link
               key={nextLocale}
               href={getLocaleHref(nextLocale)}
+              aria-current={active ? "page" : undefined}
               aria-label={t.common.switchLanguage(meta.label)}
               title={meta.label}
               className={
                 active
-                  ? "flex h-9 w-9 items-center justify-center rounded-full bg-moss/10 ring-2 ring-moss/50"
-                  : "flex h-9 w-9 items-center justify-center rounded-full bg-zinc-50 ring-1 ring-zinc-200 transition hover:bg-zinc-100"
+                  ? "flex size-11 items-center justify-center rounded-full bg-forest/10 ring-2 ring-forest/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                  : "flex size-11 items-center justify-center rounded-full bg-paper ring-1 ring-ink/10 transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
               }
             >
               <LocaleFlagIcon flag={meta.flag} label={meta.label} size="sm" />

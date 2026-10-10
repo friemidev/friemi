@@ -13,6 +13,7 @@ import { withLocale } from "@/lib/routes";
 import { getVisibleNotificationWhere } from "../queries/getNotifications";
 import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { getMerchantReservationNoticePath } from "@/features/merchants/bookings/notifications";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -44,11 +45,11 @@ function trackNotificationOpened({
     | "activity"
     | "admin_reports"
     | "messages"
-    | "now"
     | "notifications"
     | "profile"
     | "bag"
-    | "store";
+    | "store"
+    | "ticket_workbench";
   type: string;
   userProfileId: string;
 }) {
@@ -422,9 +423,11 @@ export async function openNotificationActivityAction(formData: FormData) {
       actorId: true,
       activityId: true,
       couponWalletItemId: true,
-      inventoryItemDefinitionId: true,
       momentId: true,
-      nowInviteId: true,
+      merchantBooking: { select: { id: true, profileId: true } },
+      residencySlot: {
+        select: { id: true, merchantId: true },
+      },
       planet: {
         select: {
           slug: true,
@@ -434,46 +437,83 @@ export async function openNotificationActivityAction(formData: FormData) {
     },
   });
 
-  if (notification?.type.startsWith("NOW_")) {
+  const reservationTarget = notification
+    ? getMerchantReservationNoticePath({
+        type: notification.type,
+        bookingId: notification.merchantBooking?.id,
+        forCustomer: notification.merchantBooking?.profileId === profile.id,
+      })
+    : null;
+  if (reservationTarget) {
     await prisma.notification.updateMany({
       where: { id: notificationId, recipientId: profile.id, readAt: null },
       data: { readAt: new Date() },
     });
     await invalidateUnreadBadgeCache([profile.id]);
     revalidatePath(withLocale(locale, "/notifications"));
+    redirect(withLocale(locale, reservationTarget));
+  }
+
+  if (notification?.type.startsWith("MERCHANT_BOOKING_")) {
+    await prisma.notification.updateMany({
+      where: { id: notificationId, recipientId: profile.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    await invalidateUnreadBadgeCache([profile.id]);
+    revalidatePath(withLocale(locale, "/notifications"));
+    const opensOwnerBooking =
+      notification.type === "MERCHANT_BOOKING_CONFIRMED" ||
+      notification.type === "MERCHANT_BOOKING_REJECTED";
+    const opensCancelledDate =
+      notification.type === "MERCHANT_BOOKING_CANCELLED" ||
+      notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED";
+    const target =
+      notification.type === "MERCHANT_BOOKING_PUBLISHED" &&
+      notification.activityId
+        ? getActivityDetailPath(notification.activityId)
+        : notification.residencySlot && opensOwnerBooking
+          ? `/profile/store/bookings/${notification.residencySlot.id}`
+          : notification.residencySlot && opensCancelledDate
+            ? `/merchants/${notification.residencySlot.merchantId}/bookings/${notification.residencySlot.id}`
+            : "/notifications";
     trackNotificationOpened({
       locale,
       notificationId,
-      targetType: "now",
+      targetType:
+        notification.type === "MERCHANT_BOOKING_PUBLISHED"
+          ? "activity"
+          : notification.residencySlot
+            ? "store"
+            : "notifications",
       type: notification.type,
       userProfileId: profile.id,
     });
-    redirect(
-      withLocale(
-        locale,
-        notification.nowInviteId
-          ? `/now/${notification.nowInviteId}`
-          : "/now/mine",
-      ),
-    );
+    redirect(withLocale(locale, target));
   }
 
-  if (notification?.type === "INVENTORY_TICKET_RECEIVED") {
+  if (
+    notification?.type === "INVENTORY_TICKET_RECEIVED" ||
+    notification?.type === "INVENTORY_TICKET_ACCESS_INVITED"
+  ) {
     await prisma.notification.updateMany({
       where: { id: notificationId, recipientId: profile.id, readAt: null },
       data: { readAt: new Date() },
     });
     await invalidateUnreadBadgeCache([profile.id]);
 
-    const target = notification.inventoryItemDefinitionId
-      ? `/profile/bag/items/${notification.inventoryItemDefinitionId}`
-      : "/profile/bag";
+    const target =
+      notification.type === "INVENTORY_TICKET_RECEIVED"
+        ? "/profile/bag"
+        : "/profile/ticket-workbench";
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, target));
     trackNotificationOpened({
       locale,
       notificationId,
-      targetType: "bag",
+      targetType:
+        notification.type === "INVENTORY_TICKET_RECEIVED"
+          ? "bag"
+          : "ticket_workbench",
       type: notification.type,
       userProfileId: profile.id,
     });

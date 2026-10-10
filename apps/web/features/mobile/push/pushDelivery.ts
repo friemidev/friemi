@@ -1,5 +1,10 @@
 import type { NotificationType } from "@prisma/client";
+import { formatFloatingActivityDate } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import {
+  getMerchantReservationNoticeCopy,
+  getMerchantReservationNoticePath,
+} from "@/features/merchants/bookings/notifications";
 
 export type PushCopyLocale = "zh-CN" | "en" | "fr";
 
@@ -20,19 +25,48 @@ export function getNotificationPath(input: {
   activityId: string | null;
   actorId?: string | null;
   conversationId?: string | null;
-  inventoryItemDefinitionId?: string | null;
   momentId?: string | null;
-  nowInviteId?: string | null;
   planetSlug?: string | null;
+  residencyMerchantId?: string | null;
+  residencySlotId?: string | null;
+  merchantBookingId?: string | null;
+  merchantBookingForCustomer?: boolean;
   type: NotificationType;
 }) {
-  if (input.type.startsWith("NOW_")) {
-    return input.nowInviteId ? `/now/${input.nowInviteId}` : "/now/mine";
+  const reservationPath = getMerchantReservationNoticePath({
+    type: input.type,
+    bookingId: input.merchantBookingId,
+    forCustomer: input.merchantBookingForCustomer,
+  });
+  if (reservationPath) return reservationPath;
+  if (
+    input.type === "MERCHANT_BOOKING_CANCELLED" ||
+    input.type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
+  ) {
+    return input.residencyMerchantId && input.residencySlotId
+      ? `/merchants/${input.residencyMerchantId}/bookings/${input.residencySlotId}`
+      : "/notifications";
+  }
+  if (
+    input.type === "MERCHANT_BOOKING_CONFIRMED" ||
+    input.type === "MERCHANT_BOOKING_REJECTED"
+  ) {
+    return input.residencySlotId
+      ? `/profile/store/bookings/${input.residencySlotId}`
+      : "/profile/store/bookings";
+  }
+  if (input.type === "MERCHANT_BOOKING_PUBLISHED") {
+    return input.activityId
+      ? getActivityDetailPath(input.activityId)
+      : input.residencyMerchantId && input.residencySlotId
+        ? `/merchants/${input.residencyMerchantId}/bookings/${input.residencySlotId}`
+        : "/notifications";
   }
   if (input.type === "INVENTORY_TICKET_RECEIVED") {
-    return input.inventoryItemDefinitionId
-      ? `/profile/bag/items/${input.inventoryItemDefinitionId}`
-      : "/profile/bag";
+    return "/profile/bag";
+  }
+  if (input.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return "/profile/ticket-workbench";
   }
   if (input.type === "COUPON_RECEIVED" || input.type === "COUPON_REDEEMED") {
     return "/profile/bag";
@@ -111,11 +145,25 @@ export function getNotificationCopy(input: {
   locale: PushCopyLocale;
   messageBody?: string | null;
   merchantName?: string | null;
-  nowTitle?: string | null;
+  merchantBookingDate?: string | null;
+  merchantBookingPartySize?: number | null;
+  residencyTitle?: string | null;
+  residencyDate?: string | null;
+  residencyRejectionReason?: string | null;
+  residencyStartAt?: string | Date | null;
+  residencyAddress?: string | null;
   planetName?: string | null;
   ticketTitle?: string | null;
   type: NotificationType;
 }) {
+  const reservationCopy = getMerchantReservationNoticeCopy({
+    type: input.type,
+    locale: input.locale,
+    merchantName: input.merchantName,
+    date: input.merchantBookingDate,
+    partySize: input.merchantBookingPartySize,
+  });
+  if (reservationCopy) return reservationCopy;
   const activityTitle =
     input.activityTitle ||
     (input.locale === "zh-CN"
@@ -123,8 +171,6 @@ export function getNotificationCopy(input: {
       : input.locale === "en"
         ? "your plan"
         : "votre sortie");
-  const nowTitle =
-    input.nowTitle || (input.locale === "zh-CN" ? "此刻" : "NOW");
   const planetName =
     input.planetName ||
     (input.locale === "zh-CN"
@@ -147,16 +193,23 @@ export function getNotificationCopy(input: {
   const couponTitle = input.couponTitle || "Friemi Coupon";
   const merchantName = input.merchantName || actorName;
   const ticketTitle = input.ticketTitle?.trim() || null;
+  const residencyTitle =
+    input.residencyTitle?.trim() ||
+    (input.locale === "zh-CN"
+      ? "店铺预约"
+      : input.locale === "en"
+        ? "store booking"
+        : "réservation boutique");
+  const bookingSchedule = input.residencyStartAt
+    ? `${formatFloatingActivityDate(input.residencyStartAt, input.locale)} · ${input.residencyAddress?.trim() || ""}`
+    : "";
+  const rejectionReason = input.residencyRejectionReason?.trim() || "";
 
   const copy: Record<
     PushCopyLocale,
     Partial<Record<NotificationType, string>>
   > = {
     "zh-CN": {
-      NOW_INTERESTED: `${actorName}对「${nowTitle}」举手了`,
-      NOW_SELECTED: `你被选入「${nowTitle}」的组局意向`,
-      NOW_MESSAGE: `${actorName}在「${nowTitle}」留言了`,
-      NOW_CONVERTED: `「${nowTitle}」已转为聚吧，记得正式报名`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} 提交了签到`
@@ -168,7 +221,13 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
       FRIEND_REQUEST: `${actorName} 关注了你`,
       CHARM_GIFT_RECEIVED: `${actorName} 给你送了礼物`,
-      INVENTORY_TICKET_RECEIVED: `${actorName}赠送了「${ticketTitle ?? "票券"}」，已放入物品背包`,
+      INVENTORY_TICKET_RECEIVED: `「${ticketTitle ?? "票券"}」已放入物品背包`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} 邀请你核销「${ticketTitle ?? "票券"}」`,
+      MERCHANT_BOOKING_CANCELLED: `你报名的「${residencyTitle}」已取消`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `你申请的「${residencyTitle}」已关闭`,
+      MERCHANT_BOOKING_CONFIRMED: `你申请的「${residencyTitle}」${input.residencyDate ?? ""}已确认`,
+      MERCHANT_BOOKING_REJECTED: `你申请的「${residencyTitle}」未通过${rejectionReason ? `：${rejectionReason}` : ""}`,
+      MERCHANT_BOOKING_PUBLISHED: `你报名的「${residencyTitle}」已确定时间地点：${bookingSchedule}`,
       COUPON_RECEIVED: `${merchantName}的优惠券已放入背包`,
       COUPON_CLAIMED: `${actorName}领取了${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle}核销成功`,
@@ -195,10 +254,6 @@ export function getNotificationCopy(input: {
       AA_PAYMENT_REQUEST: `${activityTitle} 有新的付款请求`,
     },
     en: {
-      NOW_INTERESTED: `${actorName} raised a hand for “${nowTitle}”`,
-      NOW_SELECTED: `The host picked you for “${nowTitle}”`,
-      NOW_MESSAGE: `${actorName} left a note on “${nowTitle}”`,
-      NOW_CONVERTED: `“${nowTitle}” is now a hangout; sign up to join`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} checked in`
@@ -210,7 +265,13 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} sent you a message`,
       FRIEND_REQUEST: `${actorName} started following you`,
       CHARM_GIFT_RECEIVED: `${actorName} sent you a gift`,
-      INVENTORY_TICKET_RECEIVED: `${actorName} sent you a ticket${ticketTitle ? `: “${ticketTitle}”` : ""}. It's in your bag`,
+      INVENTORY_TICKET_RECEIVED: `“${ticketTitle ?? "Ticket"}” is now in your bag`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} invited you to check in “${ticketTitle ?? "tickets"}”`,
+      MERCHANT_BOOKING_CANCELLED: `Your signup for “${residencyTitle}” was cancelled`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `Your request “${residencyTitle}” is closed`,
+      MERCHANT_BOOKING_CONFIRMED: `Your request “${residencyTitle}” for ${input.residencyDate ?? "the selected date"} was confirmed`,
+      MERCHANT_BOOKING_REJECTED: `Your request “${residencyTitle}” was declined${rejectionReason ? `: ${rejectionReason}` : ""}`,
+      MERCHANT_BOOKING_PUBLISHED: `“${residencyTitle}” now has a time and venue: ${bookingSchedule}`,
       COUPON_RECEIVED: `${merchantName}'s coupon was added to your bag`,
       COUPON_CLAIMED: `${actorName} claimed ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} was redeemed`,
@@ -237,10 +298,6 @@ export function getNotificationCopy(input: {
       AA_PAYMENT_REQUEST: `${activityTitle} has a payment request`,
     },
     fr: {
-      NOW_INTERESTED: `${actorName} a levé la main pour « ${nowTitle} »`,
-      NOW_SELECTED: `L'hôte vous a choisi·e pour « ${nowTitle} »`,
-      NOW_MESSAGE: `${actorName} a écrit dans « ${nowTitle} »`,
-      NOW_CONVERTED: `« ${nowTitle} » est devenue une sortie ; inscrivez-vous`,
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
       ACTIVITY_CHECK_IN: isCheckInRequest
         ? `${actorName} a envoye son pointage`
@@ -252,7 +309,13 @@ export function getNotificationCopy(input: {
       DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
       FRIEND_REQUEST: `${actorName} vous suit`,
       CHARM_GIFT_RECEIVED: `${actorName} vous a envoyé un cadeau`,
-      INVENTORY_TICKET_RECEIVED: `${actorName} vous a offert un billet${ticketTitle ? ` : « ${ticketTitle} »` : ""}. Il est dans votre sac`,
+      INVENTORY_TICKET_RECEIVED: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac`,
+      INVENTORY_TICKET_ACCESS_INVITED: `${actorName} vous invite à contrôler « ${ticketTitle ?? "billet"} »`,
+      MERCHANT_BOOKING_CANCELLED: `Votre inscription à « ${residencyTitle} » a été annulée`,
+      MERCHANT_BOOKING_REQUEST_CANCELLED: `Votre demande « ${residencyTitle} » est clôturée`,
+      MERCHANT_BOOKING_CONFIRMED: `Votre demande « ${residencyTitle} » du ${input.residencyDate ?? "jour choisi"} est confirmée`,
+      MERCHANT_BOOKING_REJECTED: `Votre demande « ${residencyTitle} » a été refusée${rejectionReason ? ` : ${rejectionReason}` : ""}`,
+      MERCHANT_BOOKING_PUBLISHED: `« ${residencyTitle} » a maintenant un horaire et une adresse : ${bookingSchedule}`,
       COUPON_RECEIVED: `Le coupon de ${merchantName} est dans votre sac`,
       COUPON_CLAIMED: `${actorName} a reçu ${couponTitle}`,
       COUPON_REDEEMED: `${couponTitle} a été utilisé`,
@@ -303,6 +366,48 @@ export function getNotificationCopy(input: {
           : input.locale === "en"
             ? "Ticket received"
             : "Billet reçu",
+    };
+  }
+
+  if (input.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return {
+      body: copy[input.locale].INVENTORY_TICKET_ACCESS_INVITED ?? "",
+      title:
+        input.locale === "zh-CN"
+          ? "核销邀请"
+          : input.locale === "en"
+            ? "Check-in invitation"
+            : "Invitation au contrôle",
+    };
+  }
+
+  if (input.type.startsWith("MERCHANT_BOOKING_")) {
+    const title: Record<PushCopyLocale, Record<string, string>> = {
+      "zh-CN": {
+        MERCHANT_BOOKING_CANCELLED: "店铺预约已取消",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "预约申请已关闭",
+        MERCHANT_BOOKING_CONFIRMED: "店铺预约已确认",
+        MERCHANT_BOOKING_REJECTED: "店铺预约未通过",
+        MERCHANT_BOOKING_PUBLISHED: "店铺聚吧已发布",
+      },
+      en: {
+        MERCHANT_BOOKING_CANCELLED: "Store booking cancelled",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "Booking request closed",
+        MERCHANT_BOOKING_CONFIRMED: "Store booking confirmed",
+        MERCHANT_BOOKING_REJECTED: "Store booking declined",
+        MERCHANT_BOOKING_PUBLISHED: "Gathering published",
+      },
+      fr: {
+        MERCHANT_BOOKING_CANCELLED: "Réservation annulée",
+        MERCHANT_BOOKING_REQUEST_CANCELLED: "Demande de réservation clôturée",
+        MERCHANT_BOOKING_CONFIRMED: "Réservation confirmée",
+        MERCHANT_BOOKING_REJECTED: "Réservation refusée",
+        MERCHANT_BOOKING_PUBLISHED: "Rencontre publiée",
+      },
+    };
+    return {
+      body: copy[input.locale][input.type] ?? "",
+      title: title[input.locale][input.type] ?? "Friemi",
     };
   }
 

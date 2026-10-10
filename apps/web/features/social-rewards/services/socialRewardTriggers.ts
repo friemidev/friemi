@@ -1,4 +1,8 @@
-import type { ActivityStatus, ActivityType, ParticipantStatus } from "@prisma/client";
+import type {
+  ActivityStatus,
+  ActivityType,
+  ParticipantStatus,
+} from "@prisma/client";
 import { grantSuccessfulActivityBlindBoxFragment } from "@/features/charm/services/charmRewards";
 import { syncActivityAchievements } from "@/features/achievements/services/achievements";
 import { markReferralFirstParticipation } from "@/features/referrals/services/referrals";
@@ -22,6 +26,7 @@ export type RewardActivityGuestParticipant = {
 };
 
 export type RewardActivitySnapshot = {
+  isPersistent?: boolean;
   endAt: Date | null;
   guestParticipants?: RewardActivityGuestParticipant[];
   id: string;
@@ -42,10 +47,7 @@ export type SuccessfulActivityRewardEligibility =
       eligible: false;
       participantProfileIds: string[];
       reason:
-        | "CANCELLED"
-        | "NOT_ENDED"
-        | "PUBLIC_EVENT"
-        | "TOO_FEW_PARTICIPANTS";
+        "CANCELLED" | "NOT_ENDED" | "PUBLIC_EVENT" | "TOO_FEW_PARTICIPANTS";
     };
 
 function unique(values: string[]) {
@@ -59,8 +61,8 @@ function isActiveParticipationStatus(status: ParticipantStatus) {
 function hasCheckInSignal(participant: RewardActivityParticipant) {
   return Boolean(
     participant.checkInCancelledAt ||
-      participant.checkInRequestedAt ||
-      participant.checkedInAt,
+    participant.checkInRequestedAt ||
+    participant.checkedInAt,
   );
 }
 
@@ -70,7 +72,9 @@ function usesActivityCheckIn(
   return (
     (activity.participants ?? []).some(hasCheckInSignal) ||
     (activity.guestParticipants ?? []).some((guest) =>
-      guest.linkedParticipant ? hasCheckInSignal(guest.linkedParticipant) : false,
+      guest.linkedParticipant
+        ? hasCheckInSignal(guest.linkedParticipant)
+        : false,
     )
   );
 }
@@ -100,6 +104,7 @@ export function getActivityRewardEndBoundary(activity: {
 
 export function isActivityEndedForRewards(
   activity: {
+    isPersistent?: boolean;
     endAt: Date | null;
     startAt: Date;
     status: ActivityStatus;
@@ -107,8 +112,9 @@ export function isActivityEndedForRewards(
   now = new Date(),
 ) {
   return (
-    activity.status === "ENDED" ||
-    getActivityRewardEndBoundary(activity).getTime() <= now.getTime()
+    !activity.isPersistent &&
+    (activity.status === "ENDED" ||
+      getActivityRewardEndBoundary(activity).getTime() <= now.getTime())
   );
 }
 
@@ -131,13 +137,12 @@ export function getRealParticipationProfileIds(
 
   return unique([
     ...(activity.participants ?? [])
-      .filter(
-        (participant) =>
-          isRealParticipant({
-            activityUsesCheckIn,
-            hasEnded,
-            participant,
-          }),
+      .filter((participant) =>
+        isRealParticipant({
+          activityUsesCheckIn,
+          hasEnded,
+          participant,
+        }),
       )
       .map((participant) => participant.userProfileId),
     ...(hasEnded
@@ -264,6 +269,7 @@ export async function syncActivitySocialRewards({
           userProfileId: true,
         },
       },
+      isPersistent: true,
       startAt: true,
       status: true,
       type: true,
@@ -360,6 +366,7 @@ export async function syncRecentEndedActivitySocialRewards({
   );
   const activities = await prisma.activity.findMany({
     where: {
+      isPersistent: false,
       status: {
         not: "CANCELLED",
       },
@@ -403,6 +410,7 @@ export async function syncRecentEndedActivitySocialRewards({
 
   return {
     activityCount: activities.length,
-    syncedCount: results.filter((result) => result.status === "fulfilled").length,
+    syncedCount: results.filter((result) => result.status === "fulfilled")
+      .length,
   };
 }

@@ -39,7 +39,9 @@ export function TicketRedemptionScanner({
     (rawValue: string, sourceType: "scan" | "manual" = "scan") => {
       const token = parseTicketRedemptionToken(rawValue);
       if (!token) {
-        setError(copy.invalid);
+        setError(
+          sourceType === "manual" ? copy.enterCodeInvalid : copy.invalid,
+        );
         setErrorSource(sourceType);
         setScanning(false);
         return false;
@@ -50,7 +52,9 @@ export function TicketRedemptionScanner({
       setScanning(false);
       const query = new URLSearchParams();
       if (definitionId) query.set("definitionId", definitionId);
-      if (source === "admin") query.set("source", "admin");
+      if (source === "admin" || source === "store" || source === "workbench") {
+        query.set("source", source);
+      }
       router.push(
         withLocale(
           locale,
@@ -59,7 +63,7 @@ export function TicketRedemptionScanner({
       );
       return true;
     },
-    [copy.invalid, definitionId, locale, router, source],
+    [copy.enterCodeInvalid, copy.invalid, definitionId, locale, router, source],
   );
 
   useEffect(() => {
@@ -250,35 +254,43 @@ export function TicketRedemptionScanner({
         }}
       >
         <label
-          className="text-sm font-bold text-[#111210]"
+          className="block text-sm font-bold text-[#111210]"
           htmlFor="ticket-redemption-code"
         >
           {copy.enterCode}
         </label>
+        <p
+          className="mt-1 text-sm leading-5 text-ink/70"
+          id="ticket-redemption-code-hint"
+        >
+          {copy.enterCodeHint}
+        </p>
         <input
           autoCapitalize="none"
           autoComplete="off"
-          className="mt-3 min-h-12 w-full rounded-xl border border-[#D6D5B2] bg-white px-4 text-base text-[#111210] outline-none focus:border-[#156240] focus:ring-2 focus:ring-[#156240]/20"
+          aria-describedby={
+            error && errorSource === "manual"
+              ? "ticket-redemption-code-hint ticket-redemption-code-error"
+              : "ticket-redemption-code-hint"
+          }
+          aria-invalid={Boolean(error) && errorSource === "manual"}
+          className="mt-4 min-h-12 w-full rounded-xl border border-ink/15 bg-white px-4 font-mono text-base tracking-[0.08em] text-ink outline-none focus:border-meadow focus:ring-2 focus:ring-meadow/20"
+          enterKeyHint="go"
           id="ticket-redemption-code"
+          inputMode="text"
           onChange={(event) => {
             setInput(event.target.value);
             setError("");
           }}
-          placeholder={copy.enterCode}
+          placeholder="A7B 9C2"
           spellCheck={false}
           type="text"
           value={input}
         />
-        <button
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#EAF5E8] px-4 text-sm font-bold text-[#156240] disabled:opacity-50"
-          disabled={!input.trim()}
-          type="submit"
-        >
-          {copy.useCode}
-        </button>
         {error && errorSource === "manual" ? (
           <p
-            className="mt-4 flex items-start gap-2 rounded-xl bg-[#FFF0ED] px-4 py-3 text-sm text-[#A62834]"
+            className="mt-2 flex items-start gap-2 text-sm font-semibold text-danger"
+            id="ticket-redemption-code-error"
             role="alert"
           >
             <CircleAlert
@@ -288,6 +300,13 @@ export function TicketRedemptionScanner({
             {error}
           </p>
         ) : null}
+        <button
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#EAF5E8] px-4 text-sm font-bold text-[#156240] disabled:opacity-50"
+          disabled={!input.trim()}
+          type="submit"
+        >
+          {copy.useCode}
+        </button>
       </form>
     </div>
   );

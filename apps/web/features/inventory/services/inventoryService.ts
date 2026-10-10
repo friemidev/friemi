@@ -19,9 +19,17 @@ export async function createTicketDefinition(input: {
   description: string | null;
   imageUrl: string | null;
   isGiftable: boolean;
+  merchantId?: string | null;
   title: string;
   totalSupply: number;
 }) {
+  if (input.merchantId) {
+    const merchant = await prisma.merchant.findFirst({
+      where: { id: input.merchantId, isActive: true },
+      select: { id: true },
+    });
+    if (!merchant) throw new Error("Cannot attach ticket to inactive merchant");
+  }
   return prisma.inventoryItemDefinition.create({
     data: {
       createdByProfileId: input.actorProfileId,
@@ -29,6 +37,7 @@ export async function createTicketDefinition(input: {
       imageUrl: input.imageUrl,
       isGiftable: input.isGiftable,
       kind: "EVENT_TICKET",
+      merchantId: input.merchantId ?? null,
       title: input.title,
       totalSupply: input.totalSupply,
     },
@@ -61,6 +70,43 @@ export async function setTicketGiftable(input: {
 export type IssueTicketResult =
   | { status: "ISSUED"; batchId: string; recipientName: string }
   | { status: "INVALID" | "NOT_FOUND" | "SOLD_OUT" };
+
+export async function ensureAllocationRedeemerGrantInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorProfileId: string;
+    definitionId: string;
+    recipientProfileId: string;
+  },
+) {
+  // A revoked grant is an intentional denial and must stay revoked, even
+  // when the same person receives a later allocation batch.
+  await tx.ticketAccess.updateMany({
+    where: {
+      definitionId: input.definitionId,
+      profileId: input.recipientProfileId,
+      role: "REDEEMER",
+      status: "PENDING",
+    },
+    data: {
+      status: "ACTIVE",
+      source: "ALLOCATION",
+      acceptedAt: new Date(),
+    },
+  });
+  await tx.ticketAccess.createMany({
+    data: [{
+      definitionId: input.definitionId,
+      profileId: input.recipientProfileId,
+      role: "REDEEMER",
+      status: "ACTIVE",
+      source: "ALLOCATION",
+      invitedByProfileId: input.actorProfileId,
+      acceptedAt: new Date(),
+    }],
+    skipDuplicates: true,
+  });
+}
 
 export async function issueTicketBatch(input: {
   actorProfileId: string;
@@ -134,6 +180,22 @@ export async function issueTicketBatch(input: {
             serialNumber: reserved[0].issuedCount - input.quantity + index + 1,
           })),
         });
+
+        await ensureAllocationRedeemerGrantInTransaction(tx, {
+          actorProfileId: input.actorProfileId,
+          definitionId: definition.id,
+          recipientProfileId: recipient.id,
+        });
+
+        await createNotifications(tx, [
+          {
+            actorId: input.actorProfileId,
+            inventoryItemDefinitionId: definition.id,
+            occurrenceId: batch.id,
+            recipientId: recipient.id,
+            type: "INVENTORY_TICKET_RECEIVED",
+          },
+        ]);
 
         return {
           status: "ISSUED" as const,
@@ -251,8 +313,10 @@ export async function giftTicketByFriemiCode(input: {
             redeemedAt: null,
           },
           data: {
+            bagSeenAt: null,
             giftedAt,
             ownerProfileId: recipient.id,
+            redemptionCode: null,
             redemptionToken: null,
             redemptionTokenExpiresAt: null,
           },
@@ -490,6 +554,8 @@ const adminTicketDefinitionSelect = {
   isGiftable: true,
   issuedCount: true,
   kind: true,
+  merchantId: true,
+  merchant: { select: { id: true, name: true, isActive: true } },
   title: true,
   totalSupply: true,
 } as const;
@@ -532,6 +598,8 @@ export async function getAdminInventoryDefinition(definitionId: string) {
       isGiftable: true,
       issuedCount: true,
       kind: true,
+      merchantId: true,
+      merchant: { select: { id: true, name: true, isActive: true } },
       title: true,
       totalSupply: true,
     },

@@ -14,6 +14,10 @@ test("Redis unread cache comparison includes every badge channel", () => {
 
   assert.equal(unreadBadgeCountsMatch(baseline, { ...baseline }), true);
   assert.equal(
+    unreadBadgeCountsMatch(baseline, { ...baseline, unreadBookingCount: 1 }),
+    false,
+  );
+  assert.equal(
     unreadBadgeCountsMatch(baseline, {
       ...baseline,
       unreadInventoryTicketGiftCount: 2,

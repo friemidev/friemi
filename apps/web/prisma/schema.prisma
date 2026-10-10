@@ -45,6 +45,32 @@ enum ActivityStatus {
   CANCELLED
 }
 
+enum MerchantBookingScheduleMode {
+  DAILY
+  WEEKLY
+  DATES
+}
+
+enum MerchantBookingReservationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum MerchantResidencyStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  PUBLISHED
+}
+
+enum MerchantResidencySignupStatus {
+  ACTIVE
+  CANCELLED
+}
+
 enum ActivityVisibility {
   PUBLIC
   LINK_ONLY
@@ -171,6 +197,29 @@ enum InventoryGiftMethod {
   FRIEND_QR
 }
 
+enum TicketAccessRole {
+  MANAGER
+  REDEEMER
+}
+
+enum TicketAccessStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+enum TicketAccessSource {
+  ADMIN
+  INVITATION
+  ALLOCATION
+}
+
+enum TicketRedemptionMethod {
+  QR
+  MANUAL
+  UNKNOWN
+}
+
 enum CouponWalletStatus {
   AVAILABLE
   REDEEMED
@@ -232,10 +281,6 @@ enum CommentType {
 }
 
 enum NotificationType {
-  NOW_INTERESTED
-  NOW_SELECTED
-  NOW_MESSAGE
-  NOW_CONVERTED
   PARTICIPATION_PENDING
   PARTICIPATION_CONFIRMED
   PARTICIPATION_CANCELLED
@@ -268,6 +313,16 @@ enum NotificationType {
   COUPON_REDEEMED
   COUPON_REDEMPTION_COMPLETED
   INVENTORY_TICKET_RECEIVED
+  INVENTORY_TICKET_ACCESS_INVITED
+  MERCHANT_BOOKING_CANCELLED
+  MERCHANT_BOOKING_REQUEST_CANCELLED
+  MERCHANT_BOOKING_CONFIRMED
+  MERCHANT_BOOKING_REJECTED
+  MERCHANT_BOOKING_PUBLISHED
+  MERCHANT_RESERVATION_REQUESTED
+  MERCHANT_RESERVATION_ACCEPTED
+  MERCHANT_RESERVATION_REJECTED
+  MERCHANT_RESERVATION_CANCELLED
 }
 
 enum ReportTargetType {
@@ -484,6 +539,12 @@ model UserProfile {
   reviewedReports         Report[]                      @relation("ReportReviewer")
   mobileDevices           MobileDevice[]
   ownedMerchant           Merchant?                     @relation("MerchantOwner")
+  requestedResidencies    MerchantResidencySlot[]        @relation("ResidencyRequester")
+  reviewedResidencies     MerchantResidencySlot[]        @relation("ResidencyReviewer")
+  createdBookingSettings      MerchantBookingSettings[]     @relation("BookingSettingsCreator")
+  bookingReservations         MerchantBookingReservation[]  @relation("BookingCustomer")
+  reviewedBookingReservations MerchantBookingReservation[]  @relation("BookingReviewer")
+  residencySignups        MerchantResidencySignup[]
   couponWalletItems       CouponWalletItem[]            @relation("CouponWalletOwner")
   redeemedCouponItems     CouponWalletItem[]            @relation("CouponRedeemer")
   claimedCouponCodes      CouponClaimCode[]             @relation("CouponClaimCodeClaimer")
@@ -500,6 +561,11 @@ model UserProfile {
   inventoryIssuesMade     InventoryIssueBatch[]          @relation("InventoryIssueActor")
   inventoryGiftsSent      InventoryItemGift[]            @relation("InventoryGiftSender")
   inventoryGiftsReceived  InventoryItemGift[]            @relation("InventoryGiftRecipient")
+  ticketAccesses          TicketAccess[]                 @relation("TicketAccessProfile")
+  ticketAccessesInvited   TicketAccess[]                 @relation("TicketAccessInviter")
+  ticketAccessesRevoked   TicketAccess[]                 @relation("TicketAccessRevoker")
+  ticketRedemptionsHeld   TicketRedemptionEvent[]        @relation("TicketRedemptionHolder")
+  ticketRedemptionsMade   TicketRedemptionEvent[]        @relation("TicketRedemptionActor")
   friemiCoinBalance       UserFriemiCoinBalance?
   friemiCoinTransactions  FriemiCoinTransaction[]
   blindBoxFragmentBalance UserBlindBoxFragmentBalance?
@@ -530,9 +596,6 @@ model UserProfile {
   createdAt               DateTime                      @default(now())
   updatedAt               DateTime                      @updatedAt
   publicEventFavorites    PublicEventFavorite[]
-  nowInvites               NowInvite[]               @relation("NowInviteOrganizer")
-  nowInterests             NowInterest[]
-  nowInviteMessages        NowInviteMessage[]
 
   @@index([nickname])
   @@index([normalizedContactEmail])
@@ -758,6 +821,10 @@ model Activity {
   publicEvent       PublicEvent?               @relation(fields: [publicEventId], references: [id], onDelete: SetNull)
   merchantId        String?
   merchant          Merchant?                  @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+  isPersistent            Boolean                    @default(false)
+  lastBookingAt           DateTime?
+  merchantBookingSettings MerchantBookingSettings?
+  residencySlot     MerchantResidencySlot?
   participants      ActivityParticipant[]
   guestParticipants GuestActivityParticipant[]
   comments          Comment[]
@@ -775,7 +842,6 @@ model Activity {
   polls             ActivityPoll[]
   planetLinks       PlanetActivity[]
   moments           Moment[]
-  nowInvites        NowInvite[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -789,60 +855,6 @@ model Activity {
   @@index([externalUrl])
   @@index([ticketUrl])
   @@index([importedAt])
-}
-
-model NowInvite {
-  id               String             @id @default(cuid())
-  organizerId      String
-  organizer        UserProfile        @relation("NowInviteOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
-  category         String
-  intentWindow     String             @default("NOW")
-  title            String
-  city             String             @default("Paris")
-  area             String
-  note             String?
-  visibilityHours  Int                @default(12)
-  expiresAt        DateTime
-  linkedActivityId String?
-  linkedActivity   Activity?          @relation(fields: [linkedActivityId], references: [id], onDelete: SetNull)
-  interests        NowInterest[]
-  messages         NowInviteMessage[]
-  notifications    Notification[]
-  conversations    Conversation[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-
-  @@index([city, expiresAt, createdAt])
-  @@index([organizerId, createdAt])
-  @@index([linkedActivityId])
-}
-
-model NowInterest {
-  id           String      @id @default(cuid())
-  inviteId     String
-  invite       NowInvite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  profileId    String
-  profile      UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  note         String?
-  withdrawnAt  DateTime?
-  selectedAt   DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@unique([inviteId, profileId])
-  @@index([profileId, withdrawnAt, createdAt])
-}
-
-model NowInviteMessage {
-  id        String      @id @default(cuid())
-  inviteId  String
-  invite    NowInvite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  body      String
-  createdAt DateTime    @default(now())
-
-  @@index([inviteId, createdAt])
 }
 
 model ActivityCoManager {
@@ -978,7 +990,7 @@ model ActivityPriorityOverride {
   updatedById    String?
   updatedBy      UserProfile?               @relation("ActivityPriorityOverrideUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
+  updatedAt      DateTime                   @default(now()) @updatedAt
 
   @@unique([targetType, targetId])
   @@index([targetType, boostExpiresAt])
@@ -1022,6 +1034,11 @@ model Merchant {
   ownerProfileId  String?                  @unique
   owner           UserProfile?             @relation("MerchantOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
   activities      Activity[]
+  // Legacy rollout flag retained for database compatibility; store ownership now grants booking access.
+  bookingAccessEnabled Boolean                   @default(false)
+  bookingSettings      MerchantBookingSettings?
+  residencySlots  MerchantResidencySlot[]
+  ticketDefinitions InventoryItemDefinition[]
   coupons         Coupon[]
   couponTemplates MerchantCouponTemplate[]
   createdAt       DateTime                 @default(now())
@@ -1032,6 +1049,97 @@ model Merchant {
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])
+}
+
+model MerchantBookingSettings {
+  id                 String                       @id @default(cuid())
+  merchantId         String                       @unique
+  merchant           Merchant                     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  activityId         String                       @unique
+  activity           Activity                     @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  createdByProfileId String?
+  createdBy          UserProfile?                 @relation("BookingSettingsCreator", fields: [createdByProfileId], references: [id], onDelete: SetNull)
+  enabled            Boolean                      @default(true)
+  scheduleMode       MerchantBookingScheduleMode
+  startDate          DateTime                     @db.Date
+  endDate            DateTime?                    @db.Date
+  weekdays           Int[]                        @default([])
+  specificDates      DateTime[]                   @db.Date
+  closedDates        DateTime[]                   @db.Date
+  reservations       MerchantBookingReservation[]
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+}
+
+model MerchantBookingReservation {
+  id                  String                           @id @default(cuid())
+  settingsId          String
+  settings            MerchantBookingSettings          @relation(fields: [settingsId], references: [id], onDelete: Restrict)
+  profileId           String
+  profile             UserProfile                      @relation("BookingCustomer", fields: [profileId], references: [id], onDelete: Cascade)
+  date                DateTime                         @db.Date
+  partySize           Int
+  contactName         String                           @db.VarChar(80)
+  contactPhone        String                           @db.VarChar(32)
+  note                String?                          @db.VarChar(1000)
+  status              MerchantBookingReservationStatus @default(PENDING)
+  rejectionReason     String?                          @db.VarChar(500)
+  reviewedByProfileId String?
+  reviewedBy          UserProfile?                     @relation("BookingReviewer", fields: [reviewedByProfileId], references: [id], onDelete: SetNull)
+  reviewedAt          DateTime?
+  cancelledAt         DateTime?
+  customerSeenAt      DateTime?
+  notifications       Notification[]
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+
+  @@index([settingsId, date, status])
+  @@index([profileId, createdAt])
+  @@index([profileId, customerSeenAt])
+}
+
+model MerchantResidencySlot {
+  id                  String                  @id @default(cuid())
+  merchantId          String
+  merchant            Merchant                @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  requestedByProfileId String?
+  requestedBy         UserProfile?            @relation("ResidencyRequester", fields: [requestedByProfileId], references: [id], onDelete: SetNull)
+  reviewedByProfileId String?
+  reviewedBy          UserProfile?            @relation("ResidencyReviewer", fields: [reviewedByProfileId], references: [id], onDelete: SetNull)
+  date                DateTime                @db.Date
+  title               String                  @db.VarChar(120)
+  description         String                  @db.Text
+  status              MerchantResidencyStatus @default(PENDING)
+  rejectionReason     String?                 @db.VarChar(500)
+  reviewedAt          DateTime?
+  cancelledAt         DateTime?
+  activityId          String?                 @unique
+  activity            Activity?               @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  publishedAt         DateTime?
+  signups             MerchantResidencySignup[]
+  notifications       Notification[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([merchantId, date, status])
+  @@index([date, status])
+  @@index([status, createdAt])
+}
+
+model MerchantResidencySignup {
+  id             String                        @id @default(cuid())
+  slotId         String
+  slot           MerchantResidencySlot         @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  profileId      String
+  profile        UserProfile                   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  status         MerchantResidencySignupStatus @default(ACTIVE)
+  cancelledAt    DateTime?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+
+  @@unique([slotId, profileId])
+  @@index([profileId, status])
+  @@index([slotId, status])
 }
 
 model CouponTemplate {
@@ -1134,7 +1242,7 @@ model CouponClaimCode {
   claimedWalletItem   CouponWalletItem?     @relation(fields: [claimedWalletItemId], references: [id], onDelete: SetNull)
   claimedAt           DateTime?
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  updatedAt           DateTime              @default(now()) @updatedAt
 
   @@index([couponId, status, createdAt])
   @@index([claimedByProfileId, claimedAt])
@@ -1179,7 +1287,7 @@ model TopNewsItem {
   createdByProfileId String?
   updatedByProfileId String?
   createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime @default(now()) @updatedAt
 
   @@index([isActive, sortOrder])
   @@index([updatedAt])
@@ -1365,13 +1473,42 @@ model InventoryItemDefinition {
   issuedCount        Int                   @default(0)
   createdByProfileId String
   createdBy          UserProfile           @relation("InventoryDefinitionCreator", fields: [createdByProfileId], references: [id])
+  merchantId         String?
+  merchant           Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   items              InventoryItem[]
   issueBatches       InventoryIssueBatch[]
+  accesses           TicketAccess[]
+  redemptions        TicketRedemptionEvent[]
   notifications      Notification[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
   @@index([kind, createdAt])
+  @@index([merchantId, kind, createdAt])
+}
+
+model TicketAccess {
+  id                 String                  @id @default(cuid())
+  definitionId       String
+  definition         InventoryItemDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  profileId          String
+  profile            UserProfile             @relation("TicketAccessProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  role               TicketAccessRole
+  status             TicketAccessStatus
+  source             TicketAccessSource
+  invitedByProfileId String?
+  invitedBy          UserProfile?            @relation("TicketAccessInviter", fields: [invitedByProfileId], references: [id], onDelete: SetNull)
+  revokedByProfileId String?
+  revokedBy          UserProfile?            @relation("TicketAccessRevoker", fields: [revokedByProfileId], references: [id], onDelete: SetNull)
+  invitedAt          DateTime                @default(now())
+  acceptedAt         DateTime?
+  revokedAt          DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([definitionId, profileId, role])
+  @@index([profileId, status, role])
+  @@index([definitionId, role, status])
 }
 
 model InventoryIssueBatch {
@@ -1392,26 +1529,30 @@ model InventoryIssueBatch {
 }
 
 model InventoryItem {
-  id             String                  @id @default(cuid())
-  definitionId   String
-  definition     InventoryItemDefinition @relation(fields: [definitionId], references: [id])
-  ownerProfileId String
-  owner          UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
-  issueBatchId   String
-  issueBatch     InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
-  serialNumber   Int
-  giftedAt       DateTime?
-  gift           InventoryItemGift?
+  id                       String                  @id @default(cuid())
+  definitionId             String
+  definition               InventoryItemDefinition @relation(fields: [definitionId], references: [id])
+  ownerProfileId           String
+  owner                    UserProfile             @relation("InventoryItemOwner", fields: [ownerProfileId], references: [id])
+  issueBatchId             String
+  issueBatch               InventoryIssueBatch     @relation(fields: [issueBatchId], references: [id])
+  serialNumber             Int
+  giftedAt                 DateTime?
+  gift                     InventoryItemGift?
+  redemptionEvent          TicketRedemptionEvent?
   redemptionToken          String?      @unique @db.VarChar(64)
+  redemptionCode           String?      @unique @db.VarChar(10)
   redemptionTokenExpiresAt DateTime?
   redeemedAt               DateTime?
   redeemedByProfileId      String?
   redeemedBy               UserProfile? @relation("InventoryItemRedeemer", fields: [redeemedByProfileId], references: [id], onDelete: SetNull)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  bagSeenAt                DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   @@unique([definitionId, serialNumber])
   @@index([ownerProfileId, definitionId, giftedAt])
+  @@index([ownerProfileId, bagSeenAt])
   @@index([issueBatchId])
   @@index([redeemedByProfileId, redeemedAt])
   @@index([redemptionTokenExpiresAt])
@@ -1431,6 +1572,25 @@ model InventoryItemGift {
 
   @@index([senderProfileId, createdAt])
   @@index([recipientProfileId, createdAt])
+}
+
+model TicketRedemptionEvent {
+  id                String                  @id @default(cuid())
+  itemId            String                  @unique
+  item              InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  definitionId      String
+  definition        InventoryItemDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  holderProfileId   String
+  holder            UserProfile             @relation("TicketRedemptionHolder", fields: [holderProfileId], references: [id], onDelete: Restrict)
+  redeemerProfileId String
+  redeemer          UserProfile             @relation("TicketRedemptionActor", fields: [redeemerProfileId], references: [id], onDelete: Restrict)
+  method            TicketRedemptionMethod
+  redeemedAt        DateTime
+  createdAt         DateTime                @default(now())
+
+  @@index([definitionId, redeemedAt, id])
+  @@index([redeemerProfileId, redeemedAt])
+  @@index([holderProfileId, redeemedAt])
 }
 
 model UserFriemiCoinBalance {
@@ -1676,8 +1836,10 @@ model Notification {
   actorDisplayName       String?               @db.VarChar(80)
   activityId             String?
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  nowInviteId            String?
-  nowInvite              NowInvite?            @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
+  merchantBookingId         String?
+  merchantBooking           MerchantBookingReservation? @relation(fields: [merchantBookingId], references: [id], onDelete: SetNull)
+  residencySlotId        String?
+  residencySlot          MerchantResidencySlot? @relation(fields: [residencySlotId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
   charmGiftEventId       String?
@@ -1701,7 +1863,8 @@ model Notification {
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
-  @@index([nowInviteId])
+  @@index([merchantBookingId])
+  @@index([residencySlotId])
   @@index([activityAnnouncementId])
   @@index([charmGiftEventId])
   @@index([momentId])
@@ -2265,8 +2428,6 @@ model Conversation {
   preferences      ConversationPreference[]
   lastMessageAt    DateTime?
   nonFriendResetAt DateTime?
-  nowInviteId      String?
-  nowInvite        NowInvite?               @relation(fields: [nowInviteId], references: [id], onDelete: SetNull)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
@@ -2274,7 +2435,6 @@ model Conversation {
   @@index([userAId, lastMessageAt])
   @@index([userBId, lastMessageAt])
   @@index([lastMessageAt])
-  @@index([nowInviteId])
 }
 
 model ConversationPreference {
@@ -2413,7 +2573,7 @@ model DrawGuessWordBank {
   sortOrder   Int            @default(0)
   rooms       GameToolRoom[]
   createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  updatedAt   DateTime       @default(now()) @updatedAt
 
   @@unique([locale, title])
   @@index([locale, isActive, sortOrder])

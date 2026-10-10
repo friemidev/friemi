@@ -99,7 +99,9 @@ export async function redeemTicketByTokenAction(
           `/profile/bag/items/${result.definitionId}/${result.itemId}`,
         ),
       );
-      revalidatePath(withLocale(locale, `/tickets/redeem/${encodeURIComponent(token)}`));
+      revalidatePath(
+        withLocale(locale, `/tickets/redeem/${encodeURIComponent(token)}`),
+      );
     }
     return result;
   } catch (error) {

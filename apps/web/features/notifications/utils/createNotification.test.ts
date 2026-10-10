@@ -30,10 +30,6 @@ test("notification dedupe keys cover the business identity", () => {
     getNotificationDedupeKey({ ...base, activityId: "activity-a" }),
     getNotificationDedupeKey({ ...base, activityId: "activity-b" }),
   );
-  assert.notEqual(
-    getNotificationDedupeKey({ ...base, nowInviteId: "now-a" }),
-    getNotificationDedupeKey({ ...base, nowInviteId: "now-b" }),
-  );
 });
 
 test("notification dedupe keys require an explicit occurrence", () => {
@@ -53,7 +49,10 @@ test("ticket gift notification dedupes by gift and recipient", () => {
     recipientId: "recipient-1",
     type: "INVENTORY_TICKET_RECEIVED" as const,
   };
-  assert.equal(getNotificationDedupeKey(input), getNotificationDedupeKey(input));
+  assert.equal(
+    getNotificationDedupeKey(input),
+    getNotificationDedupeKey(input),
+  );
   assert.notEqual(
     getNotificationDedupeKey(input),
     getNotificationDedupeKey({ ...input, occurrenceId: "gift-2" }),
@@ -61,5 +60,41 @@ test("ticket gift notification dedupes by gift and recipient", () => {
   assert.notEqual(
     getNotificationDedupeKey(input),
     getNotificationDedupeKey({ ...input, recipientId: "recipient-2" }),
+  );
+});
+
+test("ticket allocation notification dedupes by batch rather than ticket", () => {
+  const batch = {
+    actorId: "admin-1",
+    inventoryItemDefinitionId: "definition-1",
+    occurrenceId: "issue-batch-1",
+    recipientId: "recipient-1",
+    type: "INVENTORY_TICKET_RECEIVED" as const,
+  };
+
+  assert.equal(
+    getNotificationDedupeKey(batch),
+    getNotificationDedupeKey(batch),
+  );
+  assert.notEqual(
+    getNotificationDedupeKey(batch),
+    getNotificationDedupeKey({ ...batch, occurrenceId: "issue-batch-2" }),
+  );
+});
+
+test("residency cancellation notification dedupes by slot and recipient", () => {
+  const input = {
+    occurrenceId: "residency-cancel:slot-1",
+    recipientId: "guest-1",
+    residencySlotId: "slot-1",
+    type: "MERCHANT_BOOKING_CANCELLED" as const,
+  };
+  assert.equal(
+    getNotificationDedupeKey(input),
+    getNotificationDedupeKey(input),
+  );
+  assert.notEqual(
+    getNotificationDedupeKey(input),
+    getNotificationDedupeKey({ ...input, recipientId: "guest-2" }),
   );
 });

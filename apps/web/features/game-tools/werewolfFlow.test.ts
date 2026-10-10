@@ -376,6 +376,14 @@ test("reports third-party seer results", () => {
     }),
     "THIRD_PARTY",
   );
+  assert.equal(
+    getWerewolfSeerResult({
+      roleAlignment: "third_party",
+      seatNumber: 8,
+      thirdPartySeatNumbers: [],
+    }),
+    "THIRD_PARTY",
+  );
 });
 
 test("alerts when all werewolves are dead", () => {
@@ -391,6 +399,21 @@ test("alerts when all werewolves are dead", () => {
       thirdPartySeatNumbers: [],
     })?.kind,
     "WEREWOLVES_ELIMINATED",
+  );
+});
+
+test("counts a legacy Lovers seat as a villager in faction alerts", () => {
+  assert.equal(
+    getWerewolfFactionAlert({
+      deadSeatNumbers: [3],
+      seats: [
+        { roleAlignment: "werewolf", roleKey: "werewolf", seatNumber: 1 },
+        { roleAlignment: "good", roleKey: "seer", seatNumber: 2 },
+        { roleAlignment: "good", roleKey: "lovers", seatNumber: 3 },
+      ],
+      thirdPartySeatNumbers: [],
+    })?.kind,
+    "VILLAGERS_ELIMINATED",
   );
 });
 

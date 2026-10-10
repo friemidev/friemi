@@ -1,0 +1,66 @@
+export function getMerchantBookingAdminCopy(locale: string) {
+  if (locale === "fr")
+    return {
+      title: "Réservations des boutiques",
+      back: "Boutiques",
+      detailBack: "Gestion de la boutique",
+      entryHint: "Consulter les disponibilités et les sorties permanentes",
+      description:
+        "La boutique crée sa rencontre permanente et gère les demandes de ses clients.",
+      enabled: "Réservations ouvertes",
+      inactive: "Boutique désactivée",
+      paused: "Réservations en pause",
+      unconfigured: "À configurer par la boutique",
+      noOwner: "Attribuez d’abord un propriétaire à cette boutique.",
+      bindOwner: "Attribuer un propriétaire",
+      viewMeetup: "Voir la rencontre permanente",
+      search: "Rechercher une boutique",
+      submitSearch: "Rechercher",
+      empty: "Aucune boutique trouvée.",
+      previous: "Précédent",
+      next: "Suivant",
+      legacy: "Anciennes demandes de dates",
+    };
+  if (locale === "en")
+    return {
+      title: "Store bookings",
+      back: "Stores",
+      detailBack: "Store management",
+      entryHint: "View availability and permanent meetups",
+      description:
+        "The store creates its permanent meetup and handles customer reservations.",
+      enabled: "Reservations open",
+      inactive: "Store inactive",
+      paused: "Reservations paused",
+      unconfigured: "Awaiting store setup",
+      noOwner: "Assign an owner to this store first.",
+      bindOwner: "Assign an owner",
+      viewMeetup: "View permanent meetup",
+      search: "Search stores",
+      submitSearch: "Search",
+      empty: "No stores found.",
+      previous: "Previous",
+      next: "Next",
+      legacy: "Previous date requests",
+    };
+  return {
+    title: "门店预约",
+    back: "门店列表",
+    detailBack: "门店管理",
+    entryHint: "查看门店预约状态与长期聚吧",
+    description: "店主可在门店管理中创建长期聚吧，开启预约并处理顾客的预约。",
+    enabled: "正在接受预约",
+    inactive: "门店已停用",
+    paused: "门店已暂停预约",
+    unconfigured: "等待门店开启",
+    noOwner: "请先为门店绑定店主。",
+    bindOwner: "绑定店主",
+    viewMeetup: "查看长期聚吧",
+    search: "搜索门店",
+    submitSearch: "搜索",
+    empty: "没有找到门店。",
+    previous: "上一页",
+    next: "下一页",
+    legacy: "旧版日期申请记录",
+  };
+}

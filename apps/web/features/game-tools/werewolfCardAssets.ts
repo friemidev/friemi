@@ -1,12 +1,12 @@
 import {
   isWerewolfRoleKey,
+  normalizeWerewolfRoleKey,
   type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 
 const WEREWOLF_CARD_ASSET_BASE = "/game-tools/werewolf";
 const WEREWOLF_ATMOSPHERE_ASSET_BASE = `${WEREWOLF_CARD_ASSET_BASE}/atmosphere`;
 const WEREWOLF_UI_ASSET_BASE = `${WEREWOLF_CARD_ASSET_BASE}/ui`;
-const WEREWOLF_CARD_LOCALE_FALLBACK = "en";
 const WEREWOLF_CARD_BACK_MIN = 1;
 const WEREWOLF_CARD_BACK_MAX = 12;
 
@@ -127,25 +127,24 @@ export const werewolfUiAssets = {
   timelineEventDot: `${WEREWOLF_UI_ASSET_BASE}/timeline-event-dot.svg`,
 } as const;
 
-function getWerewolfCardLocale(locale: string) {
-  if (locale === "en") {
-    return "en";
-  }
-
-  return WEREWOLF_CARD_LOCALE_FALLBACK;
-}
-
 export function getWerewolfRoleCardImage(
   roleKey: string | null | undefined,
   locale: string,
+  seatNumber?: number,
 ) {
-  if (!isWerewolfRoleKey(roleKey)) {
+  const normalizedRoleKey = normalizeWerewolfRoleKey(roleKey);
+
+  if (!normalizedRoleKey) {
     return null;
   }
 
-  const cardLocale = getWerewolfCardLocale(locale);
+  const cardLanguage = locale === "zh-CN" ? "chinese" : "english";
+  const cardKey =
+    normalizedRoleKey === "villager" && seatNumber && seatNumber % 2 === 0
+      ? "villager_female"
+      : normalizedRoleKey;
 
-  return `${WEREWOLF_CARD_ASSET_BASE}/recto/${roleKey}_${cardLocale}.png`;
+  return `${WEREWOLF_CARD_ASSET_BASE}/recto/${cardLanguage}/${cardKey}.png`;
 }
 
 export function getWerewolfSeatBackImage(seatNumber: number) {

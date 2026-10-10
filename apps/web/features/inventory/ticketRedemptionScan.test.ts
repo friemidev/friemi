@@ -19,8 +19,38 @@ test("accepts a temporary ticket token or check-in link", () => {
   );
 });
 
-test("rejects friend codes, coupon links and arbitrary URLs", () => {
-  assert.equal(parseTicketRedemptionToken("123456"), null);
+test("accepts a six-character check-in code, including grouped and mixed-case input", () => {
+  assert.equal(parseTicketRedemptionToken("123456"), "123456");
+  assert.equal(parseTicketRedemptionToken("123 456"), "123456");
+  assert.equal(parseTicketRedemptionToken("123-456"), "123456");
+  assert.equal(parseTicketRedemptionToken("a1b2c3"), "A1B2C3");
+  assert.equal(parseTicketRedemptionToken("a1B 2c3"), "A1B2C3");
+  assert.equal(parseTicketRedemptionToken("a1B-2c3"), "A1B2C3");
+  assert.equal(parseTicketRedemptionToken("ABC DEF"), "ABCDEF");
+  assert.equal(
+    parseTicketRedemptionToken("https://friemi.app/fr/tickets/redeem/123456"),
+    "123456",
+  );
+  assert.equal(
+    parseTicketRedemptionToken("https://friemi.app/fr/tickets/redeem/a1b2c3"),
+    "A1B2C3",
+  );
+});
+
+test("accepts a legacy ten-digit code only as a ten-digit credential", () => {
+  assert.equal(parseTicketRedemptionToken("12345 67890"), "1234567890");
+  assert.equal(
+    parseTicketRedemptionToken(
+      "https://friemi.app/en/tickets/redeem/1234567890",
+    ),
+    "1234567890",
+  );
+});
+
+test("rejects other numbers, coupon links and arbitrary URLs", () => {
+  assert.equal(parseTicketRedemptionToken("1234567"), null);
+  assert.equal(parseTicketRedemptionToken("A1B2C"), null);
+  assert.equal(parseTicketRedemptionToken("A1B2C!"), null);
   assert.equal(
     parseTicketRedemptionToken(`https://friemi.app/en/coupons/redeem/${token}`),
     null,

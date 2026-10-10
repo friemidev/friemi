@@ -3,6 +3,10 @@ import { blindBoxFragmentExchangeCount } from "@/features/charm/charm";
 import { getProfileBag } from "@/features/charm/queries/getProfileBag";
 import { ProfileBagPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ReceivedTicketsSeen } from "@/features/inventory/components/ReceivedTicketsSeen";
+import {
+  bagTicketPageSize,
+  type BagTicketFilter,
+} from "@/features/inventory/services/inventoryBagQueries";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -12,6 +16,8 @@ type ProfileBagPageProps = {
   }>;
   searchParams: Promise<{
     couponStatus?: string;
+    filter?: string;
+    page?: string;
   }>;
 };
 
@@ -23,9 +29,16 @@ export default async function ProfileBagPage({
   searchParams,
 }: ProfileBagPageProps) {
   const { locale } = await params;
-  const { couponStatus } = await searchParams;
+  const { couponStatus, filter, page } = await searchParams;
+  const ticketFilter: BagTicketFilter =
+    filter === "all" || filter === "used" ? filter : "available";
+  const ticketPage = Number.parseInt(page ?? "1", 10);
   const profile = await ensureCurrentUserProfile(locale, "/profile/bag");
-  const result = await getProfileBag(profile.id)
+  const pageOpenedAt = new Date().toISOString();
+  const result = await getProfileBag(profile.id, {
+    ticketFilter,
+    ticketPage,
+  })
     .then((bag) => ({
       bag,
       error: null,
@@ -40,6 +53,12 @@ export default async function ProfileBagPage({
           checks: [],
           coupons: [],
           inventoryItems: [],
+          ticketPage: {
+            items: [],
+            page: 1,
+            pageSize: bagTicketPageSize,
+            total: 0,
+          },
           coinBalance: {
             balance: 0,
             earnedTotal: 0,
@@ -58,10 +77,13 @@ export default async function ProfileBagPage({
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0 md:py-8">
-      <ReceivedTicketsSeen locale={locale} />
+      {!result.error && (
+        <ReceivedTicketsSeen locale={locale} pageOpenedAt={pageOpenedAt} />
+      )}
       <ProfileBagPageView
         bag={result.bag}
         hasError={Boolean(result.error)}
+        itemFilter={ticketFilter}
         locale={locale}
         notice={
           couponStatus === "claimed" || couponStatus === "already-claimed"

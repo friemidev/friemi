@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Bell,
+  CalendarDays,
   CalendarX2,
   Check,
   CheckCheck,
@@ -23,7 +24,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
-import { formatActivityDate } from "@chill-club/shared";
+import {
+  formatActivityDate,
+  formatFloatingActivityDate,
+} from "@chill-club/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -49,21 +53,22 @@ import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "./NotificationBadgeProvider";
+import {
+  getMerchantReservationNoticeCopy,
+  isMerchantReservationNotice,
+} from "@/features/merchants/bookings/notifications";
 
 type NotificationCategory = "activity" | "friends" | "gift" | "system";
 
 type NotificationFilter = "all" | NotificationCategory;
 type NotificationBulkAction =
-  | "delete-read"
-  | "delete-selected"
-  | "mark-all-read"
-  | "mark-selected-read";
+  "delete-read" | "delete-selected" | "mark-all-read" | "mark-selected-read";
 
 function getNotificationCategory(
   type: NotificationType | string,
 ): NotificationCategory {
-  if (type.startsWith("NOW_")) return "activity";
   if (
+    isMerchantReservationNotice(type) ||
     type === "PARTICIPATION_PENDING" ||
     type === "PARTICIPATION_CONFIRMED" ||
     type === "PARTICIPATION_CANCELLED" ||
@@ -79,6 +84,7 @@ function getNotificationCategory(
   if (type === "CHARM_GIFT_RECEIVED" || type === "INVENTORY_TICKET_RECEIVED") {
     return "gift";
   }
+  if (type === "INVENTORY_TICKET_ACCESS_INVITED") return "system";
   if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
     return "activity";
@@ -139,6 +145,14 @@ function getNotificationText(
   notification: NotificationViewModel,
   locale: string,
 ) {
+  const reservationCopy = getMerchantReservationNoticeCopy({
+    type: notification.type,
+    locale,
+    merchantName: notification.merchantBooking?.merchantName,
+    date: notification.merchantBooking?.date,
+    partySize: notification.merchantBooking?.partySize,
+  });
+  if (reservationCopy) return reservationCopy;
   const t = getCopy(locale).notifications;
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
   const actorName = getNotificationActorName(notification, locale) ?? undefined;
@@ -149,69 +163,106 @@ function getNotificationText(
     actorName ??
     "Friemi";
 
-  if (notification.type.startsWith("NOW_")) {
+  if (notification.type === "MERCHANT_BOOKING_CANCELLED") {
     const title =
-      notification.nowInvite?.title ?? (locale === "zh-CN" ? "此刻" : "NOW");
-    const by =
-      actorName ??
-      (locale === "zh-CN" ? "有人" : locale === "fr" ? "Quelqu'un" : "Someone");
+      notification.residencySlot?.title ??
+      (locale === "fr"
+        ? "la réservation boutique"
+        : locale === "en"
+          ? "the store booking"
+          : "店铺预约");
     if (locale === "fr") {
-      if (notification.type === "NOW_INTERESTED")
-        return {
-          title: "Quelqu'un partage votre envie",
-          body: `${by} a levé la main pour « ${title} ». Vous pouvez en discuter.`,
-        };
-      if (notification.type === "NOW_SELECTED")
-        return {
-          title: "L'hôte vous a choisi·e",
-          body: `Pour « ${title} », c'est une invitation à discuter, pas encore une inscription.`,
-        };
-      if (notification.type === "NOW_MESSAGE")
-        return {
-          title: "Nouveau message dans NOW",
-          body: `${by} a écrit dans « ${title} ».`,
-        };
       return {
-        title: "Votre NOW est devenue une sortie",
-        body: `Consultez l'heure et le lieu de « ${title} », puis inscrivez-vous à la sortie.`,
+        title: "Réservation annulée",
+        body: `Votre inscription à « ${title} » a été annulée.`,
       };
     }
     if (locale === "en") {
-      if (notification.type === "NOW_INTERESTED")
-        return {
-          title: "Someone shares your idea",
-          body: `${by} raised a hand for “${title}”. You can chat first.`,
-        };
-      if (notification.type === "NOW_SELECTED")
-        return {
-          title: "The host picked you",
-          body: `For “${title}”, this is an invitation to talk, not a signup.`,
-        };
-      if (notification.type === "NOW_MESSAGE")
-        return {
-          title: "New NOW message",
-          body: `${by} left a note on “${title}”.`,
-        };
       return {
-        title: "Your NOW became a hangout",
-        body: `Check the time and place for “${title}”, then sign up on the hangout page.`,
+        title: "Store booking cancelled",
+        body: `Your signup for “${title}” was cancelled.`,
       };
     }
-    if (notification.type === "NOW_INTERESTED")
+    return { title: "店铺预约已取消", body: `你报名的「${title}」已取消。` };
+  }
+  if (notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED") {
+    const title =
+      notification.residencySlot?.title ??
+      (locale === "fr"
+        ? "la réservation boutique"
+        : locale === "en"
+          ? "the store booking"
+          : "店铺预约");
+    if (locale === "fr")
       return {
-        title: "有人回应了你的此刻",
-        body: `${by}对「${title}」举手了，可以先聊聊。`,
+        title: "Demande de réservation clôturée",
+        body: `Votre demande « ${title} » est clôturée.`,
       };
-    if (notification.type === "NOW_SELECTED")
+    if (locale === "en")
       return {
-        title: "发起者选中了你",
-        body: `「${title}」的发起者想与你组局。这不是正式报名，可以先聊聊。`,
+        title: "Booking request closed",
+        body: `Your request “${title}” is closed.`,
       };
-    if (notification.type === "NOW_MESSAGE")
-      return { title: "此刻有新留言", body: `${by}在「${title}」留了一句话。` };
     return {
-      title: "此刻已转为聚吧",
-      body: `查看「${title}」的时间地点，再到聚吧正式报名。`,
+      title: "预约申请已关闭",
+      body: `你申请的「${title}」已关闭。`,
+    };
+  }
+  if (notification.type === "MERCHANT_BOOKING_CONFIRMED") {
+    const title = notification.residencySlot?.title ?? "店铺预约";
+    const date = notification.residencySlot?.date ?? "";
+    if (locale === "fr")
+      return {
+        title: "Réservation confirmée",
+        body: `Votre demande « ${title} » du ${date} est confirmée.`,
+      };
+    if (locale === "en")
+      return {
+        title: "Store booking confirmed",
+        body: `Your request “${title}” for ${date} was confirmed.`,
+      };
+    return {
+      title: "店铺预约已确认",
+      body: `你申请的「${title}」（${date}）已确认。`,
+    };
+  }
+  if (notification.type === "MERCHANT_BOOKING_REJECTED") {
+    const title = notification.residencySlot?.title ?? "店铺预约";
+    const reason = notification.residencySlot?.rejectionReason;
+    if (locale === "fr")
+      return {
+        title: "Réservation refusée",
+        body: `Votre demande « ${title} » a été refusée.${reason ? ` Motif : ${reason}` : ""}`,
+      };
+    if (locale === "en")
+      return {
+        title: "Store booking declined",
+        body: `Your request “${title}” was declined.${reason ? ` Reason: ${reason}` : ""}`,
+      };
+    return {
+      title: "店铺预约未通过",
+      body: `你申请的「${title}」未通过。${reason ? `原因：${reason}` : ""}`,
+    };
+  }
+  if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
+    const title = notification.residencySlot?.title ?? "店铺聚吧";
+    const activity = notification.residencySlot?.activity;
+    const schedule = activity
+      ? `${formatFloatingActivityDate(activity.startAt, locale)} · ${activity.address}`
+      : "";
+    if (locale === "fr")
+      return {
+        title: "La rencontre est publiée",
+        body: `« ${title} » a maintenant un horaire et une adresse. ${schedule}`,
+      };
+    if (locale === "en")
+      return {
+        title: "Gathering published",
+        body: `“${title}” now has a time and venue. ${schedule}`,
+      };
+    return {
+      title: "店铺聚吧已发布",
+      body: `你报名的「${title}」已确定时间和地点：${schedule}`,
     };
   }
 
@@ -220,18 +271,37 @@ function getNotificationText(
     if (locale === "fr") {
       return {
         title: "Billet reçu",
-        body: `${actorName ?? "Quelqu'un"} vous a offert un billet${ticketTitle ? ` : « ${ticketTitle} »` : ""}. Il est dans votre sac.`,
+        body: `« ${ticketTitle ?? "Billet"} » est maintenant dans votre sac.`,
       };
     }
     if (locale === "en") {
       return {
         title: "Ticket received",
-        body: `${actorName ?? "Someone"} sent you a ticket${ticketTitle ? `: “${ticketTitle}”` : ""}. It's in your bag.`,
+        body: `“${ticketTitle ?? "Ticket"}” is now in your bag.`,
       };
     }
     return {
       title: "收到票券",
-      body: `${actorName ?? "有人"}赠送了「${ticketTitle ?? "票券"}」，已放入物品背包。`,
+      body: `「${ticketTitle ?? "票券"}」已放入物品背包。`,
+    };
+  }
+  if (notification.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    const ticketTitle = notification.inventoryItemDefinition?.title;
+    if (locale === "fr") {
+      return {
+        title: "Invitation au contrôle",
+        body: `Vous êtes invité à contrôler « ${ticketTitle ?? "Billet"} ».`,
+      };
+    }
+    if (locale === "en") {
+      return {
+        title: "Ticket check-in invitation",
+        body: `You were invited to check in “${ticketTitle ?? "Ticket"}”.`,
+      };
+    }
+    return {
+      title: "票券核销邀请",
+      body: `你受邀核销「${ticketTitle ?? "票券"}」，请在工作台接受。`,
     };
   }
 
@@ -515,13 +585,6 @@ function getNotificationActionLabel(
 ) {
   const t = getCopy(locale).notifications;
 
-  if (notification.type.startsWith("NOW_"))
-    return locale === "fr"
-      ? "Voir NOW"
-      : locale === "en"
-        ? "View NOW"
-        : "查看此刻";
-
   if (
     notification.type === "MOMENT_LIKED" ||
     notification.type === "MOMENT_COMMENTED" ||
@@ -536,12 +599,43 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (isMerchantReservationNotice(notification.type)) {
+    return locale === "fr"
+      ? "Voir la réservation"
+      : locale === "en"
+        ? "View reservation"
+        : "查看预约";
+  }
+  if (notification.type.startsWith("MERCHANT_BOOKING_")) {
+    if (notification.type === "MERCHANT_BOOKING_PUBLISHED") {
+      return t.openActivity;
+    }
+    if (notification.type === "MERCHANT_BOOKING_REQUEST_CANCELLED") {
+      return locale === "fr"
+        ? "Voir la demande"
+        : locale === "en"
+          ? "View request"
+          : "查看申请";
+    }
+    return locale === "fr"
+      ? "Voir la réservation"
+      : locale === "en"
+        ? "View booking"
+        : "查看预约";
+  }
   if (notification.type === "INVENTORY_TICKET_RECEIVED") {
     return locale === "fr"
       ? "Voir le billet"
       : locale === "en"
         ? "View ticket"
         : "查看票券";
+  }
+  if (notification.type === "INVENTORY_TICKET_ACCESS_INVITED") {
+    return locale === "fr"
+      ? "Voir l’invitation"
+      : locale === "en"
+        ? "Review invitation"
+        : "处理邀请";
   }
   if (
     notification.type === "COUPON_RECEIVED" ||
@@ -1037,14 +1131,26 @@ function getNotificationVisual(
   iconClassName: string;
   cardClassName: string;
 } {
-  if (type.startsWith("NOW_")) {
+  if (isMerchantReservationNotice(type)) {
     return {
-      icon: type === "NOW_MESSAGE" ? MessageCircle : Heart,
-      iconClassName: isUnread
-        ? "bg-[#E7F6EC] text-[#126A4A]"
-        : "bg-fog text-outline",
+      icon:
+        type === "MERCHANT_RESERVATION_CANCELLED" ||
+        type === "MERCHANT_RESERVATION_REJECTED"
+          ? CalendarX2
+          : CalendarDays,
+      iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-forest",
+      cardClassName: "bg-paper",
+    };
+  }
+  if (
+    type === "MERCHANT_BOOKING_CANCELLED" ||
+    type === "MERCHANT_BOOKING_REQUEST_CANCELLED"
+  ) {
+    return {
+      icon: CalendarX2,
+      iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
       cardClassName: isUnread
-        ? "border-[#CDEBD6] bg-paper"
+        ? "border-rose bg-paper"
         : "border-sand bg-paper/62",
     };
   }
@@ -1059,11 +1165,16 @@ function getNotificationVisual(
         : "border-sand bg-paper/62",
     };
   }
-  if (type === "INVENTORY_TICKET_RECEIVED") {
+  if (
+    type === "INVENTORY_TICKET_RECEIVED" ||
+    type === "INVENTORY_TICKET_ACCESS_INVITED"
+  ) {
     return {
       icon: TicketCheck,
       iconClassName: isUnread ? "bg-forest text-paper" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
   if (type.startsWith("AA_")) {
@@ -1250,12 +1361,16 @@ function NotificationCard({
     notification.type === "FRIEND_REQUEST"
       ? Boolean(notification.actor)
       : Boolean(notification.activity) ||
-        Boolean(notification.nowInvite) ||
         notification.type === "REPORT_CREATED" ||
         notification.type === "DIRECT_MESSAGE" ||
         notification.type === "PLANET_JOIN_REQUEST" ||
         notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "INVENTORY_TICKET_RECEIVED" ||
+        notification.type === "INVENTORY_TICKET_ACCESS_INVITED" ||
+        (isMerchantReservationNotice(notification.type) &&
+          Boolean(notification.merchantBooking)) ||
+        (notification.type.startsWith("MERCHANT_BOOKING_") &&
+          Boolean(notification.residencySlot || notification.activity)) ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||

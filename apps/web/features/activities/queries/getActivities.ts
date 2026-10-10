@@ -1,3 +1,7 @@
+import {
+  getPersistentBookingActivityWhere,
+  mergePersistentBookingActivities,
+} from "../utils/persistentBookingActivity";
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -128,6 +132,8 @@ function getNullableStringContainsWhere(
 
 export const activityCardSelect = {
   id: true,
+  isPersistent: true,
+  lastBookingAt: true,
   title: true,
   description: true,
   type: true,
@@ -272,6 +278,9 @@ const publicEventCardSelect = {
 
 const activityAgendaIndexSelect = {
   id: true,
+  isPersistent: true,
+  createdAt: true,
+  lastBookingAt: true,
   title: true,
   city: true,
   address: true,
@@ -693,6 +702,9 @@ type RankedActivityCard = {
 };
 
 type AgendaIndexItem = {
+  isPersistent?: boolean;
+  createdAt?: Date;
+  lastBookingAt?: Date | null;
   endAt: Date | null;
   id: string;
   kind: "activity" | "publicEvent";
@@ -705,7 +717,8 @@ export function getVisibleActivityWhere(
   const now = options.now ?? getActivityFloatingNow();
   const todayStart = getActivityFloatingDayStart(now);
 
-  return {
+  const ordinary: Prisma.ActivityWhereInput = {
+    isPersistent: false,
     ...(options.includePast
       ? {}
       : {
@@ -750,6 +763,9 @@ export function getVisibleActivityWhere(
       status: "ACTIVE",
     },
   };
+  if (options.visibility && !options.visibility.includes("PUBLIC"))
+    return ordinary;
+  return { OR: [ordinary, getPersistentBookingActivityWhere()] };
 }
 
 function getVisiblePublicEventWhere(
@@ -979,7 +995,10 @@ export function isLegacyActivityInfoSource(activity: {
   importedAt?: Date | string | null;
   sourcePayload?: unknown;
 }) {
-  if (activity.source === AUTO_CREATED_TEAM_SOURCE) {
+  if (
+    activity.source === AUTO_CREATED_TEAM_SOURCE ||
+    activity.source === "MERCHANT_BOOKING"
+  ) {
     return false;
   }
 
@@ -1090,7 +1109,7 @@ function filterDuplicateLegacyActivityInfoRows<
   });
 }
 
-export function getActivityTimeStateWhere(
+function getOrdinaryActivityTimeStateWhere(
   timeState: ActivityTimeState,
   now = getActivityFloatingNow(),
 ): Prisma.ActivityWhereInput {
@@ -1170,6 +1189,21 @@ export function getActivityTimeStateWhere(
       },
     ],
   };
+}
+
+export function getActivityTimeStateWhere(
+  timeState: ActivityTimeState,
+  now = getActivityFloatingNow(),
+): Prisma.ActivityWhereInput {
+  const ordinary = {
+    AND: [
+      { isPersistent: false },
+      getOrdinaryActivityTimeStateWhere(timeState, now),
+    ],
+  };
+  return timeState === "ONGOING"
+    ? { OR: [ordinary, getPersistentBookingActivityWhere()] }
+    : ordinary;
 }
 
 function getActivityDateRangeBounds(
@@ -1368,6 +1402,9 @@ export function getActivityCardViewModel(
         }
       : null,
     id: activity.id,
+    isPersistent: activity.isPersistent,
+    lastBookingAt: toIsoString(activity.lastBookingAt),
+    createdAt: toIsoString(activity.createdAt) ?? undefined,
     title: activity.title,
     description: activity.description,
     type: isActivityInfo ? "PUBLIC_EVENT" : activity.type,
@@ -1460,6 +1497,9 @@ function getActivityAgendaIndexItem(
   activity: ActivityAgendaIndexResult,
 ): AgendaIndexItem {
   return {
+    isPersistent: activity.isPersistent,
+    createdAt: activity.createdAt,
+    lastBookingAt: activity.lastBookingAt,
     endAt: activity.endAt,
     id: activity.id,
     kind: "activity",
@@ -1883,8 +1923,18 @@ async function sortRankedActivitiesWithPriority(
     right: RankedActivityCard,
   ) => number,
 ) {
+  const mergeBookingSpaces = (items: RankedActivityCard[]) =>
+    mergePersistentBookingActivities(
+      items.map((item) => ({
+        id: item.card.id,
+        isPersistent: item.card.isPersistent,
+        createdAt: item.createdAt,
+        lastBookingAt: item.card.lastBookingAt,
+        value: item,
+      })),
+    ).map((item) => item.value);
   if (!shouldApplyActivityPriorityRanking(filters)) {
-    return [...rankedActivities].sort(fallbackCompare);
+    return mergeBookingSpaces([...rankedActivities].sort(fallbackCompare));
   }
 
   const priorityOverrides = await getActivityPriorityOverrideMap(
@@ -1893,16 +1943,18 @@ async function sortRankedActivitiesWithPriority(
     ),
   );
 
-  return [...rankedActivities].sort((left, right) => {
-    const priorityDiff = compareActivityPriorityCards(
-      priorityOverrides,
-      now,
-      left,
-      right,
-    );
+  return mergeBookingSpaces(
+    [...rankedActivities].sort((left, right) => {
+      const priorityDiff = compareActivityPriorityCards(
+        priorityOverrides,
+        now,
+        left,
+        right,
+      );
 
-    return priorityDiff || fallbackCompare(left, right);
-  });
+      return priorityDiff || fallbackCompare(left, right);
+    }),
+  );
 }
 
 function mergeActivityQueryResultsById(
@@ -1959,7 +2011,7 @@ async function addActivePriorityCandidates({
     .map((target) => target.targetId);
   const [priorityActivities, priorityPublicEvents] = await Promise.all([
     priorityActivityIds.length > 0
-      ? prisma.activity.findMany({
+      ? findDiscoveryActivityCards({
           select: activityCardSelect,
           where: {
             AND: [
@@ -2032,6 +2084,7 @@ function getAgendaIndexDateKey(item: AgendaIndexItem, value: Date | string) {
 }
 
 function isLongRunningAgendaIndexItem(item: AgendaIndexItem) {
+  if (item.isPersistent) return true;
   return Boolean(
     item.endAt &&
     getAgendaIndexDateKey(item, item.startAt) !==
@@ -2170,7 +2223,7 @@ export async function getActivities(
         }
       : null;
   const [baseActivities, basePublicEvents] = await Promise.all([
-    prisma.activity.findMany({
+    findDiscoveryActivityCards({
       where: activityWhere,
       orderBy,
       take: limit,
@@ -2578,7 +2631,7 @@ async function getAgendaActivityList(
   );
   const [activities, publicEvents] = await Promise.all([
     selectedActivityIds.length > 0
-      ? prisma.activity.findMany({
+      ? findDiscoveryActivityCards({
           where: {
             id: {
               in: selectedActivityIds,
@@ -2651,7 +2704,7 @@ async function getOrderedActivityList(
     ? totalCount
     : page * pageSize;
   const [baseActivities, basePublicEvents] = await Promise.all([
-    prisma.activity.findMany({
+    findDiscoveryActivityCards({
       where,
       orderBy: getActivityListOrderBy(filters),
       take: readLimit,
@@ -2709,15 +2762,9 @@ function getRecommendedActivityRank(
 ) {
   const startAt = new Date(rankedActivity.card.startAt);
   const endAt = getActivityEndBoundary(rankedActivity.card);
-  const comparisonNow = getRankedActivityReferenceNow(
-    rankedActivity.card,
-    now,
-  );
+  const comparisonNow = getRankedActivityReferenceNow(rankedActivity.card, now);
   const isActive = visibleActivityStatusSet.has(rankedActivity.card.status);
-  const freshOngoingBoundary = addDays(
-    comparisonNow,
-    -freshOngoingWindowDays,
-  );
+  const freshOngoingBoundary = addDays(comparisonNow, -freshOngoingWindowDays);
   const endingSoonBoundary = addDays(comparisonNow, endingSoonWindowDays);
   const upcomingSoonBoundary = addDays(comparisonNow, upcomingSoonWindowDays);
   const upcomingWeekBoundary = addDays(comparisonNow, upcomingWeekWindowDays);
@@ -2826,7 +2873,7 @@ async function getRecommendedActivityList(
   }
 
   const [activities, publicEvents] = await Promise.all([
-    prisma.activity.findMany({
+    findDiscoveryActivityCards({
       where,
       select: activityCardSelect,
     }),
@@ -2930,7 +2977,7 @@ async function getPublicInfoOnlyActivityList(
     : page * pageSize + 1;
   const [baseActivities, basePublicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
-      prisma.activity.findMany({
+      findDiscoveryActivityCards({
         where: activityWhere,
         orderBy: getActivityListOrderBy(publicInfoFilters),
         take: readLimit,
@@ -3148,3 +3195,42 @@ const getCachedPublicInfoActivityFilterOptions = unstable_cache(
   ["activity-filter-options-public-info"],
   { revalidate: 300 },
 );
+
+/** Sort the complete lightweight index so recurring spaces keep stable mixed pagination. */
+export async function findDiscoveryActivityCards(args: {
+  where?: Prisma.ActivityWhereInput;
+  orderBy?:
+    | Prisma.ActivityOrderByWithRelationInput
+    | Prisma.ActivityOrderByWithRelationInput[];
+  skip?: number;
+  take?: number;
+  select: typeof activityCardSelect;
+}) {
+  const index = await prisma.activity.findMany({
+    where: args.where,
+    orderBy: args.orderBy,
+    select: {
+      id: true,
+      isPersistent: true,
+      lastBookingAt: true,
+      createdAt: true,
+    },
+  });
+  const offset = args.skip ?? 0;
+  const selected = mergePersistentBookingActivities(index).slice(
+    offset,
+    args.take === undefined ? undefined : offset + args.take,
+  );
+  if (!selected.length) return [];
+  const rows = await prisma.activity.findMany({
+    where: {
+      AND: [args.where ?? {}, { id: { in: selected.map((item) => item.id) } }],
+    },
+    select: activityCardSelect,
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return selected.flatMap((item) => {
+    const row = byId.get(item.id);
+    return row ? [row] : [];
+  });
+}

@@ -1,4 +1,4 @@
-import type { NotificationType, Prisma } from "@prisma/client";
+import { NotificationType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const notificationCenterExcludedTypes = [
@@ -11,6 +11,16 @@ export const notificationCenterExcludedTypes = [
   "ACTIVITY_ROOM_MESSAGE",
 ] satisfies NotificationType[];
 
+const excludedNotificationTypes = new Set<NotificationType>(
+  notificationCenterExcludedTypes,
+);
+
+// A rollback can leave newer enum values (and rows) in the database. Filter
+// before Prisma decodes the result, so unsupported types cannot break the page.
+export const notificationCenterVisibleTypes = Object.values(
+  NotificationType,
+).filter((type) => !excludedNotificationTypes.has(type));
+
 export function getVisibleNotificationWhere(
   where: Prisma.NotificationWhereInput = {},
 ): Prisma.NotificationWhereInput {
@@ -19,7 +29,7 @@ export function getVisibleNotificationWhere(
       where,
       {
         type: {
-          notIn: notificationCenterExcludedTypes,
+          in: notificationCenterVisibleTypes,
         },
       },
     ],
@@ -28,6 +38,7 @@ export function getVisibleNotificationWhere(
 
 const notificationSelect = {
   id: true,
+  recipientId: true,
   aaTransactionId: true,
   type: true,
   readAt: true,
@@ -46,8 +57,26 @@ const notificationSelect = {
       title: true,
     },
   },
-  nowInvite: {
-    select: { id: true, title: true },
+  merchantBooking: {
+    select: {
+      id: true,
+      profileId: true,
+      date: true,
+      partySize: true,
+      settings: { select: { merchant: { select: { name: true } } } },
+    },
+  },
+  residencySlot: {
+    select: {
+      id: true,
+      title: true,
+      date: true,
+      merchantId: true,
+      rejectionReason: true,
+      activity: {
+        select: { startAt: true, address: true },
+      },
+    },
   },
   activityAnnouncement: {
     select: {
@@ -115,6 +144,13 @@ type NotificationQueryResult = Prisma.NotificationGetPayload<{
 
 export type NotificationViewModel = {
   id: string;
+  merchantBooking: {
+    id: string;
+    date: string;
+    partySize: number;
+    merchantName: string;
+    forCustomer: boolean;
+  } | null;
   aaTransactionId: string | null;
   type: NotificationType;
   readAt: string | null;
@@ -131,7 +167,14 @@ export type NotificationViewModel = {
     id: string;
     title: string;
   } | null;
-  nowInvite: { id: string; title: string } | null;
+  residencySlot: {
+    id: string;
+    title: string;
+    date: string;
+    merchantId: string;
+    rejectionReason: string | null;
+    activity: { startAt: string; address: string } | null;
+  } | null;
   activityAnnouncement: {
     id: string;
     content: string;
@@ -182,6 +225,16 @@ function mapNotification(
 ): NotificationViewModel {
   return {
     id: notification.id,
+    merchantBooking: notification.merchantBooking
+      ? {
+          id: notification.merchantBooking.id,
+          date: notification.merchantBooking.date.toISOString().slice(0, 10),
+          partySize: notification.merchantBooking.partySize,
+          merchantName: notification.merchantBooking.settings.merchant.name,
+          forCustomer:
+            notification.merchantBooking.profileId === notification.recipientId,
+        }
+      : null,
     aaTransactionId: notification.aaTransactionId,
     type: notification.type,
     readAt: notification.readAt?.toISOString() ?? null,
@@ -197,7 +250,22 @@ function mapNotification(
           title: notification.activity.title,
         }
       : null,
-    nowInvite: notification.nowInvite,
+    residencySlot: notification.residencySlot
+      ? {
+          id: notification.residencySlot.id,
+          title: notification.residencySlot.title,
+          date: notification.residencySlot.date.toISOString().slice(0, 10),
+          merchantId: notification.residencySlot.merchantId,
+          rejectionReason: notification.residencySlot.rejectionReason,
+          activity: notification.residencySlot.activity
+            ? {
+                startAt:
+                  notification.residencySlot.activity.startAt.toISOString(),
+                address: notification.residencySlot.activity.address,
+              }
+            : null,
+        }
+      : null,
     activityAnnouncement: notification.activityAnnouncement
       ? {
           id: notification.activityAnnouncement.id,
@@ -235,11 +303,11 @@ export async function getUnreadNotificationCount(profileId: string) {
 }
 
 export async function getUnreadInventoryTicketGiftCount(profileId: string) {
-  return prisma.notification.count({
+  return prisma.inventoryItem.count({
     where: {
-      recipientId: profileId,
-      readAt: null,
-      type: "INVENTORY_TICKET_RECEIVED",
+      bagSeenAt: null,
+      definition: { kind: "EVENT_TICKET" },
+      ownerProfileId: profileId,
     },
   });
 }

@@ -1,3 +1,6 @@
+import { getPublicBookingSpaceByActivity } from "@/features/merchants/bookings/queries";
+import { PersistentBookingPage } from "@/features/merchants/bookings/components/PersistentBookingPage";
+import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -228,12 +231,7 @@ function ActivityLayerHeader({
 }
 
 type DetailViewerParticipationStatus =
-  | "JOINED"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "CANCELLED"
-  | null;
+  "JOINED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
 
 const participantAvatarTones = [
   "bg-coral text-white",
@@ -708,6 +706,25 @@ export async function generateActivityDetailMetadata(
 ): Promise<Metadata> {
   const { locale, activityId } = await params;
   const { access: accessToken } = await searchParams;
+  const bookingSpace = await getPublicBookingSpaceByActivity(activityId);
+  if (bookingSpace) {
+    const title = bookingSpace.settings.title;
+    const description = `${getPersistentBookingCopy(locale).kind} · ${bookingSpace.merchant.name} — ${bookingSpace.settings.description}`;
+    const url = buildCanonicalUrl(
+      getCanonicalMetadataBaseUrl(),
+      withLocale(locale, getActivityDetailPath(activityId)),
+    );
+    const images = bookingSpace.settings.coverImageUrl
+      ? [bookingSpace.settings.coverImageUrl]
+      : [];
+    return {
+      title,
+      description,
+      alternates: { canonical: url },
+      openGraph: { title, description, url, images },
+      twitter: { card: "summary_large_image", title, description, images },
+    };
+  }
   const baseUrl = getCanonicalMetadataBaseUrl();
   const fallbackActivityPath = withLocale(
     locale,
@@ -825,6 +842,34 @@ export async function ActivityDetailPageContent({
     ),
     perf.measure("activity.viewerAdmin", () => isCurrentUserAdmin()),
   ]);
+  const bookingSpace = await getPublicBookingSpaceByActivity(
+    activityId,
+    viewerProfile?.id,
+  );
+  if (bookingSpace) {
+    const owner = viewerProfile
+      ? await prisma.merchant.findFirst({
+          where: {
+            id: bookingSpace.merchant.id,
+            ownerProfileId: viewerProfile.id,
+          },
+          select: { id: true },
+        })
+      : null;
+    return (
+      <PersistentBookingPage
+        data={bookingSpace}
+        locale={locale}
+        isAuthenticated={Boolean(viewerProfile)}
+        isMerchantOwner={Boolean(owner)}
+        viewerName={viewerProfile?.nickname}
+        signInHref={withLocale(
+          locale,
+          `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, getActivityDetailPath(activityId)))}`,
+        )}
+      />
+    );
+  }
   const [viewerFriendIds, viewerFollowedProfileIds]: [string[], string[]] =
     viewerProfile?.id
       ? await perf.measure("activity.viewerRelations", () =>
@@ -848,7 +893,7 @@ export async function ActivityDetailPageContent({
     ),
   ]);
 
-  if (!activity) {
+  if (!activity || activity.isPersistent) {
     notFound();
   }
 
@@ -1896,6 +1941,7 @@ export async function ActivityDetailPageContent({
             </ActivityShareDialogButton>
           }
           backHref={withLocale(locale, "/lobby")}
+          returnMode="path"
           title={mobileDetailTitle}
         />
       )}

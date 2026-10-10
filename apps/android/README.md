@@ -38,6 +38,12 @@ The project uses:
 - Compile SDK: `36`
 - Min SDK: `26`
 - Java: `17`
+- Android Gradle Plugin: `9.0.1` (built-in Kotlin)
+- Gradle wrapper: `9.1.0`
+
+Use an Android Studio version compatible with AGP 9.0. Run builds through
+`./gradlew` so the checked-in Gradle version and checksum are used. Release builds
+enable R8 code optimization and AGP 9's optimized resource shrinking.
 
 ## Android Language Strategy
 

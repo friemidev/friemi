@@ -21,7 +21,6 @@ type StartDirectConversationButtonProps = {
   hideIcon?: boolean;
   label?: string;
   locale: string;
-  nowInviteId?: string;
   peerProfileId: string;
   redirectPath: string;
 };
@@ -59,7 +58,7 @@ function SubmitButton({
         <MessageCircle className="h-4 w-4 shrink-0" />
       )}
       <span className="truncate">
-        {pending ? t.openingConversation : (children ?? label)}
+        {pending ? t.openingConversation : children ?? label}
       </span>
     </button>
   );
@@ -73,7 +72,6 @@ export function StartDirectConversationButton({
   hideIcon = false,
   label,
   locale,
-  nowInviteId,
   peerProfileId,
   redirectPath,
 }: StartDirectConversationButtonProps) {
@@ -87,14 +85,9 @@ export function StartDirectConversationButton({
 
   useEffect(() => {
     if (state.ok && state.conversationId) {
-      const query = nowInviteId
-        ? `?nowId=${encodeURIComponent(nowInviteId)}`
-        : "";
-      router.push(
-        withLocale(locale, `/messages/${state.conversationId}${query}`),
-      );
+      router.push(withLocale(locale, `/messages/${state.conversationId}`));
     }
-  }, [locale, nowInviteId, router, state.conversationId, state.ok]);
+  }, [locale, router, state.conversationId, state.ok]);
 
   return (
     <form
@@ -104,9 +97,6 @@ export function StartDirectConversationButton({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="friendProfileId" type="hidden" value={peerProfileId} />
-      {nowInviteId ? (
-        <input name="nowInviteId" type="hidden" value={nowInviteId} />
-      ) : null}
       <input name="redirectPath" type="hidden" value={redirectPath} />
       <SubmitButton
         buttonClassName={buttonClassName}

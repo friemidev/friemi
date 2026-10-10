@@ -8,6 +8,7 @@ import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   BadgeCheck,
+  CalendarDays,
   ChevronRight,
   Copy,
   Crown,
@@ -24,6 +25,7 @@ import {
   MoreHorizontal,
   Package,
   PencilLine,
+  ScanLine,
   Settings,
   Share2,
   ShieldCheck,
@@ -38,6 +40,7 @@ import {
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { getTicketRedemptionCopy } from "@/features/inventory/ticketRedemptionCopy";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ProfileQrScanner } from "@/features/coupons/components/CouponRedemptionScanner";
 import {
@@ -100,6 +103,7 @@ import type {
 } from "../queries/getProfileDashboard";
 
 type ProfileDashboardViewProps = {
+  hasBookingHistory?: boolean;
   dashboard: ProfileDashboardViewModel;
   hasDashboardError?: boolean;
   isAuthenticated?: boolean;
@@ -107,6 +111,7 @@ type ProfileDashboardViewProps = {
   isSelf?: boolean;
   locale: string;
   merchantHref?: string | null;
+  ticketWorkbenchHref?: string | null;
   profile: PublicProfileViewModel;
   achievementPreviewItems?: PublicAchievementWallItem[];
   publicAchievements?: PublicAchievementWallItem[];
@@ -347,6 +352,8 @@ function getMobileProfileCopy(locale: string) {
       addFriend: "Suivre",
       available: "Ouvert",
       bag: "Sac",
+      bookings: "Mes réservations",
+      bookingsHint: "Demandes et confirmations des boutiques",
       charm: "Aura",
       charmLevelsClose: "Compris",
       charmLevelsCurrent: "Niveau actuel",
@@ -370,6 +377,8 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       store: "Gestion boutique",
+      ticketWorkbench: "Contrôle des billets",
+      ticketWorkbenchHint: "Vérifier les billets autorisés",
       myHangouts: "Mes sorties",
       myHangoutsCreated: "Créées",
       myHangoutsJoined: "Rejointes",
@@ -413,6 +422,8 @@ function getMobileProfileCopy(locale: string) {
       addFriend: "Follow",
       available: "Open",
       bag: "Bag",
+      bookings: "My bookings",
+      bookingsHint: "Booking requests and store confirmations",
       charm: "Charm",
       charmLevelsClose: "Got it",
       charmLevelsCurrent: "Current level",
@@ -436,6 +447,8 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       store: "Manage store",
+      ticketWorkbench: "Ticket check-in",
+      ticketWorkbenchHint: "Check assigned tickets",
       myHangouts: "My Hangouts",
       myHangoutsCreated: "Created",
       myHangoutsJoined: "Joined",
@@ -478,6 +491,8 @@ function getMobileProfileCopy(locale: string) {
     addFriend: "关注",
     available: "可进入",
     bag: "背包",
+    bookings: "我的预约",
+    bookingsHint: "查看预约和门店确认结果",
     charm: "魅力值",
     charmLevelsClose: "知道了",
     charmLevelsCurrent: "当前等级",
@@ -501,6 +516,8 @@ function getMobileProfileCopy(locale: string) {
     message: "发消息",
     moments: "足迹",
     store: "管理门店",
+    ticketWorkbench: "核销工作台",
+    ticketWorkbenchHint: "查验已授权票券",
     myHangouts: "我的聚吧",
     myHangoutsCreated: "我发起的",
     myHangoutsJoined: "我参与的",
@@ -3109,21 +3126,75 @@ function MobileProfileAvatarSubmitButton({
   );
 }
 
+function StoreBookingsEntry({
+  className,
+  locale,
+  hasBookingHistory,
+}: {
+  className?: string;
+  locale: string;
+  hasBookingHistory: boolean;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  const { unreadBookingCount } = useNotificationBadge();
+  const [hasBooked, setHasBooked] = useState(hasBookingHistory);
+  useEffect(() => {
+    if (hasBookingHistory || unreadBookingCount > 0) setHasBooked(true);
+  }, [hasBookingHistory, unreadBookingCount]);
+  if (!hasBooked && !hasBookingHistory && unreadBookingCount === 0) return null;
+  return (
+    <Link
+      aria-label={
+        unreadBookingCount > 0
+          ? `${copy.bookings}: ${getBookingCopy(locale).unreadBookings}`
+          : undefined
+      }
+      className={cn(
+        "relative flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest",
+        className,
+      )}
+      href={withLocale(locale, "/profile/bookings")}
+    >
+      {unreadBookingCount > 0 ? (
+        <span
+          aria-hidden="true"
+          data-testid="booking-entry-unread-dot"
+          className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-white"
+        />
+      ) : null}
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white">
+        <CalendarDays aria-hidden="true" className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{copy.bookings}</span>
+        <span className="mt-0.5 block text-xs text-ink/70">
+          {copy.bookingsHint}
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+    </Link>
+  );
+}
+
 function SelfMobileProfileHome({
+  hasBookingHistory,
   achievementPreviewItems,
   dashboard,
   locale,
   merchantHref,
+  ticketWorkbenchHref,
   onPresenceStatusChange,
   presenceStatus,
   profile,
   profileInitial,
   publicAchievements,
 }: {
+  hasBookingHistory: boolean;
   achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
   merchantHref?: string | null;
+  ticketWorkbenchHref?: string | null;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
   presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
@@ -3306,6 +3377,32 @@ function SelfMobileProfileHome({
         />
       </section>
 
+      <StoreBookingsEntry
+        className="mt-5"
+        locale={locale}
+        hasBookingHistory={hasBookingHistory}
+      />
+
+      {ticketWorkbenchHref ? (
+        <Link
+          className="mt-5 flex min-h-16 items-center gap-3 rounded-2xl bg-fog px-4 py-3 text-forest transition active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          href={ticketWorkbenchHref}
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white">
+            <ScanLine aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">
+              {copy.ticketWorkbench}
+            </span>
+            <span className="mt-0.5 block text-xs text-ink/70">
+              {copy.ticketWorkbenchHint}
+            </span>
+          </span>
+          <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+        </Link>
+      ) : null}
+
       <ProfilePreviewTabs
         achievementPreviewItems={achievementPreviewItems}
         dashboard={dashboard}
@@ -3375,6 +3472,7 @@ function WerewolfStatsPanel({
 }
 
 export function ProfileDashboardView({
+  hasBookingHistory = false,
   achievementPreviewItems = [],
   dashboard,
   hasDashboardError = false,
@@ -3383,9 +3481,14 @@ export function ProfileDashboardView({
   isSelf = false,
   locale,
   merchantHref = null,
+  ticketWorkbenchHref = null,
   profile,
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
+  const { refreshUnreadBookingCount } = useNotificationBadge();
+  useEffect(() => {
+    if (isSelf) void refreshUnreadBookingCount();
+  }, [isSelf, refreshUnreadBookingCount]);
   const t = getCopy(locale);
   const mobileCopy = getMobileProfileCopy(locale);
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
@@ -3437,10 +3540,12 @@ export function ProfileDashboardView({
       <div className="friemi-native-app-mobile-only md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
+            hasBookingHistory={hasBookingHistory}
             achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
             merchantHref={merchantHref}
+            ticketWorkbenchHref={ticketWorkbenchHref}
             onPresenceStatusChange={setCurrentPresenceStatus}
             presenceStatus={currentPresenceStatus}
             profile={profile}
@@ -3530,6 +3635,16 @@ export function ProfileDashboardView({
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
+                {ticketWorkbenchHref ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-fog px-4 text-sm font-semibold text-forest transition hover:bg-sand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                    href={ticketWorkbenchHref}
+                  >
+                    <ScanLine aria-hidden="true" className="h-4 w-4" />
+                    {mobileCopy.ticketWorkbench}
+                    <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                ) : null}
                 {merchantHref ? (
                   <Link
                     className="inline-flex min-h-11 items-center justify-center gap-2 self-end rounded-xl bg-forest px-4 text-sm font-semibold text-paper transition hover:bg-forest/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
@@ -3540,6 +3655,10 @@ export function ProfileDashboardView({
                     <ChevronRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
                 ) : null}
+                <StoreBookingsEntry
+                  locale={locale}
+                  hasBookingHistory={hasBookingHistory}
+                />
                 <ProfileOverviewPanel
                   activeActivitySection={activeProfileSection}
                   createdCount={dashboard.createdActivityCount}

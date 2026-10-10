@@ -16,6 +16,9 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 import { withLocale } from "@/lib/routes";
 import { isMobileViewportRequest } from "@/lib/mobile-root-lobby-entry";
 import { prisma } from "@/lib/prisma";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
+import { hasTicketWorkbenchAccess } from "@/features/inventory/services/ticketAccessService";
+import { getBookingEntryState } from "@/features/merchants/bookings/bookingBadge";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -130,7 +133,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const profile = await getOptionalCurrentUserProfileSnapshot();
   const isMobileRequest = isMobileViewportRequest(await headers());
-  const [dashboardResult, publicAchievements, ownedMerchant] = profile
+  const [
+    dashboardResult,
+    publicAchievements,
+    ownedMerchant,
+    hasWorkbenchAccess,
+    bookingEntryState,
+  ] = profile
     ? await Promise.all([
         getProfileDashboard(profile.id, {
           loadActivityPreview: !isMobileRequest,
@@ -157,6 +166,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           },
           select: { id: true },
         }),
+        isCurrentUserAdmin().then((isAdmin) =>
+          hasTicketWorkbenchAccess({ actorProfileId: profile.id, isAdmin }),
+        ),
+        getBookingEntryState(profile.id),
       ])
     : [
         {
@@ -165,6 +178,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         },
         [],
         null,
+        false,
+        { hasBookingHistory: false, unreadBookingCount: 0 },
       ];
   const isAuthenticated = Boolean(profile);
   const profilePresence = profile
@@ -195,6 +210,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
       <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
+        hasBookingHistory={bookingEntryState.hasBookingHistory}
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}
         isAuthenticated={isAuthenticated}
@@ -203,6 +219,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         locale={locale}
         merchantHref={
           ownedMerchant ? withLocale(locale, "/profile/store") : null
+        }
+        ticketWorkbenchHref={
+          hasWorkbenchAccess
+            ? withLocale(locale, "/profile/ticket-workbench")
+            : null
         }
         profile={profileViewModel}
         achievementPreviewItems={[]}

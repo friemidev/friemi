@@ -18,6 +18,7 @@ type AdminItemCopy = {
       total: number,
     ) => string;
     ticketType: string;
+    independent: string;
     giftable: string;
     paused: string;
     remaining: (remaining: number, total: number) => string;
@@ -52,6 +53,8 @@ type AdminItemCopy = {
     settingsHint: string;
     historyLabel: string;
     historyHint: string;
+    accessLabel: string;
+    accessHint: string;
     redeemLabel: string;
     redeemHint: string;
   };
@@ -72,6 +75,21 @@ type AdminItemCopy = {
   newItem: {
     pageTitle: string;
   };
+  access: {
+    pageTitle: string;
+    merchantTitle: string;
+    merchantHint: string;
+    changeWarning: string;
+    saveMerchant: string;
+    merchantSaved: string;
+    merchantFailed: string;
+    managersLabel: string;
+    managersHint: string;
+    staffLabel: string;
+    staffHint: string;
+    redemptionsLabel: string;
+    redemptionsHint: string;
+  };
   image: {
     tooLarge: string;
     unsupportedType: string;
@@ -89,6 +107,9 @@ type AdminItemCopy = {
     hint: string;
   };
   form: {
+    merchantLabel: string;
+    merchantNone: string;
+    merchantHint: string;
     optionalImage: string;
     saveImage: string;
     imageUpdated: string;
@@ -113,6 +134,7 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       resultRange: (query, start, end, total) =>
         `${query ? `“${query}”的搜索结果：` : ""}第 ${start}–${end} 件，共 ${total} 件票券`,
       ticketType: "票券物品",
+      independent: "独立票券",
       giftable: "允许赠送",
       paused: "暂停赠送",
       remaining: (remaining, total) => `待分配 ${remaining} / 总量 ${total}`,
@@ -147,6 +169,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       settingsHint: "上传背包展示图，管理是否允许持有人赠送。",
       historyLabel: "分配与赠送记录",
       historyHint: "分别查看管理员分配和账户间赠送的历史。",
+      accessLabel: "门店与核销权限",
+      accessHint: "关联门店，指定票券负责人并管理核销权限。",
       redeemLabel: "入场核销",
       redeemHint: "扫描持票人的二维码，确认后核销单张票券。",
     },
@@ -165,6 +189,21 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       soldOutHint: "这一批物品已全部分配。",
     },
     newItem: { pageTitle: "新建票券物品" },
+    access: {
+      pageTitle: "门店与核销权限",
+      merchantTitle: "票券归属",
+      merchantHint: "只可关联一个门店。未关联门店的票券由指定负责人管理。",
+      changeWarning: "更换或移除门店会撤销现有核销授权，历史记录仍会保留。",
+      saveMerchant: "保存门店归属",
+      merchantSaved: "门店归属已更新。",
+      merchantFailed: "无法更新，请核对门店后重试。",
+      managersLabel: "票券负责人",
+      managersHint: "指定可管理这类票券核销人员的账号。",
+      staffLabel: "核销人员",
+      staffHint: "查看邀请状态与核销权限。",
+      redemptionsLabel: "核销记录",
+      redemptionsHint: "按时间查看每一张已核销的票。",
+    },
     image: {
       tooLarge: "图片不能超过 10 MB，请选择更小的文件。",
       unsupportedType: "不支持这种图片格式，请换一张 JPG、PNG 或 WebP 图片。",
@@ -182,6 +221,9 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       hint: "建议使用 JPG、PNG 或 WebP，文件不超过 10 MB。保存后将在背包中展示。",
     },
     form: {
+      merchantLabel: "关联门店（可选）",
+      merchantNone: "独立票券，不关联门店",
+      merchantHint: "关联后，门店负责人可管理这类票的核销人员与记录。",
       optionalImage: "物品图片（可选）",
       saveImage: "保存图片",
       imageUpdated: "物品图片已更新。",
@@ -205,6 +247,7 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       resultRange: (query, start, end, total) =>
         `${query ? `Results for “${query}”: ` : ""}${start}–${end} of ${total} tickets`,
       ticketType: "Ticket item",
+      independent: "Independent ticket",
       giftable: "Gifting allowed",
       paused: "Gifting paused",
       remaining: (remaining, total) =>
@@ -245,6 +288,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       historyLabel: "Allocation and gift history",
       historyHint:
         "View admin allocations and gifts between accounts separately.",
+      accessLabel: "Store and check-in access",
+      accessHint: "Link a store and manage ticket managers and check-in access.",
       redeemLabel: "Check in tickets",
       redeemHint: "Scan a guest's ticket QR code and confirm one ticket at a time.",
     },
@@ -264,6 +309,21 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       soldOutHint: "All items in this batch have been allocated.",
     },
     newItem: { pageTitle: "Create ticket item" },
+    access: {
+      pageTitle: "Store and check-in access",
+      merchantTitle: "Ticket owner",
+      merchantHint: "Link one store, or assign a manager for an independent ticket.",
+      changeWarning: "Changing or removing the store revokes current check-in access. History remains.",
+      saveMerchant: "Save linked store",
+      merchantSaved: "Linked store updated.",
+      merchantFailed: "Could not update the store. Check the selection and try again.",
+      managersLabel: "Ticket managers",
+      managersHint: "Assign accounts that can manage check-in staff for this ticket.",
+      staffLabel: "Check-in staff",
+      staffHint: "Review invitations and check-in access.",
+      redemptionsLabel: "Check-in history",
+      redemptionsHint: "Review each checked-in ticket in time order.",
+    },
     image: {
       tooLarge: "Images must be 10 MB or smaller. Choose a smaller file.",
       unsupportedType:
@@ -284,6 +344,9 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       hint: "JPG, PNG, or WebP is recommended, up to 10 MB. The saved image will appear in bags.",
     },
     form: {
+      merchantLabel: "Linked store (optional)",
+      merchantNone: "Independent ticket, no store",
+      merchantHint: "The store owner can manage check-in staff and records for this ticket.",
       optionalImage: "Item image (optional)",
       saveImage: "Save image",
       imageUpdated: "Item image updated.",
@@ -307,6 +370,7 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       resultRange: (query, start, end, total) =>
         `${query ? `Résultats pour « ${query} » : ` : ""}${start}–${end} sur ${total} billets`,
       ticketType: "Billet",
+      independent: "Billet indépendant",
       giftable: "Cadeau autorisé",
       paused: "Cadeau suspendu",
       remaining: (remaining, total) =>
@@ -348,6 +412,8 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       historyLabel: "Historique des attributions et cadeaux",
       historyHint:
         "Consultez séparément les attributions par l’administration et les cadeaux entre comptes.",
+      accessLabel: "Boutique et accès au contrôle",
+      accessHint: "Associer une boutique et gérer les responsables et contrôleurs.",
       redeemLabel: "Valider les billets",
       redeemHint: "Scannez le QR code d’un invité et confirmez un billet à la fois.",
     },
@@ -368,6 +434,21 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       soldOutHint: "Tous les billets de ce lot ont été attribués.",
     },
     newItem: { pageTitle: "Créer un billet" },
+    access: {
+      pageTitle: "Boutique et accès au contrôle",
+      merchantTitle: "Responsable du billet",
+      merchantHint: "Associez une seule boutique ou désignez un responsable indépendant.",
+      changeWarning: "Changer ou retirer la boutique révoque les accès actuels. L’historique reste conservé.",
+      saveMerchant: "Enregistrer la boutique",
+      merchantSaved: "Boutique associée mise à jour.",
+      merchantFailed: "Impossible de mettre la boutique à jour. Vérifiez votre choix.",
+      managersLabel: "Responsables du billet",
+      managersHint: "Désigner les comptes qui peuvent gérer les contrôleurs.",
+      staffLabel: "Équipe de contrôle",
+      staffHint: "Voir les invitations et les accès au contrôle.",
+      redemptionsLabel: "Historique des contrôles",
+      redemptionsHint: "Voir chaque billet contrôlé par ordre chronologique.",
+    },
     image: {
       tooLarge:
         "L’image doit faire 10 Mo maximum. Choisissez un fichier plus petit.",
@@ -390,6 +471,9 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       hint: "JPG, PNG ou WebP recommandé, 10 Mo maximum. L’image enregistrée apparaîtra dans les sacs.",
     },
     form: {
+      merchantLabel: "Boutique associée (facultatif)",
+      merchantNone: "Billet indépendant, sans boutique",
+      merchantHint: "Le responsable de la boutique pourra gérer le contrôle et son historique.",
       optionalImage: "Image de l’objet (facultative)",
       saveImage: "Enregistrer l’image",
       imageUpdated: "Image de l’objet mise à jour.",

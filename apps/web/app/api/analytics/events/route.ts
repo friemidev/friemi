@@ -119,14 +119,11 @@ async function acceptAnalyticsEvents(request: Request) {
   }
 
   const viewerProfileId = await getViewerProfileId();
-  const result = await trackAnalyticsEvents(
-    sampledEvents,
-    {
-      userProfileId: viewerProfileId,
-      referrer: request.headers.get("referer"),
-      userAgent: request.headers.get("user-agent"),
-    },
-  );
+  const result = await trackAnalyticsEvents(sampledEvents, {
+    userProfileId: viewerProfileId,
+    referrer: request.headers.get("referer"),
+    userAgent: request.headers.get("user-agent"),
+  });
 
   return NextResponse.json(
     {
@@ -140,6 +137,13 @@ async function acceptAnalyticsEvents(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.FRIEMI_DISABLE_ANALYTICS === "1") {
+    return NextResponse.json(
+      { ok: true, accepted: true, received: 0, stored: 0 },
+      { status: 202 },
+    );
+  }
+
   return withApiRequestMetrics(request, "/api/analytics/events", async () =>
     acceptAnalyticsEvents(request),
   );

@@ -1,5 +1,6 @@
 import {
   isWerewolfRoleKey,
+  normalizeWerewolfRoleKey,
   type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 
@@ -488,15 +489,31 @@ export function canUseWerewolfAntidote({
 }
 
 const godRoleKeys = new Set<WerewolfRoleKey>([
+  "bear",
   "cupid",
+  "dream_catcher",
+  "elder",
+  "fox",
+  "gravedigger",
   "guard",
   "hunter",
+  "hybrid",
   "idiot",
   "knight",
-  "lovers",
+  "little_girl",
+  "magician",
   "seer",
+  "silencing_elder",
+  "thief",
+  "wild_child",
   "witch",
 ]);
+
+function isWerewolfGodRoleKey(roleKey: string | null) {
+  const normalizedRoleKey = normalizeWerewolfRoleKey(roleKey);
+
+  return normalizedRoleKey !== null && godRoleKeys.has(normalizedRoleKey);
+}
 
 function normalizeSeatNumbers(value: unknown) {
   if (!Array.isArray(value)) {
@@ -920,7 +937,9 @@ export function getWerewolfFactionAlert({
 }): Omit<WerewolfFactionAlert, "id"> | null {
   const dead = new Set(deadSeatNumbers);
   const thirdParty = new Set(thirdPartySeatNumbers);
-  const players = seats.filter((seat) => isWerewolfRoleKey(seat.roleKey));
+  const players = seats.filter((seat) =>
+    normalizeWerewolfRoleKey(seat.roleKey),
+  );
   const thirdPartyPlayers = players.filter((seat) =>
     thirdParty.has(seat.seatNumber),
   );
@@ -957,14 +976,15 @@ export function getWerewolfFactionAlert({
       kind: "GODS_ELIMINATED",
       seats: nonThirdPartyPlayers.filter(
         (seat) =>
-          isWerewolfRoleKey(seat.roleKey) &&
-          godRoleKeys.has(seat.roleKey) &&
+          isWerewolfGodRoleKey(seat.roleKey) &&
           !(cupidFollowsWerewolves && seat.seatNumber === cupidSeatNumber),
       ),
     },
     {
       kind: "VILLAGERS_ELIMINATED",
-      seats: nonThirdPartyPlayers.filter((seat) => seat.roleKey === "villager"),
+      seats: nonThirdPartyPlayers.filter(
+        (seat) => normalizeWerewolfRoleKey(seat.roleKey) === "villager",
+      ),
     },
   ];
 
@@ -991,7 +1011,10 @@ export function getWerewolfSeerResult({
   seatNumber: number;
   thirdPartySeatNumbers: number[];
 }) {
-  if (thirdPartySeatNumbers.includes(seatNumber)) {
+  if (
+    thirdPartySeatNumbers.includes(seatNumber) ||
+    roleAlignment === "third_party"
+  ) {
     return "THIRD_PARTY" as const;
   }
 

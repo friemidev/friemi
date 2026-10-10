@@ -15,6 +15,7 @@ import {
   setTicketGiftable,
   updateInventoryDefinitionImage,
 } from "../services/inventoryService";
+import { setTicketMerchant } from "../services/ticketAccessService";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -25,6 +26,7 @@ const definitionSchema = z.object({
   description: z.string().trim().max(1200),
   imageUrl: z.string().trim().max(2048),
   isGiftable: z.boolean(),
+  merchantId: z.string().trim().max(64),
   title: z.string().trim().min(2).max(120),
   totalSupply: z.coerce.number().int().min(1).max(100_000),
 });
@@ -82,6 +84,10 @@ export type UpdateTicketImageState = {
   status?: "UPDATED" | "FORBIDDEN" | "INVALID" | "FAILED";
 };
 
+export type SetTicketMerchantState = {
+  status?: "UPDATED" | "FORBIDDEN" | "INVALID" | "FAILED";
+};
+
 export async function lookupInventoryRecipientAction(
   locale: string,
   rawCode: string,
@@ -104,6 +110,7 @@ export async function createTicketDefinitionAction(
     description: getString(formData, "description"),
     imageUrl: getString(formData, "imageUrl"),
     isGiftable: getString(formData, "isGiftable") === "on",
+    merchantId: getString(formData, "merchantId"),
     title: getString(formData, "title"),
     totalSupply: getString(formData, "totalSupply"),
   });
@@ -123,6 +130,7 @@ export async function createTicketDefinitionAction(
       description: parsed.data.description || null,
       imageUrl: parsed.data.imageUrl || null,
       isGiftable: parsed.data.isGiftable,
+      merchantId: parsed.data.merchantId || null,
       title: parsed.data.title,
       totalSupply: parsed.data.totalSupply,
     });
@@ -135,6 +143,51 @@ export async function createTicketDefinitionAction(
     return { definitionId: definition.id, status: "CREATED" };
   } catch (error) {
     console.error("Failed to create inventory ticket definition", error);
+    return { status: "FAILED" };
+  }
+}
+
+export async function setTicketMerchantAction(
+  _previousState: SetTicketMerchantState,
+  formData: FormData,
+): Promise<SetTicketMerchantState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  if (!(await isCurrentUserAdmin())) return { status: "FORBIDDEN" };
+  const parsed = z
+    .object({
+      definitionId: z.string().min(1).max(64),
+      merchantId: z.string().trim().max(64),
+    })
+    .safeParse({
+      definitionId: getString(formData, "definitionId"),
+      merchantId: getString(formData, "merchantId"),
+    });
+  if (!parsed.success) return { status: "INVALID" };
+  const actor = await ensureCurrentUserProfile(
+    locale,
+    `/admin/items/${parsed.data.definitionId}/access`,
+  );
+  if (actor.status !== "ACTIVE") return { status: "FORBIDDEN" };
+  try {
+    const result = await setTicketMerchant({
+      actorProfileId: actor.id,
+      definitionId: parsed.data.definitionId,
+      isAdmin: true,
+      merchantId: parsed.data.merchantId || null,
+    });
+    if (result.status === "FORBIDDEN") return { status: "FORBIDDEN" };
+    if (result.status !== "UPDATED") return { status: "INVALID" };
+    revalidatePath(withLocale(locale, "/admin/merchants"));
+    revalidatePath(withLocale(locale, "/profile/store"), "layout");
+    revalidatePath(withLocale(locale, "/profile/store/tickets"), "layout");
+    revalidatePath(withLocale(locale, "/profile/ticket-workbench"), "layout");
+    revalidatePath(
+      withLocale(locale, `/admin/items/${parsed.data.definitionId}`),
+      "layout",
+    );
+    return { status: "UPDATED" };
+  } catch (error) {
+    console.error("Failed to update ticket merchant binding", error);
     return { status: "FAILED" };
   }
 }

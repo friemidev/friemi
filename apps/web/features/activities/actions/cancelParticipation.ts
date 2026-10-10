@@ -1,5 +1,7 @@
 "use server";
 
+import { isPersistentBookingActivity, getPersistentBookingCopy } from "../utils/persistentBookingActivity";
+
 import type { ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
 import {
@@ -126,6 +128,8 @@ export async function cancelParticipationAction(
           select: {
             id: true,
             organizerId: true,
+            isPersistent: true,
+            source: true,
           },
         },
       },
@@ -142,6 +146,10 @@ export async function cancelParticipationAction(
     return {
       formError: actionCopy.missingError,
     };
+  }
+
+  if (isPersistentBookingActivity(participation.activity)) {
+    return { formError: getPersistentBookingCopy(result.data.locale).ownBookings };
   }
 
   if (participation.status === "CANCELLED") {

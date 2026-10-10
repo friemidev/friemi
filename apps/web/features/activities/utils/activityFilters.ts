@@ -471,6 +471,24 @@ export function getActivityFilterHref(
   return queryString ? `${baseHref}?${queryString}` : baseHref;
 }
 
+export function getActivityListCanonicalPath(
+  basePath: string,
+  searchParams: ActivityFilterSearchParams = {},
+) {
+  const filters = normalizeActivityFilters(searchParams);
+
+  // Unfiltered result pages contain different activities; filtered variants
+  // retain the listing canonical to avoid indexing arbitrary search queries.
+  if (
+    filters.page <= 1 ||
+    getActivityFilterQueryString({ ...filters, page: 1 })
+  ) {
+    return basePath;
+  }
+
+  return getActivityFilterHref(basePath, filters);
+}
+
 export function isCanonicalActivityFilterSearchParams(
   searchParams: ActivityFilterSearchParams = {},
 ) {

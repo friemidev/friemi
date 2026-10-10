@@ -150,7 +150,7 @@ export function AdminInventoryPanelContent({
                         {definition.title}
                       </span>
                       <span className="block text-xs font-semibold text-forest">
-                        {copy.ticketType}
+                        {definition.merchant?.name ?? copy.independent}
                         <span aria-hidden="true" className="mx-2 text-ink/40">
                           ·
                         </span>

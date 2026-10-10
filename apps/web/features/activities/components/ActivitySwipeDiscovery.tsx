@@ -1,5 +1,7 @@
 "use client";
 
+import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -27,7 +29,6 @@ import { getCategoryLabel, getStatusLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
-import { getActivityCategoryPreviewSrc } from "../utils/activityCategoryVisuals";
 import { isPublicEventCard } from "../utils/activityCardKind";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 import {
@@ -710,9 +711,10 @@ export function ActivitySwipeDiscovery({
             const dateLabel = getActivityDateLabel(activity, locale);
             const locationLabel = getActivityLocationLabel(activity);
             const categoryLabel = getCategoryLabel(activity.category, locale);
-            const statusLabel = getStatusLabel(displayStatus, locale);
+            const bookingCopy = getPersistentBookingCopy(locale);
+            const statusLabel = activity.isPersistent ? bookingCopy.open : getStatusLabel(displayStatus, locale);
             const href = getSwipeActivityHref(activity, locale);
-            const kindCopy = getSwipeKindCopy(locale, isActivityInfo);
+            const kindCopy = activity.isPersistent ? { label: bookingCopy.kind, note: bookingCopy.action } : getSwipeKindCopy(locale, isActivityInfo);
             const KindIcon = isActivityInfo ? Compass : UsersRound;
             const analyticsEntity = isTopCard
               ? getAnalyticsEntityForActivity(activity)
@@ -781,9 +783,6 @@ export function ActivitySwipeDiscovery({
                 >
                   <ActivityCoverImage
                     src={isTopCard ? activity.coverImageUrl : null}
-                    fallbackSrc={getActivityCategoryPreviewSrc(
-                      activity.category,
-                    )}
                     overlayClassName={cn(
                       "bg-gradient-to-t from-black/58 via-black/12 to-transparent",
                       !isHomeVariant

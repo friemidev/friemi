@@ -6,6 +6,7 @@ import {
   Orbit,
   Plus,
   Send,
+  ShieldCheck,
   Sparkles,
   Trash2,
   UsersRound,
@@ -24,6 +25,9 @@ import { PlanetMomentComposer } from "./PlanetMomentComposer";
 import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
+import { PlanetQrCodeButton } from "./PlanetQrCodeButton";
+import { getPlanetInvitePath } from "../utils/planetInvite";
+import { buildCanonicalSiteUrl } from "@/lib/site-url";
 import type {
   getPlanetMoment,
   getPlanetRoom,
@@ -54,6 +58,7 @@ const colorPairs = [
 const planetCopy = {
   "zh-CN": {
     openChat: "\u524d\u5f80\u7fa4\u804a",
+    manage: "星球设置",
     pendingChatAction: "\u7b49\u5f85\u5ba1\u6838\u540e\u53ef\u7fa4\u804a",
     joinChatAction: "\u52a0\u5165\u540e\u53ef\u7fa4\u804a",
     create: "\u521b\u5efa\u661f\u7403",
@@ -94,6 +99,7 @@ const planetCopy = {
   },
   en: {
     openChat: "Open group chat",
+    manage: "Settings",
     pendingChatAction: "Chat available after approval",
     joinChatAction: "Join to open chat",
     create: "Create planet",
@@ -132,6 +138,7 @@ const planetCopy = {
   },
   fr: {
     openChat: "Ouvrir la discussion",
+    manage: "Réglages",
     pendingChatAction: "Discussion disponible après validation",
     joinChatAction: "Rejoindre pour discuter",
     create: "Créer une planète",
@@ -558,6 +565,10 @@ export function PlanetRoomPage({
   const canPublish =
     membership?.status === "APPROVED" &&
     (membership.role === "OWNER" || membership.role === "ADMIN");
+  const manageReturnHref = `${withLocale(locale, `/planets/${planet.slug}`)}${
+    selectedMoment ? `?moment=${encodeURIComponent(selectedMoment.id)}#planet-moment` : ""
+  }`;
+  const manageHref = `${withLocale(locale, `/planets/${planet.slug}/chat`)}?manage=1&returnTo=${encodeURIComponent(manageReturnHref)}`;
 
   return (
     <PageShell detail>
@@ -594,7 +605,27 @@ export function PlanetRoomPage({
               {planet.owner.nickname}
             </p>
           </div>
-          <div className="shrink-0 pt-0.5">
+          <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              {canPublish ? (
+                <Link
+                  className="group inline-flex min-h-11 items-center rounded-full py-1 text-xs font-bold text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 active:scale-95"
+                  href={manageHref}
+                >
+                  <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-sand bg-white px-2.5 transition group-hover:bg-fog">
+                    <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    {copy.manage}
+                  </span>
+                </Link>
+              ) : null}
+              {planet.visibility === "PUBLIC" || membership?.status === "APPROVED" ? (
+                <PlanetQrCodeButton
+                  inviteUrl={buildCanonicalSiteUrl(getPlanetInvitePath(locale, planet.inviteCode))}
+                  locale={locale}
+                  planetName={getPlanetName(planet, locale)}
+                />
+              ) : null}
+            </div>
             <MembershipButton locale={locale} planet={planet} />
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { findDiscoveryActivityCards } from "@/features/activities/queries/getActivities";
 import { prisma } from "@/lib/prisma";
 import { brand } from "@/lib/brand";
 import { createActionPerformanceTracker } from "@/lib/performance";
@@ -952,7 +953,7 @@ async function getSearchActivityResults(
   endedActivityWhere: Prisma.ActivityWhereInput | null,
   limit = activityResultLimit,
 ) {
-  const activeActivities = await prisma.activity.findMany({
+  const activeActivities = await findDiscoveryActivityCards({
     where: activeActivityWhere,
     orderBy: [{ startAt: "asc" }, { id: "asc" }],
     take: limit,
@@ -963,7 +964,7 @@ async function getSearchActivityResults(
     return activeActivities;
   }
 
-  const endedActivities = await prisma.activity.findMany({
+  const endedActivities = await findDiscoveryActivityCards({
     where: endedActivityWhere,
     orderBy: [{ startAt: "desc" }, { id: "asc" }],
     take: limit - activeActivities.length,

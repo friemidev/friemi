@@ -10,18 +10,26 @@ import {
   Megaphone,
   Pin,
   Settings2,
+  Tags,
   UserMinus,
   UsersRound,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import {
+  getPlanetCategoryLabel,
+  planetCategoryValues,
+  resolvePlanetCategory,
+} from "../utils/planetCategories";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
+import { PlanetQrCodeButton } from "./PlanetQrCodeButton";
 import {
   removePlanetMemberAction,
   reviewPlanetMemberAction,
   togglePlanetChatMuteAction,
   togglePlanetChatPinAction,
   updatePlanetAnnouncementAction,
+  updatePlanetCategoryAction,
 } from "@/features/planets/actions/planetActions";
 
 type Member = {
@@ -37,6 +45,7 @@ type PlanetChatSettingsMenuProps = {
   announcement: string | null;
   approvedMembers: Member[];
   inviteUrl: string;
+  initialManageOpen?: boolean;
   isMuted: boolean;
   isPinned: boolean;
   locale: string;
@@ -44,6 +53,8 @@ type PlanetChatSettingsMenuProps = {
   planetHref: string;
   planetId: string;
   planetSlug: string;
+  planetName: string;
+  tags: string[];
   viewerRole: "OWNER" | "ADMIN" | "MEMBER" | null;
 };
 
@@ -58,7 +69,15 @@ function getCopy(locale: string) {
       copyInvite: "Copier le lien d'invitation",
       copied: "Lien copié",
       emptyMembers: "Aucune demande en attente.",
-      manage: "Gérer la planète",
+      manage: "Réglages de la planète",
+      category: "Catégorie",
+      selectCategory: "Choisir une catégorie",
+      saveCategory: "Enregistrer la catégorie",
+      categorySaved: "Catégorie enregistrée.",
+      categoryFailed: "Enregistrement impossible. Réessayez.",
+      categoryForbidden:
+        "Seuls le créateur et les administrateurs peuvent modifier la catégorie.",
+      saving: "Enregistrement…",
       members: "Membres",
       ownerRole: "Créateur",
       adminRole: "Admin",
@@ -84,7 +103,14 @@ function getCopy(locale: string) {
       copyInvite: "Copy invite link",
       copied: "Invite link copied",
       emptyMembers: "No pending requests.",
-      manage: "Manage planet",
+      manage: "Planet settings",
+      category: "Category",
+      selectCategory: "Choose a category",
+      saveCategory: "Save category",
+      categorySaved: "Category saved.",
+      categoryFailed: "Unable to save. Please try again.",
+      categoryForbidden: "Only the owner and admins can change the category.",
+      saving: "Saving…",
       members: "Members",
       ownerRole: "Owner",
       adminRole: "Admin",
@@ -109,7 +135,14 @@ function getCopy(locale: string) {
     copyInvite: "复制邀请链接",
     copied: "邀请链接已复制",
     emptyMembers: "暂时没有待审核申请。",
-    manage: "管理星球",
+    manage: "星球设置",
+    category: "星球分类",
+    selectCategory: "选择分类",
+    saveCategory: "保存分类",
+    categorySaved: "分类已保存。",
+    categoryFailed: "保存失败，请重试。",
+    categoryForbidden: "只有主理人和管理员可以修改分类。",
+    saving: "保存中…",
     members: "成员管理",
     ownerRole: "主理人",
     adminRole: "管理员",
@@ -155,6 +188,80 @@ function HiddenPlanetFields({
       <input name="planetId" type="hidden" value={planetId} />
       <input name="planetSlug" type="hidden" value={planetSlug} />
     </>
+  );
+}
+
+function PlanetCategorySettings(
+  props: Pick<
+    PlanetChatSettingsMenuProps,
+    "locale" | "planetId" | "planetSlug" | "tags"
+  >,
+) {
+  const copy = getCopy(props.locale);
+  const [category, setCategory] = useState(
+    props.tags.map(resolvePlanetCategory).find(Boolean) ?? "",
+  );
+  const [state, action, pending] = useActionState(
+    updatePlanetCategoryAction,
+    {},
+  );
+  const [showResult, setShowResult] = useState(false);
+
+  return (
+    <form
+      action={action}
+      className="border-b border-[#ECEAE2] py-5"
+      onSubmit={() => setShowResult(true)}
+    >
+      <HiddenPlanetFields {...props} />
+      <label className="flex flex-col gap-3 text-sm font-bold">
+        <span className="flex items-center gap-2">
+          <Tags aria-hidden="true" className="h-4 w-4 text-forest" />
+          {copy.category}
+        </span>
+        <select
+          className="min-h-11 w-full rounded-lg border border-sand bg-white px-3 text-base font-normal text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          disabled={pending}
+          name="category"
+          onChange={(event) => {
+            setCategory(event.target.value);
+            setShowResult(false);
+          }}
+          required
+          value={category}
+        >
+          <option disabled value="">
+            {copy.selectCategory}
+          </option>
+          {planetCategoryValues.map((value) => (
+            <option key={value} value={value}>
+              {getPlanetCategoryLabel(value, props.locale)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        className="mt-3 min-h-11 rounded-full bg-forest px-4 text-xs font-bold text-white disabled:opacity-50"
+        disabled={pending || !category}
+        type="submit"
+      >
+        {pending ? copy.saving : copy.saveCategory}
+      </button>
+      {showResult && !pending && state.status ? (
+        <p
+          className={`mt-2 text-xs ${state.status === "saved" ? "text-forest" : "text-danger"}`}
+          role="status"
+        >
+          {state.status === "saved"
+            ? copy.categorySaved
+            : state.status === "forbidden"
+              ? copy.categoryForbidden
+              : state.status === "invalid"
+                ? copy.selectCategory
+                : copy.categoryFailed}
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -204,11 +311,13 @@ function PreferenceRow({
 }
 
 export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
-  const copy = getCopy(props.locale);
   const canManage =
     props.viewerRole === "OWNER" || props.viewerRole === "ADMIN";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(
+    Boolean(props.initialManageOpen) && canManage,
+  );
+  const copy = getCopy(props.locale);
   const roleLabels = {
     OWNER: copy.ownerRole,
     ADMIN: copy.adminRole,
@@ -264,6 +373,12 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
             planetId={props.planetId}
             planetSlug={props.planetSlug}
           />
+          <PlanetQrCodeButton
+            inviteUrl={props.inviteUrl}
+            locale={props.locale}
+            planetName={props.planetName}
+            variant="row"
+          />
           {canManage ? (
             <button
               className="flex min-h-14 w-full items-center gap-3 border-b border-[#EFEFEA] px-4 text-left text-sm font-bold active:bg-[#F7F7F2]"
@@ -294,7 +409,7 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
         </div>
       ) : null}
 
-      {manageOpen ? (
+      {manageOpen && canManage ? (
         <div
           className="fixed inset-0 z-[70]"
           role="dialog"
@@ -335,6 +450,8 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
                   />
                 </div>
               ) : null}
+
+              <PlanetCategorySettings {...props} />
 
               <form
                 action={updatePlanetAnnouncementAction}

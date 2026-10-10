@@ -110,14 +110,14 @@ export function MobileHomeV23CitySelector({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`${copy.title}: ${currentCity}`}
-        className="inline-flex h-9 min-w-0 select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-semibold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62 transition active:scale-95 max-[355px]:gap-0.5 max-[355px]:px-1.5"
+        className="inline-flex h-9 min-w-0 select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-semibold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62 transition active:scale-95"
         onClick={() => setOpen(true)}
         title={copy.title}
         type="button"
       >
         <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
         <span className="max-w-[4.4rem] truncate">{currentCity}</span>
-        <ChevronRight className="h-3.5 w-3.5 rotate-90 text-[#123D31]/58 max-[355px]:hidden" />
+        <ChevronRight className="h-3.5 w-3.5 rotate-90 text-[#123D31]/58" />
       </button>
 
       {open ? (

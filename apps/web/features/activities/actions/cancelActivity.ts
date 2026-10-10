@@ -1,10 +1,16 @@
 "use server";
 
+import {
+  isPersistentBookingActivity,
+  getPersistentBookingCopy,
+} from "../utils/persistentBookingActivity";
+
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
@@ -44,6 +50,7 @@ type CancelActivityResult =
   | {
       ok: true;
       activityId: string;
+      residencySlot?: { id: string; merchantId: string } | null;
     }
   | {
       ok: false;
@@ -96,6 +103,24 @@ function isPrismaTransactionConflictError(error: unknown) {
   );
 }
 
+function getResidencyActivityError(locale: string) {
+  if (locale === "fr") {
+    return "Cette activité est liée à une réservation de boutique. Annulez-la pour conserver l'historique ; elle ne peut pas être supprimée.";
+  }
+  if (locale === "en") {
+    return "This activity is linked to a store booking. Cancel it to preserve the booking history; it cannot be deleted.";
+  }
+  return "此聚吧关联店铺预约，请取消聚吧以保留预约记录，不能直接删除。";
+}
+
+function getResidencyConflictError(locale: string) {
+  if (locale === "fr")
+    return "L'état de la réservation a changé. Actualisez et réessayez.";
+  if (locale === "en")
+    return "The booking status changed. Refresh and try again.";
+  return "店铺预约状态已变化，请刷新后重试。";
+}
+
 export async function cancelActivityAction(
   _previousState: CancelActivityState,
   formData: FormData,
@@ -114,11 +139,19 @@ export async function cancelActivityAction(
   }
 
   const actionCopy = getCopy(result.data.locale).activityOwner;
+  const adminBookingSlotId = getString(formData, "adminBookingSlotId");
+  if (adminBookingSlotId && !(await isCurrentUserAdmin())) {
+    return { formError: actionCopy.permissionError };
+  }
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
     getActivityDetailPath(result.data.activityId),
   );
+  if (adminBookingSlotId && profile.status !== "ACTIVE") {
+    return { formError: actionCopy.permissionError };
+  }
   let cancelledActivityId: string;
+  let cancelledResidencySlot: { id: string; merchantId: string } | null = null;
 
   try {
     const cancelResult = await prisma.$transaction(
@@ -129,9 +162,14 @@ export async function cancelActivityAction(
           },
           select: {
             id: true,
+            isPersistent: true,
+            source: true,
             endAt: true,
             startAt: true,
             status: true,
+            residencySlot: {
+              select: { id: true, merchantId: true, status: true },
+            },
             participants: {
               where: {
                 status: {
@@ -152,11 +190,26 @@ export async function cancelActivityAction(
           };
         }
 
-        const permission = await assertCanManageActivity(
-          activity.id,
-          profile.id,
-          tx,
-        );
+        if (isPersistentBookingActivity(activity)) {
+          return {
+            ok: false,
+            error: getPersistentBookingCopy(result.data.locale).settings,
+          };
+        }
+
+        // A site administrator may cancel a published booking activity from
+        // its booking detail. The slot identifier must match the activity;
+        // the ordinary activity cancellation path keeps its existing role check.
+        const permission = adminBookingSlotId
+          ? {
+              ok:
+                activity.residencySlot?.id === adminBookingSlotId &&
+                (activity.residencySlot.status === "PUBLISHED" ||
+                  (activity.status === "CANCELLED" &&
+                    activity.residencySlot.status === "CANCELLED")),
+              role: "ADMIN" as const,
+            }
+          : await assertCanManageActivity(activity.id, profile.id, tx);
 
         if (!permission.ok) {
           return {
@@ -169,6 +222,7 @@ export async function cancelActivityAction(
           return {
             ok: true,
             activityId: activity.id,
+            residencySlot: activity.residencySlot,
           };
         }
 
@@ -186,6 +240,16 @@ export async function cancelActivityAction(
           };
         }
 
+        if (
+          activity.residencySlot &&
+          activity.residencySlot.status !== "PUBLISHED"
+        ) {
+          return {
+            ok: false,
+            error: getResidencyConflictError(result.data.locale),
+          };
+        }
+
         await tx.activity.update({
           where: {
             id: activity.id,
@@ -194,6 +258,25 @@ export async function cancelActivityAction(
             status: "CANCELLED",
           },
         });
+
+        if (activity.residencySlot) {
+          const cancelledAt = new Date();
+          const slotUpdate = await tx.merchantResidencySlot.updateMany({
+            where: {
+              id: activity.residencySlot.id,
+              activityId: activity.id,
+              status: "PUBLISHED",
+            },
+            data: { status: "CANCELLED", cancelledAt },
+          });
+          if (slotUpdate.count !== 1) {
+            throw new Error("Residency changed during activity cancellation");
+          }
+          await tx.merchantResidencySignup.updateMany({
+            where: { slotId: activity.residencySlot.id, status: "ACTIVE" },
+            data: { status: "CANCELLED", cancelledAt },
+          });
+        }
 
         const cancellationLog = await tx.activityManagementLog.create({
           data: {
@@ -223,6 +306,7 @@ export async function cancelActivityAction(
         return {
           ok: true,
           activityId: activity.id,
+          residencySlot: activity.residencySlot,
         };
       },
       {
@@ -237,6 +321,7 @@ export async function cancelActivityAction(
     }
 
     cancelledActivityId = cancelResult.activityId;
+    cancelledResidencySlot = cancelResult.residencySlot ?? null;
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {
       return {
@@ -251,7 +336,32 @@ export async function cancelActivityAction(
     };
   }
 
-  redirect(refreshActivityViews(result.data.locale, cancelledActivityId));
+  const activityPath = refreshActivityViews(
+    result.data.locale,
+    cancelledActivityId,
+  );
+  if (cancelledResidencySlot) {
+    for (const path of [
+      "/profile/bookings",
+      "/profile/store/bookings",
+      `/profile/store/bookings/${cancelledResidencySlot.id}`,
+      "/admin/merchants/bookings",
+      `/admin/merchants/bookings/${cancelledResidencySlot.id}`,
+      `/merchants/${cancelledResidencySlot.merchantId}`,
+      `/merchants/${cancelledResidencySlot.merchantId}/bookings`,
+      `/merchants/${cancelledResidencySlot.merchantId}/bookings/${cancelledResidencySlot.id}`,
+    ]) {
+      revalidatePath(withLocale(result.data.locale, path), "layout");
+    }
+  }
+  redirect(
+    adminBookingSlotId
+      ? withLocale(
+          result.data.locale,
+          `/admin/merchants/bookings/${adminBookingSlotId}`,
+        )
+      : activityPath,
+  );
 }
 
 export async function deleteActivityAction(
@@ -291,12 +401,14 @@ export async function deleteActivityAction(
             externalSource: true,
             externalUrl: true,
             importedAt: true,
+            isPersistent: true,
             organizerId: true,
             publicEventId: true,
             source: true,
             sourcePayload: true,
             sourceUrl: true,
             type: true,
+            residencySlot: { select: { id: true } },
           },
         });
 
@@ -311,6 +423,20 @@ export async function deleteActivityAction(
           return {
             ok: false,
             error: actionCopy.deletePermissionError,
+          };
+        }
+
+        if (isPersistentBookingActivity(activity)) {
+          return {
+            ok: false,
+            error: getPersistentBookingCopy(result.data.locale).settings,
+          };
+        }
+
+        if (activity.residencySlot) {
+          return {
+            ok: false,
+            error: getResidencyActivityError(result.data.locale),
           };
         }
 
