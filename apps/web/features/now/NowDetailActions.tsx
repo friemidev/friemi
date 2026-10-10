@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Heart, Send } from "lucide-react";
 import { changeNowInterestAction, sendNowMessageAction } from "./actions";
 import { getNowCopy, getNowStage, getNowStageLabel } from "./now";
+import { getNowTonePalette, NowKindArtwork } from "./NowKindArtwork";
 import { withLocale } from "@/lib/routes";
 
 function ActionButton({
@@ -274,7 +275,7 @@ export function NowStageBadge({
 export function NowCountdownOrb({
   compact = false,
   createdAt,
-  emoji,
+  category,
   expiresAt,
   initialNow,
   locale,
@@ -282,7 +283,7 @@ export function NowCountdownOrb({
 }: {
   compact?: boolean;
   createdAt: string;
-  emoji: string;
+  category: string;
   expiresAt: string;
   initialNow: number;
   locale: string;
@@ -304,16 +305,7 @@ export function NowCountdownOrb({
       : locale === "zh-CN"
         ? `${Math.floor(minutes / 60)}小时${minutes % 60}分`
         : `${Math.floor(minutes / 60)}h ${minutes % 60}m ${copy.remaining}`;
-  const ringColor =
-    (
-      {
-        amber: "#F5A64C",
-        blue: "#75A9EC",
-        coral: "#F58B79",
-        green: "#62C390",
-        rose: "#F56D84",
-      } as Record<string, string>
-    )[tone] ?? "#F56D84";
+  const palette = getNowTonePalette(tone);
 
   return (
     <div
@@ -322,37 +314,40 @@ export function NowCountdownOrb({
       {!compact ? (
         <>
           <span
-            className="absolute -left-7 top-10 h-2 w-2 rotate-45 rounded-[2px] bg-[#8EDDB3]"
+            className="absolute -left-7 top-10 h-2 w-2 rotate-45 rounded-[2px] bg-[#27A26D]"
             aria-hidden="true"
           />
           <span
-            className="absolute -right-6 top-14 h-2.5 w-2.5 rounded-full bg-[#F8C3CB]"
+            className="absolute -right-6 top-14 h-2.5 w-2.5 rounded-full bg-[#FFB3B8]"
             aria-hidden="true"
           />
           <span
-            className="absolute -right-4 bottom-2 h-1.5 w-1.5 rotate-45 bg-[#FFD98D]"
+            className="absolute -right-4 bottom-2 h-1.5 w-1.5 rotate-45 bg-[#FFC857]"
             aria-hidden="true"
           />
         </>
       ) : null}
       <div
-        className={`grid place-items-center rounded-full shadow-[0_16px_36px_rgba(244,111,130,.14)] transition-[background] duration-700 ${compact ? "h-[4.5rem] w-[4.5rem] p-[5px]" : "h-[8.9rem] w-[8.9rem] p-[8px]"}`}
+        className={`grid place-items-center rounded-full transition-[background] duration-700 ${compact ? "h-[4.5rem] w-[4.5rem] p-[5px]" : "h-[8.9rem] w-[8.9rem] p-[8px]"}`}
         style={{
-          background: `conic-gradient(${ringColor} ${progress}%, #F9E9EC ${progress}% 100%)`,
+          background: `conic-gradient(${palette.ring} ${progress}%, color-mix(in srgb, ${palette.ring} 18%, white) ${progress}% 100%)`,
+          boxShadow: `0 16px 36px color-mix(in srgb, ${palette.ring} 18%, transparent)`,
         }}
         role="timer"
         aria-label={timeLabel}
       >
-        <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#FFF5F6] shadow-[inset_0_3px_10px_rgba(255,255,255,.9)]">
-          <span
-            className={`${compact ? "text-[2rem]" : "text-[3.35rem]"} leading-none drop-shadow-[0_7px_7px_rgba(123,48,63,.16)]`}
-            aria-hidden="true"
-          >
-            {emoji}
-          </span>
+        <div
+          className="flex h-full w-full flex-col items-center justify-center rounded-full shadow-[inset_0_3px_10px_rgba(255,255,255,.9)]"
+          style={{ backgroundColor: palette.wash }}
+        >
+          <NowKindArtwork
+            category={category}
+            className={compact ? "h-11 w-11 text-[2rem]" : "h-[5.4rem] w-[5.4rem] text-[3.35rem]"}
+          />
           {!compact ? (
             <span
-              className="mt-1 text-[12px] font-bold text-[#D65D72]"
+              className="mt-1 text-[12px] font-bold"
+              style={{ color: palette.ink }}
               aria-hidden="true"
             >
               {timeLabel}

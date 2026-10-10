@@ -217,7 +217,7 @@ export default async function NowInvitePage({
           />
           <NowCountdownOrb
             createdAt={invite.createdAt.toISOString()}
-            emoji={kind.emoji}
+            category={invite.category}
             expiresAt={invite.expiresAt.toISOString()}
             initialNow={initialNow}
             locale={locale}

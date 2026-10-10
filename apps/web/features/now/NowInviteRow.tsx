@@ -65,7 +65,7 @@ export function NowInviteRow({
         <NowCountdownOrb
           compact
           createdAt={invite.createdAt.toISOString()}
-          emoji={kind.emoji}
+          category={invite.category}
           expiresAt={invite.expiresAt.toISOString()}
           initialNow={Date.now()}
           locale={locale}

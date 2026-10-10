@@ -20,10 +20,10 @@ const samples: Pick<
     size: "medium",
   },
   {
-    id: "preview-movie",
-    category: "MOVIE",
+    id: "preview-exhibition",
+    category: "EXHIBITION",
     intentWindow: "TONIGHT",
-    title: "看电影",
+    title: "看展",
     area: "Opéra",
     interestCount: 1,
     size: "small",
@@ -73,10 +73,19 @@ const samples: Pick<
     interestCount: 0,
     size: "medium",
   },
+  {
+    id: "preview-movie",
+    category: "MOVIE",
+    intentWindow: "TONIGHT",
+    title: "看电影",
+    area: "Opéra",
+    interestCount: 1,
+    size: "small",
+  },
 ];
 
 export function getNowPreviewInvites(now: number): NowBubbleItem[] {
-  const remainingMinutes = [38, 76, 114, 152, 190, 228, 682];
+  const remainingMinutes = [38, 76, 114, 152, 190, 228, 682, 701];
   return samples.map((sample, index) => ({
     ...sample,
     avatars: [

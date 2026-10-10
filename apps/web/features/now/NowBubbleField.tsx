@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { RetainedImage } from "@/components/media/RetainedImage";
@@ -13,6 +13,7 @@ import {
   getNowKindLabel,
   nowKinds,
 } from "./now";
+import { getNowTonePalette, NowKindArtwork } from "./NowKindArtwork";
 import styles from "./NowBubbleField.module.css";
 
 export type NowBubbleItem = {
@@ -76,6 +77,8 @@ export function NowBubbleField({
   const router = useRouter();
   const [now, setNow] = useState(initialNow);
   const [popping, setPopping] = useState<string | null>(null);
+  const [fieldActive, setFieldActive] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
   const visible = invites
     .filter((invite) => Date.parse(invite.expiresAt) > now)
     .slice(0, 7);
@@ -84,6 +87,25 @@ export function NowBubbleField({
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!fieldRef.current) return;
+    let inView = false;
+    const update = () => setFieldActive(inView && !document.hidden);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry.isIntersecting;
+        update();
+      },
+      { rootMargin: "80px" },
+    );
+    observer.observe(fieldRef.current);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", update);
+    };
   }, []);
 
   function openInvite(id: string) {
@@ -118,7 +140,12 @@ export function NowBubbleField({
       </div>
 
       {visible.length ? (
-        <div className={styles.field} data-count={visible.length}>
+        <div
+          ref={fieldRef}
+          className={styles.field}
+          data-active={fieldActive}
+          data-count={visible.length}
+        >
           <div
             className={`${styles.sparkle} ${styles.sparkleOne}`}
             aria-hidden="true"
@@ -133,6 +160,7 @@ export function NowBubbleField({
           />
           {visible.map((invite, index) => {
             const kind = getNowKind(invite.category);
+            const palette = getNowTonePalette(kind.tone);
             const total =
               Date.parse(invite.expiresAt) - Date.parse(invite.createdAt);
             const remaining = Math.max(0, Date.parse(invite.expiresAt) - now);
@@ -144,10 +172,13 @@ export function NowBubbleField({
               <button
                 key={invite.id}
                 type="button"
-                className={`${styles.item} ${styles[`slot${slots[index]}`]} ${styles[kind.tone]} ${styles[invite.size]} ${popping === invite.id ? styles.popping : ""}`}
+                className={`${styles.item} ${styles[`slot${slots[index]}`]} ${styles[invite.size]} ${popping === invite.id ? styles.popping : ""}`}
                 style={
                   {
                     "--progress": `${progress}%`,
+                    "--ring": palette.ring,
+                    "--wash": palette.wash,
+                    "--ink": palette.ink,
                     "--delay": `${index * 76}ms`,
                   } as CSSProperties
                 }
@@ -156,9 +187,10 @@ export function NowBubbleField({
               >
                 <span className={styles.orbit}>
                   <span className={styles.core}>
-                    <span className={styles.emoji} aria-hidden="true">
-                      {kind.emoji}
-                    </span>
+                    <NowKindArtwork
+                      category={invite.category}
+                      className={styles.artwork}
+                    />
                   </span>
                   <span className={styles.avatars} aria-hidden="true">
                     {invite.avatars.slice(0, 3).map((avatar, avatarIndex) => (
