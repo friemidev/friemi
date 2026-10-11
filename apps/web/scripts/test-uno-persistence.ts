@@ -183,7 +183,8 @@ try {
   check(await prisma.unoCommand.count({ where: { roomId, commandId: start.commandId } }) === 1, "Exactly one command receipt committed");
   if (starts[0].error === "STALE_COMMAND") {
     const refreshed = view(await server.getUnoRoomView(roomId, profiles[0]));
-    check(Boolean((await server.commandUnoRoom(roomId, profiles[0], envelope(refreshed, { type: "START" }))).room), "Host can start from the refreshed lobby after a character change");
+    const retriedStart = await server.commandUnoRoom(roomId, profiles[0], envelope(refreshed, { type: "START" }));
+    check("room" in retriedStart && Boolean(retriedStart.room), "Host can start from the refreshed lobby after a character change");
   }
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   const guest = view(await server.getUnoRoomView(roomId, profiles[1]));
