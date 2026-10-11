@@ -1,10 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+const prismaOptions: Prisma.PrismaClientOptions = {
+  // Existing games must remain readable before the UNO migration is applied.
+  // UNO only filters/writes this index column; its deadline is read from state.
+  omit: { gameToolRoom: { unoDeadlineAt: true } },
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);
 
 type PublicEventFavoriteDelegate = {
   count: (...args: unknown[]) => Promise<number>;

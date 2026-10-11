@@ -7,6 +7,7 @@ import { ArrowRight, ChevronRight, Layers3, LockKeyhole } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
 import { isDicePreviewEnabled } from "@/features/game-tools/diceAvailability";
+import { isUnoEnabled } from "@/features/game-tools/unoFlags";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import {
   gameToolDefinitions,
@@ -57,6 +58,7 @@ function getMobileGameToolsCopy(locale: string) {
         BOTC: "Grimoire et rythme de nuit.",
         DRAW_GUESS: "Dessiner, deviner, transmettre.",
         DICE: "Lancer les dés ou jouer au Perudo.",
+        UNO: "Couleurs et chiffres.",
         OTHER: "Plus d'outils à venir.",
         STORYTELLER: "Grimoire et rythme de nuit.",
         WEREWOLF: "Rôles, morts et résultat.",
@@ -76,6 +78,7 @@ function getMobileGameToolsCopy(locale: string) {
         BOTC: "Grimoire and night flow.",
         DRAW_GUESS: "Draw, guess, pass it on.",
         DICE: "Roll freely or practise Liar’s Dice.",
+        UNO: "Match colors or numbers.",
         OTHER: "More tools later.",
         STORYTELLER: "Grimoire and night flow.",
         WEREWOLF: "Roles, deaths, and result.",
@@ -94,6 +97,7 @@ function getMobileGameToolsCopy(locale: string) {
       BOTC: "魔典和夜晚流程。",
       DRAW_GUESS: "抢答或接龙，画出意想不到。",
       DICE: "自由摇骰 · 吹牛练习",
+      UNO: "配颜色、接数字。",
       OTHER: "更多工具会继续接入。",
       STORYTELLER: "魔典和夜晚流程。",
       WEREWOLF: "发身份、记生死、看结算。",
@@ -125,6 +129,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const drawGuessAvailable = isDrawGuessChainEnabled() || isDrawGuessClassicEnabled();
   const diceAvailable = isDicePreviewEnabled();
   const drawGuessPreviewDuo = isDrawGuessPreviewDuoEnabled() || isDrawGuessPreviewRelayDuoEnabled();
+  const unoAvailable = isUnoEnabled();
 
   return (
     <>
@@ -145,7 +150,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
-                const isAvailable = tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
@@ -157,7 +162,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                         className={
                           tool.kind === "OTHER"
                             ? "object-contain p-8"
-                            : tool.kind === "DRAW_GUESS" || tool.kind === "DICE"
+                            : tool.kind === "DRAW_GUESS" || tool.kind === "DICE" || tool.kind === "UNO"
                               ? "object-contain p-1"
                               : "object-cover"
                         }
@@ -260,10 +265,10 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
               {gameToolDefinitions.map((tool) => {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
-                const isAvailable = tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
-                  "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300" + (tool.kind === "DICE" ? " sm:col-start-2" : "");
+                  "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300" + (tool.kind === "DICE" || tool.kind === "UNO" ? " sm:col-start-2" : "");
                 const cardContent = (
                   <>
                     <div
@@ -275,7 +280,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                       <div className="flex items-start justify-between gap-3">
                         <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/45 bg-[#FEFFF9]/90 px-2.5 text-xs font-bold text-[#156240]">
                           <Icon className="h-3.5 w-3.5" />
-                          {(tool.kind === "DRAW_GUESS" || tool.kind === "DICE") && !isAvailable ? mobileCopy.coming : getGameToolLabel(tool.phase, locale)}
+                          {!isAvailable ? mobileCopy.coming : getGameToolLabel(tool.phase, locale)}
                         </span>
                         <span className="rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[11px] font-bold text-white">
                           {minPlayers === tool.maxPlayers
@@ -292,7 +297,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                             className={
                               tool.kind === "OTHER"
                                 ? "h-20 w-20 object-contain p-2"
-                                : tool.kind === "DRAW_GUESS" || tool.kind === "DICE"
+                                : tool.kind === "DRAW_GUESS" || tool.kind === "DICE" || tool.kind === "UNO"
                                   ? "h-full w-full object-contain p-1"
                                   : "h-full w-full object-cover"
                             }
@@ -317,7 +322,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                               : "mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-4 text-sm font-bold text-[#156240]"
                           }
                         >
-                          {isAvailable ? copy.primary : tool.kind === "DICE" ? mobileCopy.coming : copy.planned}
+                          {isAvailable ? copy.primary : (tool.kind === "DICE" || tool.kind === "UNO") ? mobileCopy.coming : copy.planned}
                           {isAvailable ? (
                             <ArrowRight className="h-4 w-4" />
                           ) : (

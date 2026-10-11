@@ -21,13 +21,14 @@ type ActiveGameToolFloatingWindowProps = {
     code: string;
     href: string;
     id: string;
-    kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "WEREWOLF";
+    kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
     title: string;
   } | null;
   locale: string;
   profileId?: string | null;
+  unoEnabled?: boolean;
 };
 
 function getCopy(locale: string) {
@@ -36,6 +37,7 @@ function getCopy(locale: string) {
       action: "Revenir",
       avalon: "Avalon en cours",
       drawGuess: "Dessine et devine en cours",
+      uno: "UNO en cours",
       seat: "Place",
       storyteller: "Table en cours",
       werewolf: "Loups-garous en cours",
@@ -47,6 +49,7 @@ function getCopy(locale: string) {
       action: "Return",
       avalon: "Avalon running",
       drawGuess: "Draw & Guess running",
+      uno: "UNO running",
       seat: "Seat",
       storyteller: "Game running",
       werewolf: "Werewolf running",
@@ -57,6 +60,7 @@ function getCopy(locale: string) {
     action: "回到本局",
     avalon: "阿瓦隆进行中",
     drawGuess: "你画我猜进行中",
+    uno: "UNO 进行中",
     seat: "座位",
     storyteller: "桌游进行中",
     werewolf: "狼人杀进行中",
@@ -79,6 +83,8 @@ function getKindLabel(
     return copy.drawGuess;
   }
 
+  if (kind === "UNO") return copy.uno;
+
   return copy.storyteller;
 }
 
@@ -94,6 +100,7 @@ export function ActiveGameToolFloatingWindow({
   activeRoom,
   locale,
   profileId,
+  unoEnabled = false,
 }: ActiveGameToolFloatingWindowProps) {
   const pathname = usePathname();
   const [storedRoom, setStoredRoom] = useState<StoredActiveGameToolRoom | null>(
@@ -133,7 +140,7 @@ export function ActiveGameToolFloatingWindow({
   }, [locale, profileId]);
 
   useEffect(() => {
-    if (!activeRoom || activeRoom.kind === "DRAW_GUESS" && !profileId) {
+    if (!activeRoom || (activeRoom.kind === "DRAW_GUESS" || activeRoom.kind === "UNO") && !profileId) {
       return;
     }
 
@@ -151,7 +158,7 @@ export function ActiveGameToolFloatingWindow({
         JSON.stringify({
           ...activeRoom,
           locale,
-          ...(activeRoom.kind === "DRAW_GUESS" ? { profileId } : {}),
+          ...((activeRoom.kind === "DRAW_GUESS" || activeRoom.kind === "UNO") ? { profileId } : {}),
         } satisfies StoredActiveGameToolRoom),
       );
       window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
@@ -171,7 +178,7 @@ export function ActiveGameToolFloatingWindow({
     return null;
   }
 
-  if (!currentRoom) {
+  if (!currentRoom || currentRoom.kind === "UNO" && !unoEnabled) {
     return null;
   }
 
@@ -207,7 +214,9 @@ export function ActiveGameToolFloatingWindow({
       title={label}
     >
       <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
-      {currentRoom.kind === "DRAW_GUESS" ? (
+      {currentRoom.kind === "UNO" ? (
+        <Image alt="" className="relative h-8 w-8 rounded-lg object-contain" height={32} src="/game-tools/uno/logo.png" width={32} />
+      ) : currentRoom.kind === "DRAW_GUESS" ? (
         <Image alt="" className="relative h-7 w-7 object-contain" height={28} src="/game-tools/draw-guess/logo.png" width={28} />
       ) : (
         <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />

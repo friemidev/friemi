@@ -374,6 +374,7 @@ enum PlanetMembershipStatus {
 enum GameToolKind {
   AVALON
   DRAW_GUESS
+  UNO
   STORYTELLER
   WEREWOLF
 }
@@ -2540,6 +2541,7 @@ model GameToolRoom {
   finishedAt          DateTime?
   cancelledAt         DateTime?
   drawGuessDeadlineAt DateTime?
+  unoDeadlineAt       DateTime?
   wordBankId          String?                @db.VarChar(64)
   wordBank            DrawGuessWordBank?     @relation(fields: [wordBankId], references: [id], onDelete: SetNull)
   revision            Int                    @default(0)
@@ -2552,14 +2554,48 @@ model GameToolRoom {
   drawGuessArtworks   DrawGuessArtwork[]
   drawGuessCommands   DrawGuessCommand[]
   drawGuessReports    DrawGuessReport[]
+  unoCommands         UnoCommand[]
+  unoRounds           UnoRound[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
   @@index([kind, status, drawGuessDeadlineAt])
+  @@index([kind, status, unoDeadlineAt])
   @@index([wordBankId])
   @@index([code])
+}
+
+model UnoCommand {
+  id             String       @id @default(cuid())
+  roomId         String
+  room           GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  matchNumber    Int
+  roundNumber    Int
+  commandId      String       @db.VarChar(64)
+  actorProfileId String
+  actionHash     String       @db.VarChar(64)
+  result         Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([roomId, commandId])
+  @@index([roomId, matchNumber, roundNumber, createdAt])
+  @@index([actorProfileId, createdAt])
+}
+
+model UnoRound {
+  id          String       @id @default(cuid())
+  roomId      String
+  room        GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  matchNumber Int
+  roundNumber Int
+  summary     Json
+  finishedAt  DateTime
+  createdAt   DateTime     @default(now())
+
+  @@unique([roomId, matchNumber, roundNumber])
+  @@index([roomId, finishedAt])
 }
 
 model DrawGuessWordBank {

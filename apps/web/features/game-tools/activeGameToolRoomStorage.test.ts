@@ -32,3 +32,17 @@ test("other games retain legacy shortcut support, including private Werewolf sea
     assert.deepEqual(parseStoredActiveGameToolRoom(JSON.stringify(room), "en"), room);
   }
 });
+
+
+test("UNO shortcuts cannot cross accounts or recover ownerless cached records", () => {
+  const room: StoredActiveGameToolRoom = { ...drawGuessRoom, kind: "UNO", title: "UNO", href: "/en/game-tools/uno/rooms/room-a" };
+  assert.deepEqual(parseStoredActiveGameToolRoom(JSON.stringify(room), "en", "player-a"), room);
+  const { profileId: _owner, ...legacy } = room;
+  for (const profileId of ["player-a", "player-b", null, undefined]) {
+    if (profileId !== "player-a") {
+      assert.equal(parseStoredActiveGameToolRoom(JSON.stringify(room), "en", profileId), null);
+      assert.equal(canUseStoredActiveGameToolRoom(room, profileId), false);
+    }
+    assert.equal(parseStoredActiveGameToolRoom(JSON.stringify(legacy), "en", profileId), null);
+  }
+});

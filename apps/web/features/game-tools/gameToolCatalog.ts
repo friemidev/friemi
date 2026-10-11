@@ -4,6 +4,7 @@ import {
   Brush,
   Crown,
   Dice5,
+  Layers3,
   Moon,
   Sparkles,
   UsersRound,
@@ -16,6 +17,7 @@ export type GameToolKind =
   | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
+  | "UNO"
   | "WEREWOLF";
 
 export type GameToolDefinition = {
@@ -82,6 +84,23 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       en: "Draw & Guess",
       fr: "Dessine et devine",
     },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "available",
+    description: {
+      "zh-CN": "按颜色或数字出牌，先出完手牌获胜。",
+      en: "Match colors or numbers. Be the first to play every card.",
+      fr: "Associez les couleurs ou les chiffres. Jouez toutes vos cartes en premier.",
+    },
+    href: "/game-tools/uno",
+    icon: Layers3,
+    imageSrc: "/game-tools/uno/logo.png",
+    kind: "UNO",
+    minPlayers: 2,
+    maxPlayers: 10,
+    phase: { "zh-CN": "已开放", en: "Open", fr: "Ouvert" },
+    title: { "zh-CN": "UNO", en: "UNO", fr: "UNO" },
   },
   {
     accent: "#3C73B0",
