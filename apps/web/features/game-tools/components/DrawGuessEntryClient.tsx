@@ -3,11 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Brush, Check, LoaderCircle, Sparkles, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import type { DrawGuessMode } from "@/features/game-tools/drawGuessEngine";
+import { useDrawGuessRecentRoom } from "@/features/game-tools/hooks/useDrawGuessRecentRoom";
+import { useDrawGuessCompositionGuard } from "@/features/game-tools/hooks/useDrawGuessCompositionGuard";
+import { forgetDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
+import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
+import { joinDrawGuessRoomPending } from "@/features/game-tools/drawGuessJoinRequest";
 import { withLocale } from "@/lib/routes";
 
 function copyFor(locale: string) {
@@ -16,43 +21,68 @@ function copyFor(locale: string) {
   return { back: "桌游工具", title: "你画我猜", chain: "画画接龙", chainBody: "轮流画猜", classic: "抢答模式", classicBody: "边画边猜", create: "创建房间", join: "加入房间", code: "房间号", enter: "加入", closed: "敬请期待", signedOut: "请先登录 Friemi，再创建或加入房间。", error: "房间暂时无法打开，请重试。", full: "房间已满。", missing: "房间不存在", kicked: "你已被房主移出这个房间。", missingHint: "检查一下房间号，再试一次吧。", close: "重新输入" };
 }
 
-export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: { chainEnabled: boolean; classicEnabled: boolean; locale: string }) {
+export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, profileId }: { chainEnabled: boolean; classicEnabled: boolean; locale: string; profileId?: string | null }) {
   const router = useRouter();
   const copy = copyFor(locale);
+  const { canSubmit: canSubmitCode, onKeyDown: guardCodeEnter, ...codeCompositionEvents } = useDrawGuessCompositionGuard(profileId ?? "");
   const [mode, setMode] = useState<DrawGuessMode>("CLASSIC");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [joinIssue, setJoinIssue] = useState("");
+  const mounted = useRef(false);
+  const currentProfile = useRef(profileId);
+  currentProfile.current = profileId;
+  const pendingOperation = useRef<symbol | null>(null);
+  useEffect(() => {
+    mounted.current = true;
+    pendingOperation.current = null;
+    setBusy(false);
+    setError("");
+    setJoinIssue("");
+    return () => { mounted.current = false; pendingOperation.current = null; };
+  }, [profileId]);
+  const recentRoom = useDrawGuessRecentRoom(profileId);
+  const returnLabel = locale === "zh-CN" ? "返回刚才的房间" : locale === "fr" ? "Retrouver ma salle" : "Return to your room";
 
-  async function createRoom() {
+  function beginOperation() {
+    if (!mounted.current || pendingOperation.current) return null;
+    const operation = Symbol();
+    pendingOperation.current = operation;
     setBusy(true);
     setError("");
     setJoinIssue("");
-    try {
-      const response = await fetch("/api/game-tools/draw-guess/rooms", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ locale, mode }) });
-      const result = await response.json();
-      if (!response.ok || !result.room?.id) throw new Error(result.error ?? "UNKNOWN");
-      router.push(withLocale(locale, `/game-tools/draw-guess/rooms/${result.room.id}`));
-    } catch (cause) {
-      setError(cause instanceof Error && cause.message === "SIGN_IN_REQUIRED" ? copy.signedOut : copy.error);
-    } finally { setBusy(false); }
+    return () => mounted.current && currentProfile.current === profileId && pendingOperation.current === operation;
   }
 
-  async function joinRoom() {
-    if (!code.trim()) return;
-    setBusy(true);
-    setError("");
-    setJoinIssue("");
+  async function createRoom() {
+    const isCurrent = beginOperation();
+    if (!isCurrent) return;
     try {
-      const response = await fetch("/api/game-tools/draw-guess/join", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: code.trim().toUpperCase() }) });
-      const result = await response.json();
-      if (!response.ok || !result.roomId) throw new Error(result.error ?? "UNKNOWN");
-      router.push(withLocale(locale, `/game-tools/draw-guess/rooms/${result.roomId}`));
+      const { response, data: result } = await fetchDrawGuessResponse<{ room?: { id?: string }; error?: string }>("/api/game-tools/draw-guess/rooms", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ locale, mode }) });
+      if (!isCurrent()) return;
+      if (!response.ok || !result?.room?.id) throw new Error(result?.error ?? "UNKNOWN");
+      router.push(withLocale(locale, `/game-tools/draw-guess/rooms/${result.room.id}`));
     } catch (cause) {
+      if (!isCurrent()) return;
+      setError(cause instanceof Error && cause.message === "SIGN_IN_REQUIRED" ? copy.signedOut : copy.error);
+    } finally { if (isCurrent()) { pendingOperation.current = null; setBusy(false); } }
+  }
+
+  async function joinRoom(roomCode = code, expectedRoomId?: string) {
+    if (!roomCode.trim() || !canSubmitCode()) return;
+    const isCurrent = beginOperation();
+    if (!isCurrent) return;
+    try {
+      const roomId = await joinDrawGuessRoomPending({ profileId, code: roomCode, expectedRoomId });
+      if (!isCurrent()) return;
+      router.push(withLocale(locale, `/game-tools/draw-guess/rooms/${roomId}`));
+    } catch (cause) {
+      if (!isCurrent()) return;
       const issue = cause instanceof Error ? cause.message : "UNKNOWN";
+      if (issue === "ROOM_NOT_FOUND" || issue === "KICKED") forgetDrawGuessRecentRoom(profileId, expectedRoomId ? { id: expectedRoomId } : { code: roomCode.trim().toUpperCase() });
       setJoinIssue(issue);
-    } finally { setBusy(false); }
+    } finally { if (isCurrent()) { pendingOperation.current = null; setBusy(false); } }
   }
 
   return <div className="draw-guess-theme mx-auto flex w-full max-w-2xl flex-col gap-5">
@@ -66,6 +96,11 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
         <Image alt="" className="relative h-[4.3rem] w-[4.3rem] object-contain sm:h-20 sm:w-20" height={80} src="/game-tools/draw-guess/logo.png" width={80} />
       </div>
     </header>
+    {recentRoom ? <button type="button" disabled={busy} onClick={() => void joinRoom(recentRoom.code, recentRoom.id)} className="draw-guess-btn draw-guess-btn--milk min-h-[76px] w-full justify-start gap-3 px-4 py-2 text-left" aria-label={`${returnLabel} · ${recentRoom.code}`}>
+      <DrawGuessCatSprite catId="scholar" mood="happy" size={46} />
+      <span className="min-w-0 flex-1 text-left"><strong className="block text-sm font-black">{returnLabel}</strong><span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-semibold text-[#63758D]"><span className="font-mono tracking-widest">{recentRoom.code}</span><span>{recentRoom.mode === "CLASSIC" ? copy.classic : copy.chain}</span></span></span>
+      {busy ? <LoaderCircle aria-hidden="true" className="h-5 w-5 shrink-0 animate-spin" /> : <ArrowRight aria-hidden="true" className="h-5 w-5 shrink-0" />}
+    </button> : null}
     <section aria-label={copy.title} className="grid grid-cols-2 gap-3">
       {(["CLASSIC", "CHAIN"] as const).map((value) => {
         const isChain = value === "CHAIN";
@@ -99,7 +134,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale }: {
     </button>
     <section aria-label={copy.join} className="draw-guess-join-in pt-1">
       <div className="flex gap-2">
-        <input id="draw-guess-room-code" aria-label={copy.code} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-5 text-base font-bold uppercase tracking-widest outline-none transition-colors focus:border-[#3F74AE]" maxLength={8} placeholder={copy.code} value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void joinRoom(); }} />
+        <input {...codeCompositionEvents} id="draw-guess-room-code" aria-label={copy.code} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} className="min-h-12 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-5 text-base font-bold uppercase tracking-widest outline-none transition-colors focus:border-[#3F74AE]" maxLength={8} placeholder={copy.code} value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (!guardCodeEnter(event) && event.key === "Enter") void joinRoom(); }} />
         <button disabled={busy || !code.trim()} onClick={() => void joinRoom()} type="button" className="draw-guess-btn draw-guess-btn--blush min-h-12 px-5 text-sm">{copy.enter}</button>
       </div>
     </section>

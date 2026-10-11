@@ -11,6 +11,7 @@ import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuess
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
 import { DrawGuessVolumeControls } from "@/features/game-tools/components/DrawGuessVolumeControls";
 import { playDrawGuessSound } from "@/features/game-tools/drawGuessSound";
+import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, DRAW_GUESS_ROUND_COUNTS, estimateDrawGuessDurationSeconds, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
@@ -146,9 +147,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     if (preview) { setBanks(preview.wordBanks); return; }
     if (banks) return;
     try {
-      const response = await fetch(`/api/game-tools/draw-guess/word-banks?locale=${encodeURIComponent(locale)}`);
-      if (!response.ok) throw new Error("BANKS");
-      const result = await response.json() as { wordBanks: DrawGuessWordBankSnapshot[] };
+      const { response, data: result } = await fetchDrawGuessResponse<{ wordBanks: DrawGuessWordBankSnapshot[] }>(`/api/game-tools/draw-guess/word-banks?locale=${encodeURIComponent(locale)}`);
+      if (!response.ok || !result?.wordBanks) throw new Error("BANKS");
       setBanks(result.wordBanks);
     } catch { setError(t.retry); }
   }
@@ -167,6 +167,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
   function closeCharacter() { setCharacterOpen(false); setError(""); }
 
   async function mutate(path: string, method: "POST" | "PATCH", body: unknown, close?: "bank" | "settings" | "character" | "kick") {
+    if (busy || leaving) return;
     setBusy(true);
     setError("");
     try {
@@ -192,9 +193,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
         if (close === "kick") setKickTarget(null);
         return;
       }
-      const response = await fetch(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-      const result = await response.json();
-      if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
+      const { response, data: result } = await fetchDrawGuessResponse<{ ok?: boolean; error?: string }>(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!response.ok || !result?.ok) throw new Error(result?.error ?? "UNKNOWN");
       await onRefresh();
       if (close === "bank") setBankOpen(false);
       if (close === "settings") setSettingsOpen(false);

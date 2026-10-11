@@ -10,6 +10,7 @@ const batchSchema = z.object({
   stroke: z.unknown(),
   strokeIndex: z.number().int().min(0).max(119),
   turnIndex: z.number().int().min(0).max(9),
+  inkCursor: z.object({ clientId: z.string().uuid(), seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER) }).optional(),
 });
 
 export async function HEAD() {
@@ -54,6 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ roomId
     stroke,
     strokeIndex: parsed.data.strokeIndex,
     turnIndex: parsed.data.turnIndex,
+    inkCursor: parsed.data.inkCursor,
   });
   const broadcastMs = performance.now() - startedAt - authMs - roomMs - redisMs;
   return NextResponse.json(ok ? { ok: true, seq: reserved.seq } : { error: "INK_UNAVAILABLE" }, {

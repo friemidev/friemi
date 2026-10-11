@@ -29,6 +29,7 @@ export async function ActiveGameToolFloatingWindowLoader({
   return (
     <ActiveGameToolFloatingWindow
       locale={locale}
+      profileId={profileId}
       activeRoom={
         room
           ? {

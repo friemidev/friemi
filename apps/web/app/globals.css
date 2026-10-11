@@ -2359,6 +2359,7 @@ html[data-home-motion-ready="true"]
   background-size: 22px 22px, auto;
 }
 .draw-guess-landscape-shell {
+  --draw-guess-canvas-quarter-turn: 0;
   position: fixed;
   inset: 0;
   z-index: 150;
@@ -2387,18 +2388,23 @@ html[data-home-motion-ready="true"]
 }
 .draw-guess-landscape-body .draw-guess-canvas-tools {
   width: 114px;
+  min-height: 0;
   flex: none;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0;
   padding: 7px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .draw-guess-landscape-body .draw-guess-canvas-palette {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   justify-items: center;
   gap: 4px;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 .draw-guess-landscape-body .draw-guess-canvas-palette button {
   width: 30px;
@@ -2406,8 +2412,10 @@ html[data-home-motion-ready="true"]
 }
 .draw-guess-landscape-body .draw-guess-canvas-actions {
   flex-direction: column;
+  flex-shrink: 0;
   gap: 6px;
   margin: 0;
+  margin-bottom: auto;
 }
 .draw-guess-landscape-body .draw-guess-canvas-actions label {
   width: 100%;
@@ -2470,6 +2478,7 @@ html[data-home-motion-ready="true"]
 }
 @media (orientation: portrait) {
   .draw-guess-landscape-shell {
+    --draw-guess-canvas-quarter-turn: 1;
     inset: auto;
     top: 50%;
     left: 50%;
