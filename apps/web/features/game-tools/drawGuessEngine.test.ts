@@ -19,7 +19,9 @@ import {
   normalizeDrawGuessWordBankWords,
   setDrawGuessSeatManaged,
   startDrawGuessGame,
+  type DrawGuessState,
   type DrawGuessWordBankSnapshot,
+  type DrawStroke,
   validateDrawGuessWord,
 } from "./drawGuessEngine";
 
@@ -493,9 +495,103 @@ test("a new classic turn resets the ink sequence", () => {
   state.phase = "TURN_REVEAL";
   state.deadlineAt = new Date(5_000).toISOString();
   state.inkSeq = 17;
+  state.inkCursor = { clientId: "c1520fca-93ae-420a-b476-ceb7c034c8e0", seq: 4 };
   const next = advanceDrawGuessGame(state, 3, 5_000, "en");
   assert.equal(next.turnIndex, 1);
   assert.equal(next.inkSeq, 0);
+  assert.equal(next.inkCursor, null);
+});
+
+test("classic clear snapshots retain the published ink barrier and ignore older draft barriers", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.deadlineAt = new Date(60_000).toISOString();
+  const clientId = "c1520fca-93ae-420a-b476-ceb7c034c8e0";
+  const cursor = { clientId, seq: 4 };
+  const cleared = applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: [],
+    draftClientId: clientId, draftVersion: 2, inkCursor: cursor }, 0, 3, 1_000, "en");
+  assert.ok(!("error" in cleared));
+  const viewer = getDrawGuessViewerState(cleared.state, 1, 3);
+  assert.ok("inkCursor" in viewer);
+  assert.deepEqual(viewer.inkCursor, cursor);
+  const delayed = applyDrawGuessAction(cleared.state, { type: "SAVE_CLASSIC_DRAFT",
+    strokes: [{ color: "#123456", width: 4, points: [[0.2, 0.3]] }],
+    draftClientId: clientId, draftVersion: 1, inkCursor: { clientId, seq: 3 } }, 0, 3, 2_000, "en");
+  assert.ok("ignoredDraft" in delayed);
+  assert.deepEqual(delayed.state.drawings[0], []);
+  assert.deepEqual(delayed.state.inkCursor, cursor);
+});
+
+test("invalid ink barriers cannot replace a saved classic drawing", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.deadlineAt = new Date(60_000).toISOString();
+  const drawing: DrawStroke[] = [{ color: "#123456", width: 4, points: [[0.2, 0.3]] }];
+  state.drawings[0] = drawing;
+  for (const inkCursor of [{ clientId: "invalid", seq: 1 },
+    { clientId: "c1520fca-93ae-420a-b476-ceb7c034c8e0", seq: 0 },
+    { clientId: "c1520fca-93ae-420a-b476-ceb7c034c8e0", seq: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const invalid = applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: [], inkCursor }, 0, 3, 1_000, "en");
+    assert.equal("error" in invalid && invalid.error, "INVALID_INK_CURSOR");
+    assert.deepEqual(invalid.state.drawings[0], drawing);
+  }
+});
+
+for (const mode of ["CLASSIC", "CHAIN"] as const) {
+  test(`${mode.toLowerCase()} drafts ignore older and repeated session versions while allowing newer clears`, () => {
+    const count = mode === "CLASSIC" ? 3 : 5;
+    const seat = mode === "CLASSIC" ? 0 : 1;
+    const clientId = "c1520fca-93ae-420a-b476-ceb7c034c8e0";
+    const drawing: DrawStroke[] = [{ color: "#123456", width: 4, points: [[0.2, 0.3]] }];
+    let state = createDrawGuessState(mode, count);
+    state.phase = mode === "CLASSIC" ? "DRAW_GUESS" : "CHAIN_STEP";
+    state.chainStage = mode === "CHAIN" ? 1 : 0;
+    state.deadlineAt = new Date(60_000).toISOString();
+    const save = (strokes: DrawStroke[], draftVersion: number) => applyDrawGuessAction(state, {
+      type: mode === "CLASSIC" ? "SAVE_CLASSIC_DRAFT" : "SAVE_DRAFT",
+      strokes, draftClientId: clientId, draftVersion,
+    }, seat, count, 1_000, "en");
+    const visibleDrawing = (value: DrawGuessState) => mode === "CLASSIC" ? value.drawings[0] : value.drafts["0:1"];
+
+    const newest = save(drawing, 2);
+    assert.ok(!("error" in newest));
+    state = newest.state;
+    for (const version of [1, 2]) {
+      const obsolete = save([], version);
+      assert.ok("ignoredDraft" in obsolete);
+      assert.deepEqual(visibleDrawing(obsolete.state), drawing);
+    }
+    const cleared = save([], 3);
+    assert.ok(!("error" in cleared) && !("ignoredDraft" in cleared));
+    assert.deepEqual(visibleDrawing(cleared.state), []);
+    assert.equal(cleared.state.draftVersions?.[String(seat)]?.[clientId], 3);
+  });
+}
+
+test("draft ordering requires valid paired metadata and preserves legacy and separate session saves", () => {
+  const state = createDrawGuessState("CLASSIC", 3);
+  state.phase = "DRAW_GUESS";
+  state.deadlineAt = new Date(60_000).toISOString();
+  const clientId = "c1520fca-93ae-420a-b476-ceb7c034c8e0";
+  const drawing: DrawStroke[] = [{ color: "#123456", width: 4, points: [[0.2, 0.3]] }];
+  for (const metadata of [{ draftClientId: clientId }, { draftVersion: 1 },
+    { draftClientId: "invalid", draftVersion: 1 }, { draftClientId: clientId, draftVersion: 0 },
+    { draftClientId: clientId, draftVersion: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const invalid = applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: drawing, ...metadata }, 0, 3, 1_000, "en");
+    assert.equal("error" in invalid && invalid.error, "INVALID_DRAFT_VERSION");
+    assert.deepEqual(invalid.state.drawings[0], []);
+    assert.equal(invalid.state.draftVersions, undefined);
+  }
+  const saved = applyDrawGuessAction(state, { type: "SAVE_CLASSIC_DRAFT", strokes: drawing,
+    draftClientId: clientId, draftVersion: 9 }, 0, 3, 1_000, "en");
+  assert.ok(!("error" in saved));
+  const legacy = applyDrawGuessAction(saved.state, { type: "SAVE_CLASSIC_DRAFT", strokes: [] }, 0, 3, 2_000, "en");
+  assert.ok(!("error" in legacy));
+  assert.deepEqual(legacy.state.drawings[0], []);
+  const anotherSession = applyDrawGuessAction(saved.state, { type: "SAVE_CLASSIC_DRAFT", strokes: [],
+    draftClientId: "c1520fca-93ae-420a-b476-ceb7c034c8e1", draftVersion: 1 }, 0, 3, 2_000, "en");
+  assert.ok(!("error" in anotherSession) && !("ignoredDraft" in anotherSession));
+  assert.deepEqual(anotherSession.state.drawings[0], []);
 });
 
 test("a late relay command cannot be applied to the next phase", () => {

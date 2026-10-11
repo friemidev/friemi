@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, LoaderCircle, Trophy } from "lucide-react";
 import { DrawGuessArtwork, DrawGuessCanvas } from "@/features/game-tools/components/DrawGuessCanvas";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
@@ -15,6 +14,13 @@ import { DrawGuessArtworkVote } from "@/features/game-tools/components/DrawGuess
 import { DrawGuessChainResult } from "@/features/game-tools/components/DrawGuessChainResult";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
 import { getDrawGuessRankings } from "@/features/game-tools/drawGuessEngine";
+import { fetchDrawGuessRoomWithRecovery } from "@/features/game-tools/drawGuessRoomRecovery";
+import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
+import { useDrawGuessRoomPresence } from "@/features/game-tools/hooks/useDrawGuessRoomPresence";
+import { forgetDrawGuessRecentRoom, rememberDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
+import { DrawGuessRoomCodeButton } from "@/features/game-tools/components/DrawGuessRoomCodeButton";
+import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
+import { DrawGuessRoomClosedNotice } from "@/features/game-tools/components/DrawGuessRoomClosedNotice";
 import { withLocale } from "@/lib/routes";
 
 export function DrawGuessSpectator({ initialRoom, locale }: { initialRoom: DrawGuessRoomView; locale: string }) {
@@ -24,69 +30,123 @@ export function DrawGuessSpectator({ initialRoom, locale }: { initialRoom: DrawG
   const [serverOffset, setServerOffset] = useState(initialRoom.view.serverNow ? Date.parse(initialRoom.view.serverNow) - Date.now() : 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [removed, setRemoved] = useState(false);
+  const [closed, setClosed] = useState(false);
+  const leaving = useRef(false);
+  const unavailable = useRef(false);
+  const active = useRef(true);
+  const latestRoom = useRef(room);
+  latestRoom.current = room;
+  const pollRunning = useRef<Promise<void> | null>(null);
+  const actionRunning = useRef<Promise<void> | null>(null);
+  useDrawGuessRoomPresence(initialRoom.id, () => !leaving.current && !unavailable.current);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+  useEffect(() => {
+    rememberDrawGuessRecentRoom(room.viewerProfileId, { id: room.id, code: room.code, mode: room.mode });
+  }, [room.code, room.id, room.mode, room.viewerProfileId]);
   const copy = locale === "zh-CN"
     ? { watch: "观战中", back: "离开观战", wait: "等待下一棒", draw: "正在作画", guess: "大家正在猜", answer: "答案", rank: "实时积分", story: "接龙作品", managed: "托管", seconds: "秒", lobby: "等待下一局", return: "返回房间", join: "加入下一局", full: "房间已满，继续观战", started: "已经开局，继续观战", retry: "请再试一次" }
     : locale === "fr"
       ? { watch: "Spectateur", back: "Quitter", wait: "En attendant", draw: "Dessin en cours", guess: "On devine", answer: "Réponse", rank: "Scores", story: "Dessins", managed: "Absent", seconds: "s", lobby: "Prochaine partie", return: "Retour à la salle", join: "Rejoindre la prochaine partie", full: "Salle complète, restez spectateur", started: "Partie commencée, restez spectateur", retry: "Réessayez" }
       : { watch: "Spectating", back: "Leave", wait: "Waiting for the next step", draw: "Drawing now", guess: "Everyone is guessing", answer: "Answer", rank: "Live scores", story: "Picture chain", managed: "Away", seconds: "s", lobby: "Waiting for the next game", return: "Back to room", join: "Join next game", full: "Room is full; keep spectating", started: "Game started; keep spectating", retry: "Please try again" };
 
-  useEffect(() => {
-    let disposed = false;
-    const poll = async () => {
+  const refresh = useCallback(async (afterMutation = false) => {
+    const canRecover = () => active.current && !leaving.current && !unavailable.current && document.visibilityState !== "hidden";
+    if (!canRecover()) return;
+    if (pollRunning.current) {
+      await pollRunning.current;
+      if (!afterMutation || !canRecover()) return;
+    }
+    const running = (async () => {
       try {
-        const response = await fetch(`/api/game-tools/draw-guess/rooms/${initialRoom.id}`, { cache: "no-store" });
-        if (!response.ok) return;
-        const result = await response.json() as { room?: DrawGuessRoomView };
-        if (!disposed && result.room) {
-          if (result.room.view.serverNow) setServerOffset(Date.parse(result.room.view.serverNow) - Date.now());
-          setRoom((current) => result.room!.revision >= current.revision ? result.room! : current);
+        const { response, data: result, requestedAt } = await fetchDrawGuessRoomWithRecovery(initialRoom.id, initialRoom.code, { shouldRecover: canRecover });
+        if (!canRecover()) return;
+        if (!response.ok) {
+          if (result?.error === "KICKED" || result?.error === "ROOM_NOT_FOUND") {
+            unavailable.current = true;
+            forgetDrawGuessRecentRoom(initialRoom.viewerProfileId, { id: initialRoom.id });
+            if (result.error === "KICKED") setRemoved(true);
+            else setClosed(true);
+          }
+          return;
+        }
+        if (result?.room) {
+          if (result.room.view.serverNow) setServerOffset(Date.parse(result.room.view.serverNow) - (requestedAt + Date.now()) / 2);
+          setNow(Date.now());
+          if (result.room.revision >= latestRoom.current.revision) {
+            if (result.room.viewerSeat >= 0) router.refresh();
+            setRoom(result.room);
+          }
         }
       } catch { /* The next poll retries. */ }
-    };
-    const interval = window.setInterval(() => { setNow(Date.now()); void poll(); }, 2_000);
-    window.addEventListener("focus", poll);
-    return () => { disposed = true; window.clearInterval(interval); window.removeEventListener("focus", poll); };
-  }, [initialRoom.id]);
+    })();
+    pollRunning.current = running;
+    try { await running; }
+    finally { if (pollRunning.current === running) pollRunning.current = null; }
+  }, [initialRoom.code, initialRoom.id, initialRoom.viewerProfileId, router]);
+
   useEffect(() => {
-    if (room.view.phase !== "CHAIN_REVEAL") return;
-    const interval = window.setInterval(() => setNow(Date.now()), 250);
+    const poll = () => { setNow(Date.now()); void refresh(); };
+    const interval = window.setInterval(poll, 2_000);
+    window.addEventListener("focus", poll);
+    window.addEventListener("online", poll);
+    window.addEventListener("pageshow", poll);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      window.clearInterval(interval); window.removeEventListener("focus", poll);
+      window.removeEventListener("online", poll); window.removeEventListener("pageshow", poll);
+      document.removeEventListener("visibilitychange", poll);
+    };
+  }, [refresh]);
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), room.view.phase === "CHAIN_REVEAL" ? 250 : 1_000);
     return () => window.clearInterval(interval);
   }, [room.view.phase]);
 
-  async function returnToLobby() {
+  async function runRoomAction(join: boolean) {
+    if (actionRunning.current || leaving.current || unavailable.current || !active.current) return;
     setBusy(true); setError("");
-    try {
-      const response = await fetch(`/api/game-tools/draw-guess/rooms/${room.id}/return`, { method: "POST" });
-      if (!response.ok) throw new Error("RETURN_FAILED");
-      const viewResponse = await fetch(`/api/game-tools/draw-guess/rooms/${room.id}`, { cache: "no-store" });
-      if (!viewResponse.ok) throw new Error("ROOM_UNAVAILABLE");
-      const result = await viewResponse.json() as { room: DrawGuessRoomView };
-      setRoom(result.room);
-    } catch { setError(copy.retry); }
-    finally { setBusy(false); }
-  }
-
-  async function joinNextGame() {
-    setBusy(true); setError("");
-    try {
-      const response = await fetch("/api/game-tools/draw-guess/join", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: room.code }) });
-      if (!response.ok) throw new Error("JOIN_FAILED");
-      const result = await response.json() as { spectator?: boolean };
-      if (result.spectator) { setError(copy.started); setBusy(false); return; }
-      router.refresh();
-      setBusy(false);
-    } catch { setError(copy.retry); setBusy(false); }
+    const running = (async () => {
+      try {
+        await pollRunning.current;
+        if (leaving.current || unavailable.current || !active.current) return;
+        const current = latestRoom.current;
+        const { response, data: result } = await fetchDrawGuessResponse<{ spectator?: boolean }>(join ? "/api/game-tools/draw-guess/join" : `/api/game-tools/draw-guess/rooms/${current.id}/return`, {
+          method: "POST", ...(join ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ code: current.code, expectedRoomId: current.id }) } : {}),
+        });
+        if (leaving.current || unavailable.current || !active.current) return;
+        if (!response.ok) throw new Error("ROOM_ACTION_FAILED");
+        if (join && result?.spectator) setError(copy.started);
+        await refresh(true);
+      } catch {
+        if (active.current && !leaving.current && !unavailable.current) { setError(copy.retry); void refresh(); }
+      } finally { if (active.current) setBusy(false); }
+    })();
+    actionRunning.current = running;
+    try { await running; }
+    finally { if (actionRunning.current === running) actionRunning.current = null; }
   }
 
   async function leaveRoom() {
-    const response = await fetch(`/api/game-tools/draw-guess/rooms/${room.id}/leave`, { method: "POST" });
-    if (!response.ok) throw new Error("LEAVE_FAILED");
-    router.push(withLocale(locale, "/game-tools/draw-guess"));
+    if (leaving.current) return;
+    leaving.current = true;
+    try {
+      await actionRunning.current;
+      await pollRunning.current;
+      const { response } = await fetchDrawGuessResponse(`/api/game-tools/draw-guess/rooms/${room.id}/leave`, { method: "POST" });
+      if (!response.ok) throw new Error("LEAVE_FAILED");
+      if (active.current) router.push(withLocale(locale, "/game-tools/draw-guess"));
+    } catch (cause) { leaving.current = false; throw cause; }
   }
 
+  if (removed) return <DrawGuessKickedNotice locale={locale} roomId={room.id} profileId={room.viewerProfileId} />;
+  if (closed) return <DrawGuessRoomClosedNotice locale={locale} roomId={room.id} profileId={room.viewerProfileId} />;
   if (room.view.phase === "FINISHED" && room.returnedToLobby) return <DrawGuessPostgameWaiting locale={locale} room={room} onLeave={leaveRoom} />;
 
-  const seconds = room.view.deadlineAt ? Math.max(0, Math.ceil((Date.parse(room.view.deadlineAt) - now) / 1_000)) : null;
+  const seconds = room.view.deadlineAt ? Math.max(0, Math.ceil((Date.parse(room.view.deadlineAt) - now - serverOffset) / 1_000)) : null;
   const artist = room.seats.find((seat) => seat.number === room.view.turnIndex + 1);
   const classic = room.mode === "CLASSIC";
   const drawing = room.view.phase === "DRAW_GUESS" || room.view.phase === "TURN_REVEAL";
@@ -99,15 +159,16 @@ export function DrawGuessSpectator({ initialRoom, locale }: { initialRoom: DrawG
 
   return <div className="draw-guess-theme mx-auto flex w-full max-w-3xl flex-col gap-4 pb-8">
     <header className="flex items-center gap-3">
-      <Link href={withLocale(locale, "/game-tools/draw-guess")} onClick={() => { void fetch(`/api/game-tools/draw-guess/rooms/${room.id}/leave`, { method: "POST", keepalive: true }); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center" aria-label={copy.back}><ArrowLeft className="h-5 w-5" /></Link>
-      <div className="min-w-0 flex-1"><p className="flex items-center gap-1 text-xs font-bold text-[#3E70AA]"><Eye className="h-4 w-4" />{copy.watch} · {room.code} · {room.view.roundIndex ?? 1}/{room.view.roundCount ?? 1}</p><h1 className="truncate text-xl font-black">{stage}</h1></div>
+      <button type="button" onClick={() => { void leaveRoom().catch(() => setError(copy.retry)); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center" aria-label={copy.back}><ArrowLeft className="h-5 w-5" /></button>
+      <div className="min-w-0 flex-1"><p className="flex items-center gap-1 text-xs font-bold text-[#3E70AA]"><Eye className="h-4 w-4" />{copy.watch} · {room.view.roundIndex ?? 1}/{room.view.roundCount ?? 1}</p><h1 className="truncate text-xl font-black">{stage}</h1></div>
       {seconds !== null ? <span className="rounded-full bg-[#E8F2FB] px-3 py-2 font-mono text-sm font-black tabular-nums text-[#3E70AA]">{seconds} {copy.seconds}</span> : null}
     </header>
+    <div className="flex justify-end"><DrawGuessRoomCodeButton code={room.code} compact locale={locale} /></div>
 
-    {room.view.phase === "LOBBY" ? <section className="draw-guess-stage-card rounded-[1.8rem] bg-[#FFFCF5] p-5 shadow-[0_10px_30px_rgba(48,66,92,0.1)]"><div className="flex items-center gap-2"><DrawGuessCatSprite animated catId="cloud" mood="happy" size={58} /><div><h2 className="text-lg font-black">{copy.lobby}</h2><p className="text-sm font-bold text-[#63758D]">{room.code}</p></div></div><div className="mt-4 grid grid-cols-3 gap-2">{room.seats.filter((seat) => !seat.isSystem).map((seat) => <div key={seat.number} className="flex min-w-0 flex-col items-center rounded-2xl bg-[#F3F8FC] p-2 text-center"><DrawGuessCatSprite catId={seat.catId} size={48} /><strong className="max-w-full truncate text-xs">{seat.name}</strong><span className="text-[11px] font-semibold text-[#63758D]">{seat.ready ? locale === "zh-CN" ? "已准备" : "Ready" : locale === "zh-CN" ? "准备" : "Waiting"}</span></div>)}</div>{room.seats.length < room.playerCount ? <button type="button" disabled={busy} onClick={() => void joinNextGame()} className="draw-guess-btn draw-guess-btn--candy mt-5 min-h-12 w-full px-4 text-sm">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{copy.join}</button> : <p className="mt-5 text-center text-sm font-bold text-[#63758D]">{copy.full}</p>}</section> : null}
+    {room.view.phase === "LOBBY" ? <section className="draw-guess-stage-card rounded-[1.8rem] bg-[#FFFCF5] p-5 shadow-[0_10px_30px_rgba(48,66,92,0.1)]"><div className="flex items-center gap-2"><DrawGuessCatSprite animated catId="cloud" mood="happy" size={58} /><div><h2 className="text-lg font-black">{copy.lobby}</h2><p className="text-sm font-bold text-[#63758D]">{room.code}</p></div></div><div className="mt-4 grid grid-cols-3 gap-2">{room.seats.filter((seat) => !seat.isSystem).map((seat) => <div key={seat.number} className="flex min-w-0 flex-col items-center rounded-2xl bg-[#F3F8FC] p-2 text-center"><DrawGuessCatSprite catId={seat.catId} size={48} /><strong className="max-w-full truncate text-xs">{seat.name}</strong><span className="text-[11px] font-semibold text-[#63758D]">{seat.ready ? locale === "zh-CN" ? "已准备" : "Ready" : locale === "zh-CN" ? "准备" : "Waiting"}</span></div>)}</div>{room.seats.length < room.playerCount ? <button type="button" disabled={busy} onClick={() => void runRoomAction(true)} className="draw-guess-btn draw-guess-btn--candy mt-5 min-h-12 w-full px-4 text-sm">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{copy.join}</button> : <p className="mt-5 text-center text-sm font-bold text-[#63758D]">{copy.full}</p>}</section> : null}
 
-    {room.view.phase === "FINISHED" ? room.mode === "CHAIN" ? <DrawGuessChainResult busy={busy} locale={locale} onReturn={() => void returnToLobby()} room={room} /> : <DrawGuessPodium busy={busy} finishLabel={copy.rank} locale={locale} onReturn={() => void returnToLobby()} returnLabel={copy.return} room={room} scoreLabel={locale === "zh-CN" ? "分" : "pts"} /> : null}
-    {room.view.phase === "ROUND_BREAK" ? <DrawGuessRoundBreak locale={locale} now={now} room={room} /> : null}
+    {room.view.phase === "FINISHED" ? room.mode === "CHAIN" ? <DrawGuessChainResult busy={busy} locale={locale} onReturn={() => void runRoomAction(false)} room={room} /> : <DrawGuessPodium busy={busy} finishLabel={copy.rank} locale={locale} onReturn={() => void runRoomAction(false)} returnLabel={copy.return} room={room} scoreLabel={locale === "zh-CN" ? "分" : "pts"} /> : null}
+    {room.view.phase === "ROUND_BREAK" ? <DrawGuessRoundBreak locale={locale} now={now + serverOffset} room={room} /> : null}
     {room.mode === "CHAIN" && (room.view.phase === "MATCH_VOTE" || room.view.phase === "MATCH_RESULT") ? <DrawGuessMatchVote busy={false} locale={locale} room={room} onVote={async () => null} /> : null}
     {room.mode === "CHAIN" && room.view.phase === "CHAIN_REVEAL" ? <DrawGuessChainReveal busy={false} locale={locale} now={now + serverOffset} room={room} onControl={async () => null} onReact={async () => false} /> : null}
     {room.mode === "CHAIN" && (room.view.phase === "ARTWORK_VOTE" || room.view.phase === "ARTWORK_RESULT") ? <DrawGuessArtworkVote busy={false} locale={locale} room={room} onVote={async () => null} /> : null}

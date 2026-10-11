@@ -6,18 +6,25 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
 import { withLocale } from "@/lib/routes";
+import { forgetDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
+import { joinDrawGuessRoomPending } from "@/features/game-tools/drawGuessJoinRequest";
 
-export function DrawGuessJoinClient({ code, locale }: { code: string; locale: string }) {
+export function DrawGuessJoinClient({ code, expectedRoomId, locale, profileId }: { code: string; expectedRoomId?: string; locale: string; profileId?: string | null }) {
   const router = useRouter();
   const [error, setError] = useState("");
   useEffect(() => {
     let mounted = true;
-    fetch("/api/game-tools/draw-guess/join", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: code.toUpperCase() }) })
-      .then(async (response) => { const result = await response.json(); if (!response.ok || !result.roomId) throw new Error(result.error ?? "UNKNOWN"); return result.roomId as string; })
+    setError("");
+    joinDrawGuessRoomPending({ profileId, code, expectedRoomId })
       .then((roomId) => { if (mounted) router.replace(withLocale(locale, `/game-tools/draw-guess/rooms/${roomId}`)); })
-      .catch((cause) => { if (mounted) setError(cause instanceof Error ? cause.message : "UNKNOWN"); });
+      .catch((cause) => {
+        if (!mounted) return;
+        const issue = cause instanceof Error ? cause.message : "UNKNOWN";
+        if (issue === "ROOM_NOT_FOUND" || issue === "KICKED") forgetDrawGuessRecentRoom(profileId, expectedRoomId !== undefined ? { id: expectedRoomId } : { code: code.trim().toUpperCase() });
+        setError(issue);
+      });
     return () => { mounted = false; };
-  }, [code, locale, router]);
+  }, [code, expectedRoomId, locale, profileId, router]);
   const missing = error === "ROOM_NOT_FOUND" || error === "INVALID_REQUEST";
   const message = missing ? locale === "zh-CN" ? "房间不存在" : locale === "fr" ? "Salle introuvable" : "Room not found"
     : error === "CHAIN_NOT_ENABLED" ? locale === "zh-CN" ? "画画接龙敬请期待" : locale === "fr" ? "Chaîne de dessins bientôt disponible" : "Picture chain is coming soon"

@@ -9,6 +9,8 @@ import {
   ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
   ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
   DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  canUseStoredActiveGameToolRoom,
+  parseStoredActiveGameToolRoom,
   type StoredActiveGameToolRoom,
 } from "@/features/game-tools/activeGameToolRoomStorage";
 import { withLocale } from "@/lib/routes";
@@ -25,6 +27,7 @@ type ActiveGameToolFloatingWindowProps = {
     title: string;
   } | null;
   locale: string;
+  profileId?: string | null;
 };
 
 function getCopy(locale: string) {
@@ -79,39 +82,9 @@ function getKindLabel(
   return copy.storyteller;
 }
 
-function readStoredActiveRoom(locale: string) {
+function readStoredActiveRoom(locale: string, profileId?: string | null) {
   try {
-    const rawValue = window.localStorage.getItem(
-      ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
-    );
-
-    if (!rawValue) {
-      return null;
-    }
-
-    const parsed = JSON.parse(rawValue) as Partial<StoredActiveGameToolRoom>;
-
-    if (
-      parsed.locale !== locale ||
-      !parsed.id ||
-      !parsed.href ||
-      !parsed.kind ||
-      !parsed.title
-    ) {
-      return null;
-    }
-
-    return {
-      code: parsed.code ?? "",
-      href: parsed.href,
-      id: parsed.id,
-      kind: parsed.kind,
-      locale: parsed.locale,
-      privateSeatHref: parsed.privateSeatHref ?? null,
-      seatNumber:
-        typeof parsed.seatNumber === "number" ? parsed.seatNumber : null,
-      title: parsed.title,
-    } satisfies StoredActiveGameToolRoom;
+    return parseStoredActiveGameToolRoom(window.localStorage.getItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY), locale, profileId);
   } catch {
     return null;
   }
@@ -120,6 +93,7 @@ function readStoredActiveRoom(locale: string) {
 export function ActiveGameToolFloatingWindow({
   activeRoom,
   locale,
+  profileId,
 }: ActiveGameToolFloatingWindowProps) {
   const pathname = usePathname();
   const [storedRoom, setStoredRoom] = useState<StoredActiveGameToolRoom | null>(
@@ -129,7 +103,7 @@ export function ActiveGameToolFloatingWindow({
 
   useEffect(() => {
     const syncStoredRoom = () => {
-      setStoredRoom(readStoredActiveRoom(locale));
+      setStoredRoom(readStoredActiveRoom(locale, profileId));
 
       try {
         setDismissedRoomId(
@@ -156,10 +130,10 @@ export function ActiveGameToolFloatingWindow({
         syncStoredRoom,
       );
     };
-  }, [locale]);
+  }, [locale, profileId]);
 
   useEffect(() => {
-    if (!activeRoom) {
+    if (!activeRoom || activeRoom.kind === "DRAW_GUESS" && !profileId) {
       return;
     }
 
@@ -177,18 +151,19 @@ export function ActiveGameToolFloatingWindow({
         JSON.stringify({
           ...activeRoom,
           locale,
+          ...(activeRoom.kind === "DRAW_GUESS" ? { profileId } : {}),
         } satisfies StoredActiveGameToolRoom),
       );
       window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
     } catch {
       // Floating room persistence is a convenience; the server value still works.
     }
-  }, [activeRoom, locale]);
+  }, [activeRoom, locale, profileId]);
 
   const currentRoom =
     activeRoom && activeRoom.id !== dismissedRoomId
       ? activeRoom
-      : storedRoom && storedRoom.id !== dismissedRoomId
+      : storedRoom && storedRoom.id !== dismissedRoomId && canUseStoredActiveGameToolRoom(storedRoom, profileId)
         ? storedRoom
         : null;
 
@@ -214,7 +189,9 @@ export function ActiveGameToolFloatingWindow({
   const kindLabel = getKindLabel(currentRoom.kind, copy);
   const Icon = currentRoom.kind === "WEREWOLF" ? Moon : UsersRound;
   const targetHref =
-    currentRoom.kind === "WEREWOLF"
+    currentRoom.kind === "DRAW_GUESS"
+      ? withLocale(locale, `/game-tools/draw-guess/join/${currentRoom.code}?roomId=${encodeURIComponent(currentRoom.id)}`)
+      : currentRoom.kind === "WEREWOLF"
       ? currentRoom.href
       : (currentRoom.privateSeatHref ?? currentRoom.href);
   const label = `${copy.action}: ${kindLabel} · ${currentRoom.title}`;

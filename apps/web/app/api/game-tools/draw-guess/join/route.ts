@@ -4,7 +4,10 @@ import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRea
 import { joinDrawGuessRoom } from "@/features/game-tools/drawGuessRoomServer";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 
-const schema = z.object({ code: z.string().trim().min(6).max(8) });
+const schema = z.object({
+  code: z.string().trim().min(6).max(8),
+  expectedRoomId: z.string().trim().min(1).max(128).optional(),
+});
 
 export async function POST(request: Request) {
   const profile = await getOptionalCurrentUserProfile();
@@ -13,6 +16,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const result = await joinDrawGuessRoom({
     code: parsed.data.code,
+    expectedRoomId: parsed.data.expectedRoomId,
     displayName: profile.nickname,
     profileId: profile.id,
   });

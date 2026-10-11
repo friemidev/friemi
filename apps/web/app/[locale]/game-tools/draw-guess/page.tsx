@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DrawGuessEntryClient } from "@/features/game-tools/components/DrawGuessEntryClient";
+import { getExistingDrawGuessProfileId } from "@/features/game-tools/drawGuessAuth";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -20,9 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function DrawGuessToolPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const profileId = await getExistingDrawGuessProfileId();
   return (
     <PageContainer className="max-w-[45rem] pb-12 pt-5" mobileSafeBottom mobileSafeTop>
-      <DrawGuessEntryClient chainEnabled={isDrawGuessChainEnabled()} classicEnabled={isDrawGuessClassicEnabled()} locale={locale} />
+      <DrawGuessEntryClient chainEnabled={isDrawGuessChainEnabled()} classicEnabled={isDrawGuessClassicEnabled()} locale={locale} profileId={profileId} />
     </PageContainer>
   );
 }
