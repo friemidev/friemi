@@ -30,6 +30,20 @@ test("UNO mutations reject missing, null and cross-site origins", () => {
   assert.equal(isUnoSameOrigin(request()), false);
 });
 
+test("UNO accepts the browser-facing host when Next uses a different bind address", () => {
+  const request = (origin: string, host = "127.0.0.1:4180", forwardedProtocol?: string) => new Request("http://0.0.0.0:4180/api/game-tools/uno/rooms", {
+    method: "POST",
+    headers: { origin, host, ...(forwardedProtocol ? { "x-forwarded-proto": forwardedProtocol } : {}) },
+  });
+  assert.equal(isUnoSameOrigin(request("http://127.0.0.1:4180")), true);
+  assert.equal(isUnoSameOrigin(request("http://localhost:4180")), false);
+  assert.equal(isUnoSameOrigin(request("http://evil.example")), false);
+  assert.equal(isUnoSameOrigin(request("https://127.0.0.1:4180")), false);
+  assert.equal(isUnoSameOrigin(request("https://preview.example", "preview.example", "https")), true);
+  assert.equal(isUnoSameOrigin(request("http://preview.example", "preview.example", "https")), false);
+  assert.equal(isUnoSameOrigin(request("https://preview.example", "preview.example", "javascript")), false);
+});
+
 test("unreceipted room writes require the original nonnegative integer revision", () => {
   for (const expectedRevision of [undefined, null, -1, 1.5, "4"]) assert.equal(unoMutationSchema.safeParse({ expectedRevision }).success, false);
   assert.deepEqual(unoMutationSchema.parse({ expectedRevision: 4 }), { expectedRevision: 4 });

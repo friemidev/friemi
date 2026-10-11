@@ -33,6 +33,17 @@ export const unoMutationSchema = z.object({ expectedRevision: storedCounter.nonn
 export function isUnoSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
-  try { return new URL(origin).origin === new URL(request.url).origin; }
+  try {
+    const source = new URL(origin);
+    if (!["http:", "https:"].includes(source.protocol) || source.origin === "null") return false;
+    const destination = new URL(request.url);
+    // Next may expose its bind address (0.0.0.0) as request.url even when the
+    // browser reached 127.0.0.1 or localhost. Host is the browser-facing host.
+    const host = request.headers.get("host") ?? destination.host;
+    const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    if (forwardedProtocol && !["http", "https"].includes(forwardedProtocol)) return false;
+    const protocol = forwardedProtocol ? `${forwardedProtocol}:` : destination.protocol;
+    return source.origin === new URL(`${protocol}//${host}`).origin;
+  }
   catch { return false; }
 }
