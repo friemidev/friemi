@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Moon, UsersRound } from "lucide-react";
+import { Dice5, Moon, UsersRound } from "lucide-react";
 import {
   ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
   ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
@@ -21,7 +21,7 @@ type ActiveGameToolFloatingWindowProps = {
     code: string;
     href: string;
     id: string;
-    kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
+    kind: "AVALON" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
     title: string;
@@ -37,6 +37,7 @@ function getCopy(locale: string) {
       action: "Revenir",
       avalon: "Avalon en cours",
       drawGuess: "Dessine et devine en cours",
+      dice: "Perudo en cours",
       uno: "UNO en cours",
       seat: "Place",
       storyteller: "Table en cours",
@@ -49,6 +50,7 @@ function getCopy(locale: string) {
       action: "Return",
       avalon: "Avalon running",
       drawGuess: "Draw & Guess running",
+      dice: "Liar’s Dice running",
       uno: "UNO running",
       seat: "Seat",
       storyteller: "Game running",
@@ -60,6 +62,7 @@ function getCopy(locale: string) {
     action: "回到本局",
     avalon: "阿瓦隆进行中",
     drawGuess: "你画我猜进行中",
+    dice: "吹牛进行中",
     uno: "UNO 进行中",
     seat: "座位",
     storyteller: "桌游进行中",
@@ -84,6 +87,7 @@ function getKindLabel(
   }
 
   if (kind === "UNO") return copy.uno;
+  if (kind === "DICE") return copy.dice;
 
   return copy.storyteller;
 }
@@ -140,7 +144,7 @@ export function ActiveGameToolFloatingWindow({
   }, [locale, profileId]);
 
   useEffect(() => {
-    if (!activeRoom || (activeRoom.kind === "DRAW_GUESS" || activeRoom.kind === "UNO") && !profileId) {
+    if (!activeRoom || (["DRAW_GUESS", "DICE", "UNO"].includes(activeRoom.kind) && !profileId)) {
       return;
     }
 
@@ -158,7 +162,7 @@ export function ActiveGameToolFloatingWindow({
         JSON.stringify({
           ...activeRoom,
           locale,
-          ...((activeRoom.kind === "DRAW_GUESS" || activeRoom.kind === "UNO") ? { profileId } : {}),
+          ...(["DRAW_GUESS", "DICE", "UNO"].includes(activeRoom.kind) ? { profileId } : {}),
         } satisfies StoredActiveGameToolRoom),
       );
       window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
@@ -194,7 +198,7 @@ export function ActiveGameToolFloatingWindow({
 
   const copy = getCopy(locale);
   const kindLabel = getKindLabel(currentRoom.kind, copy);
-  const Icon = currentRoom.kind === "WEREWOLF" ? Moon : UsersRound;
+  const Icon = currentRoom.kind === "WEREWOLF" ? Moon : currentRoom.kind === "DICE" ? Dice5 : UsersRound;
   const targetHref =
     currentRoom.kind === "DRAW_GUESS"
       ? withLocale(locale, `/game-tools/draw-guess/join/${currentRoom.code}?roomId=${encodeURIComponent(currentRoom.id)}`)
@@ -216,8 +220,8 @@ export function ActiveGameToolFloatingWindow({
       <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
       {currentRoom.kind === "UNO" ? (
         <Image alt="" className="relative h-8 w-8 rounded-lg object-contain" height={32} src="/game-tools/uno/logo.png" width={32} />
-      ) : currentRoom.kind === "DRAW_GUESS" ? (
-        <Image alt="" className="relative h-7 w-7 object-contain" height={28} src="/game-tools/draw-guess/logo.png" width={28} />
+      ) : currentRoom.kind === "DRAW_GUESS" || currentRoom.kind === "DICE" ? (
+        <Image alt="" className="relative h-7 w-7 object-contain" height={28} src={currentRoom.kind === "DICE" ? "/game-tools/dice/logo.webp" : "/game-tools/draw-guess/logo.png"} width={28} />
       ) : (
         <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
       )}

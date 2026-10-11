@@ -25,6 +25,12 @@ test("legacy Draw & Guess records with no known owner cannot be adopted by a new
   }
 });
 
+test("dice room shortcut belongs to the signed-in player", () => {
+  const diceRoom = { ...drawGuessRoom, kind: "DICE" as const, href: "/en/game-tools/dice/online/rooms/room-a" };
+  assert.deepEqual(parseStoredActiveGameToolRoom(JSON.stringify(diceRoom), "en", "player-a"), diceRoom);
+  assert.equal(parseStoredActiveGameToolRoom(JSON.stringify(diceRoom), "en", "player-b"), null);
+});
+
 test("other games retain legacy shortcut support, including private Werewolf seats", () => {
   const { profileId: _owner, ...legacy } = drawGuessRoom;
   for (const kind of ["AVALON", "STORYTELLER", "WEREWOLF"] as const) {

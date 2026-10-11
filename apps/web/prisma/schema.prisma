@@ -373,6 +373,7 @@ enum PlanetMembershipStatus {
 
 enum GameToolKind {
   AVALON
+  DICE
   DRAW_GUESS
   UNO
   STORYTELLER

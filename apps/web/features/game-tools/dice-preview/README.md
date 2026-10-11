@@ -14,8 +14,12 @@ as its page icon, localized preview/exit labels, and a confirmed exit from pract
 to the localized game hub. Chinese rules dialogs restore their own language after
 a localized exit dialog.
 Game controls and rules retain the prototype's Chinese copy, so the game document
-keeps `lang="zh-CN"`. This is a local roller and three-bot practice game; there is
-no shared room, account state or multiplayer service.
+keeps `lang="zh-CN"`. The local roller and three-bot practice remain in this runtime.
+The preview page now links to `/game-tools/dice/online`, a separate 2–6 player
+Liar's Dice room using shared `GameToolRoom`, seats, members and events. The online
+room is server-authoritative, keeps unrevealed hands private in authenticated
+snapshots, broadcasts only invalidation notices, and falls back to polling.
+Production still gates both the preview runtime and online room/API.
 
 ## Verification (2026-10-11)
 

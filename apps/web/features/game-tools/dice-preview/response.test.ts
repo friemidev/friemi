@@ -44,6 +44,7 @@ test("preview documents resolve all locales to the guarded asset path and matchi
     assert.equal(response.status, 200);
     assert.ok(html.includes(`<base href="/${locale}/game-tools/dice/"`));
     assert.ok(html.includes(`data-hub-href="/${locale}/game-tools"`));
+    assert.ok(html.includes(`href="/${locale}/game-tools/dice/online"`));
     assert.ok(!html.includes("__DICE_"));
   }
 });

@@ -63,6 +63,10 @@ export function getGameToolRoomPath({
     return `/game-tools/uno/rooms/${roomId}`;
   }
 
+  if (kind === "DICE") {
+    return `/game-tools/dice/online/rooms/${roomId}`;
+  }
+
   return "/game-tools/storyteller";
 }
 
