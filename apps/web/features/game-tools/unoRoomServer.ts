@@ -158,7 +158,8 @@ export async function createUnoRoom(input: { profileId: string; name: string; lo
 export async function joinUnoRoom(input: { code: string; profileId: string; name: string; expectedRoomId?: string }) {
   const found = await prisma.gameToolRoom.findUnique({ where: { code: input.code.trim().toUpperCase() }, select: { id: true, kind: true } });
   if (!found || found.kind !== "UNO" || input.expectedRoomId && found.id !== input.expectedRoomId) return { error: "ROOM_NOT_FOUND" };
-  for (let attempt = 0; attempt < RETRIES; attempt += 1) {
+  // An abandoned full lobby may need to retire stale seats before admission.
+  for (let attempt = 0; attempt < RETRIES + 10; attempt += 1) {
     const room = await readRoom(found.id);
     const state = room && asState(room.state);
     if (!room || room.kind !== "UNO" || room.status === "CANCELLED" || !state) return { error: "ROOM_NOT_FOUND" };
@@ -176,7 +177,14 @@ export async function joinUnoRoom(input: { code: string; profileId: string; name
       continue;
     }
     if (state.phase !== "LOBBY") return { error: "GAME_STARTED" };
-    if (room.seats.length >= 10) return { error: "ROOM_FULL" };
+    if (room.seats.length >= 10) {
+      const staleBefore = new Date(Date.now() - LOBBY_STALE_MS);
+      const stale = room.members.find((member) => member.profileId && !member.leftAt && member.lastSeenAt <= staleBefore
+        && room.seats.some((seat) => seat.id === member.seatedSeatId));
+      if (!stale?.profileId) return { error: "ROOM_FULL" };
+      await leaveUnoRoom(room.id, stale.profileId, staleBefore);
+      continue;
+    }
     const taken = new Set(room.seats.map((seat) => seat.seatNumber));
     const seatNumber = Array.from({ length: 10 }, (_, index) => index).find((seat) => !taken.has(seat))!;
     const next = createUnoState([...state.players.map(({ seat, name }) => ({ seat, name })), { seat: seatNumber, name: input.name.slice(0, 40) }].sort((a, b) => a.seat - b.seat), { turnSeconds: state.turnSeconds, targetScore: state.targetScore, matchMode: state.matchMode ?? "score" });
@@ -376,7 +384,7 @@ export async function leaveUnoRoom(roomId: string, profileId: string, staleBefor
 }
 
 export async function commandUnoRoom(roomId: string, profileId: string, command: UnoRoomCommand) {
-  const hash = createHash("sha256").update(JSON.stringify({ matchNumber: command.matchNumber, roundNumber: command.roundNumber, turnId: command.turnId, action: command.action })).digest("hex");
+  const hash = createHash("sha256").update(JSON.stringify({ expectedRevision: command.expectedRevision, matchNumber: command.matchNumber, roundNumber: command.roundNumber, turnId: command.turnId, action: command.action })).digest("hex");
   for (let attempt = 0; attempt < RETRIES; attempt += 1) {
     const room = await readRoom(roomId);
     const state = room && asState(room.state);
@@ -399,6 +407,7 @@ export async function commandUnoRoom(roomId: string, profileId: string, command:
     if (command.matchNumber !== state.matchNumber || command.roundNumber !== state.roundNumber) error = "STALE_ROUND";
     else if (!["CALL_UNO", "CATCH_UNO"].includes(command.action.type) && command.turnId !== state.turnId) error = "STALE_TURN";
     else if (["START", "NEXT_ROUND", "REMATCH"].includes(command.action.type) && room.hostId !== profileId) error = "HOST_ONLY";
+    else if (command.action.type === "START" && command.expectedRevision !== room.revision) error = "STALE_COMMAND";
     else if (command.action.type === "REMATCH") error = "RETURN_TO_LOBBY_FIRST";
     else if (command.action.type === "NEXT_ROUND" && (config(room).returnedProfileIds ?? []).length) error = "RETURN_TO_LOBBY_FIRST";
     else if (command.action.type === "START") {

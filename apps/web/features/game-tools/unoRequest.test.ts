@@ -5,6 +5,8 @@ import { isUnoSameOrigin, unoCommandSchema, unoMutationSchema } from "./unoReque
 const envelope = { commandId: "command-123", matchNumber: 1, roundNumber: 1, turnId: 3 };
 
 test("UNO commands require versions, explicit card ownership version and declaration episode", () => {
+  assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "START" } }).success, false);
+  assert.equal(unoCommandSchema.safeParse({ ...envelope, expectedRevision: 4, action: { type: "START" } }).success, true);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "PLAY", cardId: "red-3-a" } }).success, false);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "PLAY", cardId: "red-3-a", handVersion: 7 } }).success, true);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "CALL_UNO" } }).success, false);

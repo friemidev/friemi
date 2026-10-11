@@ -21,7 +21,7 @@ export type UnoTableProps = { locale: string; state: UnoViewerState; seats: UnoS
 export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, error, reconnecting, returning, reactions, onReact, onAction, onLeave, onReturn, onRetry }: UnoTableProps) {
   const t = getUnoCopy(locale), ux = getUnoExperienceCopy(locale), liveReactions = useUnoReactions(reactions);
   const clockNow = useUnoNow();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{ matchNumber: number; roundNumber: number; cardId: string } | null>(null);
   const [wildCard, setWildCard] = useState<string | null>(null);
   const [menuSeat, setMenuSeat] = useState<number | null>(null);
   const [menuAlign, setMenuAlign] = useState<"start" | "center" | "end">("center");
@@ -35,6 +35,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
   const handRef = useRef<HTMLDivElement>(null);
   const playerMenuRef = useRef<HTMLDivElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const selectedId = selection?.matchNumber === state.matchNumber && selection.roundNumber === state.roundNumber ? selection.cardId : null;
   const selected = state.hand.find(card => card.id === selectedId);
   const active = state.phase === "PLAYING" && state.turnSeat === state.selfSeat && state.colorChoiceSeat === null;
   const ended = state.phase === "ROUND_END" || state.phase === "FINISHED";
@@ -61,7 +62,9 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
     return () => observer.disconnect();
   }, []);
   useEffect(() => { setNow(clockNow()); const timer = setInterval(() => setNow(clockNow()), 250); return () => clearInterval(timer); }, [clockNow]);
-  useEffect(() => { if (!state.hand.some(c => c.id === selectedId)) setSelectedId(null); }, [state.hand, selectedId]);
+  useEffect(() => {
+    if (selection && (selection.matchNumber !== state.matchNumber || selection.roundNumber !== state.roundNumber || !state.hand.some(card => card.id === selection.cardId))) setSelection(null);
+  }, [selection, state.matchNumber, state.roundNumber, state.hand]);
   useEffect(() => { setWildCard(null); }, [state.handVersion, state.turnId, state.phase]);
   useEffect(() => { setShowVerdict(false); }, [state.roundNumber, state.matchNumber, state.phase]);
   useEffect(() => {
@@ -162,7 +165,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
         {state.hand.map((card, i) => {
           const chosen = selectedId === card.id, playable = active && isUnoCardPlayable(state, card);
           const rotation = state.hand.length <= 9 ? (i - (state.hand.length - 1) / 2) * 2.4 : 0;
-          return <button type="button" key={`${state.matchNumber}-${state.roundNumber}-${card.id}`} className={`${s.handCard} ${chosen ? s.selectedCard : ""} ${playable ? s.playableCard : ""}`} style={{ "--tilt": `${rotation}deg`, "--card-i": i, "--fan-lift": `${state.hand.length <= 9 ? Math.abs(i - (state.hand.length - 1) / 2) * 3 : 0}px` } as CSSProperties} aria-label={unoCardLabel(card, locale)} aria-pressed={chosen} aria-describedby={chosen ? "uno-hand-hint" : undefined} onClick={() => setSelectedId(chosen ? null : card.id)} onKeyDown={e => {
+          return <button type="button" key={`${state.matchNumber}-${state.roundNumber}-${card.id}`} className={`${s.handCard} ${chosen ? s.selectedCard : ""} ${playable ? s.playableCard : ""}`} style={{ "--tilt": `${rotation}deg`, "--card-i": i, "--fan-lift": `${state.hand.length <= 9 ? Math.abs(i - (state.hand.length - 1) / 2) * 3 : 0}px` } as CSSProperties} aria-label={unoCardLabel(card, locale)} aria-pressed={chosen} aria-describedby={chosen ? "uno-hand-hint" : undefined} onClick={() => setSelection(chosen ? null : { matchNumber: state.matchNumber, roundNumber: state.roundNumber, cardId: card.id })} onKeyDown={e => {
             if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
             e.preventDefault(); const siblings = handRef.current?.querySelectorAll<HTMLButtonElement>("button");
             siblings?.[(i + (e.key === "ArrowRight" ? 1 : -1) + state.hand.length) % state.hand.length]?.focus();

@@ -91,6 +91,7 @@ const en = {
   started: "Game already started",
   stale: "The table has moved on. Choose again.",
   reportInvalid: "Report not accepted.",
+  playersNotReady: "Wait for everyone to be online and ready.",
   hostOnly: "Only the host can do that.",
   notTurn: "Not your turn",
   busy: "Loading…",
@@ -212,6 +213,7 @@ const zh: typeof en = {
   started: "游戏已开始",
   stale: "牌局已更新，请重试。",
   reportInvalid: "举报未成立",
+  playersNotReady: "等待其他玩家上线并准备。",
   hostOnly: "仅房主可操作",
   notTurn: "未到你的回合",
   busy: "处理中…",
@@ -333,6 +335,7 @@ const fr: typeof en = {
   started: "Partie déjà commencée",
   stale: "La table a changé. Choisissez à nouveau.",
   reportInvalid: "Signalement non accepté.",
+  playersNotReady: "Attendez que tous les joueurs soient en ligne et prêts.",
   hostOnly: "Seul l'hôte peut le faire.",
   notTurn: "Ce n’est pas votre tour",
   busy: "Chargement…",
@@ -382,6 +385,7 @@ export function unoErrorMessage(code: string, locale: string) {
   if (code === "CARD_NOT_PLAYABLE") return t.notPlayable;
   if (code === "ONLY_DRAWN_CARD") return t.drawnOnly;
   if (["INVALID_REPORT", "DUPLICATE_REPORT"].includes(code)) return t.reportInvalid;
+  if (code === "PLAYERS_NOT_READY") return t.playersNotReady;
   if (["HOST_ONLY", "NOT_HOST"].includes(code)) return t.hostOnly;
   if (code === "NOT_YOUR_TURN") return t.notTurn;
   if (code === "RETURN_TO_LOBBY_FIRST") return locale === "zh-CN" ? "已有玩家返回房间，请返回后重新准备。" : locale === "fr" ? "Un joueur retourne à la salle. Revenez pour vous préparer." : "A player is returning to the room. Return and get ready again.";

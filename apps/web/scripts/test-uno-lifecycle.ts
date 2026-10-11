@@ -29,7 +29,7 @@ function view(result: Awaited<ReturnType<typeof server.getUnoRoomView>>) {
   return result.room!;
 }
 function envelope(room: UnoRoomView, action: UnoAction | { type: "START" }) {
-  return { commandId: randomUUID(), matchNumber: room.state.matchNumber, roundNumber: room.state.roundNumber, turnId: room.state.turnId, action };
+  return { commandId: randomUUID(), expectedRevision: action.type === "START" ? room.revision : undefined, matchNumber: room.state.matchNumber, roundNumber: room.state.roundNumber, turnId: room.state.turnId, action };
 }
 async function fixture(change: (state: UnoState) => void) {
   const row = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
@@ -71,6 +71,7 @@ try {
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   const firstReaction = { reactionId: randomUUID(), kind: "laugh" as const };
   await server.sendUnoReaction(roomId, profiles[0], firstReaction);
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
   host = view(await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" })));
 
   // Two independent scanners and a late player command read the same due turn.

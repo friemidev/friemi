@@ -20,11 +20,12 @@ const action = z.discriminatedUnion("type", [
 
 export const unoCommandSchema = z.object({
   commandId: z.string().min(8).max(64).regex(/^[a-zA-Z0-9_-]+$/),
+  expectedRevision: storedCounter.nonnegative().optional(),
   matchNumber: storedCounter.positive(),
   roundNumber: storedCounter.nonnegative(),
   turnId: z.number().int().nonnegative(),
   action,
-});
+}).refine((command) => command.action.type !== "START" || command.expectedRevision !== undefined);
 
 // Unreceipted writes bind the original visible revision. A delayed request
 // must not apply readiness, settings or an exit to a newer room lifecycle.

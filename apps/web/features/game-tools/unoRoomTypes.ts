@@ -17,6 +17,7 @@ export type UnoRoomView = {
 
 export type UnoRoomCommand = {
   commandId: string;
+  expectedRevision?: number;
   matchNumber: number;
   roundNumber: number;
   turnId: number;

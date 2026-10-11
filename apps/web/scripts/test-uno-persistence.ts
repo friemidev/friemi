@@ -34,7 +34,7 @@ function view(result: Awaited<ReturnType<typeof server.getUnoRoomView>>) {
   return result.room;
 }
 function envelope(room: UnoRoomView, action: UnoAction | { type: "START" }, commandId = randomUUID()) {
-  return { commandId, matchNumber: room.state.matchNumber, roundNumber: room.state.roundNumber, turnId: room.state.turnId, action };
+  return { commandId, expectedRevision: action.type === "START" ? room.revision : undefined, matchNumber: room.state.matchNumber, roundNumber: room.state.roundNumber, turnId: room.state.turnId, action };
 }
 async function fixture(change: (state: UnoState) => void) {
   const row = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
@@ -140,6 +140,7 @@ try {
   const latestReaction = view(await server.getUnoRoomView(roomId, profiles[0])).reactions[0].id;
   check(view(await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh" })).reactions[0].id === latestReaction, "Old reaction retries cannot replace a newer reaction");
 
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
   check((await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" }))).error === "PLAYERS_NOT_READY", "Cannot start before readiness");
   await server.setUnoRoomReady(roomId, profiles[0], true);
   await server.setUnoRoomReady(roomId, profiles[1], true);
@@ -150,18 +151,40 @@ try {
   await server.setUnoRoomReady(roomId, profiles[0], true);
   await server.setUnoRoomReady(roomId, profiles[1], true);
   check(view(await server.updateUnoRoomSettings(roomId, profiles[0], { matchMode: "score" })).seats.every((seat) => seat.ready), "Unchanged rules do not unnecessarily clear readiness");
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
+  const delayedStart = envelope(host, { type: "START" });
+  await server.updateUnoRoomSettings(roomId, profiles[0], { turnSeconds: 90 });
+  await server.setUnoRoomReady(roomId, profiles[0], true);
+  await server.setUnoRoomReady(roomId, profiles[1], true);
+  check((await server.commandUnoRoom(roomId, profiles[0], delayedStart)).error === "STALE_COMMAND", "An old start cannot launch after settings change and fresh readiness");
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
+  check(host.state.phase === "LOBBY" && host.state.turnSeconds === 90, "Rejected delayed start leaves the updated lobby intact");
+  await server.updateUnoRoomSettings(roomId, profiles[0], { turnSeconds: 60 });
+  await server.setUnoRoomReady(roomId, profiles[0], true);
+  await server.setUnoRoomReady(roomId, profiles[1], true);
   const characterUpdates = await Promise.all([server.setUnoCharacter(roomId, profiles[0], "baker"), server.setUnoCharacter(roomId, profiles[0], "dreamer")]);
   check(characterUpdates.every((result) => result.room), "Concurrent character changes serialize through the room revision");
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   check(["baker", "dreamer"].includes(host.seats[0].catId) && host.seats.every((seat) => seat.ready), "Character changes preserve readiness and use a committed selection");
+  await prisma.gameToolRoomMember.updateMany({ where: { roomId, profileId: profiles[1] }, data: { lastSeenAt: new Date(Date.now() - 40_000) } });
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
+  check(host.seats[1].ready && !host.seats[1].connected, "A disconnected guest retains their ready choice but is absent from start eligibility");
+  check((await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" }))).error === "PLAYERS_NOT_READY", "Host cannot start with a disconnected ready guest");
+  await prisma.gameToolRoomMember.updateMany({ where: { roomId, profileId: profiles[1] }, data: { lastSeenAt: new Date() } });
+  host = view(await server.getUnoRoomView(roomId, profiles[0]));
+  check(host.seats.every((seat) => seat.ready && seat.connected), "Guest heartbeat restores start eligibility without clearing readiness");
   const start = envelope(host, { type: "START" });
   const [starts, characterAtStart] = await Promise.all([
     Promise.all([server.commandUnoRoom(roomId, profiles[0], start), server.commandUnoRoom(roomId, profiles[0], start)]),
     server.setUnoCharacter(roomId, profiles[0], "captain"),
   ]);
-  check(starts.every((item) => "room" in item), "Concurrent identical START is idempotent");
+  check(starts.every((item) => "room" in item) || starts.every((item) => item.error === "STALE_COMMAND"), "Concurrent identical START has one stable outcome even when character changes");
   check(Boolean(characterAtStart.room) || characterAtStart.error === "WRONG_PHASE", "Character/start race either precedes start or rejects after it");
   check(await prisma.unoCommand.count({ where: { roomId, commandId: start.commandId } }) === 1, "Exactly one command receipt committed");
+  if (starts[0].error === "STALE_COMMAND") {
+    const refreshed = view(await server.getUnoRoomView(roomId, profiles[0]));
+    check(Boolean((await server.commandUnoRoom(roomId, profiles[0], envelope(refreshed, { type: "START" }))).room), "Host can start from the refreshed lobby after a character change");
+  }
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   const guest = view(await server.getUnoRoomView(roomId, profiles[1]));
   const characterAfterStart = host.seats[0].catId;
@@ -290,6 +313,27 @@ try {
   for (let index = 1; index < 10; index += 1) {
     check((await server.joinUnoRoom({ code: fullLobbyCode, profileId: profiles[index], name: `Cleanup ${index}` })).roomId === fullLobby.roomId, `Cleanup seat ${index} joined`);
   }
+  const lateProfile = await prisma.userProfile.create({ data: { clerkUserId: `${prefix}-late`, nickname: "Late player" } });
+  profiles.push(lateProfile.id);
+  check((await server.joinUnoRoom({ code: fullLobbyCode, profileId: lateProfile.id, name: "Late player" })).error === "ROOM_FULL", "Fresh ten-seat lobby rejects an eleventh player");
+  await prisma.gameToolRoomMember.updateMany({ where: { roomId: fullLobby.roomId, profileId: profiles[9] }, data: { lastSeenAt: new Date(Date.now() - 120_000) } });
+  const admissionTransaction = prisma.$transaction;
+  let admissionHeartbeatInjected = false;
+  prisma.$transaction = (async (...args: unknown[]) => {
+    if (!admissionHeartbeatInjected) {
+      admissionHeartbeatInjected = true;
+      await prisma.gameToolRoomMember.updateMany({ where: { roomId: fullLobby.roomId, profileId: profiles[9] }, data: { lastSeenAt: new Date() } });
+    }
+    return Reflect.apply(admissionTransaction, prisma, args);
+  }) as typeof prisma.$transaction;
+  let contestedAdmission: Awaited<ReturnType<typeof server.joinUnoRoom>>;
+  try { contestedAdmission = await server.joinUnoRoom({ code: fullLobbyCode, profileId: lateProfile.id, name: "Late player" }); }
+  finally { prisma.$transaction = admissionTransaction; }
+  check(admissionHeartbeatInjected && contestedAdmission.error === "ROOM_FULL", "A heartbeat during stale-seat admission keeps the reconnected player seated");
+  await prisma.gameToolRoomMember.updateMany({ where: { roomId: fullLobby.roomId, profileId: profiles[9] }, data: { lastSeenAt: new Date(Date.now() - 120_000) } });
+  check((await server.joinUnoRoom({ code: fullLobbyCode, profileId: lateProfile.id, name: "Late player" })).roomId === fullLobby.roomId, "A new player may claim an expired lobby seat without waiting for the host to refresh");
+  const replacedLobby = view(await server.getUnoRoomView(fullLobby.roomId, profiles[0]));
+  check(replacedLobby.seats.length === 10 && replacedLobby.seats.some((seat) => seat.name === "Late player") && !replacedLobby.seats.some((seat) => seat.name === "Cleanup 9"), "Expired seat is replaced without exceeding room capacity");
   await prisma.gameToolRoomMember.updateMany({ where: { roomId: fullLobby.roomId, profileId: { not: profiles[0] } }, data: { lastSeenAt: new Date(Date.now() - 120_000) } });
   const cleanedLobby = view(await server.getUnoRoomView(fullLobby.roomId, profiles[0]));
   check(cleanedLobby.seats.length === 1 && cleanedLobby.state.players.length === 1, "One GET cleans all nine stale seats without exhausting the contention retry budget");

@@ -115,7 +115,7 @@ function UnoRoomSession({ initialRoom, locale, sampleClock }: { initialRoom: Uno
   function command(action: UnoAction | { type: "START" }) {
     if (pending.current || inFlight.current) return;
     const state = latest.current.state;
-    const payload: UnoRoomCommand = { commandId: crypto.randomUUID(), matchNumber: state.matchNumber, roundNumber: state.roundNumber, turnId: state.turnId, action };
+    const payload: UnoRoomCommand = { commandId: crypto.randomUUID(), expectedRevision: action.type === "START" ? latest.current.revision : undefined, matchNumber: state.matchNumber, roundNumber: state.roundNumber, turnId: state.turnId, action };
     return submit({ path: "/actions", method: "POST", body: payload });
   }
   async function mutate(path: string, body: object = {}, method: "POST" | "PATCH" = "POST") {
