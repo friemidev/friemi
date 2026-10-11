@@ -12,6 +12,7 @@ import {
 export type GameToolKind =
   | "AVALON"
   | "BOTC"
+  | "DICE"
   | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
@@ -81,6 +82,23 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       en: "Draw & Guess",
       fr: "Dessine et devine",
     },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "planned",
+    description: {
+      "zh-CN": "选择1–6颗骰子，或和电脑练习吹牛。",
+      en: "Roll 1–6 dice or practise Liar’s Dice against the computer.",
+      fr: "Lancez 1 à 6 dés ou jouez au Perudo contre l’ordinateur.",
+    },
+    href: "/game-tools/dice",
+    icon: Dice5,
+    imageSrc: "/game-tools/dice/logo.webp",
+    kind: "DICE",
+    maxPlayers: 1,
+    minPlayers: 1,
+    phase: { "zh-CN": "试玩", en: "Try it", fr: "Essayer" },
+    title: { "zh-CN": "摇骰子", en: "Dice", fr: "Dés" },
   },
   {
     accent: "#F09182",
