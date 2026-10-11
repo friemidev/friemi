@@ -105,7 +105,7 @@ try {
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   const finish = envelope(host, { type: "PLAY", cardId: host.state.hand[0].id, handVersion: host.state.handVersion });
   const finishes = await Promise.all([server.commandUnoRoom(roomId, profiles[0], finish), server.commandUnoRoom(roomId, profiles[0], finish)]);
-  check(finishes.every((result) => result.room?.state.phase === "FINISHED"), "Duplicate final play acknowledges one finished match");
+  check(finishes.every((result) => "room" in result && result.room?.state.phase === "FINISHED"), "Duplicate final play acknowledges one finished match");
   check(await prisma.unoRound.count({ where: { roomId } }) === 1, "Final-play retry writes settlement once");
   const firstHistory = await server.getUnoRoomHistory(roomId, profiles[1]);
   check(firstHistory.rounds?.length === 1, "Round participant can read completed score history");
