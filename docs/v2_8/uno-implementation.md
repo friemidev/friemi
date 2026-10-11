@@ -56,12 +56,12 @@
 - `isUnoEnabled` 在 `VERCEL_ENV=production` 时关闭；Vercel preview/development 可用，即使其 `NODE_ENV=production`。无 Vercel 环境标识的生产构建也关闭。
 - 生产目录显示「敬请期待」且不可点击；入口、邀请、房间直达均显示三语等待页。12 个 UNO API/cron handler 在认证或数据库访问前拒绝，历史缓存浮窗也隐藏。
 - 共享 Prisma 默认不读取新增 `unoDeadlineAt` 列，避免未迁移环境的旧游戏查询失败；UNO 继续从 state 读取截止时间，新列仅用于明确写入和扫描条件。
-- 本轮未执行远端迁移。可读本地 Preview 配置尚无 UNO schema；当前 Vercel CLI 无权核实 Friemi 项目映射。dev 的真实多人使用前仍须按下文在已确认的 Preview 库应用本次迁移并配置调度器，代码入口可见不等同于多人后端已启用。
+- 2026-10-11 已按用户要求同步 Preview 和 Production 数据库，应用 UNO 结构与权限两条迁移；两库迁移记录、校验和及对象核验通过。连接来自此前已核验的环境档案；本次 Vercel CLI 仍无权重新读取部署配置。同步证据和范围见 `database-sync-20261011-uno.md`。定时推进仍需独立调度器，数据库同步不代表已经完成线上多人联调。
 - 门控验证：18 种环境组合、36 次生产 handler 请求（0 数据库、0 网络）、旧 schema 的 5 项本机 Prisma 兼容检查通过。390/1280 px 浏览器验证目录顺序和标识；生产无 UNO 链接，入口/邀请/房间均显示等待页，中英法通过。测试页面未接真实游戏数据库。
 - 合并远端摇骰子入口后，UNO 规则、请求恢复、时钟、入口开关、房间缓存与骰子开关共 58 项测试通过，生产 handler 的 36 次检查再次通过。
 
-1. 在目标隔离环境审查并应用 `apps/web/prisma/migrations/20261011120000_uno_rooms/migration.sql`：增加 UNO 枚举、`unoDeadlineAt` 索引、`UnoCommand`、`UnoRound`。不要在尚未迁移的环境开放真实 UNO 入口。
-2. 重新生成 Prisma Client。本次仅生成了本地客户端；未向项目配置的数据库执行迁移。
+1. 新环境须应用 `20261011120000_uno_rooms` 和 `20261011123000_uno_server_only_tables`：增加 UNO 枚举、`unoDeadlineAt` 索引、`UnoCommand`、`UnoRound`，并保护 UNO 房间、成员、座位及两张新表的直接访问。Preview 和 Production 已完成这两条迁移；不要在尚未迁移的环境开放真实 UNO 入口。
+2. 从当前 schema 生成 Prisma Client。权限补丁不改变 Prisma 模型。
 3. 配置现有 Clerk、数据库连接；Realtime 可复用已有 Supabase URL/key。Realtime 不可用时仍需保留轮询。
 4. 独立调度器必须配置 `CRON_SECRET`，并每约 5 秒请求 `/api/cron/uno-deadlines`，请求头为 `Authorization: Bearer …`。GET 房间和动作也处理到期，但全员离线时仍需要调度器。
 5. 提供可运行的调度脚本 `apps/web/scripts/run-uno-deadlines.mjs`：设置 `UNO_DEADLINE_ENDPOINT`、`CRON_SECRET` 后运行 `npm run uno:deadlines`；默认间隔 5000 ms，支持 `UNO_DEADLINE_INTERVAL_MS`（2000–60000）和 `--once`。只允许 HTTPS，localhost 可 HTTP。
