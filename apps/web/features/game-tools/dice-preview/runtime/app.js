@@ -100,7 +100,7 @@ function renderCount(){
   $('count-picker').replaceChildren();
   for(let n=1;n<=6;n++){
     const b=document.createElement('button');b.textContent=n;b.className=n===free.count?'selected':'';b.setAttribute('aria-label',n+' 颗骰子');b.setAttribute('aria-pressed',String(n===free.count));b.disabled=free.busy;
-    b.addEventListener('click',()=>{if(free.busy||free.count===n)return;clearRoundFeedback();free.count=n;free.covered=false;free.values=[];free.hasResult=false;renderCount();showFreeDice();updateCover();playTap()});$('count-picker').append(b);
+    b.addEventListener('click',()=>{if(free.busy||free.count===n)return;clearRoundFeedback();free.count=n;free.covered=false;free.values=[];free.hasResult=false;$('roll-button').querySelector('span').textContent='摇一摇';renderCount();showFreeDice();updateCover();playTap()});$('count-picker').append(b);
   }
   if(restoreFocus)$('count-picker').querySelector('.selected').focus({preventScroll:true});
 }

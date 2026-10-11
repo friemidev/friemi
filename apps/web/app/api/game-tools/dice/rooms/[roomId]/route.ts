@@ -10,12 +10,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ room
   const profileId = await getExistingDrawGuessProfileId();
   if (!profileId) return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
   const { roomId } = await params;
-  const match = /^W\/"dice-(\d+)"$/.exec(request.headers.get("if-none-match") ?? "");
-  const result = await getDiceRoomView(roomId, profileId, match ? Number(match[1]) : undefined);
+  const match = /^W\/"dice-(\d+)-(\d+)"$/.exec(request.headers.get("if-none-match") ?? "");
+  const result = await getDiceRoomView(roomId, profileId, match ? { viewerSeat: Number(match[1]), revision: Number(match[2]) } : undefined);
   if ("notModified" in result) return new Response(null, { status: 304, headers: { "cache-control": "private, no-store" } });
   return NextResponse.json(result, {
     status: "error" in result ? result.error === "NOT_A_PLAYER" ? 403 : 404 : 200,
-    headers: { "cache-control": "private, no-store", ...("room" in result && result.room ? { etag: `W/"dice-${result.room.revision}"` } : {}) },
+    headers: { "cache-control": "private, no-store", ...("room" in result && result.room ? { etag: `W/"dice-${result.room.viewerSeat}-${result.room.revision}"` } : {}) },
   });
 }
 const action = z.discriminatedUnion("type", [

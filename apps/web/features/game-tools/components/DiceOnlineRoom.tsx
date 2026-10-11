@@ -3,10 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Copy, Crown, LoaderCircle, Radio, RefreshCw, Trophy } from "lucide-react";
+import { ArrowLeft, Check, Copy, Crown, Eye, EyeOff, LoaderCircle, Radio, Trophy } from "lucide-react";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
 import { DICE_ROOM_EVENT, getDiceRealtimeBrowserConfig, getDiceRoomTopic } from "../diceRealtime";
 import type { DiceBid, DiceResult, DicePhase } from "../diceRoomEngine";
+import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY, DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "../activeGameToolRoomStorage";
 import { withLocale } from "@/lib/routes";
 
 type Room = {
@@ -16,11 +17,11 @@ type Room = {
     bid: DiceBid | null; history: DiceBid[]; myHand: number[] | null; revealedHands: Record<string, number[]> | null; result: DiceResult | null };
 };
 const texts = {
-  "zh-CN": { back: "返回", title: "吹牛", code: "房间号", copy: "复制邀请", copied: "已复制", waiting: "等朋友入座", ready: "已准备", unready: "待准备", prepare: "准备", cancelReady: "取消准备", start: "开局摇骰", turn: "轮到你叫点", otherTurn: "轮到", bid: "叫点", challenge: "开盅", count: "数量", face: "点数", wild: "1 点百搭", myDice: "我的骰子", hidden: "骰子盖住了", total: "实际", winner: "本轮赢了", next: "下一轮", rematch: "再来一局", finished: "本局结束", leave: "离开房间", close: "结束房间", syncing: "重连中", live: "实时已连接", polling: "正在刷新", error: "操作没成功，再试一次。", stale: "桌面已更新，请再试。", signIn: "登录已失效。", score: "分", round: "第", roundUnit: "轮", point: "点", diceUnit: "颗", min: "至少 2 人且全部准备后开局", invite: "分享房间号，请朋友加入", rules: "先叫至少当前人数的骰子；同数量要加点。1 点百搭，开盅后实际数量达到叫数，叫点的人赢。先得 3 分获胜。", reveal: "开盅啦", you: "你" },
-  en: { back: "Back", title: "Liar’s Dice", code: "Room code", copy: "Copy invite", copied: "Copied", waiting: "Waiting for friends", ready: "Ready", unready: "Not ready", prepare: "Ready up", cancelReady: "Cancel ready", start: "Roll and start", turn: "Your turn", otherTurn: "Turn:", bid: "Bid", challenge: "Challenge", count: "Count", face: "Face", wild: "Ones are wild", myDice: "My dice", hidden: "Dice are covered", total: "Actual", winner: "wins this round", next: "Next round", rematch: "Play again", finished: "Game over", leave: "Leave room", close: "Close room", syncing: "Reconnecting", live: "Live", polling: "Refreshing", error: "That didn't work. Try again.", stale: "Table changed. Try again.", signIn: "Sign-in expired.", score: "pts", round: "Round ", roundUnit: "", point: "", diceUnit: " dice", min: "Start with 2+ players, all ready", invite: "Share the code to invite friends", rules: "First bid at least one die per player. Raise the count or face. Ones are wild. A true bid wins for its caller. First to 3 points wins.", reveal: "Reveal", you: "You" },
-  fr: { back: "Retour", title: "Perudo", code: "Code de salle", copy: "Copier l’invitation", copied: "Copié", waiting: "En attente des amis", ready: "Prêt", unready: "Pas prêt", prepare: "Je suis prêt", cancelReady: "Annuler", start: "Lancer et jouer", turn: "À vous", otherTurn: "Tour de", bid: "Annoncer", challenge: "Douter", count: "Nombre", face: "Face", wild: "Les 1 sont jokers", myDice: "Mes dés", hidden: "Dés cachés", total: "Réel", winner: "gagne la manche", next: "Manche suivante", rematch: "Rejouer", finished: "Partie terminée", leave: "Quitter", close: "Fermer la salle", syncing: "Reconnexion", live: "En direct", polling: "Actualisation", error: "Action impossible. Réessayez.", stale: "La table a changé. Réessayez.", signIn: "Connexion expirée.", score: "pts", round: "Manche ", roundUnit: "", point: "", diceUnit: " dés", min: "Au moins 2 joueurs, tous prêts", invite: "Partagez le code pour inviter", rules: "Première annonce : au moins un dé par joueur. Augmentez le nombre ou la face. Les 1 sont jokers. Une annonce vraie donne le point à son auteur. Premier à 3 points.", reveal: "Révélation", you: "Vous" },
+  "zh-CN": { back: "返回", title: "吹牛", code: "房间号", copy: "复制邀请", copied: "已复制", waiting: "等朋友入座", ready: "已准备", unready: "待准备", prepare: "准备", cancelReady: "取消准备", start: "开局摇骰", turn: "轮到你叫点", otherTurn: "轮到", bid: "叫点", challenge: "开盅", count: "数量", face: "点数", wild: "1 点百搭", myDice: "我的骰子", hidden: "骰子盖住了", cover: "盖住骰子", uncover: "查看骰子", total: "实际", winner: "本轮赢了", next: "下一轮", rematch: "再来一局", finished: "本局结束", leave: "离开房间", close: "结束房间", syncing: "重连中", live: "实时已连接", polling: "正在刷新", error: "操作没成功，再试一次。", stale: "桌面已更新，请再试。", signIn: "登录已失效。", score: "分", round: "第", roundUnit: "轮", point: "点", diceUnit: "颗", min: "至少 2 人且全部准备后开局", invite: "分享房间号，请朋友加入", rules: "先叫至少当前人数的骰子；同数量要加点。1 点百搭，开盅后实际数量达到叫数，叫点的人赢。先得 3 分获胜。", reveal: "开盅啦", you: "你" },
+  en: { back: "Back", title: "Liar’s Dice", code: "Room code", copy: "Copy invite", copied: "Copied", waiting: "Waiting for friends", ready: "Ready", unready: "Not ready", prepare: "Ready up", cancelReady: "Cancel ready", start: "Roll and start", turn: "Your turn", otherTurn: "Turn:", bid: "Bid", challenge: "Challenge", count: "Count", face: "Face", wild: "Ones are wild", myDice: "My dice", hidden: "Dice are covered", cover: "Cover dice", uncover: "Show dice", total: "Actual", winner: "wins this round", next: "Next round", rematch: "Play again", finished: "Game over", leave: "Leave room", close: "Close room", syncing: "Reconnecting", live: "Live", polling: "Refreshing", error: "That didn't work. Try again.", stale: "Table changed. Try again.", signIn: "Sign-in expired.", score: "pts", round: "Round ", roundUnit: "", point: "", diceUnit: " dice", min: "Start with 2+ players, all ready", invite: "Share the code to invite friends", rules: "First bid at least one die per player. Raise the count or face. Ones are wild. A true bid wins for its caller. First to 3 points wins.", reveal: "Reveal", you: "You" },
+  fr: { back: "Retour", title: "Perudo", code: "Code de salle", copy: "Copier l’invitation", copied: "Copié", waiting: "En attente des amis", ready: "Prêt", unready: "Pas prêt", prepare: "Je suis prêt", cancelReady: "Annuler", start: "Lancer et jouer", turn: "À vous", otherTurn: "Tour de", bid: "Annoncer", challenge: "Douter", count: "Nombre", face: "Face", wild: "Les 1 sont jokers", myDice: "Mes dés", hidden: "Dés cachés", cover: "Cacher les dés", uncover: "Voir les dés", total: "Réel", winner: "gagne la manche", next: "Manche suivante", rematch: "Rejouer", finished: "Partie terminée", leave: "Quitter", close: "Fermer la salle", syncing: "Reconnexion", live: "En direct", polling: "Actualisation", error: "Action impossible. Réessayez.", stale: "La table a changé. Réessayez.", signIn: "Connexion expirée.", score: "pts", round: "Manche ", roundUnit: "", point: "", diceUnit: " dés", min: "Au moins 2 joueurs, tous prêts", invite: "Partagez le code pour inviter", rules: "Première annonce : au moins un dé par joueur. Augmentez le nombre ou la face. Les 1 sont jokers. Une annonce vraie donne le point à son auteur. Premier à 3 points.", reveal: "Révélation", you: "Vous" },
 } as const;
-function DiceSprite({ value, cue, label }: { value: number; cue: string; label: string }) {
+function DiceSprite({ value, cue, label, locale }: { value: number; cue: string; label: string; locale: string }) {
   const [frame, setFrame] = useState(31);
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -30,10 +31,18 @@ function DiceSprite({ value, cue, label }: { value: number; cue: string; label: 
     handle = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(handle);
   }, [cue]);
-  return <span className="dice-online-die" role="img" aria-label={`${value} ${label}`} style={{ backgroundImage: `url(/game-tools/dice/assets/dice-3d/roll-${value}.webp)`, backgroundPosition: `${(frame % 8) * 100 / 7}% ${Math.floor(frame / 8) * 100 / 3}%` }} />;
+  return <span className="dice-online-die" role="img" aria-label={`${value} ${label}`} style={{ backgroundImage: `url(${withLocale(locale, `/game-tools/dice/assets/dice-3d/roll-${value}.webp`)})`, backgroundPosition: `${(frame % 8) * 100 / 7}% ${Math.floor(frame / 8) * 100 / 3}%` }} />;
 }
-function Hand({ values, cue, label }: { values: number[]; cue: string; label: string }) {
-  return <div className="dice-online-hand">{values.map((value, index) => <DiceSprite key={`${index}-${value}`} value={value} cue={cue} label={label} />)}</div>;
+function Hand({ values, cue, label, locale }: { values: number[]; cue: string; label: string; locale: string }) {
+  return <div className="dice-online-hand">{values.map((value, index) => <DiceSprite key={`${index}-${value}`} value={value} cue={cue} label={label} locale={locale} />)}</div>;
+}
+function dismissDiceShortcut(roomId: string) {
+  try { window.sessionStorage.setItem(DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY, roomId); } catch { /* Ignore storage restrictions. */ }
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY) ?? "null") as { id?: string } | null;
+    if (stored?.id === roomId) window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
+  } catch { /* Ignore a blocked or malformed stored shortcut. */ }
+  window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
 }
 export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; locale: string }) {
   const t = texts[locale as keyof typeof texts] ?? texts.en;
@@ -51,12 +60,12 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
   const refresh = useCallback(async () => {
     const current = roomRef.current;
     try {
-      const response = await fetch(`/api/game-tools/dice/rooms/${current.id}`, { cache: "no-store", headers: { "if-none-match": `W/"dice-${current.revision}"` } });
+      const response = await fetch(`/api/game-tools/dice/rooms/${current.id}`, { cache: "no-store", headers: { "if-none-match": `W/"dice-${current.viewerSeat}-${current.revision}"` } });
       if (response.status === 304) return;
       if (response.status === 401) { setError(t.signIn); return; }
-      if (!response.ok) { if (response.status === 404 || response.status === 403) router.replace(entry); return; }
+      if (!response.ok) { if (response.status === 404 || response.status === 403) { dismissDiceShortcut(current.id); router.replace(entry); router.refresh(); } return; }
       const data = await response.json();
-      if (data.room && data.room.revision >= roomRef.current.revision) setRoom(data.room);
+      if (data.room) setRoom((previous) => data.room.revision >= previous.revision ? data.room : previous);
     } catch { setSyncStatus("POLLING"); }
   }, [entry, router, t.signIn]);
   useEffect(() => {
@@ -81,7 +90,6 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
     const bid = room.view.bid;
     setCount(bid ? Math.min(room.seats.length * 5, bid.count + (bid.face === 6 ? 1 : 0)) : room.seats.length);
     setFace(bid && bid.face < 6 ? bid.face + 1 : 2);
-    setCovered(false);
   }, [room.view.round, room.view.bid?.count, room.view.bid?.face, room.seats.length]);
   async function act(action: { type: string; [key: string]: unknown }) {
     if (busy) return;
@@ -91,9 +99,9 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
         body: JSON.stringify({ commandId: crypto.randomUUID(), expectedRound: roomRef.current.view.round, action }) });
       const data = await response.json();
       if (!response.ok) { setError(data.error === "STALE_ROUND" || data.error === "NOT_YOUR_TURN" ? t.stale : t.error); await refresh(); return; }
-      if (action.type === "LEAVE" || action.type === "CLOSE") { router.replace(entry); return; }
+      if (action.type === "LEAVE" || action.type === "CLOSE") { dismissDiceShortcut(room.id); router.replace(entry); router.refresh(); return; }
       if (data.room) setRoom((previous) => data.room.revision >= previous.revision ? data.room : previous);
-    } catch { setError(t.error); }
+    } catch { setError(t.error); await refresh(); }
     finally { setBusy(false); }
   }
   async function copyInvite() {
@@ -110,7 +118,7 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
   const validBid = count >= room.seats.length && count <= room.seats.length * 5 && (!view.bid || count > view.bid.count || count === view.bid.count && face > view.bid.face);
   return <main className="dice-online dice-online-room">
     <div className="dice-online-room-nav"><Link className="dice-online-back" href={entry}><ArrowLeft size={17} />{t.back}</Link><span className="dice-online-sync"><Radio size={14} />{syncStatus === "CONNECTED" ? t.live : syncStatus === "RECONNECTING" ? t.syncing : t.polling}</span></div>
-    <header className="dice-online-room-heading"><div><span className="dice-online-kicker">FRIEMI DICE · {t.round}{Math.max(1, view.round)}{t.roundUnit}</span><h1>{t.title}</h1></div><div className="dice-online-room-code"><span>{t.code}</span><strong>{room.code}</strong><button onClick={() => void copyInvite()} type="button" aria-label={t.copy}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div></header>
+    <header className="dice-online-room-heading"><div><span className="dice-online-kicker">FRIEMI DICE{view.phase !== "LOBBY" ? ` · ${t.round}${view.round}${t.roundUnit}` : ""}</span><h1>{t.title}</h1></div><div className="dice-online-room-code"><span>{t.code}</span><strong>{room.code}</strong><button onClick={() => void copyInvite()} type="button" aria-label={t.copy}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div></header>
     <section className="dice-online-table" aria-label={t.title}>
       <div className="dice-online-table-inner">
         <div className="dice-online-roster">{room.seats.map((seat) => <div className={`dice-online-player ${seat.number === view.turnSeat ? "is-turn" : ""}`} key={seat.number}>
@@ -126,9 +134,9 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
       </div>
     </section>
     {view.phase === "LOBBY" ? <section className="dice-online-paper dice-online-controls"><p>{t.min}</p><div className="dice-online-actions"><button className="dice-online-secondary" disabled={busy} onClick={() => void act({ type: "READY", ready: !own.ready })}>{own.ready ? t.cancelReady : t.prepare}</button>{room.isHost ? <button className="dice-online-primary" disabled={busy || !allReady} onClick={() => void act({ type: "START" })}>{busy ? <LoaderCircle className="animate-spin" size={17} /> : null}{t.start}</button> : null}</div></section> : null}
-    {view.phase === "BIDDING" ? <section className="dice-online-paper dice-online-controls"><div className="dice-online-hand-heading"><strong>{t.myDice}</strong><button type="button" onClick={() => setCovered(!covered)}>{covered ? t.hidden : "◉"}</button></div>{covered ? <div className="dice-online-covered">{t.hidden}</div> : view.myHand ? <Hand values={view.myHand} cue={`${view.round}:mine`} label={t.point} /> : null}
+    {view.phase === "BIDDING" ? <section className="dice-online-paper dice-online-controls"><div className="dice-online-hand-heading"><strong>{t.myDice}</strong><button type="button" aria-label={covered ? t.uncover : t.cover} aria-pressed={covered} onClick={() => setCovered(!covered)}>{covered ? <Eye size={20} /> : <EyeOff size={20} />}</button></div>{covered ? <div className="dice-online-covered">{t.hidden}</div> : view.myHand ? <Hand values={view.myHand} cue={`${view.round}:mine`} label={t.point} locale={locale} /> : null}
       {myTurn ? <div className="dice-online-bid"><label>{t.count}<input type="number" min={room.seats.length} max={room.seats.length * 5} value={count} onChange={(event) => setCount(Number(event.target.value))} /></label><label>{t.face}<select value={face} onChange={(event) => setFace(Number(event.target.value))}>{[2,3,4,5,6].map((number) => <option value={number} key={number}>{number}</option>)}</select></label><button className="dice-online-primary" disabled={busy || !validBid} onClick={() => void act({ type: "BID", count, face })}>{t.bid}</button>{view.bid ? <button className="dice-online-challenge" disabled={busy} onClick={() => void act({ type: "CHALLENGE" })}>{t.challenge}</button> : null}</div> : null}</section> : null}
-    {(view.phase === "REVEAL" || view.phase === "FINISHED") ? <section className="dice-online-paper dice-online-controls"><div className="dice-online-reveal">{room.seats.map((seat) => view.revealedHands?.[String(seat.number)] ? <div key={seat.number}><strong>{seat.name}</strong><Hand values={view.revealedHands[String(seat.number)]} cue={`${view.round}:reveal`} label={t.point} /></div> : null)}</div>{room.isHost ? <button className="dice-online-primary" disabled={busy} onClick={() => void act({ type: view.phase === "FINISHED" ? "REMATCH" : "NEXT_ROUND" })}>{view.phase === "FINISHED" ? t.rematch : t.next}</button> : null}</section> : null}
+    {(view.phase === "REVEAL" || view.phase === "FINISHED") ? <section className="dice-online-paper dice-online-controls"><div className="dice-online-reveal">{room.seats.map((seat) => view.revealedHands?.[String(seat.number)] ? <div key={seat.number}><strong>{seat.name}</strong><Hand values={view.revealedHands[String(seat.number)]} cue={`${view.round}:reveal`} label={t.point} locale={locale} /></div> : null)}</div>{room.isHost ? <button className="dice-online-primary" disabled={busy} onClick={() => void act({ type: view.phase === "FINISHED" ? "REMATCH" : "NEXT_ROUND" })}>{view.phase === "FINISHED" ? t.rematch : t.next}</button> : null}</section> : null}
     <div className="dice-online-footer"><p>{t.rules}</p><div>{room.isHost ? <button onClick={() => void act({ type: "CLOSE" })} disabled={busy}>{t.close}</button> : null}<button onClick={() => void act({ type: "LEAVE" })} disabled={busy}>{t.leave}</button></div></div>
     {error ? <p className="dice-online-error" role="alert">{error}</p> : null}
   </main>;

@@ -76,7 +76,31 @@ export async function joinDiceRoom(input: { code: string; profileId: string; dis
     const room = await prisma.gameToolRoom.findUnique({ where: { code }, include: { seats: true, members: true } });
     if (!room || room.kind !== "DICE" || room.status === "CANCELLED") return { error: "ROOM_NOT_FOUND" } as const;
     const ownSeat = room.seats.find((seat) => seat.profileId === input.profileId);
-    if (ownSeat?.leftAt) return { error: "ALREADY_LEFT" } as const;
+    if (ownSeat?.leftAt) {
+      if (room.status !== "LOBBY") return { error: "GAME_STARTED" } as const;
+      if (room.seats.filter((seat) => !seat.leftAt).length >= room.playerCount) return { error: "ROOM_FULL" } as const;
+      const member = room.members.find((item) => item.profileId === input.profileId);
+      if (!member) return { error: "INVALID_STATE" } as const;
+      const restored = await prisma.$transaction(async (tx) => {
+        const reserved = await tx.gameToolRoom.updateMany({
+          where: { id: room.id, revision: room.revision, status: "LOBBY" }, data: { revision: { increment: 1 } },
+        });
+        if (!reserved.count) return false;
+        await tx.gameToolSeat.update({ where: { id: ownSeat.id }, data: {
+          leftAt: null, readyAt: null, displayName: input.displayName.slice(0, 32),
+        } });
+        await tx.gameToolRoomMember.update({ where: { id: member.id }, data: {
+          leftAt: null, readyAt: null, lastSeenAt: new Date(), seatedSeatId: ownSeat.id,
+        } });
+        await tx.gameToolEvent.create({ data: {
+          roomId: room.id, actorId: input.profileId, type: "DICE_REJOINED", payload: { seatNumber: ownSeat.seatNumber },
+        } });
+        return true;
+      });
+      if (!restored) continue;
+      await broadcastDiceRoomChange(room.id);
+      return { roomId: room.id } as const;
+    }
     if (ownSeat) {
       const member = room.members.find((item) => item.profileId === input.profileId);
       if (member?.leftAt) {
@@ -120,15 +144,44 @@ export async function joinDiceRoom(input: { code: string; profileId: string; dis
   return { error: "TRY_AGAIN" } as const;
 }
 
-export async function getDiceRoomView(roomId: string, profileId: string, knownRevision?: number) {
-  const room = await readRoom(roomId);
+export async function getDiceRoomView(roomId: string, profileId: string, known?: { revision: number; viewerSeat: number }) {
+  let room = await readRoom(roomId);
   if (!room || room.kind !== "DICE" || room.status === "CANCELLED") return { error: "ROOM_NOT_FOUND" } as const;
-  if (!activeSeat(room, profileId)) return { error: "NOT_A_PLAYER" } as const;
+  const currentRoom = room;
+  let viewer = activeSeat(room, profileId);
+  if (!viewer) return { error: "NOT_A_PLAYER" } as const;
   const member = room.members.find((item) => item.profileId === profileId);
   if (member && Date.now() - member.lastSeenAt.getTime() > 15_000) {
-    void prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null }, data: { lastSeenAt: new Date() } }).catch(() => {});
+    await prisma.gameToolRoomMember.updateMany({ where: { id: member.id, leftAt: null }, data: { lastSeenAt: new Date() } }).catch(() => {});
   }
-  if (knownRevision === room.revision) return { notModified: true } as const;
+  const now = Date.now();
+  const hostMember = currentRoom.members.find((item) => item.profileId === currentRoom.hostId);
+  if (currentRoom.hostId !== profileId && (!hostMember || hostMember.lastSeenAt.getTime() < now - 60_000)) {
+    const successor = currentRoom.seats.find((seat) => !seat.leftAt && seat.profileId && currentRoom.members.some((item) =>
+      item.profileId === seat.profileId && (item.profileId === profileId || item.lastSeenAt.getTime() >= now - 60_000),
+    ));
+    if (successor?.profileId) {
+      const changed = await prisma.$transaction(async (tx) => {
+        const reserved = await tx.gameToolRoom.updateMany({
+          where: { id: currentRoom.id, hostId: currentRoom.hostId, revision: currentRoom.revision },
+          data: { hostId: successor.profileId!, revision: { increment: 1 } },
+        });
+        if (!reserved.count) return false;
+        await tx.gameToolEvent.create({ data: {
+          roomId: currentRoom.id, actorId: successor.profileId, type: "DICE_HOST_CHANGED", payload: { seatNumber: successor.seatNumber },
+        } });
+        return true;
+      });
+      if (changed) {
+        await broadcastDiceRoomChange(currentRoom.id);
+        room = await readRoom(roomId);
+        if (!room) return { error: "ROOM_NOT_FOUND" } as const;
+        viewer = activeSeat(room, profileId);
+        if (!viewer) return { error: "NOT_A_PLAYER" } as const;
+      }
+    }
+  }
+  if (known?.revision === room.revision && known.viewerSeat === viewer.seatNumber) return { notModified: true } as const;
   return publicRoom(room, profileId);
 }
 
@@ -192,6 +245,9 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
         await tx.gameToolSeat.update({ where: { id: seat.id }, data: { readyAt } });
         await tx.gameToolRoomMember.updateMany({ where: { roomId: room.id, profileId: input.profileId, leftAt: null }, data: { readyAt } });
       }
+      await tx.gameToolRoomMember.updateMany({
+        where: { roomId: room.id, profileId: input.profileId, leftAt: null }, data: { lastSeenAt: new Date() },
+      });
       if (action.type === "REMATCH") {
         await tx.gameToolSeat.updateMany({ where: { roomId: room.id, leftAt: null }, data: { readyAt: null } });
         await tx.gameToolRoomMember.updateMany({ where: { roomId: room.id, leftAt: null }, data: { readyAt: null } });

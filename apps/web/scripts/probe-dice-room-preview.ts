@@ -67,6 +67,11 @@ try {
   assert.equal(seat2Room.view.myHand?.length, 5);
   assert.equal(seat1Room.view.revealedHands, null);
   assert.equal(seat2Room.view.revealedHands, null);
+  assert.deepEqual(await getDiceRoomView(roomId, profiles[0], { revision: seat1Room.revision, viewerSeat: seat1Room.viewerSeat }), { notModified: true });
+  const otherViewer = await getDiceRoomView(roomId, profiles[1], { revision: seat1Room.revision, viewerSeat: seat1Room.viewerSeat });
+  const otherViewerRoom = "room" in otherViewer ? otherViewer.room : null;
+  assert.ok(otherViewerRoom);
+  assert.deepEqual(otherViewerRoom.view.myHand, seat2Room.view.myHand);
   assert.deepEqual(Object.keys(seat1Room.view).filter((key) => key.toLowerCase().includes("hand")), ["myHand", "revealedHands"]);
   assert.deepEqual(await getDiceRoomView(roomId, profiles[2]), { error: "NOT_A_PLAYER" });
   const bidId = randomUUID();
@@ -89,7 +94,34 @@ try {
   const refreshedRoom = "room" in refreshed ? refreshed.room : null; assert.ok(refreshedRoom);
   assert.equal(refreshedRoom.view.round, 2);
   assert.equal(refreshedRoom.view.revealedHands, null);
-  console.log(JSON.stringify({ project: "preview", joined: 2, privateHands: true, browserRows: 0, duplicateCommand: true, challenge: true, realtimeNotice: true, reconnectRound: 2 }));
+  assert.deepEqual(await command(profiles[1], 2, { type: "LEAVE" }), { ok: true });
+  assert.deepEqual(await joinDiceRoom({ code: created.code, profileId: profiles[1], displayName: "测试小鹿" }), { error: "GAME_STARTED" });
+  const lobby = await command(profiles[0], 2, { type: "REMATCH" });
+  const lobbyRoom = "room" in lobby ? lobby.room : null; assert.ok(lobbyRoom);
+  assert.equal(lobbyRoom.view.phase, "LOBBY");
+  assert.deepEqual(await joinDiceRoom({ code: created.code, profileId: profiles[1], displayName: "测试小鹿" }), { roomId });
+  const rejoined = await getDiceRoomView(roomId, profiles[1]);
+  const rejoinedRoom = "room" in rejoined ? rejoined.room : null; assert.ok(rejoinedRoom);
+  assert.equal(rejoinedRoom.viewerSeat, seat2Room.viewerSeat);
+  await prisma.gameToolRoomMember.updateMany({ where: { roomId, profileId: profiles[0] }, data: { lastSeenAt: new Date(Date.now() - 120_000) } });
+  const promoted = await getDiceRoomView(roomId, profiles[1]);
+  const promotedRoom = "room" in promoted ? promoted.room : null; assert.ok(promotedRoom);
+  assert.equal(promotedRoom.isHost, true);
+  assert.ok("room" in await command(profiles[0], 0, { type: "READY", ready: true }));
+  assert.ok("room" in await command(profiles[1], 0, { type: "READY", ready: true }));
+  assert.ok("room" in await command(profiles[1], 0, { type: "START" }));
+  const competing = await Promise.all([
+    command(profiles[0], 1, { type: "BID", count: 2, face: 2 }),
+    command(profiles[0], 1, { type: "BID", count: 2, face: 3 }),
+  ]);
+  assert.equal(competing.filter((result) => "room" in result).length, 1);
+  assert.equal(competing.filter((result) => "error" in result && result.error === "NOT_YOUR_TURN").length, 1);
+  assert.ok("room" in await command(profiles[1], 1, { type: "CHALLENGE" }));
+  assert.deepEqual(await command(profiles[0], 1, { type: "NEXT_ROUND" }), { error: "HOST_ONLY" });
+  const successorNext = await command(profiles[1], 1, { type: "NEXT_ROUND" });
+  const successorNextRoom = "room" in successorNext ? successorNext.room : null; assert.ok(successorNextRoom);
+  assert.equal(successorNextRoom.view.round, 2);
+  console.log(JSON.stringify({ project: "preview", joined: 2, privateHands: true, browserRows: 0, duplicateCommand: true, challenge: true, realtimeNotice: true, reconnectRound: 2, rejoin: true, hostTakeover: true, competingBid: true }));
 } finally {
   if (realtimeClient) { for (const channel of realtimeClient.getChannels()) await realtimeClient.removeChannel(channel); realtimeClient.realtime.disconnect(); }
   if (roomId) await prisma.gameToolRoom.delete({ where: { id: roomId } }).catch(() => {});
