@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { Smile } from "lucide-react";
 import { UNO_REACTION_COOLDOWN_MS, UNO_REACTION_KINDS, type UnoReaction, type UnoReactionKind } from "../unoReactions";
 import s from "./UnoReactionControls.module.css";
@@ -19,6 +19,7 @@ export function UnoReactionControls({ locale, busy = false, disabled = false, on
   const t = copy(locale);
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
+  const picker = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const mounted = useRef(true);
   const sending = useRef(false);
@@ -35,6 +36,20 @@ export function UnoReactionControls({ locale, busy = false, disabled = false, on
     return () => { mounted.current = false; if (cooldownTimer.current) clearTimeout(cooldownTimer.current); };
   }, []);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+    const placePicker = () => {
+      if (!root.current || !picker.current) return;
+      const bounds = root.current.getBoundingClientRect();
+      const width = picker.current.offsetWidth;
+      const viewportWidth = document.documentElement.clientWidth;
+      setLeft(Math.max(12 - bounds.left, Math.min(0, viewportWidth - 12 - bounds.left - width)));
+    };
+    placePicker();
+    window.addEventListener("resize", placePicker);
+    return () => window.removeEventListener("resize", placePicker);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     root.current?.querySelector<HTMLButtonElement>("[data-reaction-choice]")?.focus();
@@ -50,11 +65,6 @@ export function UnoReactionControls({ locale, busy = false, disabled = false, on
 
   function toggle() {
     if (unavailable || coolingDown) return;
-    const bounds = root.current?.getBoundingClientRect();
-    if (bounds) {
-      const width = Math.min(232, window.innerWidth - 24);
-      setLeft(Math.min(0, window.innerWidth - 12 - bounds.left - width));
-    }
     setError(""); setOpen(previous => !previous);
   }
 
@@ -74,7 +84,7 @@ export function UnoReactionControls({ locale, busy = false, disabled = false, on
 
   return <div ref={root} className={s.control} style={{ "--reaction-left": `${left}px` } as CSSProperties}>
     <button ref={trigger} type="button" className={s.trigger} disabled={busy || disabled} aria-disabled={coolingDown || pending || undefined} aria-label={coolingDown ? t.wait : t.open} title={coolingDown ? t.wait : t.open} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={toggle}><Smile size={21} strokeWidth={1.8}/></button>
-    {open && <div id={id} className={s.picker} role="menu" aria-label={t.open}>
+    {open && <div ref={picker} id={id} className={s.picker} role="menu" aria-label={t.open}>
       <div className={s.choices}>
         {UNO_REACTION_KINDS.map((kind, index) => <button key={kind} type="button" role="menuitem" data-reaction-choice={kind} disabled={unavailable} className={s.choice} onClick={() => void send(kind)} onKeyDown={event => {
           if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;

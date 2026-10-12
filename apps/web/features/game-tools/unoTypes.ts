@@ -13,6 +13,8 @@ export type UnoPlayer = UnoRosterSeat & {
   declared: boolean;
   episodeId: number;
   grace: boolean;
+  /** Private v2 report window; absent in legacy matches. */
+  unoReportOpen?: boolean;
 };
 export type UnoEvent = {
   id: number;
@@ -30,7 +32,7 @@ export type UnoRoundResult = {
   remaining: { seat: number; points: number; cardCount: number }[];
 };
 export type UnoState = {
-  rulesetVersion: 1;
+  rulesetVersion: 1 | 2;
   phase: UnoPhase;
   players: UnoPlayer[];
   turnSeat: number;
@@ -57,7 +59,7 @@ export type UnoState = {
   roundResult: UnoRoundResult | null;
 };
 export type UnoViewerState = {
-  rulesetVersion: 1;
+  rulesetVersion: 1 | 2;
   phase: UnoPhase;
   players: (UnoRosterSeat & { cardCount: number; score: number; episodeId: number })[];
   selfSeat: number;
@@ -87,7 +89,7 @@ export type UnoAction =
   | { type: "PLAY"; cardId: string; color?: UnoColor; handVersion: number }
   | { type: "DRAW" }
   | { type: "PASS" }
-  | { type: "CALL_UNO"; episodeId: number }
+  | { type: "CALL_UNO"; episodeId: number; handVersion?: number }
   | { type: "CATCH_UNO"; targetSeat: number; episodeId: number; roundNumber: number }
   | { type: "ACCEPT_DRAW_FOUR" }
   | { type: "CHALLENGE_DRAW_FOUR" }

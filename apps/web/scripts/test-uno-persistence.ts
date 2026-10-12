@@ -247,7 +247,7 @@ try {
     const last = deck.find((card) => card.color === "red" && card.value === "3")!;
     const top = deck.find((card) => card.color === "red" && card.value === "5")!;
     const opponent = deck.find((card) => card.color === "blue" && card.value === "7")!;
-    state.players[0].hand = [last]; state.players[0].handVersion += 1; state.players[0].declared = false; state.players[0].episodeId += 1; state.players[0].grace = false;
+    state.players[0].hand = [last]; state.players[0].handVersion += 1; state.players[0].declared = false; state.players[0].episodeId += 1; state.players[0].grace = false; state.players[0].unoReportOpen = true;
     state.players[1].hand = [opponent]; state.players[1].handVersion += 1;
     state.drawPile = deck.filter((card) => ![last.id, top.id, opponent.id].includes(card.id)); state.discard = [top]; state.currentColor = "red";
     state.phase = "PLAYING"; state.challenge = null; state.colorChoiceSeat = null; state.turnSeat = 0; state.drawnCardId = null; state.deadlineAt = Date.now() + 60_000;

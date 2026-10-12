@@ -47,6 +47,16 @@ test("a failed join is evicted so an explicit retry can recover", async (t) => {
   assert.equal(attempts, 2);
 });
 
+test("unauthorized joins request sign-in and can retry after authentication", async (t) => {
+  let attempts = 0;
+  t.mock.method(globalThis, "fetch", async () => ++attempts === 1
+    ? Response.json({}, { status: 401 }) : Response.json({ roomId: "room" }));
+  const input = { code: "ABCDEF" };
+  await assert.rejects(joinDrawGuessRoomPending(input), /SIGN_IN_REQUIRED/);
+  assert.equal(await joinDrawGuessRoomPending(input), "room");
+  assert.equal(attempts, 2);
+});
+
 test("a recent-room join does not navigate to a different room returned for the code", async (t) => {
   t.mock.method(globalThis, "fetch", async () => Response.json({ roomId: "another-room" }));
   await assert.rejects(joinDrawGuessRoomPending({ profileId: "one", code: "ABCDEF", expectedRoomId: "original-room" }), /ROOM_NOT_FOUND/);

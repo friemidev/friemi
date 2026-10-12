@@ -14,12 +14,13 @@ import { useDrawGuessCompositionGuard } from "@/features/game-tools/hooks/useDra
 import { forgetDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
 import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
 import { joinDrawGuessRoomPending } from "@/features/game-tools/drawGuessJoinRequest";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 
 function copyFor(locale: string) {
-  if (locale === "en") return { back: "Table games", title: "Draw & Guess", chain: "Picture chain", chainBody: "Draw, pass, guess", classic: "Speed round", classicBody: "Draw and guess live", create: "Create room", join: "Join room", code: "Room code", enter: "Join", closed: "Coming soon", signedOut: "Sign in to create or join a room.", error: "Could not open the room. Try again.", full: "This room is full.", missing: "Room not found", kicked: "The host removed you from this room.", missingHint: "Check the code and try again.", close: "Try another code" };
-  if (locale === "fr") return { back: "Jeux de table", title: "Dessine et devine", chain: "Chaîne de dessins", chainBody: "Dessiner et transmettre", classic: "Devine vite", classicBody: "Dessiner et deviner", create: "Créer une salle", join: "Rejoindre une salle", code: "Code de salle", enter: "Rejoindre", closed: "Bientôt", signedOut: "Connectez-vous pour créer ou rejoindre une salle.", error: "Impossible d'ouvrir la salle. Réessayez.", full: "Cette salle est complète.", missing: "Salle introuvable", kicked: "L'hôte vous a retiré de cette salle.", missingHint: "Vérifiez le code et réessayez.", close: "Essayer un autre code" };
-  return { back: "桌游工具", title: "你画我猜", chain: "画画接龙", chainBody: "轮流画猜", classic: "抢答模式", classicBody: "边画边猜", create: "创建房间", join: "加入房间", code: "房间号", enter: "加入", closed: "敬请期待", signedOut: "请先登录 Friemi，再创建或加入房间。", error: "房间暂时无法打开，请重试。", full: "房间已满。", missing: "房间不存在", kicked: "你已被房主移出这个房间。", missingHint: "检查一下房间号，再试一次吧。", close: "重新输入" };
+  if (locale === "en") return { back: "Table games", title: "Draw & Guess", chain: "Picture chain", chainBody: "Draw, pass, guess", classic: "Speed round", classicBody: "Draw and guess live", create: "Create room", join: "Join room", code: "Room code", enter: "Join", closed: "Coming soon", error: "Could not open the room. Try again.", full: "This room is full.", missing: "Room not found", kicked: "The host removed you from this room.", missingHint: "Check the code and try again.", close: "Try another code" };
+  if (locale === "fr") return { back: "Jeux de table", title: "Dessine et devine", chain: "Chaîne de dessins", chainBody: "Dessiner et transmettre", classic: "Devine vite", classicBody: "Dessiner et deviner", create: "Créer une salle", join: "Rejoindre une salle", code: "Code de salle", enter: "Rejoindre", closed: "Bientôt", error: "Impossible d'ouvrir la salle. Réessayez.", full: "Cette salle est complète.", missing: "Salle introuvable", kicked: "L'hôte vous a retiré de cette salle.", missingHint: "Vérifiez le code et réessayez.", close: "Essayer un autre code" };
+  return { back: "桌游工具", title: "你画我猜", chain: "画画接龙", chainBody: "轮流画猜", classic: "抢答模式", classicBody: "边画边猜", create: "创建房间", join: "加入房间", code: "房间号", enter: "加入", closed: "敬请期待", error: "房间暂时无法打开，请重试。", full: "房间已满。", missing: "房间不存在", kicked: "你已被房主移出这个房间。", missingHint: "检查一下房间号，再试一次吧。", close: "重新输入" };
 }
 
 export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, profileId }: { chainEnabled: boolean; classicEnabled: boolean; locale: string; profileId?: string | null }) {
@@ -62,11 +63,16 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, pro
     try {
       const { response, data: result } = await fetchDrawGuessResponse<{ room?: { id?: string }; error?: string }>("/api/game-tools/draw-guess/rooms", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ locale, mode }) });
       if (!isCurrent()) return;
+      if (response.status === 401) throw new Error("SIGN_IN_REQUIRED");
       if (!response.ok || !result?.room?.id) throw new Error(result?.error ?? "UNKNOWN");
       router.push(withLocale(locale, `/game-tools/draw-guess/rooms/${result.room.id}`));
     } catch (cause) {
       if (!isCurrent()) return;
-      setError(cause instanceof Error && cause.message === "SIGN_IN_REQUIRED" ? copy.signedOut : copy.error);
+      if (cause instanceof Error && cause.message === "SIGN_IN_REQUIRED") {
+        router.push(getSignInHref(locale, withLocale(locale, "/game-tools/draw-guess")));
+        return;
+      }
+      setError(copy.error);
     } finally { if (isCurrent()) { pendingOperation.current = null; setBusy(false); } }
   }
 
@@ -81,6 +87,12 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, pro
     } catch (cause) {
       if (!isCurrent()) return;
       const issue = cause instanceof Error ? cause.message : "UNKNOWN";
+      if (issue === "SIGN_IN_REQUIRED") {
+        const query = expectedRoomId ? `?${new URLSearchParams({ roomId: expectedRoomId })}` : "";
+        const joinPath = withLocale(locale, `/game-tools/draw-guess/join/${encodeURIComponent(roomCode.trim().toUpperCase())}${query}`);
+        router.push(getSignInHref(locale, joinPath));
+        return;
+      }
       if (issue === "ROOM_NOT_FOUND" || issue === "KICKED") forgetDrawGuessRecentRoom(profileId, expectedRoomId ? { id: expectedRoomId } : { code: roomCode.trim().toUpperCase() });
       setJoinIssue(issue);
     } finally { if (isCurrent()) { pendingOperation.current = null; setBusy(false); } }
@@ -140,6 +152,6 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, pro
       </div>
     </section>
     {error ? <p role="alert" className="rounded-2xl bg-[#FFE8E5] px-4 py-3 text-sm font-semibold text-[#9A3B32]">{error}</p> : null}
-    {joinIssue ? <div className="fixed inset-0 z-[120] grid place-items-center bg-[#273A53]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setJoinIssue(""); }}><div role="alertdialog" aria-modal="true" aria-labelledby="draw-guess-join-issue-title" aria-describedby="draw-guess-join-issue-hint" className="draw-guess-dialog relative w-full max-w-sm rounded-[2rem] bg-[#FFFCF5] px-6 pb-6 pt-8 text-center shadow-[0_24px_70px_rgba(48,66,92,0.3)]"><button autoFocus aria-label="Close" type="button" onClick={() => setJoinIssue("")} className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-[#E8F2FB] text-[#405875]"><X className="h-4 w-4" /></button><DrawGuessCatSprite animated catId="cloud" mood="sad" size={94} /><h2 id="draw-guess-join-issue-title" className="mt-2 text-2xl font-black">{joinIssue === "ROOM_FULL" ? copy.full : joinIssue === "KICKED" ? copy.kicked : joinIssue === "CHAIN_NOT_ENABLED" ? copy.closed : joinIssue === "SIGN_IN_REQUIRED" ? copy.signedOut : joinIssue === "ROOM_NOT_FOUND" || joinIssue === "INVALID_REQUEST" ? copy.missing : copy.error}</h2><p id="draw-guess-join-issue-hint" className="mt-2 text-sm font-semibold text-[#63758D]">{joinIssue === "ROOM_NOT_FOUND" || joinIssue === "INVALID_REQUEST" ? copy.missingHint : ""}</p><button type="button" onClick={() => { setJoinIssue(""); document.getElementById("draw-guess-room-code")?.focus(); }} className="draw-guess-btn draw-guess-btn--candy mt-6 min-h-12 w-full px-5 text-sm">{copy.close}</button></div></div> : null}
+    {joinIssue ? <div className="fixed inset-0 z-[120] grid place-items-center bg-[#273A53]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setJoinIssue(""); }}><div role="alertdialog" aria-modal="true" aria-labelledby="draw-guess-join-issue-title" aria-describedby="draw-guess-join-issue-hint" className="draw-guess-dialog relative w-full max-w-sm rounded-[2rem] bg-[#FFFCF5] px-6 pb-6 pt-8 text-center shadow-[0_24px_70px_rgba(48,66,92,0.3)]"><button autoFocus aria-label="Close" type="button" onClick={() => setJoinIssue("")} className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-[#E8F2FB] text-[#405875]"><X className="h-4 w-4" /></button><DrawGuessCatSprite animated catId="cloud" mood="sad" size={94} /><h2 id="draw-guess-join-issue-title" className="mt-2 text-2xl font-black">{joinIssue === "ROOM_FULL" ? copy.full : joinIssue === "KICKED" ? copy.kicked : joinIssue === "CHAIN_NOT_ENABLED" ? copy.closed : joinIssue === "ROOM_NOT_FOUND" || joinIssue === "INVALID_REQUEST" ? copy.missing : copy.error}</h2><p id="draw-guess-join-issue-hint" className="mt-2 text-sm font-semibold text-[#63758D]">{joinIssue === "ROOM_NOT_FOUND" || joinIssue === "INVALID_REQUEST" ? copy.missingHint : ""}</p><button type="button" onClick={() => { setJoinIssue(""); document.getElementById("draw-guess-room-code")?.focus(); }} className="draw-guess-btn draw-guess-btn--candy mt-6 min-h-12 w-full px-5 text-sm">{copy.close}</button></div></div> : null}
   </div>;
 }

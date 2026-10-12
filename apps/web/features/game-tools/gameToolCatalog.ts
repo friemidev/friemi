@@ -73,7 +73,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     imageSrc: "/game-tools/draw-guess/logo.png",
     kind: "DRAW_GUESS",
     maxPlayers: 10,
-    minPlayers: 3,
+    minPlayers: 2,
     phase: {
       "zh-CN": "已开放",
       en: "Open",

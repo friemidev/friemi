@@ -21,7 +21,7 @@ const json = (value: unknown) => value as Prisma.InputJsonValue;
 function asState(value: Prisma.JsonValue | null): UnoState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as UnoState;
-  return state.rulesetVersion === 1 && Array.isArray(state.players) && Number.isInteger(state.matchNumber) ? state : null;
+  return [1, 2].includes(state.rulesetVersion) && Array.isArray(state.players) && Number.isInteger(state.matchNumber) ? state : null;
 }
 
 async function readRoom(roomId: string) {

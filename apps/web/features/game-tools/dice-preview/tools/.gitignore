@@ -1,0 +1,12 @@
+/frames/
+/roll-*.png
+/roll-*.webp
+/idle-*.png
+/contact-sheet.png
+/manifest.json
+/validation.json
+/preview-*.png
+/spin-*.webp
+/wobble-*.webp
+/material-comparison*.png
+/__pycache__/
