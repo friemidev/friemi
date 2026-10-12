@@ -8,5 +8,5 @@ export default async function DiceOnlinePage({ params, searchParams }: { params:
   const { locale } = await params;
   const { code } = await searchParams;
   const profileId = await getExistingDrawGuessProfileId();
-  return <PageContainer className="max-w-[46rem] pb-20 pt-5" mobileSafeBottom mobileSafeTop><DiceOnlineEntry locale={locale} profileId={profileId} initialCode={code ?? ""} /></PageContainer>;
+  return <PageContainer className="max-w-[46rem] dice-online-page pb-4 pt-5" mobileSafeTop><DiceOnlineEntry locale={locale} profileId={profileId} initialCode={code ?? ""} /></PageContainer>;
 }

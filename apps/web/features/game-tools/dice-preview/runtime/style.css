@@ -462,3 +462,51 @@ body{background-color:#FFFCF5;background-image:radial-gradient(circle,rgba(72,10
 body{--dice-safe-top:var(--app-top-safe-area,var(--friemi-android-top-inset,env(safe-area-inset-top,0px)));padding-top:var(--dice-safe-top)}
 .game-shell{padding-top:16px}
 body:has(.preview-note[hidden]) .game-shell{min-height:calc(100svh - var(--dice-safe-top))}
+
+/* Spend the available height on the tray; keep controls at their normal size.
+   Minimum tray sizes deliberately allow scrolling when text or safe areas grow. */
+body{--dice-safe-bottom:var(--app-bottom-safe-area,var(--friemi-android-bottom-inset,env(safe-area-inset-bottom,0px)))}
+.game-shell{padding-bottom:calc(16px + var(--dice-safe-bottom))}
+@media(max-width:999px) and (min-height:501px){
+ .topbar{height:52px}
+ .game-navigation{gap:6px}
+ .game-navigation .mode-switch{padding:2px}
+ .game-heading{min-height:52px;padding:8px 0 12px}
+ .game-heading .rules-button{bottom:4px}
+ .table:not(.bluff){height:clamp(200px,calc(100dvh - 530px - var(--dice-safe-top) - var(--dice-safe-bottom)),320px)}
+ .table.bluff{height:clamp(220px,calc(100dvh - 530px - var(--dice-safe-top) - var(--dice-safe-bottom)),300px)}
+ .bluff-controls{margin-top:18px}
+ .table-wrap:has(.table.bluff.settled)~.bluff-controls{margin-top:8px}
+}
+@media(min-width:600px) and (max-height:500px){
+ .game-shell{grid-template-rows:auto auto 1fr;align-content:start;align-items:start;min-height:0!important}
+ .topbar{height:44px;align-self:start}
+ .game-navigation{gap:4px;padding-bottom:0}
+ .game-heading{grid-column:1;grid-row:1;align-self:end;margin-top:44px}
+ .table-wrap{grid-column:1;grid-row:2}
+ .table{height:clamp(180px,calc(100dvh - 182px - var(--dice-safe-top) - var(--dice-safe-bottom)),260px)}
+ .table.bluff{height:clamp(220px,calc(100dvh - 182px - var(--dice-safe-top) - var(--dice-safe-bottom)),260px)}
+ .controls{grid-column:2;grid-row:2;align-self:center}
+ .game-shell{padding-bottom:calc(8px + var(--dice-safe-bottom))}
+ .preview-note{height:16px;min-height:16px;padding:1px 8px}
+ .table.bluff~.my-seat{left:auto;right:0;top:-44px;bottom:auto;transform:none}
+}
+@media(min-width:600px) and (max-width:800px) and (max-height:500px){
+ .table:not(.bluff)[data-count="5"] .dice-stage{display:grid;grid-template-columns:repeat(3,56px);gap:12px 10px;left:65%;top:18%}
+ .table:not(.bluff)[data-count="5"] .die{--offset:0px}
+ .table:not(.bluff):not(.covered):not(.covering)[data-count="5"] .cup-zone{left:14%;top:25%;width:88px;height:106px}
+}
+@media(max-width:599px) and (max-height:740px){
+ .topbar{height:44px}
+ .game-heading{min-height:44px;padding:6px 0}
+ .game-heading .rules-button{bottom:0}
+ .game-navigation{gap:4px}
+ .game-navigation .player-switch{padding:2px}
+ .game-navigation .mode-switch{padding:0}
+ .bluff-controls{margin-top:12px}
+ .practice-meta{margin-bottom:0}
+ .bid-composer{margin-bottom:4px}
+ .bluff-summary-slot{min-height:24px}
+ .bluff-controls .bluff-status:not(.settled){min-height:20px;margin-bottom:2px}
+ .primary-button,.secondary-button{min-height:52px}
+}
