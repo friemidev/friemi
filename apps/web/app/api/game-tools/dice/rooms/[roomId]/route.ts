@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isDicePreviewEnabled } from "@/features/game-tools/diceAvailability";
+import { isDiceEnabled } from "@/features/game-tools/diceAvailability";
 import { getExistingDrawGuessProfileId } from "@/features/game-tools/drawGuessAuth";
 import { guardDiceWrite } from "@/features/game-tools/diceRoomWriteGuard";
 import { commandDiceRoom, getDiceRoomView } from "@/features/game-tools/diceRoomServer";
 
 export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
-  if (!isDicePreviewEnabled()) return NextResponse.json({ error: "ROOM_NOT_FOUND" }, { status: 404 });
+  if (!isDiceEnabled()) return NextResponse.json({ error: "ROOM_NOT_FOUND" }, { status: 404 });
   const profileId = await getExistingDrawGuessProfileId();
   if (!profileId) return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
   const { roomId } = await params;
@@ -31,7 +31,7 @@ const action = z.discriminatedUnion("type", [
 ]);
 const command = z.object({ commandId: z.string().regex(/^[a-zA-Z0-9-]{8,64}$/), expectedRound: z.number().int().min(0), action });
 export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
-  if (!isDicePreviewEnabled()) return NextResponse.json({ error: "ROOM_NOT_FOUND" }, { status: 404 });
+  if (!isDiceEnabled()) return NextResponse.json({ error: "ROOM_NOT_FOUND" }, { status: 404 });
   const originGuard = await guardDiceWrite(request, "origin");
   if (originGuard) return originGuard;
   const profileId = await getExistingDrawGuessProfileId();

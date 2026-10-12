@@ -1,12 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DiceOnlineRoom } from "@/features/game-tools/components/DiceOnlineRoom";
-import { isDicePreviewEnabled } from "@/features/game-tools/diceAvailability";
+import { isDiceEnabled } from "@/features/game-tools/diceAvailability";
 import { getDiceRoomView } from "@/features/game-tools/diceRoomServer";
 import { getExistingDrawGuessProfileId } from "@/features/game-tools/drawGuessAuth";
 import { withLocale } from "@/lib/routes";
 export default async function DiceOnlineRoomPage({ params }: { params: Promise<{ locale: string; roomId: string }> }) {
-  if (!isDicePreviewEnabled()) notFound();
+  if (!isDiceEnabled()) notFound();
   const { locale, roomId } = await params;
   const profileId = await getExistingDrawGuessProfileId();
   if (!profileId) redirect(withLocale(locale, "/game-tools/dice/online"));

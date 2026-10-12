@@ -3,11 +3,17 @@ type DiceEnvironment = {
   VERCEL_ENV?: string;
 };
 
-/** Preview deployments also use NODE_ENV=production. The deployment tier wins. */
-export function isDicePreviewEnabled(environment: DiceEnvironment = process.env) {
+/** Dice is released in development, preview and production. The deployment tier wins. */
+export function isDiceEnabled(environment: DiceEnvironment = process.env) {
   if (environment.VERCEL_ENV !== undefined) {
-    return environment.VERCEL_ENV === "preview" || environment.VERCEL_ENV === "development";
+    return ["production", "preview", "development"].includes(environment.VERCEL_ENV);
   }
 
-  return environment.NODE_ENV === "development";
+  return environment.NODE_ENV === "development" || environment.NODE_ENV === "production";
+}
+
+export function isDiceProduction(environment: DiceEnvironment = process.env) {
+  return environment.VERCEL_ENV !== undefined
+    ? environment.VERCEL_ENV === "production"
+    : environment.NODE_ENV === "production";
 }

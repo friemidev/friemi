@@ -6,7 +6,7 @@ import { ArrowRight, ChevronRight, Layers3, LockKeyhole } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
-import { isDicePreviewEnabled } from "@/features/game-tools/diceAvailability";
+import { isDiceEnabled } from "@/features/game-tools/diceAvailability";
 import { isUnoEnabled } from "@/features/game-tools/unoFlags";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import {
@@ -30,17 +30,17 @@ type GameToolsPageProps = {
 const metadataCopy = {
   "zh-CN": {
     description:
-      "Friemi 在线桌游网页版：开房玩你画我猜，使用狼人杀、阿瓦隆等组局工具；在线骰子和好友吹牛即将上线。",
+      "Friemi 在线桌游网页版：开房玩你画我猜和骰子吹牛，自由摇骰，使用狼人杀组局工具。与朋友在线玩，无需下载。",
     title: "在线桌游与游戏房间",
   },
   en: {
     description:
-      "Friemi browser table games and rooms: play Draw & Guess, use Werewolf and Avalon tools, and look out for the upcoming online dice game.",
+      "Play Draw & Guess and Liar’s Dice online with friends on Friemi. Roll dice in your browser or use Werewolf table tools. No download needed.",
     title: "Online Table Games & Rooms",
   },
   fr: {
     description:
-      "Jeux de table et salons sur navigateur : jouez à Dessine et devine, utilisez les outils Loups-garous et Avalon. Le jeu de dés en ligne arrive bientôt.",
+      "Jouez à Dessine et devine et au bluff avec vos amis en ligne sur Friemi. Lancez les dés sur navigateur ou utilisez les outils Loups-garous, sans téléchargement.",
     title: "Jeux de table et salons en ligne",
   },
 };
@@ -127,7 +127,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const copy = getGameToolHubCopy(locale);
   const mobileCopy = getMobileGameToolsCopy(locale);
   const drawGuessAvailable = isDrawGuessChainEnabled() || isDrawGuessClassicEnabled();
-  const diceAvailable = isDicePreviewEnabled();
+  const diceAvailable = isDiceEnabled();
   const drawGuessPreviewDuo = isDrawGuessPreviewDuoEnabled() || isDrawGuessPreviewRelayDuoEnabled();
   const unoAvailable = isUnoEnabled();
 
@@ -151,7 +151,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
                 const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
-                const canOpen = isAvailable || tool.kind === "DICE";
+                const canOpen = isAvailable;
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
@@ -267,7 +267,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
                 const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
-                const canOpen = isAvailable || tool.kind === "DICE";
+                const canOpen = isAvailable;
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300" + (tool.kind === "DICE" || tool.kind === "UNO" ? " sm:col-start-2" : "");

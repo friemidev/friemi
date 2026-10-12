@@ -1,12 +1,14 @@
-# Dice preview runtime
+# Dice game runtime
 
 `runtime/` packages the reviewed `docs/v2_8/dice-design-preview` prototype for the
-development game hub. It contains only the main page, its five CSS/JS dependencies,
+game hub. It contains only the main page, its five CSS/JS dependencies,
 six glossy dice atlases and twenty cat SVGs. Source frames, the sprite laboratory,
 test files and previous materials are deliberately outside the served allowlist.
 
-The Next route checks `isDicePreviewEnabled` before serving the page or any asset.
-Production shows a localized coming-soon page and rejects preview asset requests.
+The Next route checks `isDiceEnabled` before serving the page or any asset.
+Development, preview and production all serve the playable game. Only production
+entry documents are indexable; preview documents and runtime assets remain noindex.
+The public page supplies localized descriptions, canonical links and language alternates.
 `next.config.ts` includes the runtime files in this route's deployment trace.
 
 The packaged game's integration changes are a localized asset base, the dice logo
@@ -19,7 +21,8 @@ The preview page now links to `/game-tools/dice/online`, a separate 2–6 player
 Liar's Dice room using shared `GameToolRoom`, seats, members and events. The online
 room is server-authoritative, keeps unrevealed hands private in authenticated
 snapshots, broadcasts only invalidation notices, and falls back to polling.
-Production still gates both the preview runtime and online room/API.
+Production also enables the online room pages and APIs. The production roller
+hides the preview label; local practice keeps its three-bot notice.
 
 The dice atlases are generated from `tools/render_dice.py`. The current material
 uses cool white rounded resin, black recessed pips, and broad studio reflections.
@@ -35,7 +38,7 @@ The command validates all 192 frames and copies the six WebP atlases into
 `tools/` for inspection and are not served. `apps/web/public/game-tools/dice/cup.svg`
 is the shared graphite cup artwork used by the local preview and online room.
 
-## Verification (2026-10-11)
+## Historical verification before production release (2026-10-11)
 
 - The normal web build and TypeScript check passed on Node 20.19.6. The built
   route's NFT trace includes all 32 runtime files; no asset is missing.
@@ -51,6 +54,20 @@ is the shared graphite cup artwork used by the local preview and online room.
 - Local screenshots are under `output/playwright/dice-entry/`. No database was
   configured for this UI check; unrelated analytics/prefetch requests log missing
   database configuration. Physical WebView testing is outside this entry change.
+
+## Production release verification (2026-10-12)
+
+- Eleven focused checks and the project TypeScript check pass. Coverage includes
+  production availability, playable documents, every runtime asset, locale paths,
+  indexing, traversal denial, private hands, command retries and same-origin writes.
+- The production-tier local browser check covers 390px and 1280px hub ordering,
+  the enabled dice card, a six-die roll with a matching total, and the practice
+  notice appearing only in practice. Screenshots are in
+  `output/playwright/dice-production/`.
+- Fresh production environment settings point to the verified Production project.
+  Read-only catalog checks confirm both dice migrations, the DICE enum, five
+  dice access policies and the existing seat character field. No schema or
+  business data changes were needed for this release.
 
 Run the focused checks from `apps/web`:
 

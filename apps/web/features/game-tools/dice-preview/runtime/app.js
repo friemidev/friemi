@@ -265,9 +265,13 @@ function history(){
   showDialog('叫点记录',body,[{label:'关闭',primary:true}]);
 }
 function cancelFreeMotion(){clearTimeout(rollTimer);clearTimeout(faceTimer);clearTimeout(coverTimer);stopSounds();window.DiceSprites?.finishAll();$('game-table').classList.remove('rolling','covering','uncovering');setBusy(false)}
+function updateModeNotice(practice){
+  const label=practice?pageCopy.practiceLabel:pageCopy.previewLabel;
+  const note=document.querySelector('.preview-note');note.querySelector('p').textContent=label;note.hidden=!label;
+}
 function setMode(next,force=false){
   if(free.busy||(next===mode&&!force))return;clearTimeout(bluff.timer);clearTimeout(bluff.actionTimer);stopSounds();clearRoundFeedback();mode=next;updateCharacters();
-  const practice=mode==='bluff';document.querySelector('.preview-note p').textContent=practice?pageCopy.practiceLabel:pageCopy.previewLabel;document.querySelectorAll('.mode').forEach(b=>{b.classList.toggle('active',b.dataset.mode===mode);b.setAttribute('aria-pressed',String(b.dataset.mode===mode))});
+  const practice=mode==='bluff';updateModeNotice(practice);document.querySelectorAll('.mode').forEach(b=>{b.classList.toggle('active',b.dataset.mode===mode);b.setAttribute('aria-pressed',String(b.dataset.mode===mode))});
   $('free-controls').hidden=practice;$('bluff-controls').hidden=!practice;$('cup-zone').hidden=practice;$('table-sticker').hidden=practice;$('my-seat').hidden=!practice;
   $('game-table').classList.toggle('bluff',practice);$('game-table').classList.remove('settled','covered','covering','uncovering');$('reveal-groups').hidden=true;$('reveal-banner').hidden=true;
   $('dice-stage').hidden=false;$('private-peek').hidden=true;$('hidden-note').hidden=true;$('dice-stage').setAttribute('aria-hidden','false');
@@ -346,5 +350,5 @@ window.addEventListener('resize',()=>{
   if(free.busy)finishCover();
   else if(free.covered)positionGather();
 });
-document.querySelector('.preview-note p').textContent=pageCopy.previewLabel;
+updateModeNotice(false);
 renderCount();showFreeDice();updateCover();
