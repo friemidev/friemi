@@ -1,129 +1,91 @@
-# Friemi
-
 <p align="center">
-  <strong>发现城市里的好去处，约上合拍的人，让相聚继续。</strong>
+  <a href="https://www.friemi.com/zh-CN/home" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./apps/web/public/brand/v2_1/friemi-lockup-horizontal-white.png" />
+      <img src="./apps/web/public/brand/v2_1/friemi-lockup-horizontal-navy.png" alt="Friemi" width="340" />
+    </picture>
+  </a>
 </p>
 
 <p align="center">
-  <a href="https://www.friemi.com/zh-CN/home"><img src="./apps/web/public/readme/v2_8/button-web.svg" alt="网页访问 — 打开 Friemi 官网" width="220" height="65" /></a>
-  <a href="https://apps.apple.com/fr/app/friemi/id6788944230"><img src="./apps/web/public/readme/v2_8/button-app-store.svg" alt="App Store — iOS 下载" width="220" height="65" /></a>
-  <a href="https://play.google.com/store/apps/details?id=com.friemi.app&amp;hl=en"><img src="./apps/web/public/readme/v2_8/button-google-play.svg" alt="Google Play — Android 下载" width="220" height="65" /></a>
+  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.fr.md">Français</a>
 </p>
 
 <p align="center">
-  <a href="#产品实景">产品实景</a>
-  ·
-  <a href="#你可以在这里做什么">认识 Friemi</a>
-  ·
-  <a href="#桌游与在线游戏">一起玩</a>
-  ·
-  <a href="#体验入口">开始体验</a>
+  <strong>Find events and make plans with people in Paris.</strong>
 </p>
-
-Friemi 帮你在城市里找到想做的事，也找到愿意一起去的人。
-
-以巴黎为起点，面向海外生活场景，Friemi 将活动发现、聚吧、兴趣社群和日常互动连接起来。一场展览、一次饭局、一桌游戏，都可以成为认识新朋友、延续老朋友关系的开始。
-
-支持 **简体中文、English 和 Français**，覆盖 Web、Android 与 iOS。
-
-## 产品实景
-
-### 移动端
-
-发现城市灵感、找到同行聚吧、约朋友玩一局。
 
 <p align="center">
-  <a href="https://www.friemi.com/zh-CN/mobile-home"><img src="./apps/web/public/readme/v2_8/mobile-discover.png" alt="Friemi 移动端发现页" width="230" /></a>
-  <a href="https://www.friemi.com/zh-CN/lobby"><img src="./apps/web/public/readme/v2_8/mobile-lobby.png" alt="Friemi 移动端聚吧页" width="230" /></a>
-  <a href="https://www.friemi.com/zh-CN/game-tools"><img src="./apps/web/public/readme/v2_8/mobile-games.png" alt="Friemi 移动端桌游页" width="230" /></a>
+  <a href="https://www.friemi.com/zh-CN/home" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-web.svg" alt="Open the Friemi website" width="220" height="65" /></a>
+  <a href="https://apps.apple.com/fr/app/friemi/id6788944230" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-app-store.svg" alt="App Store — download for iOS" width="220" height="65" /></a>
+  <a href="https://play.google.com/store/apps/details?id=com.friemi.app&amp;hl=en" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-google-play.svg" alt="Google Play — download for Android" width="220" height="65" /></a>
 </p>
 
-### 桌面网页
+Friemi is for finding things to do and people to go with. Browse events, join a hangout, or organise your own: dinner, an exhibition, a walk, a game night. If you meet a group you'd like to see again, you can keep in touch in a Planet and plan the next outing there.
 
-官网首页：了解 Friemi 与共创主理人的活动社群。
+Friemi started in Paris. It's available on the web, iOS and Android, in **English, French and Simplified Chinese**.
 
-![Friemi 桌面端官网首页](./apps/web/public/readme/v2_8/desktop-home.png)
+## A look inside
 
-聚吧发现：在大屏上浏览同行计划与活动安排。
+### On your phone
 
-![Friemi 桌面端聚吧页](./apps/web/public/readme/v2_8/desktop-lobby.png)
+Discover, Hangouts and Games.
 
-<sub>截图来自 Friemi 正式网站，拍摄于 2026 年 10 月 12 日。</sub>
+<p align="center">
+  <a href="https://www.friemi.com/en/mobile-home" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-discover.png" alt="Friemi Discover on mobile" width="230" /></a>
+  <a href="https://www.friemi.com/en/lobby" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-lobby.png" alt="Friemi Hangouts on mobile" width="230" /></a>
+  <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-games.png" alt="Friemi Games on mobile" width="230" /></a>
+</p>
 
-## 你可以在这里做什么
+### On your computer
 
-### 发现：找到下一次出门的理由
+The Friemi homepage.
 
-周末还没安排？先看看城市里正在发生什么。展览、音乐、运动、桌游、吃饭、散步和旅行，通过主题分类、搜索与推荐找到感兴趣的内容。
+![Friemi homepage on desktop](./apps/web/public/readme/v2_8/desktop-home.png)
 
-查看时间、地点和活动信息，收藏想去的地方；遇到一场值得同行的活动，也可以从它发起聚吧，约上一起去的人。
+Browse hangouts and see what's coming up.
 
-### 聚吧：把“下次一起”变成一个计划
+![Friemi Hangouts on desktop](./apps/web/public/readme/v2_8/desktop-lobby.png)
 
-发起一场饭局、约人逛展，或者组织周末桌游。写下想做的事，约好时间地点，设置人数、费用和公开范围，就可以邀请大家加入。
+<sub>Screenshots from the live website, taken on 12 October 2026 with the interface set to Chinese.</sub>
 
-发起人能管理报名、审核参与者、邀请共同管理员和发布公告。参与者在聚吧群聊里沟通，分享链接或二维码邀请朋友，用投票一起决定安排。
+## What you can do
 
-共同开支可以记在聚吧的**记账本**里：谁付了钱、哪些人分摊、过程中转过多少、最后各自应付或应收，都能一起核对，并跟进结算。实际转账由参与者自行完成。
+### Find events
 
-### 星球：找到经常一起玩的那群人
+Browse exhibitions, music, sport, food and other things happening around you. Check the date and location, save something for later, or start a hangout around an event you'd like to attend.
 
-一次活动之后，还想继续见面？加入一个围绕共同兴趣的星球，在社群里聊天、分享图文和视频、关注下一次聚吧。
+### Make a plan together
 
-星球把成员、日常分享与线下相聚放在一起，也提供邀请、加入审核和成员管理，让一个兴趣圈子可以持续经营。
+A hangout brings the practical details into one place: when and where to meet, who's coming, and any costs. Hosts manage sign-ups; everyone can use the group chat, share an invitation link or QR code, and vote on plans.
 
-### 世界与个人空间：记录相聚，也保持联系
+The shared expense book records who paid and how costs are split. The group can check balances and track settlement; participants make the actual transfers themselves.
 
-在世界页发布图文足迹，记录一场展览、一顿饭或一次出行，通过点赞、评论和转发发现彼此的日常。
+### Keep a group going
 
-关注感兴趣的人，与互关的朋友保持联系，通过私聊继续交流。个人空间汇集你的聚吧、参与记录、收藏和成就；礼物互动与礼物墙，也让朋友之间的心意留下记录。
+Planets are communities built around shared interests. Members can chat, post photos and videos, and organise more hangouts. Hosts can manage membership and joining requests.
 
-### 门店与背包：让线下体验更方便
+### Share and stay in touch
 
-门店可以通过长期聚吧提供预约入口，设置开放日期。用户选择日期和人数提交预约，由店主接受或拒绝，并在自己的预约记录中查看进展。
+Post photos and updates in the World feed, follow people, or chat privately with mutual followers. Your profile keeps your hangouts, saved items and achievements together. Gifts from friends appear on your gift wall.
 
-领取的优惠券和持有的票券可以在背包查看，票券按相应规则赠送或核销。商城提供朋友之间的礼物互动，背包则方便管理实际持有的券与票。
+### Book a visit and keep your tickets handy
 
-## 桌游与在线游戏
+Shops can accept bookings through ongoing hangouts. Choose a date and party size, then follow the shop's response in your bookings. Your Backpack holds coupons and tickets; the Mall is where you send gifts to friends.
 
-聚在一张桌旁，或者和远处的朋友约一局，Friemi 都有一起玩的方式。
+## Games
 
-| 游戏     | 一起怎么玩                                                                 |
-| -------- | -------------------------------------------------------------------------- |
-| 狼人杀   | 用手机查看身份、跟进主持流程、记录生死和查看复盘，现场继续发言、投票和推理 |
-| 你画我猜 | 轮流画、抢着猜，也可以把词和画接龙传下去，看看最后变成什么                 |
-| 摇骰子   | 自由摇骰、电脑练习，或邀请朋友进入 2–6 人吹牛房间                          |
-| UNO      | 和朋友开一桌牌局，按颜色或数字出牌，体验经典积分或快速单局                 |
+| Game         | How it works                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| Werewolf     | Use your phone for roles, host controls and the game record while playing together in person. |
+| Draw & Guess | Draw and guess in turns, or pass words and drawings along a chain.                            |
+| Dice         | Roll freely, practise against the computer, or play Liar's Dice with 2–6 people.              |
+| UNO          | Play with friends using classic scoring or a quick single round.                              |
 
-具体玩法与开放状态以[桌游页](https://www.friemi.com/zh-CN/game-tools)显示为准。
+See the <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer">Games page</a> for current modes and availability.
 
-## 适合怎样的你
+## Try Friemi
 
-- **刚来到一座城市**：找周末安排，认识有共同兴趣的新朋友。
-- **想约朋友出门**：把活动、报名、群聊、投票和共同开支放在同一个聚吧里。
-- **经常组织活动**：管理参与者，通过星球保持社群联系，继续发起下一场相聚。
-- **经营线下门店**：通过长期聚吧承接预约，用优惠券和票券连接线下体验。
+<a href="https://www.friemi.com/en/mobile-home" target="_blank" rel="noopener noreferrer">Discover</a> · <a href="https://www.friemi.com/en/lobby" target="_blank" rel="noopener noreferrer">Hangouts</a> · <a href="https://www.friemi.com/en/activities" target="_blank" rel="noopener noreferrer">Events</a> · <a href="https://www.friemi.com/en/planets" target="_blank" rel="noopener noreferrer">Planets</a> · <a href="https://www.friemi.com/en/footprints" target="_blank" rel="noopener noreferrer">World</a> · <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer">Games</a>
 
-## 在手机和电脑上使用
-
-Friemi 围绕手机上的日常使用设计，也适配桌面浏览器。Web、Android 与 iOS 延续同一套活动、聚吧、社群与聊天体验，方便从看到活动到真正出门，再到活动之后继续联系。
-
-公开页面可以直接浏览；报名、聊天与个人互动按页面提示登录。
-
-## 体验入口
-
-| 想做什么         | 从这里开始                                                                        |
-| ---------------- | --------------------------------------------------------------------------------- |
-| 了解 Friemi      | [官网](https://www.friemi.com/zh-CN/home)                                         |
-| 下载 iOS App     | [App Store](https://apps.apple.com/fr/app/friemi/id6788944230)                    |
-| 下载 Android App | [Google Play](https://play.google.com/store/apps/details?id=com.friemi.app&hl=en) |
-| 找出门灵感       | [发现](https://www.friemi.com/zh-CN/mobile-home)                                  |
-| 找搭子、发起计划 | [聚吧](https://www.friemi.com/zh-CN/lobby)                                        |
-| 看城市公开活动   | [活动](https://www.friemi.com/zh-CN/activities)                                   |
-| 加入兴趣社群     | [星球](https://www.friemi.com/zh-CN/planets)                                      |
-| 看看大家的日常   | [世界](https://www.friemi.com/zh-CN/footprints)                                   |
-| 和朋友玩一局     | [桌游](https://www.friemi.com/zh-CN/game-tools)                                   |
-
-[中文](https://www.friemi.com/zh-CN/mobile-home) · [English](https://www.friemi.com/en/mobile-home) · [Français](https://www.friemi.com/fr/mobile-home)
-
-打开 [Friemi](https://www.friemi.com)，选一个想去的活动，约上愿意一起出发的人。
+You can browse public pages first. Sign in when you're ready to join a hangout, chat or post.
