@@ -1,5 +1,6 @@
 .game, .previewBar {
   --uno-ink: #30425c; --uno-muted: #63758d; --uno-blue: #3c73b0; --uno-mist: #dcecf9; --uno-paper: #fffcf5; --uno-butter: #ffe7b1; --uno-border: #b9d4eb;
+  --uno-top-clearance: calc(var(--app-top-safe-area, env(safe-area-inset-top, 0px)) + 16px);
   --uno-red: #e76859; --uno-yellow: #f2c756; --uno-green: #459e86; --uno-card-blue: #477fca;
 }
 .game {
@@ -326,3 +327,9 @@
   .changeCharacter { max-width: calc(100% - 60px); }
   .changeCharacter > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* Entry, lobby and table share the same clearance as Draw & Guess. */
+.game { padding-top: var(--uno-top-clearance); }
+.previewBar { padding-top: calc(var(--app-top-safe-area, env(safe-area-inset-top, 0px)) + 10px); }
+/* The preview bar has already consumed the safe area above the game. */
+.previewBar + .game { padding-top: 16px; }
