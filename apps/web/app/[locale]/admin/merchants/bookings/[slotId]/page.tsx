@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowUpRight, CalendarDays, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Users } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -74,7 +74,7 @@ export default async function AdminResidencyDetailPage({
           href={withLocale(locale, `/merchants/${slot.merchant.id}`)}
         >
           {copy.publicPage}
-          <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
         {slot.rejectionReason ? (
           <p className="mt-4 rounded-2xl bg-fog px-5 py-4 text-sm leading-6 text-ink/75">
@@ -93,7 +93,7 @@ export default async function AdminResidencyDetailPage({
             href={getLocalizedActivityDetailPath(locale, slot.activityId)}
           >
             {copy.activity}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : null}
       </article>

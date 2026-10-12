@@ -12,7 +12,7 @@ const gameAssets = [
 ];
 
 test("production serves the playable game with localized search metadata", async () => {
-  for (const [locale, title] of [["zh-CN", "在线骰子游戏网页版"], ["en", "Online Dice Game for Web"], ["fr", "Jeu de dés en ligne sur navigateur"]]) {
+  for (const [locale, title, single, online] of [["zh-CN", "在线骰子游戏网页版", "单人模式", "多人模式"], ["en", "Online Dice Game for Web", "Single player", "Multiplayer"], ["fr", "Jeu de dés en ligne sur navigateur", "Solo", "Multijoueur"]]) {
     for (const entry of [undefined, ["index.html"]]) {
       const response = await createDiceGameResponse(locale, entry, true, true);
       const html = await response.text();
@@ -21,6 +21,9 @@ test("production serves the playable game with localized search metadata", async
       assert.ok(html.includes('id="game-table"'));
       assert.ok(html.includes('<script src="app.js"'));
       assert.ok(html.includes(`href="/${locale}/game-tools/dice/online"`));
+      assert.ok(html.includes(`data-single-label="${single}"`));
+      assert.ok(html.includes(online));
+      assert.ok(!html.includes("本机练习") && !html.includes("和朋友玩"));
       assert.ok(html.includes('data-preview-label=""'));
       assert.ok(!/敬请期待|Coming soon|Bientôt disponible/.test(html));
       assert.equal(response.headers.get("Cache-Control"), "private, no-store");

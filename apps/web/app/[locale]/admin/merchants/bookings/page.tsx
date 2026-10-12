@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { getMerchantBookingAdminCopy } from "@/components/admin/merchantBookingCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -107,7 +107,7 @@ export default async function MerchantBookingsOverviewPage({
                       : copy.unconfigured}
                 </span>
               </span>
-              <ArrowUpRight
+              <ArrowRight
                 aria-hidden="true"
                 className="h-5 w-5 shrink-0 text-forest"
               />

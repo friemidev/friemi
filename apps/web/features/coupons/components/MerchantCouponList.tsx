@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDeferredValue, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   ChevronRight,
   CirclePlus,
   Search,
@@ -114,7 +114,7 @@ export function MerchantCouponList({
               >
                 <span className="flex w-full items-start justify-between">
                   <CirclePlus aria-hidden="true" className="h-5 w-5" />
-                  <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-ink/70" />
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 text-ink/70" />
                 </span>
                 <span className="text-sm font-bold sm:text-base">{copy.publish}</span>
               </Link>
@@ -259,7 +259,7 @@ export function MerchantCouponList({
                     href={withLocale(locale, "/profile/store/coupons/new")}
                   >
                     {copy.publish}
-                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                    <ArrowRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
                 ) : (
                   <button

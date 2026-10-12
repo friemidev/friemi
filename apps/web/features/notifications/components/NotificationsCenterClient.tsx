@@ -8,7 +8,7 @@ import {
   Check,
   CheckCheck,
   Clock3,
-  ExternalLink,
+  ArrowRight,
   Flag,
   Gift,
   Heart,
@@ -1533,7 +1533,7 @@ function NotificationCard({
                       type="button"
                     >
                       {getNotificationActionLabel(notification, locale)}
-                      <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                      <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
                     </button>
                   ) : notification.type === "CHARM_GIFT_RECEIVED" ? (
                     <button
@@ -1545,7 +1545,7 @@ function NotificationCard({
                       type="button"
                     >
                       {getNotificationActionLabel(notification, locale)}
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   ) : (
                     <form action={openNotificationActivityAction}>
@@ -1560,7 +1560,7 @@ function NotificationCard({
                         type="submit"
                       >
                         {getNotificationActionLabel(notification, locale)}
-                        <ExternalLink className="h-3.5 w-3.5" />
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </button>
                     </form>
                   )

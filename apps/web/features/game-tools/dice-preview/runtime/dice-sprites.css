@@ -29,6 +29,9 @@
 .in-flight > .sprite-frame { will-change: transform; }
 .table.rolling .cup-zone { animation: sprite-cup var(--roll-time, 1800ms) ease-in-out both; }
 .table.rolling .dice-stage { animation: sprite-release var(--roll-time, 1800ms) linear both; }
+/* A covered roll never releases the dice, even while sprite opacity animates. */
+.table:not(.bluff).covered .dice-stage { visibility: hidden; }
+.table.rolling.covered .dice-stage { animation: none; }
 .table.rolling .die.sprite-ready,
 .table.landed .die.sprite-ready { animation: none; }
 .table.rolling .motion-tick { animation: sprite-ticks var(--roll-time, 1800ms) both; }

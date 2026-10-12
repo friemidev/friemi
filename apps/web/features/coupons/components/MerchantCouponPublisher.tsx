@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   Check,
   CheckCircle2,
   LoaderCircle,
@@ -394,7 +394,7 @@ export function MerchantCouponPublished({
         href={withLocale(locale, "/profile/store/coupons")}
       >
         {copy.returnToStore}
-        <ArrowUpRight className="h-4 w-4" />
+        <ArrowRight className="h-4 w-4" />
       </Link>
     </section>
   );

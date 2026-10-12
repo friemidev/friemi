@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   PackageOpen,
   Plus,
@@ -124,7 +124,7 @@ export default async function AdminMerchantsPage({
                 {bookingCopy.entryHint}
               </span>
             </span>
-            <ArrowUpRight
+            <ArrowRight
               aria-hidden="true"
               className="h-5 w-5 shrink-0 text-forest"
             />

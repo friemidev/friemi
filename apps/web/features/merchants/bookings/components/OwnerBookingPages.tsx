@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   ChevronRight,
   Settings2,
@@ -74,7 +74,7 @@ export function OwnerBookingDashboard({
               >
                 <CalendarDays aria-hidden="true" className="h-5 w-5" />
                 <span className="flex-1">{copy.viewSpace}</span>
-                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </Link>
             </nav>
           </>
@@ -89,7 +89,7 @@ export function OwnerBookingDashboard({
               href={withLocale(locale, "/profile/store/bookings/settings")}
             >
               {copy.createSpace}
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
         )}

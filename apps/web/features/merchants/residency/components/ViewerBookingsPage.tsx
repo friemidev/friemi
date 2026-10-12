@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   ChevronRight,
 } from "lucide-react";
@@ -83,7 +83,7 @@ function BookingRow({
             href={activityHref}
           >
             {copy.viewActivity}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : null}
       </div>

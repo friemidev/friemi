@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import type { PublicBookingSpace } from "../types";
 import { getBookingCopy } from "../copy";
@@ -113,7 +113,7 @@ export function PersistentBookingPage({
             )}
           >
             {copy.viewBooking}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </section>
       ) : null}
@@ -125,7 +125,7 @@ export function PersistentBookingPage({
             href={withLocale(locale, "/profile/store/bookings")}
           >
             {copy.manage}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </div>
       ) : null}
@@ -154,7 +154,7 @@ export function PersistentBookingPage({
           href={withLocale(locale, "/profile/bookings")}
         >
           {copy.myBookings}
-          <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
       ) : null}
     </BookingShell>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { getPublicResidencyCopy } from "../publicCopy";
 import { getParisDateString } from "../validation";
 import { withLocale } from "@/lib/routes";
@@ -195,7 +195,7 @@ export function ResidencyCalendar({
                           : ""}
                       </span>
                     </span>
-                    <ArrowUpRight
+                    <ArrowRight
                       aria-hidden="true"
                       className="h-5 w-5 shrink-0 text-forest transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                     />

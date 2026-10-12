@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, History, UserRoundCheck, Users } from "lucide-react";
+import { ArrowRight, History, UserRoundCheck, Users } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminItemPageFrame } from "@/features/inventory/components/AdminItemPageFrame";
@@ -97,7 +97,7 @@ export default async function AdminTicketAccessPage({
                 {hint}
               </span>
             </span>
-            <ArrowUpRight aria-hidden="true" className="h-5 w-5 shrink-0 text-ink/50" />
+            <ArrowRight aria-hidden="true" className="h-5 w-5 shrink-0 text-ink/50" />
           </Link>
         ))}
       </nav>

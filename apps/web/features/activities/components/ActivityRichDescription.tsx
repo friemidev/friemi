@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import type {
   AnalyticsEntityType,
@@ -127,7 +127,7 @@ export function ActivityRichDescription({
                 href={part.value}
               >
                 <span className="min-w-0 break-all">{part.value}</span>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" />
               </AnalyticsExternalLink>
               <ActivityCopyButton
                 analyticsEvent={{
