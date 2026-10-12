@@ -14,7 +14,7 @@ const en = {
   invitation: "Invite friends",
   copied: "Link copied",
   players: "2–10 players",
-  ruleTag: "Number card finish",
+  ruleTag: "Classic rules",
   rules: "Rules",
   close: "Close",
   room: "TABLE",
@@ -78,10 +78,10 @@ const en = {
   soundOff: "Sound off",
   rulesTitle: "UNO rules",
   rule1: "Match the colour, number or symbol. Pass to draw one; you may keep it or play only that new card.",
-  rule2: "With one card, tap UNO yourself before playing it. The button never reminds you. Drawing more cards resets your declaration.",
-  rule3: "After someone reaches one card, the next normal play or draw opens reporting. Open their avatar menu to report before they finish. Correct report: they draw two. Wrong report: you draw two.",
-  rule4: "Finish with a number card. No action or wild card can be your last. Once a legal last card lands, the winner is final — a missed UNO that went unnoticed is allowed to win.",
-  rule5: "+2 skips the next player. +4 can be challenged: a successful challenge gives the offender four; a failed challenge gives you six. No stacking.",
+  rule2: "Tap UNO before playing from two cards to one. The button is always available; it never lights up automatically.",
+  rule3: "A missed UNO can be reported from the avatar menu until the next player plays or draws. The reported player draws two; an invalid report draws no cards.",
+  rule4: "Any legal card can finish the round. A final +2 or +4 is drawn before points are counted.",
+  rule5: "+2 draws two and skips the next player. Play +4 only with no card of the current colour: challenge success makes the offender draw four; failure makes the challenger draw six. No stacking.",
   offline: "Away",
   error: "Something went wrong. Try again.",
   unconfirmed: "Result unconfirmed. Retry.",
@@ -136,7 +136,7 @@ const zh: typeof en = {
   invitation: "邀请朋友",
   copied: "已复制",
   players: "2–10 人",
-  ruleTag: "数字牌收尾",
+  ruleTag: "经典规则",
   rules: "规则",
   close: "关闭",
   room: "房间",
@@ -200,10 +200,10 @@ const zh: typeof en = {
   soundOff: "声音已关闭",
   rulesTitle: "UNO 规则",
   rule1: "匹配颜色、数字或符号出牌。点「不出」摸一张；这回合只能出刚摸的牌，也可以留着过牌。",
-  rule2: "剩一张时，自己点击 UNO，再出最后一张。按钮不会提醒你。手牌增加到多张后，需要重新宣告。",
-  rule3: "有人刚剩一张后，下一次正常出牌或摸牌完成，才可举报。点对方头像，在其出完前举报漏喊：抓对，对方摸二张；误报，自己摸二张。",
-  rule4: "最后一张必须是数字牌，不能用功能牌或万能牌收尾。合法末张一出完立即获胜，不再举报；漏喊但没被及时发现，也可以赢。",
-  rule5: "+2 让下家摸二张并跳过。+4 可挑战：成功则出牌者摸四张，失败则挑战者摸六张。不叠加罚牌。",
+  rule2: "两张变一张前，自己点击 UNO。按钮随时可点，不会自动亮起。",
+  rule3: "漏喊 UNO，可在下一位玩家出牌或摸牌前，从头像菜单举报。漏喊者摸二张；无效举报不罚牌。",
+  rule4: "任何合法牌都可以收尾。末张为 +2 或 +4 时，下家先摸牌，再结算分数。",
+  rule5: "+2 让下家摸二张并跳过。没有当前颜色的牌才能合法出 +4；挑战成功则出牌者摸四张，失败则挑战者摸六张。不叠加罚牌。",
   offline: "暂时离开",
   error: "操作失败，请重试。",
   unconfirmed: "结果待确认，请重试。",
@@ -258,7 +258,7 @@ const fr: typeof en = {
   invitation: "Inviter des amis",
   copied: "Lien copié",
   players: "2–10 joueurs",
-  ruleTag: "Finir avec un chiffre",
+  ruleTag: "Règles classiques",
   rules: "Règles",
   close: "Fermer",
   room: "TABLE",
@@ -322,10 +322,10 @@ const fr: typeof en = {
   soundOff: "Son désactivé",
   rulesTitle: "Règles du UNO",
   rule1: "Associez couleur, chiffre ou symbole. Passez pour piocher une carte : gardez-la ou jouez uniquement celle-ci.",
-  rule2: "Avec une carte, appuyez vous-même sur UNO avant de la jouer. Aucun rappel automatique. Reprendre des cartes annule la déclaration.",
-  rule3: "Après le passage à une carte, la prochaine action normale ouvre les signalements. Utilisez le menu de l'avatar avant la fin : signalement juste, l'autre pioche deux ; erroné, vous piochez deux.",
-  rule4: "Finissez avec un chiffre, jamais une carte action ou un joker. La dernière carte légale fixe immédiatement le gagnant, même si un UNO oublié n'a pas été signalé.",
-  rule5: "+2 fait piocher deux et passer. Contester +4 : succès, le joueur pioche quatre ; échec, vous piochez six. Pas de cumul.",
+  rule2: "Appuyez sur UNO avant de passer de deux cartes à une. Le bouton reste disponible et ne s’allume jamais automatiquement.",
+  rule3: "Signalez un UNO oublié depuis le menu de l’avatar avant que le joueur suivant joue ou pioche. Le joueur signalé pioche deux ; un signalement invalide ne pénalise personne.",
+  rule4: "Toute carte légale peut terminer la manche. Un dernier +2 ou +4 est pioché avant le calcul des points.",
+  rule5: "+2 fait piocher deux et passer. +4 n’est légal que sans carte de la couleur actuelle. Contestation réussie : le joueur pioche quatre ; échec : le contestataire pioche six. Pas de cumul.",
   offline: "Absent",
   error: "Une erreur est survenue. Réessayez.",
   unconfirmed: "Résultat non confirmé. Réessayez.",
@@ -366,7 +366,29 @@ const fr: typeof en = {
   cancelled: "Salle fermée",
   loading: "Chargement…",
 };
-export function getUnoCopy(locale: string) { return locale === "zh-CN" ? zh : locale === "fr" ? fr : en; }
+const legacyRules = {
+  "en": {
+    "rule2": "With one card, tap UNO yourself before playing it. The button never reminds you. Drawing more cards resets your declaration.",
+    "rule3": "After someone reaches one card, the next normal play or draw opens reporting. Open their avatar menu to report before they finish. Correct report: they draw two. Wrong report: you draw two.",
+    "rule4": "Finish with a number card. No action or wild card can be your last. Once a legal last card lands, the winner is final — a missed UNO that went unnoticed is allowed to win."
+  },
+  "zh-CN": {
+    "rule2": "剩一张时，自己点击 UNO，再出最后一张。按钮不会提醒你。手牌增加到多张后，需要重新宣告。",
+    "rule3": "有人刚剩一张后，下一次正常出牌或摸牌完成，才可举报。点对方头像，在其出完前举报漏喊：抓对，对方摸二张；误报，自己摸二张。",
+    "rule4": "最后一张必须是数字牌，不能用功能牌或万能牌收尾。合法末张一出完立即获胜，不再举报；漏喊但没被及时发现，也可以赢。"
+  },
+  "fr": {
+    "rule2": "Avec une carte, appuyez vous-même sur UNO avant de la jouer. Aucun rappel automatique. Reprendre des cartes annule la déclaration.",
+    "rule3": "Après le passage à une carte, la prochaine action normale ouvre les signalements. Utilisez le menu de l'avatar avant la fin : signalement juste, l'autre pioche deux ; erroné, vous piochez deux.",
+    "rule4": "Finissez avec un chiffre, jamais une carte action ou un joker. La dernière carte légale fixe immédiatement le gagnant, même si un UNO oublié n'a pas été signalé."
+  }
+} as const;
+
+export function getUnoCopy(locale: string, rulesetVersion: 1 | 2 = 2) {
+  const key = locale === "zh-CN" ? "zh-CN" : locale === "fr" ? "fr" : "en";
+  const copy = key === "zh-CN" ? zh : key === "fr" ? fr : en;
+  return rulesetVersion === 1 ? { ...copy, ...legacyRules[key] } : copy;
+}
 export function unoCardUnit(count: number, locale: string) {
   if (count === 1 && locale !== "zh-CN") return locale === "fr" ? "carte" : "card";
   return getUnoCopy(locale).cards;

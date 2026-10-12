@@ -23,7 +23,7 @@ import {
   type DrawGuessTiming,
 } from "@/features/game-tools/drawGuessEngine";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "@/features/game-tools/gameToolRooms";
-import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewDuoEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
+import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled, isDrawGuessPreviewRelayDuoEnabled } from "@/features/game-tools/drawGuessFlags";
 import { broadcastDrawGuessRoomChange } from "@/features/game-tools/drawGuessRealtimeServer";
 import { getDrawGuessInkSequence } from "@/features/game-tools/drawGuessInkServer";
 import { pruneEmptyFinishedDrawGuessRoom } from "@/features/game-tools/drawGuessMaintenance";
@@ -257,7 +257,7 @@ export async function createDrawGuessRoom(input: {
   const requestedCount = input.playerCount ?? (input.mode === "CHAIN" ? 8 : 10);
   const practiceRelay = input.mode === "CHAIN" && requestedCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
   if (input.mode === "CLASSIC"
-    ? requestedCount < (isDrawGuessPreviewDuoEnabled() ? 2 : 3) || requestedCount > 10
+    ? requestedCount < 2 || requestedCount > 10
     : !practiceRelay && (requestedCount < 5 || requestedCount > 8)) {
     return { error: "INVALID_PLAYER_COUNT" } as const;
   }
@@ -581,11 +581,11 @@ export async function getDrawGuessRoomView(roomId: string, profileId: string, kn
         id: room.id,
         isHost: Boolean(viewer && room.hostId === profileId),
         autoSize: state.autoSize === true,
-        requiredPlayers: state.mode === "CLASSIC" ? isDrawGuessPreviewDuoEnabled() ? 2 : 3
+        requiredPlayers: state.mode === "CLASSIC" ? 2
           : state.practiceBotSeat !== undefined || isDrawGuessPreviewRelayDuoEnabled() && room.seats.length <= 2 ? 2 : 5,
         canStart: state.phase === "LOBBY" && (state.mode !== "CHAIN" || isDrawGuessChainEnabled()) && room.seats.filter((seat) => seat.profileId).every((seat) => Boolean(seat.readyAt)) && (state.autoSize
           ? (state.mode === "CLASSIC"
-            ? room.seats.length >= (isDrawGuessPreviewDuoEnabled() ? 2 : 3)
+            ? room.seats.length >= 2
             : room.seats.length >= 5 || room.seats.length === 2 && isDrawGuessPreviewRelayDuoEnabled())
           : room.seats.length === room.playerCount),
         mode: state.mode,
@@ -703,7 +703,7 @@ export async function startDrawGuessRoom(roomId: string, profileId: string) {
       const humanCount = room.seats.length;
       const practiceRelay = state.mode === "CHAIN" && humanCount === 2 && isDrawGuessPreviewRelayDuoEnabled();
       const validCount = state.mode === "CLASSIC"
-        ? humanCount >= (isDrawGuessPreviewDuoEnabled() ? 2 : 3) && humanCount <= 10
+        ? humanCount >= 2 && humanCount <= 10
         : practiceRelay || humanCount >= 5 && humanCount <= 8;
       if (!validCount) return { error: "WAIT_FOR_PLAYERS" } as const;
       if (room.seats.some((seat) => seat.profileId && !seat.readyAt)) return { error: "WAIT_FOR_READY" } as const;

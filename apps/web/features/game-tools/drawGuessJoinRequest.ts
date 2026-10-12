@@ -13,6 +13,7 @@ export function joinDrawGuessRoomPending({ profileId, code, expectedRoomId }: Jo
   const request = fetchDrawGuessResponse<{ roomId?: string; error?: string }>("/api/game-tools/draw-guess/join", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: normalizedCode, expectedRoomId }),
   }).then(({ response, data }) => {
+    if (response.status === 401) throw new Error("SIGN_IN_REQUIRED");
     if (!response.ok || !data?.roomId) throw new Error(data?.error ?? "UNKNOWN");
     if (expectedRoomId && data.roomId !== expectedRoomId) throw new Error("ROOM_NOT_FOUND");
     return data.roomId;

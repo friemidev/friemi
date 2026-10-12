@@ -9,7 +9,7 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PLAY"), cardId: z.string().min(1).max(64), color: color.optional(), handVersion: z.number().int().nonnegative() }),
   z.object({ type: z.literal("DRAW") }),
   z.object({ type: z.literal("PASS") }),
-  z.object({ type: z.literal("CALL_UNO"), episodeId: z.number().int().nonnegative() }),
+  z.object({ type: z.literal("CALL_UNO"), episodeId: z.number().int().nonnegative(), handVersion: z.number().int().nonnegative().optional() }),
   z.object({ type: z.literal("CATCH_UNO"), targetSeat: z.number().int().min(0).max(9), episodeId: z.number().int().nonnegative(), roundNumber: storedCounter.positive() }),
   z.object({ type: z.literal("ACCEPT_DRAW_FOUR") }),
   z.object({ type: z.literal("CHALLENGE_DRAW_FOUR") }),

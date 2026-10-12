@@ -11,6 +11,9 @@ test("UNO commands require versions, explicit card ownership version and declara
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "PLAY", cardId: "red-3-a", handVersion: 7 } }).success, true);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "CALL_UNO" } }).success, false);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "CALL_UNO", episodeId: 2 } }).success, true);
+  const call = unoCommandSchema.parse({ ...envelope, action: { type: "CALL_UNO", episodeId: 2, handVersion: 4 } });
+  assert.deepEqual(call.action, { type: "CALL_UNO", episodeId: 2, handVersion: 4 });
+  assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "CALL_UNO", episodeId: 2, handVersion: -1 } }).success, false);
   assert.equal(unoCommandSchema.safeParse({ ...envelope, matchNumber: undefined, action: { type: "DRAW" } }).success, false);
 });
 

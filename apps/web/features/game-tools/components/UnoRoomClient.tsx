@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LogOut, RotateCcw } from "lucide-react";
 import type { UnoRoomCommand, UnoRoomView } from "../unoRoomTypes";
 import type { UnoAction } from "../unoTypes";
 import type { UnoReactionKind } from "../unoReactions";
@@ -170,7 +171,7 @@ function UnoRoomSession({ initialRoom, locale, sampleClock }: { initialRoom: Uno
     } catch (cause) { if (mounted.current) setError(unoErrorMessage(cause instanceof Error ? cause.message : "UNKNOWN", locale)); }
     finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   }
-  if (accessFailure) return <main className={s.game}><div className={s.feedback} role="alert"><span>{error || unoErrorMessage(accessFailure, locale)}</span><button type="button" disabled={busy} onClick={() => void retry()}>{t.retry}</button><a className={`${s.button} ${s.secondary}`} href={`/${locale}/game-tools/uno`}>{t.leave}</a></div></main>;
+  if (accessFailure) return <main className={s.game}><div className={s.feedback} role="alert"><span>{error || unoErrorMessage(accessFailure, locale)}</span><button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} disabled={busy} onClick={() => void retry()}><RotateCcw size={18}/>{t.retry}</button><a className={`${s.button} ${s.secondary}`} href={`/${locale}/game-tools/uno`}><LogOut size={18}/>{t.leave}</a></div></main>;
   if (room.state.phase === "LOBBY") return <UnoLobby room={room} locale={locale} busy={busy || offline || unresolved} error={error || reactionError || (offline ? t.reconnecting : "")} onReady={ready => void mutate("/ready", { ready })} onStart={() => void command({ type: "START" })} onLeave={() => void mutate("/leave")} onSettings={settings => void mutate("", settings, "PATCH")} onCharacter={catId => mutate("/character", { catId }, "PATCH")} onReact={react} onRetry={retry}/>;
   return <UnoTable locale={locale} state={room.state} seats={room.seats} reactions={room.reactions} code={room.code} hostSeat={room.hostSeat} busy={busy || unresolved} error={error || reactionError} reconnecting={offline} onAction={command} onReact={react} onLeave={() => void mutate("/leave")} onReturn={() => void mutate("/return")} returning={room.returnedToLobby} onRetry={retry}/>;
 }

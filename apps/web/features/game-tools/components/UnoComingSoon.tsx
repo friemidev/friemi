@@ -11,7 +11,7 @@ export function UnoComingSoon({ locale }: { locale: string }) {
     <Image src="/game-tools/uno/logo.png" alt="UNO" width={320} height={320} priority className="h-auto w-full max-w-72 rounded-3xl object-contain"/>
     <h1 className="text-2xl font-black">UNO</h1>
     <p className="text-base text-ink/70">{copy.soon}</p>
-    <Link href={`/${locale}/game-tools`} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-meadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest">
+    <Link href={`/${locale}/game-tools`} className="mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-meadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest">
       <ArrowLeft size={18} aria-hidden="true"/>{copy.back}
     </Link>
   </main>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { ArrowRight, UsersRound } from "lucide-react";
+import { ArrowRight, Play, UsersRound } from "lucide-react";
 import { getUnoCopy, unoErrorMessage } from "../unoCopy";
 import { UnoCardFace } from "./UnoCard";
 import { UnoHeader } from "./UnoChrome";
@@ -26,7 +26,7 @@ export function UnoEntryClient({ locale, preview = false, initialCode = "", onPr
     <div className={s.entryActions}><button type="button" disabled={busy} className={`${s.button} ${s.primary} ${s.createButton}`} onClick={() => void openRoom(false)}>{busy ? t.busy : t.create}<ArrowRight size={22}/></button>
       <form className={s.joinForm} onSubmit={event => { event.preventDefault(); void openRoom(true); }}><label htmlFor="uno-room-code">{t.joinLabel}</label><div><input id="uno-room-code" placeholder={t.code} value={code} onChange={e => setCode(e.target.value)} maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} required/><button type="submit" className={`${s.button} ${s.secondary}`} disabled={busy || !code.trim()}>{t.enter}<ArrowRight size={16}/></button></div></form>
       {error && <p role="alert" className={s.inlineError}>{error}</p>}
-      {preview && <a className={s.practiceLink} href={`/${locale}/game-tools/uno/preview`}>{t.preview}<ArrowRight size={15}/></a>}
+      {preview && <a className={`${s.button} ${s.quiet} ${s.practiceLink}`} href={`/${locale}/game-tools/uno/preview`}><Play size={18}/>{t.preview}<ArrowRight size={18}/></a>}
     </div>
   </main></div>;
 }

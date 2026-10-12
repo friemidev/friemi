@@ -19,10 +19,6 @@ export function isDrawGuessChainEnabled() {
   return process.env.DRAW_GUESS_CHAIN_ENABLED !== "false";
 }
 
-export function isDrawGuessPreviewDuoEnabled() {
-  return process.env.VERCEL_ENV === "preview" && isDrawGuessClassicEnabled();
-}
-
 export function isDrawGuessPreviewRelayDuoEnabled() {
   return process.env.VERCEL_ENV === "preview" && isDrawGuessChainEnabled();
 }

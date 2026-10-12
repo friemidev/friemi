@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronDown, RotateCcw, Trophy } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronDown, Flag, House, Info, LogOut, RotateCcw, Trophy, X } from "lucide-react";
 import { isUnoCardPlayable } from "../unoEngine";
 import { getUnoCopy, unoCardLabel, unoCardUnit, unoEventLabel } from "../unoCopy";
 import { UNO_COLORS, type UnoAction, type UnoColor, type UnoViewerState } from "../unoTypes";
@@ -19,7 +19,7 @@ export type UnoSeatView = { seat: number; name: string; catId?: DrawGuessCatId; 
 export type UnoTableProps = { locale: string; state: UnoViewerState; seats: UnoSeatView[]; code: string; hostSeat: number; busy?: boolean; error?: string; reconnecting?: boolean; returning?: boolean; reactions?: UnoReaction[]; onReact?: (kind: UnoReactionKind) => Promise<boolean>; onAction: (action: UnoAction) => Promise<unknown> | void; onLeave: () => void; onReturn?: () => void; onRetry?: () => void };
 
 export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, error, reconnecting, returning, reactions, onReact, onAction, onLeave, onReturn, onRetry }: UnoTableProps) {
-  const t = getUnoCopy(locale), ux = getUnoExperienceCopy(locale), liveReactions = useUnoReactions(reactions);
+  const t = getUnoCopy(locale, state.rulesetVersion), ux = getUnoExperienceCopy(locale, state.rulesetVersion), liveReactions = useUnoReactions(reactions);
   const clockNow = useUnoNow();
   const [selection, setSelection] = useState<{ matchNumber: number; roundNumber: number; cardId: string } | null>(null);
   const [wildCard, setWildCard] = useState<string | null>(null);
@@ -45,8 +45,8 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
   const lastEvent = [...state.events].reverse().find(e => e.kind !== "UNO");
   const lastVerdict = [...state.events].reverse().find(e => ["CHALLENGE_WON", "CHALLENGE_LOST", "ACCEPT_DRAW_FOUR"].includes(e.kind));
   const selfReaction = liveReactions.get(state.selfSeat);
-  const seconds = Math.max(0, Math.ceil(((state.deadlineAt ?? now) - now) / 1000));
   const totalSeconds = state.phase === "CHALLENGE" ? 15 : state.turnSeconds;
+  const seconds = Math.min(totalSeconds, Math.max(0, Math.ceil(((state.deadlineAt ?? now) - now) / 1000)));
   const self = state.players.find(p => p.seat === state.selfSeat);
   const winner = state.players.find(p => p.seat === state.roundResult?.winnerSeat);
   const chooseInitial = state.colorChoiceSeat === state.selfSeat;
@@ -101,14 +101,14 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
     setWildCard(null);
   }
   let handHint = state.drawnCardId ? t.drawnOnly : "";
-  if (selected && !canPlay && active) handHint = state.hand.length === 1 && !/^\d$/.test(selected.value) ? t.lastNumber : state.drawnCardId && selected.id !== state.drawnCardId ? t.drawnOnly : t.notPlayable;
-  const feedback = (error || reconnecting) && <div className={s.feedback} role={error ? "alert" : "status"}><span>{reconnecting ? t.reconnecting : error}</span>{onRetry && <button type="button" onClick={onRetry}>{t.retry}</button>}</div>;
+  if (selected && !canPlay && active) handHint = state.rulesetVersion === 1 && state.hand.length === 1 && !/^\d$/.test(selected.value) ? t.lastNumber : state.drawnCardId && selected.id !== state.drawnCardId ? t.drawnOnly : t.notPlayable;
+  const feedback = (error || reconnecting) && <div className={s.feedback} role={error ? "alert" : "status"}><span>{reconnecting ? t.reconnecting : error}</span>{onRetry && <button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={onRetry}><RotateCcw size={18}/>{t.retry}</button>}</div>;
 
   return <div ref={tableRef} className={`${s.game} ${s.tablePage}`} data-uno-phase={state.phase}>
-    <UnoHeader locale={locale} code={code} round={state.roundNumber} events={state.events} onBack={() => setLeave(true)}/>
+    <UnoHeader locale={locale} code={code} round={state.roundNumber} events={state.events} rulesetVersion={state.rulesetVersion} onBack={() => setLeave(true)}/>
     <div className={s.toolbar} aria-label={t.hand}>
       <button type="button" className={`${s.button} ${s.drawButton}`} disabled={!active || busy || !!reconnecting} onClick={() => void onAction({ type: state.drawnCardId ? "PASS" : "DRAW" })}><ArrowDown size={19}/><span>{t.draw}<small>{state.drawnCardId ? ux.keepAndEnd : t.drawHint}</small></span></button>
-      <button type="button" className={`${s.button} ${s.unoButton} ${state.declared ? s.unoDeclared : ""}`} disabled={busy || !!reconnecting || ended} aria-pressed={state.declared} onClick={() => { if (state.hand.length === 1 && self) void onAction({ type: "CALL_UNO", episodeId: self.episodeId }); }}>UNO<span aria-hidden="true">!</span>{state.declared && <Check size={16}/>}</button>
+      <button type="button" className={`${s.button} ${s.unoButton} ${state.declared ? s.unoDeclared : ""}`} disabled={busy || !!reconnecting || ended} aria-pressed={state.declared} onClick={() => { if (self) void onAction({ type: "CALL_UNO", episodeId: self.episodeId, handVersion: state.handVersion }); }}>UNO<span aria-hidden="true">!</span>{state.declared && <Check size={16}/>}</button>
       <button type="button" className={`${s.button} ${s.primary}`} disabled={!canPlay || busy || !!reconnecting} onClick={play}><span>{t.play}</span><ArrowUpRight size={21}/></button>
     </div>
 
@@ -129,7 +129,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
               <span className={s.cardCount} key={player.cardCount}><span className={s.miniCardBack} aria-hidden="true"/>{player.cardCount}<small>{unoCardUnit(player.cardCount, locale)}</small></span>
             </button>
             {unoBubble === player.seat && <span className={s.unoBubble}>UNO!</span>}
-            {menuSeat === player.seat && <div ref={playerMenuRef} className={s.playerMenu} style={{ left: menuAlign === "end" ? "auto" : menuAlign === "start" ? 0 : "50%", right: menuAlign === "end" ? 0 : "auto", transform: menuAlign === "center" ? "translateX(-50%)" : "none" }}><button type="button" autoFocus disabled={busy || !!reconnecting || ended} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); void onAction({ type: "CATCH_UNO", targetSeat: player.seat, episodeId: player.episodeId, roundNumber: state.roundNumber }); }}>{t.report}</button><button type="button" onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); }}>{t.close}</button></div>}
+            {menuSeat === player.seat && <div ref={playerMenuRef} className={s.playerMenu} style={{ left: menuAlign === "end" ? "auto" : menuAlign === "start" ? 0 : "50%", right: menuAlign === "end" ? 0 : "auto", transform: menuAlign === "center" ? "translateX(-50%)" : "none" }}><button type="button" className={`${s.button} ${s.secondary} ${s.compactButton}`} autoFocus disabled={busy || !!reconnecting || ended} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); void onAction({ type: "CATCH_UNO", targetSeat: player.seat, episodeId: player.episodeId, roundNumber: state.roundNumber }); }}><Flag size={18}/>{t.report}</button><button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); }}><X size={18}/>{t.close}</button></div>}
           </div>;
         })}
       </div>
@@ -151,7 +151,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
         {!ended && state.deadlineAt !== null && <span className={s.timer} aria-label={`${seconds} s`} style={{ "--remaining": `${Math.min(100, seconds / totalSeconds * 100)}%` } as CSSProperties}>{seconds}<small>s</small></span>}
       </div>
       <div className={s.actionLog} aria-live="polite" aria-atomic="true"><p>{lastEvent ? unoEventLabel(lastEvent, state, locale) : t.dealt}</p></div>
-      {lastVerdict && !ended && <button type="button" className={s.verdictLink} onClick={() => setShowVerdict(true)}>{ux.lastJudgement}</button>}
+      {lastVerdict && !ended && <button type="button" className={`${s.button} ${s.quiet} ${s.compactButton} ${s.verdictButton}`} onClick={() => setShowVerdict(true)}><Info size={18}/>{ux.lastJudgement}</button>}
       {state.phase === "CHALLENGE" && state.challenge?.targetSeat === state.selfSeat && <section className={s.challengePanel} aria-label={t.challengeTitle}>
         <div><strong>{t.challengeTitle}</strong><p>{t.challengeBody}</p></div>
         <div className={s.challengeActions}><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.primary}`} onClick={() => void onAction({ type: "ACCEPT_DRAW_FOUR" })}>{t.accept}</button><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.secondary}`} onClick={() => void onAction({ type: "CHALLENGE_DRAW_FOUR" })}>{t.challenge}</button></div>
@@ -177,14 +177,16 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
 
     {!ended && !wildCard && !chooseInitial && feedback}
     {showVerdict && lastVerdict && !ended && <UnoDialog title={ux.judgement} onClose={() => setShowVerdict(false)}><p>{unoEventLabel(lastVerdict, state, locale)}</p><p>{unoVerdictExplanation(lastVerdict, locale)}</p><button type="button" className={`${s.button} ${s.primary}`} onClick={() => setShowVerdict(false)}>{t.close}</button></UnoDialog>}
-    {(wildCard || chooseInitial) && <UnoDialog title={t.choose} onClose={chooseInitial ? undefined : () => setWildCard(null)} fallbackFocus={() => handRef.current?.querySelector<HTMLButtonElement>("button") ?? null}><div className={s.colorChoices}>{UNO_COLORS.map((color, i) => <button type="button" key={color} data-color={color} disabled={busy || !!reconnecting} onClick={() => choose(color)}><span aria-hidden="true">{["●", "▲", "■", "◆"][i]}</span>{t[color]}</button>)}</div>{feedback}{!chooseInitial && <button className={s.textButton} type="button" onClick={() => setWildCard(null)}>{t.close}</button>}</UnoDialog>}
+    {(wildCard || chooseInitial) && <UnoDialog title={t.choose} onClose={chooseInitial ? undefined : () => setWildCard(null)} fallbackFocus={() => handRef.current?.querySelector<HTMLButtonElement>("button") ?? null}><div className={s.colorChoices}>{UNO_COLORS.map((color, i) => <button type="button" key={color} data-color={color} disabled={busy || !!reconnecting} onClick={() => choose(color)}><span aria-hidden="true">{["●", "▲", "■", "◆"][i]}</span>{t[color]}</button>)}</div>{feedback}{!chooseInitial && <button className={`${s.button} ${s.quiet}`} type="button" onClick={() => setWildCard(null)}><X size={18}/>{t.close}</button>}</UnoDialog>}
     {ended && <UnoDialog title={`${winner?.name ?? ""} ${state.phase === "FINISHED" && state.matchMode !== "single" ? t.matchWin : t.roundWin}`}>
       <div className={s.winnerArt}><span className={s.winnerConfetti} aria-hidden="true">✦</span><UnoAvatar seat={winner?.seat ?? 0} catId={seats.find(p => p.seat === winner?.seat)?.catId} pose="winner"/><Trophy size={40}/></div>
       <p className={s.winPoints}>+{state.roundResult?.points ?? 0} <small>{t.points}</small></p>
       <div className={s.scoreboard} aria-label={t.scores}>{[...state.players].sort((a, b) => (state.matchMode === "single" ? Number(b.seat === winner?.seat) - Number(a.seat === winner?.seat) : 0) || b.score - a.score).map((player, i) => <div key={player.seat}><span>{i + 1}</span><b>{player.name}{player.seat === state.selfSeat ? ` · ${t.you}` : ""}</b><strong>{player.score}</strong></div>)}</div>
-      {returning ? <p role="status">{locale === "zh-CN" ? "等待其他玩家返回" : locale === "fr" ? "En attente des autres joueurs" : "Waiting for other players"}</p> : state.phase === "ROUND_END" ? hostSeat === state.selfSeat ? <button type="button" disabled={busy} className={`${s.button} ${s.primary}`} onClick={() => void onAction({ type: "NEXT_ROUND" })}>{t.next}<ArrowRight size={18}/></button> : <p>{t.waitHost}</p> : null}
-      {onReturn && <button type="button" className={state.phase === "FINISHED" ? `${s.button} ${s.primary}` : s.textButton} disabled={busy || returning} onClick={onReturn}>{t.lobby}</button>}
-      <button type="button" className={s.textButton} disabled={busy} onClick={onLeave}>{t.leave}</button>
+      <div className={s.resultActions}>
+        {returning ? <p role="status">{locale === "zh-CN" ? "等待其他玩家返回" : locale === "fr" ? "En attente des autres joueurs" : "Waiting for other players"}</p> : state.phase === "ROUND_END" ? hostSeat === state.selfSeat ? <button type="button" disabled={busy} className={`${s.button} ${s.primary}`} onClick={() => void onAction({ type: "NEXT_ROUND" })}>{t.next}<ArrowRight size={18}/></button> : <p>{t.waitHost}</p> : null}
+        {onReturn && <button type="button" className={`${s.button} ${state.phase === "FINISHED" ? s.primary : s.secondary}`} disabled={busy || returning} onClick={onReturn}><House size={18}/>{t.lobby}</button>}
+        <button type="button" className={`${s.button} ${s.quiet}`} disabled={busy} onClick={onLeave}><LogOut size={18}/>{t.leave}</button>
+      </div>
       {feedback}
     </UnoDialog>}
     {leave && !ended && <UnoDialog title={t.leaveTitle} onClose={() => setLeave(false)}><p>{t.leaveBody}</p><div className={s.dialogActions}><button type="button" className={`${s.button} ${s.primary}`} onClick={() => setLeave(false)}>{t.stay}</button><button type="button" className={`${s.button} ${s.secondary}`} onClick={onLeave}>{t.confirmLeave}</button></div></UnoDialog>}

@@ -10,6 +10,8 @@ const card = (value: UnoValue, color: UnoColor | null = "red"): UnoCard => ({ id
 const random = () => 0.5;
 function fixture(count = 3): UnoState {
   const state = createUnoState(Array.from({ length: count }, (_, seat) => ({ seat, name: `Player ${seat}` })));
+  // Keep regression coverage for matches already started under the old rules.
+  state.rulesetVersion = 1;
   state.phase = "PLAYING";
   state.roundNumber = 1;
   state.turnId = 1;
@@ -146,7 +148,7 @@ test("+2 draws and skips; noncontiguous seat rotation follows direction", () => 
   assert.equal(state.turnSeat, 4);
 });
 
-test("two-player reverse/skip returns to actor; an immediate numeric finish has no report pause", () => {
+test("legacy: two-player reverse/skip returns to actor; an immediate numeric finish has no report pause", () => {
   for (const value of ["reverse", "skip"] as const) {
     let state = fixture(2);
     state.players[0].hand = [card(value), card("8")];
@@ -195,7 +197,7 @@ test("only a matching colour makes +4 illegal; another wild or matching number d
   }
 });
 
-test("UNO declaration works off turn and is broadcast once without ending any grace", () => {
+test("legacy: UNO declaration works off turn and is broadcast once without ending any grace", () => {
   let state = fixture();
   single(state, 1, "8", "red", true);
   state = act(state, 1, { type: "CALL_UNO", episodeId: 1 });
@@ -206,7 +208,7 @@ test("UNO declaration works off turn and is broadcast once without ending any gr
   assert.equal(act(state, 0, { type: "CALL_UNO", episodeId: 0 }), state);
 });
 
-test("new one-card grace survives its creation; next play opens old grace but preserves new grace", () => {
+test("legacy: new one-card grace survives its creation; next play opens old grace but preserves new grace", () => {
   let state = fixture();
   state = play(state, 0);
   const report = catchAction(state, 0);
@@ -222,7 +224,7 @@ test("new one-card grace survives its creation; next play opens old grace but pr
   assert.equal(state.players[1].grace, true);
 });
 
-test("ordinary draw and timeout close grace but +4 resolution does not", () => {
+test("legacy: ordinary draw and timeout close grace but +4 resolution does not", () => {
   let state = fixture();
   single(state, 2, "7", "red", true);
   state.drawPile.push(card("8", "blue"));
@@ -236,7 +238,7 @@ test("ordinary draw and timeout close grace but +4 resolution does not", () => {
   assert.equal(state.players[0].grace, true);
 });
 
-test("false reports penalize reporter once and stale/grace/self reports never punish", () => {
+test("legacy: false reports penalize reporter once and stale/grace/self reports never punish", () => {
   let state = fixture();
   single(state, 1);
   state = act(state, 1, { type: "CALL_UNO", episodeId: 1 });
@@ -346,7 +348,7 @@ test("single mode finishes the first numeric win even when remaining cards score
   }
 });
 
-test("single mode retains the numeric-final restriction for every action card", () => {
+test("legacy: single mode retains the numeric-final restriction for every action card", () => {
   for (const value of ["skip", "reverse", "draw2", "wild", "wild4"] as const) {
     const state = fixture();
     state.matchMode = "single";
@@ -439,7 +441,7 @@ test("deadlines reject late commands and advance once; timeout never draws twice
   assert.equal(state.deadlineAt, 120_000);
 });
 
-test("challenge timeout accepts four without closing offender's new grace", () => {
+test("legacy: challenge timeout accepts four without closing offender's new grace", () => {
   let state = fixture();
   state.players[0].hand[0] = card("wild4");
   state = play(state, 0, 0, "blue");
@@ -519,7 +521,7 @@ test("all opening effects use the dealer and initial direction correctly", () =>
   assert.equal(seen.size, 5);
 });
 
-test("seeded full rounds conserve every card and always reach an immediate numeric finish", () => {
+test("seeded classic rounds conserve every card and reach an immediate finish", () => {
   for (let game = 1; game <= 12; game += 1) {
     let seed = game;
     const rng = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
@@ -546,7 +548,8 @@ test("seeded full rounds conserve every card and always reach an immediate numer
       assert.ok(state.players.some((p) => p.seat === state.turnSeat));
     }
     assert.ok(state.phase === "ROUND_END" || state.phase === "FINISHED", `seed ${game} did not finish`);
-    assert.match(state.discard.at(-1)!.value, /^[0-9]$/);
+    assert.equal(state.rulesetVersion, 2);
+    assert.equal(state.players.find(p => p.seat === state.roundResult?.winnerSeat)!.hand.length, 0);
     assert.equal(state.deadlineAt, null);
   }
 });

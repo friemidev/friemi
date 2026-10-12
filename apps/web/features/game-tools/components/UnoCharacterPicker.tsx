@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatId } from "../drawGuessCats";
 import { getUnoCopy } from "../unoCopy";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
@@ -37,7 +37,7 @@ export function UnoCharacterPicker({ catId, locale, busy, error, onSelect, onClo
     <div className={s.characterFooter}>
       {error && <p role="alert" className={s.inlineError}>{error}</p>}
       <button type="button" className={`${s.button} ${s.primary}`} disabled={locked} onClick={() => void choose()}>{saving ? t.characterSaving : t.useCharacter}</button>
-      <button type="button" className={s.textButton} disabled={saving} onClick={onClose}>{t.cancel}</button>
+      <button type="button" className={`${s.button} ${s.quiet}`} disabled={saving} onClick={onClose}><X size={18}/>{t.cancel}</button>
     </div>
   </UnoDialog>;
 }
