@@ -13,10 +13,10 @@ createServer(async (request, response) => {
   try { pathname = decodeURIComponent(new URL(request.url ?? "/", "http://localhost").pathname); }
   catch { response.writeHead(400); response.end(); return; }
   let file = assets.get(pathname);
-  if (pathname.startsWith("/font/") || pathname.startsWith("/game-tools/uno/")) {
+  if (pathname.startsWith("/font/") || pathname.startsWith("/game-tools/uno/") || pathname.startsWith("/brand/")) {
     const asset = resolve(publicRoot, `.${pathname}`);
     if (!asset.startsWith(publicRoot + sep)) { response.writeHead(403); response.end(); return; }
-    file = [asset, pathname.endsWith(".woff2") ? "font/woff2" : pathname.endsWith(".svg") ? "image/svg+xml" : "application/octet-stream"];
+    file = [asset, pathname.endsWith(".woff2") ? "font/woff2" : pathname.endsWith(".svg") ? "image/svg+xml" : pathname.endsWith(".png") ? "image/png" : "application/octet-stream"];
   }
   if (!file && (pathname === "/" || /^\/(zh-CN|en|fr)\/game-tools(?:\/uno(?:\/.*)?)?\/?$/.test(pathname))) file = [resolve(output, "index.html"), "text/html"];
   if (!file) { response.writeHead(404); response.end(); return; }

@@ -150,7 +150,8 @@ function UnoRoomSession({ initialRoom, locale, sampleClock }: { initialRoom: Uno
     return submitReaction(write);
   }
   async function retry() {
-    setReactionError("");
+    // A game write and a reaction can both be unresolved. Keep the reaction's
+    // recovery entry visible until submitReaction resolves its own receipt.
     if (pending.current) {
       if (canRetryUnoRoomWrite(pending.current)) await submit(pending.current);
       else await refresh();

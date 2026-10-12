@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, RotateCcw, X } from "lucide-react";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatId } from "../drawGuessCats";
 import { getUnoCopy } from "../unoCopy";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
 import { UnoDialog } from "./UnoChrome";
 import s from "./UnoGame.module.css";
 
-export function UnoCharacterPicker({ catId, locale, busy, error, onSelect, onClose }: {
+export function UnoCharacterPicker({ catId, locale, busy, error, onSelect, onClose, onRetry }: {
   catId: DrawGuessCatId; locale: string; busy: boolean; error?: string;
   onSelect: (catId: DrawGuessCatId) => Promise<boolean>; onClose: () => void;
+  onRetry?: () => void;
 }) {
   const t = getUnoCopy(locale);
   const [selected, setSelected] = useState(catId);
@@ -35,7 +36,7 @@ export function UnoCharacterPicker({ catId, locale, busy, error, onSelect, onClo
       </button>)}
     </div>
     <div className={s.characterFooter}>
-      {error && <p role="alert" className={s.inlineError}>{error}</p>}
+      {error && <div role="alert" className={s.inlineError}>{error}{onRetry && <button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={onRetry}><RotateCcw size={18}/>{t.retry}</button>}</div>}
       <button type="button" className={`${s.button} ${s.primary}`} disabled={locked} onClick={() => void choose()}>{saving ? t.characterSaving : t.useCharacter}</button>
       <button type="button" className={`${s.button} ${s.quiet}`} disabled={saving} onClick={onClose}><X size={18}/>{t.cancel}</button>
     </div>

@@ -56,11 +56,18 @@ export function GameToolCard({
         <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-[1.5] text-ink/70 sm:text-[13px]">
           {description ?? getGameToolLabel(tool.description, locale)}
         </p>
-        {!compact ? (
+        {!compact || (available && tool.earlyAccess) ? (
           <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-3 text-[11px] font-semibold leading-4 sm:text-xs">
-            <span className="text-forest">
-              {minPlayers === tool.maxPlayers ? minPlayers : `${minPlayers}–${tool.maxPlayers}`} {playerLabel}
-            </span>
+            {!compact ? (
+              <span className="text-forest">
+                {minPlayers === tool.maxPlayers ? minPlayers : `${minPlayers}–${tool.maxPlayers}`} {playerLabel}
+              </span>
+            ) : null}
+            {available && tool.earlyAccess ? (
+              <span className="rounded-full border border-sand bg-paper px-2 py-0.5 font-bold text-forest">
+                {getGameToolLabel(tool.phase, locale)}
+              </span>
+            ) : null}
             {!available ? (
               <span className="inline-flex items-center gap-1 text-ink/70">
                 <LockKeyhole aria-hidden="true" className="h-3 w-3" />

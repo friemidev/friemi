@@ -10,6 +10,7 @@ await build({
   entryPoints: [resolve(webRoot, "scripts/uno-preview-entry.tsx")], outfile: resolve(output, "app.js"),
   bundle: true, format: "esm", platform: "browser", target: "es2022", jsx: "automatic", jsxImportSource: "react",
   minify: true, loader: { ".module.css": "local-css" }, define: { "process.env.NODE_ENV": '"production"' },
+  alias: { "next/image": resolve(webRoot, "scripts/uno-preview-image.tsx"), "next/link": resolve(webRoot, "scripts/uno-preview-link.tsx") },
 });
 await writeFile(resolve(output, "index.html"), `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#dcecf9"><link rel="icon" href="data:,"><title>Friemi UNO · Card Club</title><link rel="stylesheet" href="/app.css"><style>
 @font-face{font-family:"Friemi Latin";src:url("/font/Plus_Jakarta_Sans/PlusJakartaSans-FriemiLatin.woff2") format("woff2");font-weight:200 800;font-display:swap}

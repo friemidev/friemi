@@ -332,7 +332,8 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden){resumePractice();return}stopSounds();clearRoundFeedback();
   if(mode==='free'){
     if(free.busy){cancelFreeMotion();if(free.values.length){free.hasResult=true;showFreeDice();$('roll-button').querySelector('span').textContent='再摇一次'}}
-    if(free.hasResult){free.covered=true;positionGather();updateCover()}
+    if(free.hasResult)free.covered=true;
+    positionGather();updateCover();
   }else{
     clearTimeout(bluff.timer);
     if(bluff.phase==='bidding'){bluff.privateCovered=true;showOwnHand();updatePrivateSummary()}
@@ -349,7 +350,7 @@ reducedMotion.addEventListener('change',()=>{
 window.addEventListener('resize',()=>{
   if(mode!=='free')return;
   if(free.busy)finishCover();
-  else if(free.covered)positionGather();
+  if(free.covered)positionGather();
 });
 updateModeNotice();
 renderCount();showFreeDice();updateCover();

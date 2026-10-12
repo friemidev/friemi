@@ -43,3 +43,25 @@ test("leaving mid-round removes the private hand and starts a clean round", () =
   assert.equal(next.round, 2);
   assert.equal(createDiceLobbyState().phase, "LOBBY");
 });
+
+test("a rematch keeps room rounds increasing while displaying its first and second rounds", () => {
+  const lobby = createDiceLobbyState(3);
+  assert.equal(lobby.round, 3);
+  assert.equal(diceViewFor(lobby, 1).roundNumber, 0);
+  const started = startDiceMatch([1, 2], () => 6, lobby.round + 1);
+  assert.equal(started.round, 4);
+  assert.equal(diceViewFor(started, 1).roundNumber, 1);
+  const bid = applyDiceAction(started, 1, { type: "BID", count: 2, face: 6 }, () => 1);
+  const revealed = applyDiceAction(bid, 2, { type: "CHALLENGE" }, () => 1);
+  const next = applyDiceAction(revealed, 1, { type: "NEXT_ROUND" }, () => 2);
+  assert.equal(next.round, 5);
+  assert.equal(diceViewFor(next, 1).roundNumber, 2);
+  assert.equal(diceViewFor(next, 1).revealedHands, null);
+});
+
+test("existing persisted matches retain their displayed round without a migration", () => {
+  const legacy = { ...startDiceMatch([1, 2], () => 3), round: 3 };
+  delete legacy.matchStartRound;
+  assert.equal(diceViewFor(legacy, 1).roundNumber, 3);
+  assert.equal(diceViewFor(legacy, 1).round, 3);
+});
