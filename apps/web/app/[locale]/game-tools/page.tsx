@@ -30,18 +30,18 @@ type GameToolsPageProps = {
 const metadataCopy = {
   "zh-CN": {
     description:
-      "Friemi 桌游工具大厅：从 Avalon 到说书人工具，共用同一套线下房间能力。",
-    title: "桌游工具大厅",
+      "Friemi 在线桌游网页版：开房玩你画我猜，使用狼人杀、阿瓦隆等组局工具；在线骰子和好友吹牛即将上线。",
+    title: "在线桌游与游戏房间",
   },
   en: {
     description:
-      "Friemi table tools hub: shared offline room capabilities from Avalon to storyteller tools.",
-    title: "Table Tools",
+      "Friemi browser table games and rooms: play Draw & Guess, use Werewolf and Avalon tools, and look out for the upcoming online dice game.",
+    title: "Online Table Games & Rooms",
   },
   fr: {
     description:
-      "Hub d'outils de table Friemi : une base commune d'Avalon aux outils de conteur.",
-    title: "Outils de table",
+      "Jeux de table et salons sur navigateur : jouez à Dessine et devine, utilisez les outils Loups-garous et Avalon. Le jeu de dés en ligne arrive bientôt.",
+    title: "Jeux de table et salons en ligne",
   },
 };
 
@@ -151,6 +151,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
                 const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const canOpen = isAvailable || tool.kind === "DICE";
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
@@ -192,7 +193,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                       </span>
                     </div>
                     <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#D6D5B2]/75 bg-[#F1F2EC] text-[#0D5A3C] transition group-active:translate-x-0.5">
-                      {isAvailable ? (
+                      {canOpen ? (
                         <ChevronRight className="h-[16px] w-[16px]" />
                       ) : (
                         <LockKeyhole className="h-[14px] w-[14px]" />
@@ -201,7 +202,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                   </>
                 );
 
-                return isAvailable ? (
+                return canOpen ? (
                   <CardLink
                     className={`${cardClassName} active:scale-[0.985]`}
                     href={withLocale(locale, tool.href)}
@@ -266,6 +267,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                 const Icon = tool.icon;
                 const CardLink = tool.kind === "DICE" ? "a" : Link;
                 const isAvailable = tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available";
+                const canOpen = isAvailable || tool.kind === "DICE";
                 const minPlayers = tool.kind === "DRAW_GUESS" && drawGuessPreviewDuo ? 2 : tool.minPlayers;
                 const cardClassName =
                   "group relative min-h-[20rem] overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-4 shadow-[0_18px_45px_rgba(21,98,64,0.1)] transition duration-300" + (tool.kind === "DICE" || tool.kind === "UNO" ? " sm:col-start-2" : "");
@@ -317,13 +319,13 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                         </p>
                         <span
                           className={
-                            isAvailable
+                            canOpen
                               ? "mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] transition group-hover:bg-[#369758]"
                               : "mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-4 text-sm font-bold text-[#156240]"
                           }
                         >
                           {isAvailable ? copy.primary : (tool.kind === "DICE" || tool.kind === "UNO") ? mobileCopy.coming : copy.planned}
-                          {isAvailable ? (
+                          {canOpen ? (
                             <ArrowRight className="h-4 w-4" />
                           ) : (
                             <LockKeyhole className="h-4 w-4" />
@@ -334,7 +336,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                   </>
                 );
 
-                return isAvailable ? (
+                return canOpen ? (
                   <CardLink
                     className={`${cardClassName} hover:-translate-y-1 hover:border-[#8AB68E] hover:shadow-[0_24px_70px_rgba(21,98,64,0.16)]`}
                     href={withLocale(locale, tool.href)}

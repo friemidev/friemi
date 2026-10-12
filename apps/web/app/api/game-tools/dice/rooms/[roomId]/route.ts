@@ -20,6 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ room
 }
 const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("READY"), ready: z.boolean() }),
+  z.object({ type: z.literal("SET_CAT"), catId: z.string().min(1).max(24) }),
   z.object({ type: z.literal("START") }),
   z.object({ type: z.literal("BID"), count: z.number().int().min(2).max(30), face: z.number().int().min(2).max(6) }),
   z.object({ type: z.literal("CHALLENGE") }),

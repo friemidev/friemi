@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 235">
+            <defs>
+              <linearGradient id="cup-body" x1="0" x2="1"><stop offset="0" stop-color="#0D1115"/><stop offset=".14" stop-color="#32383E"/><stop offset=".31" stop-color="#242B31"/><stop offset=".48" stop-color="#171C21"/><stop offset=".68" stop-color="#2B3035"/><stop offset=".86" stop-color="#161A1E"/><stop offset="1" stop-color="#090C0F"/></linearGradient>
+              <linearGradient id="cup-light" x1="0" y1="0" x2="1" y2=".22"><stop stop-color="#B9C4C6" stop-opacity="0"/><stop offset=".28" stop-color="#D6DEE0" stop-opacity=".19"/><stop offset=".51" stop-color="#E1EAEB" stop-opacity=".07"/><stop offset="1" stop-color="#F2F9FA" stop-opacity="0"/></linearGradient>
+              <radialGradient id="cup-cap" cx=".42" cy=".20" r=".88"><stop stop-color="#3F474A"/><stop offset=".62" stop-color="#1B2227"/><stop offset="1" stop-color="#080C10"/></radialGradient>
+              <linearGradient id="cup-lining" x1="0" y1="0" x2=".85" y2="1"><stop stop-color="#071B19"/><stop offset=".52" stop-color="#0F3A32"/><stop offset="1" stop-color="#216154"/></linearGradient>
+              <filter id="cup-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".48" numOctaves="2" seed="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".09"/></feComponentTransfer></filter>
+              <clipPath id="cup-clip"><path d="M58 33Q105 16 152 33L180 184Q105 218 30 184Z"/></clipPath>
+            </defs>
+            <path d="M58 38Q105 21 152 38L184 189Q105 226 27 189Z" fill="#17242B" opacity=".18" transform="translate(4 5)"/>
+            <path d="M58 33Q105 16 152 33L180 184Q105 218 30 184Z" fill="url(#cup-body)" stroke="#10171B" stroke-width="1.8"/>
+            <g clip-path="url(#cup-clip)">
+              <path d="M59 43Q77 46 89 47L76 195Q55 186 42 171Z" fill="url(#cup-light)"/>
+              <path d="M144 40Q159 105 172 183" fill="none" stroke="#99A7A9" stroke-width="4" stroke-linecap="round" opacity=".07"/>
+              <rect x="24" y="22" width="162" height="191" fill="#DCE5E6" filter="url(#cup-grain)" opacity=".6"/>
+            </g>
+            <ellipse cx="105" cy="32" rx="47" ry="15" fill="url(#cup-cap)" stroke="#090D10" stroke-width="2"/>
+            <path d="M66 26Q104 15 143 26" fill="none" stroke="#8A9698" stroke-width="1.5" stroke-linecap="round" opacity=".46"/>
+            <ellipse cx="105" cy="183" rx="74" ry="20" fill="url(#cup-lining)" opacity=".48"/>
+            <path d="M30 181Q105 214 180 181L180 190Q105 225 30 190Z" fill="#0C1216"/>
+            <path d="M34 184Q105 216 176 184" fill="none" stroke="#43685F" stroke-width="2" opacity=".78"/>
+            <path d="M39 191Q105 217 171 191" fill="none" stroke="#667174" stroke-width="1.3" opacity=".45"/>
+          </svg>

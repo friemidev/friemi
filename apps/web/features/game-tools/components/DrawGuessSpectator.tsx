@@ -19,6 +19,7 @@ import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
 import { useDrawGuessRoomPresence } from "@/features/game-tools/hooks/useDrawGuessRoomPresence";
 import { forgetDrawGuessRecentRoom, rememberDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
 import { DrawGuessRoomCodeButton } from "@/features/game-tools/components/DrawGuessRoomCodeButton";
+import { GameToolBrand } from "@/features/game-tools/components/GameToolBrand";
 import { DrawGuessKickedNotice } from "@/features/game-tools/components/DrawGuessKickedNotice";
 import { DrawGuessRoomClosedNotice } from "@/features/game-tools/components/DrawGuessRoomClosedNotice";
 import { withLocale } from "@/lib/routes";
@@ -158,8 +159,8 @@ export function DrawGuessSpectator({ initialRoom, locale }: { initialRoom: DrawG
   const stage = room.view.phase === "LOBBY" ? copy.lobby : room.view.phase === "ROUND_BREAK" ? locale === "zh-CN" ? "下一轮即将开始" : locale === "fr" ? "Prochaine manche" : "Next round soon" : room.view.phase in chainStageTitle ? chainStageTitle[room.view.phase as keyof typeof chainStageTitle] : room.view.phase === "WORD_SELECT" ? copy.wait : drawing ? room.view.phase === "TURN_REVEAL" ? copy.answer : copy.guess : room.view.phase === "FINISHED" ? copy.rank : copy.wait;
 
   return <div className="draw-guess-theme mx-auto flex w-full max-w-3xl flex-col gap-4 pb-8">
-    <header className="flex items-center gap-3">
-      <button type="button" onClick={() => { void leaveRoom().catch(() => setError(copy.retry)); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center" aria-label={copy.back}><ArrowLeft className="h-5 w-5" /></button>
+    <header className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3"><button type="button" onClick={() => { void leaveRoom().catch(() => setError(copy.retry)); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center" aria-label={copy.back}><ArrowLeft className="h-5 w-5" /></button><GameToolBrand game={locale === "zh-CN" ? "你画我猜" : locale === "fr" ? "Dessine et devine" : "Draw & Guess"} showGameOnNarrow /></div>
       <div className="min-w-0 flex-1"><p className="flex items-center gap-1 text-xs font-bold text-[#3E70AA]"><Eye className="h-4 w-4" />{copy.watch} · {room.view.roundIndex ?? 1}/{room.view.roundCount ?? 1}</p><h1 className="truncate text-xl font-black">{stage}</h1></div>
       {seconds !== null ? <span className="rounded-full bg-[#E8F2FB] px-3 py-2 font-mono text-sm font-black tabular-nums text-[#3E70AA]">{seconds} {copy.seconds}</span> : null}
     </header>

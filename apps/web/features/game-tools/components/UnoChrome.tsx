@@ -8,6 +8,7 @@ import type { UnoReactionKind } from "../unoReactions";
 import type { UnoEvent } from "../unoTypes";
 import { fallbackDrawGuessCatId, type DrawGuessCatId } from "../drawGuessCats";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
+import { GameToolBrand } from "./GameToolBrand";
 import s from "./UnoGame.module.css";
 
 export function UnoDialog({ title, children, onClose, className = "", fallbackFocus }: { title: string; children: ReactNode; onClose?: () => void; className?: string; fallbackFocus?: () => HTMLElement | null }) {
@@ -98,7 +99,7 @@ export function UnoHeader({ locale, code, round, events = [], onBack }: { locale
   const t = getUnoCopy(locale), [rules, setRules] = useState(false), sound = useUnoSound(events);
   return <><header className={s.header}>
     {onBack ? <button type="button" className={s.iconButton} aria-label={t.leave} onClick={onBack}><ArrowLeft size={20}/></button> : <a className={s.iconButton} href={`/${locale}/game-tools`} aria-label={t.back}><ArrowLeft size={20}/></a>}
-    <a className={s.wordmark} href={`/${locale}/game-tools/uno`} aria-label="Friemi UNO"><span>friemi<span className={s.wordmarkDot}>.</span></span><b>UNO</b></a>
+    <GameToolBrand game="UNO" href={`/${locale}/game-tools/uno`} />
     {code && <span className={s.roomCode}><span>{t.room} {code}</span>{round ? <b>{t.round} {round}{locale === "zh-CN" ? " 轮" : ""}</b> : null}</span>}
     <div className={s.headerTools}><button type="button" className={s.iconButton} aria-label={sound.enabled ? t.soundOn : t.soundOff} aria-pressed={sound.enabled} onClick={() => void sound.toggle()}>{sound.enabled ? <Volume2 size={19}/> : <VolumeX size={19}/>}</button><button type="button" className={s.iconButton} aria-label={t.rules} onClick={() => setRules(true)}><HelpCircle size={20}/></button></div>
   </header>{rules && <UnoRules locale={locale} onClose={() => setRules(false)}/>}</>;

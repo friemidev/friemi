@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { fallbackDrawGuessCatId } from "./drawGuessCats";
+import { fallbackDrawGuessCatId, isDrawGuessCatId } from "./drawGuessCats";
 import { applyDiceAction, createDiceLobbyState, diceViewFor, DiceRuleError, removeDiceSeat, startDiceMatch, type DiceAction, type DiceRoomState } from "./diceRoomEngine";
 import { broadcastDiceRoomChange } from "./diceRealtimeServer";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "./gameToolRooms";
@@ -36,7 +36,7 @@ function publicRoom(room: Room, profileId: string) {
     maxPlayers: room.playerCount, viewerSeat: viewer.seatNumber, isHost: room.hostId === profileId,
     seats: room.seats.filter((seat) => !seat.leftAt).map((seat) => ({
       number: seat.seatNumber, name: seat.displayName, ready: Boolean(seat.readyAt),
-      isHost: room.hostId === seat.profileId, catId: fallbackDrawGuessCatId(seat.profileId ?? seat.id),
+      isHost: room.hostId === seat.profileId, catId: isDrawGuessCatId(seat.roleKey) ? seat.roleKey : fallbackDrawGuessCatId(seat.profileId ?? seat.id),
     })),
     view: diceViewFor(state, viewer.seatNumber),
   } } as const;
@@ -54,6 +54,7 @@ export async function createDiceRoom(input: { locale: string; hostId: string; ho
         const seat = await tx.gameToolSeat.create({ data: {
           roomId: created.id, profileId: input.hostId, privateToken: createGameToolPrivateToken(),
           seatNumber: 1, displayName: input.hostName.slice(0, 32), readyAt: new Date(),
+          roleKey: fallbackDrawGuessCatId(input.hostId),
         } });
         await tx.gameToolRoomMember.create({ data: {
           roomId: created.id, profileId: input.hostId, memberToken: createGameToolPrivateToken(),
@@ -126,7 +127,7 @@ export async function joinDiceRoom(input: { code: string; profileId: string; dis
       if (!reserved.count) return false;
       const seat = await tx.gameToolSeat.create({ data: {
         roomId: room.id, profileId: input.profileId, privateToken: createGameToolPrivateToken(),
-        seatNumber, displayName: input.displayName.slice(0, 32),
+        seatNumber, displayName: input.displayName.slice(0, 32), roleKey: fallbackDrawGuessCatId(input.profileId),
       } });
       await tx.gameToolRoomMember.create({ data: {
         roomId: room.id, profileId: input.profileId, memberToken: createGameToolPrivateToken(), seatedSeatId: seat.id,
@@ -185,7 +186,7 @@ export async function getDiceRoomView(roomId: string, profileId: string, known?:
   return publicRoom(room, profileId);
 }
 
-type DiceCommand = { type: "READY"; ready: boolean } | { type: "START" } | DiceAction | { type: "REMATCH" } | { type: "CLOSE" } | { type: "LEAVE" };
+type DiceCommand = { type: "READY"; ready: boolean } | { type: "SET_CAT"; catId: string } | { type: "START" } | DiceAction | { type: "REMATCH" } | { type: "CLOSE" } | { type: "LEAVE" };
 export async function commandDiceRoom(input: { roomId: string; profileId: string; commandId: string; expectedRound: number; action: DiceCommand }) {
   if (!/^[a-zA-Z0-9-]{8,64}$/.test(input.commandId)) return { error: "INVALID_COMMAND_ID" } as const;
   for (let attempt = 0; attempt < 12; attempt += 1) {
@@ -204,10 +205,16 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
     let next = old;
     let nextStatus: "LOBBY" | "IN_PROGRESS" | "FINISHED" | "CANCELLED" = room.status;
     let readyAt: Date | null | undefined;
+    let catId: string | undefined;
     let leaving = false;
     if (action.type === "READY") {
       if (room.status !== "LOBBY") return { error: "GAME_STARTED" } as const;
       readyAt = action.ready ? new Date() : null;
+    } else if (action.type === "SET_CAT") {
+      if (room.status !== "LOBBY") return { error: "GAME_STARTED" } as const;
+      if (!isDrawGuessCatId(action.catId)) return { error: "INVALID_CHARACTER" } as const;
+      if (seat.roleKey === action.catId) return publicRoom(room, input.profileId);
+      catId = action.catId;
     } else if (action.type === "START") {
       const active = room.seats.filter((item) => !item.leftAt);
       if (room.status !== "LOBBY" || active.length < 2 || active.some((item) => !item.readyAt)) return { error: "NOT_READY" } as const;
@@ -245,6 +252,7 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
         await tx.gameToolSeat.update({ where: { id: seat.id }, data: { readyAt } });
         await tx.gameToolRoomMember.updateMany({ where: { roomId: room.id, profileId: input.profileId, leftAt: null }, data: { readyAt } });
       }
+      if (catId) await tx.gameToolSeat.update({ where: { id: seat.id }, data: { roleKey: catId } });
       await tx.gameToolRoomMember.updateMany({
         where: { roomId: room.id, profileId: input.profileId, leftAt: null }, data: { lastSeenAt: new Date() },
       });
@@ -263,6 +271,7 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
       await tx.gameToolEvent.create({ data: { roomId: room.id, actorId: input.profileId, type: `DICE_${action.type}`, payload: {
         round: next.round, seatNumber: seat.seatNumber,
         ...(action.type === "BID" ? { count: action.count, face: action.face } : {}),
+        ...(action.type === "SET_CAT" ? { catId: action.catId } : {}),
         ...(action.type === "CHALLENGE" ? { winnerSeat: next.result?.winnerSeat, total: next.result?.total } : {}),
       } } });
       return true;

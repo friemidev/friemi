@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const base = 'assets/dice-3d/';
-  const revision = '?v=gloss-v2';
+  const revision = '?v=white-resin-v3';
   const readyFaces = new Set();
   const loadingFaces = new Set([1, 2, 3, 4, 5, 6]);
   const pending = new Map();

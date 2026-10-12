@@ -5,18 +5,18 @@
   <base href="__DICE_BASE_HREF__" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#F9FBFD" />
-  <title>Friemi · 摇骰子</title>
+  <title>__DICE_META_TITLE__</title>
+  <meta name="description" content="__DICE_META_DESCRIPTION__" />
   <link rel="icon" type="image/webp" href="/game-tools/dice/logo.webp" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="dice-sprites.css" />
 </head>
 <body data-hub-href="__DICE_HUB_HREF__" data-preview-label="__DICE_PREVIEW_LABEL__" data-practice-label="__DICE_PRACTICE_LABEL__" data-exit-title="__DICE_EXIT_TITLE__" data-exit-description="__DICE_EXIT_DESCRIPTION__" data-stay-label="__DICE_STAY_LABEL__" data-leave-label="__DICE_LEAVE_LABEL__">
   <div class="preview-note"><p lang="__DICE_LOCALE__">__DICE_PREVIEW_LABEL__</p></div>
-  <a class="online-entry" href="__DICE_ONLINE_HREF__" lang="__DICE_LOCALE__">✦ __DICE_ONLINE_LABEL__ <span aria-hidden="true">↗</span></a>
   <main class="game-shell">
     <header class="topbar">
       <button class="round-button" id="exit-button" aria-label="__DICE_BACK_LABEL__" lang="__DICE_LOCALE__"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
-      <a class="brand" href="__DICE_HUB_HREF__" id="brand-link" aria-label="__DICE_BACK_LABEL__" lang="__DICE_LOCALE__">friemi</a>
+      <a class="brand" href="__DICE_HUB_HREF__" id="brand-link" aria-label="Friemi · __DICE_GAME_LABEL__" lang="__DICE_LOCALE__"><span class="brand-logo-window"><img src="/brand/v2_1/friemi-title-navy.png" alt="" width="194" height="61" /></span><span class="brand-divider" aria-hidden="true"></span><span class="brand-game">__DICE_GAME_LABEL__</span></a>
       <button class="round-button" id="sound-button" aria-label="开启声音" aria-pressed="false"><svg id="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/></svg></button>
     </header>
 
@@ -38,35 +38,7 @@
         <div class="table-stitch" aria-hidden="true"></div>
         <button class="cup-zone" id="cup-zone" type="button" aria-label="摇动骰盅">
           <span class="cup-shadow" aria-hidden="true"></span>
-          <svg class="cup" viewBox="0 0 210 235" aria-hidden="true">
-            <defs>
-              <linearGradient id="cup-body" x1="0" x2="1"><stop offset="0" stop-color="#E78B7B"/><stop offset=".19" stop-color="#F7AB99"/><stop offset=".4" stop-color="#FFD1BE"/><stop offset=".6" stop-color="#F6A08D"/><stop offset=".84" stop-color="#EB8C79"/><stop offset="1" stop-color="#D97768"/></linearGradient>
-              <radialGradient id="cup-cap" cx=".34" cy=".22" r=".85"><stop stop-color="#FFE8DA"/><stop offset=".5" stop-color="#FBC3B1"/><stop offset="1" stop-color="#E8917F"/></radialGradient>
-              <linearGradient id="cup-shine" x1="0" y1="0" x2="1" y2=".4"><stop stop-color="#FFF9F2" stop-opacity=".9"/><stop offset=".45" stop-color="#FFF9F2" stop-opacity=".42"/><stop offset="1" stop-color="#FFF9F2" stop-opacity="0"/></linearGradient>
-              <linearGradient id="cup-badge" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#FFFDF5"/><stop offset=".62" stop-color="#FFF1DB"/><stop offset="1" stop-color="#EED4BC"/></linearGradient>
-              <clipPath id="cup-clip"><path d="M57 32Q105 12 153 32L177 184Q105 222 33 184Z"/></clipPath>
-            </defs>
-            <path d="M57 38Q105 18 153 38L176 188Q105 227 34 188Z" fill="#63758D" opacity=".1" transform="translate(3 4)"/>
-            <path d="M57 32Q105 12 153 32L177 184Q105 222 33 184Z" fill="url(#cup-body)" stroke="#D97E6D" stroke-width="1.3"/>
-            <g clip-path="url(#cup-clip)">
-              <path d="M61 48Q76 54 93 53L78 187Q54 180 45 171Z" fill="url(#cup-shine)" opacity=".73"/>
-              <path d="M61 56Q57 94 54 127" fill="none" stroke="#FFF9F2" stroke-width="5" stroke-linecap="round" opacity=".68"/>
-              <path d="M54 139 52 150" fill="none" stroke="#FFF9F2" stroke-width="4" stroke-linecap="round" opacity=".36"/>
-              <path d="M151 49Q161 101 170 162" fill="none" stroke="#C96F62" stroke-width="3" stroke-linecap="round" opacity=".22"/>
-            </g>
-            <ellipse cx="105" cy="33" rx="48" ry="18" fill="url(#cup-cap)" stroke="#E59B88" stroke-width="1.3"/>
-            <ellipse cx="105" cy="33" rx="38" ry="11" fill="none" stroke="#D78B79" stroke-width="2" opacity=".62"/>
-            <path d="M68 27Q99 14 139 27" fill="none" stroke="#FFF4E8" stroke-width="3.7" stroke-linecap="round" opacity=".84"/>
-            <path d="M34 177Q105 208 176 177L177 187Q105 224 33 187Z" fill="#D97768"/>
-            <path d="M36 178Q105 210 174 178" fill="none" stroke="#F6B4A0" stroke-width="3.5" opacity=".9"/>
-            <path d="M41 187Q105 215 170 188" fill="none" stroke="#C76C60" stroke-width="1.7" opacity=".4"/>
-            <g transform="translate(109 116) rotate(-5)">
-              <rect x="-23" y="-22" width="46" height="46" rx="13" fill="#D98571" opacity=".35"/>
-              <rect x="-23" y="-25" width="46" height="46" rx="13" fill="url(#cup-badge)" stroke="#FFEDD9" stroke-width="1.4"/>
-              <path d="M-13-20H8" stroke="#FFFDF5" stroke-width="2.4" stroke-linecap="round"/>
-              <g fill="#CB7969"><circle cx="-11" cy="-13" r="4"/><circle cx="11" cy="-13" r="4"/><circle cx="0" cy="-2" r="4"/><circle cx="-11" cy="9" r="4"/><circle cx="11" cy="9" r="4"/></g>
-            </g>
-          </svg>
+          <img class="cup" src="/game-tools/dice/cup.svg" alt="" width="210" height="235" />
           <span class="motion-tick tick-left" aria-hidden="true">⌁</span><span class="motion-tick tick-right" aria-hidden="true">⌁</span>
         </button>
         <div class="landing-flair" aria-hidden="true">
@@ -133,6 +105,7 @@
       <div class="settlement-actions" id="settlement-actions" hidden><button class="secondary-button" id="back-free-button">自由摇骰</button><button class="primary-button" id="rematch-button">再来一局 <span class="button-spark">↻</span></button></div>
       <p class="small-note" id="bluff-note" hidden></p>
     </section>
+    <a class="online-entry" href="__DICE_ONLINE_HREF__" lang="__DICE_LOCALE__">✦ __DICE_ONLINE_LABEL__ <span aria-hidden="true">↗</span></a>
   </main>
 
   <dialog id="game-dialog" aria-labelledby="dialog-title"><div class="dialog-content"><button class="round-button dialog-close" id="dialog-close" aria-label="关闭弹窗">×</button><div class="dialog-icon" aria-hidden="true">⚄</div><h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions"></div></div></dialog>

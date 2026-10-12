@@ -10,6 +10,12 @@
   overflow: visible;
 }
 .die.sprite-ready > .pip { display: none; }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(1) { transform: translateY(5px) rotate(-6deg); }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(2) { transform: translateY(-4px) rotate(5deg); }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(3) { transform: translateY(3px) rotate(-3deg); }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(4) { transform: translateY(-5px) rotate(6deg); }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(5) { transform: translateY(4px) rotate(-5deg); }
+.table:not(.bluff) .dice-stage > .die.sprite-ready:nth-child(6) { transform: translateY(-2px) rotate(4deg); }
 .sprite-frame {
   position: absolute;
   inset: -12%;

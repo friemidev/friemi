@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Dice5, LoaderCircle, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, LoaderCircle, UsersRound } from "lucide-react";
+import { GameToolBrand } from "./GameToolBrand";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
 import { withLocale } from "@/lib/routes";
 
@@ -37,8 +38,8 @@ export function DiceOnlineEntry({ locale, profileId, initialCode }: { locale: st
     finally { setBusy(false); }
   }
   return <main className="dice-online">
-    <Link className="dice-online-back" href={withLocale(locale, "/game-tools")}><ArrowLeft size={17} />{t.back}</Link>
-    <header className="dice-online-hero"><div><span className="dice-online-kicker"><Dice5 size={15} /> FRIEMI DICE</span><h1>{t.title}</h1><p>{t.sub}</p></div><Image src="/game-tools/dice/logo.webp" alt="" width={128} height={128} priority /></header>
+    <nav className="dice-online-nav" aria-label={locale === "zh-CN" ? "游戏导航" : "Game navigation"}><Link className="dice-online-back" aria-label={t.back} href={withLocale(locale, "/game-tools")}><ArrowLeft size={20} /></Link><GameToolBrand game={locale === "zh-CN" ? "骰子" : locale === "fr" ? "Dés" : "Dice"} href={withLocale(locale, "/game-tools/dice/online")} /></nav>
+    <header className="dice-online-hero"><div><h1>{t.title}</h1><p>{t.sub}</p></div><Image src="/game-tools/dice/logo.webp" alt="" width={128} height={128} priority /></header>
     <section className="dice-online-entry-grid">
       <div className="dice-online-paper dice-online-entry-card"><div className="dice-online-card-icon"><DrawGuessCatSprite catId="baker" mood="happy" size={62} /></div><h2>{t.create}</h2><label htmlFor="dice-players">{t.people}</label><select id="dice-players" value={players} onChange={(event) => setPlayers(Number(event.target.value))}>{[2,3,4,5,6].map((count) => <option key={count} value={count}>{count}</option>)}</select><button className="dice-online-primary" disabled={busy || !profileId} onClick={() => void submit("create")}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <ArrowRight size={18} />}{t.create}</button></div>
       <div className="dice-online-paper dice-online-entry-card"><div className="dice-online-card-icon"><DrawGuessCatSprite catId="scholar" mood="idle" size={62} /></div><h2>{t.join}</h2><label htmlFor="dice-code">{t.code}</label><input id="dice-code" autoComplete="off" inputMode="text" maxLength={8} value={code} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} onKeyDown={(event) => { if (event.key === "Enter") void submit("join"); }} placeholder="A1B2C3" /><button className="dice-online-secondary" disabled={busy || !profileId || code.length < 6} onClick={() => void submit("join")}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <UsersRound size={18} />}{t.enter}</button></div>

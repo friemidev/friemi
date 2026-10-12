@@ -21,6 +21,20 @@ room is server-authoritative, keeps unrevealed hands private in authenticated
 snapshots, broadcasts only invalidation notices, and falls back to polling.
 Production still gates both the preview runtime and online room/API.
 
+The dice atlases are generated from `tools/render_dice.py`. The current material
+uses cool white rounded resin, black recessed pips, and broad studio reflections.
+All six result-specific atlases keep the same 32-frame trajectory and settle on
+their requested top face. Rebuild them with Python 3 plus numpy, scipy and Pillow:
+
+```bash
+python3 apps/web/features/game-tools/dice-preview/tools/render_dice.py --workers 4 --runtime-only
+```
+
+The command validates all 192 frames and copies the six WebP atlases into
+`runtime/assets/dice-3d/`. Generated source frames and contact sheets stay in
+`tools/` for inspection and are not served. `apps/web/public/game-tools/dice/cup.svg`
+is the shared graphite cup artwork used by the local preview and online room.
+
 ## Verification (2026-10-11)
 
 - The normal web build and TypeScript check passed on Node 20.19.6. The built
