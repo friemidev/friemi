@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, Check, ChevronDown, Flag, House, Info, LogOut, RotateCcw, Trophy, X } from "lucide-react";
 import { isUnoCardPlayable } from "../unoEngine";
 import { getUnoCopy, unoCardLabel, unoCardUnit, unoEventLabel } from "../unoCopy";
@@ -24,7 +24,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
   const [selection, setSelection] = useState<{ matchNumber: number; roundNumber: number; cardId: string } | null>(null);
   const [wildCard, setWildCard] = useState<string | null>(null);
   const [menuSeat, setMenuSeat] = useState<number | null>(null);
-  const [menuAlign, setMenuAlign] = useState<"start" | "center" | "end">("center");
+  const [menuLeft, setMenuLeft] = useState(0);
   const [leave, setLeave] = useState(false);
   const [now, setNow] = useState(clockNow);
   const [unoBubble, setUnoBubble] = useState<number | null>(null);
@@ -68,6 +68,12 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
   useEffect(() => { setWildCard(null); }, [state.handVersion, state.turnId, state.phase]);
   useEffect(() => { setShowVerdict(false); }, [state.roundNumber, state.matchNumber, state.phase]);
   useEffect(() => {
+    setLeave(false);
+    setMenuSeat(null);
+    setUnoBubble(null);
+    if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
+  }, [state.roundNumber, state.matchNumber, ended]);
+  useEffect(() => {
     const fresh = state.events.filter(e => e.id > eventCursor.current);
     eventCursor.current = state.events.at(-1)?.id ?? 0;
     const call = fresh.find(e => e.kind === "UNO");
@@ -77,6 +83,23 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
     bubbleTimer.current = setTimeout(() => setUnoBubble(null), 1700);
   }, [state.events]);
   useEffect(() => () => { if (bubbleTimer.current) clearTimeout(bubbleTimer.current); }, []);
+  useLayoutEffect(() => {
+    if (menuSeat === null) return;
+    const menu = playerMenuRef.current, anchor = menu?.parentElement;
+    if (!menu || !anchor) return;
+    const placeMenu = () => {
+      const bounds = anchor.getBoundingClientRect();
+      const width = menu.offsetWidth;
+      const viewportWidth = document.documentElement.clientWidth;
+      setMenuLeft(Math.max(12 - bounds.left, Math.min((bounds.width - width) / 2, viewportWidth - 12 - bounds.left - width)));
+    };
+    placeMenu();
+    const observer = new ResizeObserver(placeMenu);
+    observer.observe(menu);
+    observer.observe(anchor);
+    window.addEventListener("resize", placeMenu);
+    return () => { observer.disconnect(); window.removeEventListener("resize", placeMenu); };
+  }, [menuSeat]);
   useEffect(() => {
     if (menuSeat === null) return;
     const close = (event: KeyboardEvent) => {
@@ -120,8 +143,6 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
           return <div className={`${s.opponent} ${isCurrent ? s.activeOpponent : ""}`} key={player.seat} style={{ "--seat-i": i } as CSSProperties}>
             <button type="button" className={s.opponentButton} aria-current={isCurrent ? "true" : undefined} aria-label={`${player.name} · ${player.cardCount} ${unoCardUnit(player.cardCount, locale)} · ${t.menu}`} aria-expanded={menuSeat === player.seat} onClick={event => {
               menuTriggerRef.current = event.currentTarget;
-              const bounds = event.currentTarget.getBoundingClientRect();
-              setMenuAlign(window.innerWidth - bounds.right < 120 ? "end" : bounds.left < 120 ? "start" : "center");
               setMenuSeat(menuSeat === player.seat ? null : player.seat);
             }}>
               <span className={s.avatar}><UnoAvatar seat={player.seat} catId={seat?.catId} pose={unoBubble === player.seat ? "uno" : isCurrent ? "playing" : "idle"} reaction={unoBubble === player.seat ? undefined : reaction?.kind} animated={!ended && !wildCard && !chooseInitial && !leave}/>{reaction && unoBubble !== player.seat && <UnoReactionBubble reaction={reaction} locale={locale}/>}{seat?.connected === false && <span className={s.awayDot} aria-label={t.offline}/>}</span>
@@ -129,7 +150,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
               <span className={s.cardCount} key={player.cardCount}><span className={s.miniCardBack} aria-hidden="true"/>{player.cardCount}<small>{unoCardUnit(player.cardCount, locale)}</small></span>
             </button>
             {unoBubble === player.seat && <span className={s.unoBubble}>UNO!</span>}
-            {menuSeat === player.seat && <div ref={playerMenuRef} className={s.playerMenu} style={{ left: menuAlign === "end" ? "auto" : menuAlign === "start" ? 0 : "50%", right: menuAlign === "end" ? 0 : "auto", transform: menuAlign === "center" ? "translateX(-50%)" : "none" }}><button type="button" className={`${s.button} ${s.secondary} ${s.compactButton}`} autoFocus disabled={busy || !!reconnecting || ended} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); void onAction({ type: "CATCH_UNO", targetSeat: player.seat, episodeId: player.episodeId, roundNumber: state.roundNumber }); }}><Flag size={18}/>{t.report}</button><button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); }}><X size={18}/>{t.close}</button></div>}
+            {menuSeat === player.seat && <div ref={playerMenuRef} className={s.playerMenu} style={{ left: menuLeft, right: "auto", transform: "none" }}><button type="button" className={`${s.button} ${s.secondary} ${s.compactButton}`} autoFocus disabled={busy || !!reconnecting || ended} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); void onAction({ type: "CATCH_UNO", targetSeat: player.seat, episodeId: player.episodeId, roundNumber: state.roundNumber }); }}><Flag size={18}/>{t.report}</button><button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={() => { setMenuSeat(null); menuTriggerRef.current?.focus(); }}><X size={18}/>{t.close}</button></div>}
           </div>;
         })}
       </div>
@@ -175,7 +196,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
       </div></div>
     </section>
 
-    {!ended && !wildCard && !chooseInitial && feedback}
+    {!ended && !wildCard && !chooseInitial && !leave && feedback}
     {showVerdict && lastVerdict && !ended && <UnoDialog title={ux.judgement} onClose={() => setShowVerdict(false)}><p>{unoEventLabel(lastVerdict, state, locale)}</p><p>{unoVerdictExplanation(lastVerdict, locale)}</p><button type="button" className={`${s.button} ${s.primary}`} onClick={() => setShowVerdict(false)}>{t.close}</button></UnoDialog>}
     {(wildCard || chooseInitial) && <UnoDialog title={t.choose} onClose={chooseInitial ? undefined : () => setWildCard(null)} fallbackFocus={() => handRef.current?.querySelector<HTMLButtonElement>("button") ?? null}><div className={s.colorChoices}>{UNO_COLORS.map((color, i) => <button type="button" key={color} data-color={color} disabled={busy || !!reconnecting} onClick={() => choose(color)}><span aria-hidden="true">{["●", "▲", "■", "◆"][i]}</span>{t[color]}</button>)}</div>{feedback}{!chooseInitial && <button className={`${s.button} ${s.quiet}`} type="button" onClick={() => setWildCard(null)}><X size={18}/>{t.close}</button>}</UnoDialog>}
     {ended && <UnoDialog title={`${winner?.name ?? ""} ${state.phase === "FINISHED" && state.matchMode !== "single" ? t.matchWin : t.roundWin}`}>
@@ -189,6 +210,6 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
       </div>
       {feedback}
     </UnoDialog>}
-    {leave && !ended && <UnoDialog title={t.leaveTitle} onClose={() => setLeave(false)}><p>{t.leaveBody}</p><div className={s.dialogActions}><button type="button" className={`${s.button} ${s.primary}`} onClick={() => setLeave(false)}>{t.stay}</button><button type="button" className={`${s.button} ${s.secondary}`} onClick={onLeave}>{t.confirmLeave}</button></div></UnoDialog>}
+    {leave && !ended && <UnoDialog title={t.leaveTitle} onClose={busy ? undefined : () => setLeave(false)}><p>{t.leaveBody}</p>{feedback}<div className={s.dialogActions}><button type="button" className={`${s.button} ${s.primary}`} disabled={busy} onClick={() => setLeave(false)}>{t.stay}</button><button type="button" className={`${s.button} ${s.secondary}`} disabled={busy} onClick={onLeave}>{t.confirmLeave}</button></div></UnoDialog>}
   </div>;
 }
