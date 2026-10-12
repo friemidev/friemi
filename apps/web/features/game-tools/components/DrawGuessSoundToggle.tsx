@@ -18,7 +18,7 @@ export function DrawGuessSoundToggle({ locale }: { locale: string }) {
     const next = !isDrawGuessSoundEnabled();
     setDrawGuessSoundEnabled(next);
     if (next) playDrawGuessSound("ready");
-  }} className={`draw-guess-btn grid h-10 min-h-10 w-10 shrink-0 place-items-center p-0 ${enabled ? "draw-guess-btn--butter" : "draw-guess-btn--milk"}`}>
+  }} className={`draw-guess-btn grid h-11 min-h-11 w-11 shrink-0 place-items-center p-0 ${enabled ? "draw-guess-btn--butter" : "draw-guess-btn--milk"}`}>
     {enabled ? <Volume2 aria-hidden="true" className="h-4 w-4" /> : <VolumeX aria-hidden="true" className="h-4 w-4" />}
   </button>;
 }

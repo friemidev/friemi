@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Brush, Check, LoaderCircle, Sparkles, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { GameToolBrand } from "@/features/game-tools/components/GameToolBrand";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import type { DrawGuessMode } from "@/features/game-tools/drawGuessEngine";
 import { useDrawGuessRecentRoom } from "@/features/game-tools/hooks/useDrawGuessRecentRoom";
@@ -86,7 +87,7 @@ export function DrawGuessEntryClient({ chainEnabled, classicEnabled, locale, pro
   }
 
   return <div className="draw-guess-theme mx-auto flex w-full max-w-2xl flex-col gap-5">
-    <div className="flex items-center justify-between gap-3"><Link href={withLocale(locale, "/game-tools")} className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#63758D] transition-colors hover:text-[#3E6FA8]"><ArrowLeft className="h-4 w-4" />{copy.back}</Link><DrawGuessSoundToggle locale={locale} /></div>
+    <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><Link href={withLocale(locale, "/game-tools")} aria-label={copy.back} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center"><ArrowLeft className="h-5 w-5" /></Link><GameToolBrand game={copy.title} href={withLocale(locale, "/game-tools/draw-guess")} showGameOnNarrow /></div><DrawGuessSoundToggle locale={locale} /></div>
     <header className="draw-guess-hero-in flex items-center justify-between gap-3 px-1 py-1">
       <div className="min-w-0">
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{copy.title}</h1>

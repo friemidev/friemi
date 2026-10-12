@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DrawGuessArtworkCarousel } from "@/features/game-tools/components/DrawGuessArtworkCarousel";
+import { GameToolBrand } from "@/features/game-tools/components/GameToolBrand";
 import { DrawGuessClassicRecap } from "@/features/game-tools/components/DrawGuessClassicRecap";
 import { DrawGuessChainRecap } from "@/features/game-tools/components/DrawGuessChainReview";
 import { getDrawGuessRankings } from "@/features/game-tools/drawGuessEngine";
@@ -20,7 +21,7 @@ export default async function DrawGuessHistoryPage({ params }: { params: Promise
   const seatName = (seats: { name: string; number: number }[], seat: number) => seats.find((item) => item.number === seat + 1)?.name ?? `#${seat + 1}`;
 
   return <PageContainer className="draw-guess-theme max-w-[900px] pb-24 pt-5" mobileSafeBottom mobileSafeTop>
-    <Link className="inline-flex items-center gap-2 text-sm font-semibold text-[#3E6FA8]" href={withLocale(locale, `/game-tools/draw-guess/join/${result.room.code}`)}><ArrowLeft className="h-4 w-4" />{zh ? "返回房间" : "Back to room"}</Link>
+    <nav className="flex items-center gap-3" aria-label={zh ? "游戏导航" : "Game navigation"}><Link className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center" aria-label={zh ? "返回房间" : locale === "fr" ? "Retour à la salle" : "Back to room"} href={withLocale(locale, `/game-tools/draw-guess/join/${result.room.code}`)}><ArrowLeft className="h-5 w-5" /></Link><GameToolBrand game={zh ? "你画我猜" : locale === "fr" ? "Dessine et devine" : "Draw & Guess"} href={withLocale(locale, "/game-tools/draw-guess")} showGameOnNarrow /></nav>
     <header className="mt-5 rounded-[2rem] bg-[#F1F6FC] p-6 text-[#30425C] sm:p-8"><p className="text-xs font-bold uppercase tracking-widest text-[#3E70AA]">{result.room.code}</p><h1 className="mt-2 text-3xl font-bold">{zh ? "往期作品与排行" : "Past games and artwork"}</h1><p className="mt-2 text-sm text-[#63758D]">{zh ? "每局结束后保存，最多保留 1 年。" : "Finished games remain read-only for up to one year."}</p></header>
     {result.rounds.length ? <div className="mt-6 space-y-8">{result.rounds.map((round) => <section key={round.roundNumber} className="rounded-[1.6rem] border border-[#DCE8F2] bg-white p-5 text-[#30425C] sm:p-7">
       <div className="flex flex-wrap items-end justify-between gap-2"><h2 className="text-xl font-bold">{zh ? `第 ${round.roundNumber} 局` : `Game ${round.roundNumber}`}</h2><time className="text-xs text-[#7C8AA0]" dateTime={round.finishedAt}>{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(round.finishedAt))}</time></div>

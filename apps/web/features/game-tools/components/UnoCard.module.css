@@ -1,0 +1,83 @@
+.card {
+  /* Playing-card inks are a game palette, scoped to this deck. */
+  --uno-card-paper: var(--dg-paper, #fffcf5);
+  --uno-card-ink: var(--dg-ink, #30425c);
+  --uno-card-red: #e76859;
+  --uno-card-yellow: #f2c756;
+  --uno-card-green: #459e86;
+  --uno-card-blue: #477fca;
+  --uno-card-tone: var(--uno-card-blue);
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 11 / 16;
+  border-radius: 12%;
+  isolation: isolate;
+  color: var(--uno-card-ink);
+  filter: drop-shadow(0 2px 0 #b5bcc4) drop-shadow(0 4px 3px rgb(48 66 92 / 13%));
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.art { display: block; width: 100%; height: 100%; overflow: visible; }
+.paper { fill: var(--uno-card-paper); stroke: var(--uno-card-ink); }
+.red { --uno-card-tone: var(--uno-card-red); }
+.yellow { --uno-card-tone: var(--uno-card-yellow); }
+.green { --uno-card-tone: var(--uno-card-green); }
+.blue { --uno-card-tone: var(--uno-card-blue); }
+.wild { --uno-card-tone: var(--uno-card-ink); }
+.field { fill: var(--uno-card-tone); }
+.faceOval { fill: var(--uno-card-paper); }
+.corner { color: var(--uno-card-paper); }
+.yellow .corner { color: var(--uno-card-ink); }
+.mainSymbol { color: var(--uno-card-tone); }
+.yellow .mainSymbol { color: var(--uno-card-ink); }
+.wild .mainSymbol { color: var(--uno-card-ink); }
+.number, .cornerNumber, .plusNumber {
+  fill: currentColor;
+  font-family: var(--friemi-font-latin, "Friemi Latin"), ui-rounded, system-ui, sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -.075em;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+}
+.number { font-size: 88px; stroke: currentColor; stroke-width: 1; }
+.cornerNumber { font-size: 25px; letter-spacing: -.055em; }
+.plusNumber { font-size: 51px; letter-spacing: -.065em; }
+.drawCards { fill: var(--uno-card-paper); }
+.numberLine { stroke: var(--uno-card-tone); }
+.yellow .numberLine { stroke: var(--uno-card-ink); }
+.sheen { stroke: var(--uno-card-paper); opacity: .6; }
+.yellow .sheen { stroke: var(--uno-card-ink); opacity: .25; }
+.flower { stroke: var(--uno-card-ink); }
+.flowerRed { fill: var(--uno-card-red); }
+.flowerYellow { fill: var(--uno-card-yellow); }
+.flowerGreen { fill: var(--uno-card-green); }
+.flowerBlue { fill: var(--uno-card-blue); }
+.flowerCenter { fill: var(--uno-card-paper); }
+.backField { fill: var(--uno-card-ink); }
+.backFrame { stroke: #9ab6d2; opacity: .65; }
+.backBubble { fill: var(--uno-card-paper); }
+.backWordmark {
+  fill: var(--uno-card-ink);
+  font-family: var(--friemi-font-latin, "Friemi Latin"), ui-rounded, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -1.5px;
+}
+.backCaption {
+  fill: var(--uno-card-paper);
+  font-family: var(--friemi-font-latin, "Friemi Latin"), ui-rounded, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 7px;
+  letter-spacing: 2px;
+}
+.backDoodles { color: #9ab6d2; stroke: currentColor; }
+.small .backCaption, .small .backDoodles, .small .backFrame, .small .sheen { display: none; }
+.small .cornerNumber { font-size: 28px; }
+
+@media (forced-colors: active) {
+  .art { forced-color-adjust: none; }
+}

@@ -4,6 +4,7 @@ import {
   Brush,
   Crown,
   Dice5,
+  Layers3,
   Moon,
   Sparkles,
   UsersRound,
@@ -12,9 +13,11 @@ import {
 export type GameToolKind =
   | "AVALON"
   | "BOTC"
+  | "DICE"
   | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
+  | "UNO"
   | "WEREWOLF";
 
 export type GameToolDefinition = {
@@ -81,6 +84,40 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       en: "Draw & Guess",
       fr: "Dessine et devine",
     },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "available",
+    description: {
+      "zh-CN": "按颜色或数字出牌，先出完手牌获胜。",
+      en: "Match colors or numbers. Be the first to play every card.",
+      fr: "Associez les couleurs ou les chiffres. Jouez toutes vos cartes en premier.",
+    },
+    href: "/game-tools/uno",
+    icon: Layers3,
+    imageSrc: "/game-tools/uno/logo.png",
+    kind: "UNO",
+    minPlayers: 2,
+    maxPlayers: 10,
+    phase: { "zh-CN": "已开放", en: "Open", fr: "Ouvert" },
+    title: { "zh-CN": "UNO", en: "UNO", fr: "UNO" },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "planned",
+    description: {
+      "zh-CN": "自由摇骰，或和朋友开一桌吹牛。",
+      en: "Roll dice freely or play Liar’s Dice with friends.",
+      fr: "Lancez les dés ou jouez au Perudo avec vos amis.",
+    },
+    href: "/game-tools/dice",
+    icon: Dice5,
+    imageSrc: "/game-tools/dice/logo.webp",
+    kind: "DICE",
+    maxPlayers: 6,
+    minPlayers: 1,
+    phase: { "zh-CN": "试玩", en: "Preview", fr: "Aperçu" },
+    title: { "zh-CN": "摇骰子", en: "Dice", fr: "Dés" },
   },
   {
     accent: "#F09182",

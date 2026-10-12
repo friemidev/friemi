@@ -1,0 +1,70 @@
+{
+  "materialVersion": 2,
+  "geometryChecks": "passed",
+  "sourceFrameCount": 192,
+  "frameSize": [
+    160,
+    160
+  ],
+  "atlasSize": [
+    1280,
+    640
+  ],
+  "emptyOuterBorders": true,
+  "finalStaticEquality": true,
+  "atlases": [
+    {
+      "file": "roll-1.webp",
+      "bytes": 264130,
+      "sha256": "74777534dcdf16689dfe467527532e59f78c96e8f007aa4d682bffef90f59f29"
+    },
+    {
+      "file": "roll-2.webp",
+      "bytes": 282450,
+      "sha256": "101579e22678cad2524870928bddc65c68a539e734830954321788fe9e46f38c"
+    },
+    {
+      "file": "roll-3.webp",
+      "bytes": 294258,
+      "sha256": "e90f645221511640fb93ec4f53b384538a347e537412fd9aa14d292aa1b108bd"
+    },
+    {
+      "file": "roll-4.webp",
+      "bytes": 269958,
+      "sha256": "59bd3242ed68e0ffd981c615c71429e661b6d9fc25b406b05eca48efd052d6c6"
+    },
+    {
+      "file": "roll-5.webp",
+      "bytes": 285636,
+      "sha256": "fe48e836462a0dbc24f7427ef7b252f87e0792128f4620ea1016460f2bef088f"
+    },
+    {
+      "file": "roll-6.webp",
+      "bytes": 303228,
+      "sha256": "0482b21b261aea6e8a5b3c94acc95c1995e013481943520f9e96ed557d2343a9"
+    }
+  ],
+  "v1Compatibility": {
+    "dimensions": true,
+    "timing": true,
+    "faceMapping": true,
+    "allMainPoses": true,
+    "anchors": true,
+    "allAuxiliaryPoses": true
+  },
+  "webpFinalVisiblePixelsEqualPng": true,
+  "auxiliaryFrameCount": 44,
+  "auxiliaryAtlases": [
+    {
+      "file": "spin-32.webp",
+      "bytes": 305618,
+      "sha256": "db684e4886de621f34f411262dbb21e148cae51263c6d5dd0d131a2d358e6e35"
+    },
+    {
+      "file": "wobble-12.webp",
+      "bytes": 89114,
+      "sha256": "75245ee714a8b3de42504dd449e3c699c74e2fde214001a3d8d6ea3b5ba75ca3"
+    }
+  ],
+  "wobbleReturnsExactlyToIdle": true
+}

@@ -33,6 +33,7 @@ import { useDrawGuessCompositionGuard } from "@/features/game-tools/hooks/useDra
 import { useDrawGuessRoomPresence } from "@/features/game-tools/hooks/useDrawGuessRoomPresence";
 import { forgetDrawGuessRecentRoom, rememberDrawGuessRecentRoom } from "@/features/game-tools/drawGuessRecentRoom";
 import { DrawGuessRoomCodeButton } from "@/features/game-tools/components/DrawGuessRoomCodeButton";
+import { GameToolBrand } from "@/features/game-tools/components/GameToolBrand";
 import { DrawGuessRoomClosedNotice } from "@/features/game-tools/components/DrawGuessRoomClosedNotice";
 import { getChainStageCount, getDrawGuessRankings, type ChainStep, type DrawGuessAction, type DrawGuessChainReaction, type DrawGuessChainReactionKind, type DrawGuessChatMessage, type DrawGuessClassicHighlight, type DrawGuessMode, type DrawGuessPhase, type DrawGuessReaction, type DrawGuessReactionKind, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
@@ -932,7 +933,7 @@ export function DrawGuessRoomClient({ initialRoom, locale }: { initialRoom: Draw
 
   const compactSummary = true;
   return <div className="draw-guess-theme min-h-[80vh] pb-24">
-    <div className="flex items-center justify-between gap-3"><button type="button" onClick={() => { void leaveRoom().catch(() => setError(t.error)); }} className="inline-flex items-center gap-2 text-sm font-semibold text-[#3E6FA8] hover:underline"><ArrowLeft className="h-4 w-4" />{t.back}</button><div className="flex items-center gap-2"><DrawGuessSoundToggle locale={locale} /><DrawGuessMusicToggle locale={locale} /></div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 max-[374px]:[&>div]:w-full"><div className="flex min-w-0 items-center gap-3"><button type="button" aria-label={t.back} onClick={() => { void leaveRoom().catch(() => setError(t.error)); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center"><ArrowLeft className="h-5 w-5" /></button><GameToolBrand game={t.title} showGameOnNarrow /></div><div className="flex items-center gap-2 max-[374px]:justify-end"><DrawGuessSoundToggle locale={locale} /><DrawGuessMusicToggle locale={locale} /></div></div>
     <header className={`relative overflow-hidden bg-[#F1F6FC] shadow-[0_18px_55px_rgba(48,66,92,0.09)] ${compactSummary ? "mt-3 rounded-2xl p-4 sm:p-5" : "mt-5 rounded-[2rem] p-6 sm:p-8"}`}>
       <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-[#BED6EC]/50 blur-3xl" />
       <div className="relative flex items-start justify-between gap-3">

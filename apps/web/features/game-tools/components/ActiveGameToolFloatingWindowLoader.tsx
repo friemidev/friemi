@@ -5,6 +5,7 @@ import {
   getGameToolRoomPath,
 } from "../gameToolRooms";
 import { withLocale } from "@/lib/routes";
+import { isUnoEnabled } from "../unoFlags";
 
 export async function ActiveGameToolFloatingWindowLoader({
   locale,
@@ -30,6 +31,7 @@ export async function ActiveGameToolFloatingWindowLoader({
     <ActiveGameToolFloatingWindow
       locale={locale}
       profileId={profileId}
+      unoEnabled={isUnoEnabled()}
       activeRoom={
         room
           ? {

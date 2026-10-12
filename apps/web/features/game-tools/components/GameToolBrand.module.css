@@ -1,0 +1,59 @@
+.brand {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  color: #30425c;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.brand:focus-visible {
+  border-radius: 8px;
+  outline: 3px solid #3c73b0;
+  outline-offset: 3px;
+}
+
+.logoWindow {
+  position: relative;
+  display: block;
+  width: 106px;
+  height: 36px;
+  flex: 0 0 106px;
+  overflow: hidden;
+}
+
+.logo {
+  position: absolute;
+  top: -11px;
+  left: -8px;
+  display: block;
+  width: 194px;
+  max-width: none;
+  height: 61px;
+}
+
+.divider {
+  width: 1px;
+  height: 19px;
+  flex: none;
+  background: #b9d4eb;
+}
+
+.game {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .compactGame, .compactDivider { display: none; }
+}
+
+@media (max-width: 359px) {
+  .game, .divider { display: none; }
+  .showOnNarrow { display: block; }
+}

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <base href="__DICE_BASE_HREF__" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#F9FBFD" />
+  <title>__DICE_META_TITLE__</title>
+  <meta name="description" content="__DICE_META_DESCRIPTION__" />
+  <link rel="icon" type="image/webp" href="/game-tools/dice/logo.webp" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="dice-sprites.css" />
+</head>
+<body data-hub-href="__DICE_HUB_HREF__" data-preview-label="__DICE_PREVIEW_LABEL__" data-practice-label="__DICE_PRACTICE_LABEL__" data-exit-title="__DICE_EXIT_TITLE__" data-exit-description="__DICE_EXIT_DESCRIPTION__" data-stay-label="__DICE_STAY_LABEL__" data-leave-label="__DICE_LEAVE_LABEL__">
+  <div class="preview-note"><p lang="__DICE_LOCALE__">__DICE_PREVIEW_LABEL__</p></div>
+  <main class="game-shell">
+    <header class="topbar">
+      <button class="round-button" id="exit-button" aria-label="__DICE_BACK_LABEL__" lang="__DICE_LOCALE__"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
+      <a class="brand" href="__DICE_HUB_HREF__" id="brand-link" aria-label="Friemi · __DICE_GAME_LABEL__" lang="__DICE_LOCALE__"><span class="brand-logo-window"><img src="/brand/v2_1/friemi-title-navy.png" alt="" width="194" height="61" /></span><span class="brand-divider" aria-hidden="true"></span><span class="brand-game">__DICE_GAME_LABEL__</span></a>
+      <button class="round-button" id="sound-button" aria-label="开启声音" aria-pressed="false"><svg id="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/></svg></button>
+    </header>
+
+    <nav class="mode-switch" aria-label="骰子玩法">
+      <button class="mode active" data-mode="free" aria-pressed="true"><svg class="mode-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" transform="rotate(-10 12 12)"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="16" r="1"/></svg>自由摇骰</button>
+      <button class="mode" data-mode="bluff" aria-pressed="false"><svg class="mode-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 4H6a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h3l3 4 3-4h3a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>吹牛</button>
+    </nav>
+
+    <section class="game-heading">
+      <div class="heading-kicker" id="heading-kicker" hidden></div>
+      <h1 id="game-title">摇骰子</h1>
+      <p id="game-subtitle" hidden></p>
+      <button class="text-button rules-button" id="rules-button"><span>?</span> 规则</button>
+    </section>
+
+    <section class="table-wrap" aria-label="骰子游戏桌">
+      <div class="table" id="game-table">
+        <div class="felt-grain" aria-hidden="true"></div>
+        <div class="table-stitch" aria-hidden="true"></div>
+        <button class="cup-zone" id="cup-zone" type="button" aria-label="摇动骰盅">
+          <span class="cup-shadow" aria-hidden="true"></span>
+          <img class="cup" src="/game-tools/dice/cup.svg" alt="" width="210" height="235" />
+          <span class="motion-tick tick-left" aria-hidden="true">⌁</span><span class="motion-tick tick-right" aria-hidden="true">⌁</span>
+        </button>
+        <div class="landing-flair" aria-hidden="true">
+          <svg class="flair flair-one" viewBox="0 0 24 24"><path d="M12 2c1 7 3 9 10 10-7 1-9 3-10 10C11 15 9 13 2 12c7-1 9-3 10-10Z"/></svg>
+          <svg class="flair flair-two" viewBox="0 0 24 24"><path d="m5 3 3 5M15 2l-2 6M22 8l-6 3"/></svg>
+          <svg class="flair flair-three" viewBox="0 0 24 24"><path d="M12 3c1 6 3 8 9 9-6 1-8 3-9 9-1-6-3-8-9-9 6-1 8-3 9-9Z"/></svg>
+        </div>
+        <div class="dice-stage" id="dice-stage" role="group" aria-label="当前骰子"></div>
+        <div class="hidden-note" id="hidden-note" hidden></div>
+        <button class="private-peek" id="private-peek" hidden>看骰子</button>
+        <div class="table-caption" id="table-caption" hidden></div>
+
+        <div class="seat seat-right" id="seat-taotao" data-player="桃桃" data-mood="idle" hidden><span class="avatar character-avatar"><img src="assets/cats/players/baker-idle.svg" alt="面包喵" width="64" height="64" /></span><div><strong>桃桃</strong><span class="seat-status">叫了 4 个 3</span></div></div>
+        <div class="seat seat-left" id="seat-xiaolu" data-player="小鹿" data-mood="idle" hidden><span class="avatar character-avatar"><img src="assets/cats/players/scholar-idle.svg" alt="学者喵" width="64" height="64" /></span><div><strong>小鹿</strong><span class="seat-status">等你出招</span></div></div>
+        <div class="seat seat-top" id="seat-maomao" data-player="猫猫" data-mood="idle" hidden><span class="avatar character-avatar"><img src="assets/cats/players/captain-idle.svg" alt="船长喵" width="64" height="64" /></span><div><strong>猫猫</strong><span class="seat-status">等你出招</span></div></div>
+        <div class="bid-bubble" id="bid-bubble" data-caller="桃桃" hidden><span id="bid-speaker">桃桃说</span><strong id="bid-content">“4 个 <i class="mini-face">⚂</i>”</strong><small id="bid-hint" hidden></small></div>
+        <div class="reveal-banner" id="reveal-banner" hidden>
+          <div><strong id="reveal-target"></strong><span id="reveal-progress"></span></div>
+          <button id="skip-reveal" type="button">直接看结果</button>
+        </div>
+        <div class="reveal-groups" id="reveal-groups" hidden></div>
+      </div>
+      <div class="table-edge" aria-hidden="true"></div>
+      <div class="table-cat" aria-hidden="true">
+        <img class="cat-idle" src="assets/cats/cloud-idle.svg" alt="" width="80" height="80" />
+        <img class="cat-happy" src="assets/cats/cloud-happy.svg" alt="" width="80" height="80" />
+        <img class="cat-thinking" src="assets/cats/cloud-thinking.svg" alt="" width="80" height="80" />
+        <img class="cat-sad" src="assets/cats/cloud-sad.svg" alt="" width="80" height="80" />
+      </div>
+      <div class="my-seat" id="my-seat" data-player="我" data-mood="thinking" hidden><span class="avatar character-avatar"><img src="assets/cats/players/cloud-thinking.svg" alt="云朵喵" width="56" height="56" /></span><span class="my-seat-name">我</span><strong id="my-seat-status">轮到你</strong><span id="my-seat-hint" hidden></span></div>
+      <span class="table-sticker" id="table-sticker" aria-hidden="true" hidden></span>
+    </section>
+
+    <section class="controls" id="free-controls" aria-label="自由摇骰操作">
+      <div class="result-line" id="result-line" aria-live="polite"><span class="result-label">合计</span><strong id="sum-value">—</strong><span id="sum-unit"></span><span class="result-divider"></span><span id="result-message"></span></div>
+      <div class="count-row"><span>骰子数</span><div class="count-picker" id="count-picker" role="group" aria-label="选择骰子数量"></div><button class="quick-roll-button" id="quick-roll-button" type="button" aria-label="快摇" aria-pressed="false">快摇</button></div>
+      <div class="action-row">
+        <button class="secondary-button cover-button" id="cover-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="3"/></svg><span>盖盅</span></button>
+        <button class="primary-button" id="roll-button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" transform="rotate(-12 12 12)"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="16" r="1"/></svg><span>摇一摇</span><span class="button-spark">✦</span></button>
+      </div>
+      <p class="small-note" id="free-note" hidden></p>
+    </section>
+
+    <section class="controls bluff-controls" id="bluff-controls" aria-label="吹牛操作" hidden>
+      <div class="practice-meta">
+        <span>1 百搭</span>
+        <button type="button" id="history-button">叫点记录</button>
+        <button type="button" id="hand-toggle">盖住骰子</button>
+      </div>
+      <div class="bluff-summary-slot"><div class="bluff-status" id="bluff-status" aria-live="polite"></div></div>
+      <div class="bid-composer" id="bid-composer">
+        <div class="bid-composer-row">
+          <div class="bid-quantity" role="group" aria-label="调整叫点数量">
+            <button type="button" id="bid-minus" aria-label="叫点数量减一">−</button>
+            <input id="bid-count" type="number" min="4" max="20" step="1" value="5" inputmode="numeric" aria-label="叫点数量" />
+            <button type="button" id="bid-plus" aria-label="叫点数量加一">+</button>
+          </div>
+          <span class="bid-unit">个</span>
+          <label class="bid-face-wrap"><select id="bid-face" aria-label="叫点点数"><option value="2">2 点</option><option value="3" selected>3 点</option><option value="4">4 点</option><option value="5">5 点</option><option value="6">6 点</option></select></label>
+        </div>
+        <p id="bid-guidance" aria-live="polite"></p>
+      </div>
+      <div class="action-row" id="bluff-actions"><button class="secondary-button" id="open-button">开盅</button><button class="primary-button" id="bid-button">叫出 <span class="button-spark">↗</span></button></div>
+      <div class="settlement-actions" id="settlement-actions" hidden><button class="secondary-button" id="back-free-button">自由摇骰</button><button class="primary-button" id="rematch-button">再来一局 <span class="button-spark">↻</span></button></div>
+      <p class="small-note" id="bluff-note" hidden></p>
+    </section>
+    <a class="online-entry" href="__DICE_ONLINE_HREF__" lang="__DICE_LOCALE__">✦ __DICE_ONLINE_LABEL__ <span aria-hidden="true">↗</span></a>
+  </main>
+
+  <dialog id="game-dialog" aria-labelledby="dialog-title"><div class="dialog-content"><button class="round-button dialog-close" id="dialog-close" aria-label="关闭弹窗">×</button><div class="dialog-icon" aria-hidden="true">⚄</div><h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions"></div></div></dialog>
+  <script src="dice-sprites.js"></script>
+  <script src="bluff-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
