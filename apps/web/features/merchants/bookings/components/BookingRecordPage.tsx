@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Phone } from "lucide-react";
+import { ArrowRight, Phone } from "lucide-react";
 import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getBookingCopy } from "../copy";
 import type { BookingRecord } from "../types";
@@ -147,7 +147,7 @@ export function BookingRecordPage({
           href={getLocalizedActivityDetailPath(locale, booking.activityId)}
         >
           {copy.viewSpace}
-          <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
       ) : null}
       {canCancel ? (

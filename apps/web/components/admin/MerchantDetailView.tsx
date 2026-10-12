@@ -1,8 +1,7 @@
 import Link from "next/link";
 import {
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
-  ExternalLink,
   TicketCheck,
   UserRoundPlus,
 } from "lucide-react";
@@ -48,7 +47,7 @@ export function MerchantDetailView({
     {
       description: copy.detail.publicHint,
       href: `/merchants/${merchant.slug}`,
-      icon: ExternalLink,
+      icon: ArrowRight,
       label: copy.common.publicPage,
     },
   ];
@@ -87,7 +86,7 @@ export function MerchantDetailView({
                 {description}
               </span>
             </span>
-            <ArrowUpRight
+            <ArrowRight
               aria-hidden="true"
               className="h-5 w-5 shrink-0 text-ink/50 group-hover:text-forest"
             />

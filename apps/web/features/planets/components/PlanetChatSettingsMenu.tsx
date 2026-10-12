@@ -5,7 +5,7 @@ import {
   BellOff,
   Check,
   Ellipsis,
-  ExternalLink,
+  ArrowRight,
   Link2,
   Megaphone,
   Pin,
@@ -403,7 +403,7 @@ export function PlanetChatSettingsMenu(props: PlanetChatSettingsMenuProps) {
             href={props.planetHref}
             role="menuitem"
           >
-            <ExternalLink className="h-4 w-4 text-[#155F40]" />
+            <ArrowRight className="h-4 w-4 text-[#155F40]" />
             {copy.viewPlanet}
           </Link>
         </div>

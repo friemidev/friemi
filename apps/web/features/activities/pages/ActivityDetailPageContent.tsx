@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
-  ExternalLink,
+  ArrowRight,
   MapPin,
   Orbit,
   PencilLine,
@@ -691,7 +691,7 @@ function ProtectedDetailNotice({
   icon?: "address" | "link";
   label: string;
 }) {
-  const Icon = icon === "link" ? ExternalLink : ShieldAlert;
+  const Icon = icon === "link" ? ArrowRight : ShieldAlert;
 
   return (
     <div className="rounded-[1rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2.5 text-sm font-semibold leading-6 text-[#156240] shadow-sm">
@@ -1275,7 +1275,7 @@ export async function ActivityDetailPageContent({
               </p>
               {activityAddressUrl ? (
                 <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
-                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                   <span className="min-w-0">
                     <span className="block font-semibold text-[#156240]">
                       {t.activityDetail.onlineLink}
@@ -1297,7 +1297,7 @@ export async function ActivityDetailPageContent({
                     }}
                     href={activityAddressUrl}
                   >
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </AnalyticsExternalLink>
                   <ActivityCopyButton
                     analyticsEvent={{
@@ -1379,7 +1379,7 @@ export async function ActivityDetailPageContent({
                   <span className="min-w-0 leading-tight">
                     {ticketCtaLabel}
                   </span>
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </AnalyticsExternalLink>
               ) : null}
               {activity.officialUrl ? (
@@ -1397,7 +1397,7 @@ export async function ActivityDetailPageContent({
                   href={activity.officialUrl}
                 >
                   {publicEventCopy.officialPage}
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </AnalyticsExternalLink>
               ) : null}
               {canCreateTeam ? (
@@ -1799,7 +1799,7 @@ export async function ActivityDetailPageContent({
             )}
           </span>
           <span className="inline-flex max-w-[8.25rem] shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap py-0.5 text-[12px] font-semibold leading-6 text-[#156240] transition active:scale-[0.98]">
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate leading-6">
               {publicEventCopy.linkedEventTitle}
             </span>
@@ -1826,7 +1826,7 @@ export async function ActivityDetailPageContent({
             )}
           >
             {publicEventCopy.linkedEventCta}
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </details>
@@ -1909,7 +1909,7 @@ export async function ActivityDetailPageContent({
                 )}
               >
                 {publicEventCopy.linkedEventCta}
-                <ExternalLink className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -2472,7 +2472,7 @@ export async function ActivityDetailPageContent({
                   data-detail-source-target={`merchant:${activity.merchant.slug}`}
                 >
                   {t.merchant.viewProfile}
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </ContextualDetailLink>
               </div>
             </div>
@@ -2663,7 +2663,7 @@ export async function ActivityDetailPageContent({
             {protectedLocationNotice ? (
               <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 text-[#156240]">
                 {protectedLocationIsOnline ? (
-                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 )}
@@ -2673,7 +2673,7 @@ export async function ActivityDetailPageContent({
               </p>
             ) : activityAddressUrl ? (
               <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
-                <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="min-w-0">
                   <span className="block font-semibold text-[#156240]">
                     {t.activityDetail.onlineLink}
@@ -2695,7 +2695,7 @@ export async function ActivityDetailPageContent({
                   }}
                   href={activityAddressUrl}
                 >
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </AnalyticsExternalLink>
                 <ActivityCopyButton
                   analyticsEvent={{
@@ -2784,7 +2784,7 @@ export async function ActivityDetailPageContent({
                 href={ticketUrl}
               >
                 <span className="min-w-0 leading-tight">{ticketLabel}</span>
-                <ExternalLink className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </AnalyticsExternalLink>
             ) : null}
 

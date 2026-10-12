@@ -64,7 +64,7 @@ function updateFreeResult(message){
 }
 function setBusy(busy){
   free.busy=busy;['roll-button','cup-zone','quick-roll-button'].forEach(id=>$(id).disabled=busy);
-  $('cover-button').disabled=busy||!free.hasResult;
+  $('cover-button').disabled=busy;
   for(const b of $('count-picker').children)b.disabled=busy;
   document.querySelectorAll('.mode').forEach(b=>b.disabled=busy);
 }
@@ -77,12 +77,12 @@ function positionGather(){
 }
 function updateCover(){
   $('game-table').classList.toggle('covered',free.covered);
-  $('cover-button').disabled=free.busy||!free.hasResult;$('cover-button').querySelector('span').textContent=free.covered?'揭盅':'盖盅';
+  $('cover-button').disabled=free.busy;$('cover-button').querySelector('span').textContent=free.covered?'揭盅':'盖盅';
   $('cover-button').setAttribute('aria-pressed',String(free.covered));$('cup-zone').setAttribute('aria-label',free.covered?'揭开骰盅':'摇动骰盅');
   $('dice-stage').setAttribute('aria-hidden',String(free.covered));updateFreeResult();
 }
 function toggleCover(){
-  if(free.busy||!free.hasResult)return;
+  if(free.busy)return;
   clearRoundFeedback();positionGather();const closing=!free.covered,table=$('game-table');
   free.covered=closing;setBusy(true);playTap();
   table.classList.remove('covered');table.classList.add(closing?'covering':'uncovering');
@@ -100,22 +100,23 @@ function renderCount(){
   $('count-picker').replaceChildren();
   for(let n=1;n<=6;n++){
     const b=document.createElement('button');b.textContent=n;b.className=n===free.count?'selected':'';b.setAttribute('aria-label',n+' 颗骰子');b.setAttribute('aria-pressed',String(n===free.count));b.disabled=free.busy;
-    b.addEventListener('click',()=>{if(free.busy||free.count===n)return;clearRoundFeedback();free.count=n;free.covered=false;free.values=[];free.hasResult=false;$('roll-button').querySelector('span').textContent='摇一摇';renderCount();showFreeDice();updateCover();playTap()});$('count-picker').append(b);
+    b.addEventListener('click',()=>{if(free.busy||free.count===n)return;clearRoundFeedback();free.count=n;free.values=[];free.hasResult=false;$('roll-button').querySelector('span').textContent='摇一摇';renderCount();showFreeDice();positionGather();updateCover();playTap()});$('count-picker').append(b);
   }
   if(restoreFocus)$('count-picker').querySelector('.selected').focus({preventScroll:true});
 }
 function finishRoll(){
   if(mode!=='free'||!$('game-table').classList.contains('rolling'))return;
   clearTimeout(rollTimer);clearTimeout(faceTimer);window.DiceSprites?.finishAll();free.hasResult=true;renderDice(free.values);$('game-table').classList.remove('rolling');
+  if(free.covered)positionGather();
   setBusy(false);$('roll-button').querySelector('span').textContent='再摇一次';
   updateFreeResult();celebrateLanding();tone(520,.06,.018,'triangle');tone(740,.08,.012,'sine',.07);
 }
 function roll(){
-  if(free.busy)return;clearRoundFeedback();free.covered=false;updateCover();setBusy(true);
+  if(free.busy)return;clearRoundFeedback();updateCover();setBusy(true);
   free.values=Array.from({length:free.count},randomDie);free.rolls++;
   const duration=reducedMotion.matches?140:free.quick?900:1800,factor=duration/1800;
   $('game-table').style.setProperty('--roll-time',duration+'ms');$('game-table').classList.add('rolling');
-  $('roll-button').querySelector('span').textContent='摇动中…';setStatus('—');$('sum-unit').textContent='';playRoll(factor);
+  $('roll-button').querySelector('span').textContent='摇动中…';setStatus(free.covered?'?':'—');$('sum-unit').textContent='';playRoll(factor);
   faceTimer=setTimeout(()=>{renderDice(free.values);window.DiceSprites?.animate($('dice-stage').children,{duration:1333*factor,stagger:28*factor})},reducedMotion.matches?30:300*factor);
   rollTimer=setTimeout(finishRoll,duration);
 }
@@ -196,7 +197,7 @@ function startPractice(resetScores=false){
   bluff.state=E.createRound(turnOrder,randomDie,starting);
   // A gentle first call lets the first practice immediately teach "at least".
   if(bluff.roundNo===1)bluff.state=E.placeBid(bluff.state,'桃桃',4,3);
-  $('heading-kicker').textContent='本机练习 · 第 '+bluff.roundNo+' 局';$('bluff-controls').classList.remove('counting');
+  $('heading-kicker').textContent=pageCopy.singleLabel+' · 第 '+bluff.roundNo+' 局';$('bluff-controls').classList.remove('counting');
   renderPracticeTurn();scheduleBot();
 }
 function revealGroup(player){
@@ -265,13 +266,13 @@ function history(){
   showDialog('叫点记录',body,[{label:'关闭',primary:true}]);
 }
 function cancelFreeMotion(){clearTimeout(rollTimer);clearTimeout(faceTimer);clearTimeout(coverTimer);stopSounds();window.DiceSprites?.finishAll();$('game-table').classList.remove('rolling','covering','uncovering');setBusy(false)}
-function updateModeNotice(practice){
-  const label=practice?pageCopy.practiceLabel:pageCopy.previewLabel;
+function updateModeNotice(){
+  const label=pageCopy.previewLabel;
   const note=document.querySelector('.preview-note');note.querySelector('p').textContent=label;note.hidden=!label;
 }
 function setMode(next,force=false){
   if(free.busy||(next===mode&&!force))return;clearTimeout(bluff.timer);clearTimeout(bluff.actionTimer);stopSounds();clearRoundFeedback();mode=next;updateCharacters();
-  const practice=mode==='bluff';updateModeNotice(practice);document.querySelectorAll('.mode').forEach(b=>{b.classList.toggle('active',b.dataset.mode===mode);b.setAttribute('aria-pressed',String(b.dataset.mode===mode))});
+  const practice=mode==='bluff';document.querySelectorAll('.mode').forEach(b=>{b.classList.toggle('active',b.dataset.mode===mode);b.setAttribute('aria-pressed',String(b.dataset.mode===mode))});
   $('free-controls').hidden=practice;$('bluff-controls').hidden=!practice;$('cup-zone').hidden=practice;$('table-sticker').hidden=practice;$('my-seat').hidden=!practice;
   $('game-table').classList.toggle('bluff',practice);$('game-table').classList.remove('settled','covered','covering','uncovering');$('reveal-groups').hidden=true;$('reveal-banner').hidden=true;
   $('dice-stage').hidden=false;$('private-peek').hidden=true;$('hidden-note').hidden=true;$('dice-stage').setAttribute('aria-hidden','false');
@@ -288,7 +289,7 @@ function showDialog(title,body,actions){
   $('game-dialog').showModal();$('dialog-close').focus();
 }
 function rules(){
-  if(mode==='free')showDialog('摇骰规则','<ul><li>选择1–6颗，点击骰盅或「摇一摇」。</li><li>盖盅、揭盅不改变点数。</li><li>快摇将动画缩短一半。</li></ul>',[{label:'知道了',primary:true}]);
+  if(mode==='free')showDialog('摇骰规则','<ul><li>选择1–6颗，点击骰盅或「摇一摇」。</li><li>盖盅后摇骰仍隐藏，揭盅才显示。盖盅、揭盅不改变点数。</li><li>快摇将动画缩短一半。</li></ul>',[{label:'知道了',primary:true}]);
   else showDialog('吹牛规则','<ol><li><strong>叫点</strong>每人5颗，共20颗。「4个3」代表全桌至少有4颗3。1是百搭，可代2–6；不能叫1。首叫至少4个。</li><li><strong>加叫</strong>同数量加点数，增加数量可换点数。例如：5个3 → 5个4 → 6个2。</li><li><strong>开盅</strong>实际数量达到叫数，叫点者赢；否则开盅者赢。胜方+1。</li></ol><p class="rules-aside">退出练习后积分清空。</p>',[{label:'知道了',primary:true}]);
 }
 function resetTable(){clearTimeout(bluff.timer);cancelFreeMotion();free.count=5;free.values=[];free.hasResult=false;free.covered=false;free.rolls=0;bluff.scores={};bluff.roundNo=0;bluff.state=null;$('roll-button').querySelector('span').textContent='摇一摇';renderCount();setMode('free',true)}
@@ -350,5 +351,5 @@ window.addEventListener('resize',()=>{
   if(free.busy)finishCover();
   else if(free.covered)positionGather();
 });
-updateModeNotice(false);
+updateModeNotice();
 renderCount();showFreeDice();updateCover();

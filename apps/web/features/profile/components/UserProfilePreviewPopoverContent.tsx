@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { FollowButton } from "@/features/follow/components/FollowButton";
@@ -303,7 +303,7 @@ export function UserProfilePreviewPopoverContent({
                 href={withLocale(locale, `/profile/${profileId}`)}
                 prefetch={false}
               >
-                <ExternalLink className="h-3 w-3 shrink-0" />
+                <ArrowRight className="h-3 w-3 shrink-0" />
                 <span className="truncate">{previewCopy.openProfile}</span>
               </Link>
             ) : null}

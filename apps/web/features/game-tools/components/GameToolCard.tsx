@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, LockKeyhole } from "lucide-react";
+import { ArrowRight, LockKeyhole } from "lucide-react";
 import {
   getGameToolLabel,
   type GameToolDefinition,
@@ -51,7 +51,7 @@ export function GameToolCard({
           <Heading className="min-w-0 break-words text-[16px] font-bold leading-snug sm:text-[18px]">
             {getGameToolLabel(tool.title, locale)}
           </Heading>
-          {available ? <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-forest" /> : null}
+          {available ? <ArrowRight aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-forest" /> : null}
         </div>
         <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-[1.5] text-ink/70 sm:text-[13px]">
           {description ?? getGameToolLabel(tool.description, locale)}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   Loader2,
   MoreHorizontal,
@@ -269,7 +269,7 @@ export function ActivityPriorityManagementClient({
                       )}
                     >
                       查看
-                      <ArrowUpRight className="h-3.5 w-3.5" />
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </a>
                     <button
                       className="inline-flex h-8 items-center justify-center gap-1 rounded-full bg-white text-xs font-bold text-[#B5301F] ring-1 ring-[#F09182]/50 transition hover:bg-[#FFF5F0] md:h-9"

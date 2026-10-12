@@ -9,7 +9,7 @@ import {
   Bell,
   CheckCircle2,
   ChevronRight,
-  ExternalLink,
+  ArrowRight,
   ListChecks,
   LoaderCircle,
   Lock,
@@ -834,7 +834,7 @@ function ActivityRoomInfoContextualLinkRow({
         {label}
       </span>
       <span className="flex min-w-0 items-center justify-end gap-2 text-right text-sm font-semibold text-[#8B907F]">
-        <ExternalLink className="h-4 w-4 shrink-0" />
+        <ArrowRight className="h-4 w-4 shrink-0" />
         <ChevronRight className="h-4 w-4 shrink-0 text-[#B6B7AE]" />
       </span>
     </ContextualDetailLink>

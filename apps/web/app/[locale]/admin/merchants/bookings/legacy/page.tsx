@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight, CalendarDays } from "lucide-react";
+import { ArrowRight, CalendarDays } from "lucide-react";
 import { MerchantAdminHeader } from "@/components/admin/MerchantAdminHeader";
 import { getMerchantBookingAdminCopy } from "@/components/admin/merchantBookingCopy";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -50,7 +50,7 @@ function SlotList({
                   : ""}
               </span>
             </span>
-            <ArrowUpRight
+            <ArrowRight
               aria-hidden="true"
               className="h-5 w-5 shrink-0 text-forest"
             />

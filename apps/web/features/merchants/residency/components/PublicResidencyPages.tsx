@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   Clock3,
   MapPin,
@@ -234,7 +234,7 @@ export function PublicResidencyDatePage({
               href={getLocalizedActivityDetailPath(locale, slot.activityId)}
             >
               {copy.goToActivity}
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           ) : (
             <p className="text-sm text-ink/70">{copy.unavailable}</p>
@@ -249,7 +249,7 @@ export function PublicResidencyDatePage({
               href={withLocale(locale, `/profile/store/bookings/${slot.id}`)}
             >
               {copy.ownerBookingLink}
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
         ) : bookingPaused ? (

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import React from "react";
-import { ArrowLeft, ArrowUpRight, CalendarDays } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { getLocalizedActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getResidencyOwnerCopy } from "../ownerCopy";
 import type { ResidencySlotSummary } from "../queries";
@@ -73,7 +73,7 @@ export function RequesterResidencyDetail({
               href={getLocalizedActivityDetailPath(locale, slot.activityId)}
             >
               {copy.viewActivity}
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           ) : null}
         </article>

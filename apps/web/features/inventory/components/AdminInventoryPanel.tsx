@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUpRight,
   PackageOpen,
   Plus,
   Search,
@@ -160,7 +159,7 @@ export function AdminInventoryPanelContent({
                         {copy.remaining(remaining, definition.totalSupply)}
                       </span>
                     </span>
-                    <ArrowUpRight
+                    <ArrowRight
                       aria-hidden="true"
                       className="h-5 w-5 shrink-0 text-ink/50 transition group-hover:text-forest"
                     />
@@ -224,7 +223,7 @@ export function AdminInventoryPanelContent({
             }
           >
             {query ? copy.viewAll : copy.createFirst}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </div>
       )}

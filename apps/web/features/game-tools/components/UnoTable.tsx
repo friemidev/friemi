@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronDown, Flag, House, Info, LogOut, RotateCcw, Trophy, X } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ChevronDown, Flag, House, Info, LogOut, RotateCcw, Trophy, X } from "lucide-react";
 import { isUnoCardPlayable } from "../unoEngine";
 import { getUnoCopy, unoCardLabel, unoCardUnit, unoEventLabel } from "../unoCopy";
 import { UNO_COLORS, type UnoAction, type UnoColor, type UnoViewerState } from "../unoTypes";
@@ -109,7 +109,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
     <div className={s.toolbar} aria-label={t.hand}>
       <button type="button" className={`${s.button} ${s.drawButton}`} disabled={!active || busy || !!reconnecting} onClick={() => void onAction({ type: state.drawnCardId ? "PASS" : "DRAW" })}><ArrowDown size={19}/><span>{t.draw}<small>{state.drawnCardId ? ux.keepAndEnd : t.drawHint}</small></span></button>
       <button type="button" className={`${s.button} ${s.unoButton} ${state.declared ? s.unoDeclared : ""}`} disabled={busy || !!reconnecting || ended} aria-pressed={state.declared} onClick={() => { if (self) void onAction({ type: "CALL_UNO", episodeId: self.episodeId, handVersion: state.handVersion }); }}>UNO<span aria-hidden="true">!</span>{state.declared && <Check size={16}/>}</button>
-      <button type="button" className={`${s.button} ${s.primary}`} disabled={!canPlay || busy || !!reconnecting} onClick={play}><span>{t.play}</span><ArrowUpRight size={21}/></button>
+      <button type="button" className={`${s.button} ${s.primary}`} disabled={!canPlay || busy || !!reconnecting} onClick={play}><span>{t.play}</span><ArrowRight size={21}/></button>
     </div>
 
     <section className={s.arena} aria-label={t.seats}>

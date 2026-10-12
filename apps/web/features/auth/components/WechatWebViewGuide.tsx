@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Check, Copy } from "lucide-react";
+import { ArrowRight, Check, Copy } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
@@ -111,7 +111,7 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
   return (
     <section className="fixed inset-0 z-[100] overflow-x-hidden overflow-y-auto bg-[linear-gradient(165deg,#FEFFF9_0%,#F1F2EC_52%,#FFF5E6_100%)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
       <div className="pointer-events-none fixed right-10 top-3 z-20 flex flex-col items-end text-forest">
-        <ArrowUpRight className="h-8 w-8 drop-shadow-sm" />
+        <ArrowRight className="h-8 w-8 drop-shadow-sm" />
         <span className="-mt-1 rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold shadow-[0_8px_18px_rgba(21,98,64,0.12)] ring-1 ring-sage/55">
           {copy.arrowHint}
         </span>
