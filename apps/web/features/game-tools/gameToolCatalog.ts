@@ -170,31 +170,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       fr: "Blood on the Clocktower",
     },
   },
-  {
-    accent: "#156240",
-    availability: "planned",
-    description: {
-      "zh-CN": "更多线下桌游工具会继续接入。",
-      en: "More offline table tools will be added later.",
-      fr: "D'autres outils de table seront ajoutés plus tard.",
-    },
-    href: "/game-tools",
-    icon: Sparkles,
-    imageSrc: "/game-tools/avalon/states/public-screen-token.svg",
-    kind: "OTHER",
-    maxPlayers: 20,
-    minPlayers: 5,
-    phase: {
-      "zh-CN": "敬请期待",
-      en: "Coming soon",
-      fr: "Bientôt",
-    },
-    title: {
-      "zh-CN": "其他工具",
-      en: "Other tools",
-      fr: "Autres outils",
-    },
-  },
+
 ];
 
 export function getGameToolDefinition(kind: GameToolKind) {
