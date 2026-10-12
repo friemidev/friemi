@@ -451,4 +451,7 @@ body{background-color:#FFFCF5;background-image:radial-gradient(circle,rgba(72,10
 .brand .brand-game{display:block;overflow:hidden;margin:0;font:850 14px/1.2 LocalRounded,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;letter-spacing:-.02em;text-overflow:ellipsis;color:#30425c}
 @media(max-width:359px){.brand .brand-divider,.brand .brand-game{display:none}}
 
-body:has(.preview-note[hidden]) .game-shell{min-height:100svh}
+/* Match Draw & Guess: clear the native status bar, then leave 16px of air. */
+body{--dice-safe-top:var(--app-top-safe-area,var(--friemi-android-top-inset,env(safe-area-inset-top,0px)));padding-top:var(--dice-safe-top)}
+.game-shell{padding-top:16px}
+body:has(.preview-note[hidden]) .game-shell{min-height:calc(100svh - var(--dice-safe-top))}
