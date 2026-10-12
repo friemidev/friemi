@@ -3,7 +3,9 @@ export type DiceResult = { total: number; callerSeat: number; challengerSeat: nu
 export type DicePhase = "LOBBY" | "BIDDING" | "REVEAL" | "FINISHED";
 export type DiceRoomState = {
   phase: DicePhase;
+  /** Monotonic room round, also used to reject commands from previous matches. */
   round: number;
+  matchStartRound?: number;
   seatNumbers: number[];
   hands: Record<string, number[]>;
   scores: Record<string, number>;
@@ -19,8 +21,9 @@ export class DiceRuleError extends Error {
 }
 const invalid = (code: string): never => { throw new DiceRuleError(code); };
 
-export function createDiceLobbyState(): DiceRoomState {
-  return { phase: "LOBBY", round: 0, seatNumbers: [], hands: {}, scores: {}, turnSeat: null, bid: null, history: [], result: null, commandLog: [] };
+export function createDiceLobbyState(round = 0): DiceRoomState {
+  if (!Number.isSafeInteger(round) || round < 0) invalid("INVALID_ROUND");
+  return { phase: "LOBBY", round, matchStartRound: round + 1, seatNumbers: [], hands: {}, scores: {}, turnSeat: null, bid: null, history: [], result: null, commandLog: [] };
 }
 
 function deal(seatNumbers: number[], randomDie: () => number) {
@@ -35,11 +38,12 @@ function deal(seatNumbers: number[], randomDie: () => number) {
   return hands;
 }
 
-export function startDiceMatch(seatNumbers: number[], randomDie: () => number): DiceRoomState {
+export function startDiceMatch(seatNumbers: number[], randomDie: () => number, firstRound = 1): DiceRoomState {
   if (seatNumbers.length < 2 || seatNumbers.length > 6 || new Set(seatNumbers).size !== seatNumbers.length) invalid("INVALID_ROSTER");
+  if (!Number.isSafeInteger(firstRound) || firstRound < 1) invalid("INVALID_ROUND");
   const order = [...seatNumbers].sort((a, b) => a - b);
   return {
-    ...createDiceLobbyState(), phase: "BIDDING", round: 1, seatNumbers: order,
+    ...createDiceLobbyState(firstRound - 1), phase: "BIDDING", round: firstRound, seatNumbers: order,
     hands: deal(order, randomDie), scores: Object.fromEntries(order.map((seat) => [String(seat), 0])),
     turnSeat: order[0],
   };
@@ -82,7 +86,9 @@ export function applyDiceAction(state: DiceRoomState, actorSeat: number, action:
 export function diceViewFor(state: DiceRoomState, viewerSeat: number) {
   const reveal = state.phase === "REVEAL" || state.phase === "FINISHED";
   return {
-    phase: state.phase, round: state.round, seatNumbers: state.seatNumbers,
+    phase: state.phase, round: state.round,
+    roundNumber: state.phase === "LOBBY" ? 0 : state.round - (state.matchStartRound ?? 1) + 1,
+    seatNumbers: state.seatNumbers,
     scores: state.scores, turnSeat: state.turnSeat, bid: state.bid, history: state.history,
     myHand: state.seatNumbers.includes(viewerSeat) ? state.hands[String(viewerSeat)] ?? null : null,
     revealedHands: reveal ? state.hands : null,

@@ -218,11 +218,12 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
     } else if (action.type === "START") {
       const active = room.seats.filter((item) => !item.leftAt);
       if (room.status !== "LOBBY" || active.length < 2 || active.some((item) => !item.readyAt)) return { error: "NOT_READY" } as const;
-      next = startDiceMatch(active.map((item) => item.seatNumber), roll);
+      next = startDiceMatch(active.map((item) => item.seatNumber), roll, old.round + 1);
       nextStatus = "IN_PROGRESS";
     } else if (action.type === "REMATCH") {
       if (room.status !== "FINISHED") return { error: "NOT_FINISHED" } as const;
-      next = createDiceLobbyState();
+      // Reusing round 0/1 would let a delayed command from the last match act again.
+      next = createDiceLobbyState(old.round);
       nextStatus = "LOBBY";
     } else if (action.type === "CLOSE") {
       nextStatus = "CANCELLED";
@@ -264,7 +265,12 @@ export async function commandDiceRoom(input: { roomId: string; profileId: string
         await tx.gameToolSeat.update({ where: { id: seat.id }, data: { leftAt: new Date() } });
         await tx.gameToolRoomMember.updateMany({ where: { roomId: room.id, profileId: input.profileId, leftAt: null }, data: { leftAt: new Date() } });
         if (isHost) {
-          const successor = room.seats.find((item) => !item.leftAt && item.id !== seat.id && item.profileId)?.profileId;
+          const eligible = room.seats.filter((item) => !item.leftAt && item.id !== seat.id && item.profileId);
+          const activeSince = Date.now() - 60_000;
+          // A lower seat may be disconnected. Hand control to someone still here.
+          const successor = (eligible.find((item) => room.members.some((member) =>
+            member.profileId === item.profileId && member.lastSeenAt.getTime() >= activeSince,
+          )) ?? eligible[0])?.profileId;
           if (successor) await tx.gameToolRoom.update({ where: { id: room.id }, data: { hostId: successor } });
         }
       }

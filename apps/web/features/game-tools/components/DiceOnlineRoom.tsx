@@ -8,6 +8,7 @@ import { GameToolBrand } from "./GameToolBrand";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatId } from "../drawGuessCats";
 import { DICE_ROOM_EVENT, getDiceRealtimeBrowserConfig, getDiceRoomTopic } from "../diceRealtime";
+import { fetchDiceResponse } from "../diceRequest";
 import type { DiceBid, DiceResult, DicePhase } from "../diceRoomEngine";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY, DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY } from "../activeGameToolRoomStorage";
 import { withLocale } from "@/lib/routes";
@@ -15,7 +16,7 @@ import { withLocale } from "@/lib/routes";
 type Room = {
   id: string; code: string; revision: number; status: string; maxPlayers: number; viewerSeat: number; isHost: boolean;
   seats: { number: number; name: string; ready: boolean; isHost: boolean; catId: string }[];
-  view: { phase: DicePhase; round: number; seatNumbers: number[]; scores: Record<string, number>; turnSeat: number | null;
+  view: { phase: DicePhase; round: number; roundNumber?: number; seatNumbers: number[]; scores: Record<string, number>; turnSeat: number | null;
     bid: DiceBid | null; history: DiceBid[]; myHand: number[] | null; revealedHands: Record<string, number[]> | null; result: DiceResult | null };
 };
 const texts = {
@@ -60,19 +61,46 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
   const [covered, setCovered] = useState(false);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [selectedCat, setSelectedCat] = useState<DrawGuessCatId>(DRAW_GUESS_CATS[0].id);
+  const mountedRef = useRef(true);
+  const refreshRequestRef = useRef<AbortController | null>(null);
+  const refreshQueuedRef = useRef(false);
+  const actionRequestRef = useRef<AbortController | null>(null);
   const pickerCloseRef = useRef<HTMLButtonElement>(null);
   const pickerReturnFocusRef = useRef<HTMLElement | null>(null);
   const entry = withLocale(locale, "/game-tools/dice/online");
-  const refresh = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      refreshQueuedRef.current = false;
+      refreshRequestRef.current?.abort();
+      actionRequestRef.current?.abort();
+    };
+  }, []);
+  const refresh = useCallback(async function refreshRoom() {
+    // Background polling must not keep an absent host's presence alive.
+    if (!mountedRef.current || document.hidden) return;
+    if (refreshRequestRef.current) { refreshQueuedRef.current = true; return; }
+    const controller = new AbortController();
+    refreshRequestRef.current = controller;
     const current = roomRef.current;
     try {
-      const response = await fetch(`/api/game-tools/dice/rooms/${current.id}`, { cache: "no-store", headers: { "if-none-match": `W/"dice-${current.viewerSeat}-${current.revision}"` } });
+      const { response, data } = await fetchDiceResponse<{ room?: Room }>(`/api/game-tools/dice/rooms/${current.id}`, { signal: controller.signal, cache: "no-store", headers: { "if-none-match": `W/"dice-${current.viewerSeat}-${current.revision}"` } });
+      if (controller.signal.aborted || !mountedRef.current) return;
       if (response.status === 304) return;
       if (response.status === 401) { setError(t.signIn); return; }
       if (!response.ok) { if (response.status === 404 || response.status === 403) { dismissDiceShortcut(current.id); router.replace(entry); router.refresh(); } return; }
-      const data = await response.json();
-      if (data.room) setRoom((previous) => data.room.revision >= previous.revision ? data.room : previous);
-    } catch { setSyncStatus("POLLING"); }
+      const nextRoom = data?.room;
+      if (nextRoom) setRoom((previous) => nextRoom.revision >= previous.revision ? nextRoom : previous);
+    } catch { if (!controller.signal.aborted && mountedRef.current) setSyncStatus("POLLING"); }
+    finally {
+      if (refreshRequestRef.current === controller) refreshRequestRef.current = null;
+      // A broadcast arriving during a refresh still needs a subsequent fetch.
+      if (refreshQueuedRef.current && mountedRef.current && !controller.signal.aborted) {
+        refreshQueuedRef.current = false;
+        void refreshRoom();
+      }
+    }
   }, [entry, router, t.signIn]);
   useEffect(() => {
     const config = getDiceRealtimeBrowserConfig();
@@ -87,23 +115,34 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
   }, [initialRoom.id, refresh]);
   useEffect(() => {
     const timer = window.setInterval(() => { void refresh(); }, syncStatus === "CONNECTED" ? 12000 : 2500);
-    const onFocus = () => { void refresh(); };
+    const onFocus = () => { if (!document.hidden) void refresh(); };
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (roomRef.current.view.phase === "BIDDING") setCovered(true);
+      } else void refresh();
+    };
     window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisibility); };
   }, [refresh, syncStatus]);
+  useEffect(() => {
+    if (room.view.phase === "BIDDING" && document.hidden) setCovered(true);
+  }, [room.view.phase]);
   useEffect(() => {
     const bid = room.view.bid;
     setCount(bid ? Math.min(room.seats.length * 5, bid.count + (bid.face === 6 ? 1 : 0)) : room.seats.length);
     setFace(bid && bid.face < 6 ? bid.face + 1 : 2);
   }, [room.view.round, room.view.bid?.count, room.view.bid?.face, room.seats.length]);
   useEffect(() => {
+    if (room.view.phase !== "LOBBY") setCharacterOpen(false);
+  }, [room.view.phase]);
+  useEffect(() => {
     if (!characterOpen) return;
     pickerCloseRef.current?.focus();
   }, [characterOpen]);
   useEffect(() => {
     if (characterOpen) return;
-    pickerReturnFocusRef.current?.focus();
+    if (pickerReturnFocusRef.current?.isConnected) pickerReturnFocusRef.current.focus();
   }, [characterOpen]);
   useEffect(() => {
     if (!characterOpen) return;
@@ -112,18 +151,22 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [characterOpen, busy]);
   async function act(action: { type: string; [key: string]: unknown }): Promise<boolean> {
-    if (busy) return false;
+    if (actionRequestRef.current || !mountedRef.current) return false;
+    const controller = new AbortController();
+    actionRequestRef.current = controller;
     setBusy(true); setError("");
     try {
-      const response = await fetch(`/api/game-tools/dice/rooms/${room.id}`, { method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+      const { response, data } = await fetchDiceResponse<{ room?: Room; error?: string }>(`/api/game-tools/dice/rooms/${room.id}`, { method: "POST", signal: controller.signal, cache: "no-store", headers: { "content-type": "application/json" },
         body: JSON.stringify({ commandId: crypto.randomUUID(), expectedRound: roomRef.current.view.round, action }) });
-      const data = await response.json();
-      if (!response.ok) { setError(data.error === "STALE_ROUND" || data.error === "NOT_YOUR_TURN" ? t.stale : t.error); await refresh(); return false; }
+      if (controller.signal.aborted || !mountedRef.current) return false;
+      if (!response.ok) { setError(response.status === 401 ? t.signIn : data?.error === "STALE_ROUND" || data?.error === "NOT_YOUR_TURN" ? t.stale : t.error); void refresh(); return false; }
       if (action.type === "LEAVE" || action.type === "CLOSE") { dismissDiceShortcut(room.id); router.replace(entry); router.refresh(); return true; }
-      if (data.room) setRoom((previous) => data.room.revision >= previous.revision ? data.room : previous);
+      const nextRoom = data?.room;
+      if (!nextRoom) { setError(t.error); void refresh(); return false; }
+      setRoom((previous) => nextRoom.revision >= previous.revision ? nextRoom : previous);
       return true;
-    } catch { setError(t.error); await refresh(); return false; }
-    finally { setBusy(false); }
+    } catch { if (!controller.signal.aborted && mountedRef.current) { setError(t.error); void refresh(); } return false; }
+    finally { if (actionRequestRef.current === controller) actionRequestRef.current = null; if (mountedRef.current && !controller.signal.aborted) setBusy(false); }
   }
   function openCharacter() {
     pickerReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -148,10 +191,10 @@ export function DiceOnlineRoom({ initialRoom, locale }: { initialRoom: Room; loc
   const allReady = room.seats.length >= 2 && room.seats.every((seat) => seat.ready);
   const readyCount = room.seats.filter((seat) => seat.ready).length;
   const myTurn = view.phase === "BIDDING" && view.turnSeat === room.viewerSeat;
-  const validBid = count >= room.seats.length && count <= room.seats.length * 5 && (!view.bid || count > view.bid.count || count === view.bid.count && face > view.bid.face);
+  const validBid = Number.isInteger(count) && Number.isInteger(face) && face >= 2 && face <= 6 && count >= room.seats.length && count <= room.seats.length * 5 && (!view.bid || count > view.bid.count || count === view.bid.count && face > view.bid.face);
   return <main className="dice-online dice-online-room">
     <div className="dice-online-room-nav"><div className="dice-online-nav"><Link className="dice-online-back" href={entry} aria-label={t.back}><ArrowLeft size={20} /></Link><GameToolBrand game={locale === "zh-CN" ? "骰子" : locale === "fr" ? "Dés" : "Dice"} /></div><span className="dice-online-sync"><Radio size={14} />{syncStatus === "CONNECTED" ? t.live : syncStatus === "RECONNECTING" ? t.syncing : t.polling}</span></div>
-    <header className="dice-online-room-heading"><div>{view.phase !== "LOBBY" ? <span className="dice-online-kicker">{t.round}{view.round}{t.roundUnit}</span> : null}<h1>{t.title}</h1></div><div className="dice-online-room-code"><span>{t.code}</span><strong>{room.code}</strong><button onClick={() => void copyInvite()} type="button" aria-label={t.copy}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div></header>
+    <header className="dice-online-room-heading"><div>{view.phase !== "LOBBY" ? <span className="dice-online-kicker">{t.round}{view.roundNumber ?? view.round}{t.roundUnit}</span> : null}<h1>{t.title}</h1></div><div className="dice-online-room-code"><span>{t.code}</span><strong>{room.code}</strong><button onClick={() => void copyInvite()} type="button" aria-label={t.copy}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div></header>
     <section className={`dice-online-table ${view.phase === "LOBBY" ? "dice-online-table--lobby" : ""}`} aria-label={t.title}>
       <div className={`dice-online-table-inner ${view.phase === "LOBBY" ? "dice-online-table-inner--lobby" : ""}`}>
         {view.phase === "LOBBY" ? <div className="dice-online-lobby-scene">
