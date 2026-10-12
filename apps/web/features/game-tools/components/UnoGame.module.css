@@ -145,6 +145,7 @@
 .entryPage { max-width: 1000px; min-height: 660px; }
 .entryMain { position: relative; padding: 70px 50px 50px; min-height: 510px; }
 .entryCopy { position: relative; z-index: 2; width: 56%; }
+.earlyAccess { display: inline-flex; max-width: 100%; padding: 6px 12px; border: 1px solid var(--uno-border); border-radius: 999px; background: var(--uno-butter); color: var(--uno-ink); font-size: 12px; font-weight: 800; line-height: 18px; }
 .entryCopy h1 { margin: 10px 0 4px; font-size: clamp(70px, 8vw, 106px); font-weight: 900; line-height: 1; letter-spacing: -7px; color: var(--uno-blue); transform: rotate(-4deg); transform-origin: bottom left; }
 .entryCopy h1 > span { display: inline-block; color: var(--uno-red); transform: rotate(9deg); }
 .entryTags { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 24px; font-size: 10px; font-weight: 700; }.entryTags > span { display: inline-flex; align-items: center; gap: 6px; }.entryTags > span + span { padding-left: 12px; border-left: 1px solid var(--uno-border); }

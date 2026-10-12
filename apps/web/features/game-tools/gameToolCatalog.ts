@@ -23,6 +23,7 @@ export type GameToolKind =
 export type GameToolDefinition = {
   accent: string;
   availability: "available" | "planned";
+  earlyAccess?: boolean;
   description: Record<string, string>;
   href: string;
   icon: LucideIcon;
@@ -114,9 +115,10 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     icon: Layers3,
     imageSrc: "/game-tools/uno/logo.png",
     kind: "UNO",
+    earlyAccess: true,
     minPlayers: 2,
     maxPlayers: 10,
-    phase: { "zh-CN": "已开放", en: "Open", fr: "Ouvert" },
+    phase: { "zh-CN": "抢先体验", en: "Early access", fr: "Accès anticipé" },
     title: { "zh-CN": "UNO", en: "UNO", fr: "UNO" },
   },
   {
