@@ -314,7 +314,8 @@ try {
   assert.equal(stored.seats.find(seat => seat.profileId === "guest")?.seatNumber, 2);
   const newLobbyState = structuredClone(stored.state), newLobbyRevision = stored.revision;
   const retriedFinish = await server.commandUnoRoom(stored.id, "guest", historicalFinish);
-  assert.ok(retriedFinish.room); assert.equal(retriedFinish.room.viewerSeat, 2); assert.equal(retriedFinish.room.state.hand.length, 0);
+  assert.ok("room" in retriedFinish && retriedFinish.room);
+  assert.equal(retriedFinish.room.viewerSeat, 2); assert.equal(retriedFinish.room.state.hand.length, 0);
   assert.deepEqual(stored.state, newLobbyState); assert.equal(stored.revision, newLobbyRevision);
   assert.equal(rounds.length, 1); assert.equal((await server.getUnoRoomHistory(stored.id, "guest")).rounds?.length, 1);
 

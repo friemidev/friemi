@@ -386,7 +386,7 @@ export async function leaveUnoRoom(roomId: string, profileId: string, staleBefor
   return { error: "TRY_AGAIN" };
 }
 
-export async function commandUnoRoom(roomId: string, profileId: string, command: UnoRoomCommand) {
+export async function commandUnoRoom(roomId: string, profileId: string, command: UnoRoomCommand): Promise<RoomResult> {
   const hash = createHash("sha256").update(JSON.stringify({ expectedRevision: command.expectedRevision, matchNumber: command.matchNumber, roundNumber: command.roundNumber, turnId: command.turnId, action: command.action })).digest("hex");
   for (let attempt = 0; attempt < RETRIES; attempt += 1) {
     const room = await readRoom(roomId);
