@@ -29,6 +29,7 @@ export type BookingServiceStatus =
   | "FAILED";
 export type BookingServiceResult = {
   status: BookingServiceStatus;
+  acceptanceEnabled?: boolean;
   bookingId?: string;
   activityId?: string;
   customerProfileId?: string;
@@ -131,6 +132,9 @@ export async function saveBookingSettingsInDatabase(
     ["CANCELLED", "ENDED"].includes(merchant.bookingSettings.activity.status)
   )
     return { status: "CLOSED" };
+  const enabled = merchant.bookingSettings && !input.enabledChanged
+    ? merchant.bookingSettings.enabled
+    : input.enabled;
   const activityData = {
     title: input.title.trim(),
     description: input.description.trim(),
@@ -140,7 +144,7 @@ export async function saveBookingSettingsInDatabase(
     address: merchant.address ?? "",
     latitude: merchant.latitude,
     longitude: merchant.longitude,
-    visibility: input.enabled ? "PUBLIC" as const : "PRIVATE" as const,
+    visibility: enabled ? "PUBLIC" as const : "PRIVATE" as const,
   };
   const activity = merchant.bookingSettings
     ? await tx.activity.update({
@@ -166,7 +170,7 @@ export async function saveBookingSettingsInDatabase(
         select: { id: true },
       });
   const settingsData = {
-    enabled: input.enabled,
+    enabled,
     scheduleMode: input.scheduleMode,
     startDate: parseBookingDate(input.startDate)!,
     endDate: input.endDate ? parseBookingDate(input.endDate) : null,
@@ -193,7 +197,7 @@ export async function saveBookingSettingsInDatabase(
       },
     });
   }
-  return { status: "SAVED", activityId: activity.id };
+  return { status: "SAVED", activityId: activity.id, acceptanceEnabled: enabled };
 }
 
 export function setBookingAcceptance(input: {

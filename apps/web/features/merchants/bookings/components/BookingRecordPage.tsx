@@ -141,7 +141,7 @@ export function BookingRecordPage({
           </div>
         ) : null}
       </dl>
-      {!embedded ? (
+      {!embedded && booking.canViewSpace ? (
         <Link
           className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           href={getLocalizedActivityDetailPath(locale, booking.activityId)}

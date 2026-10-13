@@ -82,6 +82,7 @@ function state(
     alreadyBooked: result.status === "ALREADY_BOOKED",
     bookingId: result.bookingId,
     activityId: result.activityId,
+    acceptanceEnabled: result.acceptanceEnabled,
   };
 }
 
@@ -149,6 +150,7 @@ export async function saveBookingSettingsAction(
       description: field(data, "description"),
       coverImageUrl: field(data, "coverImageUrl"),
       enabled: ["true", "on", "1"].includes(field(data, "enabled")),
+      enabledChanged: field(data, "enabledChanged") === "true",
       scheduleMode: field(data, "scheduleMode") as BookingScheduleMode,
       startDate: field(data, "startDate"),
       endDate: field(data, "endDate") || null,

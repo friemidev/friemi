@@ -31,6 +31,7 @@ export type BookingRecord = {
   id: string;
   settingsId: string;
   activityId: string;
+  canViewSpace: boolean;
   date: string;
   partySize: number;
   contactName: string;

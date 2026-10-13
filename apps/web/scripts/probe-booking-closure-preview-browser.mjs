@@ -101,6 +101,11 @@ try {
   browser = await chromium.launch({ headless: true });
   const ownerPage = await signIn(owner);
   const guestPage = await signIn(guest);
+  const oldSettingsPage = await ownerPage.context().newPage();
+  oldSettingsPage.setDefaultTimeout(25_000);
+  await oldSettingsPage.goto(`${origin}/zh-CN/profile/store/bookings/settings`);
+  await oldSettingsPage.getByLabel("接收新预约", { exact: false }).waitFor();
+  assert.equal(await oldSettingsPage.getByLabel("接收新预约", { exact: false }).isChecked(), true);
 
   step = "close bookings with a customer form already open";
   await prepareBooking(guestPage);
@@ -118,6 +123,40 @@ try {
   await guestPage.getByRole("button", { name: "提交预约", exact: true }).click();
   await guestPage.getByRole("alert").waitFor();
   assert.equal(await prisma.merchantBookingReservation.count({ where: { settingsId } }), 1);
+
+  step = "closed reservation details avoid an unavailable meetup link";
+  await guestPage.goto(`${origin}/zh-CN/profile/bookings/${reservation.id}`);
+  await guestPage.getByRole("heading", { name: "预约详情", exact: true }).waitFor();
+  const closedSpaceLinks = await guestPage.getByRole("link", { name: "查看长期聚吧", exact: true }).count();
+  console.log("Meetup links on a closed reservation:", closedSpaceLinks);
+  const closedPublicPage = await guestPage.request.get(`${origin}/zh-CN/lobby/${activityId}`);
+  assert.equal((await closedPublicPage.text()).includes('id="booking-contact-phone"'), false,
+    "A closed store cannot expose its public booking form");
+
+  step = "saving a stale settings form preserves the closed booking status";
+  await oldSettingsPage.locator("#booking-end").fill(newDate);
+  await oldSettingsPage.getByRole("button", { name: "保存设置", exact: true }).click();
+  await oldSettingsPage.getByRole("status").getByText("设置已保存", { exact: true }).waitFor();
+  const savedWhileClosed = await prisma.merchantBookingSettings.findUniqueOrThrow({
+    where: { id: settingsId }, include: { activity: true },
+  });
+  assert.equal(savedWhileClosed.enabled, false, "Saving an unchanged opening switch must not reopen bookings from an old tab");
+  assert.equal(savedWhileClosed.activity.visibility, "PRIVATE");
+  assert.equal(savedWhileClosed.endDate.toISOString().slice(0, 10), newDate);
+  assert.equal(await oldSettingsPage.getByLabel("接收新预约", { exact: false }).isChecked(), false);
+  assert.equal(closedSpaceLinks, 0);
+  assert.equal(await oldSettingsPage.getByRole("link", { name: "查看长期聚吧", exact: true }).count(), 0);
+
+  step = "an explicitly changed settings switch can still reopen bookings";
+  await oldSettingsPage.getByLabel("接收新预约", { exact: false }).check();
+  await oldSettingsPage.getByRole("button", { name: "保存设置", exact: true }).click();
+  await oldSettingsPage.getByRole("status").getByText("设置已保存", { exact: true }).waitFor();
+  assert.equal((await prisma.merchantBookingSettings.findUniqueOrThrow({ where: { id: settingsId } })).enabled, true);
+  await oldSettingsPage.getByRole("link", { name: "查看长期聚吧", exact: true }).waitFor();
+  await ownerPage.reload();
+  await ownerPage.getByRole("button", { name: "关闭预约", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "确认关闭", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "重新开启预约", exact: true }).waitFor();
 
   step = "process an existing reservation while closed";
   await ownerPage.goto(`${origin}/zh-CN/profile/store/bookings/reservations/${reservation.id}`);
@@ -144,7 +183,7 @@ try {
   await ownerPage.getByRole("button", { name: "关闭预约", exact: true }).waitFor();
   await checkLayout(ownerPage);
   await ownerPage.screenshot({ path: `${output}/reopened-desktop.png`, fullPage: true });
-  console.log("PASS booking closure: stale form blocked, existing reservation accepted, reopening resumes new bookings, mobile/desktop layout checked");
+  console.log("PASS booking closure: stale customer and settings forms guarded, closed public links hidden, existing reservation accepted, reopening resumes new bookings, mobile/desktop layout checked");
 } catch (error) {
   console.error(`FAIL booking closure at ${step}:`, error);
   process.exitCode = 1;
