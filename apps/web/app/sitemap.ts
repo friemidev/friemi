@@ -19,6 +19,7 @@ const staticLocalePaths = [
   "/game-tools/draw-guess",
   "/game-tools/uno",
   "/game-tools/dice",
+  "/game-tools/dice/online",
   "/game-tools/werewolf",
   "/game-tools/avalon",
   "/privacy",
