@@ -366,6 +366,7 @@ test("editing a schedule reuses its permanent meetup and leaves reservation hist
   const result = await saveBookingSettingsInDatabase(db, {
     actorProfileId: "owner",
     enabled: false,
+    enabledChanged: true,
     scheduleMode: "WEEKLY",
     startDate: "2050-01-01",
     endDate: null,
@@ -380,6 +381,35 @@ test("editing a schedule reuses its permanent meetup and leaves reservation hist
   assert.equal(activityUpdates.length, 1);
   assert.equal(settingUpdates.length, 1);
 });
+
+for (const scenario of [
+  { label: "an old open form keeps newly closed bookings closed", current: false, submitted: true, touched: false, expected: false },
+  { label: "an old closed form preserves bookings reopened elsewhere", current: true, submitted: false, touched: false, expected: true },
+  { label: "an explicitly changed switch can reopen bookings", current: false, submitted: true, touched: true, expected: true },
+]) {
+  test(scenario.label, async () => {
+    let savedEnabled: unknown;
+    let savedVisibility: unknown;
+    const db = {
+      merchant: { findFirst: async () => ({ ...merchant, bookingSettings: { ...settings, enabled: scenario.current } }) },
+      activity: { update: async ({ data }: { data: Record<string, unknown> }) => {
+        savedVisibility = data.visibility;
+        return { id: "activity" };
+      } },
+      merchantBookingSettings: { update: async ({ data }: { data: Record<string, unknown> }) => {
+        savedEnabled = data.enabled;
+      } },
+    } as unknown as Prisma.TransactionClient;
+    const result = await saveBookingSettingsInDatabase(db, {
+      actorProfileId: "owner", enabled: scenario.submitted, enabledChanged: scenario.touched,
+      scheduleMode: "DAILY", startDate: "2050-01-01", endDate: null,
+      weekdays: [], specificDates: [], closedDates: [], title: "Updated meetup", description: "",
+    });
+    assert.equal(savedEnabled, scenario.expected);
+    assert.equal(savedVisibility, scenario.expected ? "PUBLIC" : "PRIVATE");
+    assert.equal(result.acceptanceEnabled, scenario.expected);
+  });
+}
 
 test("an owner creates one persistent meetup without a separate admin grant", async () => {
   const activities: Array<{ data: Record<string, unknown> }> = [];

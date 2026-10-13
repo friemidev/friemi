@@ -24,6 +24,7 @@ export const dynamic = "force-dynamic";
 type AdminMerchantsPageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{
+    archived?: string | string[];
     page?: string | string[];
     q?: string | string[];
     ticket?: string | string[];
@@ -50,6 +51,8 @@ export default async function AdminMerchantsPage({
     );
   }
   const rawSearch = Array.isArray(query.q) ? query.q[0] : query.q;
+  const rawArchived = Array.isArray(query.archived) ? query.archived[0] : query.archived;
+  const itemArchived = rawArchived === "1";
   const itemSearch = rawSearch?.trim().slice(0, 120) ?? "";
   const rawPage = Array.isArray(query.page) ? query.page[0] : query.page;
   const itemPage = Math.max(
@@ -103,6 +106,7 @@ export default async function AdminMerchantsPage({
 
       {view === "items" ? (
         <AdminInventoryPanel
+          archived={itemArchived}
           locale={locale}
           page={itemPage}
           query={itemSearch}

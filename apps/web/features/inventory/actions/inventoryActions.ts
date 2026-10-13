@@ -13,6 +13,7 @@ import {
   giftTicketByFriemiCode,
   issueTicketBatch,
   setTicketGiftable,
+  setTicketDefinitionArchived,
   updateInventoryDefinitionImage,
 } from "../services/inventoryService";
 import { setTicketMerchant } from "../services/ticketAccessService";
@@ -59,6 +60,7 @@ export type IssueTicketState = {
     | "INVALID"
     | "NOT_FOUND"
     | "SOLD_OUT"
+    | "ARCHIVED"
     | "FAILED";
 };
 
@@ -79,6 +81,42 @@ export type GiftTicketState = {
 export type SetTicketGiftableState = {
   status?: "UPDATED" | "FORBIDDEN" | "INVALID" | "FAILED";
 };
+
+export type SetTicketArchivedState = {
+  status?: "ARCHIVED" | "RESTORED" | "FORBIDDEN" | "INVALID" | "FAILED";
+};
+
+export async function setTicketArchivedAction(
+  _previousState: SetTicketArchivedState,
+  formData: FormData,
+): Promise<SetTicketArchivedState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  if (!(await isCurrentUserAdmin())) return { status: "FORBIDDEN" };
+  const definitionId = getString(formData, "definitionId");
+  const archived = getString(formData, "archived");
+  if (!definitionId || (archived !== "true" && archived !== "false"))
+    return { status: "INVALID" };
+  const actor = await ensureCurrentUserProfile(
+    locale,
+    `/admin/items/${definitionId}/settings`,
+  );
+  if (actor.status !== "ACTIVE") return { status: "FORBIDDEN" };
+  try {
+    const changed = await setTicketDefinitionArchived({
+      definitionId,
+      archived: archived === "true",
+    });
+    if (!changed) return { status: "INVALID" };
+    for (const language of ["zh-CN", "en", "fr"]) {
+      revalidatePath(withLocale(language, "/admin/merchants"));
+      revalidatePath(withLocale(language, `/admin/items/${definitionId}`), "layout");
+    }
+    return { status: archived === "true" ? "ARCHIVED" : "RESTORED" };
+  } catch (error) {
+    console.error("Failed to archive ticket definition", error);
+    return { status: "FAILED" };
+  }
+}
 
 export type UpdateTicketImageState = {
   status?: "UPDATED" | "FORBIDDEN" | "INVALID" | "FAILED";

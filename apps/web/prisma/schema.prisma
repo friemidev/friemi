@@ -1205,6 +1205,7 @@ model Coupon {
   claimedCount           Int                    @default(0)
   publishedAt            DateTime?
   unlistedAt             DateTime?
+  archivedAt             DateTime?
   sourceRedemptionItemId String?                @unique
   sourceRedemptionItem   CouponWalletItem?      @relation("PostRedemptionGiftSource", fields: [sourceRedemptionItemId], references: [id], onDelete: SetNull)
   claimCodes             CouponClaimCode[]
@@ -1215,6 +1216,7 @@ model Coupon {
 
   @@unique([merchantId, slug])
   @@index([merchantId, campaignStatus, createdAt])
+  @@index([merchantId, archivedAt, createdAt])
   @@index([templateId, campaignStatus])
   @@index([expiresAt])
 }
@@ -1472,6 +1474,7 @@ model InventoryItemDefinition {
   title              String                @db.VarChar(120)
   description        String?               @db.Text
   imageUrl           String?               @db.Text
+  archivedAt         DateTime?
   isGiftable         Boolean               @default(false)
   totalSupply        Int
   issuedCount        Int                   @default(0)
@@ -1488,6 +1491,7 @@ model InventoryItemDefinition {
   updatedAt          DateTime              @updatedAt
 
   @@index([kind, createdAt])
+  @@index([kind, archivedAt, createdAt])
   @@index([merchantId, kind, createdAt])
 }
 

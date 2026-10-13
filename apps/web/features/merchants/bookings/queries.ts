@@ -39,7 +39,11 @@ const recordSelect = {
   createdAt: true,
   profile: { select: { nickname: true } },
   settings: {
-    select: { activityId: true, merchant: { select: merchantSelect } },
+    select: {
+      activityId: true,
+      activity: { select: { visibility: true } },
+      merchant: { select: merchantSelect },
+    },
   },
 } as const satisfies Prisma.MerchantBookingReservationSelect;
 type RecordRow = Prisma.MerchantBookingReservationGetPayload<{
@@ -73,6 +77,7 @@ function recordView(record: RecordRow): BookingRecord {
     id: record.id,
     settingsId: record.settingsId,
     activityId: record.settings.activityId,
+    canViewSpace: record.settings.activity.visibility === "PUBLIC",
     date: record.date.toISOString().slice(0, 10),
     partySize: record.partySize,
     contactName: record.contactName,
