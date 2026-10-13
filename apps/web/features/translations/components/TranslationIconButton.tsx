@@ -5,13 +5,11 @@ import { cn } from "@/lib/utils";
 
 export function TranslationIconButton({
   active = false,
-  expanded,
   label,
   loading = false,
   onClick,
 }: {
   active?: boolean;
-  expanded?: boolean;
   label: string;
   loading?: boolean;
   onClick: () => void;
@@ -22,10 +20,10 @@ export function TranslationIconButton({
       aria-label={label}
       title={label}
       aria-busy={loading}
-      aria-expanded={expanded}
+      aria-pressed={active}
       disabled={loading}
       onClick={onClick}
-      className="group -mx-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 disabled:cursor-wait disabled:opacity-60"
+      className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 disabled:cursor-wait disabled:opacity-60"
     >
       <span
         className={cn(

@@ -121,83 +121,98 @@ function PlanetMessageBubble({
           </button>
         </div>
       ) : null}
-      <div
-        className={cn(
-          "relative inline-block min-w-0 max-w-full select-none rounded-2xl px-3 py-2 text-left text-sm leading-5 [-webkit-touch-callout:none]",
-          isViewer
-            ? "rounded-tr-sm bg-[#155F40] text-white after:absolute after:-right-1 after:top-1.5 after:border-b-[5px] after:border-l-[6px] after:border-t-[5px] after:border-b-transparent after:border-l-[#155F40] after:border-t-transparent"
-            : "rounded-tl-sm bg-[#F0F1ED] text-[#171917] after:absolute after:-left-1 after:top-1.5 after:border-b-[5px] after:border-r-[6px] after:border-t-[5px] after:border-b-transparent after:border-r-[#F0F1ED] after:border-t-transparent",
-        )}
-        data-planet-message-id={message.id}
-        onClick={() => {
-          if (suppressNextClickRef.current) {
-            suppressNextClickRef.current = false;
-            return;
-          }
-          setActionOpen(false);
-        }}
-        onContextMenu={(event) => {
-          event.preventDefault();
-          setActionOpen(true);
-        }}
-        onPointerCancel={() => {
-          clearLongPressTimer();
-          pointerStartRef.current = null;
-        }}
-        onPointerDown={(event) => {
-          if (
-            event.button !== 0 ||
-            (event.target instanceof Element &&
-              event.target.closest("[data-chat-image-preview='true']"))
-          ) {
-            return;
-          }
-
-          pointerStartRef.current = { x: event.clientX, y: event.clientY };
-          clearLongPressTimer();
-          longPressTimerRef.current = window.setTimeout(() => {
-            longPressTimerRef.current = null;
-            suppressNextClickRef.current = true;
-            setActionOpen(true);
-          }, 450);
-        }}
-        onPointerMove={(event) => {
-          const start = pointerStartRef.current;
-          if (
-            start &&
-            (Math.abs(event.clientX - start.x) > 8 ||
-              Math.abs(event.clientY - start.y) > 8)
-          ) {
-            clearLongPressTimer();
-            pointerStartRef.current = null;
-          }
-        }}
-        onPointerUp={() => {
-          clearLongPressTimer();
-          pointerStartRef.current = null;
-        }}
+      <ManualMessageTranslation
+        entityId={message.id}
+        entityType="planet_message"
+        locale={locale}
+        text={message.content}
+        align={isViewer ? "end" : "start"}
+        enabled={Boolean(message.content.trim())}
       >
-        {message.imageUrls.length ? (
-          <ChatImagePreviewGrid
-            imageLabel={imageCopy.image}
-            imageUrls={message.imageUrls}
-            resetLabel={imageCopy.reset}
-            saveLabel={imageCopy.save}
-            savedLabel={imageCopy.saving}
-          />
-        ) : null}
-        {message.content.trim() ? (
-          <p className={message.imageUrls.length ? "px-1 pt-2" : ""}>
-            <ChatMentionText
-              content={message.content}
-              mentionClassName={isViewer ? "text-[#BDF3D2]" : "text-[#7A2FBE]"}
-              mentionLabels={message.mentionLabels}
-              mentionsEveryone={message.mentionsEveryone}
-            />
-          </p>
-        ) : null}
-      </div>
-      {message.content.trim() ? <ManualMessageTranslation entityId={message.id} entityType="planet_message" locale={locale} text={message.content} align={isViewer ? "end" : "start"} /> : null}
+        {(displayText) => (
+          <div
+            className={cn(
+              "relative inline-block min-w-0 max-w-full select-none rounded-2xl px-3 py-2 text-left text-sm leading-5 [-webkit-touch-callout:none]",
+              isViewer
+                ? "rounded-tr-sm bg-[#155F40] text-white after:absolute after:-right-1 after:top-1.5 after:border-b-[5px] after:border-l-[6px] after:border-t-[5px] after:border-b-transparent after:border-l-[#155F40] after:border-t-transparent"
+                : "rounded-tl-sm bg-[#F0F1ED] text-[#171917] after:absolute after:-left-1 after:top-1.5 after:border-b-[5px] after:border-r-[6px] after:border-t-[5px] after:border-b-transparent after:border-r-[#F0F1ED] after:border-t-transparent",
+            )}
+            data-planet-message-id={message.id}
+            onClick={() => {
+              if (suppressNextClickRef.current) {
+                suppressNextClickRef.current = false;
+                return;
+              }
+              setActionOpen(false);
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setActionOpen(true);
+            }}
+            onPointerCancel={() => {
+              clearLongPressTimer();
+              pointerStartRef.current = null;
+            }}
+            onPointerDown={(event) => {
+              if (
+                event.button !== 0 ||
+                (event.target instanceof Element &&
+                  event.target.closest("[data-chat-image-preview='true']"))
+              ) {
+                return;
+              }
+
+              pointerStartRef.current = { x: event.clientX, y: event.clientY };
+              clearLongPressTimer();
+              longPressTimerRef.current = window.setTimeout(() => {
+                longPressTimerRef.current = null;
+                suppressNextClickRef.current = true;
+                setActionOpen(true);
+              }, 450);
+            }}
+            onPointerMove={(event) => {
+              const start = pointerStartRef.current;
+              if (
+                start &&
+                (Math.abs(event.clientX - start.x) > 8 ||
+                  Math.abs(event.clientY - start.y) > 8)
+              ) {
+                clearLongPressTimer();
+                pointerStartRef.current = null;
+              }
+            }}
+            onPointerUp={() => {
+              clearLongPressTimer();
+              pointerStartRef.current = null;
+            }}
+          >
+            {message.imageUrls.length ? (
+              <ChatImagePreviewGrid
+                imageLabel={imageCopy.image}
+                imageUrls={message.imageUrls}
+                resetLabel={imageCopy.reset}
+                saveLabel={imageCopy.save}
+                savedLabel={imageCopy.saving}
+              />
+            ) : null}
+            {message.content.trim() ? (
+              <p
+                aria-live="polite"
+                className={message.imageUrls.length ? "px-1 pt-2" : ""}
+              >
+                <ChatMentionText
+                  content={displayText}
+                  mentionClassName={
+                    isViewer ? "text-[#BDF3D2]" : "text-[#7A2FBE]"
+                  }
+                  mentionLabels={message.mentionLabels}
+                  mentionsEveryone={message.mentionsEveryone}
+                />
+              </p>
+            ) : null}
+          </div>
+        )}
+      </ManualMessageTranslation>
       {message.replyTo ? (
         <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
       ) : null}
