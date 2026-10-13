@@ -27,6 +27,8 @@ import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { sendActivityRoomWelcome } from "@/features/activity-room-chat/services/activityRoomWelcome";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -498,8 +500,8 @@ export async function joinActivityAction(
             requiresApproval: activity.requiresApproval,
           });
 
-          if (existingParticipation) {
-            await tx.activityParticipant.update({
+          const participant = existingParticipation
+            ? await tx.activityParticipant.update({
               where: {
                 id: existingParticipation.id,
               },
@@ -509,9 +511,8 @@ export async function joinActivityAction(
                 joinedAt: new Date(),
                 cancelledAt: null,
               },
-            });
-          } else {
-            await tx.activityParticipant.create({
+            })
+            : await tx.activityParticipant.create({
               data: {
                 activityId: activity.id,
                 userProfileId: profile.id,
@@ -519,7 +520,11 @@ export async function joinActivityAction(
                 message,
               },
             });
-          }
+          const welcome = await sendActivityRoomWelcome({
+            db: tx,
+            participant,
+            previousStatus: existingParticipation?.status,
+          });
 
           return {
             ok: true as const,
@@ -527,6 +532,7 @@ export async function joinActivityAction(
             organizerId: activity.organizerId,
             participantStatus: nextStatus,
             requiresApproval: activity.requiresApproval,
+            welcome,
           };
         },
         {
@@ -555,6 +561,14 @@ export async function joinActivityAction(
           message: rawInput.message,
         },
       };
+    }
+
+    if (joinResult.welcome) {
+      scheduleChatRealtimeChange({
+        scope: "activity",
+        subjectKey: joinResult.activityId,
+        profileIds: joinResult.welcome.profileIds,
+      });
     }
 
     await createNotification(prisma, {

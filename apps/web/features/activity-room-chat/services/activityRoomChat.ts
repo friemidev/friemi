@@ -24,6 +24,12 @@ import { normalizeChatMentionProfileIds } from "@/features/chat/utils/chatMentio
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import { isChatRosterEntryHidden } from "@/features/chat/utils/chatRosterVisibility";
+import {
+  activityRoomAssistantAvatar,
+  activityRoomAssistantId,
+  defaultActivityRoomWelcomeTemplate,
+  getActivityRoomAssistantCopy,
+} from "../assistant";
 
 export const activityRoomMessageMaxLength = 500;
 export const activityRoomMessageImageMaxCount = 4;
@@ -69,6 +75,7 @@ export type ActivityRoomMessageViewModel = {
   createdAt: string;
   isDeleted: boolean;
   isMine: boolean;
+  isAssistant?: boolean;
   imageUrls: string[];
   mentionedProfileIds: string[];
   mentionLabels: string[];
@@ -100,6 +107,7 @@ export type ActivityRoomChatActivityViewModel = {
   status: ActivityStatus;
   title: string | null;
   type: ActivityType;
+  welcomeTemplate?: string;
 };
 
 export type ActivityRoomAnnouncementViewModel = {
@@ -324,6 +332,7 @@ const messageSelect = {
   replyToBody: true,
   replyToHasImage: true,
   senderId: true,
+  assistantWelcomeKey: true,
   updatedAt: true,
   sender: {
     select: {
@@ -345,6 +354,7 @@ const activityRoomPageSelect = {
   status: true,
   title: true,
   type: true,
+  roomWelcomeTemplate: true,
   visibility: true,
   announcements: {
     orderBy: {
@@ -431,6 +441,7 @@ type ActivityRoomActivityForView = {
   status: ActivityStatus;
   title: string;
   type: ActivityType;
+  roomWelcomeTemplate: string | null;
   visibility: ActivityVisibility;
 };
 
@@ -626,12 +637,18 @@ function mapActivityRoomMessage(
         : null,
     isDeleted,
     isMine: message.senderId === viewerProfileId,
-    sender: {
+    isAssistant: Boolean(message.assistantWelcomeKey),
+    sender: message.sender ? {
       id: message.sender.id,
       avatarUrl: message.sender.avatarUrl,
       friendCode: message.sender.friendCode,
       nickname:
         message.sender.nickname.trim() || message.sender.friendCode || "Friemi",
+    } : {
+      id: activityRoomAssistantId,
+      avatarUrl: activityRoomAssistantAvatar,
+      friendCode: null,
+      nickname: getActivityRoomAssistantCopy("zh-CN").name,
     },
   };
 }
@@ -698,6 +715,10 @@ function mapActivityRoomActivity(
     status: activity.status,
     title: canShowTitle ? activity.title : null,
     type: activity.type,
+    welcomeTemplate:
+      policy.role === "ORGANIZER" || policy.role === "CO_MANAGER"
+        ? activity.roomWelcomeTemplate ?? defaultActivityRoomWelcomeTemplate
+        : undefined,
   };
 }
 
@@ -754,9 +775,7 @@ async function getActivityRoomUnreadCountMap(
     return {
       activityId: room.id,
       deletedAt: null,
-      senderId: {
-        not: viewerProfileId,
-      },
+      OR: [{ senderId: { not: viewerProfileId } }, { senderId: null }],
       ...(lastReadAt
         ? {
             createdAt: {
@@ -844,7 +863,7 @@ async function getActivityRoomUnreadMentionMap(
         : "ALL",
       messageId: message.id,
       senderName:
-        message.sender.nickname.trim() || message.sender.friendCode || "Friemi",
+        message.sender?.nickname.trim() || message.sender?.friendCode || getActivityRoomAssistantCopy("zh-CN").name,
     });
   }
 
@@ -872,11 +891,11 @@ function mapActivityRoomRosterItem(
           body: lastMessage.body,
           createdAt: lastMessage.createdAt.toISOString(),
           isMine: lastMessage.senderId === viewerProfileId,
-          senderId: lastMessage.senderId,
+          senderId: lastMessage.senderId ?? activityRoomAssistantId,
           senderName:
-            lastMessage.sender.nickname.trim() ||
-            lastMessage.sender.friendCode ||
-            "Friemi",
+            lastMessage.sender?.nickname.trim() ||
+            lastMessage.sender?.friendCode ||
+            getActivityRoomAssistantCopy("zh-CN").name,
         }
       : null,
     startAt: room.startAt.toISOString(),
@@ -1054,7 +1073,7 @@ export function canDeleteActivityRoomMessage({
   actorId: string;
   isCoManager?: boolean;
   isOrganizer?: boolean;
-  senderId: string;
+  senderId: string | null;
 }) {
   return actorId === senderId || isOrganizer || isCoManager;
 }
@@ -1751,9 +1770,7 @@ export async function getActivityRoomUnreadState(
     where: {
       activityId,
       deletedAt: null,
-      senderId: {
-        not: viewerProfileId,
-      },
+      OR: [{ senderId: { not: viewerProfileId } }, { senderId: null }],
       ...(readState?.lastReadAt
         ? {
             createdAt: {
@@ -1895,9 +1912,9 @@ export async function sendActivityRoomMessage({
         replyToHasImage: Boolean(replySource?.imageUrls.length),
         replyToMessageId: replySource?.id ?? null,
         replyToSenderName: replySource
-          ? replySource.sender.nickname.trim() ||
-            replySource.sender.friendCode ||
-            "Friemi"
+          ? replySource.sender?.nickname.trim() ||
+            replySource.sender?.friendCode ||
+            getActivityRoomAssistantCopy("zh-CN").name
           : null,
         senderId,
       },

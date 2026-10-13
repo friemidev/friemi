@@ -836,6 +836,7 @@ model Activity {
   coManagers        ActivityCoManager[]
   managementLogs    ActivityManagementLog[]
   roomMessages      ActivityRoomMessage[]
+  roomWelcomeTemplate String?                    @db.Text
   roomReadStates    ActivityRoomReadState[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
@@ -891,7 +892,8 @@ model ActivityManagementLog {
 model ActivityRoomMessage {
   id                  String       @id @default(cuid())
   activityId          String
-  senderId            String
+  senderId            String?
+  assistantWelcomeKey String?      @unique
   body                String       @db.Text
   imageUrls           String[]     @default([])
   mentionedProfileIds String[]     @default([])
@@ -904,7 +906,7 @@ model ActivityRoomMessage {
   deletedAt           DateTime?
   deletedById         String?
   activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  sender              UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  sender              UserProfile? @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   deletedBy           UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt

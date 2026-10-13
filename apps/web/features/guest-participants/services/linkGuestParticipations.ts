@@ -5,6 +5,7 @@ import {
   normalizeGuestWechatId,
 } from "../utils/contactIdentity";
 import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
+import { sendActivityRoomWelcome } from "@/features/activity-room-chat/services/activityRoomWelcome";
 
 type PrismaTx = Prisma.TransactionClient;
 
@@ -87,7 +88,7 @@ export async function countGuestLinkCandidatesForProfile(
 
 async function linkGuestParticipation(
   tx: PrismaTx,
-  guest: {
+  initialGuest: {
     activityId: string;
     id: string;
     linkedParticipantId: string | null;
@@ -96,9 +97,30 @@ async function linkGuestParticipation(
   },
   profileId: string,
 ) {
-  if (guest.linkedParticipantId) {
+  if (initialGuest.linkedParticipantId) {
     return null;
   }
+
+  // Claim and lock the guest row before activating the same membership twice.
+  const claimed = await tx.guestActivityParticipant.updateMany({
+    where: {
+      id: initialGuest.id,
+      linkedParticipantId: null,
+      status: { in: linkableGuestStatuses },
+    },
+    data: { linkedAt: new Date() },
+  });
+  if (claimed.count !== 1) return null;
+  const guest = await tx.guestActivityParticipant.findUniqueOrThrow({
+    where: { id: initialGuest.id },
+    select: {
+      id: true,
+      activityId: true,
+      linkedParticipantId: true,
+      status: true,
+      message: true,
+    },
+  });
 
   const existingParticipation = await tx.activityParticipant.findUnique({
     where: {
@@ -110,6 +132,7 @@ async function linkGuestParticipation(
     select: {
       id: true,
       status: true,
+      joinedAt: true,
     },
   });
 
@@ -131,6 +154,7 @@ async function linkGuestParticipation(
             select: {
               id: true,
               status: true,
+              joinedAt: true,
             },
           })
         : await tx.activityParticipant.create({
@@ -143,6 +167,7 @@ async function linkGuestParticipation(
             select: {
               id: true,
               status: true,
+              joinedAt: true,
             },
           });
 
@@ -183,6 +208,15 @@ async function linkGuestParticipation(
 
   return {
     activityId: guest.activityId,
+    welcome: await sendActivityRoomWelcome({
+      db: tx,
+      participant: {
+        ...participant,
+        activityId: guest.activityId,
+        userProfileId: profileId,
+      },
+      previousStatus: existingParticipation?.status,
+    }),
   };
 }
 
@@ -204,7 +238,11 @@ export async function linkGuestParticipationsForProfile(
   const matchWhere = getGuestMatchWhere(profile);
 
   if (matchWhere.length === 0) {
-    return { activityIds: [], linked: 0 };
+    return {
+      activityIds: [],
+      linked: 0,
+      welcomeChanges: [] as { activityId: string; profileIds: string[] }[],
+    };
   }
 
   const guestParticipations =
@@ -229,6 +267,7 @@ export async function linkGuestParticipationsForProfile(
 
   let linked = 0;
   const linkedActivityIds = new Set<string>();
+  const welcomeAudiences = new Map<string, Set<string>>();
 
   try {
     for (const guest of guestParticipations) {
@@ -239,6 +278,15 @@ export async function linkGuestParticipationsForProfile(
       if (linkedParticipation) {
         linked += 1;
         linkedActivityIds.add(linkedParticipation.activityId);
+        if (linkedParticipation.welcome) {
+          const audience =
+            welcomeAudiences.get(linkedParticipation.activityId) ??
+            new Set<string>();
+          linkedParticipation.welcome.profileIds.forEach((id) =>
+            audience.add(id),
+          );
+          welcomeAudiences.set(linkedParticipation.activityId, audience);
+        }
       }
     }
   } catch (error) {
@@ -253,6 +301,10 @@ export async function linkGuestParticipationsForProfile(
   const result = {
     activityIds: [...linkedActivityIds],
     linked,
+    welcomeChanges: Array.from(welcomeAudiences, ([activityId, profileIds]) => ({
+      activityId,
+      profileIds: Array.from(profileIds),
+    })),
   };
 
   await Promise.allSettled(
