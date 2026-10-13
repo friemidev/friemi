@@ -14,6 +14,7 @@ import {
   type ChatCursorResponse,
 } from "./chatCursorSync";
 import { useChatRealtime } from "./useChatRealtime";
+import { rememberChatRosterVisit } from "./chatRosterReturn";
 
 type UseChatCursorSyncInput<TMessage extends ChatCursorMessage> = {
   endpoint: string;
@@ -38,6 +39,10 @@ export function useChatCursorSync<TMessage extends ChatCursorMessage>({
   );
   const inFlightRef = useRef(false);
   const stoppedRef = useRef(false);
+
+  useEffect(() => {
+    rememberChatRosterVisit(scope);
+  }, [scope, subjectKey]);
 
   useEffect(() => {
     messagesRef.current = messages;
