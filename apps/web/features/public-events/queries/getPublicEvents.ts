@@ -1,3 +1,5 @@
+import { localizeContentItems } from "@/features/translations/services/localizedContent";
+import { getContentRequestLocale } from "@/features/translations/services/requestLocale";
 import { prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -234,7 +236,7 @@ export async function getPublicEvents(
   });
 
   return attachPublicEventFavoriteStates(
-    publicEvents.map(getPublicEventCardViewModel),
+    await localizeContentItems(publicEvents.map(getPublicEventCardViewModel), await getContentRequestLocale(), "public_event"),
     options.viewerProfileId,
   );
 }

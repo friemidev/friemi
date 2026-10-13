@@ -1832,6 +1832,37 @@ model ContentTranslation {
   @@unique([entityType, entityId, field, locale, sourceHash])
   @@index([entityType, entityId, locale])
   @@index([locale, createdAt])
+  @@index([sourceHash, field, locale])
+}
+
+model ContentTranslationTask {
+  id             String   @id @default(cuid())
+  entityType     String
+  entityId       String
+  field          String
+  locale         String
+  sourceHash     String
+  sourceText     String   @db.Text
+  status         String   @default("PENDING")
+  lockToken      String?
+  lockedUntil    DateTime?
+  nextAttemptAt  DateTime @default(now())
+  attempts       Int      @default(0)
+  lastError      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([entityType, entityId, field, locale])
+  @@index([status, nextAttemptAt, lockedUntil])
+}
+
+model ContentTranslationBudget {
+  id             String   @id
+  usedCharacters Int      @default(0)
+  pausedUntil    DateTime?
+  pauseReason    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Notification {

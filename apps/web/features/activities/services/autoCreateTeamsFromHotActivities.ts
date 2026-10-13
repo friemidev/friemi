@@ -7,6 +7,7 @@ import {
   type PriceType,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 import {
   AUTO_CREATED_TEAM_CLAIM_WINDOW_HOURS,
   AUTO_CREATED_TEAM_DAILY_LIMIT,
@@ -312,7 +313,7 @@ async function createAutoTeamFromSourceActivity(input: {
   );
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const activeExisting = await tx.activity.findFirst({
         where: {
           publicEventId: input.sourceActivity.id,
@@ -400,6 +401,8 @@ async function createAutoTeamFromSourceActivity(input: {
         reason: null,
       };
     });
+    if (result.created && result.activityId) await scheduleGatheringTranslations(result.activityId);
+    return result;
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return {

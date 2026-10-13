@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { ActivityCategory, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 
 export type AdminActivityListItem = {
   id: string;
@@ -486,6 +487,7 @@ export async function createAdminActivity(data: AdminActivityInput) {
       _count: { select: { participants: true } },
     },
   });
+  await scheduleGatheringTranslations(activity.id);
   return serializeAdminActivity(activity);
 }
 
@@ -508,6 +510,7 @@ export async function updateAdminActivity(
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  await scheduleGatheringTranslations(activity.id);
   return serializeAdminActivity(activity);
 }
 

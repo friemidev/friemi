@@ -441,12 +441,13 @@ const copy = {
       },
     },
     translation: {
+      quotaPaused: "今日免费翻译额度已用完，请明天再试。",
       translate: "翻译",
       translateMainInfo: "翻译主要信息",
       translating: "翻译中...",
       showOriginal: "查看原文",
       showTranslation: "查看翻译",
-      translatedBy: "DeepL 翻译",
+      translatedBy: "自动翻译",
       failed: "暂时无法翻译，请稍后重试。",
       fields: {
         title: "标题",
@@ -1445,12 +1446,13 @@ const copy = {
       },
     },
     translation: {
+      quotaPaused: "Today’s free translation allowance is used up. Please try again tomorrow.",
       translate: "Translate",
       translateMainInfo: "Translate key info",
       translating: "Translating...",
       showOriginal: "View original",
       showTranslation: "View translation",
-      translatedBy: "Translated by DeepL",
+      translatedBy: "Automatic translation",
       failed: "Translation is unavailable right now. Try again later.",
       fields: {
         title: "Title",
@@ -2504,12 +2506,13 @@ const copy = {
       },
     },
     translation: {
+      quotaPaused: "Le quota gratuit de traduction est épuisé pour aujourd’hui. Réessayez demain.",
       translate: "Traduire",
       translateMainInfo: "Traduire les infos clés",
       translating: "Traduction...",
       showOriginal: "Voir l'original",
       showTranslation: "Voir la traduction",
-      translatedBy: "Traduit avec DeepL",
+      translatedBy: "Traduction automatique",
       failed: "Traduction indisponible pour le moment. Réessayez plus tard.",
       fields: {
         title: "Titre",
