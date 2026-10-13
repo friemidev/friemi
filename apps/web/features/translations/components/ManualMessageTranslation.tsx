@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { TranslationResult } from "../types";
@@ -19,6 +19,8 @@ export function ManualMessageTranslation(props: {
   locale: string;
   text: string;
   align?: "start" | "end";
+  enabled?: boolean;
+  children: (displayText: string) => ReactNode;
 }) {
   // A realtime edit or locale change discards the previously displayed result.
   return (
@@ -33,13 +35,18 @@ function MessageTranslationControl({
   entityId,
   entityType,
   locale,
+  text,
   align = "start",
+  enabled = true,
+  children,
 }: {
   entityId: string;
   entityType: MessageEntityType;
   locale: string;
   text: string;
   align?: "start" | "end";
+  enabled?: boolean;
+  children: (displayText: string) => ReactNode;
 }) {
   const t = getCopy(locale).translation;
   const [translation, setTranslation] = useState<TranslationResult | null>(
@@ -83,43 +90,38 @@ function MessageTranslationControl({
   const paused =
     error === "TRANSLATION_FREE_QUOTA_EXHAUSTED" ||
     error === "TRANSLATION_DAILY_LIMIT";
+  const translated = enabled && visible && translation !== null;
   return (
-    <div
-      className={cn("min-w-0 max-w-full", align === "end" && "text-right")}
-      data-message-translation
-    >
-      <TranslationIconButton
-        loading={loading}
-        active={visible}
-        expanded={visible}
-        label={
-          loading
-            ? t.translating
-            : translation
-              ? visible
-                ? t.showOriginal
-                : t.showTranslation
-              : t.translate
-        }
-        onClick={() => void translate()}
-      />
-      <div aria-live="polite" className="text-left">
-        {error ? (
-          <p className="pb-2 text-xs text-danger">
-            {paused ? t.quotaPaused : t.failed}
-          </p>
-        ) : null}
-        {visible && translation ? (
-          <div className="mb-2 border-l-2 border-meadow/40 pl-2 text-ink">
-            <p className="mb-1 text-[11px] font-medium text-ink/70">
-              {t.translatedBy}
-            </p>
-            <p className="whitespace-pre-wrap text-sm leading-6 [overflow-wrap:anywhere]">
-              {translation.translatedText}
-            </p>
-          </div>
+    <div className="min-w-0 max-w-full" data-message-translation>
+      <div
+        className={cn(
+          "flex min-w-0 max-w-full items-center gap-1",
+          align === "end" && "flex-row-reverse",
+        )}
+      >
+        {children(translated ? translation.translatedText : text)}
+        {enabled ? (
+          <TranslationIconButton
+            loading={loading}
+            active={translated}
+            label={
+              loading
+                ? t.translating
+                : translation
+                  ? translated
+                    ? t.showOriginal
+                    : t.showTranslation
+                  : t.translate
+            }
+            onClick={() => void translate()}
+          />
         ) : null}
       </div>
+      {enabled && error ? (
+        <p role="status" className="mt-1 text-xs text-danger">
+          {paused ? t.quotaPaused : t.failed}
+        </p>
+      ) : null}
     </div>
   );
 }

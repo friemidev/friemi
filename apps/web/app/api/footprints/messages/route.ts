@@ -48,7 +48,9 @@ export async function GET(request: Request) {
       planetsResult,
     ] = await Promise.all([
       shouldLoad("direct")
-        ? getDirectMessageFriendRoster(viewerProfileId)
+        ? getDirectMessageFriendRoster(viewerProfileId, {
+            includeActivitySignals: false,
+          })
             .then((friends) => ({ data: friends, error: null }))
             .catch((error: unknown) => {
               console.error("Failed to refresh direct message roster", error);

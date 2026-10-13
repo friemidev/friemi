@@ -229,9 +229,14 @@ export function ManualTranslationText({
     translation && !showOriginal ? translation.translatedText : text;
 
   return (
-    <div>
-      <p className={className}>{displayText}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium">
+    <div className={cn("min-w-0", className)}>
+      <div className="flex min-w-0 items-center gap-1">
+        <p
+          aria-live="polite"
+          className="min-w-0 [overflow-wrap:anywhere]"
+        >
+          {displayText}
+        </p>
         {translation ? (
           <TranslationIconButton
             active={!showOriginal}
@@ -245,10 +250,12 @@ export function ManualTranslationText({
             onClick={translateComment}
           />
         )}
-        {status === "error" ? (
-          <span className="text-red-600">{t.failed}</span>
-        ) : null}
       </div>
+      {status === "error" ? (
+        <p role="status" className="mt-1 text-xs text-danger">
+          {t.failed}
+        </p>
+      ) : null}
     </div>
   );
 }

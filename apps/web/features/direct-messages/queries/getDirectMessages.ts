@@ -634,6 +634,7 @@ export async function getDirectConversations(currentUserProfileId: string) {
 
 export async function getDirectMessageFriendRoster(
   currentUserProfileId: string,
+  { includeActivitySignals = true }: { includeActivitySignals?: boolean } = {},
 ) {
   const [followBuckets, conversations] = await Promise.all([
     getFollowRelationshipBuckets(currentUserProfileId),
@@ -693,20 +694,30 @@ export async function getDirectMessageFriendRoster(
             select: rosterProfileSelect,
           })
         : Promise.resolve([] as RosterProfileResult[]),
-      getFriendNearestActivitySignals({
-        friendIds: [
-          ...new Set([
-            ...followBuckets.mutualFollowIds,
-            ...followBuckets.followingOnlyIds,
-          ]),
-        ],
-        limitPerFriend: friendActivitySignalLimitPerFriend,
-        viewerProfileId: currentUserProfileId,
-      }).catch((error: unknown) => {
-        console.error("Failed to load mobile follow activity signals", error);
+      includeActivitySignals
+        ? getFriendNearestActivitySignals({
+            friendIds: [
+              ...new Set([
+                ...followBuckets.mutualFollowIds,
+                ...followBuckets.followingOnlyIds,
+              ]),
+            ],
+            limitPerFriend: friendActivitySignalLimitPerFriend,
+            viewerProfileId: currentUserProfileId,
+          }).catch((error: unknown) => {
+            console.error(
+              "Failed to load mobile follow activity signals",
+              error,
+            );
 
-        return new Map<string, DirectConversationActivitySignalViewModel[]>();
-      }),
+            return new Map<
+              string,
+              DirectConversationActivitySignalViewModel[]
+            >();
+          })
+        : Promise.resolve(
+            new Map<string, DirectConversationActivitySignalViewModel[]>(),
+          ),
       getProfileRemarkMap({
         ownerProfileId: currentUserProfileId,
         targetProfileIds: rosterProfileIds,
