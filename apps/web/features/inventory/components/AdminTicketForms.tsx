@@ -9,10 +9,12 @@ import {
   createTicketDefinitionAction,
   issueTicketBatchAction,
   setTicketGiftableAction,
+  setTicketArchivedAction,
   updateTicketImageAction,
   type CreateTicketDefinitionState,
   type IssueTicketState,
   type SetTicketGiftableState,
+  type SetTicketArchivedState,
   type UpdateTicketImageState,
 } from "../actions/inventoryActions";
 import { getAdminItemCopy } from "../adminItemCopy";
@@ -367,12 +369,74 @@ export function IssueTicketForm({
         >
           {state.status === "SOLD_OUT"
             ? copy.adminIssueNoStock
+            : state.status === "ARCHIVED"
+              ? getAdminItemCopy(locale).issue.archivedHint
             : state.status === "NOT_FOUND"
               ? copy.adminIssueNotFound
               : state.status === "INVALID"
                 ? copy.adminIssueInvalid
                 : copy.issueError}
         </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function TicketArchiveControl({
+  definitionId,
+  isArchived,
+  locale,
+}: {
+  definitionId: string;
+  isArchived: boolean;
+  locale: string;
+}) {
+  const copy = getAdminItemCopy(locale).settings;
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [state, action, pending] = useActionState<SetTicketArchivedState, FormData>(
+    setTicketArchivedAction,
+    {},
+  );
+  const archived = state.status === "ARCHIVED"
+    ? true
+    : state.status === "RESTORED"
+      ? false
+      : isArchived;
+  useEffect(() => {
+    if (state.status === "ARCHIVED" || state.status === "RESTORED") {
+      setConfirming(false);
+      router.refresh();
+    }
+  }, [router, state.status]);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm leading-6 text-ink/70">{copy.archiveHint}</p>
+      {confirming && !archived ? (
+        <p className="text-sm font-semibold text-ink">{copy.archiveConfirm}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-3">
+        {confirming || archived ? (
+          <form action={action}>
+            <input name="definitionId" type="hidden" value={definitionId} />
+            <input name="locale" type="hidden" value={locale} />
+            <input name="archived" type="hidden" value={archived ? "false" : "true"} />
+            <button className="min-h-11 rounded-xl bg-ink px-4 text-sm font-semibold text-paper disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" disabled={pending} type="submit">
+              {archived ? copy.restoreAction : copy.archiveConfirm}
+            </button>
+          </form>
+        ) : (
+          <button className="min-h-11 text-sm font-semibold text-ink/75 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" onClick={() => setConfirming(true)} type="button">{copy.archiveAction}</button>
+        )}
+        {confirming && !archived ? (
+          <button className="min-h-11 px-3 text-sm font-semibold text-ink/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" onClick={() => setConfirming(false)} type="button">{copy.archiveCancel}</button>
+        ) : null}
+      </div>
+      {state.status === "ARCHIVED" || state.status === "RESTORED" ? (
+        <p className="text-sm font-semibold text-forest" role="status">{archived ? copy.archiveSaved : copy.restoreSaved}</p>
+      ) : state.status ? (
+        <p className="text-sm font-semibold text-danger" role="alert">{copy.archiveFailed}</p>
       ) : null}
     </div>
   );

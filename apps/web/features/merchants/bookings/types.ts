@@ -56,6 +56,7 @@ export type PublicBookingSpace = {
 
 export type BookingActionState = {
   success?: boolean;
+  acceptanceEnabled?: boolean;
   alreadyBooked?: boolean;
   error?: string;
   bookingId?: string;

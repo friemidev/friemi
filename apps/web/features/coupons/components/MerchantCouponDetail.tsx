@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 import { ArrowLeft, Ticket } from "lucide-react";
 import {
+  setCouponCampaignArchivedAction,
   unlistCouponCampaignAction,
+  type ArchiveCouponCampaignState,
   type UnlistCouponCampaignState,
 } from "@/features/coupons/actions/couponActions";
 import type { getMerchantCouponDetail } from "@/features/coupons/queries/getMerchantCouponDetail";
@@ -15,6 +18,7 @@ import { getCampaignStatus, getCopy } from "./MerchantStoreDashboard";
 
 type Detail = NonNullable<Awaited<ReturnType<typeof getMerchantCouponDetail>>>;
 const initialUnlistState: UnlistCouponCampaignState = {};
+const initialArchiveState: ArchiveCouponCampaignState = {};
 
 export function MerchantCouponDetail({
   detail,
@@ -24,22 +28,41 @@ export function MerchantCouponDetail({
   locale: string;
 }) {
   const copy = getCopy(locale);
+  const router = useRouter();
   const { campaign, merchant } = detail;
   const [confirmUnlist, setConfirmUnlist] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiveState, archiveAction, archivePending] = useActionState(
+    setCouponCampaignArchivedAction,
+    initialArchiveState,
+  );
   const [unlistState, unlistAction, unlistPending] = useActionState(
     unlistCouponCampaignAction,
     initialUnlistState,
   );
+  useEffect(() => {
+    if (archiveState.status === "ARCHIVED" || archiveState.status === "RESTORED") {
+      setConfirmArchive(false);
+      router.refresh();
+    }
+  }, [archiveState.status, router]);
   const wasUnlisted = unlistState.status === "UNLISTED";
-  const status = wasUnlisted
+  const isArchived = archiveState.status === "ARCHIVED"
+    ? true
+    : archiveState.status === "RESTORED"
+      ? false
+      : Boolean(campaign.archivedAt);
+  const status = isArchived
+    ? { className: "bg-fog text-ink/70", label: copy.statusArchived }
+    : wasUnlisted
     ? { className: "bg-fog text-ink/70", label: copy.statusUnlisted }
     : getCampaignStatus(campaign, copy);
   const canShowQr =
-    !wasUnlisted &&
+    !isArchived && !wasUnlisted &&
     (campaign.claimAvailability === "AVAILABLE" ||
       campaign.claimAvailability === "NOT_STARTED") &&
     Boolean(campaign.claimToken);
-  const canUnlist = campaign.campaignStatus === "PUBLISHED" && !wasUnlisted;
+  const canUnlist = campaign.campaignStatus === "PUBLISHED" && !wasUnlisted && !isArchived;
   const path = campaign.claimToken
     ? withLocale(locale, `/coupons/claim/${campaign.claimToken}`)
     : null;
@@ -56,7 +79,7 @@ export function MerchantCouponDetail({
           <Link
             aria-label={copy.couponManage}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-forest transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-            href={withLocale(locale, "/profile/store/coupons")}
+            href={withLocale(locale, isArchived ? "/profile/store/coupons?filter=archived" : "/profile/store/coupons")}
           >
             <ArrowLeft aria-hidden="true" className="h-5 w-5" />
           </Link>
@@ -167,6 +190,36 @@ export function MerchantCouponDetail({
             {copy.unlistError}
           </p>
         ) : null}
+        <section className="mt-8 pt-5" aria-label={isArchived ? copy.restore : copy.archive}>
+          {confirmArchive && !isArchived ? (
+            <div className="rounded-2xl bg-fog px-5 py-5">
+              <p className="text-sm leading-6 text-ink/80">{copy.archiveHint}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <form action={archiveAction}>
+                  <input name="couponId" type="hidden" value={campaign.id} />
+                  <input name="locale" type="hidden" value={locale} />
+                  <input name="archived" type="hidden" value="true" />
+                  <button className="min-h-11 rounded-xl bg-ink px-4 text-sm font-semibold text-paper disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" disabled={archivePending} type="submit">
+                    {copy.archiveConfirm}
+                  </button>
+                </form>
+                <button className="min-h-11 px-4 text-sm font-semibold text-ink/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" onClick={() => setConfirmArchive(false)} type="button">{copy.unlistCancel}</button>
+              </div>
+            </div>
+          ) : isArchived ? (
+            <form action={archiveAction}>
+              <input name="couponId" type="hidden" value={campaign.id} />
+              <input name="locale" type="hidden" value={locale} />
+              <input name="archived" type="hidden" value="false" />
+              <button className="min-h-11 text-sm font-semibold text-forest underline underline-offset-4 disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" disabled={archivePending} type="submit">{copy.restore}</button>
+            </form>
+          ) : (
+            <button className="min-h-11 text-sm font-semibold text-ink/70 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" onClick={() => setConfirmArchive(true)} type="button">{copy.archive}</button>
+          )}
+          {archiveState.status && !["ARCHIVED", "RESTORED"].includes(archiveState.status) ? (
+            <p className="mt-3 text-sm font-semibold text-danger" role="alert">{copy.archiveError}</p>
+          ) : null}
+        </section>
       </div>
     </main>
   );

@@ -14,6 +14,7 @@ import {
   cancelBooking,
   reviewBooking,
   saveBookingSettings,
+  setBookingAcceptance,
   submitBooking,
   type BookingServiceResult,
 } from "./service";
@@ -156,6 +157,21 @@ export async function saveBookingSettingsAction(
       closedDates: values(data, "closedDates"),
     }),
   );
+}
+
+export async function setBookingAcceptanceAction(
+  _previous: BookingActionState,
+  data: FormData,
+): Promise<BookingActionState> {
+  const enabled = field(data, "enabled");
+  if (enabled !== "true" && enabled !== "false")
+    return state({ status: "INVALID" }, localeOf(data));
+  const result = await run(data, "/profile/store/bookings", (actorProfileId) =>
+    setBookingAcceptance({ actorProfileId, enabled: enabled === "true" }),
+  );
+  return result.success
+    ? { ...result, acceptanceEnabled: enabled === "true" }
+    : result;
 }
 
 export async function submitBookingAction(

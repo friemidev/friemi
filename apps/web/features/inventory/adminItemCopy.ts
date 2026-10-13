@@ -7,6 +7,10 @@ type AdminItemCopy = {
     countLabel: (count: number) => string;
     intro: string;
     new: string;
+    currentTab: string;
+    archivedTab: string;
+    archivedBadge: string;
+    archivedEmptyHint: string;
     searchPlaceholder: string;
     searchAria: string;
     searchButton: string;
@@ -65,12 +69,22 @@ type AdminItemCopy = {
     giftingTitle: string;
     currentAllowed: string;
     currentPaused: string;
+    archiveTitle: string;
+    archiveHint: string;
+    archiveAction: string;
+    restoreAction: string;
+    archiveConfirm: string;
+    archiveCancel: string;
+    archiveSaved: string;
+    restoreSaved: string;
+    archiveFailed: string;
   };
   issue: {
     pageTitle: string;
     formTitle: string;
     formHint: string;
     soldOutHint: string;
+    archivedHint: string;
   };
   newItem: {
     pageTitle: string;
@@ -127,6 +141,10 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       countLabel: (count) => `票券 ${count}`,
       intro: "目前支持票券物品。选择票券后管理图片、分配数量与查看记录。",
       new: "新建票券",
+      currentTab: "当前票券",
+      archivedTab: "已归档",
+      archivedBadge: "已归档",
+      archivedEmptyHint: "归档的票券会保留在这里，已发出的票仍可使用。",
       searchPlaceholder: "搜索票券名称",
       searchAria: "按名称搜索票券",
       searchButton: "搜索",
@@ -181,12 +199,22 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       giftingTitle: "账户间赠送",
       currentAllowed: "当前：允许赠送",
       currentPaused: "当前：暂停赠送",
+      archiveTitle: "归档管理",
+      archiveHint: "归档后停止新分配，已发出的票仍按原规则使用、赠送和核销。",
+      archiveAction: "归档票券",
+      restoreAction: "移出归档",
+      archiveConfirm: "确认归档",
+      archiveCancel: "取消",
+      archiveSaved: "票券已归档。",
+      restoreSaved: "票券已移出归档。",
+      archiveFailed: "归档状态更新失败，请重试。",
     },
     issue: {
       pageTitle: "分配物品",
       formTitle: "分配给指定账户",
       formHint: "确认接收账户，再填写这次放入背包的数量。",
       soldOutHint: "这一批物品已全部分配。",
+      archivedHint: "这件票券已归档，不能继续分配；已发出的票仍可使用和核销。",
     },
     newItem: { pageTitle: "新建票券物品" },
     access: {
@@ -240,6 +268,10 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       intro:
         "Ticket items are currently supported. Select a ticket to manage its image, allocations, and history.",
       new: "Create ticket",
+      currentTab: "Current tickets",
+      archivedTab: "Archived",
+      archivedBadge: "Archived",
+      archivedEmptyHint: "Archived tickets appear here. Tickets already issued remain usable.",
       searchPlaceholder: "Search ticket names",
       searchAria: "Search tickets by name",
       searchButton: "Search",
@@ -300,6 +332,15 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       giftingTitle: "Gifting between accounts",
       currentAllowed: "Current setting: gifting allowed",
       currentPaused: "Current setting: gifting paused",
+      archiveTitle: "Archive",
+      archiveHint: "Archiving stops new allocations. Issued tickets keep their existing use, gifting and check-in rules.",
+      archiveAction: "Archive ticket",
+      restoreAction: "Restore to list",
+      archiveConfirm: "Confirm archive",
+      archiveCancel: "Cancel",
+      archiveSaved: "Ticket archived.",
+      restoreSaved: "Ticket restored to the list.",
+      archiveFailed: "Could not update the archive. Try again.",
     },
     issue: {
       pageTitle: "Allocate items",
@@ -307,6 +348,7 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       formHint:
         "Verify the receiving account, then enter the number of tickets to add to its bag.",
       soldOutHint: "All items in this batch have been allocated.",
+      archivedHint: "This ticket is archived and cannot be allocated. Issued tickets remain usable and redeemable.",
     },
     newItem: { pageTitle: "Create ticket item" },
     access: {
@@ -363,6 +405,10 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       intro:
         "Les billets sont actuellement pris en charge. Sélectionnez-en un pour gérer son image, ses attributions et son historique.",
       new: "Créer un billet",
+      currentTab: "Billets actuels",
+      archivedTab: "Archivés",
+      archivedBadge: "Archivé",
+      archivedEmptyHint: "Les billets archivés apparaissent ici. Les billets distribués restent utilisables.",
       searchPlaceholder: "Rechercher un billet par nom",
       searchAria: "Rechercher des billets par nom",
       searchButton: "Rechercher",
@@ -425,6 +471,15 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       giftingTitle: "Cadeaux entre comptes",
       currentAllowed: "Réglage actuel : cadeaux autorisés",
       currentPaused: "Réglage actuel : cadeaux suspendus",
+      archiveTitle: "Archives",
+      archiveHint: "L’archivage arrête les nouvelles attributions. Les billets distribués conservent leurs règles d’utilisation, de transmission et de contrôle.",
+      archiveAction: "Archiver le billet",
+      restoreAction: "Retirer des archives",
+      archiveConfirm: "Confirmer l’archivage",
+      archiveCancel: "Annuler",
+      archiveSaved: "Billet archivé.",
+      restoreSaved: "Billet retiré des archives.",
+      archiveFailed: "Impossible de modifier les archives. Réessayez.",
     },
     issue: {
       pageTitle: "Attribuer des billets",
@@ -432,6 +487,7 @@ const copies: Record<"zh-CN" | "en" | "fr", AdminItemCopy> = {
       formHint:
         "Vérifiez le compte destinataire, puis indiquez le nombre de billets à ajouter à son sac.",
       soldOutHint: "Tous les billets de ce lot ont été attribués.",
+      archivedHint: "Ce billet est archivé et ne peut plus être attribué. Les billets distribués restent utilisables.",
     },
     newItem: { pageTitle: "Créer un billet" },
     access: {

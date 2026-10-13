@@ -140,6 +140,7 @@ export async function saveBookingSettingsInDatabase(
     address: merchant.address ?? "",
     latitude: merchant.latitude,
     longitude: merchant.longitude,
+    visibility: input.enabled ? "PUBLIC" as const : "PRIVATE" as const,
   };
   const activity = merchant.bookingSettings
     ? await tx.activity.update({
@@ -156,7 +157,6 @@ export async function saveBookingSettingsInDatabase(
           type: "LOCAL",
           category: "OTHER",
           status: "RECRUITING",
-          visibility: "PUBLIC",
           capacity: 0,
           startAt: parseBookingDate(input.startDate)!,
           priceType: "FREE",
@@ -194,6 +194,39 @@ export async function saveBookingSettingsInDatabase(
     });
   }
   return { status: "SAVED", activityId: activity.id };
+}
+
+export function setBookingAcceptance(input: {
+  actorProfileId: string;
+  enabled: boolean;
+}) {
+  return serializable(async (tx) => {
+    const merchant = await tx.merchant.findFirst({
+      where: {
+        isActive: true,
+        ownerProfileId: input.actorProfileId,
+        owner: { status: "ACTIVE" },
+      },
+      select: {
+        bookingSettings: {
+          select: { id: true, activityId: true, activity: { select: { status: true } } },
+        },
+      },
+    });
+    if (!merchant) return { status: "FORBIDDEN" };
+    const settings = merchant.bookingSettings;
+    if (!settings) return { status: "NOT_FOUND" };
+    if (settings.activity.status !== "RECRUITING") return { status: "CLOSED" };
+    await tx.merchantBookingSettings.update({
+      where: { id: settings.id },
+      data: { enabled: input.enabled },
+    });
+    await tx.activity.update({
+      where: { id: settings.activityId },
+      data: { visibility: input.enabled ? "PUBLIC" : "PRIVATE" },
+    });
+    return { status: "SAVED", activityId: settings.activityId };
+  });
 }
 
 export type SubmitBookingInput = {

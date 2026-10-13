@@ -53,6 +53,10 @@ test("public campaign claiming enforces publication, dates, and inventory", () =
 
   assert.equal(getCouponClaimAvailability(campaign, now), "AVAILABLE");
   assert.equal(
+    getCouponClaimAvailability({ ...campaign, archivedAt: now }, now),
+    "UNLISTED",
+  );
+  assert.equal(
     getCouponClaimAvailability({ ...campaign, claimedCount: 10 }, now),
     "SOLD_OUT",
   );

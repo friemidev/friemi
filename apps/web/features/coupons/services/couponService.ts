@@ -345,6 +345,34 @@ export async function unlistCouponCampaign({
     : { status: "FORBIDDEN" };
 }
 
+export async function setCouponCampaignArchived({
+  couponId,
+  profileId,
+  archived,
+}: {
+  couponId: string;
+  profileId: string;
+  archived: boolean;
+}): Promise<{ status: "ARCHIVED" | "RESTORED" | "INVALID" | "FORBIDDEN" }> {
+  const updated = await prisma.coupon.updateMany({
+    where: {
+      id: couponId,
+      merchant: { isActive: true, ownerProfileId: profileId },
+      distributionMode: "PUBLIC_QR",
+      archivedAt: archived ? null : { not: null },
+    },
+    data: { archivedAt: archived ? new Date() : null },
+  });
+  if (updated.count) return { status: archived ? "ARCHIVED" : "RESTORED" };
+  const coupon = await prisma.coupon.findUnique({
+    where: { id: couponId },
+    select: { merchant: { select: { ownerProfileId: true } } },
+  });
+  return {
+    status: coupon?.merchant.ownerProfileId === profileId ? "INVALID" : "FORBIDDEN",
+  };
+}
+
 export async function claimCouponByToken({
   claimToken,
   profileId,
@@ -395,6 +423,7 @@ export async function claimCouponByToken({
       const inventory = await tx.coupon.updateMany({
         where: {
           id: coupon.id,
+          archivedAt: null,
           campaignStatus: "PUBLISHED",
           distributionMode: "PUBLIC_QR",
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
