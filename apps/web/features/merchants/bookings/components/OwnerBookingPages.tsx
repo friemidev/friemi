@@ -16,6 +16,7 @@ import type {
 import { getBookingToday } from "../validation";
 import { BookingHeader, BookingShell, primaryClass } from "./BookingPrimitives";
 import { BookingList } from "./BookingList";
+import { BookingAcceptanceControl } from "./BookingAcceptanceControl";
 import { BookingSettingsForm } from "./BookingSettingsForm";
 
 export function OwnerBookingDashboard({
@@ -65,7 +66,7 @@ export function OwnerBookingDashboard({
                 <span className="flex-1">{copy.settings}</span>
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
               </Link>
-              <Link
+              {settings.enabled ? <Link
                 className="flex min-h-14 items-center gap-3 rounded-xl px-4 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-forest"
                 href={getLocalizedActivityDetailPath(
                   locale,
@@ -75,8 +76,12 @@ export function OwnerBookingDashboard({
                 <CalendarDays aria-hidden="true" className="h-5 w-5" />
                 <span className="flex-1">{copy.viewSpace}</span>
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
+              </Link> : null}
             </nav>
+            <BookingAcceptanceControl
+              enabled={settings.enabled}
+              locale={locale}
+            />
           </>
         ) : (
           <div className="pt-7">

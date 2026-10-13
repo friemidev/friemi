@@ -25,6 +25,7 @@ export type CouponClaimAvailability =
 
 export function getCouponClaimAvailability(
   coupon: {
+    archivedAt?: Date | null;
     campaignStatus: string;
     claimedCount: number;
     distributionMode: string;
@@ -35,6 +36,7 @@ export function getCouponClaimAvailability(
   now = new Date(),
 ): CouponClaimAvailability {
   if (coupon.distributionMode !== "PUBLIC_QR") return "UNAVAILABLE";
+  if (coupon.archivedAt) return "UNLISTED";
   if (coupon.campaignStatus !== "PUBLISHED") return "UNLISTED";
   if (coupon.validFrom && coupon.validFrom.getTime() > now.getTime()) {
     return "NOT_STARTED";

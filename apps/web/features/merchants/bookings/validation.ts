@@ -63,6 +63,8 @@ export function normalizeBookingPhone(value: string) {
 
 export type BookingSettingsInput = BookingSchedule & {
   actorProfileId: string;
+  /** Existing settings only change acceptance when the owner touches the switch. */
+  enabledChanged?: boolean;
   title: string;
   description: string;
   coverImageUrl?: string | null;

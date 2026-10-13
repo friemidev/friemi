@@ -36,9 +36,9 @@ export default async function AdminItemIssuePage({
       <section className="rounded-2xl bg-paper p-5 sm:p-6">
         <h2 className="text-lg font-bold text-ink">{copy.issue.formTitle}</h2>
         <p className="mt-1 text-sm leading-6 text-ink/70">
-          {remaining > 0 ? copy.issue.formHint : copy.issue.soldOutHint}
+          {definition.archivedAt ? copy.issue.archivedHint : remaining > 0 ? copy.issue.formHint : copy.issue.soldOutHint}
         </p>
-        <div className="mt-5 max-w-xl">
+        {!definition.archivedAt ? <div className="mt-5 max-w-xl">
           <IssueTicketForm
             definitionId={definition.id}
             initialRequestId={randomUUID()}
@@ -46,7 +46,7 @@ export default async function AdminItemIssuePage({
             remaining={remaining}
             ticketTitle={definition.title}
           />
-        </div>
+        </div> : null}
       </section>
     </AdminItemPageFrame>
   );

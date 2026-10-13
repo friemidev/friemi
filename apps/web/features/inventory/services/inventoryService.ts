@@ -67,9 +67,34 @@ export async function setTicketGiftable(input: {
   return updated.count > 0;
 }
 
+export async function setTicketDefinitionArchived(input: {
+  definitionId: string;
+  archived: boolean;
+}) {
+  const updated = await prisma.inventoryItemDefinition.updateMany({
+    where: {
+      id: input.definitionId,
+      kind: "EVENT_TICKET",
+      archivedAt: input.archived ? null : { not: null },
+    },
+    data: { archivedAt: input.archived ? new Date() : null },
+  });
+  if (updated.count > 0) return true;
+  // A retry or another administrator may already have applied this state.
+  const existing = await prisma.inventoryItemDefinition.findFirst({
+    where: {
+      id: input.definitionId,
+      kind: "EVENT_TICKET",
+      archivedAt: input.archived ? { not: null } : null,
+    },
+    select: { id: true },
+  });
+  return Boolean(existing);
+}
+
 export type IssueTicketResult =
   | { status: "ISSUED"; batchId: string; recipientName: string }
-  | { status: "INVALID" | "NOT_FOUND" | "SOLD_OUT" };
+  | { status: "ARCHIVED" | "INVALID" | "NOT_FOUND" | "SOLD_OUT" };
 
 export async function ensureAllocationRedeemerGrantInTransaction(
   tx: Prisma.TransactionClient,
@@ -145,20 +170,28 @@ export async function issueTicketBatch(input: {
 
         const definition = await tx.inventoryItemDefinition.findUnique({
           where: { id: input.definitionId },
-          select: { id: true, kind: true },
+          select: { archivedAt: true, id: true, kind: true },
         });
         if (!definition || definition.kind !== "EVENT_TICKET") {
           return { status: "INVALID" as const };
         }
+        if (definition.archivedAt) return { status: "ARCHIVED" as const };
 
         const reserved = await tx.$queryRaw<Array<{ issuedCount: number }>>`
           UPDATE "InventoryItemDefinition"
           SET "issuedCount" = "issuedCount" + ${input.quantity}, "updatedAt" = ${new Date()}
           WHERE "id" = ${definition.id}
+            AND "archivedAt" IS NULL
             AND "issuedCount" + ${input.quantity} <= "totalSupply"
           RETURNING "issuedCount"
         `;
-        if (reserved.length === 0) return { status: "SOLD_OUT" as const };
+        if (reserved.length === 0) {
+          const latest = await tx.inventoryItemDefinition.findUnique({
+            where: { id: definition.id },
+            select: { archivedAt: true },
+          });
+          return { status: latest?.archivedAt ? "ARCHIVED" as const : "SOLD_OUT" as const };
+        }
 
         const batch = await tx.inventoryIssueBatch.create({
           data: {
@@ -547,6 +580,7 @@ export async function getInventoryDefinitionForProfile(input: {
 }
 
 const adminTicketDefinitionSelect = {
+  archivedAt: true,
   createdAt: true,
   description: true,
   id: true,
@@ -561,6 +595,7 @@ const adminTicketDefinitionSelect = {
 } as const;
 
 export async function getAdminTicketDefinitionPage(input: {
+  archived: boolean;
   page: number;
   query: string;
 }) {
@@ -570,6 +605,7 @@ export async function getAdminTicketDefinitionPage(input: {
   const query = input.query.trim().slice(0, 120);
   const where: Prisma.InventoryItemDefinitionWhereInput = {
     kind: "EVENT_TICKET",
+    archivedAt: input.archived ? { not: null } : null,
     ...(query ? { title: { contains: query, mode: "insensitive" } } : {}),
   };
   const total = await prisma.inventoryItemDefinition.count({ where });
@@ -592,6 +628,7 @@ export async function getAdminInventoryDefinition(definitionId: string) {
   return prisma.inventoryItemDefinition.findUnique({
     where: { id: definitionId },
     select: {
+      archivedAt: true,
       description: true,
       id: true,
       imageUrl: true,

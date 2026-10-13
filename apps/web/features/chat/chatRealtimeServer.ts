@@ -135,6 +135,25 @@ function normalizeProfileIds(profileIds: string[]) {
   return [...new Set(profileIds.map((id) => id.trim()))].filter(Boolean);
 }
 
+export async function broadcastChatRealtimeChange({
+  profileIds = [],
+  scope,
+  subjectKey,
+}: {
+  profileIds?: string[];
+  scope: ChatRealtimeScope;
+  subjectKey: string;
+}) {
+  await Promise.all([
+    broadcastChatChange({ scope, subjectKey }),
+    broadcastChatInboxChanges({
+      profileIds: normalizeProfileIds(profileIds),
+      scope,
+      subjectKey,
+    }),
+  ]);
+}
+
 export function scheduleChatInboxRealtimeChange({
   profileIds = [],
   scope,
@@ -168,16 +187,7 @@ export function scheduleChatRealtimeChange({
   scope: ChatRealtimeScope;
   subjectKey: string;
 }) {
-  const uniqueProfileIds = normalizeProfileIds(profileIds);
-
   after(async () => {
-    await Promise.all([
-      broadcastChatChange({ scope, subjectKey }),
-      broadcastChatInboxChanges({
-        profileIds: uniqueProfileIds,
-        scope,
-        subjectKey,
-      }),
-    ]);
+    await broadcastChatRealtimeChange({ profileIds, scope, subjectKey });
   });
 }

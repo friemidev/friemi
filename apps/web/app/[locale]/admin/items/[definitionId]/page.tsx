@@ -55,11 +55,11 @@ export default async function AdminItemDetailPage({
       icon: ScanLine,
       label: copy.detail.redeemLabel,
     },
-  ];
+  ].filter((link) => !definition.archivedAt || link.href !== `/admin/items/${definitionId}/issue`);
 
   return (
     <AdminItemPageFrame
-      backHref="/admin/merchants?view=items"
+      backHref={definition.archivedAt ? "/admin/merchants?view=items&archived=1" : "/admin/merchants?view=items"}
       backLabel={copy.frame.backToList}
       definition={definition}
       locale={locale}

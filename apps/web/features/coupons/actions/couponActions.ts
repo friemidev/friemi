@@ -8,6 +8,7 @@ import {
   generateCouponRedemptionToken,
   grantFollowUpCoupon,
   redeemCouponByToken,
+  setCouponCampaignArchived,
   unlistCouponCampaign,
 } from "@/features/coupons/services/couponService";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
@@ -49,6 +50,10 @@ export type CreateCouponCampaignState = {
 export type UnlistCouponCampaignState = {
   couponId?: string;
   status?: "FORBIDDEN" | "INVALID" | "UNLISTED";
+};
+
+export type ArchiveCouponCampaignState = {
+  status?: "ARCHIVED" | "RESTORED" | "INVALID" | "FORBIDDEN" | "FAILED";
 };
 
 export type GrantFollowUpCouponState = {
@@ -143,6 +148,40 @@ export async function unlistCouponCampaignAction(
   });
   revalidatePath(withLocale(locale, "/profile/store"));
   return result;
+}
+
+export async function setCouponCampaignArchivedAction(
+  _previousState: ArchiveCouponCampaignState,
+  formData: FormData,
+): Promise<ArchiveCouponCampaignState> {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const couponId = getString(formData, "couponId");
+  const archived = getString(formData, "archived");
+  if (!couponId || (archived !== "true" && archived !== "false"))
+    return { status: "INVALID" };
+  const profile = await getCurrentUserProfileForMutation(
+    locale,
+    `/profile/store/coupons/${couponId}`,
+  );
+  if (profile.status !== "ACTIVE") return { status: "FORBIDDEN" };
+  try {
+    const result = await setCouponCampaignArchived({
+      couponId,
+      profileId: profile.id,
+      archived: archived === "true",
+    });
+    if (result.status === "ARCHIVED" || result.status === "RESTORED") {
+      for (const language of ["zh-CN", "en", "fr"]) {
+        revalidatePath(withLocale(language, "/profile/store/coupons"));
+        revalidatePath(withLocale(language, `/profile/store/coupons/${couponId}`));
+        revalidatePath(withLocale(language, "/profile/store"));
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error("Failed to archive merchant coupon", error);
+    return { status: "FAILED" };
+  }
 }
 
 export async function updateMerchantStoreAction(

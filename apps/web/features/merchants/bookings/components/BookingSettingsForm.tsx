@@ -150,6 +150,7 @@ export function BookingSettingsForm({
     settings?.coverImageUrl ?? "",
   );
   const [enabled, setEnabled] = useState(settings?.enabled ?? true);
+  const [enabledChanged, setEnabledChanged] = useState(false);
   const [weekdays, setWeekdays] = useState(settings?.weekdays ?? [5, 6]);
   const [specificDates, setSpecificDates] = useState(
     settings?.specificDates ?? [],
@@ -164,7 +165,7 @@ export function BookingSettingsForm({
     mode === "DATES" && specificDates.some(outsideRange);
   const missingWeekdays = mode === "WEEKLY" && !weekdays.length;
   const missingDates = mode === "DATES" && !specificDates.length;
-  const values = JSON.stringify({
+  const formValues = {
     title,
     description,
     coverImageUrl,
@@ -175,14 +176,27 @@ export function BookingSettingsForm({
     specificDates,
     closedDates,
     enabled,
-  });
+  };
+  const values = JSON.stringify(formValues);
+  const submittedPayload = useRef<typeof formValues | null>(null);
   const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(
     saveBookingSettingsAction,
     {} as BookingActionState,
   );
   useEffect(() => {
-    if (state.success) router.refresh();
+    if (!state.success) return;
+    if (state.acceptanceEnabled !== undefined) {
+      setEnabled(state.acceptanceEnabled);
+      setEnabledChanged(false);
+      if (submittedPayload.current) {
+        setSubmittedValues(JSON.stringify({
+          ...submittedPayload.current,
+          enabled: state.acceptanceEnabled,
+        }));
+      }
+    }
+    router.refresh();
   }, [state, router]);
   useEffect(() => {
     if (lastStep.current !== step) panelHeading.current?.focus();
@@ -223,10 +237,12 @@ export function BookingSettingsForm({
           event.preventDefault();
           return;
         }
+        submittedPayload.current = formValues;
         setSubmittedValues(values);
       }}
     >
       <input name="locale" type="hidden" value={locale} />
+      <input name="enabledChanged" type="hidden" value={String(enabledChanged)} />
       <nav aria-label={flow.steps} className="flex gap-5">
         {([copy.identity, copy.availability] as const).map((label, index) => (
           <button
@@ -506,7 +522,11 @@ export function BookingSettingsForm({
               <input
                 className="mt-1 h-5 w-5 accent-forest"
                 checked={enabled}
-                onChange={(event) => setEnabled(event.target.checked)}
+                disabled={pending}
+                onChange={(event) => {
+                  setEnabled(event.target.checked);
+                  setEnabledChanged(true);
+                }}
                 name="enabled"
                 type="checkbox"
               />
@@ -531,10 +551,11 @@ export function BookingSettingsForm({
         {step === 1 &&
         state.success &&
         !pending &&
+        !enabledChanged &&
         submittedValues === values ? (
           <div className="space-y-2" role="status">
             <p className="text-sm font-bold text-forest">{copy.saved}</p>
-            {state.activityId ? (
+            {state.activityId && enabled ? (
               <Link
                 className="inline-flex min-h-11 items-center text-sm font-bold text-forest underline underline-offset-4"
                 href={getLocalizedActivityDetailPath(locale, state.activityId)}

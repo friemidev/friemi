@@ -104,6 +104,11 @@ import {
   type ActivityRoomMemberActionState,
 } from "../actions/activityRoomChatActions";
 import { getActivityRoomChatCopy } from "../copy";
+import {
+  activityRoomAssistantAvatar,
+  getActivityRoomAssistantCopy,
+} from "../assistant";
+import { ActivityRoomWelcomeEditor } from "./ActivityRoomWelcomeEditor";
 import type {
   ActivityRoomChatActivityViewModel,
   ActivityRoomAnnouncementViewModel,
@@ -126,6 +131,7 @@ type ActivityRoomChatPageProps = {
   activityId: string;
   locale: string;
   management?: ActivityRoomManagementViewModel | null;
+  messageEndpoint?: string;
   messages: ActivityRoomMessageViewModel[];
   policy: ActivityRoomChatPolicy;
   signInHref: string;
@@ -1405,6 +1411,14 @@ export function ActivityRoomManagePage({
                 {activity?.title ?? chatCopy.title}
               </span>
             </ActivityRoomInfoRow>
+            {canManageRoom && activity ? (
+              <ActivityRoomWelcomeEditor
+                activityId={activity.id}
+                activityTitle={activity.title ?? chatCopy.title}
+                initialTemplate={activity.welcomeTemplate}
+                locale={locale}
+              />
+            ) : null}
             <ActivityRoomPreferenceToggleRow
               action={toggleActivityRoomMuteAction}
               activityId={activity?.id ?? activityId}
@@ -1575,6 +1589,8 @@ function getPolicyNotice(
 }
 
 function MessageRow({
+  activityId,
+  activityTitle,
   actionMenuOpen,
   canManage,
   isDeleting,
@@ -1588,7 +1604,10 @@ function MessageRow({
   onToggleSelection,
   selectionMode,
   viewer,
+  welcomeTemplate,
 }: {
+  activityId: string;
+  activityTitle: string;
   actionMenuOpen: boolean;
   canManage: boolean;
   isDeleting: boolean;
@@ -1602,12 +1621,19 @@ function MessageRow({
   onToggleSelection: (messageId: string) => void;
   selectionMode: boolean;
   viewer: ActivityRoomViewer | null;
+  welcomeTemplate?: string;
 }) {
   const copy = getActivityRoomChatCopy(locale);
   const replyCopy = getChatReplyCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
   const canOpenActions = !message.isDeleted;
-  const sender = message.isMine && viewer ? viewer : message.sender;
+  const sender = message.isAssistant
+    ? {
+        ...message.sender,
+        avatarUrl: activityRoomAssistantAvatar,
+        nickname: getActivityRoomAssistantCopy(locale).name,
+      }
+    : message.isMine && viewer ? viewer : message.sender;
   const senderProfileHref = withLocale(locale, `/profile/${sender.id}`);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -1773,7 +1799,11 @@ function MessageRow({
         message.isMine ? "justify-end" : "justify-start",
       )}
     >
-      {!message.isMine ? (
+      {!message.isMine && message.isAssistant ? (
+        <div className="shrink-0 pt-[1.25rem]" aria-label={sender.nickname}>
+          <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        </div>
+      ) : !message.isMine ? (
         <Link
           aria-label={sender.nickname}
           className="shrink-0 rounded-full pt-[1.25rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
@@ -1788,7 +1818,9 @@ function MessageRow({
       <div
         className={cn(
           "flex min-w-0 flex-col gap-0.5",
-          actionMenuOpen
+          message.isAssistant && canManage && !actionMenuOpen && !selectionMode
+            ? "max-w-[calc(100%-8.5rem)] sm:max-w-[64%]"
+            : actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
               ? "max-w-[65%] sm:max-w-[60%]"
@@ -1872,6 +1904,15 @@ function MessageRow({
         ) : null}
       </div>
       {!message.isMine ? (actionMenu ?? selectionControl) : null}
+      {message.isAssistant && !message.isDeleted && canManage && !selectionMode && !actionMenuOpen ? (
+        <ActivityRoomWelcomeEditor
+          activityId={activityId}
+          activityTitle={activityTitle}
+          initialTemplate={welcomeTemplate}
+          locale={locale}
+          presentation="inline"
+        />
+      ) : null}
       {message.isMine ? (
         <Link
           aria-label={sender.nickname}
@@ -2273,6 +2314,7 @@ export function ActivityRoomChatPage({
   activityId,
   locale,
   management,
+  messageEndpoint = `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
   messages: initialMessages,
   policy,
   signInHref,
@@ -2290,14 +2332,14 @@ export function ActivityRoomChatPage({
   const [selectionMode, setSelectionMode] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
   useChatCursorSync({
-    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    endpoint: messageEndpoint,
     messages,
     scope: "activity",
     setMessages,
     subjectKey: activityId,
   });
   const chatHistory = useChatHistoryPagination({
-    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    endpoint: messageEndpoint,
     initialPageSize: 50,
     messages,
     setMessages,
@@ -2369,7 +2411,7 @@ export function ActivityRoomChatPage({
       body: message.body,
       hasImage: message.imageUrls.length > 0,
       messageId: message.id,
-      senderName: message.sender.nickname,
+      senderName: message.isAssistant ? getActivityRoomAssistantCopy(locale).name : message.sender.nickname,
     });
     setActionMenuMessageId("");
     setSelectionMode(false);
@@ -2523,6 +2565,8 @@ export function ActivityRoomChatPage({
                     ) : null}
                     <div className="min-w-0" data-chat-motion-id={message.id}>
                       <MessageRow
+                        activityId={activity?.id ?? activityId}
+                        activityTitle={activity?.title ?? copy.title}
                         actionMenuOpen={actionMenuMessageId === message.id}
                         canManage={canManage}
                         isDeleting={deletingMessageIds.includes(message.id)}
@@ -2536,6 +2580,7 @@ export function ActivityRoomChatPage({
                         onToggleSelection={handleToggleSelection}
                         selectionMode={selectionMode}
                         viewer={viewer}
+                        welcomeTemplate={activity?.welcomeTemplate}
                       />
                     </div>
                   </Fragment>

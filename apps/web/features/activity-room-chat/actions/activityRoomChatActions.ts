@@ -14,6 +14,8 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { chatMentionMaxProfileCount } from "@/features/chat/utils/chatMentions";
 import { getActivityRoomChatCopy } from "../copy";
+import { sendActivityRoomWelcome } from "../services/activityRoomWelcome";
+import { approveInvitedActivityRoomParticipant } from "../services/activityRoomInvitation";
 import {
   ActivityRoomChatDomainError,
   activityRoomMessageImageMaxCount,
@@ -851,28 +853,20 @@ export async function inviteActivityRoomParticipantAction(
         };
       }
 
-      if (existingParticipation) {
-        await tx.activityParticipant.update({
-          where: {
-            id: existingParticipation.id,
-          },
-          data: {
-            cancelledAt: null,
-            joinedAt: new Date(),
-            message: null,
-            status: "APPROVED",
-          },
-        });
-      } else {
-        await tx.activityParticipant.create({
-          data: {
-            activityId: activity.id,
-            message: null,
-            status: "APPROVED",
-            userProfileId: invitee.id,
-          },
-        });
+      const participant = await approveInvitedActivityRoomParticipant({
+        db: tx,
+        activityId: activity.id,
+        profileId: invitee.id,
+        previous: existingParticipation,
+      });
+      if (!participant) {
+        return { ok: false, error: copy.inviteAlready };
       }
+      const welcome = await sendActivityRoomWelcome({
+        db: tx,
+        participant,
+        previousStatus: existingParticipation?.status,
+      });
 
       await tx.activityManagementLog.create({
         data: {
@@ -887,6 +881,7 @@ export async function inviteActivityRoomParticipantAction(
 
       return {
         ok: true,
+        welcome,
       };
     });
 
@@ -894,6 +889,13 @@ export async function inviteActivityRoomParticipantAction(
       return {
         formError: inviteResult.error,
       };
+    }
+    if (inviteResult.welcome) {
+      scheduleChatRealtimeChange({
+        scope: "activity",
+        subjectKey: result.data.activityId,
+        profileIds: inviteResult.welcome.profileIds,
+      });
     }
 
     revalidateActivityRoom(result.data.locale, result.data.activityId);

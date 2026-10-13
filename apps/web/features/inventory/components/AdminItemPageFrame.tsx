@@ -68,6 +68,9 @@ export function AdminItemPageFrame({
           <p className="text-xs font-semibold text-paper/75">
             {definition.merchant?.name ?? copy.ticketType}
           </p>
+          {definition.archivedAt ? (
+            <span className="mt-2 inline-flex rounded-full bg-paper/15 px-2.5 py-1 text-xs font-semibold text-paper">{itemCopy.list.archivedBadge}</span>
+          ) : null}
           <h2
             className={`mt-1 break-words font-bold tracking-tight ${compact ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"}`}
           >

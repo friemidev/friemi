@@ -836,6 +836,7 @@ model Activity {
   coManagers        ActivityCoManager[]
   managementLogs    ActivityManagementLog[]
   roomMessages      ActivityRoomMessage[]
+  roomWelcomeTemplate String?                    @db.Text
   roomReadStates    ActivityRoomReadState[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
@@ -891,7 +892,8 @@ model ActivityManagementLog {
 model ActivityRoomMessage {
   id                  String       @id @default(cuid())
   activityId          String
-  senderId            String
+  senderId            String?
+  assistantWelcomeKey String?      @unique
   body                String       @db.Text
   imageUrls           String[]     @default([])
   mentionedProfileIds String[]     @default([])
@@ -904,7 +906,7 @@ model ActivityRoomMessage {
   deletedAt           DateTime?
   deletedById         String?
   activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  sender              UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  sender              UserProfile? @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   deletedBy           UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -1203,6 +1205,7 @@ model Coupon {
   claimedCount           Int                    @default(0)
   publishedAt            DateTime?
   unlistedAt             DateTime?
+  archivedAt             DateTime?
   sourceRedemptionItemId String?                @unique
   sourceRedemptionItem   CouponWalletItem?      @relation("PostRedemptionGiftSource", fields: [sourceRedemptionItemId], references: [id], onDelete: SetNull)
   claimCodes             CouponClaimCode[]
@@ -1213,6 +1216,7 @@ model Coupon {
 
   @@unique([merchantId, slug])
   @@index([merchantId, campaignStatus, createdAt])
+  @@index([merchantId, archivedAt, createdAt])
   @@index([templateId, campaignStatus])
   @@index([expiresAt])
 }
@@ -1470,6 +1474,7 @@ model InventoryItemDefinition {
   title              String                @db.VarChar(120)
   description        String?               @db.Text
   imageUrl           String?               @db.Text
+  archivedAt         DateTime?
   isGiftable         Boolean               @default(false)
   totalSupply        Int
   issuedCount        Int                   @default(0)
@@ -1486,6 +1491,7 @@ model InventoryItemDefinition {
   updatedAt          DateTime              @updatedAt
 
   @@index([kind, createdAt])
+  @@index([kind, archivedAt, createdAt])
   @@index([merchantId, kind, createdAt])
 }
 

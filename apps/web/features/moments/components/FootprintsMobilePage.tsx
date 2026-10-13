@@ -47,6 +47,7 @@ import {
   X,
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
+import { getActivityRoomMessageSenderName } from "@/features/activity-room-chat/assistant";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { ChatNavigationPending } from "@/features/chat/components/ChatNavigationPending";
 import {
@@ -2765,7 +2766,8 @@ function FootprintsMessageList({
         room.title,
         room.city,
         room.lastMessage?.body,
-        room.lastMessage?.senderName,
+        room.lastMessage &&
+          getActivityRoomMessageSenderName(room.lastMessage, locale),
       ]
         .filter(Boolean)
         .join(" "),
@@ -2854,6 +2856,7 @@ function FootprintsMessageList({
   }, [
     activityRoomChats,
     friends,
+    locale,
     officialFeedbackInbox,
     officialMessages,
     planetChats,
@@ -3281,6 +3284,9 @@ function FootprintsRoomChatRow({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = room.lastMessage;
+  const senderName = lastMessage
+    ? getActivityRoomMessageSenderName(lastMessage, locale)
+    : "";
   const unreadCount = room.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const showUnreadBadge = unreadCount > 0 && !room.isMuted;
@@ -3291,7 +3297,7 @@ function FootprintsRoomChatRow({
   const preview =
     mentionPreview ??
     (lastMessage
-      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+      ? `${lastMessage.isMine ? t.youPrefix : `${senderName}: `}${
           lastMessage.body.trim() || t.imageMessage
         }`
       : t.roomChatEmptyPreview);
