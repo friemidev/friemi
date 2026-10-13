@@ -41,6 +41,7 @@ import { ChatTimeSeparator } from "@/features/chat/components/ChatTimeSeparator"
 import { useChatTextareaAutosize } from "@/features/chat/useChatTextareaAutosize";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
+import { ManualMessageTranslation } from "@/features/translations/components/ManualMessageTranslation";
 import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
@@ -1899,6 +1900,9 @@ function MessageRow({
             </p>
           ) : null}
         </div>
+        {!message.isDeleted && message.body.trim() && !selectionMode ? (
+          <ManualMessageTranslation entityId={message.id} entityType="activity_room_message" locale={locale} text={message.body} align={message.isMine ? "end" : "start"} />
+        ) : null}
         {!message.isDeleted && message.replyTo ? (
           <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
         ) : null}

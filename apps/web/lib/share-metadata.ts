@@ -529,6 +529,7 @@ export function buildDetailShareMetadata({
 
 export function buildTeamShareMetadata({
   canonicalUrl,
+  description,
   capacity,
   coverImageUrl,
   dateLabel,
@@ -543,7 +544,7 @@ export function buildTeamShareMetadata({
 }: TeamShareMetadataInput): Metadata {
   const baseUrl = new URL(canonicalUrl).origin;
   const metadataTitle = truncateShareText(title, 72);
-  const metadataDescription = getTeamShareDescription({
+  const teamDetails = getTeamShareDescription({
     capacity,
     dateLabel,
     locationLabel,
@@ -551,6 +552,9 @@ export function buildTeamShareMetadata({
     participantCount,
     priceLabel,
   });
+  const metadataDescription = description?.trim()
+    ? truncateShareText(`${description.trim()} · ${teamDetails}`, 180)
+    : teamDetails;
   const imageUrl =
     resolveAbsoluteUrl(shareImageUrl, baseUrl) ??
     resolveShareImageUrl(coverImageUrl, baseUrl);

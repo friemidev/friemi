@@ -1,3 +1,7 @@
+import { isLegacyActivityInfoSource, legacyPublicActivitySources } from "../utils/activityInfoSource";
+export { isLegacyActivityInfoSource } from "../utils/activityInfoSource";
+import { localizeActivityContentTree } from "@/features/translations/services/localizedContent";
+import { getContentRequestLocale } from "@/features/translations/services/requestLocale";
 import {
   getPersistentBookingActivityWhere,
   mergePersistentBookingActivities,
@@ -40,13 +44,11 @@ import {
 } from "../utils/activityFilters";
 import { getActivityEndBoundary } from "../utils/activityDisplay";
 import {
-  AUTO_CREATED_TEAM_SOURCE,
   getAutoCreatedTeamMetadata,
   isAutoCreatedTeamClaimable,
 } from "../utils/autoCreatedTeams";
 import {
   getActivityAddressPrivacy,
-  isAddressPrivacyOnlySourcePayload,
 } from "../utils/activityAddressPrivacy";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
@@ -77,8 +79,6 @@ const endingSoonWindowDays = 1;
 const upcomingSoonWindowDays = 1;
 const upcomingWeekWindowDays = 7;
 const upcomingMonthWindowDays = 30;
-const legacyPublicActivityIdPattern =
-  /^(playinparis|sortiraparis|paris-opendata|paris_open_data|feverup)_/i;
 const legacyPublicActivityIdPrefixes = [
   "playinparis_",
   "sortiraparis_",
@@ -86,30 +86,6 @@ const legacyPublicActivityIdPrefixes = [
   "paris_open_data_",
   "feverup_",
 ];
-const legacyPublicActivitySources = [
-  "playinparis",
-  "playinparis.com",
-  "sortiraparis",
-  "sortiraparis.com",
-  "paris-opendata",
-  "paris-opendata:que-faire-a-paris",
-  "opendata.paris.fr",
-  "feverup",
-  "feverup.com",
-];
-
-function includesKnownPublicActivitySource(value: string | null | undefined) {
-  const normalizedValue = value?.trim().toLowerCase();
-
-  if (!normalizedValue) {
-    return false;
-  }
-
-  return legacyPublicActivitySources.some((knownSource) =>
-    normalizedValue.includes(knownSource),
-  );
-}
-
 function getNullableStringContainsWhere(
   field: "source" | "sourceUrl" | "externalUrl",
   source: string,
@@ -984,51 +960,6 @@ function getPublicEventTimeStateWhere(
       },
     ],
   };
-}
-
-export function isLegacyActivityInfoSource(activity: {
-  id?: string | null;
-  publicEventId?: string | null;
-  source?: string | null;
-  sourceUrl?: string | null;
-  externalSource?: string | null;
-  externalId?: string | null;
-  externalUrl?: string | null;
-  importedAt?: Date | string | null;
-  sourcePayload?: unknown;
-}) {
-  if (
-    activity.source === AUTO_CREATED_TEAM_SOURCE ||
-    activity.source === "MERCHANT_BOOKING"
-  ) {
-    return false;
-  }
-
-  if (activity.publicEventId) {
-    return false;
-  }
-
-  const sourceLooksPublic =
-    Boolean(activity.id && legacyPublicActivityIdPattern.test(activity.id)) ||
-    includesKnownPublicActivitySource(activity.source) ||
-    includesKnownPublicActivitySource(activity.sourceUrl) ||
-    includesKnownPublicActivitySource(activity.externalUrl);
-
-  const sourcePayloadLooksPublic = Boolean(
-    activity.sourcePayload &&
-    !isAddressPrivacyOnlySourcePayload(
-      activity.sourcePayload as Prisma.JsonValue,
-    ),
-  );
-
-  return Boolean(
-    sourceLooksPublic ||
-    activity.externalSource ||
-    activity.externalId ||
-    activity.externalUrl ||
-    activity.importedAt ||
-    sourcePayloadLooksPublic,
-  );
 }
 
 function getActivityInfoDedupeKeys(item: {
@@ -2190,7 +2121,7 @@ function getAgendaDateSortDirection(
     : "asc";
 }
 
-export async function getActivities(
+async function getActivitiesUnlocalized(
   options: GetActivitiesOptions = {},
 ): Promise<ActivityCardViewModel[]> {
   const activityNow = getActivityFloatingNow();
@@ -2274,7 +2205,7 @@ export async function getActivities(
   );
 }
 
-export async function getUpcomingHomeActivities({
+async function getUpcomingHomeActivitiesUnlocalized({
   limit = 8,
 }: {
   limit?: number;
@@ -3048,7 +2979,7 @@ async function getPublicInfoOnlyActivityList(
   };
 }
 
-export async function getActivityList(
+async function getActivityListUnlocalized(
   filters: ActivityFilters,
   options: GetActivityListOptions = {},
 ): Promise<ActivityListResult> {
@@ -3238,4 +3169,19 @@ export async function findDiscoveryActivityCards(args: {
     return row ? [row] : [];
   });
   return attachPersistentBookingParticipantCounts(orderedRows);
+}
+
+export async function getActivities(...args: Parameters<typeof getActivitiesUnlocalized>) {
+  const result = await getActivitiesUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getUpcomingHomeActivities(...args: Parameters<typeof getUpcomingHomeActivitiesUnlocalized>) {
+  const result = await getUpcomingHomeActivitiesUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityList(...args: Parameters<typeof getActivityListUnlocalized>) {
+  const result = await getActivityListUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
 }

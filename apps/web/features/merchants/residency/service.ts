@@ -5,6 +5,7 @@ import {
   type CreateNotificationInput,
 } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 import {
   isCurrentOrFutureResidencyDate,
   isFutureResidencyDate,
@@ -480,7 +481,11 @@ export async function publishResidencySlot(input: {
   startTime: string;
   address: string;
 }): Promise<ResidencyServiceResult> {
-  return serializable((tx) => publishResidencySlotInDatabase(tx, input));
+  const result = await serializable((tx) => publishResidencySlotInDatabase(tx, input));
+  if (result.status === "PUBLISHED" && result.activityId) {
+    await scheduleGatheringTranslations(result.activityId);
+  }
+  return result;
 }
 
 export async function publishResidencySlotInDatabase(

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "translations:test-db": "node --conditions=react-server --import tsx scripts/test-content-translations.ts",
+    "translations:backfill": "node --conditions=react-server --import tsx scripts/backfill-content-translations.ts",
     "aa:preview": "node scripts/build-aa-preview.mjs && node scripts/serve-aa-preview.mjs",
     "dev": "next dev",
     "ios:sync": "cap sync ios && npm run ios:verify-keyboard",

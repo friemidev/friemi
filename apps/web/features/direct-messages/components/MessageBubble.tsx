@@ -26,6 +26,7 @@ import {
   getChatReplyCopy,
 } from "@/features/chat/components/ChatReplyPreview";
 import type { ChatReplyTarget } from "@/features/chat/types";
+import { ManualMessageTranslation } from "@/features/translations/components/ManualMessageTranslation";
 
 export type MessageBubbleDeliveryStatus = "sending" | "failed";
 
@@ -416,6 +417,9 @@ export function MessageBubble({
             </p>
           ) : null}
         </div>
+        {hasBody && !deliveryStatus && !selectionMode ? (
+          <ManualMessageTranslation entityId={id} entityType="direct_message" locale={locale} text={body} align={isMine ? "end" : "start"} />
+        ) : null}
         {replyTo ? (
           <ChatReplyBubblePreview locale={locale} replyTo={replyTo} />
         ) : null}

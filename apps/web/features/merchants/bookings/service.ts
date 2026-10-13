@@ -4,6 +4,7 @@ import {
   type CreateNotificationInput,
 } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 import {
   getBookingToday,
   isBookingDateOpen,
@@ -109,8 +110,12 @@ function toSchedule(settings: {
   };
 }
 
-export function saveBookingSettings(input: BookingSettingsInput) {
-  return serializable((tx) => saveBookingSettingsInDatabase(tx, input));
+export async function saveBookingSettings(input: BookingSettingsInput) {
+  const result = await serializable((tx) => saveBookingSettingsInDatabase(tx, input));
+  if (result.status === "SAVED" && result.activityId) {
+    await scheduleGatheringTranslations(result.activityId);
+  }
+  return result;
 }
 
 export async function saveBookingSettingsInDatabase(

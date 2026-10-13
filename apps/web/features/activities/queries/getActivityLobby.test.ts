@@ -47,11 +47,13 @@ test("mobile history filtering scopes the complete lightweight index before pagi
     prisma.activity.findMany = original;
   });
   await getMobileActivityLobbyPage({
+    locale: "en",
     tab: "nearby",
     status: "ongoing",
     viewerProfileId: null,
   });
   await getMobileActivityLobbyPage({
+    locale: "en",
     tab: "nearby",
     status: "ended",
     page: 3,
@@ -80,7 +82,7 @@ test("anonymous users cannot load another user's mine or following tabs", async 
     prisma.activity.findMany = original;
   });
   for (const tab of ["mine", "friends"] as const) {
-    await getMobileActivityLobbyPage({ tab, viewerProfileId: null });
+    await getMobileActivityLobbyPage({ tab, viewerProfileId: null, locale: "en" });
   }
   for (const args of calls) {
     const filters = args.where?.AND as Prisma.ActivityWhereInput[];

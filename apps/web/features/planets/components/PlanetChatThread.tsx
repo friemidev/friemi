@@ -12,6 +12,7 @@ import {
 import { dispatchChatReplyRequest } from "@/features/chat/chatReplyEvents";
 import type { ChatReplyTarget } from "@/features/chat/types";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
+import { ManualMessageTranslation } from "@/features/translations/components/ManualMessageTranslation";
 import {
   getChatDateKey,
   shouldShowChatTimeSeparator,
@@ -196,6 +197,7 @@ function PlanetMessageBubble({
           </p>
         ) : null}
       </div>
+      {message.content.trim() ? <ManualMessageTranslation entityId={message.id} entityType="planet_message" locale={locale} text={message.content} align={isViewer ? "end" : "start"} /> : null}
       {message.replyTo ? (
         <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
       ) : null}
