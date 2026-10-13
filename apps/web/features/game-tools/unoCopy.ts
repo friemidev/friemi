@@ -1,4 +1,5 @@
-import type { UnoCard, UnoEvent, UnoViewerState } from "./unoTypes";
+import type { UnoCard, UnoEvent, UnoRuleSettings, UnoRulesetVersion, UnoViewerState } from "./unoTypes";
+import { getUnoRules } from "./unoRules";
 
 const en = {
   changeCharacter: "Change character",
@@ -16,6 +17,11 @@ const en = {
   players: "2–10 players",
   earlyAccess: "Early access",
   ruleTag: "Classic rules",
+  stackDraws: "Stack draw cards",
+  stackDrawsHint: "+2 on +2 · +4 on +4",
+  challengeDrawFour: "Challenge +4",
+  allowActionFinish: "Finish with action cards",
+  drawPenalty: "Draw {count}",
   rules: "Rules",
   close: "Close",
   room: "TABLE",
@@ -108,8 +114,8 @@ const en = {
   caught: "was caught · +2 cards",
   falseCatch: "reported incorrectly · +2 cards",
   challengeWon: "won the challenge",
-  challengeLost: "lost the challenge · +6",
-  accepted: "accepted · +4 cards",
+  challengeLost: "lost the challenge · +{count}",
+  accepted: "accepted · +{count} cards",
   timeout: "timed out",
   toWin: "to win",
   settings: "Table rules",
@@ -139,6 +145,11 @@ const zh: typeof en = {
   players: "2–10 人",
   earlyAccess: "抢先体验",
   ruleTag: "经典规则",
+  stackDraws: "罚牌叠加",
+  stackDrawsHint: "+2 接 +2 · +4 接 +4",
+  challengeDrawFour: "+4 挑战",
+  allowActionFinish: "功能牌收尾",
+  drawPenalty: "摸 {count} 张",
   rules: "规则",
   close: "关闭",
   room: "房间",
@@ -231,8 +242,8 @@ const zh: typeof en = {
   caught: "被抓到漏喊 · 摸二张",
   falseCatch: "误报 · 摸二张",
   challengeWon: "挑战成功",
-  challengeLost: "挑战失败 · 摸六张",
-  accepted: "接受了 · 摸四张",
+  challengeLost: "挑战失败 · 摸 {count} 张",
+  accepted: "接受了 · 摸 {count} 张",
   timeout: "超时",
   toWin: "分获胜",
   settings: "游戏设置",
@@ -262,6 +273,11 @@ const fr: typeof en = {
   players: "2–10 joueurs",
   earlyAccess: "Accès anticipé",
   ruleTag: "Règles classiques",
+  stackDraws: "Cumuler les pénalités",
+  stackDrawsHint: "+2 sur +2 · +4 sur +4",
+  challengeDrawFour: "Contester le +4",
+  allowActionFinish: "Finir par une carte action",
+  drawPenalty: "Piocher {count}",
   rules: "Règles",
   close: "Fermer",
   room: "TABLE",
@@ -354,8 +370,8 @@ const fr: typeof en = {
   caught: "a oublié UNO · +2 cartes",
   falseCatch: "signale à tort · +2 cartes",
   challengeWon: "gagne la contestation",
-  challengeLost: "perd la contestation · +6",
-  accepted: "accepte · +4 cartes",
+  challengeLost: "perd la contestation · +{count}",
+  accepted: "accepte · +{count} cartes",
   timeout: "dépasse le temps",
   toWin: "pour gagner",
   settings: "Règles de la table",
@@ -387,10 +403,39 @@ const legacyRules = {
   }
 } as const;
 
-export function getUnoCopy(locale: string, rulesetVersion: 1 | 2 = 2) {
+export function getUnoCopy(locale: string, rulesetVersion: UnoRulesetVersion = 3, settings: Partial<UnoRuleSettings> = {}) {
   const key = locale === "zh-CN" ? "zh-CN" : locale === "fr" ? "fr" : "en";
   const copy = key === "zh-CN" ? zh : key === "fr" ? fr : en;
-  return rulesetVersion === 1 ? { ...copy, ...legacyRules[key] } : copy;
+  if (rulesetVersion === 1) return { ...copy, ...legacyRules[key] };
+  if (rulesetVersion === 2) return copy;
+  const rules = getUnoRules({ ...settings, rulesetVersion });
+  const variant = {
+    "zh-CN": {
+      ruleTag: "房间规则",
+      rule1: (rules.stackDraws ? "没有累计罚牌时，" : "") + copy.rule1,
+      rule4: rules.allowActionFinish ? "任何合法牌都可以收尾。末张为罚牌时，下家先摸完累计罚牌，再结算。" : "最后一张只能出数字牌，不能用功能牌或万能牌收尾。",
+      rule5: (rules.stackDraws ? "罚牌只允许同类叠加：+2 接 +2、+4 接 +4。接不下则摸完累计张数并跳过回合。" : "+2 让下家摸二张并跳过，不叠加罚牌。") + (rules.challengeDrawFour ? "出 +4 时没有当前颜色才合法。挑战成功，出牌者摸全部罚牌；失败，挑战者摸全部罚牌再加二，并跳过回合。" : "+4 可直接出并指定颜色，不使用挑战。" + (rules.stackDraws ? "" : "下家摸四张并跳过。")),
+      challengeBody: "若对方仍有原颜色，可挑战。失败需摸累计罚牌再加二。",
+    },
+    en: {
+      ruleTag: "Room rules",
+      rule1: (rules.stackDraws ? "When no draw penalty is pending: " : "") + copy.rule1,
+      rule4: rules.allowActionFinish ? "Any legal card can finish the round. A final draw card makes the next player draw the full penalty before scoring." : "Finish with a number card. Action and wild cards cannot be your last card.",
+      rule5: (rules.stackDraws ? "Stack only the same type: +2 on +2, +4 on +4. Take the full penalty and skip your turn if you do not stack." : "+2 makes the next player draw two and skip. No stacking.") + (rules.challengeDrawFour ? " Play +4 only without the current colour. A successful challenge makes its player take the full penalty; a failed challenge makes you take it plus two and skip." : " Play +4 freely and choose a colour; no challenge. Without stacking, the next player draws four and skips."),
+      challengeBody: "Challenge if the player held the previous colour. If wrong, take the full penalty plus two.",
+    },
+    fr: {
+      ruleTag: "Règles de la salle",
+      rule1: (rules.stackDraws ? "Sans pénalité en attente : " : "") + copy.rule1,
+      rule4: rules.allowActionFinish ? "Toute carte légale peut terminer la manche. Une dernière carte de pioche fait piocher toute la pénalité avant le décompte." : "Terminez par un chiffre. Une carte action ou un joker ne peut pas être votre dernière carte.",
+      rule5: (rules.stackDraws ? "Cumulez seulement le même type : +2 sur +2, +4 sur +4. Sinon, piochez le total et passez votre tour." : "Le +2 fait piocher deux cartes et passer un tour. Aucun cumul.") + (rules.challengeDrawFour ? " Le +4 exige de ne pas avoir la couleur actuelle. Contestation réussie : son joueur pioche toute la pénalité. Échec : vous piochez le total plus deux et passez." : " Jouez librement le +4 et choisissez une couleur, sans contestation. Sans cumul, le suivant pioche quatre cartes et passe."),
+      challengeBody: "Contestez si le joueur avait la couleur précédente. En cas d’échec, piochez le total plus deux.",
+    },
+  }[key];
+  return { ...copy, ...variant };
+}
+export function unoDrawLabel(count: number, locale: string) {
+  return getUnoCopy(locale).drawPenalty.replace("{count}", String(count));
 }
 export function unoCardUnit(count: number, locale: string) {
   if (count === 1 && locale !== "zh-CN") return locale === "fr" ? "carte" : "card";
@@ -429,8 +474,8 @@ export function unoEventLabel(event: UnoEvent, state: UnoViewerState, locale: st
     case "CAUGHT": return `${state.players.find(p => p.seat === event.targetSeat)?.name ?? name} ${t.caught}`;
     case "FALSE_CATCH": return `${name} ${t.falseCatch}`;
     case "CHALLENGE_WON": return `${name} ${t.challengeWon}`;
-    case "CHALLENGE_LOST": return `${name} ${t.challengeLost}`;
-    case "ACCEPT_DRAW_FOUR": return `${name} ${t.accepted}`;
+    case "CHALLENGE_LOST": return `${name} ${t.challengeLost.replace("{count}", String(event.count ?? 6))}`;
+    case "ACCEPT_DRAW_FOUR": return `${name} ${t.accepted.replace("{count}", String(event.count ?? 4))}`;
     case "COLOR": return `${name} ${t.chose} ${event.color ? t[event.color] : ""}`;
     case "ROUND_WIN": return `${name} ${t.roundWin}`;
     case "TIMEOUT": return `${name} ${t.timeout} · ${event.count ? `${t.drew} ${event.count} ${unoCardUnit(event.count, locale)}` : t.passed}`;

@@ -1,8 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isUnoSameOrigin, unoCommandSchema, unoMutationSchema } from "./unoRequest";
+import { isUnoSameOrigin, unoCommandSchema, unoMutationSchema, unoReactionSchema, unoSettingsMutationSchema } from "./unoRequest";
 
 const envelope = { commandId: "command-123", matchNumber: 1, roundNumber: 1, turnId: 3 };
+
+test("reactions bind the original match and round before they can be stored", () => {
+  const input = { reactionId: "d94703ee-0e5c-4b21-8aaa-cd5f8871e992", kind: "laugh", matchNumber: 1, roundNumber: 0 };
+  assert.deepEqual(unoReactionSchema.parse(input), input);
+  for (const patch of [
+    { matchNumber: undefined }, { roundNumber: undefined }, { matchNumber: 0 }, { roundNumber: -1 },
+    { matchNumber: 2_147_483_648 }, { roundNumber: 2_147_483_648 }, { roundNumber: 1.5 },
+    { matchNumber: "1" }, { kind: "unknown" }, { reactionId: "invalid" }, { extra: true },
+  ]) assert.equal(unoReactionSchema.safeParse({ ...input, ...patch }).success, false);
+});
+
+test("room rule switches accept explicit booleans and require a revision and a real change", () => {
+  for (const key of ["stackDraws", "challengeDrawFour", "allowActionFinish"]) {
+    for (const value of [true, false]) assert.equal(unoSettingsMutationSchema.safeParse({ expectedRevision: 2, [key]: value }).success, true);
+    for (const value of ["false", 0, null]) assert.equal(unoSettingsMutationSchema.safeParse({ expectedRevision: 2, [key]: value }).success, false);
+    assert.equal(unoSettingsMutationSchema.safeParse({ [key]: true }).success, false);
+  }
+  assert.equal(unoSettingsMutationSchema.safeParse({ expectedRevision: 2 }).success, false);
+});
 
 test("UNO commands require versions, explicit card ownership version and declaration episode", () => {
   assert.equal(unoCommandSchema.safeParse({ ...envelope, action: { type: "START" } }).success, false);

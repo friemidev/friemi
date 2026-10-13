@@ -4,8 +4,12 @@ export type UnoValue = `${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}` | "skip" | "re
 export type UnoCard = { id: string; color: UnoColor | null; value: UnoValue };
 export type UnoPhase = "LOBBY" | "PLAYING" | "CHALLENGE" | "ROUND_END" | "FINISHED";
 export type UnoMatchMode = "score" | "single";
+export type UnoRulesetVersion = 1 | 2 | 3;
+export type UnoRuleSettings = { stackDraws: boolean; challengeDrawFour: boolean; allowActionFinish: boolean };
+export type UnoRoomSettings = Partial<UnoRuleSettings> & { turnSeconds?: 30 | 60 | 90; matchMode?: UnoMatchMode };
+export type UnoDrawPenalty = { value: "draw2" | "wild4"; count: number };
 export type UnoRosterSeat = { seat: number; name: string };
-export type UnoOptions = { turnSeconds?: 30 | 60 | 90; targetScore?: number; matchMode?: UnoMatchMode };
+export type UnoOptions = UnoRoomSettings & { targetScore?: number };
 export type UnoPlayer = UnoRosterSeat & {
   hand: UnoCard[];
   handVersion: number;
@@ -31,8 +35,10 @@ export type UnoRoundResult = {
   points: number;
   remaining: { seat: number; points: number; cardCount: number }[];
 };
-export type UnoState = {
-  rulesetVersion: 1 | 2;
+export type UnoState = Partial<UnoRuleSettings> & {
+  rulesetVersion: UnoRulesetVersion;
+  /** Public accumulated draw penalty; absent in pre-stacking matches. */
+  pendingDraw?: UnoDrawPenalty | null;
   phase: UnoPhase;
   players: UnoPlayer[];
   turnSeat: number;
@@ -58,8 +64,9 @@ export type UnoState = {
   caughtEpisodes: string[];
   roundResult: UnoRoundResult | null;
 };
-export type UnoViewerState = {
-  rulesetVersion: 1 | 2;
+export type UnoViewerState = UnoRuleSettings & {
+  rulesetVersion: UnoRulesetVersion;
+  pendingDraw: UnoDrawPenalty | null;
   phase: UnoPhase;
   players: (UnoRosterSeat & { cardCount: number; score: number; episodeId: number })[];
   selfSeat: number;

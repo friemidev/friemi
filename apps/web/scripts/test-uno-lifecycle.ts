@@ -69,7 +69,7 @@ try {
   await server.setUnoRoomReady(roomId, profiles[0], true);
   await server.setUnoRoomReady(roomId, profiles[1], true);
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
-  const firstReaction = { reactionId: randomUUID(), kind: "laugh" as const };
+  const firstReaction = { reactionId: randomUUID(), kind: "laugh" as const, matchNumber: host.state.matchNumber, roundNumber: host.state.roundNumber };
   await server.sendUnoReaction(roomId, profiles[0], firstReaction);
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   host = view(await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" })));
@@ -135,7 +135,7 @@ try {
   for (const profileId of profiles) await server.setUnoRoomReady(roomId, profileId, true);
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   host = view(await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" })));
-  const newReaction = { reactionId: randomUUID(), kind: "surprise" as const };
+  const newReaction = { reactionId: randomUUID(), kind: "surprise" as const, matchNumber: host.state.matchNumber, roundNumber: host.state.roundNumber };
   const liveReaction = view(await server.sendUnoReaction(roomId, profiles[0], newReaction));
   const oldReactionRetry = view(await server.sendUnoReaction(roomId, profiles[0], firstReaction));
   check(oldReactionRetry.revision === liveReaction.revision && oldReactionRetry.reactions[0]?.id === newReaction.reactionId, "Old reaction cannot replace a different reaction in a new match");
