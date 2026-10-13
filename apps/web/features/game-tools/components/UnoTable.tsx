@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, Check, ChevronDown, Flag, House, Info, LogOut, RotateCcw, Trophy, X } from "lucide-react";
 import { isUnoCardPlayable } from "../unoEngine";
-import { getUnoCopy, unoCardLabel, unoCardUnit, unoEventLabel } from "../unoCopy";
+import { getUnoCopy, unoCardLabel, unoCardUnit, unoDrawLabel, unoEventLabel } from "../unoCopy";
 import { UNO_COLORS, type UnoAction, type UnoColor, type UnoViewerState } from "../unoTypes";
 import type { DrawGuessCatId } from "../drawGuessCats";
 import type { UnoReaction, UnoReactionKind } from "../unoReactions";
@@ -19,7 +19,7 @@ export type UnoSeatView = { seat: number; name: string; catId?: DrawGuessCatId; 
 export type UnoTableProps = { locale: string; state: UnoViewerState; seats: UnoSeatView[]; code: string; hostSeat: number; busy?: boolean; error?: string; reconnecting?: boolean; returning?: boolean; reactions?: UnoReaction[]; onReact?: (kind: UnoReactionKind) => Promise<boolean>; onAction: (action: UnoAction) => Promise<unknown> | void; onLeave: () => void; onReturn?: () => void; onRetry?: () => void };
 
 export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, error, reconnecting, returning, reactions, onReact, onAction, onLeave, onReturn, onRetry }: UnoTableProps) {
-  const t = getUnoCopy(locale, state.rulesetVersion), ux = getUnoExperienceCopy(locale, state.rulesetVersion), liveReactions = useUnoReactions(reactions);
+  const t = getUnoCopy(locale, state.rulesetVersion, state), ux = getUnoExperienceCopy(locale, state.rulesetVersion, state), liveReactions = useUnoReactions(reactions);
   const clockNow = useUnoNow();
   const [selection, setSelection] = useState<{ matchNumber: number; roundNumber: number; cardId: string } | null>(null);
   const [wildCard, setWildCard] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
   const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const selectedId = selection?.matchNumber === state.matchNumber && selection.roundNumber === state.roundNumber ? selection.cardId : null;
   const selected = state.hand.find(card => card.id === selectedId);
-  const active = state.phase === "PLAYING" && state.turnSeat === state.selfSeat && state.colorChoiceSeat === null;
+  const active = (state.phase === "PLAYING" || state.phase === "CHALLENGE" && state.stackDraws && state.pendingDraw) && state.turnSeat === state.selfSeat && state.colorChoiceSeat === null;
   const ended = state.phase === "ROUND_END" || state.phase === "FINISHED";
   const canPlay = Boolean(selected && active && isUnoCardPlayable(state, selected));
   const opponents = state.players.filter(p => p.seat !== state.selfSeat);
@@ -124,13 +124,13 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
     setWildCard(null);
   }
   let handHint = state.drawnCardId ? t.drawnOnly : "";
-  if (selected && !canPlay && active) handHint = state.rulesetVersion === 1 && state.hand.length === 1 && !/^\d$/.test(selected.value) ? t.lastNumber : state.drawnCardId && selected.id !== state.drawnCardId ? t.drawnOnly : t.notPlayable;
+  if (selected && !canPlay && active) handHint = !state.allowActionFinish && state.hand.length === 1 && !/^\d$/.test(selected.value) ? t.lastNumber : state.pendingDraw ? t.stackDrawsHint : state.drawnCardId && selected.id !== state.drawnCardId ? t.drawnOnly : t.notPlayable;
   const feedback = (error || reconnecting) && <div className={s.feedback} role={error ? "alert" : "status"}><span>{reconnecting ? t.reconnecting : error}</span>{onRetry && <button type="button" className={`${s.button} ${s.quiet} ${s.compactButton}`} onClick={onRetry}><RotateCcw size={18}/>{t.retry}</button>}</div>;
 
   return <div ref={tableRef} className={`${s.game} ${s.tablePage}`} data-uno-phase={state.phase}>
-    <UnoHeader locale={locale} code={code} round={state.roundNumber} events={state.events} rulesetVersion={state.rulesetVersion} onBack={() => setLeave(true)}/>
+    <UnoHeader locale={locale} code={code} round={state.roundNumber} events={state.events} rulesetVersion={state.rulesetVersion} settings={state} onBack={() => setLeave(true)}/>
     <div className={s.toolbar} aria-label={t.hand}>
-      <button type="button" className={`${s.button} ${s.drawButton}`} disabled={!active || busy || !!reconnecting} onClick={() => void onAction({ type: state.drawnCardId ? "PASS" : "DRAW" })}><ArrowDown size={19}/><span>{t.draw}<small>{state.drawnCardId ? ux.keepAndEnd : t.drawHint}</small></span></button>
+      <button type="button" className={`${s.button} ${s.drawButton}`} disabled={!active || busy || !!reconnecting} onClick={() => void onAction({ type: state.phase === "CHALLENGE" ? "ACCEPT_DRAW_FOUR" : state.drawnCardId ? "PASS" : "DRAW" })}><ArrowDown size={19}/><span>{t.draw}<small>{state.pendingDraw ? unoDrawLabel(state.pendingDraw.count, locale) : state.drawnCardId ? ux.keepAndEnd : t.drawHint}</small></span></button>
       <button type="button" className={`${s.button} ${s.unoButton} ${state.declared ? s.unoDeclared : ""}`} disabled={busy || !!reconnecting || ended} aria-pressed={state.declared} onClick={() => { if (self) void onAction({ type: "CALL_UNO", episodeId: self.episodeId, handVersion: state.handVersion }); }}>UNO<span aria-hidden="true">!</span>{state.declared && <Check size={16}/>}</button>
       <button type="button" className={`${s.button} ${s.primary}`} disabled={!canPlay || busy || !!reconnecting} onClick={play}><span>{t.play}</span><ArrowRight size={21}/></button>
     </div>
@@ -175,7 +175,7 @@ export function UnoTable({ locale, state, seats, code, hostSeat, busy = false, e
       {lastVerdict && !ended && <button type="button" className={`${s.button} ${s.quiet} ${s.compactButton} ${s.verdictButton}`} onClick={() => setShowVerdict(true)}><Info size={18}/>{ux.lastJudgement}</button>}
       {state.phase === "CHALLENGE" && state.challenge?.targetSeat === state.selfSeat && <section className={s.challengePanel} aria-label={t.challengeTitle}>
         <div><strong>{t.challengeTitle}</strong><p>{t.challengeBody}</p></div>
-        <div className={s.challengeActions}><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.primary}`} onClick={() => void onAction({ type: "ACCEPT_DRAW_FOUR" })}>{t.accept}</button><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.secondary}`} onClick={() => void onAction({ type: "CHALLENGE_DRAW_FOUR" })}>{t.challenge}</button></div>
+        <div className={s.challengeActions}><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.primary}`} onClick={() => void onAction({ type: "ACCEPT_DRAW_FOUR" })}>{unoDrawLabel(state.pendingDraw?.count ?? 4, locale)}</button><button type="button" disabled={busy || !!reconnecting} className={`${s.button} ${s.secondary}`} onClick={() => void onAction({ type: "CHALLENGE_DRAW_FOUR" })}>{t.challenge}</button></div>
       </section>}
     </section>
 

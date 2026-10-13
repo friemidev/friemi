@@ -110,12 +110,13 @@ try {
   host = view(await server.updateUnoRoomSettings(roomId, profiles[0], { turnSeconds: 60 }, host.revision));
 
   const reactionId = randomUUID();
-  check((await server.sendUnoReaction(roomId, profiles[2], { reactionId: randomUUID(), kind: "laugh" })).error === "NOT_A_MEMBER", "Outsider cannot send reactions");
-  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: "bad-id", kind: "laugh" })).error === "INVALID_REACTION", "Reaction IDs must be UUIDs");
+  const lobbyReactionFrame = { matchNumber: host.state.matchNumber, roundNumber: host.state.roundNumber };
+  check((await server.sendUnoReaction(roomId, profiles[2], { reactionId: randomUUID(), kind: "laugh", ...lobbyReactionFrame })).error === "NOT_A_MEMBER", "Outsider cannot send reactions");
+  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: "bad-id", kind: "laugh", ...lobbyReactionFrame })).error === "INVALID_REACTION", "Reaction IDs must be UUIDs");
   const beforeReaction = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
   const reactionResults = await Promise.all([
-    server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh" }),
-    server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh" }),
+    server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh", ...lobbyReactionFrame }),
+    server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh", ...lobbyReactionFrame }),
   ]);
   check(reactionResults.every((result) => result.room), "Duplicate concurrent reactions acknowledge the same send");
   const reactionRoom = view(reactionResults[0]);
@@ -123,22 +124,22 @@ try {
   check(reactionRoom.reactions[0].expiresAt - reactionRoom.reactions[0].createdAt === 4_500, "Reaction lifetime is 4.5 seconds");
   check(await prisma.unoCommand.count({ where: { roomId, commandId: `reaction_${reactionId}` } }) === 1, "Reaction dedup receipt commits once");
   check(JSON.stringify((await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } })).state) === JSON.stringify(beforeReaction.state), "Reaction leaves complete rules state unchanged");
-  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause" })).error === "REACTION_COOLDOWN", "Different reaction inside 3 seconds is rejected");
-  check((await server.sendUnoReaction(roomId, profiles[1], { reactionId, kind: "laugh" })).error === "COMMAND_ID_USED", "Reaction receipt is bound to the original actor");
-  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "surprise" })).error === "COMMAND_ID_USED", "Reaction receipt is bound to the original kind");
+  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause", ...lobbyReactionFrame })).error === "REACTION_COOLDOWN", "Different reaction inside 3 seconds is rejected");
+  check((await server.sendUnoReaction(roomId, profiles[1], { reactionId, kind: "laugh", ...lobbyReactionFrame })).error === "COMMAND_ID_USED", "Reaction receipt is bound to the original actor");
+  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "surprise", ...lobbyReactionFrame })).error === "COMMAND_ID_USED", "Reaction receipt is bound to the original kind");
   check(view(await server.getUnoRoomView(roomId, profiles[1])).reactions.some((reaction) => reaction.id === reactionId), "Reaction is visible to other members without private game state");
   await expireReactions();
   check(view(await server.getUnoRoomView(roomId, profiles[0])).reactions.length === 0, "Expired reactions disappear from snapshots");
   const beforeRetry = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
-  check(view(await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh" })).reactions.length === 0, "Retrying an expired reaction never replays its animation");
+  check(view(await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh", ...lobbyReactionFrame })).reactions.length === 0, "Retrying an expired reaction never replays its animation");
   check((await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } })).revision === beforeRetry.revision, "Expired duplicate does not increment revision");
   const concurrentReactions = await Promise.all([
-    server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh" }),
-    server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause" }),
+    server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh", ...lobbyReactionFrame }),
+    server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause", ...lobbyReactionFrame }),
   ]);
   check(concurrentReactions.filter((result) => result.room).length === 1 && concurrentReactions.filter((result) => result.error === "REACTION_COOLDOWN").length === 1, "Concurrent different reactions obey one cooldown window");
   const latestReaction = view(await server.getUnoRoomView(roomId, profiles[0])).reactions[0].id;
-  check(view(await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh" })).reactions[0].id === latestReaction, "Old reaction retries cannot replace a newer reaction");
+  check(view(await server.sendUnoReaction(roomId, profiles[0], { reactionId, kind: "laugh", ...lobbyReactionFrame })).reactions[0].id === latestReaction, "Old reaction retries cannot replace a newer reaction");
 
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
   check((await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "START" }))).error === "PLAYERS_NOT_READY", "Cannot start before readiness");
@@ -202,16 +203,17 @@ try {
   await fixture((state) => { state.colorChoiceSeat = null; state.currentColor = "red"; state.phase = "PLAYING"; state.challenge = null; state.turnSeat = 0; state.drawnCardId = null; state.deadlineAt = Date.now() + 60_000; });
   await expireReactions();
   const beforePlayReaction = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
-  check(Boolean((await server.sendUnoReaction(roomId, profiles[1], { reactionId: randomUUID(), kind: "surprise" })).room), "Players can manually react during play");
+  const playReactionFrame = { matchNumber: host.state.matchNumber, roundNumber: host.state.roundNumber };
+  check(Boolean((await server.sendUnoReaction(roomId, profiles[1], { reactionId: randomUUID(), kind: "surprise", ...playReactionFrame })).room), "Players can manually react during play");
   const afterPlayReaction = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
   check(JSON.stringify(beforePlayReaction.state) === JSON.stringify(afterPlayReaction.state) && beforePlayReaction.unoDeadlineAt?.getTime() === afterPlayReaction.unoDeadlineAt?.getTime(), "In-game reaction preserves turn, deadline, grace, cards and events");
   await fixture((state) => { state.phase = "CHALLENGE"; state.challenge = { offenderSeat: 0, targetSeat: 1, illegal: false }; });
   await expireReactions();
-  check(Boolean((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause" })).room), "Manual reactions remain available during a +4 challenge");
+  check(Boolean((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "applause", ...playReactionFrame })).room), "Manual reactions remain available during a +4 challenge");
   await fixture((state) => { state.phase = "PLAYING"; state.challenge = null; state.deadlineAt = Date.now() - 10; });
   await expireReactions();
   const expiredTurnBeforeReaction = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } });
-  check(Boolean((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh" })).room), "Reaction acknowledgment does not run the deadline engine");
+  check(Boolean((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh", ...playReactionFrame })).room), "Reaction acknowledgment does not run the deadline engine");
   check(JSON.stringify((await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId } })).state) === JSON.stringify(expiredTurnBeforeReaction.state), "Even an expired turn remains unchanged by a reaction alone");
   await fixture((state) => { state.deadlineAt = Date.now() + 60_000; });
   host = view(await server.getUnoRoomView(roomId, profiles[0]));
@@ -268,7 +270,7 @@ try {
   }
   // Force a completed round to exercise collective return and a fresh ready gate.
   await fixture((state) => { state.phase = "FINISHED"; state.matchMode = "single"; state.deadlineAt = null; });
-  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh" })).error === "WRONG_PHASE", "Finished games reject new reactions");
+  check((await server.sendUnoReaction(roomId, profiles[0], { reactionId: randomUUID(), kind: "laugh", matchNumber: host.state.matchNumber, roundNumber: host.state.roundNumber })).error === "WRONG_PHASE", "Finished games reject new reactions");
   check(view(await server.getUnoRoomView(roomId, profiles[0])).reactions.length === 0, "Finished games expose no live reaction animation");
   const oldMatch = host.state.matchNumber;
   check((await server.commandUnoRoom(roomId, profiles[0], envelope(host, { type: "REMATCH" }))).error === "RETURN_TO_LOBBY_FIRST", "Rematch cannot bypass fresh lobby readiness");

@@ -1,0 +1,5 @@
+export const diceDeviceCopy = {
+  "zh-CN": { shake: "手摇开关", shakeHint: "摇动手机", requesting: "等待授权…", denied: "未获动作权限，请点击摇骰。", unsupported: "此设备无法手摇，请点击摇骰。", unavailable: "未收到动作数据，请点击摇骰。", soundOn: "开启声音", soundOff: "关闭声音", soundError: "声音未开启，点喇叭重试。" },
+  en: { shake: "Shake to roll", shakeHint: "Shake your phone", requesting: "Waiting for permission…", denied: "Motion permission denied. Use the roll button.", unsupported: "Motion unavailable. Use the roll button.", unavailable: "No motion data. Use the roll button.", soundOn: "Turn sound on", soundOff: "Mute sound", soundError: "Sound unavailable. Tap the speaker to retry." },
+  fr: { shake: "Secouer", shakeHint: "Secouez le téléphone", requesting: "Autorisation en attente…", denied: "Mouvement refusé. Utilisez le bouton de lancer.", unsupported: "Mouvement indisponible. Utilisez le bouton de lancer.", unavailable: "Aucun mouvement reçu. Utilisez le bouton de lancer.", soundOn: "Activer le son", soundOff: "Couper le son", soundError: "Son indisponible. Touchez le haut-parleur." },
+} as const;

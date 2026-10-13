@@ -5,7 +5,9 @@ import { RotateCcw } from "lucide-react";
 import { advanceUnoDeadline, applyUnoAction, createUnoState, getUnoViewerState, isUnoCardPlayable, startUnoGame } from "../unoEngine";
 import { getUnoCopy, unoErrorMessage } from "../unoCopy";
 import { DRAW_GUESS_CATS, type DrawGuessCatId } from "../drawGuessCats";
-import { UNO_COLORS, type UnoAction, type UnoColor, type UnoMatchMode, type UnoState, type UnoViewerState } from "../unoTypes";
+import { UNO_COLORS, type UnoAction, type UnoColor, type UnoMatchMode, type UnoRoomSettings, type UnoRuleSettings, type UnoState, type UnoViewerState } from "../unoTypes";
+import { configureUnoLobby, getUnoRules } from "../unoRules";
+import { applyUnoPreviewScenario as scenarioPractice, type UnoPreviewScenario } from "../unoPreviewScenarios";
 import { UNO_REACTION_COOLDOWN_MS, UNO_REACTION_DURATION_MS, type UnoReaction, type UnoReactionKind } from "../unoReactions";
 import type { UnoRoomView } from "../unoRoomTypes";
 import { UnoEntryClient } from "./UnoEntryClient";
@@ -14,7 +16,7 @@ import { UnoTable } from "./UnoTable";
 import s from "./UnoGame.module.css";
 
 type Scene = "entry" | "lobby" | "table";
-export type UnoPreviewScenario = "one-card" | "two-cards" | "function-last" | "report" | "challenge" | "result" | "many-cards";
+export type { UnoPreviewScenario } from "../unoPreviewScenarios";
 
 function seededRandom(seed: number) {
   let value = seed;
@@ -27,9 +29,9 @@ function seededRandom(seed: number) {
   };
 }
 
-function createPractice(locale: string, count: number, seconds: 30 | 60 | 90 = 60, matchMode: UnoMatchMode = "score") {
+function createPractice(locale: string, count: number, seconds: 30 | 60 | 90 = 60, matchMode: UnoMatchMode = "score", rules: Partial<UnoRuleSettings> = {}) {
   const names = locale === "zh-CN" ? ["米粒", "桃桃", "小蓝", "阿栗", "圆圆", "豆豆", "团子", "星星", "小满", "布丁"] : locale === "fr" ? ["Camille", "Lou", "Milo", "Lili", "Noé", "Jules", "Alma", "Léon", "Zoé", "Rose"] : ["Jamie", "Peach", "Milo", "Lumi", "Bean", "Pip", "Sunny", "Clover", "Finn", "Coco"];
-  return createUnoState(names.slice(0, count).map((name, seat) => ({ seat, name })), { turnSeconds: seconds, matchMode });
+  return createUnoState(names.slice(0, count).map((name, seat) => ({ seat, name })), { turnSeconds: seconds, matchMode, ...rules });
 }
 
 function dealPractice(lobby: UnoState, seed: number) {
@@ -42,47 +44,6 @@ function dealPractice(lobby: UnoState, seed: number) {
   return startUnoGame(lobby, Date.now(), seededRandom(seed)).state;
 }
 
-function scenarioPractice(dealt: UnoState, scenario?: UnoPreviewScenario): UnoState {
-  if (!scenario) return dealt;
-  const state = structuredClone(dealt);
-  if (scenario === "many-cards") {
-    const self = state.players.find(player => player.seat === 0)!;
-    self.hand.push(...state.drawPile.splice(-(18 - self.hand.length)));
-    self.handVersion += 1;
-    return state;
-  }
-  const deck = [...state.drawPile, ...state.discard, ...state.players.flatMap(player => player.hand)];
-  const take = (id: string) => deck.splice(deck.findIndex(card => card.id === id), 1)[0];
-  state.discard = [take(scenario === "challenge" ? "wild4-0" : "red-5-0")];
-  const fewSeat = scenario === "report" ? 1 : 0;
-  for (const player of state.players) {
-    player.hand = player.seat === fewSeat && scenario !== "challenge" ? [take(scenario === "function-last" ? "red-skip-0" : "red-7-0")] : [];
-    if (player.seat === fewSeat && scenario === "two-cards") player.hand.push(take("blue-7-0"));
-  }
-  for (const player of state.players) {
-    if (!player.hand.length) player.hand = deck.splice(0, 7);
-    player.handVersion += 1;
-    player.episodeId += 1;
-    player.declared = false;
-    player.grace = false;
-    player.unoReportOpen = scenario === "report" && player.seat === fewSeat;
-  }
-  state.drawPile = deck;
-  state.currentColor = scenario === "challenge" ? "blue" : "red";
-  state.phase = scenario === "challenge" ? "CHALLENGE" : "PLAYING";
-  state.challenge = scenario === "challenge" ? { offenderSeat: 1, targetSeat: 0, illegal: false } : null;
-  state.turnSeat = 0;
-  state.colorChoiceSeat = null;
-  state.drawnCardId = null;
-  state.deadlineAt = Date.now() + (scenario === "challenge" ? 15 : state.turnSeconds) * 1000;
-  state.events = [];
-  if (scenario === "result") {
-    const self = state.players[0];
-    return applyUnoAction(state, 0, { type: "PLAY", cardId: self.hand[0].id, handVersion: self.handVersion }, Date.now()).state;
-  }
-  return state;
-}
-
 function preferredColor(view: UnoViewerState): UnoColor {
   return [...UNO_COLORS].sort((a, b) => view.hand.filter(card => card.color === b).length - view.hand.filter(card => card.color === a).length)[0];
 }
@@ -93,11 +54,11 @@ function botAction(state: UnoState): { seat: number; action: UnoAction } | null 
   const view = getUnoViewerState(state, current.seat);
   if (view.phase === "CHALLENGE") return { seat: current.seat, action: { type: "ACCEPT_DRAW_FOUR" } };
   if (view.colorChoiceSeat === current.seat) return { seat: current.seat, action: { type: "CHOOSE_COLOR", color: preferredColor(view) } };
-  const playable = view.hand.filter(card => isUnoCardPlayable(view, card)).filter(card => card.value !== "wild4" || !view.hand.some(other => other.color === view.currentColor));
+  const playable = view.hand.filter(card => isUnoCardPlayable(view, card)).filter(card => !view.challengeDrawFour || card.value !== "wild4" || !view.hand.some(other => other.color === view.currentColor));
   // A bot keeps a newly drawn number if playing it would strand its last action card.
-  if (view.rulesetVersion === 1 && view.drawnCardId && view.hand.length === 2 && view.hand.some(card => card.id !== view.drawnCardId && !/^\d$/.test(card.value))) return { seat: current.seat, action: { type: "PASS" } };
+  if (!view.allowActionFinish && view.drawnCardId && view.hand.length === 2 && view.hand.some(card => card.id !== view.drawnCardId && !/^\d$/.test(card.value))) return { seat: current.seat, action: { type: "PASS" } };
   const card = playable.sort((a, b) => Number(a.color === null) - Number(b.color === null) || Number(/^\d$/.test(a.value)) - Number(/^\d$/.test(b.value)))[0];
-  if (card && view.hand.length === (view.rulesetVersion === 2 ? 2 : 1) && !view.declared) return { seat: current.seat, action: { type: "CALL_UNO", episodeId: current.episodeId, handVersion: view.handVersion } };
+  if (card && view.hand.length === (view.rulesetVersion >= 2 ? 2 : 1) && !view.declared) return { seat: current.seat, action: { type: "CALL_UNO", episodeId: current.episodeId, handVersion: view.handVersion } };
   if (card) return { seat: current.seat, action: { type: "PLAY", cardId: card.id, handVersion: view.handVersion, ...(card.color === null ? { color: preferredColor(view) } : {}) } };
   return { seat: current.seat, action: { type: view.drawnCardId ? "PASS" : "DRAW" } };
 }
@@ -107,7 +68,7 @@ export function UnoPreview({ locale, initialScene = "table", autoplay = true, pl
   const t = getUnoCopy(locale);
   const [scene, setScene] = useState<Scene>(initialScene);
   const [state, setState] = useState(() => {
-    const lobby = createPractice(locale, count);
+    const lobby = createPractice(locale, count, 60, "score", scenario === "challenge" ? { challengeDrawFour: true } : {});
     return initialScene === "table" ? scenarioPractice(dealPractice(lobby, 36), scenario) : lobby;
   });
   const [ready, setReady] = useState(false);
@@ -169,13 +130,13 @@ export function UnoPreview({ locale, initialScene = "table", autoplay = true, pl
     const seed = dealSeed + 997;
     setDealSeed(seed);
     clearSession();
-    setState(scenarioPractice(dealPractice(createPractice(locale, count, state.turnSeconds, state.matchMode), seed), scenario));
+    setState(scenarioPractice(dealPractice(createPractice(locale, count, state.turnSeconds, state.matchMode, getUnoRules(state)), seed), scenario));
     setScene("table");
   }
 
   function lobby() {
     clearSession();
-    setState(createPractice(locale, count, state.turnSeconds, state.matchMode));
+    setState(createPractice(locale, count, state.turnSeconds, state.matchMode, getUnoRules(state)));
     setScene("lobby");
   }
 
@@ -205,12 +166,9 @@ export function UnoPreview({ locale, initialScene = "table", autoplay = true, pl
     return true;
   }
 
-  function settings(patch: { turnSeconds?: 30 | 60 | 90; matchMode?: UnoMatchMode }) {
+  function settings(patch: UnoRoomSettings) {
     if (state.phase !== "LOBBY") return;
-    const turnSeconds = patch.turnSeconds ?? state.turnSeconds;
-    const matchMode = patch.matchMode ?? state.matchMode ?? "score";
-    if (turnSeconds === state.turnSeconds && matchMode === (state.matchMode ?? "score")) return;
-    setState(previous => ({ ...previous, turnSeconds, matchMode }));
+    setState(previous => configureUnoLobby(previous, patch).state);
     setReady(false);
   }
 

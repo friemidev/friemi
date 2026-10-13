@@ -510,9 +510,12 @@ test("all opening effects use the dealer and initial direction correctly", () =>
     if (top.value === "reverse") {
       assert.equal(state.direction, -1);
       assert.equal(state.turnSeat, state.dealerSeat);
-    } else if (top.value === "skip" || top.value === "draw2") {
+    } else if (top.value === "skip") {
       assert.equal(state.turnSeat, (first + 1) % 3);
-      if (top.value === "draw2") assert.equal(state.players[first].hand.length, 9);
+    } else if (top.value === "draw2") {
+      assert.equal(state.turnSeat, first);
+      assert.equal(state.players[first].hand.length, 7);
+      assert.deepEqual(state.pendingDraw, { value: "draw2", count: 2 });
     } else {
       assert.equal(state.turnSeat, first);
       assert.equal(state.colorChoiceSeat, top.value === "wild" ? first : null);
@@ -548,7 +551,7 @@ test("seeded classic rounds conserve every card and reach an immediate finish", 
       assert.ok(state.players.some((p) => p.seat === state.turnSeat));
     }
     assert.ok(state.phase === "ROUND_END" || state.phase === "FINISHED", `seed ${game} did not finish`);
-    assert.equal(state.rulesetVersion, 2);
+    assert.equal(state.rulesetVersion, 3);
     assert.equal(state.players.find(p => p.seat === state.roundResult?.winnerSeat)!.hand.length, 0);
     assert.equal(state.deadlineAt, null);
   }

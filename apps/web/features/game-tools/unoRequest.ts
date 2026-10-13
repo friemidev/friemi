@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { UNO_REACTION_KINDS } from "./unoReactions";
 
 const color = z.enum(["red", "yellow", "green", "blue"]);
 // These counters also enter PostgreSQL Int columns in command receipts.
 // Reject overflow before a stale request can turn into a database failure.
 const storedCounter = z.number().int().max(2_147_483_647);
+export const unoReactionSchema = z.object({
+  reactionId: z.string().uuid(), kind: z.enum(UNO_REACTION_KINDS),
+  matchNumber: storedCounter.positive(), roundNumber: storedCounter.nonnegative(),
+}).strict();
 const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("START") }),
   z.object({ type: z.literal("PLAY"), cardId: z.string().min(1).max(64), color: color.optional(), handVersion: z.number().int().nonnegative() }),
@@ -30,6 +35,14 @@ export const unoCommandSchema = z.object({
 // Unreceipted writes bind the original visible revision. A delayed request
 // must not apply readiness, settings or an exit to a newer room lifecycle.
 export const unoMutationSchema = z.object({ expectedRevision: storedCounter.nonnegative() });
+export const unoRoomSettingsSchema = z.object({
+  turnSeconds: z.union([z.literal(30), z.literal(60), z.literal(90)]).optional(),
+  matchMode: z.enum(["score", "single"]).optional(),
+  stackDraws: z.boolean().optional(),
+  challengeDrawFour: z.boolean().optional(),
+  allowActionFinish: z.boolean().optional(),
+}).refine(settings => Object.values(settings).some(value => value !== undefined));
+export const unoSettingsMutationSchema = unoMutationSchema.and(unoRoomSettingsSchema);
 
 export function isUnoSameOrigin(request: Request) {
   const origin = request.headers.get("origin");

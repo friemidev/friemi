@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "./gameToolRooms";
 import { fallbackDrawGuessCatId, isDrawGuessCatId } from "./drawGuessCats";
 import { advanceUnoDeadline, applyUnoAction, createUnoState, getUnoViewerState, startUnoGame } from "./unoEngine";
+import { configureUnoLobby, DEFAULT_UNO_RULES, getUnoRules } from "./unoRules";
+import { unoReactionSchema, unoRoomSettingsSchema } from "./unoRequest";
 import { broadcastUnoRoomChange } from "./unoRealtimeServer";
-import { isUnoReactionKind, UNO_REACTION_COOLDOWN_MS, UNO_REACTION_DURATION_MS, type UnoReaction, type UnoReactionKind } from "./unoReactions";
+import { UNO_REACTION_COOLDOWN_MS, UNO_REACTION_DURATION_MS, type UnoReaction, type UnoReactionCommand } from "./unoReactions";
 import type { UnoRoomCommand, UnoRoomView } from "./unoRoomTypes";
-import type { UnoMatchMode, UnoState } from "./unoTypes";
+import type { UnoMatchMode, UnoRoomSettings, UnoRuleSettings, UnoState } from "./unoTypes";
 
 const RETRIES = 6;
 const PRESENCE_MS = 35_000;
@@ -21,17 +23,19 @@ const json = (value: unknown) => value as Prisma.InputJsonValue;
 function asState(value: Prisma.JsonValue | null): UnoState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const state = value as unknown as UnoState;
-  return [1, 2].includes(state.rulesetVersion) && Array.isArray(state.players) && Number.isInteger(state.matchNumber) ? state : null;
+  if (![1, 2, 3].includes(state.rulesetVersion) || !Array.isArray(state.players) || !Number.isInteger(state.matchNumber)) return null;
+  return state.phase === "LOBBY" && state.rulesetVersion < 3 ? configureUnoLobby(state, DEFAULT_UNO_RULES).state : state;
 }
 
 async function readRoom(roomId: string) {
-  return prisma.gameToolRoom.findUnique({
+  const room = await prisma.gameToolRoom.findUnique({
     where: { id: roomId },
     include: {
       seats: { orderBy: { seatNumber: "asc" }, include: { profile: { select: { avatarUrl: true } } } },
       members: true,
     },
   });
+  return room?.status === "CANCELLED" ? null : room;
 }
 type Room = NonNullable<Awaited<ReturnType<typeof readRoom>>>;
 type Config = { returnedProfileIds?: string[]; reactions?: UnoReaction[] };
@@ -81,7 +85,7 @@ async function persist(room: Room, before: UnoState, next: UnoState, options: Pe
   try {
     const changed = await prisma.$transaction(async (tx) => {
       const updated = await tx.gameToolRoom.updateMany({
-        where: { id: room.id, kind: "UNO", revision: room.revision },
+        where: { id: room.id, kind: "UNO", revision: room.revision, status: { not: "CANCELLED" } },
         data: {
           state: json(next), revision: { increment: 1 },
           unoDeadlineAt: next.deadlineAt ? new Date(next.deadlineAt) : null,
@@ -105,7 +109,7 @@ async function persist(room: Room, before: UnoState, next: UnoState, options: Pe
         // Retain only score summaries and participants, never hands or shuffled decks.
         await tx.unoRound.create({ data: {
           roomId: room.id, matchNumber: next.matchNumber, roundNumber: next.roundNumber, finishedAt: new Date(),
-          summary: json({ rulesetVersion: next.rulesetVersion, matchMode: next.matchMode ?? "score", result: next.roundResult,
+          summary: json({ rulesetVersion: next.rulesetVersion, ...getUnoRules(next), matchMode: next.matchMode ?? "score", result: next.roundResult,
             players: next.players.map((player) => ({ seat: player.seat, name: player.name, score: player.score })),
             participantProfileIds: room.seats.flatMap((seat) => seat.profileId ? [seat.profileId] : []),
           }),
@@ -124,7 +128,7 @@ async function persist(room: Room, before: UnoState, next: UnoState, options: Pe
 
 function lobbyState(room: Room, seats = room.seats, nextMatch = false) {
   const previous = asState(room.state)!;
-  const state = createUnoState(seats.map((seat) => ({ seat: seat.seatNumber, name: seat.displayName })), { turnSeconds: previous.turnSeconds, targetScore: previous.targetScore, matchMode: previous.matchMode ?? "score" });
+  const state = createUnoState(seats.map((seat) => ({ seat: seat.seatNumber, name: seat.displayName })), { turnSeconds: previous.turnSeconds, targetScore: previous.targetScore, matchMode: previous.matchMode ?? "score", ...(previous.rulesetVersion === 3 ? getUnoRules(previous) : {}) });
   state.matchNumber = previous.matchNumber + (nextMatch ? 1 : 0);
   return state;
 }
@@ -187,7 +191,7 @@ export async function joinUnoRoom(input: { code: string; profileId: string; name
     }
     const taken = new Set(room.seats.map((seat) => seat.seatNumber));
     const seatNumber = Array.from({ length: 10 }, (_, index) => index).find((seat) => !taken.has(seat))!;
-    const next = createUnoState([...state.players.map(({ seat, name }) => ({ seat, name })), { seat: seatNumber, name: input.name.slice(0, 40) }].sort((a, b) => a.seat - b.seat), { turnSeconds: state.turnSeconds, targetScore: state.targetScore, matchMode: state.matchMode ?? "score" });
+    const next = createUnoState([...state.players.map(({ seat, name }) => ({ seat, name })), { seat: seatNumber, name: input.name.slice(0, 40) }].sort((a, b) => a.seat - b.seat), { turnSeconds: state.turnSeconds, targetScore: state.targetScore, matchMode: state.matchMode ?? "score", ...(state.rulesetVersion === 3 ? getUnoRules(state) : {}) });
     next.matchNumber = state.matchNumber;
     const changed = await persist(room, state, next, { data: { playerCount: room.seats.length + 1 }, mutate: async (tx) => {
       const seat = await tx.gameToolSeat.create({ data: { roomId: room.id, profileId: input.profileId, seatNumber, displayName: input.name.slice(0, 40), roleKey: fallbackDrawGuessCatId(`${room.id}:${seatNumber}`), privateToken: createGameToolPrivateToken() } });
@@ -295,11 +299,9 @@ export async function setUnoRoomReady(roomId: string, profileId: string, ready: 
   return { error: "TRY_AGAIN" };
 }
 
-export async function updateUnoRoomSettings(roomId: string, profileId: string, input: 30 | 60 | 90 | { turnSeconds?: 30 | 60 | 90; matchMode?: UnoMatchMode }, expectedRevision?: number) {
-  const settings = typeof input === "number" ? { turnSeconds: input } : input;
-  if (!settings || settings.turnSeconds === undefined && settings.matchMode === undefined
-    || settings.turnSeconds !== undefined && ![30, 60, 90].includes(settings.turnSeconds)
-    || settings.matchMode !== undefined && !["score", "single"].includes(settings.matchMode)) return { error: "INVALID_REQUEST" };
+export async function updateUnoRoomSettings(roomId: string, profileId: string, input: 30 | 60 | 90 | UnoRoomSettings, expectedRevision?: number) {
+  const parsed = unoRoomSettingsSchema.safeParse(typeof input === "number" ? { turnSeconds: input } : input);
+  if (!parsed.success) return { error: "INVALID_REQUEST" };
   for (let attempt = 0; attempt < RETRIES; attempt += 1) {
     const room = await readRoom(roomId);
     const state = room && asState(room.state);
@@ -308,10 +310,10 @@ export async function updateUnoRoomSettings(roomId: string, profileId: string, i
     if (expectedRevision !== undefined && room.revision !== expectedRevision) return { error: "STALE_COMMAND" };
     if (room.hostId !== profileId) return { error: "HOST_ONLY" };
     if (state.phase !== "LOBBY") return { error: "WRONG_PHASE" };
-    const turnSeconds = settings.turnSeconds ?? state.turnSeconds;
-    const matchMode = settings.matchMode ?? state.matchMode ?? "score";
-    if (turnSeconds === state.turnSeconds && matchMode === (state.matchMode ?? "score")) return getUnoRoomView(roomId, profileId);
-    if (await persist(room, state, { ...state, turnSeconds, matchMode }, { mutate: async (tx) => {
+    const next = configureUnoLobby(state, parsed.data).state;
+    if (next.rulesetVersion === state.rulesetVersion && next.turnSeconds === state.turnSeconds && next.matchMode === (state.matchMode ?? "score")
+      && (["stackDraws", "challengeDrawFour", "allowActionFinish"] as const).every(key => next[key] === state[key])) return getUnoRoomView(roomId, profileId);
+    if (await persist(room, state, next, { mutate: async (tx) => {
       await tx.gameToolSeat.updateMany({ where: { roomId }, data: { readyAt: null } });
       await tx.gameToolRoomMember.updateMany({ where: { roomId }, data: { readyAt: null } });
     } })) return getUnoRoomView(roomId, profileId);
@@ -326,10 +328,10 @@ async function currentUnoRoomSnapshot(roomId: string, profileId: string): Promis
   return view ? { room: view } : { error: "NOT_A_MEMBER" };
 }
 
-export async function sendUnoReaction(roomId: string, profileId: string, input: { reactionId: string; kind: UnoReactionKind }): Promise<RoomResult> {
-  if (!isUnoReactionKind(input.kind) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.reactionId)) return { error: "INVALID_REACTION" };
+export async function sendUnoReaction(roomId: string, profileId: string, input: UnoReactionCommand): Promise<RoomResult> {
+  if (!unoReactionSchema.safeParse(input).success) return { error: "INVALID_REACTION" };
   const commandId = `reaction_${input.reactionId.toLowerCase()}`;
-  const hash = createHash("sha256").update(JSON.stringify({ scope: "reaction", kind: input.kind })).digest("hex");
+  const hash = createHash("sha256").update(JSON.stringify({ scope: "reaction", kind: input.kind, matchNumber: input.matchNumber, roundNumber: input.roundNumber })).digest("hex");
   for (let attempt = 0; attempt < RETRIES; attempt += 1) {
     const room = await readRoom(roomId);
     const state = room && asState(room.state);
@@ -341,6 +343,7 @@ export async function sendUnoReaction(roomId: string, profileId: string, input: 
       if (previous.actorProfileId !== profileId || previous.actionHash !== hash) return { error: "COMMAND_ID_USED" };
       return currentUnoRoomSnapshot(roomId, profileId);
     }
+    if (input.matchNumber !== state.matchNumber || input.roundNumber !== state.roundNumber) return { error: "STALE_ROUND" };
     if (!["LOBBY", "PLAYING", "CHALLENGE"].includes(state.phase)) return { error: "WRONG_PHASE" };
     const now = Date.now();
     const saved = config(room);
@@ -383,7 +386,7 @@ export async function leaveUnoRoom(roomId: string, profileId: string, staleBefor
   return { error: "TRY_AGAIN" };
 }
 
-export async function commandUnoRoom(roomId: string, profileId: string, command: UnoRoomCommand) {
+export async function commandUnoRoom(roomId: string, profileId: string, command: UnoRoomCommand): Promise<RoomResult> {
   const hash = createHash("sha256").update(JSON.stringify({ expectedRevision: command.expectedRevision, matchNumber: command.matchNumber, roundNumber: command.roundNumber, turnId: command.turnId, action: command.action })).digest("hex");
   for (let attempt = 0; attempt < RETRIES; attempt += 1) {
     const room = await readRoom(roomId);
@@ -470,8 +473,9 @@ export async function getUnoRoomHistory(roomId: string, profileId: string) {
   if (!member || member.room.kind !== "UNO") return { error: "NOT_A_MEMBER" };
   const rounds = await prisma.unoRound.findMany({ where: { roomId }, orderBy: [{ matchNumber: "desc" }, { roundNumber: "desc" }], take: 100 });
   return { rounds: rounds.flatMap((round) => {
-    const summary = round.summary as { participantProfileIds?: string[]; rulesetVersion?: number; matchMode?: UnoMatchMode; result?: unknown; players?: unknown };
-    return summary.participantProfileIds?.includes(profileId) ? [{ matchNumber: round.matchNumber, roundNumber: round.roundNumber, matchMode: summary.matchMode ?? "score", finishedAt: round.finishedAt.toISOString(), rulesetVersion: summary.rulesetVersion, result: summary.result, players: summary.players }] : [];
+    const summary = round.summary as Partial<UnoRuleSettings> & { participantProfileIds?: string[]; rulesetVersion?: number; matchMode?: UnoMatchMode; result?: unknown; players?: unknown };
+    const rules = getUnoRules({ ...summary, rulesetVersion: summary.rulesetVersion === 1 ? 1 : summary.rulesetVersion === 3 ? 3 : 2 });
+    return summary.participantProfileIds?.includes(profileId) ? [{ matchNumber: round.matchNumber, roundNumber: round.roundNumber, matchMode: summary.matchMode ?? "score", finishedAt: round.finishedAt.toISOString(), rulesetVersion: summary.rulesetVersion, ...rules, result: summary.result, players: summary.players }] : [];
   }) };
 }
 

@@ -45,7 +45,7 @@ export function DiceOnlineEntry({ locale, profileId, initialCode }: { locale: st
     } catch { if (!controller.signal.aborted) setError(t.error); }
     finally { if (requestRef.current === controller) requestRef.current = null; if (!controller.signal.aborted) setBusy(false); }
   }
-  return <main className="dice-online">
+  return <main className="dice-online dice-online-entry">
     <nav className="dice-online-nav" aria-label={locale === "zh-CN" ? "游戏导航" : "Game navigation"}><Link className="dice-online-back" aria-label={t.back} href={withLocale(locale, "/game-tools")}><ArrowLeft size={20} /></Link><GameToolBrand game={locale === "zh-CN" ? "骰子" : locale === "fr" ? "Dés" : "Dice"} href={withLocale(locale, "/game-tools/dice/online")} /></nav>
     <header className="dice-online-hero"><div><h1>{t.title}</h1><p>{t.sub}</p></div><Image src="/game-tools/dice/logo.webp" alt="" width={128} height={128} priority /></header>
     <section className="dice-online-entry-grid">

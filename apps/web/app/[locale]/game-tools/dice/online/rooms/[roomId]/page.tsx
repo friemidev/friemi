@@ -12,5 +12,5 @@ export default async function DiceOnlineRoomPage({ params }: { params: Promise<{
   if (!profileId) redirect(withLocale(locale, "/game-tools/dice/online"));
   const result = await getDiceRoomView(roomId, profileId);
   if (!("room" in result) || !result.room) notFound();
-  return <PageContainer className="max-w-[68rem] pb-20 pt-5" mobileSafeBottom mobileSafeTop><DiceOnlineRoom initialRoom={result.room} locale={locale} /></PageContainer>;
+  return <PageContainer className="max-w-[68rem] dice-online-page pb-4 pt-5" mobileSafeTop><DiceOnlineRoom initialRoom={result.room} locale={locale} /></PageContainer>;
 }

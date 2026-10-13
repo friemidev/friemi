@@ -1,4 +1,5 @@
 'use strict';
+import { createMotionRoller, createDiceAudio } from './dice-device.js';
 const $ = id => document.getElementById(id);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const pageCopy = document.body.dataset;
@@ -14,6 +15,20 @@ const turnOrder = ['我','小鹿','猫猫','桃桃'];
 const free = {count:5,values:[],hasResult:false,covered:false,busy:false,rolls:0,quick:false};
 const bluff = {state:null,phase:'idle',timer:null,actionTimer:null,actionsReady:true,roundNo:0,scores:{},privateCovered:false,draft:{count:4,face:2},revealed:0,total:0};
 let mode='free', soundOn=false, audioContext, rollTimer, faceTimer, coverTimer, landingTimer, dialogTrigger;
+let soundChosen=false, soundFailure=false, motionGeneration=0, soundGeneration=0;
+const diceAudio=createDiceAudio();
+const motionRoller=createMotionRoller({
+  canRoll:()=>mode==='free'&&!free.busy&&!$('game-dialog').open,
+  onRoll:()=>roll(),
+  onState:state=>{
+    const enabled=state==='on'||state==='waiting',pending=state==='requesting';
+    $('hand-shake-button').setAttribute('aria-checked',String(enabled));
+    $('hand-shake-button').disabled=pending;
+    $('hand-shake-button').dataset.state=state;
+    $('hand-shake-button').setAttribute('aria-busy',String(pending));
+    updateDeviceNote(state);
+  },
+});
 const activeVoices = new Set();
 const characterFrames={idle:'idle',thinking:'thinking',calling:'idle',challenged:'thinking',happy:'happy',sad:'sad'};
 
@@ -53,9 +68,16 @@ function tone(frequency,duration,volume=.03,type='sine',delay=0){
   gain.gain.setValueAtTime(volume,start);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
   osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration);
 }
-function stopSounds(){for(const {osc,gain} of activeVoices){gain.gain.cancelScheduledValues(0);gain.gain.setValueAtTime(0,audioContext.currentTime);try{osc.stop()}catch{}}activeVoices.clear()}
+function stopSounds(){diceAudio.stop();for(const {osc,gain} of activeVoices){gain.gain.cancelScheduledValues(0);gain.gain.setValueAtTime(0,audioContext.currentTime);try{osc.stop()}catch{}}activeVoices.clear()}
 function playTap(){tone(600,.055,.014,'triangle')}
-function playRoll(factor){[0,.14,.27,.4,.54,.67].forEach((delay,i)=>tone(240+i*54,.065,.026,'triangle',delay*factor))}
+function playRoll(factor){
+  if(!soundOn)return;
+  const current=soundGeneration,rollNumber=free.rolls;
+  void diceAudio.roll(1800*factor,free.count).then(status=>{
+    if(status!=='blocked'||current!==soundGeneration||rollNumber!==free.rolls||mode!=='free'||document.hidden||!soundOn)return;
+    ++soundGeneration;soundOn=false;soundFailure=true;stopSounds();diceAudio.disable();updateSound();updateDeviceNote();
+  });
+}
 function setStatus(value,message=''){$('sum-value').textContent=value;$('result-message').textContent=message;$('result-message').hidden=!message;document.querySelector('.result-divider').hidden=!message}
 function updateFreeResult(message){
   const sum=free.values.reduce((a,b)=>a+b,0);
@@ -109,7 +131,7 @@ function finishRoll(){
   clearTimeout(rollTimer);clearTimeout(faceTimer);window.DiceSprites?.finishAll();free.hasResult=true;renderDice(free.values);$('game-table').classList.remove('rolling');
   if(free.covered)positionGather();
   setBusy(false);$('roll-button').querySelector('span').textContent='再摇一次';
-  updateFreeResult();celebrateLanding();tone(520,.06,.018,'triangle');tone(740,.08,.012,'sine',.07);
+  updateFreeResult();celebrateLanding();
 }
 function roll(){
   if(free.busy)return;clearRoundFeedback();updateCover();setBusy(true);
@@ -272,6 +294,7 @@ function updateModeNotice(){
 }
 function setMode(next,force=false){
   if(free.busy||(next===mode&&!force))return;clearTimeout(bluff.timer);clearTimeout(bluff.actionTimer);stopSounds();clearRoundFeedback();mode=next;updateCharacters();
+  motionRoller.reset();
   const practice=mode==='bluff';document.querySelectorAll('.mode').forEach(b=>{b.classList.toggle('active',b.dataset.mode===mode);b.setAttribute('aria-pressed',String(b.dataset.mode===mode))});
   $('free-controls').hidden=practice;$('bluff-controls').hidden=!practice;$('cup-zone').hidden=practice;$('table-sticker').hidden=practice;$('my-seat').hidden=!practice;
   $('game-table').classList.toggle('bluff',practice);$('game-table').classList.remove('settled','covered','covering','uncovering');$('reveal-groups').hidden=true;$('reveal-banner').hidden=true;
@@ -282,6 +305,7 @@ function setMode(next,force=false){
   playTap();
 }
 function showDialog(title,body,actions){
+  motionRoller.reset();
   $('game-dialog').lang='zh-CN';
   if(mode==='bluff')clearTimeout(bluff.timer);
   $('game-dialog').lang='zh-CN';dialogTrigger=document.activeElement;$('dialog-title').textContent=title;$('dialog-body').innerHTML=body;$('dialog-actions').replaceChildren();
@@ -323,11 +347,29 @@ $('rules-button').addEventListener('click',rules);$('exit-button').addEventListe
 $('dialog-close').addEventListener('click',()=>$('game-dialog').close());
 $('game-dialog').addEventListener('close',()=>{if(dialogTrigger&&document.contains(dialogTrigger)&&!dialogTrigger.disabled)dialogTrigger.focus({preventScroll:true});resumePractice()});
 $('game-dialog').addEventListener('click',event=>{if(event.target===$('game-dialog')){const r=$('game-dialog').getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)$('game-dialog').close()}});
-$('sound-button').addEventListener('click',async()=>{
-  soundOn=!soundOn;if(!soundOn)stopSounds();else try{audioContext??=new(window.AudioContext||window.webkitAudioContext)();await audioContext.resume()}catch{soundOn=false}
-  $('sound-button').setAttribute('aria-pressed',String(soundOn));$('sound-button').setAttribute('aria-label',soundOn?'关闭声音':'开启声音');
-  $('sound-icon').innerHTML=soundOn?'<path d="M11 4 5 9H2v6h3l6 5V4ZM16 8c3 2 3 6 0 8M19 4c5 4 5 12 0 16"/>':'<path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/>';playTap();
+function updateSound(){
+  $('sound-button').setAttribute('aria-pressed',String(soundOn));$('sound-button').setAttribute('aria-label',soundOn?pageCopy.soundOff:pageCopy.soundOn);
+  $('sound-icon').innerHTML=soundOn?'<path d="M11 4 5 9H2v6h3l6 5V4ZM16 8c3 2 3 6 0 8M19 4c5 4 5 12 0 16"/>':'<path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/>';
+}
+function updateDeviceNote(state=motionRoller.state){
+  const message=state==='requesting'?pageCopy.motionRequesting:['denied','unsupported','unavailable'].includes(state)?pageCopy['motion'+state[0].toUpperCase()+state.slice(1)]:soundFailure?pageCopy.soundError:'';
+  $('motion-note').textContent=message||'';$('motion-note').hidden=!message;
+}
+$('hand-shake-button').addEventListener('click',async()=>{
+  const current=++motionGeneration,audioOperation=soundGeneration;
+  if(['on','waiting'].includes(motionRoller.state)){motionRoller.disable();if(!soundChosen&&!soundOn)diceAudio.disable();return}
+  const permission=motionRoller.enable();
+  // Unlock both APIs in this gesture. Turning sound off later stays respected.
+  const sound=!soundChosen?diceAudio.enable():null;
+  const enabled=await permission;
+  if(sound){const audible=await sound;if(current!==motionGeneration||audioOperation!==soundGeneration||soundChosen)return;soundOn=enabled&&audible;soundFailure=enabled&&!audible;audioContext=diceAudio.context;if(!enabled)diceAudio.disable();updateSound();updateDeviceNote()}
 });
+$('sound-button').addEventListener('click',async()=>{
+  const current=++soundGeneration;soundChosen=true;soundFailure=false;soundOn=!soundOn;updateSound();updateDeviceNote();
+  if(!soundOn){stopSounds();diceAudio.disable()}else{const audible=await diceAudio.enable();if(current!==soundGeneration)return;soundOn=audible;soundFailure=!audible;audioContext=diceAudio.context}
+  updateSound();updateDeviceNote();playTap();
+});
+window.addEventListener('pagehide',()=>{++motionGeneration;++soundGeneration;motionRoller.disable();stopSounds();diceAudio.disable();soundOn=false;updateSound()});
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden){resumePractice();return}stopSounds();clearRoundFeedback();
   if(mode==='free'){

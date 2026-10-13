@@ -145,7 +145,8 @@ function UnoRoomSession({ initialRoom, locale, sampleClock }: { initialRoom: Uno
   }
   async function react(kind: UnoReactionKind) {
     if (reactionInFlight.current || offline || pendingReaction.current) return false;
-    const write: UnoPendingWrite = { path: "/reactions", method: "POST", body: { reactionId: crypto.randomUUID(), kind } };
+    const { matchNumber, roundNumber } = latest.current.state;
+    const write: UnoPendingWrite = { path: "/reactions", method: "POST", body: { reactionId: crypto.randomUUID(), kind, matchNumber, roundNumber } };
     pendingReaction.current = write;
     return submitReaction(write);
   }

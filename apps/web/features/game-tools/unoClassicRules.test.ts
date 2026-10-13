@@ -7,6 +7,7 @@ import { getUnoExperienceCopy } from "./unoExperienceCopy";
 
 function fixture(count = 3) {
   const state = createUnoState(Array.from({ length: count }, (_, seat) => ({ seat, name: `P${seat}` })));
+  state.rulesetVersion = 2;
   state.phase = "PLAYING"; state.roundNumber = 1; state.turnId = 1; state.deadlineAt = 60_000;
   const deck = createUnoDeck();
   const take = (id: string) => deck.splice(deck.findIndex(c => c.id === id), 1)[0];
@@ -172,14 +173,14 @@ test("classic: two-player Skip permits immediate reporting before the same playe
   assert.equal(ended.phase, "ROUND_END"); assert.equal(applyUnoAction(ended, 1, report(state), 1).error, "WRONG_PHASE");
 });
 
-test("classic: lobby upgrades to v2; ongoing legacy rounds keep their rules; rematch upgrades", () => {
+test("classic: new starts upgrade to v3; ongoing legacy rounds keep their rules; rematch upgrades", () => {
   const lobby = createUnoState([{ seat: 0, name: "A" }, { seat: 1, name: "B" }]); lobby.rulesetVersion = 1;
-  assert.equal(startUnoGame(lobby, 0, () => .5).state.rulesetVersion, 2);
+  assert.equal(startUnoGame(lobby, 0, () => .5).state.rulesetVersion, 3);
   let legacy = fixture(2); legacy.rulesetVersion = 1; setHand(legacy, 0, ["red-skip-0"]);
   assert.equal(applyUnoAction(legacy, 0, { type: "PLAY", cardId: legacy.players[0].hand[0].id, handVersion: 1 }, 1).error, "LAST_CARD_MUST_BE_NUMBER");
   setHand(legacy, 0, ["red-7-0"]); legacy = play(legacy);
   assert.equal(act(legacy, 0, { type: "NEXT_ROUND" }).rulesetVersion, 1);
-  legacy.phase = "FINISHED"; assert.equal(act(legacy, 0, { type: "REMATCH" }).rulesetVersion, 2);
+  legacy.phase = "FINISHED"; assert.equal(act(legacy, 0, { type: "REMATCH" }).rulesetVersion, 3);
   for (const locale of ["zh-CN", "en", "fr"]) {
     assert.notEqual(getUnoCopy(locale, 1).rule4, getUnoCopy(locale, 2).rule4);
     assert.notEqual(getUnoExperienceCopy(locale, 1).example1, getUnoExperienceCopy(locale, 2).example1);

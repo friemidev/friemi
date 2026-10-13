@@ -12,6 +12,7 @@ import {
   type UnoValue,
   type UnoViewerState,
 } from "./unoTypes";
+import { DEFAULT_UNO_RULES, getUnoRules } from "./unoRules";
 
 export * from "./unoTypes";
 type Random = () => number;
@@ -50,8 +51,11 @@ export function createUnoState(roster: UnoRosterSeat[], options: UnoOptions = {}
   const targetScore = options.targetScore ?? 500;
   const matchMode = options.matchMode ?? "score";
   if (![30, 60, 90].includes(turnSeconds) || !Number.isInteger(targetScore) || targetScore <= 0 || !["score", "single"].includes(matchMode)) throw new Error("INVALID_OPTIONS");
+  for (const key of ["stackDraws", "challengeDrawFour", "allowActionFinish"] as const) {
+    if (options[key] !== undefined && typeof options[key] !== "boolean") throw new Error("INVALID_OPTIONS");
+  }
   return {
-    rulesetVersion: 2, phase: "LOBBY", players: roster.map((p) => ({ ...p, hand: [], handVersion: 0, score: 0, declared: false, episodeId: 0, grace: false, unoReportOpen: false })),
+    rulesetVersion: 3, ...getUnoRules({ ...options, rulesetVersion: 3 }), pendingDraw: null, phase: "LOBBY", players: roster.map((p) => ({ ...p, hand: [], handVersion: 0, score: 0, declared: false, episodeId: 0, grace: false, unoReportOpen: false })),
     turnSeat: roster[0]?.seat ?? 0, dealerSeat: roster[0]?.seat ?? 0, direction: 1, roundNumber: 0, matchNumber: 1, turnId: 0,
     deadlineAt: null, turnSeconds, targetScore, matchMode, drawPile: [], discard: [], currentColor: null, drawnCardId: null,
     colorChoiceSeat: null, challenge: null, events: [], eventId: 0, falseReports: [], caughtEpisodes: [], roundResult: null,
@@ -73,7 +77,7 @@ function changeHand(state: UnoState, player: UnoPlayer, cards: UnoCard[]) {
   const oldLength = player.hand.length;
   player.hand = cards;
   player.handVersion += 1;
-  if (state.rulesetVersion === 2) {
+  if (state.rulesetVersion >= 2) {
     player.grace = false;
     player.unoReportOpen = oldLength === 2 && cards.length === 1;
     if (player.unoReportOpen) player.episodeId += 1;
@@ -121,7 +125,7 @@ function closeExistingUnoWindow(state: UnoState, before: Map<number, number>) {
   if (state.phase !== "PLAYING" && state.phase !== "CHALLENGE") return;
   for (const player of state.players) {
     if (player.hand.length === 1 && before.get(player.seat) === player.episodeId) {
-      if (state.rulesetVersion === 2) player.unoReportOpen = false;
+      if (state.rulesetVersion >= 2) player.unoReportOpen = false;
       else player.grace = false;
     }
   }
@@ -141,6 +145,7 @@ function dealRound(state: UnoState, now: number, random: Random): UnoState {
   state.caughtEpisodes = [];
   state.events = [];
   state.roundResult = null;
+  state.pendingDraw = null;
   for (const player of state.players) {
     player.hand = [];
     player.handVersion += 1;
@@ -166,8 +171,11 @@ function dealRound(state: UnoState, now: number, random: Random): UnoState {
   } else if (top.value === "skip") {
     state.turnSeat = nextSeat(state, first);
   } else if (top.value === "draw2") {
-    draw(state, first, 2, random);
-    state.turnSeat = nextSeat(state, first);
+    if (getUnoRules(state).stackDraws) state.pendingDraw = { value: "draw2", count: 2 };
+    else {
+      draw(state, first, 2, random);
+      state.turnSeat = nextSeat(state, first);
+    }
   } else if (top.value === "wild") {
     state.colorChoiceSeat = first;
   }
@@ -179,7 +187,8 @@ export function startUnoGame(input: UnoState, now: number, random: Random = Math
   if (input.phase !== "LOBBY") return { state: input, error: "WRONG_PHASE" };
   if (input.players.length < 2 || input.players.length > 10) return { state: input, error: "INVALID_PLAYERS" };
   const state = structuredClone(input);
-  state.rulesetVersion = 2;
+  Object.assign(state, input.rulesetVersion === 3 ? getUnoRules(input) : DEFAULT_UNO_RULES);
+  state.rulesetVersion = 3;
   state.dealerSeat = state.players[Math.min(state.players.length - 1, Math.max(0, Math.floor(random() * state.players.length)))].seat;
   return { state: dealRound(state, now, random) };
 }
@@ -189,9 +198,12 @@ function matches(card: UnoCard, color: UnoColor | null, top: UnoCard | null): bo
 }
 
 export function isUnoCardPlayable(view: UnoViewerState, card: UnoCard): boolean {
-  return view.phase === "PLAYING" && view.selfSeat === view.turnSeat && view.colorChoiceSeat === null &&
-    view.hand.some((c) => c.id === card.id) && (view.rulesetVersion === 2 || view.hand.length > 1 || isUnoNumber(card)) &&
-    (!view.drawnCardId || card.id === view.drawnCardId) && matches(card, view.currentColor, view.topCard);
+  const rules = getUnoRules(view);
+  const stacking = Boolean(rules.stackDraws && view.pendingDraw);
+  return (view.phase === "PLAYING" || view.phase === "CHALLENGE" && stacking) && view.selfSeat === view.turnSeat && view.colorChoiceSeat === null &&
+    view.hand.some((c) => c.id === card.id) && (rules.allowActionFinish || view.hand.length > 1 || isUnoNumber(card)) &&
+    (!view.drawnCardId || card.id === view.drawnCardId) &&
+    (view.pendingDraw ? rules.stackDraws && card.value === view.pendingDraw.value : matches(card, view.currentColor, view.topCard));
 }
 
 function finishRound(state: UnoState, winner: UnoPlayer) {
@@ -203,6 +215,7 @@ function finishRound(state: UnoState, winner: UnoPlayer) {
   state.deadlineAt = null;
   state.drawnCardId = null;
   state.challenge = null;
+  state.pendingDraw = null;
   state.colorChoiceSeat = null;
   event(state, { kind: "ROUND_WIN", seat: winner.seat, count: points });
 }
@@ -211,8 +224,10 @@ function resolveChallenge(state: UnoState, challenged: boolean, now: number, ran
   const challenge = state.challenge!;
   const won = challenged && challenge.illegal;
   const seat = won ? challenge.offenderSeat : challenge.targetSeat;
-  const count = draw(state, seat, won || !challenged ? 4 : 6, random).length;
+  const penalty = state.pendingDraw?.count ?? 4;
+  const count = draw(state, seat, penalty + (challenged && !won ? 2 : 0), random).length;
   event(state, { kind: challenged ? (won ? "CHALLENGE_WON" : "CHALLENGE_LOST") : "ACCEPT_DRAW_FOUR", seat: challenge.targetSeat, targetSeat: seat, count });
+  state.pendingDraw = null;
   beginTurn(state, won ? challenge.targetSeat : nextSeat(state, challenge.targetSeat), now);
 }
 
@@ -228,7 +243,7 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
   }
   if (action.type === "REMATCH") {
     if (input.phase !== "FINISHED") return fail("WRONG_PHASE");
-    const state = createUnoState(input.players.map(({ seat, name }) => ({ seat, name })), { turnSeconds: input.turnSeconds, targetScore: input.targetScore, matchMode: input.matchMode ?? "score" });
+    const state = createUnoState(input.players.map(({ seat, name }) => ({ seat, name })), { turnSeconds: input.turnSeconds, targetScore: input.targetScore, matchMode: input.matchMode ?? "score", ...(input.rulesetVersion === 3 ? getUnoRules(input) : {}) });
     state.matchNumber = input.matchNumber + 1;
     state.eventId = input.eventId;
     state.turnId = input.turnId;
@@ -240,8 +255,9 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
   state.matchMode ??= "score";
   const player = state.players.find((p) => p.seat === actorSeat)!;
   const before = existingEpisodes(state);
+  const rules = getUnoRules(state);
   if (action.type === "CALL_UNO") {
-    if (action.episodeId !== player.episodeId || (state.rulesetVersion === 2 && action.handVersion !== player.handVersion)) return fail("STALE_HAND");
+    if (action.episodeId !== player.episodeId || (state.rulesetVersion >= 2 && action.handVersion !== player.handVersion)) return fail("STALE_HAND");
     if ((state.rulesetVersion === 1 && player.hand.length !== 1) || player.declared) return { state: input };
     player.declared = true;
     event(state, { kind: "UNO", seat: actorSeat });
@@ -249,7 +265,7 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
   }
   if (action.type === "CATCH_UNO") {
     const target = state.players.find((p) => p.seat === action.targetSeat);
-    if (!target || target.seat === actorSeat || target.hand.length !== 1 || (state.rulesetVersion === 2 ? !target.unoReportOpen || target.declared : target.grace) || action.roundNumber !== state.roundNumber || action.episodeId !== target.episodeId) return fail("INVALID_REPORT");
+    if (!target || target.seat === actorSeat || target.hand.length !== 1 || (state.rulesetVersion >= 2 ? !target.unoReportOpen || target.declared : target.grace) || action.roundNumber !== state.roundNumber || action.episodeId !== target.episodeId) return fail("INVALID_REPORT");
     const episode = `${state.roundNumber}:${target.seat}:${target.episodeId}`;
     const report = `${episode}:${actorSeat}`;
     if (state.caughtEpisodes.includes(episode) || state.falseReports.includes(report)) return fail("DUPLICATE_REPORT");
@@ -266,10 +282,12 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
   }
   if (state.turnSeat !== actorSeat) return fail("NOT_YOUR_TURN");
   if (state.phase === "CHALLENGE") {
-    if (action.type !== "ACCEPT_DRAW_FOUR" && action.type !== "CHALLENGE_DRAW_FOUR") return fail("WRONG_PHASE");
-    resolveChallenge(state, action.type === "CHALLENGE_DRAW_FOUR", now, random);
-    if (state.rulesetVersion === 2) closeExistingUnoWindow(state, before);
-    return { state };
+    if (action.type === "ACCEPT_DRAW_FOUR" || action.type === "CHALLENGE_DRAW_FOUR") {
+      resolveChallenge(state, action.type === "CHALLENGE_DRAW_FOUR", now, random);
+      if (state.rulesetVersion >= 2) closeExistingUnoWindow(state, before);
+      return { state };
+    }
+    if (!rules.stackDraws || !state.pendingDraw || action.type !== "PLAY") return fail("WRONG_PHASE");
   }
   if (state.colorChoiceSeat !== null) {
     if (action.type !== "CHOOSE_COLOR") return fail("CHOOSE_COLOR");
@@ -283,22 +301,24 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
     if (action.handVersion !== player.handVersion) return fail("STALE_HAND");
     const card = player.hand.find((c) => c.id === action.cardId);
     if (!card) return fail("CARD_NOT_FOUND");
-    if (state.rulesetVersion === 1 && player.hand.length === 1 && !isUnoNumber(card)) return fail("LAST_CARD_MUST_BE_NUMBER");
+    if (!rules.allowActionFinish && player.hand.length === 1 && !isUnoNumber(card)) return fail("LAST_CARD_MUST_BE_NUMBER");
     if (state.drawnCardId && state.drawnCardId !== card.id) return fail("ONLY_DRAWN_CARD");
-    if (!matches(card, state.currentColor, state.discard.at(-1) ?? null)) return fail("CARD_NOT_PLAYABLE");
+    if (state.pendingDraw ? !rules.stackDraws || card.value !== state.pendingDraw.value : !matches(card, state.currentColor, state.discard.at(-1) ?? null)) return fail("CARD_NOT_PLAYABLE");
     if (card.color === null && !isColor(action.color)) return fail("INVALID_COLOR");
     const illegalDrawFour = card.value === "wild4" && player.hand.some((c) => c.id !== card.id && c.color === state.currentColor);
     changeHand(state, player, player.hand.filter((c) => c.id !== card.id));
     state.discard.push(card);
     state.currentColor = card.color ?? action.color!;
     event(state, { kind: "PLAY", seat: actorSeat, card: { ...card }, color: state.currentColor });
+    const penalty = card.value === "draw2" ? 2 : card.value === "wild4" ? 4 : 0;
+    const accumulated = (state.pendingDraw?.count ?? 0) + penalty;
     if (!player.hand.length) {
-      if (state.rulesetVersion === 2) {
+      if (state.rulesetVersion >= 2) {
         if (card.value === "reverse") state.direction = state.direction === 1 ? -1 : 1;
         if (card.value === "draw2" || card.value === "wild4") {
           // A final +4 has no other cards in hand, so it is necessarily legal.
           const seat = nextSeat(state, actorSeat);
-          const count = draw(state, seat, card.value === "draw2" ? 2 : 4, random).length;
+          const count = draw(state, seat, accumulated, random).length;
           event(state, { kind: "DRAW", seat, count });
         }
       }
@@ -307,7 +327,8 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
     }
     if (card.value === "reverse") state.direction = state.direction === 1 ? -1 : 1;
     const next = nextSeat(state, actorSeat);
-    if (card.value === "wild4") {
+    if (penalty && rules.stackDraws) state.pendingDraw = { value: card.value as "draw2" | "wild4", count: accumulated };
+    if (card.value === "wild4" && rules.challengeDrawFour) {
       state.phase = "CHALLENGE";
       state.challenge = { offenderSeat: actorSeat, targetSeat: next, illegal: illegalDrawFour };
       state.turnSeat = next;
@@ -315,17 +336,25 @@ export function applyUnoAction(input: UnoState, actorSeat: number, action: UnoAc
       state.drawnCardId = null;
       state.deadlineAt = now + 15_000;
     } else {
-      if (card.value === "draw2") {
-        const count = draw(state, next, 2, random).length;
+      if (penalty && !rules.stackDraws) {
+        const count = draw(state, next, penalty, random).length;
         event(state, { kind: "DRAW", seat: next, count });
       }
-      const skips = card.value === "skip" || card.value === "draw2" || (card.value === "reverse" && state.players.length === 2);
+      const skips = card.value === "skip" || Boolean(penalty && !rules.stackDraws) || (card.value === "reverse" && state.players.length === 2);
       beginTurn(state, nextSeat(state, actorSeat, skips ? 2 : 1), now);
     }
     closeExistingUnoWindow(state, before);
     return { state };
   }
   if (action.type === "DRAW") {
+    if (state.pendingDraw) {
+      const count = draw(state, actorSeat, state.pendingDraw.count, random).length;
+      state.pendingDraw = null;
+      event(state, { kind: "DRAW", seat: actorSeat, count });
+      beginTurn(state, nextSeat(state, actorSeat), now);
+      closeExistingUnoWindow(state, before);
+      return { state };
+    }
     if (state.drawnCardId !== null) return fail("ALREADY_DREW");
     const drawn = draw(state, actorSeat, 1, random)[0];
     event(state, { kind: "DRAW", seat: actorSeat, count: drawn ? 1 : 0 });
@@ -353,7 +382,7 @@ export function advanceUnoDeadline(input: UnoState, now: number, random: Random 
   if (state.phase === "CHALLENGE") {
     const before = existingEpisodes(state);
     resolveChallenge(state, false, now, random);
-    if (state.rulesetVersion === 2) closeExistingUnoWindow(state, before);
+    if (state.rulesetVersion >= 2) closeExistingUnoWindow(state, before);
     return state;
   }
   const before = existingEpisodes(state);
@@ -362,7 +391,8 @@ export function advanceUnoDeadline(input: UnoState, now: number, random: Random 
     state.currentColor = UNO_COLORS[Math.min(3, Math.max(0, Math.floor(random() * 4)))];
     state.colorChoiceSeat = null;
   }
-  const count = state.drawnCardId ? 0 : draw(state, state.turnSeat, 1, random).length;
+  const count = state.drawnCardId ? 0 : draw(state, state.turnSeat, state.pendingDraw?.count ?? 1, random).length;
+  state.pendingDraw = null;
   event(state, { kind: "TIMEOUT", seat: state.turnSeat, count });
   beginTurn(state, nextSeat(state, state.turnSeat), now);
   closeExistingUnoWindow(state, before);
@@ -372,7 +402,7 @@ export function advanceUnoDeadline(input: UnoState, now: number, random: Random 
 export function getUnoViewerState(state: UnoState, seat: number): UnoViewerState {
   const self = state.players.find((p) => p.seat === seat);
   return structuredClone({
-    rulesetVersion: state.rulesetVersion, phase: state.phase,
+    rulesetVersion: state.rulesetVersion, ...getUnoRules(state), pendingDraw: state.pendingDraw ?? null, phase: state.phase,
     players: state.players.map((p) => ({ seat: p.seat, name: p.name, cardCount: p.hand.length, score: p.score, episodeId: p.episodeId })),
     selfSeat: seat, hand: self?.hand ?? [], handVersion: self?.handVersion ?? 0, declared: self?.declared ?? false,
     turnSeat: state.turnSeat, dealerSeat: state.dealerSeat, direction: state.direction, roundNumber: state.roundNumber, matchNumber: state.matchNumber,

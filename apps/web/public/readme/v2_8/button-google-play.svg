@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="230" height="68" viewBox="0 0 230 68" role="img" aria-labelledby="title">
+  <title id="title">Google Play — download for Android</title>
+  <rect x="1" y="1" width="228" height="66" rx="14" fill="#1D1D1B" stroke="#8E8383" stroke-width="2"/>
+  <path d="M23 19v30l25-15z" fill="none" stroke="#FEFFF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#FEFFF9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif">
+    <text x="62" y="31" font-size="19" font-weight="700">Google Play</text>
+    <text x="62" y="51" font-size="12">Download for Android</text>
+  </g>
+</svg>

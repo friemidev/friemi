@@ -145,6 +145,17 @@
 .entryPage { max-width: 1000px; min-height: 660px; }
 .entryMain { position: relative; padding: 70px 50px 50px; min-height: 510px; }
 .entryCopy { position: relative; z-index: 2; width: 56%; }
+.ruleToggles { display: grid; gap: 10px; }
+.ruleToggle { display: flex; width: 100%; min-height: 60px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1.5px solid var(--uno-border); border-radius: 17px; color: var(--uno-ink); background: var(--uno-mist); box-shadow: 0 3px 0 var(--uno-border); text-align: left; }
+.ruleToggle > span:first-child { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.ruleToggle strong { font-size: 14px; font-weight: 800; }
+.ruleToggle small { font-size: 12px; color: var(--uno-muted); }
+.ruleToggle[aria-checked="true"] { background: var(--uno-butter); }
+.switchTrack { display: flex; width: 46px; height: 28px; flex: 0 0 46px; padding: 3px; border-radius: 999px; background: var(--uno-muted); }
+.switchTrack > span { width: 22px; height: 22px; border-radius: 50%; background: var(--uno-paper); transition: transform .15s ease; }
+.ruleToggle[aria-checked="true"] .switchTrack { background: var(--uno-blue); }
+.ruleToggle[aria-checked="true"] .switchTrack > span { transform: translateX(18px); }
+.ruleToggle:disabled { cursor: default; }
 .earlyAccess { display: inline-flex; max-width: 100%; padding: 6px 12px; border: 1px solid var(--uno-border); border-radius: 999px; background: var(--uno-butter); color: var(--uno-ink); font-size: 12px; font-weight: 800; line-height: 18px; }
 .entryCopy h1 { margin: 10px 0 4px; font-size: clamp(70px, 8vw, 106px); font-weight: 900; line-height: 1; letter-spacing: -7px; color: var(--uno-blue); transform: rotate(-4deg); transform-origin: bottom left; }
 .entryCopy h1 > span { display: inline-block; color: var(--uno-red); transform: rotate(9deg); }

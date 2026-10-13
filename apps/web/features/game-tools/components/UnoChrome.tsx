@@ -5,7 +5,7 @@ import { ArrowLeft, HelpCircle, Volume2, VolumeX, X } from "lucide-react";
 import { getUnoCopy } from "../unoCopy";
 import { getUnoExperienceCopy } from "../unoExperienceCopy";
 import type { UnoReactionKind } from "../unoReactions";
-import type { UnoEvent } from "../unoTypes";
+import type { UnoEvent, UnoRuleSettings, UnoRulesetVersion } from "../unoTypes";
 import { fallbackDrawGuessCatId, type DrawGuessCatId } from "../drawGuessCats";
 import { DrawGuessCatSprite } from "./DrawGuessCatSprite";
 import { GameToolBrand } from "./GameToolBrand";
@@ -45,8 +45,8 @@ export function UnoDialog({ title, children, onClose, className = "", fallbackFo
   }}><div className={s.dialogBody}><h2 ref={titleRef} tabIndex={-1}>{title}</h2>{children}</div></dialog>;
 }
 
-export function UnoRules({ locale, onClose, rulesetVersion = 2 }: { locale: string; onClose: () => void; rulesetVersion?: 1 | 2 }) {
-  const t = getUnoCopy(locale, rulesetVersion), ux = getUnoExperienceCopy(locale, rulesetVersion);
+export function UnoRules({ locale, onClose, rulesetVersion = 3, settings }: { locale: string; onClose: () => void; rulesetVersion?: UnoRulesetVersion; settings?: Partial<UnoRuleSettings> }) {
+  const t = getUnoCopy(locale, rulesetVersion, settings), ux = getUnoExperienceCopy(locale, rulesetVersion, settings);
   return <UnoDialog title={t.rulesTitle} onClose={onClose}>
     <ol className={s.rulesList}>{[t.rule1, t.rule2, t.rule3, t.rule4, t.rule5, ux.modesRule].map((rule, i) => <li key={rule}><span>{i + 1}</span><p>{rule}</p></li>)}</ol>
     <details className={s.ruleDetails}><summary>{ux.examples}</summary><p>{ux.example1}</p><p>{ux.example2}</p></details>
@@ -95,12 +95,12 @@ function useUnoSound(events: UnoEvent[]) {
   return { enabled, toggle };
 }
 
-export function UnoHeader({ locale, code, round, events = [], onBack, rulesetVersion = 2 }: { locale: string; code?: string; round?: number; events?: UnoEvent[]; onBack?: () => void; rulesetVersion?: 1 | 2 }) {
+export function UnoHeader({ locale, code, round, events = [], onBack, rulesetVersion = 3, settings }: { locale: string; code?: string; round?: number; events?: UnoEvent[]; onBack?: () => void; rulesetVersion?: UnoRulesetVersion; settings?: Partial<UnoRuleSettings> }) {
   const t = getUnoCopy(locale), [rules, setRules] = useState(false), sound = useUnoSound(events);
   return <><header className={s.header}>
     {onBack ? <button type="button" className={s.iconButton} aria-label={t.leave} onClick={onBack}><ArrowLeft size={20}/></button> : <a className={s.iconButton} href={`/${locale}/game-tools`} aria-label={t.back}><ArrowLeft size={20}/></a>}
     <GameToolBrand game="UNO" href={`/${locale}/game-tools/uno`} />
     {code && <span className={s.roomCode}><span>{t.room} {code}</span>{round ? <b>{t.round} {round}{locale === "zh-CN" ? " 轮" : ""}</b> : null}</span>}
     <div className={s.headerTools}><button type="button" className={s.iconButton} aria-label={sound.enabled ? t.soundOn : t.soundOff} aria-pressed={sound.enabled} onClick={() => void sound.toggle()}>{sound.enabled ? <Volume2 size={19}/> : <VolumeX size={19}/>}</button><button type="button" className={s.iconButton} aria-label={t.rules} onClick={() => setRules(true)}><HelpCircle size={20}/></button></div>
-  </header>{rules && <UnoRules locale={locale} rulesetVersion={rulesetVersion} onClose={() => setRules(false)}/>}</>;
+  </header>{rules && <UnoRules locale={locale} rulesetVersion={rulesetVersion} settings={settings} onClose={() => setRules(false)}/>}</>;
 }

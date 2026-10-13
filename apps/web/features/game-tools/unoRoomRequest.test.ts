@@ -25,12 +25,18 @@ test("unknown action results preserve command ID through retryable server and ra
 
 test("uncertain reaction retries keep the same receipt ID", async () => {
   const bodies: string[] = [];
-  const write: UnoPendingWrite = { path: "/reactions", method: "POST", body: { reactionId: "original-reaction", kind: "laugh" } };
+  const write: UnoPendingWrite = { path: "/reactions", method: "POST", body: { reactionId: "original-reaction", kind: "laugh", matchNumber: 2, roundNumber: 3 } };
   const fetcher = (async (_url: unknown, init?: RequestInit) => { bodies.push(String(init?.body)); if (bodies.length === 1) throw new Error("lost"); return Response.json({ room: { id: "room", revision: 9 } }); }) as typeof fetch;
   assert.equal(canRetryUnoRoomWrite(write), true);
   assert.equal((await sendUnoRoomWrite("/room", write, fetcher)).status, "uncertain");
   assert.equal((await sendUnoRoomWrite("/room", write, fetcher)).status, "accepted");
   assert.equal(new Set(bodies).size, 1);
+  assert.deepEqual(JSON.parse(bodies[1]), write.body);
+});
+
+test("a delayed reaction rejected for an old round is resolved rather than retried as a network failure", async () => {
+  const write: UnoPendingWrite = { path: "/reactions", method: "POST", body: { reactionId: "delayed-reaction", kind: "laugh", matchNumber: 1, roundNumber: 1 } };
+  assert.deepEqual(await sendUnoRoomWrite("/room", write, async () => Response.json({ error: "STALE_ROUND" }, { status: 409 })), { status: "rejected", error: "STALE_ROUND", room: undefined });
 });
 
 test("malformed success is uncertain, while definitive game errors release the request", async () => {

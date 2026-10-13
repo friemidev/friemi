@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildCanonicalSiteUrl } from "@/lib/site-url";
+import { diceDeviceCopy } from "../diceDeviceCopy";
 
 const copy = {
   "zh-CN": {
@@ -53,6 +54,7 @@ const assetTypes = new Map<string, string>([
   ["app.js", "text/javascript; charset=utf-8"],
   ["dice-sprites.js", "text/javascript; charset=utf-8"],
   ["bluff-engine.js", "text/javascript; charset=utf-8"],
+  ["dice-device.js", "text/javascript; charset=utf-8"],
 ]);
 
 for (let face = 1; face <= 6; face += 1) {
@@ -121,6 +123,7 @@ export async function createDiceGameResponse(
 
   if (isEntry) {
     const text = copy[selectedLocale];
+    const device = diceDeviceCopy[selectedLocale];
     const replacements: Record<string, string> = {
       __DICE_BASE_HREF__: `/${locale}/game-tools/dice/`,
       __DICE_HUB_HREF__: `/${locale}/game-tools`,
@@ -143,6 +146,15 @@ export async function createDiceGameResponse(
       __DICE_EXIT_DESCRIPTION__: text.exitDescription,
       __DICE_STAY_LABEL__: text.stay,
       __DICE_LEAVE_LABEL__: text.leave,
+      __DICE_SHAKE_LABEL__: device.shake,
+      __DICE_SHAKE_HINT__: device.shakeHint,
+      __DICE_MOTION_REQUESTING__: device.requesting,
+      __DICE_MOTION_DENIED__: device.denied,
+      __DICE_MOTION_UNSUPPORTED__: device.unsupported,
+      __DICE_MOTION_UNAVAILABLE__: device.unavailable,
+      __DICE_SOUND_ON__: device.soundOn,
+      __DICE_SOUND_OFF__: device.soundOff,
+      __DICE_SOUND_ERROR__: device.soundError,
     };
     const html = (await readRuntimeFile("index.html"))
       .toString("utf8")

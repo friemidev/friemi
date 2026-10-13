@@ -1,7 +1,7 @@
 # Dice game runtime
 
 `runtime/` packages the reviewed `docs/v2_8/dice-design-preview` prototype for the
-game hub. It contains only the main page, its five CSS/JS dependencies,
+game hub. It contains only the main page, its six CSS/JS dependencies,
 six glossy dice atlases and twenty cat SVGs. Source frames, the sprite laboratory,
 test files and previous materials are deliberately outside the served allowlist.
 
@@ -38,6 +38,30 @@ The command validates all 192 frames and copies the six WebP atlases into
 `tools/` for inspection and are not served. `apps/web/public/game-tools/dice/cup.svg`
 is the shared graphite cup artwork used by the local preview and online room.
 
+## Phone shaking and roll audio
+
+`runtime/dice-device.js` is shared by the local roller and the online room. The
+physical shake switch requests motion permission only in a button gesture and
+enables roll audio in that same gesture. Motion data stays in the browser. Three
+opposing impulses trigger the existing roll; busy states, dialogs, background
+pages and orientation changes discard partial gestures. Turning the switch off
+removes its listeners; losing the host role also stops room motion input. Returning
+from the background checks for fresh sensor readings. Missing sensors or denied permissions leave the normal
+buttons usable. Motion requires a secure context, such as the HTTPS site.
+
+The local free roller preserves the dice count and covered state. Online rooms
+use motion only for a host's legal START, NEXT_ROUND or REMATCH command; bidding
+never rerolls hands. Accepted round snapshots trigger the existing sprite motion
+and short Web Audio collision buffers. These are synthesized dice/cup sounds,
+with an independent mute control, rather than licensed recordings.
+Interrupted audio contexts resume for the next roll. Delayed recovery only plays
+the remaining sounds; muted, canceled and expired rolls cannot replay later.
+
+Automated checks cover detection, permission failures, cleanup, duplicate input,
+mute, and the served module. Browser sensor events can be simulated for UI QA;
+actual sensitivity, Safari permission prompts and embedded WebView behavior still
+need a physical phone. Do not treat desktop emulation as hardware verification.
+
 ## Historical verification before production release (2026-10-11)
 
 - The normal web build and TypeScript check passed on Node 20.19.6. The built
@@ -72,5 +96,5 @@ is the shared graphite cup artwork used by the local preview and online room.
 Run the focused checks from `apps/web`:
 
 ```bash
-node --import tsx --test features/game-tools/diceAvailability.test.ts features/game-tools/dice-preview/response.test.ts
+node --import tsx --test features/game-tools/diceAvailability.test.ts features/game-tools/diceDevice.test.ts features/game-tools/dice-preview/response.test.ts
 ```
