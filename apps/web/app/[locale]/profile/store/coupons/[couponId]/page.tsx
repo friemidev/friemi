@@ -20,5 +20,5 @@ export default async function MerchantCouponDetailPage({
   const detail = await getMerchantCouponDetail(profile.id, couponId);
   if (!detail) notFound();
 
-  return <MerchantCouponDetail detail={detail} locale={locale} />;
+  return <MerchantCouponDetail detail={detail} key={detail.campaign.id} locale={locale} />;
 }

@@ -45,13 +45,9 @@ export function MerchantCouponDetail({
       setConfirmArchive(false);
       router.refresh();
     }
-  }, [archiveState.status, router]);
+  }, [archiveState, router]);
   const wasUnlisted = unlistState.status === "UNLISTED";
-  const isArchived = archiveState.status === "ARCHIVED"
-    ? true
-    : archiveState.status === "RESTORED"
-      ? false
-      : Boolean(campaign.archivedAt);
+  const isArchived = Boolean(campaign.archivedAt);
   const status = isArchived
     ? { className: "bg-fog text-ink/70", label: copy.statusArchived }
     : wasUnlisted

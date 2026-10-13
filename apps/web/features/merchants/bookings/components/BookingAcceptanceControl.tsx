@@ -8,27 +8,24 @@ import type { BookingActionState } from "../types";
 
 export function BookingAcceptanceControl({
   locale,
-  enabled: initialEnabled,
+  enabled,
 }: {
   locale: string;
   enabled: boolean;
 }) {
   const copy = getBookingCopy(locale);
   const router = useRouter();
-  const [enabled, setEnabled] = useState(initialEnabled);
   const [confirming, setConfirming] = useState(false);
   const [state, action, pending] = useActionState<BookingActionState, FormData>(
     setBookingAcceptanceAction,
     {},
   );
 
-  useEffect(() => setEnabled(initialEnabled), [initialEnabled]);
   useEffect(() => {
-    if (!state.success || state.acceptanceEnabled === undefined) return;
-    setEnabled(state.acceptanceEnabled);
+    if (!state.success) return;
     setConfirming(false);
     router.refresh();
-  }, [state.success, state.acceptanceEnabled, router]);
+  }, [state, router]);
 
   return (
     <div className="mt-5">

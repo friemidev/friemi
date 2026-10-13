@@ -79,7 +79,17 @@ export async function setTicketDefinitionArchived(input: {
     },
     data: { archivedAt: input.archived ? new Date() : null },
   });
-  return updated.count > 0;
+  if (updated.count > 0) return true;
+  // A retry or another administrator may already have applied this state.
+  const existing = await prisma.inventoryItemDefinition.findFirst({
+    where: {
+      id: input.definitionId,
+      kind: "EVENT_TICKET",
+      archivedAt: input.archived ? { not: null } : null,
+    },
+    select: { id: true },
+  });
+  return Boolean(existing);
 }
 
 export type IssueTicketResult =

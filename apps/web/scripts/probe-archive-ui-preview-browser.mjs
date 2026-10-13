@@ -126,6 +126,14 @@ try {
     "The archived filter must be visible without horizontal scrolling on mobile");
   await checkLayout(ownerPage);
   await ownerPage.screenshot({ path: `${output}/coupon-archived-mobile.png`, fullPage: true });
+  step = "restore a coupon and repeat the archive action";
+  await ownerPage.getByRole("link").filter({ hasText: coupon.title }).filter({ visible: true }).first().click();
+  await ownerPage.getByRole("button", { name: "移出归档", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "归档优惠券", exact: true }).waitFor();
+  assert.equal((await prisma.coupon.findUniqueOrThrow({ where: { id: couponId } })).archivedAt, null);
+  await ownerPage.getByRole("button", { name: "归档优惠券", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "确认归档", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "移出归档", exact: true }).waitFor();
 
   step = "administrator archives ticket on desktop";
   await adminPage.goto(`${origin}/zh-CN/admin/items/${definitionId}/settings`);
@@ -133,6 +141,14 @@ try {
   await adminPage.getByRole("button", { name: "确认归档" }).click();
   await adminPage.getByRole("status").getByText("票券已归档。", { exact: true }).waitFor();
   assert.ok((await prisma.inventoryItemDefinition.findUniqueOrThrow({ where: { id: definitionId } })).archivedAt);
+  step = "archive state follows a server refresh after another administrator restores it";
+  await prisma.inventoryItemDefinition.update({ where: { id: definitionId }, data: { archivedAt: null } });
+  await adminPage.getByRole("button", { name: "允许赠送", exact: true }).click();
+  await adminPage.getByRole("button", { name: "暂停赠送", exact: true }).waitFor();
+  await adminPage.getByRole("button", { name: "归档票券", exact: true }).waitFor();
+  await adminPage.getByRole("button", { name: "归档票券", exact: true }).click();
+  await adminPage.getByRole("button", { name: "确认归档", exact: true }).click();
+  await adminPage.getByRole("button", { name: "移出归档", exact: true }).waitFor();
   await adminPage.goto(`${origin}/zh-CN/admin/merchants?view=items`);
   assert.equal(await adminPage.getByText(ticket.title, { exact: true }).count(), 0);
   await adminPage.goto(`${origin}/zh-CN/admin/merchants?view=items&archived=1`);
@@ -142,7 +158,7 @@ try {
   await adminPage.setViewportSize({ width: 390, height: 844 });
   await checkLayout(adminPage);
   await adminPage.screenshot({ path: `${output}/ticket-archived-mobile.png`, fullPage: true });
-  console.log("PASS archive UI: merchant mobile and administrator desktop/mobile filters and controls");
+  console.log("PASS archive UI: repeated archive/restore and external-state refresh; merchant mobile and administrator desktop/mobile filters and controls");
 } catch (error) {
   console.error(`FAIL archive UI acceptance at ${step}:`, error);
   process.exitCode = 1;

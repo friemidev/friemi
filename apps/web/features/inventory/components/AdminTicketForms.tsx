@@ -398,17 +398,13 @@ export function TicketArchiveControl({
     setTicketArchivedAction,
     {},
   );
-  const archived = state.status === "ARCHIVED"
-    ? true
-    : state.status === "RESTORED"
-      ? false
-      : isArchived;
+  const archived = isArchived;
   useEffect(() => {
     if (state.status === "ARCHIVED" || state.status === "RESTORED") {
       setConfirming(false);
       router.refresh();
     }
-  }, [router, state.status]);
+  }, [router, state]);
 
   return (
     <div className="space-y-3">
@@ -433,9 +429,9 @@ export function TicketArchiveControl({
           <button className="min-h-11 px-3 text-sm font-semibold text-ink/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest" onClick={() => setConfirming(false)} type="button">{copy.archiveCancel}</button>
         ) : null}
       </div>
-      {state.status === "ARCHIVED" || state.status === "RESTORED" ? (
+      {(state.status === "ARCHIVED" && archived) || (state.status === "RESTORED" && !archived) ? (
         <p className="text-sm font-semibold text-forest" role="status">{archived ? copy.archiveSaved : copy.restoreSaved}</p>
-      ) : state.status ? (
+      ) : state.status && state.status !== "ARCHIVED" && state.status !== "RESTORED" ? (
         <p className="text-sm font-semibold text-danger" role="alert">{copy.archiveFailed}</p>
       ) : null}
     </div>

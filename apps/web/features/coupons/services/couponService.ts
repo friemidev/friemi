@@ -366,11 +366,17 @@ export async function setCouponCampaignArchived({
   if (updated.count) return { status: archived ? "ARCHIVED" : "RESTORED" };
   const coupon = await prisma.coupon.findUnique({
     where: { id: couponId },
-    select: { merchant: { select: { ownerProfileId: true } } },
+    select: {
+      archivedAt: true,
+      distributionMode: true,
+      merchant: { select: { isActive: true, ownerProfileId: true } },
+    },
   });
-  return {
-    status: coupon?.merchant.ownerProfileId === profileId ? "INVALID" : "FORBIDDEN",
-  };
+  if (!coupon || coupon.merchant.ownerProfileId !== profileId || !coupon.merchant.isActive)
+    return { status: "FORBIDDEN" };
+  if (coupon.distributionMode !== "PUBLIC_QR" || Boolean(coupon.archivedAt) !== archived)
+    return { status: "INVALID" };
+  return { status: archived ? "ARCHIVED" : "RESTORED" };
 }
 
 export async function claimCouponByToken({
@@ -433,7 +439,14 @@ export async function claimCouponByToken({
         },
         data: { claimedCount: { increment: 1 } },
       });
-      if (inventory.count === 0) return { status: "SOLD_OUT" } as const;
+      if (inventory.count === 0) {
+        const latest = await tx.coupon.findUnique({ where: { id: coupon.id } });
+        if (!latest) return { status: "INVALID" } as const;
+        const latestAvailability = getCouponClaimAvailability(latest);
+        return {
+          status: latestAvailability === "AVAILABLE" ? "SOLD_OUT" : latestAvailability,
+        } as const;
+      }
 
       const item = await tx.couponWalletItem.create({
         data: { couponId: coupon.id, ownerProfileId: profileId },

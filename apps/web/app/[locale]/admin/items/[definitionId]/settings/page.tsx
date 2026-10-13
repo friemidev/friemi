@@ -76,7 +76,7 @@ export default async function AdminItemSettingsPage({
         <section className="rounded-2xl bg-paper p-5 sm:p-6">
           <h2 className="text-lg font-bold text-ink">{itemCopy.settings.archiveTitle}</h2>
           <div className="mt-3">
-            <TicketArchiveControl definitionId={definition.id} isArchived={Boolean(definition.archivedAt)} locale={locale} />
+            <TicketArchiveControl definitionId={definition.id} isArchived={Boolean(definition.archivedAt)} key={definition.id} locale={locale} />
           </div>
         </section>
       </div>
