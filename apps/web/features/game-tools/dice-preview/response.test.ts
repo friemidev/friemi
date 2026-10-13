@@ -3,7 +3,7 @@ import test from "node:test";
 import { createDiceGameResponse } from "./response";
 
 const gameAssets = [
-  "app.js", "bluff-engine.js", "dice-sprites.js", "style.css", "dice-sprites.css",
+  "app.js", "bluff-engine.js", "dice-sprites.js", "dice-device.js", "style.css", "dice-sprites.css",
   ...Array.from({ length: 6 }, (_, index) => `assets/dice-3d/roll-${index + 1}.webp`),
   ...["idle", "thinking", "happy", "sad"].flatMap((mood) => [
     `assets/cats/cloud-${mood}.svg`,

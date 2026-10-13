@@ -21,13 +21,13 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="dice-sprites.css" />
 </head>
-<body data-hub-href="__DICE_HUB_HREF__" data-preview-label="__DICE_PREVIEW_LABEL__" data-single-label="__DICE_SINGLE_LABEL__" data-exit-title="__DICE_EXIT_TITLE__" data-exit-description="__DICE_EXIT_DESCRIPTION__" data-stay-label="__DICE_STAY_LABEL__" data-leave-label="__DICE_LEAVE_LABEL__">
+<body data-hub-href="__DICE_HUB_HREF__" data-preview-label="__DICE_PREVIEW_LABEL__" data-single-label="__DICE_SINGLE_LABEL__" data-exit-title="__DICE_EXIT_TITLE__" data-exit-description="__DICE_EXIT_DESCRIPTION__" data-stay-label="__DICE_STAY_LABEL__" data-leave-label="__DICE_LEAVE_LABEL__" data-motion-requesting="__DICE_MOTION_REQUESTING__" data-motion-denied="__DICE_MOTION_DENIED__" data-motion-unsupported="__DICE_MOTION_UNSUPPORTED__" data-motion-unavailable="__DICE_MOTION_UNAVAILABLE__" data-sound-on="__DICE_SOUND_ON__" data-sound-off="__DICE_SOUND_OFF__" data-sound-error="__DICE_SOUND_ERROR__">
   <div class="preview-note" hidden><p lang="__DICE_LOCALE__">__DICE_PREVIEW_LABEL__</p></div>
   <main class="game-shell">
     <header class="topbar">
       <button class="round-button" id="exit-button" aria-label="__DICE_BACK_LABEL__" lang="__DICE_LOCALE__"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
       <a class="brand" href="__DICE_HUB_HREF__" id="brand-link" aria-label="Friemi · __DICE_GAME_LABEL__" lang="__DICE_LOCALE__"><span class="brand-logo-window"><img src="/brand/v2_1/friemi-title-navy.png" alt="" width="194" height="61" /></span><span class="brand-divider" aria-hidden="true"></span><span class="brand-game">__DICE_GAME_LABEL__</span></a>
-      <button class="round-button" id="sound-button" aria-label="开启声音" aria-pressed="false"><svg id="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/></svg></button>
+      <button class="round-button" id="sound-button" aria-label="__DICE_SOUND_ON__" lang="__DICE_LOCALE__" aria-pressed="false"><svg id="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/></svg></button>
     </header>
 
     <div class="game-navigation">
@@ -89,13 +89,13 @@
     </section>
 
     <section class="controls" id="free-controls" aria-label="自由摇骰操作">
-      <div class="result-line" id="result-line" aria-live="polite"><span class="result-label">合计</span><strong id="sum-value">—</strong><span id="sum-unit"></span><span class="result-divider"></span><span id="result-message"></span></div>
+      <div class="roller-settings"><div class="result-line" id="result-line" aria-live="polite"><span class="result-label">合计</span><strong id="sum-value">—</strong><span id="sum-unit"></span><span class="result-divider"></span><span id="result-message"></span></div><button id="hand-shake-button" class="hand-shake-switch" type="button" role="switch" aria-checked="false" title="__DICE_SHAKE_HINT__" lang="__DICE_LOCALE__"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="3"/><path d="M11 17h2M3 7l-2 3 2 3M21 7l2 3-2 3"/></svg><span>__DICE_SHAKE_LABEL__</span><i class="switch-track" aria-hidden="true"></i></button></div>
       <div class="count-row"><span>骰子数</span><div class="count-picker" id="count-picker" role="group" aria-label="选择骰子数量"></div><button class="quick-roll-button" id="quick-roll-button" type="button" aria-label="快摇" aria-pressed="false">快摇</button></div>
       <div class="action-row">
         <button class="secondary-button cover-button" id="cover-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="3"/></svg><span>盖盅</span></button>
         <button class="primary-button" id="roll-button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" transform="rotate(-12 12 12)"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="16" r="1"/></svg><span>摇一摇</span><span class="button-spark">✦</span></button>
       </div>
-      <p class="small-note" id="free-note" hidden></p>
+      <p class="device-note" id="motion-note" role="status" lang="__DICE_LOCALE__" hidden></p>
     </section>
 
     <section class="controls bluff-controls" id="bluff-controls" aria-label="吹牛操作" hidden>
@@ -126,6 +126,6 @@
   <dialog id="game-dialog" aria-labelledby="dialog-title"><div class="dialog-content"><button class="round-button dialog-close" id="dialog-close" aria-label="关闭弹窗">×</button><div class="dialog-icon" aria-hidden="true">⚄</div><h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions"></div></div></dialog>
   <script src="dice-sprites.js"></script>
   <script src="bluff-engine.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js" type="module"></script>
 </body>
 </html>
