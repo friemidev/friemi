@@ -1,7 +1,7 @@
 # Dice game runtime
 
 `runtime/` packages the reviewed `docs/v2_8/dice-design-preview` prototype for the
-game hub. It contains only the main page, its six CSS/JS dependencies,
+game hub. It contains only the main page, its seven CSS/JS dependencies,
 six glossy dice atlases and twenty cat SVGs. Source frames, the sprite laboratory,
 test files and previous materials are deliberately outside the served allowlist.
 
@@ -52,10 +52,24 @@ buttons usable. Motion requires a secure context, such as the HTTPS site.
 The local free roller preserves the dice count and covered state. Online rooms
 use motion only for a host's legal START, NEXT_ROUND or REMATCH command; bidding
 never rerolls hands. Accepted round snapshots trigger the existing sprite motion
-and short Web Audio collision buffers. These are synthesized dice/cup sounds,
-with an independent mute control, rather than licensed recordings.
+and recorded dice/cup foley with an independent mute control. A content-versioned
+755 KB MP3 atlas under `public/sounds/dice` uses one matched CC0 recording set by
+2BACH. The source was microphone-recorded; the shipped excerpts use its public
+HQ MP3 previews. The recorded 1, 3 and 6 dice serve count groups 1, 2–3 and 4–6.
+Closed-cup rolls use a complete cup take with its own internal settling, including
+online rooms. Open rolls join matched open-cup and felt-landings with a short
+crossfade. Each condition has three takes, avoiding immediate repetition.
+Quick rolls keep the real take's ending at the original pitch. Reduced motion
+uses one softer short impact, also respecting the covered state. One gain
+adjustment per source preserves the relative strength of its collisions; there
+are no synthesized roll impacts, added reverb, dynamic-range compression or pitch changes.
+Credits and source hashes are in `public/sounds/dice/LICENSE.md`.
+`tools/prepare_audio.py` reproduces the atlas and `runtime/dice-audio-data.js`
+metadata together; the new filename prevents old cached offsets being reused.
 Interrupted audio contexts resume for the next roll. Delayed recovery only plays
-the remaining sounds; muted, canceled and expired rolls cannot replay later.
+the remaining sounds; muted, canceled and expired rolls cannot replay later,
+including when the recording is still downloading. A failed download or decode
+leaves the roll usable and allows sound to be retried.
 
 Automated checks cover detection, permission failures, cleanup, duplicate input,
 mute, and the served module. Browser sensor events can be simulated for UI QA;

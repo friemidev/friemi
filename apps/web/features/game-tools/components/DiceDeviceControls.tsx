@@ -44,7 +44,7 @@ export function DiceDeviceControls({ locale, showShake, canRoll, onRoll, soundCu
     if (soundCue !== previousCue.current) audio.current?.stop();
     if (soundCue && soundCue !== previousCue.current && soundEnabled.current) {
       const operation = soundOperation.current;
-      void audio.current?.roll(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 900).then((status) => {
+      void audio.current?.roll(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 140 : 900, 5, { covered: true }).then((status) => {
         if (status !== "blocked" || operation !== soundOperation.current || previousCue.current !== soundCue || !audio.current || !soundEnabled.current || document.hidden) return;
         soundOperation.current += 1; audio.current.disable(); soundEnabled.current = false; setSoundOn(false); setSoundError(true);
       });

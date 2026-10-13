@@ -73,7 +73,7 @@ function playTap(){tone(600,.055,.014,'triangle')}
 function playRoll(factor){
   if(!soundOn)return;
   const current=soundGeneration,rollNumber=free.rolls;
-  void diceAudio.roll(1800*factor,free.count).then(status=>{
+  void diceAudio.roll(1800*factor,free.count,{covered:free.covered}).then(status=>{
     if(status!=='blocked'||current!==soundGeneration||rollNumber!==free.rolls||mode!=='free'||document.hidden||!soundOn)return;
     ++soundGeneration;soundOn=false;soundFailure=true;stopSounds();diceAudio.disable();updateSound();updateDeviceNote();
   });

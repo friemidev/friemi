@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createShakeDetector, createMotionRoller, createDiceAudio, type MotionState } from "./dice-preview/runtime/dice-device.js";
+import { diceAudioData } from "./dice-preview/runtime/dice-audio-data.js";
 
 const sample = (x: number) => ({ acceleration: { x, y: 0, z: 0 } });
 function device(requestPermission?: () => Promise<string>) {
@@ -120,20 +121,21 @@ test("returning to the page verifies that the previously active sensor still sen
   roller.destroy();
 });
 
-function audioDevice() {
-  const started: number[] = [];
-  let resumeGate: Promise<void> | undefined, time = 0;
+function audioDevice(options: { assetOk?: boolean; decodedDuration?: number } = {}) {
+  const started: { time: number; offset: number; duration: number; rate: number }[] = [];
+  let resumeGate: Promise<void> | undefined, fetchGate: Promise<void> | undefined, time = 0, fetches = 0, stopped = 0;
+  let assetOk = options.assetOk ?? true, decodedDuration = options.decodedDuration ?? 50;
   class Audio {
     state = "suspended"; currentTime = 1; sampleRate = 24000; destination = {}; resumes = 0;
     async resume() { this.resumes += 1; if (resumeGate) await resumeGate; this.state = "running"; }
     async close() { this.state = "closed"; }
-    createBuffer(_channels: number, size: number) { return { getChannelData: () => new Float32Array(size) }; }
-    createGain() { return { gain: { value: 0 }, connect() {}, disconnect() {} }; }
-    createBufferSource() { return { playbackRate: { value: 1 }, buffer: null, onended: null as (() => void) | null, connect() {}, disconnect() {}, start(delay: number) { started.push(delay); }, stop() { this.onended?.(); } }; }
+    async decodeAudioData() { return { duration: decodedDuration }; }
+    createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect() {}, disconnect() {} }; }
+    createBufferSource() { return { playbackRate: { value: 1 }, buffer: null, onended: null as (() => void) | null, connect() {}, disconnect() {}, start(time: number, offset: number, duration: number) { started.push({ time, offset, duration, rate: this.playbackRate.value }); }, stop() { stopped += 1; this.onended?.(); } }; }
   }
-  const host = { AudioContext: Audio, document: { hidden: false }, performance: { now: () => time } } as unknown as Window;
+  const host = { AudioContext: Audio, document: { hidden: false }, performance: { now: () => time }, async fetch() { fetches += 1; if (fetchGate) await fetchGate; return { ok: assetOk, arrayBuffer: async () => new ArrayBuffer(8) }; } } as unknown as Window;
   const player = createDiceAudio(host);
-  return { player, host, started, context: () => player.context as unknown as Audio, gate(promise?: Promise<void>) { resumeGate = promise; }, advance(ms: number) { time += ms; } };
+  return { player, host, started, context: () => player.context as unknown as Audio, gate(promise?: Promise<void>) { resumeGate = promise; }, assetGate(promise?: Promise<void>) { fetchGate = promise; }, badAsset(ok: boolean, duration = 50) { assetOk = ok; decodedDuration = duration; }, fetches: () => fetches, stopped: () => stopped, advance(ms: number) { time += ms; } };
 }
 
 test("enabled roll audio recovers after the browser suspends or interrupts its context", async () => {
@@ -143,7 +145,7 @@ test("enabled roll audio recovers after the browser suspends or interrupts its c
     const before = device.started.length;
     assert.equal(await device.player.roll(900, 5), "played");
     assert.equal(device.context().state, "running");
-    assert.equal(device.started.length - before, 32);
+    assert.equal(device.started.length - before, 2);
   }
   device.player.dispose();
 });
@@ -170,11 +172,12 @@ test("a delayed audio resume plays only the remaining part of the current roll",
   const device = audioDevice(); await device.player.enable(); device.context().state = "suspended";
   let resolve!: () => void;
   device.gate(new Promise<void>((finish) => { resolve = finish; }));
-  const pending = device.player.roll(900, 5);
+  const pending = device.player.roll(900, 1);
   device.advance(250); resolve();
   assert.equal(await pending, "played");
-  assert.ok(device.started.length > 0 && device.started.length < 32);
-  assert.ok(device.started.every((time) => time >= 1 && time < 1.65));
+  assert.equal(device.started.length, 2);
+  assert.ok(device.started[0].offset > 0, "recovery skips already elapsed shake audio");
+  assert.ok(device.started.every((voice) => voice.time >= 1 && voice.time + voice.duration <= 1.651));
   device.player.dispose();
 });
 
@@ -187,24 +190,93 @@ test("audio resume failures are distinguished from muted or canceled rolls", asy
   device.player.dispose();
 });
 
-test("dice audio schedules short collision buffers, honors mute and stops all voices on disposal", async () => {
-  const started: number[] = [], samples: Float32Array[] = []; let stopped = 0;
-  class Audio {
-    state = "suspended"; currentTime = 1; sampleRate = 24000; destination = {};
-    async resume() { this.state = "running"; }
-    async close() { this.state = "closed"; }
-    createBuffer(_channels: number, size: number) { const data = new Float32Array(size); samples.push(data); return { getChannelData: () => data }; }
-    createGain() { return { gain: { value: 0 }, connect() {}, disconnect() {} }; }
-    createBufferSource() { return { playbackRate: { value: 1 }, buffer: null, onended: null as (() => void) | null, connect() {}, disconnect() {}, start(time: number) { started.push(time); }, stop() { stopped += 1; this.onended?.(); } }; }
-  }
-  const host = { AudioContext: Audio, document: { hidden: false } } as unknown as Window;
-  const audio = createDiceAudio(host);
-  audio.roll(); assert.equal(started.length, 0);
+test("recorded foley keeps its pitch for quick rolls, distinguishes one die, and stops when muted", async () => {
+  const device = audioDevice(), audio = device.player;
+  assert.equal(await audio.roll(), "canceled");
   assert.equal(await audio.enable(), true);
-  audio.roll(900, 5); assert.equal(started.length, 32);
-  assert.ok(started.every((time) => time >= 1 && time < 2));
-  assert.ok(samples.every((data) => data.every((value) => Number.isFinite(value) && Math.abs(value) <= 1)));
-  audio.disable(); assert.equal(stopped, 32); audio.roll(); assert.equal(started.length, 32);
-  await audio.enable(); Object.assign(host.document, { hidden: true }); audio.roll(); assert.equal(started.length, 32);
-  audio.dispose(); assert.equal(audio.context?.state, "closed");
+  assert.equal(await audio.roll(900, 1), "played");
+  assert.equal(device.started.length, 2);
+  assert.ok(device.started.every(voice => voice.rate === 1 && voice.time + voice.duration <= 1.901));
+  assert.ok(diceAudioData.groups["1"].landing.some(take => take.offset === device.started[1].offset), "one die uses a single-die landing");
+  audio.disable(); assert.equal(device.stopped(), 2);
+  assert.equal(await audio.roll(), "canceled"); assert.equal(device.started.length, 2);
+  await audio.enable(); assert.equal(await audio.roll(140, 5), "played");
+  assert.equal(device.started.length, 3, "reduced motion only plays a brief landing");
+  assert.ok(device.started[2].duration <= .14 && device.started[2].rate === 1);
+  assert.equal(device.fetches(), 1, "muting and re-enabling reuse the cached atlas");
+  Object.assign(device.host.document, { hidden: true }); assert.equal(await audio.roll(), "canceled");
+  audio.dispose(); assert.equal(audio.context?.state, "closed"); assert.equal(await audio.enable(), false);
+});
+
+test("a first roll waiting for audio download cannot play after mute or its deadline", async () => {
+  for (const reason of ["mute", "expired", "dispose"] as const) {
+    const device = audioDevice({ assetOk: false });
+    // Force a retry so the constructor's initial preload has finished first.
+    device.badAsset(false); assert.equal(await device.player.enable(), false); device.badAsset(true);
+    let resolve!: () => void;
+    device.assetGate(new Promise<void>(finish => { resolve = finish; }));
+    const enabling = device.player.enable();
+    await Promise.resolve();
+    const roll = device.player.roll(900);
+    if (reason === "mute") device.player.disable();
+    if (reason === "dispose") device.player.dispose();
+    if (reason === "expired") device.advance(1000);
+    resolve(); await enabling;
+    assert.equal(await roll, "canceled", reason); assert.equal(device.started.length, 0, reason);
+    device.player.dispose();
+  }
+});
+
+test("missing or invalid recorded audio reports failure and can be retried", async () => {
+  for (const failure of ["missing", "short"] as const) {
+    const device = audioDevice({ assetOk: failure !== "missing", decodedDuration: failure === "short" ? .1 : 50 });
+    assert.equal(await device.player.enable(), false);
+    assert.equal(await device.player.roll(), "canceled");
+    device.badAsset(true); assert.equal(await device.player.enable(), true);
+    assert.equal(await device.player.roll(), "played"); assert.equal(device.started.length, 2);
+    device.player.dispose();
+  }
+});
+
+test("dice count and cover choose matching physical recordings; a covered roll never lands outside", async () => {
+  const device = audioDevice(); await device.player.enable();
+  for (const count of [1, 2, 3, 4, 5, 6]) {
+    const group = diceAudioData.groups[count === 1 ? "1" : count <= 3 ? "3" : "6"];
+    const before = device.started.length;
+    await device.player.roll(1800, count, { covered: true });
+    const voices = device.started.slice(before);
+    assert.equal(voices.length, 1, `covered ${count} dice have only internal cup impacts`);
+    assert.ok(group.covered.some(take => Math.abs(voices[0].offset - take.offset) < .001));
+    assert.ok(voices[0].time + voices[0].duration <= 2.801);
+    await device.player.roll(900, count);
+    assert.ok(group.landing.some(take => take.offset === device.started.at(-1)!.offset), `${count} dice use their recorded landing group`);
+  }
+  const before = device.started.length;
+  await device.player.roll(140, 5, { covered: true });
+  assert.equal(device.started.length, before + 1);
+  assert.ok(diceAudioData.groups["6"].closedTick.some(take => take.offset === device.started.at(-1)!.offset), "reduced covered cue also stays inside the cup");
+  device.player.dispose();
+});
+
+test("quick covered rolls keep the real settling tail, don't repeat a take, and skip elapsed audio after recovery", async () => {
+  const device = audioDevice(); await device.player.enable();
+  let lastOffset: number | undefined;
+  for (let n = 0; n < 8; n += 1) {
+    await device.player.roll(900, 5, { covered: true });
+    const voice = device.started.at(-1)!;
+    assert.equal(voice.rate, 1);
+    assert.equal(voice.duration, .9);
+    assert.ok(diceAudioData.groups["6"].covered.some(take => Math.abs(voice.offset + voice.duration - take.offset - take.duration) < .001), "quick roll ends at the recording's own settling tail");
+    assert.notEqual(voice.offset, lastOffset, "avoid immediately repeating a cup take");
+    lastOffset = voice.offset;
+  }
+  device.context().state = "interrupted";
+  let resolve!: () => void;
+  device.gate(new Promise<void>(finish => { resolve = finish; }));
+  const pending = device.player.roll(900, 5, { covered: true });
+  device.advance(250); resolve(); assert.equal(await pending, "played");
+  const voice = device.started.at(-1)!;
+  assert.ok(Math.abs(voice.duration - .65) < .001);
+  assert.ok(diceAudioData.groups["6"].covered.some(take => Math.abs(voice.offset + voice.duration - take.offset - take.duration) < .001));
+  device.player.dispose();
 });
