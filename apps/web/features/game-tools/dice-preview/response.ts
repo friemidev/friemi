@@ -55,6 +55,7 @@ const assetTypes = new Map<string, string>([
   ["dice-sprites.js", "text/javascript; charset=utf-8"],
   ["bluff-engine.js", "text/javascript; charset=utf-8"],
   ["dice-device.js", "text/javascript; charset=utf-8"],
+  ["dice-audio-data.js", "text/javascript; charset=utf-8"],
 ]);
 
 for (let face = 1; face <= 6; face += 1) {
