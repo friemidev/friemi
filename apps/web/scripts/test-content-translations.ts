@@ -30,12 +30,19 @@ const { warmupViewedContent, getTranslationSource } =
   await import("../features/translations/services/contentTranslations");
 const { localizeContent, localizeActivityContentTree } =
   await import("../features/translations/services/localizedContent");
+const { cloudflareTranslationProvider, translationChunkVersion } =
+  await import("../features/translations/services/translationPolicy");
 const originalFetch = globalThis.fetch;
 let calls: Array<{ operation: string; text: string; locale: string | null }> =
   [];
 let failQuota = false;
 let failChunk = false;
 let chunkTranslations = 0;
+let detectedLanguage = "fr";
+let malformedDetection = false;
+let truncateAboveLength = Infinity;
+let failSmallChunkAt = 0;
+let smallChunkCalls = 0;
 globalThis.fetch = async (input, init) => {
   const url = new URL(String(input));
   assert.equal(
@@ -47,7 +54,9 @@ globalThis.fetch = async (input, init) => {
   const operation = body.response_format.json_schema.properties.language
     ? "detect"
     : "translate";
-  const text: string = JSON.parse(body.messages[1].content).text;
+  const text: string = operation === "detect"
+    ? JSON.parse(body.messages[1].content).text
+    : body.messages[1].content;
   const locale =
     operation === "detect"
       ? null
@@ -65,8 +74,12 @@ globalThis.fetch = async (input, init) => {
   if (operation === "detect")
     return Response.json({
       success: true,
-      result: { response: { language: "fr" } },
+      result: { response: malformedDetection ? '{"language":' : { language: detectedLanguage } },
     });
+  if (text.length > truncateAboveLength)
+    return Response.json({ success: true, result: { response: { translated_text: "Partial" }, finish_reason: "length" } });
+  if (Number.isFinite(truncateAboveLength) && failSmallChunkAt && ++smallChunkCalls === failSmallChunkAt)
+    return Response.json({ success: false, errors: [{ code: 3036 }] }, { status: 429 });
   if (failChunk && text.length > 100 && ++chunkTranslations === 2)
     return Response.json(
       { success: false, errors: [{ code: 3040 }] },
@@ -161,7 +174,7 @@ try {
   await prisma.contentTranslation.deleteMany({
     where: {
       entityId: event.id,
-      field: "title:chunk:llama-3.1-v1",
+      field: `title:chunk:${translationChunkVersion}`,
       locale: "en",
     },
   });
@@ -210,11 +223,47 @@ try {
         where: { id: titleCache.id },
       })
     ).provider,
-    "cloudflare:llama-3.1-8b-instruct:v1",
+    cloudflareTranslationProvider,
   );
   console.log(
     "PASS: obsolete M2M fields/chunks are replaced while DeepL cache and source hashes remain compatible",
   );
+  await prisma.contentTranslation.update({
+    where: { id: titleCache.id },
+    data: { provider: "cloudflare:llama-3.1-8b-instruct:v1", translatedText: "Existing complete 8B translation" },
+  });
+  const beforeCompleteCacheRead = calls.length;
+  await warmupViewedContent({ entityId: event.id, entityType: "public_event", locale: "en" });
+  assert.equal((await localizeContent(event, "en", "public_event")).title, "Existing complete 8B translation");
+  assert.equal(calls.length, beforeCompleteCacheRead, "Complete 8B translations remain reusable after the model upgrade");
+
+  const neutralEvent = await prisma.publicEvent.create({ data: {
+    ...eventData, id: "translation-qa-neutral", title: "12345 😊", description: "https://example.com/reserve?hello=world",
+  } });
+  const beforeNeutral = calls.length;
+  await warmupViewedContent({ entityId: neutralEvent.id, entityType: "public_event", locale: "en" });
+  assert.equal(calls.length, beforeNeutral, "Nonlinguistic fields never call the provider");
+  assert.equal((await localizeContent(neutralEvent, "en", "public_event")).title, neutralEvent.title);
+  assert.equal(await prisma.contentTranslation.count({ where: { entityId: neutralEvent.id, provider: "original" } }), 2);
+
+  detectedLanguage = "und";
+  const uncertainEvent = await prisma.publicEvent.create({ data: {
+    ...eventData, id: "translation-qa-uncertain", title: "ACME", description: "你好🎲",
+  } });
+  await warmupViewedContent({ entityId: uncertainEvent.id, entityType: "public_event", locale: "en" });
+  assert.equal((await localizeContent(uncertainEvent, "en", "public_event")).title, "en: ACME");
+  assert.equal((await localizeContent(uncertainEvent, "en", "public_event")).description, "en: 你好🎲");
+  const beforeUndCached = calls.length;
+  await warmupViewedContent({ entityId: uncertainEvent.id, entityType: "public_event", locale: "fr" });
+  assert.equal(calls.slice(beforeUndCached).filter(call => call.operation === "detect").length, 0, "A valid und detection is cached across locales");
+  malformedDetection = true;
+  const invalidEvent = await prisma.publicEvent.create({ data: { ...eventData, id: "translation-qa-malformed", title: "Invalid detector output", description: "" } });
+  await warmupViewedContent({ entityId: invalidEvent.id, entityType: "public_event", locale: "en" });
+  assert.equal(await prisma.contentTranslation.count({ where: { entityId: invalidEvent.id } }), 0, "Invalid detection JSON is never cached or treated as und");
+  malformedDetection = false;
+  detectedLanguage = "fr";
+  console.log("PASS: complete 8B cache is reused, neutral fields avoid all API calls, valid und translates and malformed detection stays rejected");
+
   const beforeConcurrent = calls.length;
   await Promise.all(
     Array.from({ length: 8 }, () =>
@@ -328,7 +377,8 @@ try {
   );
   assert.equal(
     calls.filter(
-      (call) => call.operation === "translate" && call.locale === "fr",
+      (call) => call.operation === "translate" && call.locale === "fr" &&
+        [gathering.title, gathering.description].includes(call.text),
     ).length,
     0,
     "Original French is preserved without translating to itself",
@@ -808,6 +858,48 @@ try {
   // Preserve these isolated local fixtures for desktop/mobile browser QA.
   await prisma.contentTranslationBudget.deleteMany();
   process.env.CLOUDFLARE_TRANSLATOR_DAILY_CHARACTER_LIMIT = "100000";
+  process.env.CLOUDFLARE_TRANSLATOR_DAILY_CHARACTER_LIMIT = "100000";
+  failQuota = false;
+  failChunk = false;
+  await prisma.contentTranslationBudget.deleteMany();
+  const splitText = ("Bonjour les amis. ".repeat(20) + "Nous partageons un café. ".repeat(20)).trim();
+  const splitEvent = await prisma.publicEvent.create({ data: { ...eventData, id: "translation-qa-split", title: splitText, description: "" } });
+  const { createSourceHash } = await import("../features/translations/services/translationPolicy");
+  await prisma.contentTranslation.create({ data: {
+    entityType: "public_event", entityId: splitEvent.id, field: "title:chunk:llama-3.1-v1", locale: "en",
+    sourceHash: createSourceHash(splitText), sourceText: splitText, translatedText: "Old unfinished 8B chunk",
+    detectedSourceLocale: "fr", provider: "cloudflare:llama-3.1-8b-instruct:v1",
+  } });
+  truncateAboveLength = 600;
+  failSmallChunkAt = 2;
+  smallChunkCalls = 0;
+  const beforeSplit = calls.length;
+  await warmupViewedContent({ entityId: splitEvent.id, entityType: "public_event", locale: "en" });
+  assert.equal(await prisma.contentTranslation.count({ where: { entityId: splitEvent.id, field: "title", locale: "en" } }), 0, "Partial split content is never published as a complete field");
+  assert.equal(await prisma.contentTranslation.count({ where: { entityId: splitEvent.id, field: `title:chunk-split:${translationChunkVersion}` } }), 1);
+  assert.equal(await prisma.contentTranslation.count({ where: { entityId: splitEvent.id, field: `title:chunk:${translationChunkVersion}` } }), 1, "Successful child persists before a later quota failure");
+  const firstSplitCalls = calls.slice(beforeSplit);
+  assert.equal(firstSplitCalls.filter(call => call.operation === "translate" && call.text === splitText).length, 1, "Old 8B chunks are never reused by the new model");
+  const partialBudget = await prisma.contentTranslationBudget.findFirstOrThrow();
+  assert.ok(partialBudget.usedCharacters >= splitText.length);
+  // Simulate tomorrow's availability without refunding any already counted calls.
+  await prisma.contentTranslationBudget.update({ where: { id: partialBudget.id }, data: { pausedUntil: null, pauseReason: null } });
+  await prisma.contentTranslationTask.updateMany({ where: { entityId: splitEvent.id }, data: { nextAttemptAt: new Date(0) } });
+  failSmallChunkAt = 0;
+  const beforeResume = calls.length;
+  await warmupViewedContent({ entityId: splitEvent.id, entityType: "public_event", locale: "en" });
+  const resumedCalls = calls.slice(beforeResume);
+  const { splitTranslationText } = await import("../features/translations/services/translationPolicy");
+  const childCount = splitTranslationText(splitText, Math.floor(splitText.length / 2)).filter(part => part.trim()).length;
+  assert.equal(resumedCalls.filter(call => call.operation === "translate").length, childCount - 1, "Resume only translates unfinished children; split marker prevents repeating the oversized request");
+  assert.ok(resumedCalls.every(call => call.text.length <= 600));
+  const resumedBudget = await prisma.contentTranslationBudget.findUniqueOrThrow({ where: { id: partialBudget.id } });
+  assert.equal(resumedBudget.usedCharacters, partialBudget.usedCharacters + resumedCalls.reduce((sum, call) => sum + call.text.length, 0), "Failed and successful calls remain charged to the same budget");
+  const splitTranslation = await localizeContent(splitEvent, "en", "public_event");
+  assert.equal(splitTranslation.title.replaceAll("en: ", ""), splitText, "Every part is preserved after smaller chunks complete");
+  truncateAboveLength = Infinity;
+  console.log("PASS: truncated chunks split durably, quota pause retains completed children and budget, old 8B chunks are isolated");
+
   console.log(
     "Browser fixtures: translation-qa-event and translation-qa-gathering (isolated local database only)",
   );

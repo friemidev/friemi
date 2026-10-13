@@ -27,6 +27,15 @@ export async function translateField(
   input: FieldTranslationInput,
   dependencies: FieldTranslationDependencies,
 ) {
+  // Unicode letters include Chinese, Japanese and Korean. Numbers, emoji,
+  // punctuation and URLs alone have no linguistic content to translate.
+  if (!/\p{L}/u.test(input.text.replace(/https?:\/\/[^\s<>"']+/g, ""))) {
+    return {
+      translatedText: input.text,
+      detectedSourceLocale: "und",
+      provider: "original",
+    };
+  }
   const sourceLocale = normalizeSourceLocale(
     input.sourceLocale ??
       (await dependencies.detect(input.text.slice(0, 1000))),

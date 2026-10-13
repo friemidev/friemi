@@ -3,10 +3,12 @@ import { createHash } from "node:crypto";
 export const contentLocales = ["zh-CN", "en", "fr"] as const;
 export type ContentLocale = (typeof contentLocales)[number];
 export const cloudflareTranslationProvider =
-  "cloudflare:llama-3.1-8b-instruct:v1";
+  "cloudflare:llama-3.3-70b-instruct-fp8-fast:v1";
+export const translationChunkVersion = "llama-3.3-70b-v1";
 export const reusableTranslationProviders = [
   "deepl",
   "original",
+  "cloudflare:llama-3.1-8b-instruct:v1",
   cloudflareTranslationProvider,
 ];
 export const automaticTranslationFields = ["title", "description"] as const;

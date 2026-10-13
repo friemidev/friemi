@@ -23,6 +23,8 @@ import {
   isContentLocale,
   normalizeSourceText,
   reusableTranslationProviders,
+  splitTranslationText,
+  translationChunkVersion,
   type ContentLocale,
 } from "./translationPolicy";
 import { translateField } from "./translationProcessor";
@@ -424,46 +426,87 @@ async function processTask(task: ContentTranslationTask, deadline: number) {
               return result.language;
             },
             async translate(text, locale, sourceLocale) {
-              const key = {
-                ...cacheKey,
-                field: `${task.field}:chunk:llama-3.1-v1`,
-                sourceHash: createSourceHash(text),
-              };
-              const cachedChunk = await prisma.contentTranslation.findUnique({
-                where: { entityType_entityId_field_locale_sourceHash: key },
-              });
-              if (cachedChunk) return cachedChunk.translatedText;
-              if (Date.now() >= deadline)
-                throw new TranslationProviderError("TRANSLATION_PENDING");
-              const result = (
-                await requestWithinBudget(
-                  "translate",
-                  text,
-                  locale,
-                  sourceLocale,
-                  deadline,
-                )
-              )[0];
-              const translatedText = result?.translations?.find(
-                (translation) =>
-                  translation.to === (locale === "zh-CN" ? "zh-Hans" : locale),
-              )?.text;
-              if (!translatedText?.trim())
-                throw new TranslationProviderError(
-                  "TRANSLATION_EMPTY_RESPONSE",
-                );
-              await prisma.contentTranslation.upsert({
-                where: { entityType_entityId_field_locale_sourceHash: key },
-                create: {
+              async function translateChunk(chunk: string): Promise<string> {
+                const key = {
+                  ...cacheKey,
+                  field: `${task.field}:chunk:${translationChunkVersion}`,
+                  sourceHash: createSourceHash(chunk),
+                };
+                const cachedChunk = await prisma.contentTranslation.findUnique({
+                  where: { entityType_entityId_field_locale_sourceHash: key },
+                });
+                if (cachedChunk) return cachedChunk.translatedText;
+                const splitKey = {
                   ...key,
-                  sourceText: text,
-                  translatedText,
-                  detectedSourceLocale: sourceLocale,
-                  provider: cloudflareTranslationProvider,
-                },
-                update: {},
-              });
-              return translatedText;
+                  field: `${task.field}:chunk-split:${translationChunkVersion}`,
+                };
+                const savedSplit = await prisma.contentTranslation.findUnique({
+                  where: { entityType_entityId_field_locale_sourceHash: splitKey },
+                  select: { id: true },
+                });
+                let translatedText: string | undefined;
+                if (!savedSplit) {
+                  if (Date.now() >= deadline)
+                    throw new TranslationProviderError("TRANSLATION_PENDING");
+                  try {
+                    const result = (
+                      await requestWithinBudget(
+                        "translate", chunk, locale, sourceLocale, deadline,
+                      )
+                    )[0];
+                    translatedText = result?.translations?.find(
+                      (translation) =>
+                        translation.to === (locale === "zh-CN" ? "zh-Hans" : locale),
+                    )?.text;
+                    if (!translatedText?.trim())
+                      throw new TranslationProviderError("TRANSLATION_EMPTY_RESPONSE");
+                  } catch (error) {
+                    if (
+                      !(error instanceof TranslationProviderError) ||
+                      error.code !== "TRANSLATION_INVALID_RESPONSE" ||
+                      chunk.length <= 128
+                    ) throw error;
+                    // Persist the smaller-chunk decision before translating any
+                    // children. A retry never repeats the failed large request,
+                    // and completed children survive timeout/quota exhaustion.
+                    await prisma.contentTranslation.upsert({
+                      where: { entityType_entityId_field_locale_sourceHash: splitKey },
+                      create: {
+                        ...splitKey,
+                        sourceText: chunk,
+                        translatedText: "split",
+                        detectedSourceLocale: sourceLocale,
+                        provider: cloudflareTranslationProvider,
+                      },
+                      update: {},
+                    });
+                  }
+                }
+                if (translatedText === undefined) {
+                  const parts: string[] = [];
+                  for (const part of splitTranslationText(chunk, Math.floor(chunk.length / 2))) {
+                    const leading = part.match(/^\s*/)?.[0] ?? "";
+                    const trailing = part.match(/\s*$/)?.[0] ?? "";
+                    parts.push(part.trim()
+                      ? `${leading}${await translateChunk(part.trim())}${trailing}`
+                      : part);
+                  }
+                  translatedText = parts.join("");
+                }
+                await prisma.contentTranslation.upsert({
+                  where: { entityType_entityId_field_locale_sourceHash: key },
+                  create: {
+                    ...key,
+                    sourceText: chunk,
+                    translatedText,
+                    detectedSourceLocale: sourceLocale,
+                    provider: cloudflareTranslationProvider,
+                  },
+                  update: {},
+                });
+                return translatedText;
+              }
+              return translateChunk(text);
             },
           },
         ));
