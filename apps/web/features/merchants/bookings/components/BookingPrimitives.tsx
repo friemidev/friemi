@@ -1,14 +1,19 @@
 import Link from "next/link";
+import React from "react";
 import { ArrowLeft } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getBookingCopy } from "../copy";
 
 export const inputClass =
-  "min-h-12 w-full rounded-xl bg-fog px-4 text-base text-ink placeholder:text-ink/60 outline-none focus-visible:ring-2 focus-visible:ring-forest";
+  "min-h-12 w-full rounded-xl bg-fog px-4 text-base text-ink placeholder:text-ink/60 caret-forest outline-none focus-visible:ring-2 focus-visible:ring-forest";
 export const primaryClass =
-  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-forest px-5 text-sm font-bold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
 export const secondaryClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-fog px-4 text-sm font-semibold text-forest transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-fog px-4 py-3 text-center text-sm font-semibold text-forest transition-colors hover:bg-sand/30 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
+export const dangerClass =
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-center text-sm font-semibold text-danger transition-colors hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger";
+export const dangerPrimaryClass =
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger";
 
 export function BookingShell({
   children,
@@ -29,7 +34,7 @@ export function BookingShell({
         className={
           embedded
             ? "mx-auto max-w-3xl px-5 pb-8 sm:px-6"
-            : "mx-auto max-w-3xl px-4 pb-24 sm:px-6"
+            : "mx-auto max-w-3xl px-4 pb-12 sm:px-6 md:pt-8"
         }
       >
         {children}
@@ -55,12 +60,12 @@ export function BookingHeader({
     <header className="flex min-h-14 items-center gap-3">
       <Link
         aria-label={backLabel ?? getBookingCopy(locale).back}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-fog text-forest transition-colors hover:bg-sand/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         href={withLocale(locale, backHref)}
       >
         <ArrowLeft aria-hidden="true" className="h-5 w-5" />
       </Link>
-      <h1 className="min-w-0 flex-1 text-base font-bold leading-snug">
+      <h1 className="min-w-0 flex-1 text-lg font-bold leading-snug">
         {title}
       </h1>
       {action}

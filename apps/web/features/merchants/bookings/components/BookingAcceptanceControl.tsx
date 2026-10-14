@@ -1,10 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Power, PowerOff } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { setBookingAcceptanceAction } from "../actions";
 import { getBookingCopy } from "../copy";
 import type { BookingActionState } from "../types";
+import {
+  dangerClass,
+  dangerPrimaryClass,
+  primaryClass,
+  secondaryClass,
+} from "./BookingPrimitives";
 
 export function BookingAcceptanceControl({
   locale,
@@ -28,7 +35,7 @@ export function BookingAcceptanceControl({
   }, [state, router]);
 
   return (
-    <div className="mt-5">
+    <div className="mt-3">
       {confirming ? (
         <form action={action} className="rounded-xl bg-fog p-4">
           <input name="locale" type="hidden" value={locale} />
@@ -36,9 +43,9 @@ export function BookingAcceptanceControl({
           <p className="text-sm leading-6 text-ink/80">
             {enabled ? copy.closeBookingsConfirm : copy.reopenBookingsHint}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
             <button
-              className="min-h-11 rounded-full bg-forest px-5 text-sm font-semibold text-white disabled:opacity-50"
+              className={enabled ? dangerPrimaryClass : primaryClass}
               disabled={pending}
               type="submit"
             >
@@ -49,7 +56,7 @@ export function BookingAcceptanceControl({
                   : copy.confirmReopenBookings}
             </button>
             <button
-              className="min-h-11 rounded-full px-4 text-sm font-semibold text-forest"
+              className={`${secondaryClass} bg-white hover:bg-white/80`}
               disabled={pending}
               onClick={() => setConfirming(false)}
               type="button"
@@ -60,10 +67,15 @@ export function BookingAcceptanceControl({
         </form>
       ) : (
         <button
-          className="min-h-11 text-sm font-semibold text-forest underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-forest"
+          className={`${enabled ? dangerClass : primaryClass} w-full sm:w-auto`}
           onClick={() => setConfirming(true)}
           type="button"
         >
+          {enabled ? (
+            <PowerOff aria-hidden="true" className="h-4 w-4" />
+          ) : (
+            <Power aria-hidden="true" className="h-4 w-4" />
+          )}
           {enabled ? copy.closeBookings : copy.reopenBookings}
         </button>
       )}
