@@ -9,6 +9,8 @@ import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { sendActivityRoomWelcome } from "@/features/activity-room-chat/services/activityRoomWelcome";
+import { scheduleChatRealtimeChange } from "@/features/chat/chatRealtimeServer";
 import { assertCanManageActivity } from "../utils/activityManagement";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
@@ -28,6 +30,7 @@ export type ReviewParticipationState = {
 type ReviewParticipationResult =
   | {
       ok: true;
+      welcome?: Awaited<ReturnType<typeof sendActivityRoomWelcome>>;
     }
   | {
       ok: false;
@@ -300,7 +303,7 @@ export async function reviewParticipationAction(
           };
         }
 
-        await tx.activityParticipant.update({
+        const reviewedParticipant = await tx.activityParticipant.update({
           where: {
             id: participation.id,
           },
@@ -308,6 +311,12 @@ export async function reviewParticipationAction(
             status:
               result.data.decision === "approve" ? "APPROVED" : "REJECTED",
           },
+        });
+
+        const welcome = await sendActivityRoomWelcome({
+          db: tx,
+          participant: reviewedParticipant,
+          previousStatus: participation.status,
         });
 
         await createNotification(tx, {
@@ -322,6 +331,7 @@ export async function reviewParticipationAction(
 
         return {
           ok: true,
+          welcome,
         };
       },
       {
@@ -333,6 +343,13 @@ export async function reviewParticipationAction(
       return {
         formError: reviewResult.error,
       };
+    }
+    if (reviewResult.welcome) {
+      scheduleChatRealtimeChange({
+        scope: "activity",
+        subjectKey: result.data.activityId,
+        profileIds: reviewResult.welcome.profileIds,
+      });
     }
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {

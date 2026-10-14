@@ -41,6 +41,7 @@ import { ChatTimeSeparator } from "@/features/chat/components/ChatTimeSeparator"
 import { useChatTextareaAutosize } from "@/features/chat/useChatTextareaAutosize";
 import { ChatMentionPicker } from "@/features/chat/components/ChatMentionPicker";
 import { ChatMentionText } from "@/features/chat/components/ChatMentionText";
+import { ManualMessageTranslation } from "@/features/translations/components/ManualMessageTranslation";
 import {
   ChatImageAttachmentPicker,
   ChatImageAttachmentPreviews,
@@ -104,6 +105,11 @@ import {
   type ActivityRoomMemberActionState,
 } from "../actions/activityRoomChatActions";
 import { getActivityRoomChatCopy } from "../copy";
+import {
+  activityRoomAssistantAvatar,
+  getActivityRoomAssistantCopy,
+} from "../assistant";
+import { ActivityRoomWelcomeEditor } from "./ActivityRoomWelcomeEditor";
 import type {
   ActivityRoomChatActivityViewModel,
   ActivityRoomAnnouncementViewModel,
@@ -126,6 +132,7 @@ type ActivityRoomChatPageProps = {
   activityId: string;
   locale: string;
   management?: ActivityRoomManagementViewModel | null;
+  messageEndpoint?: string;
   messages: ActivityRoomMessageViewModel[];
   policy: ActivityRoomChatPolicy;
   signInHref: string;
@@ -1405,6 +1412,14 @@ export function ActivityRoomManagePage({
                 {activity?.title ?? chatCopy.title}
               </span>
             </ActivityRoomInfoRow>
+            {canManageRoom && activity ? (
+              <ActivityRoomWelcomeEditor
+                activityId={activity.id}
+                activityTitle={activity.title ?? chatCopy.title}
+                initialTemplate={activity.welcomeTemplate}
+                locale={locale}
+              />
+            ) : null}
             <ActivityRoomPreferenceToggleRow
               action={toggleActivityRoomMuteAction}
               activityId={activity?.id ?? activityId}
@@ -1575,6 +1590,8 @@ function getPolicyNotice(
 }
 
 function MessageRow({
+  activityId,
+  activityTitle,
   actionMenuOpen,
   canManage,
   isDeleting,
@@ -1588,7 +1605,10 @@ function MessageRow({
   onToggleSelection,
   selectionMode,
   viewer,
+  welcomeTemplate,
 }: {
+  activityId: string;
+  activityTitle: string;
   actionMenuOpen: boolean;
   canManage: boolean;
   isDeleting: boolean;
@@ -1602,12 +1622,19 @@ function MessageRow({
   onToggleSelection: (messageId: string) => void;
   selectionMode: boolean;
   viewer: ActivityRoomViewer | null;
+  welcomeTemplate?: string;
 }) {
   const copy = getActivityRoomChatCopy(locale);
   const replyCopy = getChatReplyCopy(locale);
   const canDelete = !message.isDeleted && (message.isMine || canManage);
   const canOpenActions = !message.isDeleted;
-  const sender = message.isMine && viewer ? viewer : message.sender;
+  const sender = message.isAssistant
+    ? {
+        ...message.sender,
+        avatarUrl: activityRoomAssistantAvatar,
+        nickname: getActivityRoomAssistantCopy(locale).name,
+      }
+    : message.isMine && viewer ? viewer : message.sender;
   const senderProfileHref = withLocale(locale, `/profile/${sender.id}`);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -1773,7 +1800,11 @@ function MessageRow({
         message.isMine ? "justify-end" : "justify-start",
       )}
     >
-      {!message.isMine ? (
+      {!message.isMine && message.isAssistant ? (
+        <div className="shrink-0 pt-[1.25rem]" aria-label={sender.nickname}>
+          <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        </div>
+      ) : !message.isMine ? (
         <Link
           aria-label={sender.nickname}
           className="shrink-0 rounded-full pt-[1.25rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/45"
@@ -1788,7 +1819,9 @@ function MessageRow({
       <div
         className={cn(
           "flex min-w-0 flex-col gap-0.5",
-          actionMenuOpen
+          message.isAssistant && canManage && !actionMenuOpen && !selectionMode
+            ? "max-w-[calc(100%-8.5rem)] sm:max-w-[64%]"
+            : actionMenuOpen
             ? "max-w-[56%] sm:max-w-[58%]"
             : selectionMode && canDelete
               ? "max-w-[65%] sm:max-w-[60%]"
@@ -1801,77 +1834,102 @@ function MessageRow({
             {sender.nickname}
           </p>
         ) : null}
-        <div
-          aria-pressed={selectionMode && canDelete ? isSelected : undefined}
-          className={cn(
-            "relative min-w-0 max-w-full touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
-            canOpenActions && "select-none [-webkit-touch-callout:none]",
-            selectionMode && canDelete && "cursor-pointer",
-            isSelected &&
-              "outline outline-2 outline-offset-2 outline-[#36A15F]",
-            message.isDeleted
-              ? message.isMine
-                ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-right-1 before:border-r before:border-t before:border-[#DFDAC5] before:bg-[#F1F2EC]"
-                : "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-left-1 before:border-b before:border-l before:border-[#DFDAC5] before:bg-[#F1F2EC]"
-              : message.isMine
-                ? "rounded-tr-[0.35rem] bg-[#156240] text-white before:-right-1 before:bg-[#156240]"
-                : "rounded-tl-[0.35rem] bg-white text-[#111210] ring-1 ring-[#D6D5B2] before:-left-1 before:border-b before:border-l before:border-[#D6D5B2] before:bg-white",
-          )}
-          data-room-message-id={message.id}
-          onClick={handleMessageClick}
-          onContextMenu={(event) => {
-            if (!canOpenActions || isDeleting || selectionMode) {
-              return;
-            }
-
-            event.preventDefault();
-            onOpenActionMenu(message.id);
-          }}
-          onKeyDown={handleMessageKeyDown}
-          onPointerCancel={handlePointerEnd}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerEnd}
-          role={canOpenActions ? "button" : undefined}
-          tabIndex={canOpenActions ? 0 : undefined}
+        <ManualMessageTranslation
+          entityId={message.id}
+          entityType="activity_room_message"
+          locale={locale}
+          text={message.body}
+          align={message.isMine ? "end" : "start"}
+          enabled={
+            !message.isDeleted && Boolean(message.body.trim()) && !selectionMode
+          }
         >
-          {!message.isDeleted && message.imageUrls.length ? (
-            <ChatImagePreviewGrid
-              imageLabel={copy.imageMessage}
-              imageUrls={message.imageUrls}
-              resetLabel={copy.resetImagePreview}
-              saveLabel={copy.saveImage}
-              savedLabel={copy.savingImage}
-            />
-          ) : null}
-          {message.isDeleted || message.body.trim() ? (
-            <p
+          {(displayText) => (
+            <div
+              aria-pressed={selectionMode && canDelete ? isSelected : undefined}
               className={cn(
-                "whitespace-pre-wrap break-words",
-                message.imageUrls.length && !message.isDeleted && "px-1 pt-2",
-                message.isDeleted && "font-semibold italic",
+                "relative min-w-0 max-w-full touch-pan-y rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)] before:absolute before:top-2 before:h-2.5 before:w-2.5 before:rotate-45 before:content-['']",
+                canOpenActions && "select-none [-webkit-touch-callout:none]",
+                selectionMode && canDelete && "cursor-pointer",
+                isSelected &&
+                  "outline outline-2 outline-offset-2 outline-[#36A15F]",
+                message.isDeleted
+                  ? message.isMine
+                    ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-right-1 before:border-r before:border-t before:border-[#DFDAC5] before:bg-[#F1F2EC]"
+                    : "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5] before:-left-1 before:border-b before:border-l before:border-[#DFDAC5] before:bg-[#F1F2EC]"
+                  : message.isMine
+                    ? "rounded-tr-[0.35rem] bg-[#156240] text-white before:-right-1 before:bg-[#156240]"
+                    : "rounded-tl-[0.35rem] bg-white text-[#111210] ring-1 ring-[#D6D5B2] before:-left-1 before:border-b before:border-l before:border-[#D6D5B2] before:bg-white",
               )}
+              data-room-message-id={message.id}
+              onClick={handleMessageClick}
+              onContextMenu={(event) => {
+                if (!canOpenActions || isDeleting || selectionMode) {
+                  return;
+                }
+
+                event.preventDefault();
+                onOpenActionMenu(message.id);
+              }}
+              onKeyDown={handleMessageKeyDown}
+              onPointerCancel={handlePointerEnd}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerEnd}
+              role={canOpenActions ? "button" : undefined}
+              tabIndex={canOpenActions ? 0 : undefined}
             >
-              {message.isDeleted ? (
-                copy.deletedMessage
-              ) : (
-                <ChatMentionText
-                  content={message.body}
-                  mentionClassName={
-                    message.isMine ? "text-[#BDF3D2]" : "text-[#7A2FBE]"
-                  }
-                  mentionLabels={message.mentionLabels}
-                  mentionsEveryone={message.mentionsEveryone}
+              {!message.isDeleted && message.imageUrls.length ? (
+                <ChatImagePreviewGrid
+                  imageLabel={copy.imageMessage}
+                  imageUrls={message.imageUrls}
+                  resetLabel={copy.resetImagePreview}
+                  saveLabel={copy.saveImage}
+                  savedLabel={copy.savingImage}
                 />
-              )}
-            </p>
-          ) : null}
-        </div>
+              ) : null}
+              {message.isDeleted || message.body.trim() ? (
+                <p
+                  aria-live="polite"
+                  className={cn(
+                    "whitespace-pre-wrap break-words",
+                    message.imageUrls.length &&
+                      !message.isDeleted &&
+                      "px-1 pt-2",
+                    message.isDeleted && "font-semibold italic",
+                  )}
+                >
+                  {message.isDeleted ? (
+                    copy.deletedMessage
+                  ) : (
+                    <ChatMentionText
+                      content={displayText}
+                      mentionClassName={
+                        message.isMine ? "text-[#BDF3D2]" : "text-[#7A2FBE]"
+                      }
+                      mentionLabels={message.mentionLabels}
+                      mentionsEveryone={message.mentionsEveryone}
+                    />
+                  )}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </ManualMessageTranslation>
         {!message.isDeleted && message.replyTo ? (
           <ChatReplyBubblePreview locale={locale} replyTo={message.replyTo} />
         ) : null}
       </div>
       {!message.isMine ? (actionMenu ?? selectionControl) : null}
+      {message.isAssistant && !message.isDeleted && canManage && !selectionMode && !actionMenuOpen ? (
+        <ActivityRoomWelcomeEditor
+          activityId={activityId}
+          activityTitle={activityTitle}
+          initialTemplate={welcomeTemplate}
+          locale={locale}
+          presentation="inline"
+        />
+      ) : null}
       {message.isMine ? (
         <Link
           aria-label={sender.nickname}
@@ -2273,6 +2331,7 @@ export function ActivityRoomChatPage({
   activityId,
   locale,
   management,
+  messageEndpoint = `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
   messages: initialMessages,
   policy,
   signInHref,
@@ -2290,14 +2349,14 @@ export function ActivityRoomChatPage({
   const [selectionMode, setSelectionMode] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReplyTarget | null>(null);
   useChatCursorSync({
-    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    endpoint: messageEndpoint,
     messages,
     scope: "activity",
     setMessages,
     subjectKey: activityId,
   });
   const chatHistory = useChatHistoryPagination({
-    endpoint: `/api/activity-room/${encodeURIComponent(activityId)}/messages`,
+    endpoint: messageEndpoint,
     initialPageSize: 50,
     messages,
     setMessages,
@@ -2369,7 +2428,7 @@ export function ActivityRoomChatPage({
       body: message.body,
       hasImage: message.imageUrls.length > 0,
       messageId: message.id,
-      senderName: message.sender.nickname,
+      senderName: message.isAssistant ? getActivityRoomAssistantCopy(locale).name : message.sender.nickname,
     });
     setActionMenuMessageId("");
     setSelectionMode(false);
@@ -2523,6 +2582,8 @@ export function ActivityRoomChatPage({
                     ) : null}
                     <div className="min-w-0" data-chat-motion-id={message.id}>
                       <MessageRow
+                        activityId={activity?.id ?? activityId}
+                        activityTitle={activity?.title ?? copy.title}
                         actionMenuOpen={actionMenuMessageId === message.id}
                         canManage={canManage}
                         isDeleting={deletingMessageIds.includes(message.id)}
@@ -2536,6 +2597,7 @@ export function ActivityRoomChatPage({
                         onToggleSelection={handleToggleSelection}
                         selectionMode={selectionMode}
                         viewer={viewer}
+                        welcomeTemplate={activity?.welcomeTemplate}
                       />
                     </div>
                   </Fragment>

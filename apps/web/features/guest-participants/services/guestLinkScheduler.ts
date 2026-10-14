@@ -184,6 +184,20 @@ export async function runScheduledGuestLink({
     }
 
     result = await linkGuestParticipationsForProfile(prisma, profile);
+    if (result.welcomeChanges.length) {
+      const { broadcastChatRealtimeChange } = await import(
+        "@/features/chat/chatRealtimeServer"
+      );
+      await Promise.allSettled(
+        result.welcomeChanges.map(({ activityId, profileIds }) =>
+          broadcastChatRealtimeChange({
+            scope: "activity",
+            subjectKey: activityId,
+            profileIds,
+          }),
+        ),
+      );
+    }
   } catch (error) {
     if (usesScheduleGuard) {
       await prisma.userProfile.updateMany({

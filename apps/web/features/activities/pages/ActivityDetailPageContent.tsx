@@ -2,6 +2,10 @@ import { getPublicBookingSpaceByActivity } from "@/features/merchants/bookings/q
 import { PersistentBookingPage } from "@/features/merchants/bookings/components/PersistentBookingPage";
 import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
 import type { Metadata } from "next";
+import { hasCachedContent, localizeContent } from "@/features/translations/services/localizedContent";
+import { isTranslationEnabled } from "@/features/translations/services/cloudflare";
+import { ContentTranslationOnView } from "@/features/translations/components/ContentTranslationOnView";
+
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -735,10 +739,11 @@ export async function generateActivityDetailMetadata(
     locale,
     getActivityDetailPath(activityId),
   );
-  const [activity, requestHeaders] = await Promise.all([
+  const [originalActivity, requestHeaders] = await Promise.all([
     getActivityShareMetadataById(activityId, accessToken ?? null),
     headers(),
   ]);
+  const activity = originalActivity ? await localizeContent(originalActivity, locale, "activity") : null;
   const requestBaseUrl = getRequestBaseUrl(requestHeaders);
 
   if (!activity) {
@@ -798,6 +803,7 @@ export async function generateActivityDetailMetadata(
         variant: "wechat",
       }),
       title: activity.title,
+      description: activity.description,
     });
 
     return metadata;
@@ -852,6 +858,29 @@ export async function ActivityDetailPageContent({
     viewerProfile?.id,
   );
   if (bookingSpace) {
+    // Booking settings read their text directly from this Activity row, so the
+    // public detail, cards and metadata all share the same translation cache.
+    const originalBookingContent = {
+      id: bookingSpace.settings.activityId,
+      title: bookingSpace.settings.title,
+      description: bookingSpace.settings.description,
+    };
+    const bookingContent = await localizeContent(
+      originalBookingContent,
+      locale,
+      "activity",
+    );
+    const bookingTranslationPending =
+      isTranslationEnabled() &&
+      !(await hasCachedContent(originalBookingContent, locale, "activity"));
+    const localizedBookingSpace = {
+      ...bookingSpace,
+      settings: {
+        ...bookingSpace.settings,
+        title: bookingContent.title,
+        description: bookingContent.description,
+      },
+    };
     const owner = viewerProfile
       ? await prisma.merchant.findFirst({
           where: {
@@ -863,9 +892,16 @@ export async function ActivityDetailPageContent({
       : null;
     return (
       <>
+        {bookingTranslationPending ? (
+          <ContentTranslationOnView
+            entityId={bookingSpace.settings.activityId}
+            entityType="activity"
+            locale={locale}
+          />
+        ) : null}
         <ActivityDetailRefresh validatedAt={Date.now()} />
         <PersistentBookingPage
-          data={bookingSpace}
+          data={localizedBookingSpace}
           embedded={isSheetPresentation}
           locale={locale}
           isAuthenticated={Boolean(viewerProfile)}
@@ -888,7 +924,7 @@ export async function ActivityDetailPageContent({
           ]),
         )
       : [[], []];
-  const [activity, activityIsFavorited] = await Promise.all([
+  const [originalActivity, activityIsFavorited] = await Promise.all([
     perf.measure("activity.primary", () =>
       getActivityById(
         activityId,
@@ -901,6 +937,13 @@ export async function ActivityDetailPageContent({
       getViewerActivityFavorite(activityId, viewerProfile?.id),
     ),
   ]);
+
+  const activity = originalActivity ? await localizeContent(originalActivity, locale, "activity") : null;
+  const translationPending = Boolean(originalActivity && isTranslationEnabled() && !(await hasCachedContent(originalActivity, locale, "activity")));
+  if (activity?.publicEvent) {
+    const localizedEvent = await localizeContent({ ...activity.publicEvent, description: "" }, locale, "public_event");
+    activity.publicEvent = { ...activity.publicEvent, title: localizedEvent.title };
+  }
 
   if (!activity || activity.isPersistent) {
     notFound();
@@ -1084,6 +1127,7 @@ export async function ActivityDetailPageContent({
         className="space-y-5 py-4 sm:space-y-6 sm:py-8"
         mobileSafeTop
       >
+        {translationPending ? <ContentTranslationOnView entityId={activity.id} entityType="activity" locale={locale} accessToken={accessToken} /> : null}
         <ActivityDetailRefresh validatedAt={Date.now()} />
         <MobileNavSectionOverride section="activities" />
         <DetailSourceRestore sourceKey="activity_detail" />
@@ -1169,12 +1213,12 @@ export async function ActivityDetailPageContent({
                   {
                     field: "title",
                     label: t.translation.fields.title,
-                    text: activity.title,
+                    text: originalActivity!.title,
                   },
                   {
                     field: "description",
                     label: t.translation.fields.description,
-                    text: activity.description,
+                    text: originalActivity!.description,
                   },
                   {
                     field: "address",
@@ -1746,12 +1790,12 @@ export async function ActivityDetailPageContent({
                 {
                   field: "title",
                   label: t.translation.fields.title,
-                  text: activity.title,
+                  text: originalActivity!.title,
                 },
                 {
                   field: "description",
                   label: t.translation.fields.description,
-                  text: activity.description,
+                  text: originalActivity!.description,
                 },
                 {
                   field: "address",
@@ -1863,12 +1907,12 @@ export async function ActivityDetailPageContent({
                 {
                   field: "title",
                   label: t.translation.fields.title,
-                  text: activity.title,
+                  text: originalActivity!.title,
                 },
                 {
                   field: "description",
                   label: t.translation.fields.description,
-                  text: activity.description,
+                  text: originalActivity!.description,
                 },
                 {
                   field: "address",
@@ -1926,6 +1970,7 @@ export async function ActivityDetailPageContent({
           : "app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)]",
       )}
     >
+      {translationPending ? <ContentTranslationOnView entityId={activity.id} entityType="activity" locale={locale} accessToken={accessToken} /> : null}
       <ActivityDetailRefresh validatedAt={Date.now()} />
       {isSheetPresentation ? null : (
         <MobileNavSectionOverride section="lobby" />
@@ -2886,6 +2931,9 @@ function ContactOrganizerForm({
   const label = isAuthenticated
     ? t.activityDetail.contactOrganizer
     : t.activityDetail.contactOrganizerLogin;
+  const shortLabel = isAuthenticated
+    ? t.activityDetail.contactOrganizerShort
+    : t.activityDetail.contactOrganizerLoginShort;
 
   return (
     <ActivityOrganizerContactForm
@@ -2894,6 +2942,7 @@ function ContactOrganizerForm({
       hint={t.activityDetail.contactOrganizerHint}
       isAuthenticated={isAuthenticated}
       label={label}
+      shortLabel={shortLabel}
       locale={locale}
       organizerNickname={organizerNickname}
       organizerProfileId={organizerProfileId}

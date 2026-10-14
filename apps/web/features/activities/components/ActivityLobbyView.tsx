@@ -1283,6 +1283,7 @@ export function LazyLobbySwipeDiscovery({
           credentials: "same-origin",
           headers: {
             Accept: "application/json",
+              "x-friemi-locale": locale,
           },
           signal: controller.signal,
         });
@@ -2277,6 +2278,7 @@ export function ActivityLobbyView({
           credentials: "same-origin",
           headers: {
             Accept: "application/json",
+              "x-friemi-locale": locale,
           },
           signal: controller.signal,
         });
@@ -2373,6 +2375,7 @@ export function ActivityLobbyView({
             credentials: "same-origin",
             headers: {
               Accept: "application/json",
+              "x-friemi-locale": locale,
             },
             signal: controller.signal,
           },

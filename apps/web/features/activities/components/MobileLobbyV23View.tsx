@@ -392,6 +392,7 @@ async function fetchMobileLobbyPage(
   page: number,
   signal: AbortSignal,
   status: "ongoing" | "ended" = "ongoing",
+  locale = "zh-CN",
 ) {
   const params = new URLSearchParams({
     page: String(page),
@@ -402,6 +403,7 @@ async function fetchMobileLobbyPage(
     credentials: "same-origin",
     headers: {
       Accept: "application/json",
+      "x-friemi-locale": locale,
     },
     signal,
   });
@@ -850,13 +852,15 @@ export function MobileLobbyV23View({
           tab,
           nextPage,
           controller.signal,
+          "ongoing",
+          locale,
         );
         // Revalidate all retained pages before swapping the list. Refreshing
         // only page one would remove the user's scroll range on return.
         if (background && !loadNext && currentPage) {
           const refreshed = [...result.activities];
           for (let page = 2; page <= currentPage.page && result.hasMore; page += 1) {
-            result = await fetchMobileLobbyPage(tab, page, controller.signal);
+            result = await fetchMobileLobbyPage(tab, page, controller.signal, "ongoing", locale);
             refreshed.push(...result.activities);
           }
           result = { ...result, activities: refreshed };
@@ -943,6 +947,7 @@ export function MobileLobbyV23View({
           nextPage,
           controller.signal,
           "ended",
+          locale,
         );
         const previous = endedTabPagesRef.current[tab];
         const nextTabPage = {
