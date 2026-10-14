@@ -72,7 +72,7 @@ function getGuestJoinCopy(locale: string) {
       messageLabel: "Message",
       submit: "Ajouter l'invité",
       submitting: "Envoi...",
-      loginJoin: "Se connecter pour s'inscrire",
+      loginJoin: "Se connecter",
       loginRequired:
         "La consultation reste libre, mais un compte est obligatoire pour s'inscrire et assurer le suivi des participations.",
       successTitle: "Invité ajouté",
@@ -126,7 +126,7 @@ function getGuestJoinCopy(locale: string) {
     messageLabel: "报名留言",
     submit: "添加游客",
     submitting: "提交中...",
-    loginJoin: "登录后报名",
+    loginJoin: "登录报名",
     loginRequired:
       "游客可以浏览聚吧内容，但报名必须登录，以便记录参与和爽约情况。",
     successTitle: "游客已添加",
@@ -152,9 +152,9 @@ function SubmitButton({
       aria-busy={pending}
     >
       {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
       ) : null}
-      <span className="min-w-0 text-center leading-tight">
+      <span className="min-w-0 truncate text-center leading-tight">
         {pending
           ? t.submitting
           : requiresApproval
@@ -177,9 +177,9 @@ function GuestSubmitButton({ locale }: { locale: string }) {
       aria-busy={pending}
     >
       {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
       ) : null}
-      <span className="min-w-0 text-center leading-tight">
+      <span className="min-w-0 truncate text-center leading-tight">
         {pending ? t.submitting : t.submit}
       </span>
     </Button>
@@ -464,15 +464,15 @@ function SignInToJoinEntry({
   const t = getGuestJoinCopy(locale);
 
   return (
-    <div className="grid gap-2.5">
+    <div className="grid min-w-0 gap-2.5">
       <Link
-        className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
+        className="inline-flex min-h-11 min-w-0 w-full max-w-full items-center justify-center whitespace-nowrap rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
         href={getSignInHref(
           locale,
           getSignInReturnPath(activityId, accessToken),
         )}
       >
-        <span className="min-w-0 leading-tight">{t.loginJoin}</span>
+        <span className="min-w-0 truncate leading-tight">{t.loginJoin}</span>
       </Link>
       <p className="px-1 text-xs font-medium leading-5 text-[#156240]/75">
         {t.loginRequired}
