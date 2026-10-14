@@ -19,7 +19,8 @@
       "favoriting": "Adding...",
       "unfavoriting": "Removing...",
       "signInToFavorite": "Sign in to favorite",
-      "invalidRequest": "Invalid request. Try again later."
+      "invalidRequest": "Invalid request. Try again later.",
+      "failed": "Could not complete this action. Please try again."
     },
     "activity": {
       "unavailable": "This activity does not exist or cannot be favorited right now."

@@ -91,6 +91,8 @@ import {
   getViewerFriendIds,
 } from "@/features/friends/queries/getViewerFriendIds";
 import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
+import { ActivityHostLink } from "@/features/activities/components/ActivityHostLink";
+import { getActivityHostLink } from "@/features/activities/utils/activityHostLink";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -1164,6 +1166,7 @@ export async function ActivityDetailPageContent({
               favoriteCount={activity.favoriteCount}
               isAuthenticated={Boolean(viewerProfile)}
               isFavorited={activityIsFavorited}
+              viewerProfileId={viewerProfile?.id ?? null}
               locale={locale}
               redirectPath={legacyActivityDetailPath}
               sourceSurface="public_event_detail"
@@ -1542,14 +1545,26 @@ export async function ActivityDetailPageContent({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const participantPreview = activity.participantPreview ?? [];
-  const ticketUrl =
-    activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
-  const ticketLabel = getTicketCtaLabel(
+  const hostLink = getActivityHostLink({
+    url: activity.ticketUrl ?? activity.publicEvent?.ticketUrl,
+    label: activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
     locale,
-    activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
-  );
-  const canOpenTicketLink =
-    Boolean(ticketUrl) && !isCancelled && !isEndedByTime;
+    isCancelled,
+    isEnded: isEndedByTime,
+  });
+  const hostLinkEntry = hostLink ? (
+    <ActivityHostLink
+      link={hostLink}
+      locale={locale}
+      event={{
+        name: "ticket_link_clicked",
+        entityId: detailAnalyticsEntity.entityId,
+        entityType: detailAnalyticsEntity.entityType,
+        sourceSurface: "activity_detail",
+        properties: { item_kind: detailAnalyticsEntity.itemKind },
+      }}
+    />
+  ) : null;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
   const activityVisibilityLabel =
     activity.visibility === "PRIVATE"
@@ -2067,6 +2082,7 @@ export async function ActivityDetailPageContent({
               favoriteCount={activity.favoriteCount}
               isAuthenticated={Boolean(viewerProfile)}
               isFavorited={activityIsFavorited}
+              viewerProfileId={viewerProfile?.id ?? null}
               locale={locale}
               redirectPath={lobbyActivityDetailPath}
               sourceSurface="activity_detail"
@@ -2384,6 +2400,7 @@ export async function ActivityDetailPageContent({
               </div>
             </TeamDetailMobileCtaSheet>
           ) : null}
+          {hostLinkEntry}
         </div>
       </div>
 
@@ -2814,24 +2831,7 @@ export async function ActivityDetailPageContent({
               </span>
             </p>
 
-            {canOpenTicketLink && ticketUrl ? (
-              <AnalyticsExternalLink
-                className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#369758] px-4 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
-                event={{
-                  name: "ticket_link_clicked",
-                  entityId: detailAnalyticsEntity.entityId,
-                  entityType: detailAnalyticsEntity.entityType,
-                  sourceSurface: "activity_detail",
-                  properties: {
-                    item_kind: detailAnalyticsEntity.itemKind,
-                  },
-                }}
-                href={ticketUrl}
-              >
-                <span className="min-w-0 leading-tight">{ticketLabel}</span>
-                <ArrowRight className="h-4 w-4" />
-              </AnalyticsExternalLink>
-            ) : null}
+            {hostLinkEntry}
 
             {autoCreatedTeam?.isClaimable && !isTeamOperator ? (
               <div className="mt-3 rounded-2xl border border-[#8AB68E] bg-[#FEFFF9] p-3">

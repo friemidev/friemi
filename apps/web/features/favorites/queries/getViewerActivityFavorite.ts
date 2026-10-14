@@ -88,6 +88,36 @@ export async function attachActivityFavoriteStates(
   }
 }
 
+/** Refresh only favorite fields on cached discovery cards, not their ordering. */
+export async function attachLiveActivityFavoriteStates(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null | undefined,
+) {
+  if (activities.length === 0) return activities;
+
+  const snapshots = await prisma.activity.findMany({
+    where: { id: { in: activities.map((activity) => activity.id) } },
+    select: {
+      id: true,
+      _count: { select: { favorites: true } },
+      favorites: {
+        where: { userProfileId: viewerProfileId ?? "" },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+  const byId = new Map(snapshots.map((snapshot) => [snapshot.id, snapshot]));
+  return activities.map((activity) => {
+    const snapshot = byId.get(activity.id);
+    return {
+      ...activity,
+      favoriteCount: snapshot?._count.favorites ?? activity.favoriteCount,
+      isFavorited: Boolean(viewerProfileId && snapshot?.favorites.length),
+    };
+  });
+}
+
 export async function getViewerPublicEventFavorite(
   publicEventId: string,
   viewerProfileId: string | null | undefined,
