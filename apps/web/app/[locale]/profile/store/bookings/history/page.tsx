@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, History } from "lucide-react";
 import {
   BookingHeader,
   BookingShell,
@@ -35,13 +35,16 @@ export default async function LegacyBookingHistoryRoute({
         locale={locale}
         title={copy.legacy}
       />
-      <ol className="divide-y divide-fog pt-7">
+      <ol className="space-y-3 pt-5">
         {data.slots.map((slot) => (
           <li key={slot.id}>
             <Link
-              className="flex min-h-20 items-center gap-3 rounded-lg py-4 focus-visible:outline-2 focus-visible:outline-forest"
+              className="flex min-h-20 items-center gap-3 rounded-xl bg-fog/70 px-4 py-4 transition-colors hover:bg-fog focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
               href={withLocale(locale, `/profile/store/bookings/${slot.id}`)}
             >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-forest">
+                <CalendarDays aria-hidden="true" className="h-5 w-5" />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">
                   {slot.title}
@@ -56,9 +59,10 @@ export default async function LegacyBookingHistoryRoute({
         ))}
       </ol>
       {!data.slots.length ? (
-        <p className="py-12 text-center text-sm text-ink/70">
-          {copy.noHistory}
-        </p>
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-2xl bg-fog/60 px-4 py-10 text-center">
+          <History aria-hidden="true" className="h-6 w-6 text-forest/70" />
+          <p className="text-sm text-ink/70">{copy.noHistory}</p>
+        </div>
       ) : null}
     </BookingShell>
   );

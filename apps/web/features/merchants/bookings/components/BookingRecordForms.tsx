@@ -2,11 +2,17 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, XCircle } from "lucide-react";
 import { cancelBookingAction, reviewBookingAction } from "../actions";
 import { getBookingCopy } from "../copy";
 import { notifyBookingUpdated } from "../bookingUpdates";
 import type { BookingActionState } from "../types";
-import { inputClass, primaryClass, secondaryClass } from "./BookingPrimitives";
+import {
+  dangerClass,
+  dangerPrimaryClass,
+  inputClass,
+  primaryClass,
+} from "./BookingPrimitives";
 
 export function ReviewBookingForm({
   locale,
@@ -31,7 +37,7 @@ export function ReviewBookingForm({
     }
   }, [state, router]);
   return (
-    <div className="mt-8 space-y-4">
+    <div className="mt-6 space-y-3">
       {state.error ? (
         <p className="text-sm font-semibold text-danger" role="alert">
           {state.error}
@@ -51,14 +57,16 @@ export function ReviewBookingForm({
           disabled={pending || state.success}
           type="submit"
         >
+          <Check aria-hidden="true" className="h-4 w-4" />
           {pending ? copy.processing : copy.accept}
         </button>
       </form>
       <details>
-        <summary className="flex min-h-12 cursor-pointer items-center justify-center text-sm font-semibold text-ink/70 focus-visible:outline-2 focus-visible:outline-forest">
+        <summary className={`${dangerClass} w-full cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+          <XCircle aria-hidden="true" className="h-4 w-4" />
           {copy.reject}
         </summary>
-        <form action={action} className="space-y-3 pt-3">
+        <form action={action} className="space-y-3 pt-4">
           <input name="locale" type="hidden" value={locale} />
           <input name="bookingId" type="hidden" value={bookingId} />
           <input name="decision" type="hidden" value="reject" />
@@ -79,7 +87,7 @@ export function ReviewBookingForm({
             required
           />
           <button
-            className={`${secondaryClass} w-full`}
+            className={`${dangerPrimaryClass} w-full`}
             disabled={pending || state.success}
             type="submit"
           >
@@ -113,8 +121,9 @@ export function CancelBookingForm({
     }
   }, [state, router]);
   return (
-    <details className="mt-9">
-      <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold text-ink/70 focus-visible:outline-2 focus-visible:outline-forest">
+    <details className="mt-4">
+      <summary className={`${dangerClass} w-full cursor-pointer list-none sm:w-auto [&::-webkit-details-marker]:hidden`}>
+        <XCircle aria-hidden="true" className="h-4 w-4" />
         {copy.cancel}
       </summary>
       <form action={action} className="space-y-4 py-3">
@@ -132,7 +141,7 @@ export function CancelBookingForm({
           </p>
         ) : null}
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-ink px-5 text-sm font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className={dangerPrimaryClass}
           disabled={pending || state.success}
           type="submit"
         >
