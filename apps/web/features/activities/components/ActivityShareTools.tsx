@@ -512,11 +512,18 @@ export function ActivityPosterDownloadButton({
       : preferPosterPreviewSave
         ? t.savePoster
         : t.downloadPoster;
+  const shortButtonLabel =
+    downloadState === "downloading"
+      ? t.downloadingShort
+      : preferPosterPreviewSave
+        ? t.savePosterShort
+        : t.downloadPosterShort;
 
   return (
     <>
       <Button
         aria-label={buttonLabel}
+        title={buttonLabel}
         className={cn(
           "h-10 w-full gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
           downloadState === "failed" && "text-red-600 ring-red-200",
@@ -532,7 +539,7 @@ export function ActivityPosterDownloadButton({
         ) : (
           <Download className="h-4 w-4 shrink-0" />
         )}
-        <span className="min-w-0 truncate">{buttonLabel}</span>
+        <span className="min-w-0 truncate">{shortButtonLabel}</span>
       </Button>
       {posterPreviewUrl && posterPreviewOpen ? (
         <div
@@ -806,9 +813,15 @@ export function ActivityShareTools({
       : preferPosterPreviewSave
         ? t.savePoster
         : t.downloadPoster;
+  const shortPosterButtonLabel =
+    downloadState === "downloading"
+      ? t.downloadingShort
+      : preferPosterPreviewSave
+        ? t.savePosterShort
+        : t.downloadPosterShort;
 
   return (
-    <div className="rounded-[1.1rem] border border-[#8AB68E] bg-white p-3 shadow-sm">
+    <div className="min-w-0 rounded-[1.1rem] border border-[#8AB68E] bg-white p-3 shadow-sm">
       <WechatShareConfigurator
         description={description || shareDescription}
         enabled={shareKind === "team"}
@@ -830,7 +843,7 @@ export function ActivityShareTools({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(min(100%,8.5rem),1fr))] gap-2">
         <Button
           className="h-10 gap-2 rounded-full border-[#1D1D1B] bg-[#1D1D1B] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#1D1D1B]"
           disabled={!activityUrl}
@@ -842,6 +855,8 @@ export function ActivityShareTools({
           <span className="min-w-0 truncate">{t.systemShare}</span>
         </Button>
         <Button
+          aria-label={posterButtonLabel}
+          title={posterButtonLabel}
           className={cn(
             "h-10 gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
             !canDownload && "opacity-70",
@@ -856,7 +871,7 @@ export function ActivityShareTools({
           ) : (
             <Download className="h-4 w-4 shrink-0" />
           )}
-          <span className="min-w-0 truncate">{posterButtonLabel}</span>
+          <span className="min-w-0 truncate">{shortPosterButtonLabel}</span>
         </Button>
       </div>
       {downloadState === "failed" || posterPreviewState === "failed" ? (

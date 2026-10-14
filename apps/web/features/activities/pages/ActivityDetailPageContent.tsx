@@ -2931,6 +2931,9 @@ function ContactOrganizerForm({
   const label = isAuthenticated
     ? t.activityDetail.contactOrganizer
     : t.activityDetail.contactOrganizerLogin;
+  const shortLabel = isAuthenticated
+    ? t.activityDetail.contactOrganizerShort
+    : t.activityDetail.contactOrganizerLoginShort;
 
   return (
     <ActivityOrganizerContactForm
@@ -2939,6 +2942,7 @@ function ContactOrganizerForm({
       hint={t.activityDetail.contactOrganizerHint}
       isAuthenticated={isAuthenticated}
       label={label}
+      shortLabel={shortLabel}
       locale={locale}
       organizerNickname={organizerNickname}
       organizerProfileId={organizerProfileId}

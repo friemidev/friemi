@@ -18,6 +18,7 @@ type ActivityOrganizerContactFormProps = {
   hint: string;
   isAuthenticated: boolean;
   label: string;
+  shortLabel?: string;
   locale: string;
   organizerNickname: string;
   organizerProfileId: string;
@@ -25,7 +26,13 @@ type ActivityOrganizerContactFormProps = {
 
 const initialState: OpenActivityOrganizerConversationState = {};
 
-function ContactSubmitButton({ label }: { label: string }) {
+function ContactSubmitButton({
+  label,
+  shortLabel,
+}: {
+  label: string;
+  shortLabel: string;
+}) {
   const { pending } = useFormStatus();
 
   return (
@@ -35,13 +42,15 @@ function ContactSubmitButton({ label }: { label: string }) {
       className="h-10 w-full gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] text-[#156240] shadow-none hover:bg-white sm:h-11"
       disabled={pending}
       aria-busy={pending}
+      aria-label={label}
+      title={label}
     >
       {pending ? (
         <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-[#B5301F]" />
       ) : (
         <MessageCircle className="h-4 w-4 shrink-0 text-[#B5301F]" />
       )}
-      {label}
+      <span className="min-w-0 truncate">{shortLabel}</span>
     </Button>
   );
 }
@@ -52,6 +61,7 @@ export function ActivityOrganizerContactForm({
   hint,
   isAuthenticated,
   label,
+  shortLabel = label,
   locale,
   organizerNickname,
   organizerProfileId,
@@ -64,17 +74,15 @@ export function ActivityOrganizerContactForm({
 
   if (!isAuthenticated) {
     return (
-      <div className="grid gap-2">
-        <Link href={getSignInHref(locale, redirectPath)}>
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-10 w-full gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] text-[#156240] shadow-none hover:bg-white sm:h-11"
-            aria-label={`${label}: ${organizerNickname}`}
-          >
-            <MessageCircle className="h-4 w-4 shrink-0 text-[#B5301F]" />
-            {label}
-          </Button>
+      <div className="grid min-w-0 gap-2">
+        <Link
+          href={getSignInHref(locale, redirectPath)}
+          className="friemi-pressable inline-flex min-h-11 min-w-0 w-full max-w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] shadow-none hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/45 focus-visible:ring-offset-2"
+          aria-label={`${label}: ${organizerNickname}`}
+          title={`${label}: ${organizerNickname}`}
+        >
+          <MessageCircle className="h-4 w-4 shrink-0 text-[#B5301F]" />
+          <span className="min-w-0 truncate">{shortLabel}</span>
         </Link>
         <p className="hidden px-1 text-xs leading-5 text-zinc-500 sm:block">
           {hint}
@@ -84,7 +92,7 @@ export function ActivityOrganizerContactForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-2">
+    <form action={formAction} className="grid min-w-0 gap-2">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="activityId" value={activityId} />
       <input
@@ -93,7 +101,7 @@ export function ActivityOrganizerContactForm({
         value={organizerProfileId}
       />
       <input type="hidden" name="accessToken" value={accessToken ?? ""} />
-      <ContactSubmitButton label={label} />
+      <ContactSubmitButton label={label} shortLabel={shortLabel} />
       <p className="hidden px-1 text-xs leading-5 text-zinc-500 sm:block">
         {hint}
       </p>
