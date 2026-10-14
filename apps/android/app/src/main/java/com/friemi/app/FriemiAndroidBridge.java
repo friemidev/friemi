@@ -25,6 +25,11 @@ final class FriemiAndroidBridge {
     }
 
     @JavascriptInterface
+    public boolean openHostLink(String url) {
+        return activity.openHostLinkFromBridge(url);
+    }
+
+    @JavascriptInterface
     public void openMap(String url) {
         activity.openExternalFromBridge(url);
     }

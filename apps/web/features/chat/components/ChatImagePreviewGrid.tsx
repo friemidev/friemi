@@ -16,15 +16,9 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { cn } from "@/lib/utils";
-
-type FriemiNavigationPlugin = {
-  saveImageToPhotos: (options: { url: string }) => Promise<void>;
-};
-
-const FriemiNavigation =
-  registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
+import { FriemiNavigation } from "@/features/mobile/nativeNavigation";
 
 type ChatImagePreviewGridProps = {
   imageLabel: string;

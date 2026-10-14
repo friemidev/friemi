@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
 import { bookingUpdatedMessage } from "@/features/merchants/bookings/bookingUpdates";
+import { nativeHostExternalBrowser } from "@/features/mobile/hostExternalBrowser";
+import { handleHostExternalBrowserRequest } from "@/features/mobile/hostExternalBrowserProtocol";
 import {
   detailSheetCloseMessage,
   detailSheetReadyMessage,
@@ -54,6 +56,8 @@ export function ActivityDetailFrame({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "slow">("loading");
+  const canOpenHostLinkRef = useRef(false);
+  canOpenHostLinkRef.current = open && status === "ready";
   const copy = copyOverride ?? getDetailFrameCopy(locale);
 
   useEffect(() => {
@@ -68,12 +72,32 @@ export function ActivityDetailFrame({
           onBookingUpdated?.();
         } else if (event.data?.type === detailSheetCloseMessage) {
           onCloseRequested?.();
+        } else {
+          const source = frameRef.current?.contentWindow;
+          void handleHostExternalBrowserRequest(
+            event.data,
+            nativeHostExternalBrowser,
+            () => {
+              const frame = frameRef.current;
+              return Boolean(
+                canOpenHostLinkRef.current &&
+                frame?.isConnected &&
+                !frame.closest(
+                  '[inert], [aria-hidden="true"], [data-state="closing"]',
+                ),
+              );
+            },
+          ).then((response) => {
+            if (response && source === frameRef.current?.contentWindow) {
+              source?.postMessage(response, window.location.origin);
+            }
+          });
         }
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onBookingUpdated, onCloseRequested]);
+  }, [onBookingUpdated, onCloseRequested, open, status]);
 
   useEffect(() => {
     if (status !== "loading" || !open) return;

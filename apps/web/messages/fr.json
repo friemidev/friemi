@@ -19,7 +19,8 @@
       "favoriting": "Ajout...",
       "unfavoriting": "Retrait...",
       "signInToFavorite": "Se connecter pour ajouter aux favoris",
-      "invalidRequest": "Requête invalide. Réessayez plus tard."
+      "invalidRequest": "Requête invalide. Réessayez plus tard.",
+      "failed": "Impossible de terminer cette action. Réessayez."
     },
     "activity": {
       "unavailable": "Cette activité est introuvable ou ne peut pas être ajoutée aux favoris."

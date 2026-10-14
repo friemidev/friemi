@@ -89,7 +89,7 @@ export function isUsableTicketLabel(label: string | null | undefined) {
   return true;
 }
 
-function getGenericTicketLabelKind(label: string) {
+export function getGenericTicketLabelKind(label: string) {
   const key = normalizeLabelKey(label);
 
   if (genericReservationLabels.has(key)) {

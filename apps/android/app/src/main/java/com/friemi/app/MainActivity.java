@@ -1086,6 +1086,19 @@ public final class MainActivity extends ComponentActivity {
         });
     }
 
+    boolean openHostLinkFromBridge(String value) {
+        if (isBlank(value) || isFinishing() || isDestroyed()) {
+            return false;
+        }
+        Uri uri = Uri.parse(value.trim());
+        if (!"https".equalsIgnoreCase(uri.getScheme())
+            || isBlank(uri.getHost()) || !isBlank(uri.getUserInfo())) {
+            return false;
+        }
+        mainHandler.post(() -> openHostBrowser(uri));
+        return true;
+    }
+
     void copyTextFromBridge(String text) {
         mainHandler.post(() -> copyText(text));
     }
@@ -1366,6 +1379,43 @@ public final class MainActivity extends ComponentActivity {
             Toast.makeText(this, R.string.image_save_started, Toast.LENGTH_SHORT).show();
         } catch (Exception error) {
             openExternal(url);
+        }
+    }
+
+    private void openHostBrowser(Uri uri) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        String browserPackage = CustomTabsClient.getPackageName(this, null);
+        if (browserPackage == null) {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://"));
+            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            ResolveInfo browser = getPackageManager().resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY);
+            if (browser != null && browser.activityInfo != null
+                && !getPackageName().equals(browser.activityInfo.packageName)
+                && !"android".equals(browser.activityInfo.packageName)) {
+                browserPackage = browser.activityInfo.packageName;
+            }
+        }
+        if (browserPackage == null) {
+            Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+        CustomTabColorSchemeParams colors = new CustomTabColorSchemeParams.Builder()
+            .setToolbarColor(getColorCompat(R.color.friemi_mist))
+            .setNavigationBarColor(getColorCompat(R.color.friemi_mist))
+            .build();
+        CustomTabsIntent browser = new CustomTabsIntent.Builder()
+            .setColorScheme(CustomTabsIntent.COLOR_SCHEME_LIGHT)
+            .setDefaultColorSchemeParams(colors)
+            .setShowTitle(true)
+            .build();
+        browser.intent.setPackage(browserPackage);
+        try {
+            // The Friemi WebView stays mounted with its original URL and scroll.
+            browser.launchUrl(this, uri);
+        } catch (ActivityNotFoundException error) {
+            Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
         }
     }
 

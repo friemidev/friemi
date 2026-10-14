@@ -3,35 +3,22 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
-import {
-  ArrowRight,
-  CalendarPlus,
-  Clock3,
-  MapPin,
-  UsersRound,
-} from "lucide-react";
+import { ArrowRight, CalendarPlus, Clock3, UsersRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { ImageResourcePreloader } from "@/components/media/ImageResourcePreloader";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
-import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
-import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
 import { attachViewerPendingBookingPartySizes } from "@/features/merchants/bookings/activityParticipantCounts";
-import { getBookingCopy } from "@/features/merchants/bookings/copy";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import {
   getLobbySwipePublicEventActivities,
   getMobileHomeTrendingTeamActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import {
-  getActivityCategoryPreviewSrc,
-  getActivityListCoverSrc,
-} from "@/features/activities/utils/activityCategoryVisuals";
-import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
-import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
+import { MobileHomeTrendingActivityCard } from "@/features/home/components/MobileHomeTrendingActivityCard";
+import { attachLiveActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { isIOSWebUserAgent } from "@/features/mobile/iosAppStore";
 import { IOSReferralAppBanner } from "@/features/referrals/components/IOSReferralAppBanner";
@@ -42,7 +29,6 @@ import {
 } from "@/features/home/queries/getMobileHomeTopNews";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
-import { getActivityCoverThumbnailUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCategoryLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -108,6 +94,7 @@ type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
   topNewsItems: MobileHomeTopNewsItem[];
   trendingActivities: ActivityCardViewModel[];
   viewerName: string | null;
+  viewerProfileId: string | null;
 };
 
 const mobileHomeIllustrationPath = "/illustrations/vector";
@@ -485,7 +472,10 @@ export default async function MobileHomePage({
   );
 
   const trendingActivities = await attachViewerPendingBookingPartySizes(
-    trendingActivitiesResult.trendingActivities,
+    await attachLiveActivityFavoriteStates(
+      trendingActivitiesResult.trendingActivities,
+      viewerProfile?.id,
+    ),
     viewerProfile?.id,
   );
 
@@ -515,6 +505,7 @@ export default async function MobileHomePage({
           topNewsItems={topNewsItems}
           trendingActivities={trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
+          viewerProfileId={viewerProfile?.id ?? null}
         />
         <div className="friemi-native-app-desktop-only hidden md:block">
           <MobileHomeExperience
@@ -547,6 +538,7 @@ function MobileHomeV23Experience({
   topNewsItems,
   trendingActivities,
   viewerName,
+  viewerProfileId,
 }: MobileHomeV23ExperienceProps) {
   const copy = getMobileHomeV23Copy(locale, viewerName);
   const categories = getMobileHomeCopy(locale).categories;
@@ -665,11 +657,13 @@ function MobileHomeV23Experience({
           <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {displayTrendingActivities.length > 0
               ? displayTrendingActivities.map((activity) => (
-                  <MobileHomeV23ActivityCard
+                  <MobileHomeTrendingActivityCard
                     activity={activity}
+                    href={getMobileHomeActivityHref(activity, locale)}
                     key={`${activity.type}:${activity.id}`}
                     locale={locale}
                     participantsLabel={copy.participantsLabel}
+                    viewerProfileId={viewerProfileId}
                   />
                 ))
               : copy.fallbackCards.map((card) => (
@@ -718,74 +712,6 @@ function MobileHomeV23NewsCard({
         {title}
       </span>
     </Link>
-  );
-}
-
-function MobileHomeV23ActivityCard({
-  activity,
-  locale,
-  participantsLabel,
-}: {
-  activity: ActivityCardViewModel;
-  locale: string;
-  participantsLabel: string;
-}) {
-  const isPublicEvent = isPublicEventCard(activity);
-  const participantLabel =
-    activity.capacity > 0
-      ? `${activity.participantCount}/${activity.capacity}`
-      : `${activity.participantCount}`;
-  const bookingCopy = getBookingCopy(locale);
-  return (
-    <MobileActivityDetailSheetLink
-      href={getMobileHomeActivityHref(activity, locale)}
-      label={activity.title}
-      locale={locale}
-      retainOnClose={!activity.isPersistent}
-      className="friemi-interactive-card group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)] ring-1 ring-inset ring-[#D7D5C8]"
-    >
-      <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
-        <ActivityCoverImage
-          alt={activity.title}
-          fallbackSrc={getActivityCategoryPreviewSrc(activity.category)}
-          src={getActivityCoverThumbnailUrl(
-            getActivityListCoverSrc(activity.coverImageUrl, activity.category),
-            320,
-          )}
-          overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
-        />
-      </div>
-      <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
-        <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
-          {activity.title}
-        </h3>
-        <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
-          {isPublicEvent ? (
-            <MapPin className="h-3 w-3 shrink-0" />
-          ) : (
-            <UsersRound className="h-3 w-3 shrink-0" />
-          )}
-          <span className="truncate">
-            {isPublicEvent
-              ? activity.city || activity.address
-              : activity.isPersistent
-                ? bookingCopy.publicCount(activity.participantCount)
-                : `${participantLabel} ${participantsLabel}`}
-          </span>
-        </p>
-        <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
-          <Clock3 className="h-3 w-3 shrink-0" />
-          <span className="truncate">
-            {getActivityDateLabel(activity, locale)}
-          </span>
-        </p>
-        {activity.isPersistent && activity.viewerPendingBookingPartySize ? (
-          <p className="mt-1.5 rounded-md bg-sand/40 px-1.5 py-1 text-[10px] font-bold leading-tight text-forest">
-            {bookingCopy.pendingCard(activity.viewerPendingBookingPartySize)}
-          </p>
-        ) : null}
-      </div>
-    </MobileActivityDetailSheetLink>
   );
 }
 

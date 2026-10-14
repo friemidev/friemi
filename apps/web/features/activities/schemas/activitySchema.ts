@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeHostExternalUrl } from "@/features/mobile/hostExternalBrowserProtocol";
 import { activityCategories, priceTypes } from "@chill-club/shared";
 import { clampActivityDescription } from "@/lib/activity-description";
 import { nonEmptyString } from "@/lib/validations";
@@ -59,8 +60,8 @@ const optionalExternalUrl = z
   .max(1000, "链接地址过长")
   .transform((value) => (value.length > 0 ? value : null))
   .refine(
-    (value) => value === null || /^https?:\/\/.+/i.test(value),
-    "请输入有效的网址",
+    (value) => value === null || normalizeHostExternalUrl(value) !== null,
+    "请输入有效的 HTTPS 网址",
   );
 const optionalNumber = z.preprocess(
   (value) =>

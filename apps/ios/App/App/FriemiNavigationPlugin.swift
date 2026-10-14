@@ -2,11 +2,12 @@ import AuthenticationServices
 import Capacitor
 import GoogleSignIn
 import Photos
+import SafariServices
 import UIKit
 import WebKit
 
 @objc(FriemiNavigationPlugin)
-class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding, SFSafariViewControllerDelegate {
     private let googleClientId = "114440097515-l4nse3gdjm6s12n5vu78a22gmch41560.apps.googleusercontent.com"
     private var appleSignInCall: CAPPluginCall?
 
@@ -16,10 +17,52 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContro
         CAPPluginMethod(name: "signInWithGoogle", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveImageToPhotos", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getExternalBrowserSupport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openHostLink", returnType: CAPPluginReturnPromise),
     ]
 
     override func load() {
         CAPLog.print("Friemi iOS navigation plugin loaded")
+    }
+
+    @objc func getExternalBrowserSupport(_ call: CAPPluginCall) {
+        call.resolve(["supported": true])
+    }
+
+    @objc func openHostLink(_ call: CAPPluginCall) {
+        guard let value = call.getString("url"),
+              let url = URL(string: value),
+              url.scheme?.lowercased() == "https",
+              url.host?.isEmpty == false,
+              url.user == nil,
+              url.password == nil
+        else {
+            call.reject("Invalid host link.")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard UIApplication.shared.applicationState == .active,
+                  let presenter = self.bridge?.viewController,
+                  presenter.view.window != nil,
+                  presenter.presentedViewController == nil
+            else {
+                call.reject("The browser cannot be presented right now.")
+                return
+            }
+            let browser = SFSafariViewController(url: url)
+            browser.delegate = self
+            browser.dismissButtonStyle = .close
+            browser.preferredControlTintColor = UIColor(red: 21 / 255, green: 98 / 255, blue: 64 / 255, alpha: 1)
+            browser.modalPresentationStyle = .pageSheet
+            presenter.present(browser, animated: true) {
+                call.resolve()
+            }
+        }
+    }
+
+    func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        controller.dismiss(animated: true)
     }
 
     @objc func signInWithGoogle(_ call: CAPPluginCall) {
