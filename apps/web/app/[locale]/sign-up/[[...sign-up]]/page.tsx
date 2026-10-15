@@ -83,7 +83,7 @@ export default async function SignUpPage({
   if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
-        <WechatWebViewGuide locale={locale} target={redirectTarget} />
+        <WechatWebViewGuide locale={locale} target={redirectTarget} mode="sign-up" />
       </PageContainer>
     );
   }

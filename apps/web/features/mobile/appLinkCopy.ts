@@ -12,6 +12,8 @@ export function getAppLinkCopy(locale: string) {
       installHint:
         "Après l’installation, revenez à ce lien pour retrouver cette page.",
       wechatTitle: "Ouvrir dans le navigateur",
+      wechatBrowserHint:
+        "Dans WeChat, touchez ··· puis « Ouvrir dans le navigateur » pour continuer la connexion sur le site.",
       wechatHint:
         "Dans WeChat, touchez ··· puis « Ouvrir dans le navigateur ». Vous pourrez ouvrir Friemi ou l’installer.",
       notOpened: "L’app ne s’est pas ouverte ? Installez Friemi ou réessayez.",
@@ -28,6 +30,8 @@ export function getAppLinkCopy(locale: string) {
       retry: "Try again",
       installHint: "After installing, return to this link to open this page.",
       wechatTitle: "Open in your browser",
+      wechatBrowserHint:
+        "In WeChat, tap ··· then “Open in browser” to continue signing in on the website.",
       wechatHint:
         "In WeChat, tap ··· then “Open in browser”. You can then open Friemi or install it.",
       notOpened: "App didn’t open? Install Friemi or try again.",
@@ -43,6 +47,8 @@ export function getAppLinkCopy(locale: string) {
     retry: "再次打开",
     installHint: "安装后回到这个链接，即可打开原页面。",
     wechatTitle: "在浏览器中打开",
+    wechatBrowserHint:
+      "点击微信右上角 ···，选择「在浏览器中打开」，继续在网页上登录。",
     wechatHint:
       "点击微信右上角 ···，选择「在浏览器中打开」，即可打开 Friemi 或下载安装。",
     notOpened: "App 没有打开？可以下载安装，或再次尝试。",

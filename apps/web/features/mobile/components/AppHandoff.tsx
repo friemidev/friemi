@@ -16,6 +16,7 @@ import {
   getAppLinks,
 } from "../appLinks";
 import { getAppLinkCopy } from "../appLinkCopy";
+import { APP_HANDOFF_ENABLED } from "../appHandoffRollout";
 
 const actionClass =
   "inline-flex min-h-11 min-w-0 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold touch-manipulation transition active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow focus-visible:ring-offset-2";
@@ -39,7 +40,8 @@ export function AppOpenEntry({
   userAgent?: string;
 }) {
   const { platform } = usePlatform(userAgent);
-  if (platform === "native" || platform === "desktop") return null;
+  if (!APP_HANDOFF_ENABLED || platform === "native" || platform === "desktop")
+    return null;
   return (
     <a
       className={`${actionClass} border border-forest/20 bg-white text-forest`}
@@ -72,6 +74,8 @@ export function AppHandoff({
   const [copyFailed, setCopyFailed] = useState(false);
   const links = getAppLinks(locale, target);
   const copy = getAppLinkCopy(locale);
+
+  if (!APP_HANDOFF_ENABLED) return null;
 
   // Existing native login must never be replaced with another app launch.
   if (compact && (platform === "native" || platform === "desktop")) return null;

@@ -2,7 +2,26 @@
 
 Implemented 2026-10-15. Website changes and NEW Android/iOS packages are both required for the complete flow. No database migration or new authentication credentials are needed. This change does not publish a release.
 
-## Behavior
+## Current rollout: disabled
+
+`apps/web/features/mobile/appHandoffRollout.ts` sets `APP_HANDOFF_ENABLED = false` for the website-first release. It is a source-controlled switch shared by the server and client, with no environment, query-string or local-storage override.
+
+- Plan details and sign-in/sign-up do not render the new app-opening/download choices, including after hydration and on old native user agents.
+- `/open` redirects to the validated content URL on www with `Cache-Control: no-store`; localized `open-app` pages redirect directly to that content. They do not present a scheme retry. Invitation access, locale and section anchors are retained.
+- Localized `/zh-CN/open`, `/en/open` and `/fr/open` aliases also handle the path rewriting performed by older Android shells. A missing target falls back to the locale's mobile home; a target already discarded by an old shell cannot be recovered by the website.
+- WeChat retains a browser-login guide. Copying uses the ordinary web sign-in/sign-up URL with the original return target, not the app handoff page. Clipboard failure exposes a selectable link.
+- Ordinary website/native login, registration and participation remain unchanged. Association endpoints remain HTTP 200 JSON but return no active associations while the switch is off. This prevents the old Android manifest's broad URL filter from becoming verified during this website-only release. The certificate/team configuration and native code are retained for later activation. There is no database migration for this switch.
+- To enable later, first complete signed-device checks and old-package fallback, then explicitly change the switch, update the disabled-rollout regression tests and deploy. Store approval or a new app installation does not automatically turn it on.
+- Both production hosts returned 404 for both association endpoints during the pre-release read-only check on 2026-10-15; this does not disable an existing deployed association. OS verification caches and user-selected link preferences are outside this website switch. After enabling, reverify signed devices before opening the rollout broadly.
+
+Disabled-rollout verification (2026-10-15):
+
+- Web type checking and 32 focused rollout, app-link and authentication tests passed. Server redirects preserve encoded invitation values and anchors, reject external targets, and do not allow retry/preview query parameters to enable launching.
+- Browser checks at 390 px and 1280 px found no new launch links after hydration, including with old Android/iOS user agents. A direct localized handoff URL returned to the plan with its existing joined state unchanged. These are browser simulations, not signed-device acceptance.
+- WeChat sign-in/sign-up in Chinese, English and French retained their browser guide; clipboard success and denied-permission selectable-link fallbacks preserved the auth mode and original return target. Both local association endpoints returned HTTP 200 JSON with empty associations and no-store caching.
+- No production deployment, database migration, real-account login or store package publication was performed as part of this rollout change.
+
+## Behavior when enabled
 
 - Mobile web: an Open Friemi entry beside the existing plan participation controls, and app/store choices on sign-in and sign-up. Web sign-in and participation remain available; launching never automatically joins, cancels, pays, or posts.
 - Installed apps: HTTPS App Links / Universal Links and `friemi://open?target=...` preserve the content route, locale, invitation access and fragment. Existing `friemi://auth-complete` login completion stays separate.
@@ -16,17 +35,18 @@ Implemented 2026-10-15. Website changes and NEW Android/iOS packages are both re
 
 - Production shells load the live website. A successful main/Production website deployment updates web behavior for already-installed apps; store review does not isolate those users from web changes. Java, Swift, manifest and entitlement changes still require a newly installed package.
 - The pre-handoff native code at `0d1ad6f7` does not support `friemi://open?target=...`: Android routes it to a localized `/open` page and drops the target; iOS does not resolve it. Do not assume that opening an old installed app reaches the requested plan.
-- The new web handoff entry is currently enabled without a production rollout gate. Do not promote the full dev branch unchanged while the new packages are unavailable. If website prerequisites must ship first, prepare a separately reviewed deployment that keeps the new handoff entry disabled and retains ordinary web sign-in/participation.
+- The new web handoff entry is currently disabled by the rollout switch above. The guarded website changes can be promoted before package availability; keep the switch disabled while the packages are being reviewed.
 - Store availability alone does not upgrade every installed app. Validate old-package fallback and new-package routing on signed devices before enabling the entry broadly. Browser code cannot reliably detect the installed app version.
 - The follow-up audit's web auth cleanup remains compatible with existing callers and adds no mandatory native plugin method. No database migration is required. Native-shell fixes remain unavailable to users until they update their installed app.
 
 ## Website prerequisites
 
-1. Review and merge this branch to dev. Apply the production rollout restrictions above before promoting any website changes to main; deploy the public association endpoints before validating signed packages.
+1. Review and merge this branch to dev. Apply the production rollout restrictions above before promoting any website changes to main. Signed-package link verification must be checked after the associations are explicitly activated in the later rollout.
 2. Both `friemi.com` and `www.friemi.com` must serve these endpoints with HTTP 200, JSON content type, no authentication and no redirect:
    - `/.well-known/assetlinks.json`
    - `/.well-known/apple-app-site-association`
-3. `/open?target=%2Ffr%2Flobby%2FPLAN_ID` is deliberately excluded from locale/canonical middleware. Without an installed app it returns a 302 to the www handoff page, not an immediate store redirect. Do not add a blanket apex-domain redirect in Vercel that intercepts the association endpoints.
+   During the current disabled rollout, these responses deliberately contain no active associations; HTTP 200 alone does not mean native link verification is enabled.
+3. `/open?target=%2Ffr%2Flobby%2FPLAN_ID` is deliberately excluded from locale/canonical middleware. With rollout disabled, it returns a 302 to the validated www content page; once enabled, it returns the www handoff page, not an immediate store redirect. Do not add a blanket apex-domain redirect in Vercel that intercepts the association endpoints.
 4. Public Android identity: `com.friemi.app`, Play App Signing SHA-256 `B6:37:6C:1B:AC:7F:9F:EB:0A:B6:FE:FE:8C:08:05:5B:25:20:B4:F4:B8:10:60:7A:62:F2:2A:45:73:D8:64:57`, read from Play Console's Digital Asset Links JSON. Do not replace it with the upload certificate. If signing-key rotation later introduces another supported certificate, publish both.
 5. Public iOS identity: `SQFM8Y4B8X.com.friemi.app`. Confirm the signed app's `application-identifier` matches this value before uploading; transferred/legacy applications can have an App ID prefix different from the current team.
 
