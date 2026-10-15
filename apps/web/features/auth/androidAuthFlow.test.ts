@@ -2,11 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   androidAuthMaxAgeMs,
+  cleanNativeAuthReturnTarget,
   getAndroidAccountPortalUrl,
   isAndroidAuthReturnPath,
   normalizeAndroidAuthTarget,
   readAndroidAuthAttempt,
 } from "./androidAuthFlow";
+
+test("native login cleanup preserves invitation values and the destination anchor", () => {
+  assert.equal(
+    cleanNativeAuthReturnTarget(
+      "/fr/lobby/a?access=k%2B1%26x%3Dy&__friemi_android_auth_return=1&__friemi_android_auth_retry=1&__friemi_android_auth_ts=1&__friemi_ios_auth_ts=2#comments",
+    ),
+    "/fr/lobby/a?access=k%2B1%26x%3Dy#comments",
+  );
+});
 
 test("Android login proof belongs to the initiating app and expires", () => {
   const attempt = {

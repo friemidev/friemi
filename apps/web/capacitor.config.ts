@@ -21,9 +21,6 @@ const iosInAppAuthNavigation = [
 // externally when needed, then Clerk/Friemi callbacks return to the app session.
 const iosAllowNavigation = [
   ...baseAllowNavigation,
-  "localhost",
-  "127.0.0.1",
-  "*.vercel.app",
   ...iosInAppAuthNavigation,
 ];
 const iosPreviewHost = "";

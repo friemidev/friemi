@@ -100,16 +100,21 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContro
     }
 
     @objc func signInWithApple(_ call: CAPPluginCall) {
-        appleSignInCall = call
+        DispatchQueue.main.async {
+            guard self.appleSignInCall == nil else {
+                call.reject("Apple sign-in is already in progress.")
+                return
+            }
+            self.appleSignInCall = call
+            let provider = ASAuthorizationAppleIDProvider()
+            let request = provider.createRequest()
+            request.requestedScopes = [.fullName, .email]
 
-        let provider = ASAuthorizationAppleIDProvider()
-        let request = provider.createRequest()
-        request.requestedScopes = [.fullName, .email]
-
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = self
-        controller.presentationContextProvider = self
-        controller.performRequests()
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            controller.performRequests()
+        }
     }
 
     @objc func saveImageToPhotos(_ call: CAPPluginCall) {
@@ -207,65 +212,33 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContro
 
         let isTopLevelNavigation = navigationAction.targetFrame == nil ||
             navigationAction.targetFrame?.isMainFrame == true
-        let navigationType = navigationAction.navigationType.rawValue
-
         guard isTopLevelNavigation else {
             return nil
         }
 
         guard url.scheme == "http" || url.scheme == "https" else {
-            CAPLog.print("Friemi iOS navigation allowed non-web URL: \(url.absoluteString)")
             return nil
         }
 
-        if shouldKeepInWebView(url.host) {
-            CAPLog.print("Friemi iOS navigation allowed in WebView: \(url.absoluteString), type: \(navigationType)")
+        let configuredBase = bridge?.config.serverURL.absoluteString ?? "https://www.friemi.com"
+        if url.path == "/open", FriemiAppLinks.trustedContentOrigin(url.absoluteString, configuredBase: configuredBase) != nil {
+            let locale = bridge?.webView?.url?.path.split(separator: "/").first.map(String.init) ?? "zh-CN"
+            if let target = FriemiAppLinks.resolve(url, base: configuredBase, locale: locale) {
+                DispatchQueue.main.async { [weak self] in
+                    self?.bridge?.webView?.load(URLRequest(url: target))
+                }
+            }
+            return true
+        }
+
+        if FriemiAppLinks.isAllowedWebNavigation(url, configuredBase: configuredBase) {
             return false
         }
 
         if UIApplication.shared.applicationState == .active {
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
-        CAPLog.print("Friemi iOS navigation opened externally: \(url.absoluteString), type: \(navigationType)")
+        CAPLog.print("Friemi iOS navigation opened externally")
         return true
-    }
-
-    private func shouldKeepInWebView(_ host: String?) -> Bool {
-        guard let normalizedHost = host?.lowercased() else {
-            return false
-        }
-
-        return normalizedHost == "friemi.com" ||
-            normalizedHost == "www.friemi.com" ||
-            normalizedHost.hasSuffix(".friemi.com") ||
-            normalizedHost == "clerk.com" ||
-            normalizedHost.hasSuffix(".clerk.com") ||
-            normalizedHost == "accounts.dev" ||
-            normalizedHost.hasSuffix(".accounts.dev") ||
-            normalizedHost == "clerk.shared.lcl.dev" ||
-            normalizedHost == "appleid.apple.com" ||
-            normalizedHost.hasSuffix(".appleid.apple.com") ||
-            normalizedHost == "idmsa.apple.com" ||
-            normalizedHost.hasSuffix(".idmsa.apple.com") ||
-            normalizedHost == "localhost" ||
-            normalizedHost == "127.0.0.1" ||
-            isPrivateIPv4Host(normalizedHost) ||
-            normalizedHost.hasSuffix(".vercel.app")
-    }
-
-    private func isPrivateIPv4Host(_ host: String) -> Bool {
-        let parts = host.split(separator: ".")
-
-        guard parts.count == 4,
-              let first = Int(parts[0]),
-              let second = Int(parts[1]),
-              parts.dropFirst(2).allSatisfy({ Int($0) != nil })
-        else {
-            return false
-        }
-
-        return first == 10 ||
-            (first == 172 && (16...31).contains(second)) ||
-            (first == 192 && second == 168)
     }
 }

@@ -1,5 +1,6 @@
 import Capacitor
 import CapacitorKeyboard
+import SafariServices
 import UIKit
 import WebKit
 
@@ -118,7 +119,14 @@ class AppViewController: CAPBridgeViewController {
         }
 
         DispatchQueue.main.async { [weak self] in
-            self?.webView?.load(URLRequest(url: targetUrl))
+            guard let self else { return }
+            if let browser = self.presentedViewController as? SFSafariViewController {
+                browser.dismiss(animated: true) { [weak self] in
+                    self?.webView?.load(URLRequest(url: targetUrl))
+                }
+            } else {
+                self.webView?.load(URLRequest(url: targetUrl))
+            }
         }
     }
 
@@ -130,82 +138,10 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func buildWebUrlFromAuthCompleteURL(_ url: URL) -> URL? {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let target = components.queryItems?.first(where: { $0.name == "target" })?.value
-        else {
-            return nil
-        }
-
-        let route = normalizeAuthCompleteTarget(target)
-        let webBaseUrl = getTrustedWebBase(from: components) ?? getCurrentBaseUrl()
-        guard var webComponents = URLComponents(string: "\(webBaseUrl)\(route)") else {
-            return nil
-        }
-
-        var queryItems = webComponents.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "__friemi_android_auth_return", value: "1"))
-        queryItems.append(
-            URLQueryItem(name: "__friemi_ios_auth_ts", value: String(Int(Date().timeIntervalSince1970 * 1000)))
+        FriemiAppLinks.resolveAuthComplete(
+            url, base: getCurrentBaseUrl(), configuredBase: getConfiguredBaseUrl(),
+            locale: getCurrentLocale(), timestamp: String(Int(Date().timeIntervalSince1970 * 1000))
         )
-        webComponents.queryItems = queryItems
-
-        return webComponents.url
-    }
-
-    private func getTrustedWebBase(from components: URLComponents) -> String? {
-        guard let rawWebBase = components.queryItems?.first(where: { $0.name == "webBase" })?.value,
-              let webBaseComponents = URLComponents(string: rawWebBase),
-              let scheme = webBaseComponents.scheme,
-              let host = webBaseComponents.host,
-              (scheme == "https" || scheme == "http"),
-              shouldKeepInApp(host)
-        else {
-            return nil
-        }
-
-        var originComponents = URLComponents()
-        originComponents.scheme = scheme
-        originComponents.host = host
-        originComponents.port = webBaseComponents.port
-
-        return originComponents.url?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    }
-
-    private func normalizeAuthCompleteTarget(_ target: String) -> String {
-        let trimmedTarget = target.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedTarget.isEmpty,
-              !trimmedTarget.lowercased().hasPrefix("http://"),
-              !trimmedTarget.lowercased().hasPrefix("https://"),
-              !trimmedTarget.hasPrefix("//")
-        else {
-            return "/\(getCurrentLocale())/mobile-home"
-        }
-
-        var route = trimmedTarget.hasPrefix("/") ? trimmedTarget : "/\(trimmedTarget)"
-        let path = route.split(separator: "?", maxSplits: 1).first.map(String.init) ?? route
-
-        if isAuthPath(path) {
-            return "/\(getCurrentLocale())/mobile-home"
-        }
-
-        if getLocaleFromPath(path) == nil {
-            route = "/\(getCurrentLocale())\(route)"
-        }
-
-        return route
-    }
-
-    private func isAuthPath(_ path: String) -> Bool {
-        let segments = path.split(separator: "/").map(String.init)
-        let pathWithoutLocale = supportedLocales.contains(segments.first ?? "")
-            ? "/" + segments.dropFirst().joined(separator: "/")
-            : path
-
-        return pathWithoutLocale == "/sign-in" ||
-            pathWithoutLocale.hasPrefix("/sign-in/") ||
-            pathWithoutLocale == "/sign-up" ||
-            pathWithoutLocale.hasPrefix("/sign-up/")
     }
 
     private func getLocaleFromPath(_ path: String) -> String? {
@@ -214,29 +150,18 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func getCurrentLocale() -> String {
-        guard let url = webView?.url else {
-            return fallbackLocale
-        }
+        return getLocaleFromPath(webView?.url?.path ?? "") ??
+            getLocaleFromPath(bridge?.config.serverURL.path ?? "") ?? fallbackLocale
+    }
 
-        return getLocaleFromPath(url.path) ?? fallbackLocale
+    private func getConfiguredBaseUrl() -> String {
+        bridge?.config.serverURL.absoluteString ?? fallbackBaseUrl
     }
 
     private func getCurrentBaseUrl() -> String {
-        guard let url = webView?.url,
-              let scheme = url.scheme,
-              let host = url.host,
-              (scheme == "https" || scheme == "http"),
-              shouldKeepInApp(host)
-        else {
-            return fallbackBaseUrl
-        }
-
-        var components = URLComponents()
-        components.scheme = scheme
-        components.host = host
-        components.port = url.port
-
-        return components.url?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) ?? fallbackBaseUrl
+        let configured = getConfiguredBaseUrl()
+        return FriemiAppLinks.trustedContentOrigin(webView?.url?.absoluteString, configuredBase: configured) ??
+            FriemiAppLinks.trustedContentOrigin(configured, configuredBase: configured) ?? fallbackBaseUrl
     }
 
     private func installEdgeBackGestures() {
@@ -320,6 +245,8 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func installFriemiNavigationGuard() {
+        let configured = (try? JSONSerialization.data(withJSONObject: [getConfiguredBaseUrl()]))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
         let source = """
         (() => {
           if (window.__friemiIOSNavigationGuard) {
@@ -327,6 +254,7 @@ class AppViewController: CAPBridgeViewController {
           }
 
           window.__friemiIOSNavigationGuard = true;
+          const configuredOrigin = new URL((\(configured))[0] || 'https://www.friemi.com').origin;
 
           const isFriemiHost = (hostname) =>
             hostname === "friemi.com" ||
@@ -346,35 +274,17 @@ class AppViewController: CAPBridgeViewController {
             hostname === "idmsa.apple.com" ||
             hostname.endsWith(".idmsa.apple.com");
 
-          const isLocalHost = (hostname) =>
-            hostname === "localhost" ||
-            hostname === "127.0.0.1";
-
-          const isPrivateIPv4Host = (hostname) =>
-            /^10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname) ||
-            /^192\\.168\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname) ||
-            /^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname);
-
-          const isPreviewHost = (hostname) =>
-            hostname.endsWith(".vercel.app");
-
           const shouldKeepInApp = (hostname) =>
             isFriemiHost(hostname) ||
             isClerkHost(hostname) ||
-            isAppleAuthHost(hostname) ||
-            isLocalHost(hostname) ||
-            isPrivateIPv4Host(hostname) ||
-            isPreviewHost(hostname);
+            isAppleAuthHost(hostname);
 
           const shouldStayInWebView = (value) => {
             try {
               const url = new URL(String(value), window.location.href);
-              const isAllowedProtocol =
-                url.protocol === "https:" ||
-                (url.protocol === "http:" &&
-                  (isLocalHost(url.hostname) || isPrivateIPv4Host(url.hostname)));
-
-              return isAllowedProtocol && shouldKeepInApp(url.hostname)
+              const allowed = !url.username && !url.password && (url.origin === configuredOrigin ||
+                (url.protocol === "https:" && !url.port && shouldKeepInApp(url.hostname)));
+              return allowed
                 ? url.toString()
                 : null;
             } catch (_) {
@@ -426,44 +336,6 @@ class AppViewController: CAPBridgeViewController {
         webView?.configuration.userContentController.addUserScript(script)
     }
 
-    private func shouldKeepInApp(_ host: String?) -> Bool {
-        guard let normalizedHost = host?.lowercased() else {
-            return false
-        }
-
-        return normalizedHost == "friemi.com" ||
-            normalizedHost == "www.friemi.com" ||
-            normalizedHost.hasSuffix(".friemi.com") ||
-            normalizedHost == "clerk.com" ||
-            normalizedHost.hasSuffix(".clerk.com") ||
-            normalizedHost == "accounts.dev" ||
-            normalizedHost.hasSuffix(".accounts.dev") ||
-            normalizedHost == "clerk.shared.lcl.dev" ||
-            normalizedHost == "appleid.apple.com" ||
-            normalizedHost.hasSuffix(".appleid.apple.com") ||
-            normalizedHost == "idmsa.apple.com" ||
-            normalizedHost.hasSuffix(".idmsa.apple.com") ||
-            normalizedHost == "localhost" ||
-            normalizedHost == "127.0.0.1" ||
-            isPrivateIPv4Host(normalizedHost) ||
-            normalizedHost.hasSuffix(".vercel.app")
-    }
-
-    private func isPrivateIPv4Host(_ host: String) -> Bool {
-        let parts = host.split(separator: ".")
-
-        guard parts.count == 4,
-              let first = Int(parts[0]),
-              let second = Int(parts[1]),
-              parts.dropFirst(2).allSatisfy({ Int($0) != nil })
-        else {
-            return false
-        }
-
-        return first == 10 ||
-            (first == 172 && (16...31).contains(second)) ||
-            (first == 192 && second == 168)
-    }
 }
 
 extension AppViewController: UIGestureRecognizerDelegate {
@@ -496,11 +368,11 @@ extension AppViewController: WKUIDelegate {
             return nil
         }
 
-        if shouldKeepInApp(url.host) {
-            CAPLog.print("Friemi iOS popup kept in WebView: \(url.absoluteString)")
+        if FriemiAppLinks.isAllowedWebNavigation(url, configuredBase: getConfiguredBaseUrl()) {
+            CAPLog.print("Friemi iOS popup kept in WebView")
             webView.load(URLRequest(url: url))
         } else if UIApplication.shared.applicationState == .active {
-            CAPLog.print("Friemi iOS popup opened externally: \(url.absoluteString)")
+            CAPLog.print("Friemi iOS popup opened externally")
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
 

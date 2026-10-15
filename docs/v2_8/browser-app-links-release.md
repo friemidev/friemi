@@ -12,9 +12,17 @@ Implemented 2026-10-15. Website changes and NEW Android/iOS packages are both re
 - WeChat: shows the browser-menu instructions and a copyable continuation link. Direct `wx-open-launch-app` is NOT enabled: a certified service account, JS security domain and approved/bound WeChat Open Platform mobile app are not yet available.
 - Native Friemi login never shows the web app-download choices. Browser and native login sessions are independent; the app may still require one login.
 
-## Website deployment first
+## Production rollout and older packages
 
-1. Review and merge this branch to dev, then promote the reviewed changes to main through the normal workflow.
+- Production shells load the live website. A successful main/Production website deployment updates web behavior for already-installed apps; store review does not isolate those users from web changes. Java, Swift, manifest and entitlement changes still require a newly installed package.
+- The pre-handoff native code at `0d1ad6f7` does not support `friemi://open?target=...`: Android routes it to a localized `/open` page and drops the target; iOS does not resolve it. Do not assume that opening an old installed app reaches the requested plan.
+- The new web handoff entry is currently enabled without a production rollout gate. Do not promote the full dev branch unchanged while the new packages are unavailable. If website prerequisites must ship first, prepare a separately reviewed deployment that keeps the new handoff entry disabled and retains ordinary web sign-in/participation.
+- Store availability alone does not upgrade every installed app. Validate old-package fallback and new-package routing on signed devices before enabling the entry broadly. Browser code cannot reliably detect the installed app version.
+- The follow-up audit's web auth cleanup remains compatible with existing callers and adds no mandatory native plugin method. No database migration is required. Native-shell fixes remain unavailable to users until they update their installed app.
+
+## Website prerequisites
+
+1. Review and merge this branch to dev. Apply the production rollout restrictions above before promoting any website changes to main; deploy the public association endpoints before validating signed packages.
 2. Both `friemi.com` and `www.friemi.com` must serve these endpoints with HTTP 200, JSON content type, no authentication and no redirect:
    - `/.well-known/assetlinks.json`
    - `/.well-known/apple-app-site-association`
@@ -56,6 +64,37 @@ Implemented 2026-10-15. Website changes and NEW Android/iOS packages are both re
 - Browser round trip to the original plan preserved the existing joined state. Native iOS user-agent check hid the web app-download entry. WeChat clipboard success and denied-clipboard fallback both passed.
 - Both association endpoints returned HTTP 200 with JSON locally; `/open` returned the expected locale-preserving 302 without a sign-in redirect.
 - iOS project wiring and entitlement files were reviewed. The Foundation routing test and full iOS archive require the developer's Mac; no physical device was connected to this Linux host.
+
+## Follow-up shell audit (2026-10-15)
+
+The following defects were fixed after the initial dev push. This audit covers the browser/app handoff, native navigation, notification entry and authentication return paths; it is not a claim that every native feature has passed device testing.
+
+| Area | Defect and resulting behavior |
+| --- | --- |
+| Android launcher resume | A new launcher intent without a destination reloaded home. It now keeps the mounted WebView and draft; invalid content links also leave the current page alone. |
+| Android background notifications | FCM notification/data messages deliver their destination in intent extras, while foreground notifications use a URI. Both now resolve the same allowed content paths. |
+| Android internal windows | Content-only filtering discarded sign-in routes and Clerk parameters. Internal navigation now preserves authentication state; `/open` resolves its target before locale rewriting. |
+| Android history and load failures | SPA history updates now update the native back-navigation URL. A failed main-frame load keeps its retry UI when `onPageFinished` subsequently fires. |
+| iOS content origins | Cold-start routing uses the configured app origin and locale. Clerk hosts and arbitrary Vercel hosts cannot become a content/auth-return origin. Preview builds explicitly trust their configured server. |
+| iOS external browser return | Returning to a valid Friemi link dismisses the host-link Safari sheet before showing the target. Native URL logs no longer include full queries. |
+| iOS Apple sign-in | Requests run on the main queue; a concurrent request cannot replace the pending sign-in callback. |
+| Authentication return | Both native resolvers retain encoded invitation values, the one-retry marker and validated internal profile-setup return links. Web cleanup retains the destination fragment and removes the transient return timestamps. |
+
+Verification completed on this Linux workspace:
+
+- Android `testDebugUnitTest`: 11 tests passed. `lintDebug` and `assembleDebug` passed. The audit APK uses a local fixture URL and is **not a release artifact**; do not upload it.
+- Web type checking passed. The focused app-link, Android-auth and iOS-frame suites passed all 20 tests.
+- iOS Info.plist and entitlements parsed successfully. Custom scheme, associated domains, source inclusion, bundle ID and signing-team configuration were checked.
+- `git diff --check` passed. No database migration is required.
+
+Still required before release:
+
+1. On the iOS developer's Mac, pull these changes, run `npm run ios:sync --workspace=apps/web`, then run the Foundation routing test documented above and build/archive the Xcode workspace. Swift compilation, provisioning and signed entitlements cannot be validated on this Linux host.
+2. On Android, test a Play-signed internal build: open a shared plan from a cold start; enter a draft, minimize and reopen from the launcher; tap a background push for a different chat; complete browser login and verify the original invitation and section remain selected.
+3. On iPhone/TestFlight, test Google and Apple login from a shared plan, cancellation/retry, return from a host-link Safari sheet, and Universal Links with the app both stopped and running. Confirm no browser sheet obscures the returned page.
+4. Test the keyboard accessory bar and gestures on the new installed iOS package. Website deployment alone cannot update native behavior.
+
+No physical device was connected. The local Android emulator crashed during startup, before the audit APK could be exercised; its attempted run is not a successful interaction test. Production deployment, OS link verification, live push delivery and signed-device OAuth remain outside the completed local checks. These follow-up fixes have not been deployed by this audit.
 
 ## Platform references
 

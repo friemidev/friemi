@@ -106,6 +106,7 @@ public final class MainActivity extends ComponentActivity {
     private String authBrowserPackage;
     private boolean webBackRequested;
     private boolean pageLoading;
+    private boolean mainFrameFailed;
     private FriemiInstallReferrer installReferrer;
     private final Runnable slowLoadNoticeRunnable = () -> {
         if (!pageLoading || loadingOverlay.getVisibility() != View.VISIBLE) {
@@ -129,9 +130,10 @@ public final class MainActivity extends ComponentActivity {
         configureWindow();
         setupViews();
         setupWebView();
-        loadUrl(buildLaunchUrl(getIntent()));
+        String launchUrl = buildLaunchUrl(getIntent());
+        loadUrl(launchUrl != null ? launchUrl : buildDefaultHomeUrl());
         installReferrer = new FriemiInstallReferrer(preferences);
-        if (savedInstanceState == null && (getIntent() == null || getIntent().getData() == null)) {
+        if (savedInstanceState == null && launchUrl == null) {
             final String initialUrl = currentUrl;
             installReferrer.start(this, resolveLocale(null), target -> {
                 if (!isFinishing() && !isDestroyed() && webView != null && initialUrl.equals(currentUrl)) {
@@ -148,6 +150,7 @@ public final class MainActivity extends ComponentActivity {
         super.onNewIntent(intent);
         if (installReferrer != null) installReferrer.consume();
         setIntent(intent);
+        // A launcher resume has no destination. Keep the mounted page and draft.
         loadUrl(buildLaunchUrl(intent));
     }
 
@@ -525,6 +528,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void loadUrl(String url) {
+        if (url == null || webView == null) return;
         if (isBrowserAuthCompletion(Uri.parse(url))) {
             // Verified App Links can intercept the browser's authenticated
             // callback. Keep that step in the same browser, never the WebView.
@@ -545,9 +549,13 @@ public final class MainActivity extends ComponentActivity {
         }
         try {
             Uri uri = Uri.parse(url);
-            if ("friemi".equalsIgnoreCase(uri.getScheme())
-                || (isHttp(uri) && isFriemiHost(uri.getHost()))) {
+            if ("friemi".equalsIgnoreCase(uri.getScheme())) {
                 loadUrl(normalizeIncomingUri(uri));
+                return true;
+            }
+            String internal = FriemiAppLinks.resolveWebNavigation(url, getBaseUrl(), resolveLocale(null));
+            if (internal != null) {
+                loadUrl(internal);
                 return true;
             }
         } catch (Exception ignored) {
@@ -558,10 +566,15 @@ public final class MainActivity extends ComponentActivity {
 
     private String buildLaunchUrl(Intent intent) {
         Uri data = intent != null ? intent.getData() : null;
-        if (data == null) {
-            return buildDefaultHomeUrl();
+        if (data != null) return normalizeIncomingUri(data);
+        if (intent == null) return null;
+        // Background FCM notification taps deliver the destination in extras,
+        // unlike foreground notifications, which use a data URI.
+        for (String key : new String[]{"url", "deepLink", "path"}) {
+            String resolved = FriemiAppLinks.resolveNotification(intent.getStringExtra(key), getBaseUrl(), resolveLocale(null));
+            if (resolved != null) return resolved;
         }
-        return normalizeIncomingUri(data);
+        return null;
     }
 
     private String buildDefaultHomeUrl() {
@@ -572,15 +585,7 @@ public final class MainActivity extends ComponentActivity {
         if ("friemi".equalsIgnoreCase(uri.getScheme()) && AUTH_COMPLETE_HOST.equalsIgnoreCase(uri.getHost())) {
             return buildUrlFromAuthCompleteTarget(uri.getQueryParameter("target"));
         }
-        String resolved = FriemiAppLinks.resolve(uri.toString(), getBaseUrl(), resolveLocale(null));
-        return resolved != null ? resolved : buildDefaultHomeUrl();
-    }
-
-    private String normalizePath(String path) {
-        if (isBlank(path) || "/".equals(path)) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-        return path.startsWith("/") ? path : "/" + path;
+        return FriemiAppLinks.resolve(uri.toString(), getBaseUrl(), resolveLocale(null));
     }
 
     private String buildUrlFromAuthCompleteTarget(String target) {
@@ -608,34 +613,8 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private String normalizeAuthCompleteTarget(String target) {
-        if (isBlank(target)) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-
-        String trimmed = target.trim();
-        String lowerTarget = trimmed.toLowerCase(Locale.ROOT);
-        if (lowerTarget.startsWith("http://") || lowerTarget.startsWith("https://") || trimmed.startsWith("//")) {
-            try {
-                Uri uri = Uri.parse(trimmed);
-                if (!isFriemiHost(uri.getHost())) {
-                    return BuildConfig.FRIEMI_DEFAULT_PATH;
-                }
-                String path = normalizePath(uri.getPath());
-                if (isAuthPath(path)) {
-                    return BuildConfig.FRIEMI_DEFAULT_PATH;
-                }
-                String query = uri.getQuery();
-                String fragment = uri.getFragment();
-                return path
-                    + (isBlank(query) ? "" : "?" + query)
-                    + (isBlank(fragment) ? "" : "#" + fragment);
-            } catch (Exception ignored) {
-                return BuildConfig.FRIEMI_DEFAULT_PATH;
-            }
-        }
-
-        String path = normalizePath(trimmed);
-        return isAuthPath(path) ? BuildConfig.FRIEMI_DEFAULT_PATH : path;
+        String normalized = FriemiAppLinks.normalizeAuthTarget(target, getBaseUrl(), resolveLocale(null));
+        return normalized != null ? normalized : BuildConfig.FRIEMI_DEFAULT_PATH;
     }
 
     private String resolveLocale(String explicitLocale) {
@@ -758,6 +737,7 @@ public final class MainActivity extends ComponentActivity {
 
     private void showLoading() {
         pageLoading = true;
+        mainFrameFailed = false;
         mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setProgress(10);
@@ -795,6 +775,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void showError(String message) {
+        mainFrameFailed = true;
         pageLoading = false;
         mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         hideLoading();
@@ -1487,14 +1468,17 @@ public final class MainActivity extends ComponentActivity {
                 return true;
             }
 
-            if (isFriemiHost(uri.getHost()) && getLocaleFromPath(uri.getPath()) == null) {
-                String localizedUrl = uri
-                    .buildUpon()
-                    .path("/" + resolveLocale(null) + normalizePath(uri.getPath()))
-                    .build()
-                    .toString();
-                view.loadUrl(localizedUrl);
+            if ("/open".equals(uri.getPath())) {
+                loadUrl(FriemiAppLinks.resolve(uri.toString(), getBaseUrl(), resolveLocale(null)));
                 return true;
+            }
+
+            if (isFriemiHost(uri.getHost()) && getLocaleFromPath(uri.getPath()) == null) {
+                String localizedUrl = FriemiAppLinks.resolveWebNavigation(uri.toString(), getBaseUrl(), resolveLocale(null));
+                if (localizedUrl != null && !localizedUrl.equals(uri.toString())) {
+                    view.loadUrl(localizedUrl);
+                    return true;
+                }
             }
 
             return false;
@@ -1502,6 +1486,7 @@ public final class MainActivity extends ComponentActivity {
 
         @Override
         public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            mainFrameFailed = false;
             currentUrl = url;
             progressBar.setVisibility(View.VISIBLE);
             progressBar.setProgress(20);
@@ -1512,8 +1497,13 @@ public final class MainActivity extends ComponentActivity {
             currentUrl = url;
             CookieManager.getInstance().flush();
             hideLoading();
-            hideError();
+            if (!mainFrameFailed) hideError();
             injectAndroidAppContext(true);
+        }
+
+        @Override
+        public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+            currentUrl = url;
         }
 
         @Override
@@ -1599,7 +1589,7 @@ public final class MainActivity extends ComponentActivity {
                     }
                     Uri uri = request.getUrl();
                     if ("friemi".equalsIgnoreCase(uri.getScheme())) {
-                        webView.loadUrl(normalizeIncomingUri(uri));
+                        loadUrl(normalizeIncomingUri(uri));
                         destroyPopupWebView(popupView);
                         return true;
                     }
@@ -1623,7 +1613,7 @@ public final class MainActivity extends ComponentActivity {
                     }
 
                     if (shouldStayInWebView(uri)) {
-                        webView.loadUrl(normalizeIncomingUri(uri));
+                        loadUrl(FriemiAppLinks.resolveWebNavigation(uri.toString(), getBaseUrl(), resolveLocale(null)));
                     } else {
                         openExternal(uri.toString());
                     }
