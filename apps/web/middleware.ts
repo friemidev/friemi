@@ -162,10 +162,6 @@ function getCanonicalHostRedirectUrl(request: NextRequest) {
 }
 
 export default clerkMiddleware(async (auth, request) => {
-  if (request.nextUrl.pathname === "/open") {
-    return NextResponse.next();
-  }
-
   const canonicalHostRedirectUrl = getCanonicalHostRedirectUrl(request);
 
   if (canonicalHostRedirectUrl) {
@@ -379,7 +375,7 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
-    "/((?!api|_next|_vercel|.*\\..*).*)",
+    "/((?!api|_next|_vercel|open(?:/|$)|.*\\..*).*)",
     "/:locale/updates",
     "/:locale/updates/:path*",
     "/api/admin/:path*",
