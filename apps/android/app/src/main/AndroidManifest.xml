@@ -56,10 +56,33 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="${friemiAppLinkHost}"
-                    android:pathPrefix="/"
-                    android:scheme="https" />
+                <data android:scheme="https" />
+                <data android:host="${friemiAppLinkHost}" />
+                <data android:path="/open" />
+                <data android:pathPrefix="/zh-CN/lobby/" />
+                <data android:pathPrefix="/en/lobby/" />
+                <data android:pathPrefix="/fr/lobby/" />
+                <data android:pathPrefix="/zh-CN/activities/" />
+                <data android:pathPrefix="/en/activities/" />
+                <data android:pathPrefix="/fr/activities/" />
+                <data android:pathPrefix="/zh-CN/public-events/" />
+                <data android:pathPrefix="/en/public-events/" />
+                <data android:pathPrefix="/fr/public-events/" />
+                <data android:pathPrefix="/zh-CN/planets/" />
+                <data android:pathPrefix="/en/planets/" />
+                <data android:pathPrefix="/fr/planets/" />
+                <data android:pathPrefix="/zh-CN/game-tools/" />
+                <data android:pathPrefix="/en/game-tools/" />
+                <data android:pathPrefix="/fr/game-tools/" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="friemi.com" />
+                <data android:path="/open" />
             </intent-filter>
 
             <intent-filter>

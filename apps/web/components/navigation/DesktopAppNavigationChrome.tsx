@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { withLocale } from "@/lib/routes";
 
 const hiddenSections = [
+  "/open-app",
   "/poll",
   "/admin/merchants",
   "/admin/items",

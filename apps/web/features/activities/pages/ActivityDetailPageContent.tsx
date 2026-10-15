@@ -92,6 +92,7 @@ import {
 } from "@/features/friends/queries/getViewerFriendIds";
 import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ActivityHostLink } from "@/features/activities/components/ActivityHostLink";
+import { AppOpenEntry } from "@/features/mobile/components/AppHandoff";
 import { getActivityHostLink } from "@/features/activities/utils/activityHostLink";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
@@ -2349,6 +2350,7 @@ export async function ActivityDetailPageContent({
             participants={participantPreview}
             variant="bare"
           />
+          <AppOpenEntry locale={locale} target={participantInvitePath} userAgent={userAgent ?? ""} />
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
               activityId={activity.id}

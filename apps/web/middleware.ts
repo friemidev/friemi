@@ -162,6 +162,10 @@ function getCanonicalHostRedirectUrl(request: NextRequest) {
 }
 
 export default clerkMiddleware(async (auth, request) => {
+  if (request.nextUrl.pathname === "/open") {
+    return NextResponse.next();
+  }
+
   const canonicalHostRedirectUrl = getCanonicalHostRedirectUrl(request);
 
   if (canonicalHostRedirectUrl) {

@@ -123,30 +123,10 @@ class AppViewController: CAPBridgeViewController {
     }
 
     private func buildWebUrlFromFriemiURL(_ url: URL) -> URL? {
-        if (url.scheme == "https" || url.scheme == "http"), shouldKeepInApp(url.host) {
-            return url
-        }
-
-        if url.host?.lowercased() == "auth-complete" {
+        if url.scheme?.lowercased() == "friemi", url.host?.lowercased() == "auth-complete" {
             return buildWebUrlFromAuthCompleteURL(url)
         }
-
-        guard url.host?.lowercased() == "game-tools",
-              url.path.hasPrefix("/werewolf/join/")
-        else {
-            return nil
-        }
-
-        let route = "/game-tools\(url.path)"
-        guard var webComponents = URLComponents(
-            string: "\(getCurrentBaseUrl())/\(getCurrentLocale())\(route)"
-        ) else {
-            return nil
-        }
-
-        webComponents.query = url.query
-        webComponents.fragment = url.fragment
-        return webComponents.url
+        return FriemiAppLinks.resolve(url, base: getCurrentBaseUrl(), locale: getCurrentLocale())
     }
 
     private func buildWebUrlFromAuthCompleteURL(_ url: URL) -> URL? {

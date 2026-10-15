@@ -69,6 +69,7 @@ function shouldHideMobileNav(pathname: string, locale: string) {
 
   return (
     isAaRoute ||
+    pathname === withLocale(locale, "/open-app") ||
     pathname === localizedPollPath ||
     pathname.startsWith(`${localizedPollPath}/`) ||
     pathname.startsWith(`${localizedPlanetsPath}/`) ||
