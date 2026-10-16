@@ -70,6 +70,7 @@ type MobileHomePageProps = {
   searchParams?: Promise<{
     ref?: string | string[];
     previewNow?: string | string[];
+    previewNowCount?: string | string[];
   }>;
 };
 
@@ -274,7 +275,7 @@ function getMobileHomeCopy(locale: string) {
 function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
   if (locale === "fr") {
     return {
-      greeting: viewerName ? `Bonsoir, ${viewerName}` : "Bonsoir",
+      greeting: viewerName ? `Salut, ${viewerName}` : "Salut",
       subtitle: "Qu'avez-vous envie de faire aujourd'hui ?",
       searchPlaceholder: "Rechercher activités ou personnes...",
       location: "Paris",
@@ -327,7 +328,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
 
   if (locale === "en") {
     return {
-      greeting: viewerName ? `Good evening, ${viewerName}!` : "Good evening!",
+      greeting: viewerName ? `Hey, ${viewerName}` : "Hey",
       subtitle: "What are you up to today?",
       searchPlaceholder: "Search activities or people...",
       location: "Paris",
@@ -379,7 +380,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
   }
 
   return {
-    greeting: viewerName ? `晚上好，${viewerName}` : "晚上好",
+    greeting: viewerName ? `嗨，${viewerName}` : "嗨",
     subtitle: "今天想做点什么？",
     searchPlaceholder: "搜索活动或用户...",
     location: "巴黎",
@@ -534,8 +535,13 @@ export default async function MobileHomePage({
           console.error("Failed to load home now invites", error);
           return [];
         });
+  const previewNowCount =
+    typeof query.previewNowCount === "string" &&
+    /^[1-7]$/.test(query.previewNowCount)
+      ? Number(query.previewNowCount)
+      : 7;
   const nowInvites = isNowPreview
-    ? getNowPreviewInvites(nowInitialTime)
+    ? getNowPreviewInvites(nowInitialTime).slice(0, previewNowCount)
     : liveNowInvites;
 
   return (
