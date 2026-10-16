@@ -4,9 +4,9 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, MapPin } from "lucide-react";
 import { createNowInviteAction } from "./actions";
+import { NowKindArtwork } from "./NowKindArtwork";
 import {
   getNowCopy,
-  getNowKind,
   getNowKindLabel,
   getNowIntentWindowLabel,
   getNowPreviewDisabledLabel,
@@ -129,11 +129,13 @@ export function NowCreateForm({
                 type="button"
                 onClick={() => chooseCategory(kind)}
                 aria-pressed={selected}
-                className={`inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-xl border px-3 text-[12px] font-semibold transition active:scale-[.96] ${selected ? "border-[#F2A7B5] bg-[#FFF0F2] text-[#A9475B] shadow-[0_5px_14px_rgba(246,111,129,.1)]" : "border-[#E2EBE4] bg-white text-[#305444]"}`}
+                className={`inline-flex min-h-12 shrink-0 snap-start select-none items-center gap-2 rounded-xl border px-2.5 text-[12px] font-semibold transition-[background-color,border-color,transform] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-forest active:scale-[.97] motion-reduce:transition-none ${selected ? "border-forest/50 bg-fog text-forest ring-1 ring-inset ring-forest/15" : "border-sand bg-paper text-ink/80"}`}
               >
-                <span className="text-[17px]" aria-hidden="true">
-                  {getNowKind(kind).emoji}
-                </span>
+                <NowKindArtwork
+                  category={kind}
+                  variant="icon"
+                  className="h-8 w-8"
+                />
                 {getNowKindLabel(kind, locale)}
               </button>
             );

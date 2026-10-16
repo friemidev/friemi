@@ -41,9 +41,11 @@ export function getNowTonePalette(tone: string) {
 export function NowKindArtwork({
   category,
   className = "",
+  variant = "bubble",
 }: {
   category: string;
   className?: string;
+  variant?: "bubble" | "icon";
 }) {
   const kind = isNowKind(category) ? category : "OTHER";
   const artworkName = artworkNames[kind];
@@ -62,7 +64,7 @@ export function NowKindArtwork({
         inView = entry.isIntersecting;
         update();
       },
-      { rootMargin: "80px" },
+      { rootMargin: variant === "icon" ? "0px" : "80px" },
     );
     observer.observe(nodeRef.current);
     motionPreference.addEventListener("change", update);
@@ -72,7 +74,7 @@ export function NowKindArtwork({
       motionPreference.removeEventListener("change", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, []);
+  }, [variant]);
 
   return (
     <span
@@ -80,20 +82,22 @@ export function NowKindArtwork({
       aria-hidden="true"
       className={`relative inline-grid shrink-0 place-items-center ${className}`}
     >
+      {variant === "bubble" ? (
+        <Image
+          alt=""
+          className="object-contain"
+          fill
+          sizes="96px"
+          src={`/now/artwork/ring-${backdrop}.webp`}
+          unoptimized
+          draggable={false}
+        />
+      ) : null}
       <Image
         alt=""
-        className="object-contain"
+        className={variant === "icon" ? "object-contain" : "object-contain p-[5%]"}
         fill
-        sizes="96px"
-        src={`/now/artwork/ring-${backdrop}.webp`}
-        unoptimized
-        draggable={false}
-      />
-      <Image
-        alt=""
-        className="object-contain p-[5%]"
-        fill
-        sizes="96px"
+        sizes={variant === "icon" ? "32px" : "96px"}
         src={`/now/artwork/${artworkName}-${animate ? "motion" : "still"}.webp`}
         unoptimized
         draggable={false}

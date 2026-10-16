@@ -4,7 +4,7 @@
 }
 .headingRow {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
@@ -20,16 +20,6 @@
   color: #61736a;
   font-size: 0.8rem;
   line-height: 1.45;
-}
-.seeAll {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-  min-height: 2.75rem;
-  color: #156240;
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
 }
 .field {
   position: relative;
@@ -369,15 +359,35 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid #e0ebe3;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--friemi-palette-sand);
   border-radius: 0.85rem;
-  background: #fff;
-  color: #416852;
+  background: var(--friemi-palette-paper);
+  color: var(--friemi-palette-forest);
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
+  user-select: none;
+  touch-action: manipulation;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 150ms ease-out;
+}
+.quickKind:focus-visible {
+  outline: 2px solid var(--friemi-palette-forest);
+  outline-offset: -3px;
+}
+.quickKind:active {
+  transform: scale(0.97);
+  background: var(--friemi-palette-fog);
+}
+@media (hover: hover) and (pointer: fine) {
+  .quickKind:hover {
+    border-color: var(--friemi-palette-sage);
+    background: var(--friemi-palette-fog);
+  }
 }
 .create:hover,
 .mine:hover,
@@ -488,6 +498,9 @@
     animation: none;
   }
   .orbit {
+    transition: none;
+  }
+  .quickKind {
     transition: none;
   }
 }

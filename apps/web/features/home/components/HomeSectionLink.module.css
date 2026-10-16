@@ -1,0 +1,47 @@
+.link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--friemi-palette-sand);
+  border-radius: 999px;
+  background: var(--friemi-palette-fog);
+  color: var(--friemi-palette-forest);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 150ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    border-color: var(--friemi-palette-sage);
+    background: var(--friemi-palette-paper);
+  }
+}
+
+.link:active {
+  transform: scale(0.97);
+  background: var(--friemi-palette-sand);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--friemi-palette-forest);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
+  }
+}

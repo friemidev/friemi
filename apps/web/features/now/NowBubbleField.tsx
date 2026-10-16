@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowUpRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { RetainedImage } from "@/components/media/RetainedImage";
+import { HomeSectionLink } from "@/features/home/components/HomeSectionLink";
 import {
   getNowCopy,
   getNowIntentWindowLabel,
@@ -130,13 +131,12 @@ export function NowBubbleField({
           </h2>
           <p className={styles.subtitle}>{copy.subtitle}</p>
         </div>
-        <Link
-          className={styles.seeAll}
+        <HomeSectionLink
           href={withLocale(locale, preview ? "/now?previewNow=1" : "/now")}
+          label={`${copy.seeAll} · ${copy.heading}`}
         >
           {copy.seeAll}
-          <ArrowUpRight size={15} aria-hidden="true" />
-        </Link>
+        </HomeSectionLink>
       </div>
 
       {visible.length ? (
@@ -262,7 +262,11 @@ export function NowBubbleField({
             )}
             className={styles.quickKind}
           >
-            <span aria-hidden="true">{getNowKind(kind).emoji}</span>
+            <NowKindArtwork
+              category={kind}
+              variant="icon"
+              className="h-8 w-8"
+            />
             {getNowKindLabel(kind, locale)}
           </Link>
         ))}

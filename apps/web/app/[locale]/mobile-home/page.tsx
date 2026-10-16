@@ -24,6 +24,7 @@ import type { ActivityCardViewModel } from "@/features/activities/types";
 import { DESKTOP_LOBBY_CANDIDATE_ORIGIN } from "@/features/activities/utils/desktopLobbyCandidates";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
+import { HomeSectionLink } from "@/features/home/components/HomeSectionLink";
 import { MobileHomeTrendingActivityCard } from "@/features/home/components/MobileHomeTrendingActivityCard";
 import { attachLiveActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
@@ -716,12 +717,12 @@ function MobileHomeV23Experience({
             <h2 className="text-[17px] font-bold tracking-normal text-[#111210]">
               {copy.trendingTitle}
             </h2>
-            <Link
+            <HomeSectionLink
               href={withLocale(locale, "/lobby")}
-              className="text-[13px] font-semibold text-[#096B45]"
+              label={`${copy.seeAll} · ${copy.trendingTitle}`}
             >
               {copy.seeAll}
-            </Link>
+            </HomeSectionLink>
           </div>
 
           <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
