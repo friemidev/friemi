@@ -32,7 +32,7 @@ type AudioProps = {
   roomKey: string;
   state?: DdzViewerState | null;
   serverNow?: number;
-  freezeClock?: boolean;
+  localPreview?: boolean;
   connected?: boolean;
 };
 const AudioContext = createContext<{
@@ -63,7 +63,7 @@ export function DoudizhuAudioProvider({
   state,
   serverNow,
   locale,
-  freezeClock = false,
+  localPreview = false,
   connected = true,
   children,
 }: AudioProps & { children: ReactNode }) {
@@ -73,8 +73,8 @@ export function DoudizhuAudioProvider({
   );
   const session = useRef<ReturnType<typeof createDdzAudioSession> | null>(null);
   const cursor = useRef<DdzPresentationCursor | null>(null);
-  const current = useRef({ state, roomKey, locale, freezeClock, connected });
-  current.current = { state, roomKey, locale, freezeClock, connected };
+  const current = useRef({ state, roomKey, locale, localPreview, connected });
+  current.current = { state, roomKey, locale, localPreview, connected };
   const previousConnection = useRef(connected);
 
   useLayoutEffect(() => {
@@ -133,9 +133,9 @@ export function DoudizhuAudioProvider({
     };
     const recover = () => {
       const latest = current.current;
-      // Live rooms wait for a fresh baseline; the manual preview has no polling.
+      // Live rooms wait for a fresh baseline; local previews have no snapshot polling.
       cursor.current =
-        latest.freezeClock && latest.state
+        latest.localPreview && latest.state
           ? ddzPresentationCursor(latest.state, latest.roomKey)
           : null;
       audio.cancelPresentation();
@@ -191,7 +191,7 @@ export function DoudizhuAudioProvider({
     if (previousConnection.current !== connected) {
       previousConnection.current = connected;
       cursor.current =
-        freezeClock && state ? ddzPresentationCursor(state, roomKey) : null;
+        localPreview && state ? ddzPresentationCursor(state, roomKey) : null;
       audio.cancelPresentation();
       setPresentation(null);
     }
@@ -224,7 +224,7 @@ export function DoudizhuAudioProvider({
       audio.cancelPresentation();
       setPresentation(null);
     }
-  }, [state, serverNow, roomKey, locale, connected, freezeClock]);
+  }, [state, serverNow, roomKey, locale, connected, localPreview]);
 
   const value = useMemo(
     () => ({

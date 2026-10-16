@@ -9,7 +9,8 @@ export type DdzPatternType = "SINGLE" | "PAIR" | "TRIPLE" | "TRIPLE_SINGLE" | "T
 export type DdzPlay = { type: DdzPatternType; cardIds: DdzCardId[]; mainRank: number; chainLength: number; cardCount: number };
 export type DdzTargetPlay = DdzPlay & { seat: DdzSeat };
 export type DdzPlayer = { seat: DdzSeat; name: string; profileId?: string; catId?: string };
-export type DdzRules = { bidSeconds: 20; playSeconds: 30; managedSeconds: 4; resultSeconds: 60; multiplierCap: 64 };
+/** 30 seconds is accepted for active games saved before the 60-second default. */
+export type DdzRules = { bidSeconds: 20; playSeconds: 30 | 60; managedSeconds: 4; resultSeconds: 60; multiplierCap: 64 };
 export type DdzBidState = { startSeat: DdzSeat; highestScore: 0 | 1 | 2 | 3; highestSeat: DdzSeat | null; bids: { seat: DdzSeat; score: 0 | 1 | 2 | 3 }[] };
 export type DdzResult = {
   gameNo: number; winnerSeat: DdzSeat; winnerSide: "landlord" | "farmers"; landlordSeat: DdzSeat;

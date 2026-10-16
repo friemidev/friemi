@@ -24,7 +24,6 @@ function act(state: DdzState, action: DdzAction, seat = state.currentSeat!, now 
 function playState(hand: number[], otherHands = [[5, 6], [7, 8]]) {
   let state = act(start(), { type: "BID", score: 3 });
   state.hands = { 0: ids(...hand), 1: ids(...otherHands[0]), 2: ids(...otherHands[1]) };
-  state.deadlineAt = 30_000;
   return state;
 }
 function assertConservation(state: DdzState) {
@@ -107,6 +106,28 @@ test("bids rise, each seat acts once and 3 immediately awards the bottom cards",
   assert.equal(state.landlordSeat, 1); assert.equal(state.currentSeat, 1); assert.equal(state.phase, "PLAYING");
   assert.equal(state.hands[1].length, 20); assert.equal(state.bid.bids.length, 2);
   assertConservation(state);
+});
+
+test("new games use a 60-second play clock while active saved 30-second games keep their rules", () => {
+  const lobby = createDdzState([0, 1, 2].map((seat) => ({ seat, name: `P${seat}` })));
+  assert.deepEqual(lobby.rules, { bidSeconds: 20, playSeconds: 60, managedSeconds: 4, resultSeconds: 60, multiplierCap: 64 });
+  lobby.rules.playSeconds = 30;
+  const started = startDdzGame(lobby, 100, { deck: allIds(), firstBidSeat: 0 }).state;
+  assert.equal(started.rules.playSeconds, 60);
+  assert.equal(lobby.rules.playSeconds, 30);
+  assert.equal(started.deadlineAt, 20_100);
+  let playing = act(started, { type: "BID", score: 3 }, 0, 200);
+  assert.equal(playing.deadlineAt, 60_200);
+  playing = act(playing, { type: "PLAY", cardIds: [playing.hands[0][0]] }, 0, 300);
+  assert.equal(playing.deadlineAt, 60_300);
+
+  const saved = structuredClone(playing);
+  saved.rules.playSeconds = 30;
+  saved.deadlineAt = 30_300;
+  const continued = act(saved, { type: "PASS" }, 1, 400);
+  assert.equal(continued.rules.playSeconds, 30);
+  assert.equal(continued.deadlineAt, 30_400);
+  assert.equal(saved.deadlineAt, 30_300);
 });
 
 test("highest bid wins after three and all-pass redeals twice then uses third starter", () => {
@@ -194,21 +215,51 @@ test("deadline boundary wins over an action and managed control never extends a 
   assert.equal(state.turnId, before + 1); assert.equal(state.deadlineAt, 1_020_000);
 });
 
-test("timeout leads lowest single, follows only with a legal whole-hand finish, otherwise passes", () => {
+test("a responding timeout always passes, even with a legal whole-hand finish or bomb", () => {
+  for (const managed of [false, true]) for (const hand of [[5], [5, 5, 5, 5], [16, 17], [5, 6]]) {
+    let state = playState([3, 4], [hand, [7, 8]]);
+    if (managed) state = act(state, { type: "SET_MANAGED", managed: true }, 1);
+    state = act(state, { type: "PLAY", cardIds: ids(3) });
+    const before = structuredClone(state);
+    const deadline = state.deadlineAt!;
+    assert.equal(deadline, managed ? 4_200 : 60_200);
+    assert.equal(advanceDdzDeadline(state, deadline - 1, allIds), state);
+    const next = advanceDdzDeadline(state, deadline, allIds);
+    assert.equal(next.phase, "PLAYING"); assert.equal(next.result, null);
+    assert.equal(next.currentSeat, 2); assert.equal(next.consecutivePasses, 1);
+    assert.deepEqual(next.hands, state.hands); assert.deepEqual(next.handVersions, state.handVersions);
+    assert.deepEqual(next.playedCards, state.playedCards); assert.deepEqual(next.playCounts, state.playCounts);
+    assert.deepEqual(next.targetPlay, state.targetPlay);
+    assert.equal(next.bombCount, 0); assert.equal(next.multiplier, 1);
+    assert.deepEqual(next.events.slice(-2).map((event) => [event.kind, event.seat]), [["TIMEOUT", 1], ["PASS", 1]]);
+    assert.ok(next.managedSeats.includes(1));
+    assert.equal(advanceDdzDeadline(next, deadline, allIds), next);
+    assert.deepEqual(state, before);
+  }
+});
+
+test("two timeout passes clear the trick and the next timeout leads only the lowest single", () => {
   let state = playState([4, 3, 3], [[5], [7, 8]]);
-  state = advanceDdzDeadline(state, 30_000, allIds);
-  assert.deepEqual(state.targetPlay?.cardIds, ids(3)); assert.ok(state.managedSeats.includes(0));
   state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
-  assert.equal(state.phase, "RESULT"); assert.equal(state.result?.winnerSeat, 1);
-  let pass = playState([3, 4], [[5, 6], [7, 8]]);
-  pass = act(pass, { type: "PLAY", cardIds: ids(3) });
-  pass = advanceDdzDeadline(pass, pass.deadlineAt!, allIds);
-  assert.equal(pass.currentSeat, 2); assert.equal(pass.consecutivePasses, 1); assert.equal(pass.hands[1].length, 2);
-  pass = advanceDdzDeadline(pass, pass.deadlineAt!, allIds);
-  pass = act(pass, { type: "SET_MANAGED", managed: true }, 0, pass.deadlineAt! - 1);
-  pass = advanceDdzDeadline(pass, pass.deadlineAt!, allIds);
-  // A managed player who has just received another turn gets four seconds.
-  assert.equal(pass.phase, "RESULT");
+  assert.deepEqual(state.targetPlay?.cardIds, ids(3)); assert.ok(state.managedSeats.includes(0));
+  const firstTrick = state.trickId;
+  state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
+  state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
+  assert.equal(state.phase, "PLAYING"); assert.equal(state.currentSeat, 0);
+  assert.equal(state.targetPlay, null); assert.equal(state.trickId, firstTrick + 1);
+  assert.equal(state.consecutivePasses, 0);
+  assert.deepEqual(state.hands[1], ids(5));
+  assert.deepEqual(state.events.slice(-3).map((event) => event.kind), ["TIMEOUT", "PASS", "TRICK"]);
+  const leadAt = state.deadlineAt!;
+  assert.equal(applyDdzAction(state, 0, { type: "PASS" }, leadAt - 1).error, "MUST_LEAD");
+  state = advanceDdzDeadline(state, leadAt, allIds);
+  assert.equal(state.targetPlay?.type, "SINGLE"); assert.equal(state.targetPlay?.mainRank, 3);
+  assert.deepEqual(state.hands[0], ids(4));
+  assert.equal(state.deadlineAt, leadAt + 4_000);
+  state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
+  state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
+  state = advanceDdzDeadline(state, state.deadlineAt!, allIds);
+  assert.equal(state.phase, "RESULT"); assert.equal(state.result?.winnerSeat, 0);
 });
 
 test("private views never contain opponents' hands, bottom cards, or account IDs before reveal", () => {
@@ -262,11 +313,24 @@ test("all-offline games finish with conserved cards, monotonic clocks and exactl
       assertConservation(state);
       const previousTurn = state.turnId;
       const now = state.deadlineAt!;
+      const responding = state.phase === "PLAYING" && state.targetPlay !== null;
+      const previousHands = structuredClone(state.hands);
+      const previousEvent = state.eventSeq;
       state = advanceDdzDeadline(state, now, shuffled);
       assert.ok(state.turnId > previousTurn);
       assert.ok(state.deadlineAt! > now);
+      if (responding) {
+        assert.deepEqual(state.hands, previousHands);
+        assert.ok(state.events.some((event) => event.id > previousEvent && event.kind === "PASS"));
+        assert.equal(state.events.some((event) => event.id > previousEvent && event.kind === "PLAY"), false);
+      }
     }
     assert.equal(state.phase, "RESULT"); assertConservation(state);
+    assert.equal(actions, 67); // Nine bids, twenty single-card leads, and nineteen pairs of passes.
+    assert.equal(state.result!.winnerSeat, state.landlordSeat);
+    assert.equal(state.result!.spring, "spring");
+    assert.equal(state.result!.bombCount, 0);
+    assert.ok(state.players.filter((player) => player.seat !== state.landlordSeat).every((player) => state.hands[player.seat].length === 17));
     assert.equal(state.result!.scores.reduce((sum, row) => sum + row.delta, 0), 0);
     assert.equal(state.events.filter((event) => event.kind === "RESULT").length, 1);
     assert.equal(getDdzViewerState(state, 0).remainingHands!.length, 3);

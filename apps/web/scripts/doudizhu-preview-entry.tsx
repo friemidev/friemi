@@ -2,9 +2,13 @@ import { createRoot } from "react-dom/client";
 import { DoudizhuPreview } from "../features/game-tools/components/DoudizhuPreview";
 import { createDdzDeck } from "../features/game-tools/doudizhuEngine";
 const query = new URLSearchParams(window.location.search);
-const locale = query.get("locale") ?? window.location.pathname.match(/^\/(zh-CN|en|fr)\//)?.[1] ?? "zh-CN";
+const locale =
+  query.get("locale") ??
+  window.location.pathname.match(/^\/(zh-CN|en|fr)\//)?.[1] ??
+  "zh-CN";
 const requested = query.get("scene");
-const scene = requested === "entry" || requested === "lobby" ? requested : "table";
+const scene =
+  requested === "entry" || requested === "lobby" ? requested : "table";
 // Deterministic local hands exercise the real bidding and play flow. The production
 // room client cannot load these fixtures and no event is synthesized for an effect.
 const effectHands: Record<string, string[]> = {
@@ -18,7 +22,19 @@ const effectHands: Record<string, string[]> = {
 };
 const fixture = effectHands[query.get("effect") ?? ""];
 const initialDeck = fixture
-  ? [...fixture, ...createDdzDeck().map((card) => card.id).filter((id) => !fixture.includes(id))]
+  ? [
+      ...fixture,
+      ...createDdzDeck()
+        .map((card) => card.id)
+        .filter((id) => !fixture.includes(id)),
+    ]
   : undefined;
 document.documentElement.lang = locale;
-createRoot(document.getElementById("doudizhu-preview-root")!).render(<DoudizhuPreview locale={locale} initialScene={scene} initialDeck={initialDeck}/>);
+createRoot(document.getElementById("doudizhu-preview-root")!).render(
+  <DoudizhuPreview
+    locale={locale}
+    initialScene={scene}
+    initialDeck={initialDeck}
+    freezeClock={query.get("clock") === "frozen"}
+  />,
+);

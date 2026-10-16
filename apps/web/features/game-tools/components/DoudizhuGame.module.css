@@ -518,19 +518,34 @@
   font-weight: 700;
 }
 .turnTime {
-  display: inline-grid;
-  place-items: center;
-  min-width: 38px;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 0 5px;
   height: 38px;
   background: var(--ddz-paper);
   border: 1.5px solid var(--ddz-border);
-  border-radius: 50%;
+  border-radius: 999px;
   font-variant-numeric: tabular-nums;
   font-size: 18px;
+  line-height: 35px;
+}
+.timeUnit {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
 }
 .ownTurn .turnTime {
   background: var(--ddz-butter);
   border-color: var(--ddz-butter);
+}
+.turnTime[data-urgent="true"] {
+  color: rgb(var(--friemi-danger-rgb, 181 48 31));
+  background: var(--ddz-paper);
+  border-color: currentColor;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 12%, transparent);
 }
 .handPanel {
   background: var(--ddz-paper);
@@ -1687,10 +1702,11 @@
   text-overflow: ellipsis;
 }
 .tableClassic .turnTime {
-  min-width: 30px;
-  width: 30px;
-  height: 30px;
+  min-width: 44px;
+  width: 44px;
+  height: 32px;
   font-size: 16px;
+  line-height: 29px;
 }
 .tableClassic .opponents {
   position: absolute;
@@ -1961,10 +1977,11 @@
     max-width: 100px;
   }
   .tableClassic .turnTime {
-    min-width: 26px;
-    width: 26px;
-    height: 26px;
-    font-size: 14px;
+    min-width: 42px;
+    width: 42px;
+    height: 28px;
+    font-size: 16px;
+    line-height: 25px;
   }
   .tableClassic .player {
     top: 0;
@@ -2059,6 +2076,9 @@
   .tableClassic .bidActions {
     width: clamp(242px, 40vw, 330px);
     gap: 6px;
+  }
+  .tableClassic .bidActions {
+    width: clamp(280px, 44vw, 360px);
   }
   .tableClassic .actions .button,
   .tableClassic .bidActions .button {

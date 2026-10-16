@@ -1,8 +1,9 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import {
   applyDdzAction,
+  advanceDdzDeadline,
   createDdzDeck,
   createDdzState,
   getDdzViewerState,
@@ -53,11 +54,14 @@ export function DoudizhuPreview({
   locale,
   initialScene = "table",
   initialDeck,
+  freezeClock = false,
 }: {
   locale: string;
   initialScene?: "entry" | "lobby" | "table";
   /** Local preview fixtures only; online rooms always use server shuffling. */
   initialDeck?: string[];
+  /** Explicit screenshot fixtures only; the normal preview runs real deadlines. */
+  freezeClock?: boolean;
 }) {
   const t = getDoudizhuCopy(locale),
     motionRoot = useRef<HTMLDivElement>(null),
@@ -82,12 +86,60 @@ export function DoudizhuPreview({
     [reactions, setReactions] = useState<DdzReaction[]>([]),
     [history, setHistory] = useState<DdzRoundSummary[]>([]);
   const view = useMemo(() => getDdzViewerState(state, seat), [state, seat]);
-  // Preview deadlines are deliberately frozen; each seat is operated explicitly.
+  const previousPhase = useRef(state.phase);
+  useEffect(() => {
+    if (state.phase === "LOBBY" && previousPhase.current !== "LOBBY") {
+      setReady([false, false, false]);
+      setError("");
+      setReactions([]);
+    }
+    previousPhase.current = state.phase;
+  }, [state.phase]);
+  useEffect(() => {
+    if (entry || freezeClock) return;
+    const advance = () =>
+      setState((previous) =>
+        advanceDdzDeadline(previous, Date.now(), () =>
+          deck(seed + previous.dealNo),
+        ),
+      );
+    const timer = setInterval(advance, 250);
+    window.addEventListener("pageshow", advance);
+    document.addEventListener("visibilitychange", advance);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("pageshow", advance);
+      document.removeEventListener("visibilitychange", advance);
+    };
+  }, [entry, freezeClock, seed]);
+  // Manual actions and automatic deadlines both contribute one result record.
+  const recordedResult = useRef(0);
+  useEffect(() => {
+    const result = state.result;
+    if (!result || result.gameNo <= recordedResult.current) return;
+    recordedResult.current = result.gameNo;
+    setHistory((previous) => [
+      {
+        gameNo: result.gameNo,
+        finishedAt: new Date(result.finishedAt).toISOString(),
+        rulesetVersion: state.rulesetVersion,
+        result,
+        players: state.players.map((player) => ({
+          seat: player.seat,
+          name: player.name,
+          catId: cats[player.seat],
+        })),
+      },
+      ...previous,
+    ]);
+  }, [state.result, state.rulesetVersion, state.players, cats]);
   const room: DdzRoomView = {
     id: "local-preview",
     code: "PREVIEW",
     revision: state.eventSeq,
-    serverNow: state.events.at(-1)?.at ?? Date.now(),
+    serverNow: freezeClock
+      ? (state.events.at(-1)?.at ?? Date.now())
+      : Date.now(),
     hostSeat: 0,
     viewerSeat: seat,
     returnedToLobby: false,
@@ -106,7 +158,19 @@ export function DoudizhuPreview({
     state: view,
   };
   function act(action: DdzAction) {
-    const now = (state.events.at(-1)?.at ?? Date.now()) + 100;
+    const now = freezeClock
+      ? (state.events.at(-1)?.at ?? Date.now()) + 100
+      : Date.now();
+    if (!freezeClock) {
+      const advanced = advanceDdzDeadline(state, now, () =>
+        deck(seed + state.dealNo),
+      );
+      if (advanced !== state) {
+        setState(advanced);
+        setError(doudizhuErrorMessage("DEADLINE_EXPIRED", locale));
+        return false;
+      }
+    }
     const result = applyDdzAction(state, seat, action, now, () =>
       deck(seed + state.dealNo),
     );
@@ -116,24 +180,6 @@ export function DoudizhuPreview({
     }
     setError("");
     setState(result.state);
-    if (
-      result.state.result &&
-      result.state.result.gameNo !== state.result?.gameNo
-    )
-      setHistory((prev) => [
-        {
-          gameNo: result.state.gameNo,
-          finishedAt: new Date(result.state.result!.finishedAt).toISOString(),
-          rulesetVersion: result.state.rulesetVersion,
-          result: result.state.result!,
-          players: room.seats.map((p) => ({
-            seat: p.seat,
-            name: p.name,
-            catId: p.catId,
-          })),
-        },
-        ...prev,
-      ]);
     return true;
   }
   function restart() {
@@ -181,7 +227,7 @@ export function DoudizhuPreview({
   return (
     <DoudizhuAudioProvider
       locale={locale}
-      freezeClock
+      localPreview
       roomKey={room.id}
       state={view}
       serverNow={room.serverNow}
@@ -191,7 +237,9 @@ export function DoudizhuPreview({
         <div className={s.previewBar}>
           <span>
             <b>{t.previewLabel}</b>
-            <span className={s.previewNote}>{t.previewNote}</span>
+            <span className={s.previewNote}>
+              {freezeClock ? t.previewFrozenNote : t.previewNote}
+            </span>
           </span>
           <div className={s.previewControls}>
             <label htmlFor="ddz-preview-seat">{t.previewSeat}</label>
@@ -261,11 +309,11 @@ export function DoudizhuPreview({
         ) : (
           <DoudizhuOrientationGate
             locale={locale}
-            preview
+            preview={freezeClock}
             onExit={() => setEntry(true)}
           >
             <DoudizhuTable
-              freezeClock
+              freezeClock={freezeClock}
               room={room}
               locale={locale}
               error={error}

@@ -48,7 +48,7 @@ function chooseLandlord(state: DdzState, seat: number, score: 1 | 2 | 3, now: nu
 export function createDdzState(players: DdzPlayer[]): DdzState {
   return {
     schemaVersion: 1, rulesetVersion: DDZ_RULESET_VERSION,
-    rules: { bidSeconds: 20, playSeconds: 30, managedSeconds: 4, resultSeconds: 60, multiplierCap: 64 },
+    rules: { bidSeconds: 20, playSeconds: 60, managedSeconds: 4, resultSeconds: 60, multiplierCap: 64 },
     phase: "LOBBY", players: structuredClone(players), gameNo: 0, dealNo: 0, turnId: 0, trickId: 0, eventSeq: 0,
     hands: seatRecord(() => []), handVersions: seatRecord(() => 0), bottomCards: [], landlordSeat: null,
     bid: { startSeat: 0, highestScore: 0, highestSeat: null, bids: [] }, currentSeat: null, targetPlay: null,
@@ -62,6 +62,8 @@ export function startDdzGame(state: DdzState, now: number, firstDeal: DdzStartDe
   if (state.players.length !== 3 || new Set(state.players.map((player) => player.seat)).size !== 3 || !state.players.every((player) => [0, 1, 2].includes(player.seat))) return { state, error: "INVALID_PLAYERS" };
   if (!firstDeal || ![0, 1, 2].includes(firstDeal.firstBidSeat) || !isDdzDeck(firstDeal.deck)) return { state, error: "INVALID_DECK" };
   const next = structuredClone(state);
+  // Adopt the current default at a new game boundary; active saved games retain their clock.
+  next.rules.playSeconds = 60;
   next.gameNo += 1;
   next.dealNo = 1;
   next.trickId = 0;
@@ -197,10 +199,7 @@ export function advanceDdzDeadline(state: DdzState, now: number, redealDeck?: Dd
   let action: DdzAction;
   if (state.phase === "BIDDING") action = { type: "BID", score: 0 };
   else if (!state.targetPlay) action = { type: "PLAY", cardIds: [sortDdzCards(state.hands[seat])[0]], handVersion: state.handVersions[seat] };
-  else {
-    const wholeHand = classifyDdzPlay(state.hands[seat]);
-    action = wholeHand && beatsDdzPlay(wholeHand, state.targetPlay) ? { type: "PLAY", cardIds: wholeHand.cardIds, handVersion: state.handVersions[seat] } : { type: "PASS" };
-  }
+  else action = { type: "PASS" };
   const applied = applyCurrentAction(next, seat, action, now, redealDeck);
   return applied.error ? state : applied.state;
 }

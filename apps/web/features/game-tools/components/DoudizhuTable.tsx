@@ -20,7 +20,7 @@ import {
   getDdzCard,
   listDdzHints,
 } from "../doudizhuEngine";
-import { getDoudizhuCopy } from "../doudizhuCopy";
+import { doudizhuBidLabel, getDoudizhuCopy } from "../doudizhuCopy";
 import { getDdzPassFeedback } from "../doudizhuPassFeedback";
 import { DoudizhuCardFace, doudizhuCardLabel } from "./DoudizhuCard";
 import { DoudizhuCat, DoudizhuDialog, DoudizhuHeader } from "./DoudizhuChrome";
@@ -141,6 +141,8 @@ export function DoudizhuTable({
     state.deadlineAt === null
       ? 0
       : Math.max(0, Math.ceil((state.deadlineAt - now) / 1000));
+  const timerLabel = `${seconds} ${seconds === 1 ? t.timeSingular : t.time}`,
+    timerUrgent = state.deadlineAt !== null && seconds <= 5;
   const currentName =
     room.seats.find((x) => x.seat === state.currentSeat)?.name ?? "";
   const hand = useMemo(
@@ -273,7 +275,9 @@ export function DoudizhuTable({
         </span>
         {state.phase === "BIDDING" && bid && (
           <span className={s.lastAction}>
-            {bid.score ? `${t.bidScore} ${bid.score}` : t.noBid}
+            {bid.score
+              ? `${t.bidScore} ${doudizhuBidLabel(bid.score, locale)}`
+              : t.noBid}
           </span>
         )}
       </section>
@@ -437,7 +441,11 @@ export function DoudizhuTable({
               </div>
               <span className={s.stat}>
                 {t.highBid}
-                <strong>{state.bid.highestScore || "—"}</strong>
+                <strong>
+                  {state.bid.highestScore
+                    ? doudizhuBidLabel(state.bid.highestScore, locale)
+                    : "—"}
+                </strong>
               </span>
               <span className={s.stat}>
                 {t.multiplier}
@@ -458,9 +466,17 @@ export function DoudizhuTable({
                 </span>
                 <span
                   className={s.turnTime}
-                  aria-label={`${seconds} ${t.time}`}
+                  role="timer"
+                  aria-live="off"
+                  aria-label={timerLabel}
+                  title={timerLabel}
+                  data-ddz-countdown={seconds}
+                  data-urgent={timerUrgent || undefined}
                 >
-                  {seconds}
+                  <span>{seconds}</span>
+                  <span className={s.timeUnit} aria-hidden="true">
+                    {t.timeShort}
+                  </span>
                 </span>
               </div>
             </div>
@@ -500,7 +516,9 @@ export function DoudizhuTable({
                 ))}
               </div>
               {!state.targetPlay && state.phase === "BIDDING" && (
-                <span className={s.emptyPlay}>{`${t.bidScore} 1 · 2 · 3`}</span>
+                <span
+                  className={s.emptyPlay}
+                >{`${t.bidScore} ${[1, 2, 3].map((score) => doudizhuBidLabel(score, locale)).join(" · ")}`}</span>
               )}
             </section>
             <div
@@ -588,9 +606,13 @@ export function DoudizhuTable({
                       (score > 0 && score <= state.bid.highestScore)
                     }
                     onClick={() => void onAction({ type: "BID", score })}
-                    aria-label={score ? `${t.bidScore} ${score}` : t.noBid}
+                    aria-label={
+                      score
+                        ? `${t.bidScore} ${doudizhuBidLabel(score, locale)}`
+                        : t.noBid
+                    }
                   >
-                    {score || t.noBid}
+                    {score ? doudizhuBidLabel(score, locale) : t.noBid}
                   </button>
                 ))}
               </div>
@@ -709,7 +731,20 @@ export function DoudizhuTable({
         <DoudizhuDialog title={t.hand} onClose={() => setExpanded(false)}>
           <div className={`${s.turn} ${isTurn ? s.ownTurn : ""}`}>
             <span>{turnText}</span>
-            <span className={s.turnTime}>{seconds}</span>
+            <span
+              className={s.turnTime}
+              role="timer"
+              aria-live="off"
+              aria-label={timerLabel}
+              title={timerLabel}
+              data-ddz-countdown={seconds}
+              data-urgent={timerUrgent || undefined}
+            >
+              <span>{seconds}</span>
+              <span className={s.timeUnit} aria-hidden="true">
+                {t.timeShort}
+              </span>
+            </span>
           </div>
           <DoudizhuHand
             layout="grid"
