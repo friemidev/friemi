@@ -55,3 +55,7 @@ skills-folder/
 
 # Local migration backups
 migration-backups/
+
+# Local Dou Dizhu browser evidence and generated preview bundle
+.playwright-cli/
+output/playwright/doudizhu*

@@ -14,6 +14,7 @@ export type GameToolKind =
   | "AVALON"
   | "BOTC"
   | "DICE"
+  | "DOUDIZHU"
   | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
@@ -120,6 +121,24 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     maxPlayers: 10,
     phase: { "zh-CN": "抢先体验", en: "Early access", fr: "Accès anticipé" },
     title: { "zh-CN": "UNO", en: "UNO", fr: "UNO" },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "planned",
+    description: {
+      "zh-CN": "三位朋友，叫分定地主，搭档出完手牌。",
+      en: "Three friends, one landlord. Bid for your role and play every card.",
+      fr: "Trois amis, un propriétaire. Enchérissez, puis jouez toutes vos cartes.",
+    },
+    href: "/game-tools/doudizhu",
+    icon: Layers3,
+    imageSrc: "/game-tools/doudizhu/logo.svg",
+    kind: "DOUDIZHU",
+    earlyAccess: true,
+    minPlayers: 3,
+    maxPlayers: 3,
+    phase: { "zh-CN": "开发预览", en: "Development preview", fr: "Aperçu de développement" },
+    title: { "zh-CN": "斗地主", en: "Dou Dizhu", fr: "Dou Dizhu" },
   },
   {
     accent: "#F09182",

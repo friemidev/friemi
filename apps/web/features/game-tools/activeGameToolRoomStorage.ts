@@ -11,7 +11,7 @@ export type StoredActiveGameToolRoom = {
   code: string;
   href: string;
   id: string;
-  kind: "AVALON" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
+  kind: "AVALON" | "DOUDIZHU" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
   locale: string;
   privateSeatHref: string | null;
   /** Required for Draw & Guess, Dice and UNO shortcuts; older games retain their format. */
@@ -24,7 +24,7 @@ export function canUseStoredActiveGameToolRoom(
   room: Pick<StoredActiveGameToolRoom, "kind" | "profileId">,
   profileId?: string | null,
 ) {
-  return !["DRAW_GUESS", "DICE", "UNO"].includes(room.kind) || Boolean(profileId && room.profileId === profileId);
+  return !["DRAW_GUESS", "DICE", "UNO", "DOUDIZHU"].includes(room.kind) || Boolean(profileId && room.profileId === profileId);
 }
 
 export function parseStoredActiveGameToolRoom(raw: string | null, locale: string, profileId?: string | null): StoredActiveGameToolRoom | null {

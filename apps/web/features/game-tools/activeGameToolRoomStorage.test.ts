@@ -31,6 +31,15 @@ test("dice room shortcut belongs to the signed-in player", () => {
   assert.equal(parseStoredActiveGameToolRoom(JSON.stringify(diceRoom), "en", "player-b"), null);
 });
 
+test("Dou Dizhu room shortcuts cannot expose a previous account's table", () => {
+  const room = { ...drawGuessRoom, kind: "DOUDIZHU" as const, href: "/en/game-tools/doudizhu/rooms/room-a" };
+  const raw = JSON.stringify(room);
+  assert.deepEqual(parseStoredActiveGameToolRoom(raw, "en", "player-a"), room);
+  assert.equal(parseStoredActiveGameToolRoom(raw, "en", "player-b"), null);
+  const { profileId: _owner, ...legacy } = room;
+  assert.equal(parseStoredActiveGameToolRoom(JSON.stringify(legacy), "en", "player-a"), null);
+});
+
 test("other games retain legacy shortcut support, including private Werewolf seats", () => {
   const { profileId: _owner, ...legacy } = drawGuessRoom;
   for (const kind of ["AVALON", "STORYTELLER", "WEREWOLF"] as const) {

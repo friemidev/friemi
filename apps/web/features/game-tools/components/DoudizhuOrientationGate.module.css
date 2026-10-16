@@ -1,0 +1,125 @@
+.root {
+  --gate-ink: #30425c;
+  --gate-sky: #3c73b0;
+  --gate-mist: #dcecf9;
+  --gate-paper: #fffcf5;
+  color: var(--gate-ink);
+}
+.prompt {
+  display: none;
+}
+.root:fullscreen {
+  overflow: auto;
+  background: var(--gate-mist);
+  padding: env(safe-area-inset-top, 0px)
+    max(10px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px)
+    max(10px, env(safe-area-inset-left, 0px));
+}
+@media (max-width: 767px) and (orientation: portrait) {
+  .content {
+    display: none;
+  }
+  .prompt {
+    display: flex;
+    min-height: calc(100svh - 120px);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 36px 24px max(28px, env(safe-area-inset-bottom, 0px));
+    gap: 18px;
+  }
+  .phone {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: var(--gate-paper);
+    margin-bottom: 10px;
+  }
+  .phone > svg:first-child {
+    transform: rotate(-90deg);
+  }
+  .rotate {
+    position: absolute;
+    right: 8px;
+    top: 7px;
+    color: var(--gate-sky);
+  }
+  .phone span {
+    position: absolute;
+    font-size: 23px;
+    color: var(--gate-sky);
+  }
+  .prompt h1 {
+    margin: 0;
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+  }
+  .prompt p {
+    max-width: 320px;
+    margin: 0;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .enter,
+  .back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 12px 22px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 14px;
+    border: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .enter {
+    background: var(--gate-sky);
+    color: white;
+    box-shadow: 0 4px 0 var(--gate-ink);
+    margin: 4px 0;
+  }
+  .enter:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--gate-ink);
+  }
+  .enter:disabled {
+    opacity: 0.6;
+  }
+  .back {
+    color: var(--gate-ink);
+    background: transparent;
+    text-decoration: none;
+  }
+  .enter:focus-visible,
+  .back:focus-visible {
+    outline: 3px solid var(--gate-ink);
+    outline-offset: 4px;
+  }
+  .prompt .timer {
+    font-size: 12px;
+    color: var(--gate-ink);
+    opacity: 0.8;
+  }
+  .prompt .manual {
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--gate-paper);
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter:active {
+    transform: none;
+  }
+}

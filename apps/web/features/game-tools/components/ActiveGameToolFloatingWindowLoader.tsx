@@ -6,6 +6,7 @@ import {
 } from "../gameToolRooms";
 import { withLocale } from "@/lib/routes";
 import { isUnoEnabled } from "../unoFlags";
+import { isDoudizhuEnabled } from "../doudizhuFlags";
 
 export async function ActiveGameToolFloatingWindowLoader({
   locale,
@@ -32,6 +33,7 @@ export async function ActiveGameToolFloatingWindowLoader({
       locale={locale}
       profileId={profileId}
       unoEnabled={isUnoEnabled()}
+      doudizhuEnabled={isDoudizhuEnabled()}
       activeRoom={
         room
           ? {

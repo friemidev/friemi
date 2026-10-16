@@ -5,9 +5,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const prismaOptions: Prisma.PrismaClientOptions = {
-  // Existing games must remain readable before the UNO migration is applied.
-  // UNO only filters/writes this index column; its deadline is read from state.
-  omit: { gameToolRoom: { unoDeadlineAt: true } },
+  // Existing games must remain readable before a gated game's migration is applied.
+  // Dou Dizhu explicitly selects its new fields inside its enabled service.
+  omit: { gameToolRoom: { unoDeadlineAt: true, ddzDeadlineAt: true }, gameToolSeat: { appearance: true } },
 };
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);

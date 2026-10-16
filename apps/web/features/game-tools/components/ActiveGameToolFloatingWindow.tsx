@@ -21,7 +21,7 @@ type ActiveGameToolFloatingWindowProps = {
     code: string;
     href: string;
     id: string;
-    kind: "AVALON" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
+    kind: "AVALON" | "DOUDIZHU" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
     title: string;
@@ -29,6 +29,7 @@ type ActiveGameToolFloatingWindowProps = {
   locale: string;
   profileId?: string | null;
   unoEnabled?: boolean;
+  doudizhuEnabled?: boolean;
 };
 
 function getCopy(locale: string) {
@@ -39,6 +40,7 @@ function getCopy(locale: string) {
       drawGuess: "Dessine et devine en cours",
       dice: "Perudo en cours",
       uno: "UNO en cours",
+      doudizhu: "Dou Dizhu en cours",
       seat: "Place",
       storyteller: "Table en cours",
       werewolf: "Loups-garous en cours",
@@ -52,6 +54,7 @@ function getCopy(locale: string) {
       drawGuess: "Draw & Guess running",
       dice: "Liar’s Dice running",
       uno: "UNO running",
+      doudizhu: "Dou Dizhu running",
       seat: "Seat",
       storyteller: "Game running",
       werewolf: "Werewolf running",
@@ -64,6 +67,7 @@ function getCopy(locale: string) {
     drawGuess: "你画我猜进行中",
     dice: "吹牛进行中",
     uno: "UNO 进行中",
+    doudizhu: "斗地主进行中",
     seat: "座位",
     storyteller: "桌游进行中",
     werewolf: "狼人杀进行中",
@@ -86,6 +90,7 @@ function getKindLabel(
     return copy.drawGuess;
   }
 
+  if (kind === "DOUDIZHU") return copy.doudizhu;
   if (kind === "UNO") return copy.uno;
   if (kind === "DICE") return copy.dice;
 
@@ -105,6 +110,7 @@ export function ActiveGameToolFloatingWindow({
   locale,
   profileId,
   unoEnabled = false,
+  doudizhuEnabled = false,
 }: ActiveGameToolFloatingWindowProps) {
   const pathname = usePathname();
   const [storedRoom, setStoredRoom] = useState<StoredActiveGameToolRoom | null>(
@@ -144,7 +150,7 @@ export function ActiveGameToolFloatingWindow({
   }, [locale, profileId]);
 
   useEffect(() => {
-    if (!activeRoom || (["DRAW_GUESS", "DICE", "UNO"].includes(activeRoom.kind) && !profileId)) {
+    if (!activeRoom || (["DRAW_GUESS", "DICE", "UNO", "DOUDIZHU"].includes(activeRoom.kind) && !profileId)) {
       return;
     }
 
@@ -162,7 +168,7 @@ export function ActiveGameToolFloatingWindow({
         JSON.stringify({
           ...activeRoom,
           locale,
-          ...(["DRAW_GUESS", "DICE", "UNO"].includes(activeRoom.kind) ? { profileId } : {}),
+          ...(["DRAW_GUESS", "DICE", "UNO", "DOUDIZHU"].includes(activeRoom.kind) ? { profileId } : {}),
         } satisfies StoredActiveGameToolRoom),
       );
       window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
@@ -182,7 +188,7 @@ export function ActiveGameToolFloatingWindow({
     return null;
   }
 
-  if (!currentRoom || currentRoom.kind === "UNO" && !unoEnabled) {
+  if (!currentRoom || currentRoom.kind === "UNO" && !unoEnabled || currentRoom.kind === "DOUDIZHU" && !doudizhuEnabled) {
     return null;
   }
 
@@ -218,16 +224,18 @@ export function ActiveGameToolFloatingWindow({
       title={label}
     >
       <span className="absolute inset-1 rounded-full bg-[#F1F2E3]/12" />
-      {currentRoom.kind === "UNO" ? (
+      {currentRoom.kind === "DOUDIZHU" ? (
+        <Image alt="" className="relative h-8 w-8 object-contain" height={32} src="/game-tools/doudizhu/logo.svg" width={32} />
+      ) : currentRoom.kind === "UNO" ? (
         <Image alt="" className="relative h-8 w-8 rounded-lg object-contain" height={32} src="/game-tools/uno/logo.png" width={32} />
       ) : currentRoom.kind === "DRAW_GUESS" || currentRoom.kind === "DICE" ? (
         <Image alt="" className="relative h-7 w-7 object-contain" height={28} src={currentRoom.kind === "DICE" ? "/game-tools/dice/logo.webp" : "/game-tools/draw-guess/logo.png"} width={28} />
       ) : (
         <Icon className="relative h-5 w-5 text-[#F1F2E3]" strokeWidth={2.35} />
       )}
-      {currentRoom.seatNumber ? (
+      {currentRoom.seatNumber !== null ? (
         <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F1F2E3] px-1 text-[10px] font-bold leading-none text-[#052F28] ring-2 ring-white">
-          {currentRoom.seatNumber}
+          {currentRoom.kind === "DOUDIZHU" ? currentRoom.seatNumber + 1 : currentRoom.seatNumber}
         </span>
       ) : null}
       <span className="sr-only">

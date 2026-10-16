@@ -33,7 +33,10 @@
     "uno:test-persistence": "node --conditions=react-server --import tsx scripts/test-uno-persistence.ts",
     "draw-guess:preview-cron": "node scripts/configure-draw-guess-preview-cron.mjs",
     "draw-guess:production-cron": "node scripts/configure-draw-guess-production-cron.mjs",
-    "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts"
+    "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts",
+    "doudizhu:preview": "node scripts/build-doudizhu-preview.mjs && node scripts/serve-doudizhu-preview.mjs",
+    "doudizhu:deadlines": "node scripts/run-doudizhu-deadlines.mjs",
+    "doudizhu:test-persistence": "node --conditions=react-server --import tsx scripts/test-doudizhu-persistence.ts"
   },
   "dependencies": {
     "@capacitor/keyboard": "7.0.6",

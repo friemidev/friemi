@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolCard } from "@/features/game-tools/components/GameToolCard";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
 import { isDiceEnabled } from "@/features/game-tools/diceAvailability";
+import { isDoudizhuEnabled } from "@/features/game-tools/doudizhuFlags";
 import { isUnoEnabled } from "@/features/game-tools/unoFlags";
 import { isDrawGuessChainEnabled, isDrawGuessClassicEnabled } from "@/features/game-tools/drawGuessFlags";
 import {
@@ -57,6 +58,7 @@ function getMobileGameToolsCopy(locale: string) {
         DRAW_GUESS: "Dessiner, deviner, transmettre.",
         DICE: "Lancer les dés ou jouer entre amis.",
         UNO: "Couleurs et chiffres.",
+        DOUDIZHU: "Trois amis autour des cartes.",
         OTHER: "Plus d'outils à venir.",
         STORYTELLER: "Grimoire et rythme de nuit.",
         WEREWOLF: "Rôles, morts et résultat.",
@@ -77,6 +79,7 @@ function getMobileGameToolsCopy(locale: string) {
         DRAW_GUESS: "Draw, guess, pass it on.",
         DICE: "Roll freely or play with friends.",
         UNO: "Match colors or numbers.",
+        DOUDIZHU: "A three-player card table.",
         OTHER: "More tools later.",
         STORYTELLER: "Grimoire and night flow.",
         WEREWOLF: "Roles, deaths, and result.",
@@ -96,6 +99,7 @@ function getMobileGameToolsCopy(locale: string) {
       DRAW_GUESS: "抢答或接龙，画出意想不到。",
       DICE: "自由摇骰 · 好友吹牛",
       UNO: "配颜色、接数字。",
+      DOUDIZHU: "三人叫分 · 好友搭档",
       OTHER: "更多工具会继续接入。",
       STORYTELLER: "魔典和夜晚流程。",
       WEREWOLF: "发身份、记生死、看结算。",
@@ -130,7 +134,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const tools = gameToolDefinitions;
   const renderCard = (tool: (typeof tools)[number], headingLevel: 2 | 3) => (
     <GameToolCard
-      available={tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available"}
+      available={tool.kind === "DOUDIZHU" ? isDoudizhuEnabled() : tool.kind === "UNO" ? unoAvailable : tool.kind === "DICE" ? diceAvailable : tool.kind === "DRAW_GUESS" ? drawGuessAvailable : tool.availability === "available"}
       description={mobileCopy.intros[tool.kind]}
       headingLevel={headingLevel}
       key={tool.kind}

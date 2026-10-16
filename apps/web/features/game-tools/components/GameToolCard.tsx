@@ -30,7 +30,7 @@ export function GameToolCard({
 }: GameToolCardProps) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const CardLink = tool.kind === "DICE" ? "a" : Link;
-  const illustrated = ["DRAW_GUESS", "DICE", "UNO"].includes(tool.kind);
+  const illustrated = ["DRAW_GUESS", "DICE", "UNO", "DOUDIZHU"].includes(tool.kind);
   const playerLabel = locale === "fr" ? "joueurs" : locale === "en" ? "players" : "人";
   const comingLabel = locale === "fr" ? "Bientôt" : locale === "en" ? "Soon" : "敬请期待";
   const cardClassName = "group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.3rem] border border-sand/75 bg-white text-ink shadow-sm";

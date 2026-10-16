@@ -374,6 +374,7 @@ enum PlanetMembershipStatus {
 enum GameToolKind {
   AVALON
   DICE
+  DOUDIZHU
   DRAW_GUESS
   UNO
   STORYTELLER
@@ -2580,6 +2581,7 @@ model GameToolRoom {
   cancelledAt         DateTime?
   drawGuessDeadlineAt DateTime?
   unoDeadlineAt       DateTime?
+  ddzDeadlineAt       DateTime?
   wordBankId          String?                @db.VarChar(64)
   wordBank            DrawGuessWordBank?     @relation(fields: [wordBankId], references: [id], onDelete: SetNull)
   revision            Int                    @default(0)
@@ -2594,6 +2596,8 @@ model GameToolRoom {
   drawGuessReports    DrawGuessReport[]
   unoCommands         UnoCommand[]
   unoRounds           UnoRound[]
+  ddzCommands         DdzCommand[]
+  ddzEvents           DdzEvent[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
@@ -2601,8 +2605,54 @@ model GameToolRoom {
   @@index([kind, status, updatedAt])
   @@index([kind, status, drawGuessDeadlineAt])
   @@index([kind, status, unoDeadlineAt])
+  @@index([kind, status, ddzDeadlineAt])
   @@index([wordBankId])
   @@index([code])
+}
+
+// Private command receipts: no hand snapshots. createKey makes room creation idempotent.
+model DdzCommand {
+  id             String        @id @default(cuid())
+  roomId         String
+  room           GameToolRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  commandId      String        @db.VarChar(64)
+  createKey      String?       @unique @db.VarChar(160)
+  actorProfileId String
+  actionHash     String        @db.VarChar(64)
+  gameNo         Int
+  result         Json
+  createdAt      DateTime      @default(now())
+
+  @@unique([roomId, commandId])
+  @@index([actorProfileId, createdAt])
+}
+
+// Deliberately no cascading room FK: retain summaries after private room cleanup.
+model DdzRound {
+  id                    String   @id @default(cuid())
+  roomId                String
+  gameNo                Int
+  participantProfileIds String[]
+  summary               Json
+  finishedAt            DateTime
+  createdAt             DateTime @default(now())
+
+  @@unique([roomId, gameNo])
+  @@index([roomId, finishedAt])
+  @@index([finishedAt])
+}
+
+model DdzEvent {
+  id        String       @id @default(cuid())
+  roomId    String
+  room      GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  eventSeq  Int
+  gameNo    Int
+  payload   Json
+  createdAt DateTime     @default(now())
+
+  @@unique([roomId, eventSeq])
+  @@index([roomId, gameNo])
 }
 
 model UnoCommand {
@@ -2754,6 +2804,7 @@ model GameToolSeat {
   guestName      String?
   roleKey        String?
   roleAlignment  String?
+  appearance     Json?
   privatePayload Json?
   readyAt        DateTime?
   joinedAt       DateTime             @default(now())
