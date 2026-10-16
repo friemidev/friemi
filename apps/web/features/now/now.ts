@@ -372,6 +372,20 @@ export function getNowCopy(locale: string) {
       city: "Paris",
       formError: "Vérifiez les champs et réessayez.",
       closed: "Cette invitation n'accepte plus d'intérêt.",
+      deleteInvite: "Supprimer l'envie",
+      deleteConfirmTitle: "Supprimer cette envie ?",
+      deleteConfirmDescription:
+        "Cette envie, les marques d'intérêt et les messages de groupe seront supprimés définitivement.",
+      deleteRelatedHint:
+        "Les sorties créées et les discussions privées seront conservées.",
+      deleteCancel: "Garder l'envie",
+      deleteConfirm: "Supprimer",
+      deleting: "Suppression…",
+      deleteError: "La suppression a échoué. Réessayez.",
+      deleteUnavailable:
+        "Cette envie n'existe plus ou vous n'êtes pas son hôte.",
+      deleted: "L'envie a été supprimée.",
+      deletePreview: "La suppression est désactivée pour cet exemple.",
     };
   if (locale === "en")
     return {
@@ -406,6 +420,18 @@ export function getNowCopy(locale: string) {
       city: "Paris",
       formError: "Check the fields and try again.",
       closed: "This invite is no longer accepting interest.",
+      deleteInvite: "Delete NOW",
+      deleteConfirmTitle: "Delete this NOW?",
+      deleteConfirmDescription:
+        "This invite, its raised hands and group notes will be permanently deleted.",
+      deleteRelatedHint: "Existing hangouts and private chats will be kept.",
+      deleteCancel: "Keep NOW",
+      deleteConfirm: "Delete",
+      deleting: "Deleting…",
+      deleteError: "Could not delete this NOW. Please try again.",
+      deleteUnavailable: "This NOW no longer exists or you are not its host.",
+      deleted: "Your NOW has been deleted.",
+      deletePreview: "Deleting is disabled for this sample invite.",
     };
   return {
     heading: "此刻",
@@ -439,5 +465,17 @@ export function getNowCopy(locale: string) {
     city: "巴黎",
     formError: "请检查填写内容后重试。",
     closed: "这条邀约已停止接受举手。",
+    deleteInvite: "删除此刻",
+    deleteConfirmTitle: "删除这条此刻？",
+    deleteConfirmDescription:
+      "这条此刻、举手记录和同频留言会被永久删除，无法恢复。",
+    deleteRelatedHint: "已创建的聚吧和私聊会保留。",
+    deleteCancel: "保留此刻",
+    deleteConfirm: "确认删除",
+    deleting: "正在删除…",
+    deleteError: "删除失败，请稍后重试。",
+    deleteUnavailable: "这条此刻已不存在，或你不是它的发起者。",
+    deleted: "此刻已删除。",
+    deletePreview: "示例邀约不支持实际删除。",
   };
 }

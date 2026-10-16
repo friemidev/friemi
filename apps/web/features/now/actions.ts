@@ -8,6 +8,7 @@ import {
   createNotifications,
 } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { invalidateUnreadBadgeCache } from "@/features/notifications/unreadBadgeRedisCache";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import {
@@ -18,6 +19,7 @@ import {
   isNowVisibilityHours,
   nowOpenCity,
 } from "./now";
+import { deleteNowInviteForOrganizer } from "./deleteNowInvite";
 
 export type NowActionState = { error?: string; ok?: boolean };
 
@@ -76,6 +78,37 @@ export async function createNowInviteAction(
   });
   refreshNow(locale, invite.id);
   redirect(withLocale(locale, `/now/${invite.id}?justPublished=1`));
+}
+
+export async function deleteNowInviteAction(
+  _previous: NowActionState,
+  form: FormData,
+): Promise<NowActionState> {
+  const locale = field(form, "locale") || "zh-CN";
+  const copy = getNowCopy(locale);
+  const inviteId = field(form, "inviteId");
+  if (!inviteId || inviteId.length > 100) return { error: copy.formError };
+
+  const profile = await ensureCurrentUserProfile(locale, `/now/${inviteId}`);
+  let deleted;
+  try {
+    deleted = await prisma.$transaction((tx) =>
+      deleteNowInviteForOrganizer(tx, inviteId, profile.id),
+    );
+  } catch (error) {
+    console.error("Failed to delete NOW invite", error);
+    return { error: copy.deleteError };
+  }
+  if (!deleted) return { error: copy.deleteUnavailable };
+
+  await invalidateUnreadBadgeCache(deleted.recipientIds);
+  refreshNow(locale, inviteId);
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/messages"));
+  for (const conversationId of deleted.conversationIds) {
+    revalidatePath(withLocale(locale, `/messages/${conversationId}`));
+  }
+  redirect(withLocale(locale, "/now/mine?deleted=1"));
 }
 
 const interestSchema = z.object({

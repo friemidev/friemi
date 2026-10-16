@@ -3,11 +3,16 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { buildNoIndexMetadata } from "@/lib/seo";
-import { getNowCopy } from "@/features/now/now";
+import { getNowCopy, getNowPreviewLabel } from "@/features/now/now";
+import { getNowPreviewRows } from "@/features/now/nowPreview";
+import { isNowPreviewEnabled } from "@/features/now/previewAccess";
 import { getMyNowInvites } from "@/features/now/queries";
 import { NowInviteRow } from "@/features/now/NowInviteRow";
 
-type PageProps = { params: Promise<{ locale: string }> };
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ previewNow?: string; deleted?: string }>;
+};
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps) {
@@ -17,24 +22,36 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function MyNowPage({ params }: PageProps) {
+export default async function MyNowPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale, "/now/mine");
-  const { created, interested } = await getMyNowInvites(profile.id);
+  const query = (await searchParams) ?? {};
+  const preview = isNowPreviewEnabled() && query.previewNow === "1";
+  const profile = preview
+    ? null
+    : await ensureCurrentUserProfile(locale, "/now/mine");
+  const { created, interested } = preview
+    ? { created: getNowPreviewRows(Date.now()), interested: [] }
+    : await getMyNowInvites(profile!.id);
   const copy = getNowCopy(locale);
   return (
     <main className="now-flow-page app-mobile-page-shell min-h-svh bg-[#FAFCF9] px-5 pb-28 pt-5 text-[#143D32]">
       <div className="mx-auto max-w-[640px]">
         <div className="flex items-center justify-between">
           <Link
-            href={withLocale(locale, "/mobile-home")}
+            href={withLocale(
+              locale,
+              preview ? "/mobile-home?previewNow=1" : "/mobile-home",
+            )}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white text-[#1E6248] shadow-sm"
             aria-label="Back"
           >
             <ArrowLeft size={20} />
           </Link>
           <Link
-            href={withLocale(locale, "/now/new")}
+            href={withLocale(
+              locale,
+              preview ? "/now/new?previewNow=1" : "/now/new",
+            )}
             className="inline-flex min-h-11 items-center gap-1 text-[13px] font-bold text-[#1E7353]"
           >
             <Plus size={16} />
@@ -42,12 +59,31 @@ export default async function MyNowPage({ params }: PageProps) {
           </Link>
         </div>
         <h1 className="mt-4 text-[27px] font-bold">{copy.mine}</h1>
+        {preview ? (
+          <p className="mt-2 text-xs text-ink/70">
+            {getNowPreviewLabel(locale)}
+          </p>
+        ) : null}
+        {query.deleted === "1" && !preview ? (
+          <p
+            role="status"
+            className="mt-4 rounded-2xl bg-meadow/10 px-4 py-3 text-sm font-semibold text-forest"
+          >
+            {copy.deleted}
+          </p>
+        ) : null}
         <section className="mt-7">
           <h2 className="mb-3 text-[17px] font-bold">{copy.myCreated}</h2>
           {created.length ? (
             <div className="grid gap-3">
               {created.map((invite) => (
-                <NowInviteRow invite={invite} key={invite.id} locale={locale} />
+                <NowInviteRow
+                  invite={invite}
+                  key={invite.id}
+                  locale={locale}
+                  showDeleteAction
+                  preview={preview}
+                />
               ))}
             </div>
           ) : (

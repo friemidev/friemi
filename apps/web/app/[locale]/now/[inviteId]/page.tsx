@@ -24,6 +24,7 @@ import {
   isNowVisible,
 } from "@/features/now/now";
 import { selectNowInterestAction } from "@/features/now/actions";
+import { NowDeleteInviteButton } from "@/features/now/NowDeleteInviteButton";
 import { getNowInviteDetail } from "@/features/now/queries";
 import { getNowPreviewDetail } from "@/features/now/nowPreview";
 import { isNowPreviewEnabled } from "@/features/now/previewAccess";
@@ -128,12 +129,25 @@ export default async function NowInvitePage({
           >
             <ArrowLeft size={20} />
           </Link>
-          <Link
-            href={withLocale(locale, "/now/mine")}
-            className="inline-flex min-h-11 items-center text-[13px] font-semibold text-[#1E7353]"
-          >
-            {copy.mine}
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href={withLocale(
+                locale,
+                preview ? "/now/mine?previewNow=1" : "/now/mine",
+              )}
+              className="inline-flex min-h-11 items-center text-[13px] font-semibold text-[#1E7353]"
+            >
+              {copy.mine}
+            </Link>
+            {invite.isOrganizer ? (
+              <NowDeleteInviteButton
+                inviteId={invite.id}
+                title={invite.title}
+                locale={locale}
+                preview={preview}
+              />
+            ) : null}
+          </div>
         </div>
 
         {preview ? (

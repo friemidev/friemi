@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, MapPin, UsersRound } from "lucide-react";
 import { RetainedImage } from "@/components/media/RetainedImage";
 import { withLocale } from "@/lib/routes";
+import { NowDeleteInviteButton } from "./NowDeleteInviteButton";
 import {
   NowCountdownOrb,
   NowInlineInterestForm,
@@ -36,6 +37,7 @@ type NowInviteRowProps = {
   viewerId?: string | null;
   showInterestAction?: boolean;
   preview?: boolean;
+  showDeleteAction?: boolean;
 };
 
 export function NowInviteRow({
@@ -44,11 +46,15 @@ export function NowInviteRow({
   viewerId,
   showInterestAction = false,
   preview = false,
+  showDeleteAction = false,
 }: NowInviteRowProps) {
   const copy = getNowCopy(locale);
   const kind = getNowKind(invite.category);
   const active = isNowVisible(invite.expiresAt);
-  const href = withLocale(locale, `/now/${invite.id}`);
+  const href = withLocale(
+    locale,
+    `/now/${invite.id}${preview && showDeleteAction ? "?as=host" : ""}`,
+  );
   const canRaiseHand =
     showInterestAction &&
     active &&
@@ -147,6 +153,13 @@ export function NowInviteRow({
         ) : (
           <NowInlineInterestForm inviteId={invite.id} locale={locale} />
         )
+      ) : showDeleteAction ? (
+        <NowDeleteInviteButton
+          inviteId={invite.id}
+          title={invite.title}
+          locale={locale}
+          preview={preview}
+        />
       ) : (
         <Link
           href={href}
