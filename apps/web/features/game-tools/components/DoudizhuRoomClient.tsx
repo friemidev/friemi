@@ -19,6 +19,7 @@ import {
 } from "../doudizhuRealtime";
 import { doudizhuErrorMessage, getDoudizhuCopy } from "../doudizhuCopy";
 import { sendDdzRoomWrite, type DdzPendingWrite } from "../doudizhuRoomRequest";
+import { clearDdzRoomShortcuts } from "../doudizhuRoomStorage";
 import { DoudizhuOrientationGate } from "./DoudizhuOrientationGate";
 import { DoudizhuAudioProvider } from "./DoudizhuAudioControls";
 import { DoudizhuLobby } from "./DoudizhuLobby";
@@ -95,6 +96,24 @@ function DoudizhuRoomSession({
     controller = useRef<AbortController | null>(null);
   const endpoint = `/api/game-tools/doudizhu/rooms/${encodeURIComponent(initialRoom.id)}`,
     storageKey = `friemi:ddz:pending:${accountId}:${initialRoom.id}`;
+  const clearShortcuts = useCallback(
+    (keepResume = false) => {
+      try {
+        if (
+          clearDdzRoomShortcuts(
+            localStorage,
+            accountId,
+            initialRoom.id,
+            keepResume,
+          )
+        )
+          window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+      } catch {
+        /* Storage is optional. */
+      }
+    },
+    [accountId, initialRoom.id],
+  );
   function savePending(write: DdzPendingWrite | null) {
     pending.current = write;
     try {
@@ -158,7 +177,7 @@ function DoudizhuRoomSession({
     [initialRoom.viewerSeat],
   );
   const refresh = useCallback(async () => {
-    if (!mounted.current || refreshing.current) return;
+    if (!mounted.current || refreshing.current || accessError) return;
     refreshing.current = true;
     const request = new AbortController();
     controller.current = request;
@@ -168,14 +187,13 @@ function DoudizhuRoomSession({
         cache: "no-store",
         signal: request.signal,
       });
-      if (response.status === 401 || response.status === 403) {
-        if (mounted.current)
-          setAccessError(
-            response.status === 401 ? "SIGN_IN_REQUIRED" : "NOT_A_MEMBER",
-          );
-        return;
-      }
-      const data = await response.json();
+      const data =
+        response.status === 401 || response.status === 403
+          ? {
+              error:
+                response.status === 401 ? "SIGN_IN_REQUIRED" : "NOT_A_MEMBER",
+            }
+          : await response.json();
       if (!mounted.current) return;
       if (
         ["SIGN_IN_REQUIRED", "NOT_A_MEMBER", "ROOM_NOT_FOUND"].includes(
@@ -183,9 +201,15 @@ function DoudizhuRoomSession({
         )
       ) {
         if (
-          pending.current?.path === "/leave" &&
+          ["/leave", "/close"].includes(pending.current?.path ?? "") &&
           data.error !== "SIGN_IN_REQUIRED"
         ) {
+          const keepResume =
+            pending.current?.path === "/leave" &&
+            ["BIDDING", "PLAYING"].includes(latest.current.state.phase);
+          savePending(null);
+          setUnresolved(false);
+          clearShortcuts(keepResume);
           window.location.assign(`/${locale}/game-tools/doudizhu`);
           return;
         }
@@ -201,7 +225,11 @@ function DoudizhuRoomSession({
       clearTimeout(timer);
       refreshing.current = false;
     }
-  }, [endpoint, locale, receive]);
+  }, [endpoint, locale, receive, accessError, clearShortcuts]);
+  useEffect(() => {
+    if (!accessError) return;
+    clearShortcuts();
+  }, [accessError, clearShortcuts]);
   useEffect(() => {
     mounted.current = true;
     try {
@@ -227,6 +255,7 @@ function DoudizhuRoomSession({
     };
   }, [storageKey]);
   useEffect(() => {
+    if (accessError) return;
     const focus = () => {
       if (!document.hidden) void refresh();
     };
@@ -246,8 +275,9 @@ function DoudizhuRoomSession({
       window.removeEventListener("online", focus);
       document.removeEventListener("visibilitychange", focus);
     };
-  }, [refresh, subscribed]);
+  }, [refresh, subscribed, accessError]);
   useEffect(() => {
+    if (accessError) return;
     const config = getDdzRealtimeBrowserConfig();
     if (!config) return;
     let disposed = false;
@@ -301,7 +331,7 @@ function DoudizhuRoomSession({
           .finally(() => client.realtime.disconnect());
       else client.realtime.disconnect();
     };
-  }, [initialRoom.id, accountId, refresh]);
+  }, [initialRoom.id, accountId, refresh, accessError]);
   async function submit(write: DdzPendingWrite) {
     if (inFlight.current || !mounted.current) return false;
     inFlight.current = true;
@@ -319,21 +349,14 @@ function DoudizhuRoomSession({
       setUnresolved(false);
       setOffline(false);
       if (
-        write.path === "/leave" &&
+        ["/leave", "/close"].includes(write.path) &&
         (result.status === "accepted" ||
           ["NOT_A_MEMBER", "ROOM_NOT_FOUND"].includes(result.error))
       ) {
-        try {
-          const active = JSON.parse(
-            localStorage.getItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY) ?? "null",
-          );
-          if (active?.id === room.id) {
-            localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
-            window.dispatchEvent(
-              new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT),
-            );
-          }
-        } catch {}
+        clearShortcuts(
+          write.path === "/leave" &&
+            ["BIDDING", "PLAYING"].includes(latest.current.state.phase),
+        );
         window.location.assign(`/${locale}/game-tools/doudizhu`);
         return true;
       }
@@ -431,12 +454,14 @@ function DoudizhuRoomSession({
             busy={busy || offline || unresolved}
             error={feedback}
             onReady={(ready) => void mutate("/ready", { ready })}
-            onSettings={(settings) => mutate("/settings", { settings }, "PATCH")}
+            onSettings={(settings) =>
+              mutate("/settings", { settings }, "PATCH")
+            }
             onStart={() => void command({ type: "START" })}
             onLeave={() => void mutate("/leave")}
-            onCharacter={(catId) =>
-              void mutate("/character", { catId }, "PATCH")
-            }
+            onCloseRoom={() => mutate("/close")}
+            onHistory={history}
+            onCharacter={(catId) => mutate("/character", { catId }, "PATCH")}
             onReact={(kind) => {
               if (pending.current || inFlight.current) return;
               void submit({

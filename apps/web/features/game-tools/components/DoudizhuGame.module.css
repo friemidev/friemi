@@ -1911,8 +1911,8 @@
 }
 .tableUtility {
   position: absolute;
-  right: 8px;
-  bottom: 160px;
+  right: 0;
+  bottom: calc(100% + 8px);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -2092,8 +2092,7 @@
     height: 44px;
   }
   .tableUtility {
-    bottom: 160px;
-    right: 2px;
+    right: 0;
   }
 }
 @media (max-height: 500px) and (max-width: 700px) and (orientation: landscape) {
@@ -2233,5 +2232,56 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .matchButton {
     padding-inline: 7px;
+  }
+}
+
+.tableUtility {
+  width: max-content;
+  min-width: 160px;
+  max-width: min(280px, calc(100vw - 24px));
+}
+.historyItem summary {
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.historyItem summary > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.historyItem summary time {
+  font-size: 12px;
+  flex: none;
+}
+.historyItem summary:focus-visible {
+  outline: 3px solid var(--ddz-sky);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.historyScores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 8px 0 0;
+}
+.historyScores > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.historyScores span {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.historyScores b {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .resultPlayer strong {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

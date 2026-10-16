@@ -15,22 +15,41 @@ export function DoudizhuDialog({
   title,
   children,
   onClose,
+  closeLabel = "Close",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
-    heading = useRef<HTMLHeadingElement>(null);
+    heading = useRef<HTMLHeadingElement>(null),
+    close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const node = ref.current,
       trigger =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
-    node?.showModal();
-    heading.current?.focus();
+    const portrait = matchMedia(
+      "(max-width: 767px) and (orientation: portrait)",
+    );
+    const dismissHiddenTableDialog = () => {
+      if (!portrait.matches || !node?.closest("[data-ddz-orientation]"))
+        return false;
+      // A hidden, open native dialog still makes the rotation prompt inert.
+      node.close();
+      close.current();
+      return true;
+    };
+    if (!dismissHiddenTableDialog()) {
+      node?.showModal();
+      heading.current?.focus();
+    }
+    portrait.addEventListener("change", dismissHiddenTableDialog);
     return () => {
+      portrait.removeEventListener("change", dismissHiddenTableDialog);
       node?.close();
       if (trigger?.isConnected) trigger.focus({ preventScroll: true });
     };
@@ -60,10 +79,14 @@ export function DoudizhuDialog({
         if (e.key !== "Tab") return;
         const controls = Array.from(
           e.currentTarget.querySelectorAll<HTMLElement>(
-            'button,a[href],input,select,[tabindex="0"]',
+            "button,a[href],input,select,textarea,summary,[tabindex]",
           ),
         ).filter(
-          (el) => !el.matches(":disabled") && el.getClientRects().length,
+          (el) =>
+            el.tabIndex >= 0 &&
+            !el.matches(":disabled,[inert]") &&
+            el.getClientRects().length &&
+            getComputedStyle(el).visibility !== "hidden",
         );
         const first = controls[0],
           last = controls.at(-1);
@@ -88,7 +111,7 @@ export function DoudizhuDialog({
           type="button"
           className={s.iconButton}
           onClick={onClose}
-          aria-label={title === "" ? "Close" : `${title} · ×`}
+          aria-label={closeLabel}
         >
           <X size={20} />
         </button>
@@ -155,7 +178,11 @@ export function DoudizhuHeader({
         </div>
       </header>
       {rules && (
-        <DoudizhuDialog title={t.rules} onClose={() => setRules(false)}>
+        <DoudizhuDialog
+          title={t.rules}
+          closeLabel={t.close}
+          onClose={() => setRules(false)}
+        >
           <ol className={s.rulesList}>
             {t.rulesLines.map((line) => (
               <li key={line}>{line}</li>
@@ -212,16 +239,67 @@ export function DoudizhuCatPicker({
   busy,
   onSelect,
   onClose,
+  error = "",
+  onRetry,
 }: {
   locale: string;
   catId: string;
   busy?: boolean;
-  onSelect: (id: DrawGuessCatId) => void;
+  onSelect: (id: DrawGuessCatId) => void | boolean | Promise<boolean>;
   onClose: () => void;
+  error?: string;
+  onRetry?: () => void;
 }) {
   const t = getDoudizhuCopy(locale);
+  const [submitting, setSubmitting] = useState(false),
+    [failed, setFailed] = useState(false);
+  const submitted = useRef<DrawGuessCatId | null>(null),
+    mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (failed && submitted.current === catId && !busy) onClose();
+  }, [catId, busy, failed, onClose]);
+  async function select(id: DrawGuessCatId) {
+    if (busy || submitting) return;
+    if (id === catId) {
+      onClose();
+      return;
+    }
+    submitted.current = id;
+    setSubmitting(true);
+    setFailed(false);
+    try {
+      const accepted = await onSelect(id);
+      if (!mounted.current) return;
+      if (accepted === false) setFailed(true);
+      else onClose();
+    } catch {
+      if (mounted.current) setFailed(true);
+    } finally {
+      if (mounted.current) setSubmitting(false);
+    }
+  }
   return (
-    <DoudizhuDialog title={t.chooseCat} onClose={onClose}>
+    <DoudizhuDialog title={t.chooseCat} closeLabel={t.close} onClose={onClose}>
+      {failed && (
+        <div className={s.feedback} role="alert">
+          <span>{error || t.changed}</span>
+          {onRetry && (
+            <button
+              className={s.textButton}
+              disabled={submitting}
+              onClick={onRetry}
+            >
+              {t.retry}
+            </button>
+          )}
+        </div>
+      )}
       <div className={s.catGrid}>
         {DRAW_GUESS_CATS.map((cat) => (
           <button
@@ -229,8 +307,8 @@ export function DoudizhuCatPicker({
             type="button"
             className={s.catOption}
             aria-pressed={catId === cat.id}
-            disabled={busy}
-            onClick={() => onSelect(cat.id)}
+            disabled={busy || submitting}
+            onClick={() => void select(cat.id)}
           >
             <DrawGuessCatSprite catId={cat.id} size={64} animated={false} />
             <span>{getDrawGuessCatName(cat.id, locale)}</span>

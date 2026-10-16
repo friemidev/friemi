@@ -62,5 +62,8 @@ export function listDdzHints(hand: readonly DdzCardId[] | readonly DdzCard[], ta
   }
   const power = (play: DdzPlay) => play.type === "ROCKET" ? 2 : play.type === "BOMB" ? 1 : 0;
   const splitCost = (play: DdzPlay) => [...groupDdzCards(play.cardIds)!].reduce((cost, [rank, used]) => cost + (used.length < groups.get(rank)!.length ? groups.get(rank)!.length - used.length : 0), 0);
-  return [...candidates.values()].sort((a, b) => power(a) - power(b) || a.mainRank - b.mainRank || splitCost(a) - splitCost(b) || b.cardCount - a.cardCount || a.type.localeCompare(b.type) || a.cardIds.join().localeCompare(b.cardIds.join())).slice(0, 128);
+  const sorted = [...candidates.values()].sort((a, b) => power(a) - power(b) || a.mainRank - b.mainRank || splitCost(a) - splitCost(b) || b.cardCount - a.cardCount || a.type.localeCompare(b.type) || a.cardIds.join().localeCompare(b.cardIds.join()));
+  // Wing combinations can fill the cap before the higher-power options are reached.
+  const overrides = sorted.filter((play) => power(play) > 0);
+  return [...sorted.filter((play) => power(play) === 0).slice(0, Math.max(0, 128 - overrides.length)), ...overrides];
 }

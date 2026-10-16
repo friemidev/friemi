@@ -238,6 +238,7 @@ export function DoudizhuPreview({
     return (
       <DoudizhuEntryClient
         locale={locale}
+        onHistory={async () => history}
         onPreviewRoom={() => {
           setEntry(false);
           returnLobby();
@@ -311,6 +312,23 @@ export function DoudizhuPreview({
                 );
             }}
             onLeave={() => setEntry(true)}
+            onCloseRoom={() => {
+              setState({
+                ...lobby(locale),
+                gameNo: state.gameNo,
+                turnId: state.turnId,
+                eventSeq: state.eventSeq,
+                handVersions: state.handVersions,
+              });
+              setReady([false, false, false]);
+              setCats(["scholar", "baker", "artist"]);
+              setSeat(0);
+              setReactions([]);
+              setError("");
+              setEntry(true);
+              return true;
+            }}
+            onHistory={async () => history}
             onReact={(kind) =>
               setReactions((prev) => [
                 ...prev.filter((r) => r.seat !== seat),

@@ -31,6 +31,7 @@ export function DoudizhuScoreboard({
   return (
     <DoudizhuDialog
       title={match.status === "COMPLETE" ? t.matchResults : t.scoreboard}
+      closeLabel={t.close}
       onClose={onClose}
     >
       <div className={s.scoreboard} data-ddz-scoreboard>

@@ -51,6 +51,31 @@ export function DoudizhuHand({
   const cardsKey = cards.map((card) => card.id).join(",");
   const latest = useRef({ cards, selected, onSelectionChange });
   latest.current = { cards, selected, onSelectionChange };
+  function cancelGesture() {
+    const current = gesture.current;
+    if (!current) return;
+    gesture.current = null;
+    if (root.current?.hasPointerCapture(current.pointerId))
+      root.current.releasePointerCapture(current.pointerId);
+    if (current.dragging) {
+      const owned = new Set(latest.current.cards.map((card) => card.id));
+      latest.current.onSelectionChange(
+        current.base.filter((id) => owned.has(id)),
+      );
+    }
+  }
+  useEffect(() => {
+    const hidden = () => {
+      if (document.hidden) cancelGesture();
+    };
+    window.addEventListener("blur", cancelGesture);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("blur", cancelGesture);
+      document.removeEventListener("visibilitychange", hidden);
+      gesture.current = null;
+    };
+  }, []);
   useLayoutEffect(() => {
     const node = root.current;
     if (!node || layout === "grid") return;
@@ -177,13 +202,7 @@ export function DoudizhuHand({
   function pointerCancel(event: PointerEvent<HTMLDivElement>) {
     const current = gesture.current;
     if (!current || current.pointerId !== event.pointerId) return;
-    gesture.current = null;
-    if (current.dragging) {
-      const owned = new Set(latest.current.cards.map((card) => card.id));
-      latest.current.onSelectionChange(
-        current.base.filter((id) => owned.has(id)),
-      );
-    }
+    cancelGesture();
   }
   function keyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
@@ -211,6 +230,7 @@ export function DoudizhuHand({
       ref={root}
       className={layout === "grid" ? s.grid : s.hand}
       aria-label={label}
+      role="group"
       data-ddz-motion-anchor={layout === "fan" ? "hand" : undefined}
       data-ddz-hand-layout={layout}
       style={
@@ -223,6 +243,7 @@ export function DoudizhuHand({
       onPointerMove={pointerMove}
       onPointerUp={pointerUp}
       onPointerCancel={pointerCancel}
+      onLostPointerCapture={pointerCancel}
     >
       {cards.map((card, index) => (
         <button

@@ -238,6 +238,9 @@ export async function commandDdzRoom(roomId: string, actor: string, command: Ddz
       else if (room.seats.length !== 3 || room.seats.some(s => !s.profileId)) error = "INVALID_PLAYERS";
       else if (!room.seats.every(s => s.readyAt && !s.leftAt && room.members.some(m => m.seatedSeatId === s.id && !m.leftAt && now - m.lastSeenAt.getTime() < PRESENCE_MS))) error = "PLAYERS_NOT_READY";
       else if (await activeElsewhere(tx, room.seats.map(s => s.profileId!), room.id)) error = "ACTIVE_ROOM_EXISTS";
+      // activeElsewhere locks these profile rows. An account deleted on another
+      // device must not enter a new game using its still-fresh ready heartbeat.
+      else if (await tx.userProfile.count({ where: { id: { in: room.seats.map(s => s.profileId!) }, status: "ACTIVE" } }) !== 3) error = "PLAYERS_NOT_READY";
       else { const result = startDdzGame(lobbyState(room), now, { deck: shuffle(), firstBidSeat: randomInt(3) }); next = result.state; error = result.error; }
     } else if (!error && command.action.type !== "START") {
       const action = command.action.type === "PLAY" ? { ...command.action, handVersion: command.handVersion } : command.action;
@@ -342,9 +345,18 @@ export async function reactDdzRoom(roomId: string, actor: string, input: { comma
     return error ? { error } : { room: view(room, actor, now)! };
   });
 }
+function historySummary(round: { summary: Prisma.JsonValue; finishedAt: Date }) {
+  return { ...(round.summary as unknown as Omit<DdzRoundSummary, "finishedAt">), finishedAt: round.finishedAt.toISOString() };
+}
 export async function getDdzRoomHistory(roomId: string, actor: string) {
   const rounds = await prisma.ddzRound.findMany({ where: { roomId, participantProfileIds: { has: actor } }, orderBy: { gameNo: "desc" }, take: 20 });
-  return { rounds: rounds.map(round => ({ ...(round.summary as unknown as Omit<DdzRoundSummary, "finishedAt">), finishedAt: round.finishedAt.toISOString() })) };
+  return { rounds: rounds.map(historySummary) };
+}
+export async function getDdzPlayerHistory(actor: string) {
+  // Summaries intentionally outlive closed rooms; membership today is not a
+  // substitute for the account roster saved when each round was settled.
+  const rounds = await prisma.ddzRound.findMany({ where: { participantProfileIds: { has: actor } }, orderBy: [{ finishedAt: "desc" }, { id: "desc" }], take: 20 });
+  return { rounds: rounds.map(round => ({ ...historySummary(round), roomId: round.roomId })) };
 }
 export async function sweepDueDdzRooms(limit = 100) {
   const rooms = await prisma.gameToolRoom.findMany({ where: { kind: "DOUDIZHU", status: { in: ["LOBBY", "IN_PROGRESS", "FINISHED"] }, ddzDeadlineAt: { lte: new Date() } }, orderBy: { ddzDeadlineAt: "asc" }, take: Math.max(1, Math.min(100, limit)), select: { id: true } });

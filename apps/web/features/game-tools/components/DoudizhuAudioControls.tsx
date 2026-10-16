@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -263,6 +264,34 @@ export function DoudizhuAudioControls(
 
 function DoudizhuAudioPanel({ locale }: { locale: string }) {
   const { preferences, update } = useContext(AudioContext)!;
+  const root = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (
+        root.current?.open &&
+        event.target instanceof Node &&
+        !root.current.contains(event.target)
+      )
+        root.current.open = false;
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        !root.current?.open ||
+        document.querySelector("dialog[open]")
+      )
+        return;
+      event.preventDefault();
+      root.current.open = false;
+      root.current.querySelector("summary")?.focus({ preventScroll: true });
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
   const t =
     locale === "zh-CN"
       ? {
@@ -294,7 +323,17 @@ function DoudizhuAudioPanel({ locale }: { locale: string }) {
             mv: "Music volume",
           };
   return (
-    <details className={s.root}>
+    <details
+      ref={root}
+      className={s.root}
+      onBlur={(event) => {
+        if (
+          event.relatedTarget instanceof Node &&
+          !event.currentTarget.contains(event.relatedTarget)
+        )
+          event.currentTarget.open = false;
+      }}
+    >
       <summary aria-label={t.title}>
         <Volume2 size={19} aria-hidden="true" />
         <span>{t.title}</span>

@@ -8,4 +8,4 @@ export type DdzRoomView = {
 };
 export type DdzRoomCommand = { commandId: string; gameNo: number; dealNo: number; turnId: number; expectedPhase: DdzPhase; handVersion?: number; expectedRevision?: number; action: DdzAction | { type: "START" } };
 export type DdzRoomMutation = { commandId: string; expectedRevision: number; gameNo: number; expectedPhase: DdzPhase };
-export type DdzRoundSummary = { gameNo: number; finishedAt: string; rulesetVersion: string; result: DdzResult; match?: DdzMatchView; players: { seat: number; name: string; catId: DrawGuessCatId }[] };
+export type DdzRoundSummary = { roomId?: string; gameNo: number; finishedAt: string; rulesetVersion: string; result: DdzResult; match?: DdzMatchView; players: { seat: number; name: string; catId: DrawGuessCatId }[] };

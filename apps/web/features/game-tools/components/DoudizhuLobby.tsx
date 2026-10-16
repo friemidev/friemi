@@ -8,8 +8,13 @@ import {
   SlidersHorizontal,
   ListOrdered,
   LockKeyhole,
+  History,
 } from "lucide-react";
-import type { DdzReaction, DdzRoomView } from "../doudizhuRoomTypes";
+import type {
+  DdzReaction,
+  DdzRoomView,
+  DdzRoundSummary,
+} from "../doudizhuRoomTypes";
 import type { DrawGuessCatId } from "../drawGuessCats";
 import {
   doudizhuRoundCountLabel,
@@ -23,6 +28,7 @@ import {
 } from "../doudizhuEngine";
 import type { DdzRoomSettings } from "../doudizhuTypes";
 import { DoudizhuScoreboard } from "./DoudizhuScoreboard";
+import { DoudizhuHistoryDialog } from "./DoudizhuHistoryDialog";
 import {
   DoudizhuCat,
   DoudizhuCatPicker,
@@ -44,6 +50,8 @@ export function DoudizhuLobby({
   onRetry,
   onReact,
   onSettings,
+  onCloseRoom,
+  onHistory,
 }: {
   room: DdzRoomView;
   locale: string;
@@ -52,15 +60,21 @@ export function DoudizhuLobby({
   onReady: (ready: boolean) => void;
   onStart: () => void;
   onLeave: () => void;
-  onCharacter: (cat: DrawGuessCatId) => void;
+  onCharacter: (cat: DrawGuessCatId) => Promise<boolean> | boolean | void;
   onRemove?: (seat: number) => void;
   onRetry?: () => void;
   onReact?: (kind: DdzReaction["kind"]) => void;
   onSettings?: (settings: DdzRoomSettings) => Promise<boolean> | boolean | void;
+  onCloseRoom?: () => Promise<boolean> | boolean | void;
+  onHistory?: () => Promise<DdzRoundSummary[]>;
 }) {
   const t = getDoudizhuCopy(locale),
     [catPicker, setCatPicker] = useState(false),
     [leaving, setLeaving] = useState(false),
+    [closing, setClosing] = useState(false),
+    [closeBusy, setCloseBusy] = useState(false),
+    [closeError, setCloseError] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
     [removing, setRemoving] = useState<number | null>(null),
     [copied, setCopied] = useState("");
   const settings = getDdzRoomSettings(room.state),
@@ -227,6 +241,14 @@ export function DoudizhuLobby({
             <ListOrdered size={18} />
             {t.scoreboard}
           </button>
+          {onHistory && (
+            <button
+              className={s.textButton}
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History size={18} /> {t.history}
+            </button>
+          )}
         </div>
         {settingsNotice && (
           <p className={`${s.help} ${s.center}`} role="status">
@@ -268,7 +290,7 @@ export function DoudizhuLobby({
                             ? "👋"
                             : ""}
                     </span>
-                    <h2>
+                    <h2 title={player.name}>
                       {player.name}
                       {player.seat === room.viewerSeat ? ` · ${t.you}` : ""}
                     </h2>
@@ -276,8 +298,14 @@ export function DoudizhuLobby({
                       <span className={s.badge}>{t.host}</span>
                     )}
                     <span className={s.readyLabel}>
-                      {player.ready && <Check size={15} />}
-                      {player.ready ? t.ready : t.notReady}
+                      {player.connected && !player.left && player.ready && (
+                        <Check size={15} />
+                      )}
+                      {!player.connected || player.left
+                        ? t.disconnected
+                        : player.ready
+                          ? t.ready
+                          : t.notReady}
                     </span>
                     {player.seat === room.viewerSeat ? (
                       <button
@@ -350,9 +378,35 @@ export function DoudizhuLobby({
           </div>
         )}
         {host && !canStart && (
-          <p className={`${s.help} ${s.center}`}>{t.startNeed}</p>
+          <p className={`${s.help} ${s.center}`}>
+            {room.seats.length === 3 &&
+            room.seats.some((player) => !player.connected || player.left)
+              ? t.startOffline
+              : t.startNeed}
+          </p>
+        )}
+        {host && onCloseRoom && (
+          <div className={s.belowTable}>
+            <button
+              className={s.textButton}
+              disabled={busy}
+              onClick={() => {
+                setCloseError(false);
+                setClosing(true);
+              }}
+            >
+              {t.closeRoom}
+            </button>
+          </div>
         )}
       </main>
+      {historyOpen && (
+        <DoudizhuHistoryDialog
+          locale={locale}
+          onLoad={onHistory}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
       {scoreboardOpen && (
         <DoudizhuScoreboard
           match={match}
@@ -364,6 +418,7 @@ export function DoudizhuLobby({
       {settingsOpen && (
         <DoudizhuDialog
           title={t.roomSettings}
+          closeLabel={t.close}
           onClose={() => {
             if (!settingsSaving) setSettingsOpen(false);
           }}
@@ -436,7 +491,6 @@ export function DoudizhuLobby({
                   <button
                     type="button"
                     className={s.textButton}
-                    disabled={busy}
                     onClick={onRetry}
                   >
                     {t.retry}
@@ -477,13 +531,29 @@ export function DoudizhuLobby({
           locale={locale}
           catId={self?.catId ?? "scholar"}
           busy={busy}
+          error={error}
+          onRetry={onRetry}
           onSelect={onCharacter}
           onClose={() => setCatPicker(false)}
         />
       )}
       {leaving && (
-        <DoudizhuDialog title={t.leaveTitle} onClose={() => setLeaving(false)}>
+        <DoudizhuDialog
+          title={t.leaveTitle}
+          closeLabel={t.close}
+          onClose={() => setLeaving(false)}
+        >
           <p className={s.help}>{t.leaveLobby}</p>
+          {error && (
+            <div className={s.feedback} role="alert">
+              <span>{error}</span>
+              {onRetry && (
+                <button className={s.textButton} onClick={onRetry}>
+                  {t.retry}
+                </button>
+              )}
+            </div>
+          )}
           <div className={s.lobbyActions}>
             <button className={s.button} onClick={() => setLeaving(false)}>
               {t.cancel}
@@ -501,6 +571,7 @@ export function DoudizhuLobby({
       {removing !== null && (
         <DoudizhuDialog
           title={t.confirmRemove}
+          closeLabel={t.close}
           onClose={() => setRemoving(null)}
         >
           <div className={s.lobbyActions}>
@@ -516,6 +587,54 @@ export function DoudizhuLobby({
               }}
             >
               {t.remove}
+            </button>
+          </div>
+        </DoudizhuDialog>
+      )}
+      {closing && (
+        <DoudizhuDialog
+          title={t.confirmCloseRoom}
+          closeLabel={t.close}
+          onClose={() => {
+            if (!closeBusy) setClosing(false);
+          }}
+        >
+          <p className={s.help}>{t.closeRoomNote}</p>
+          {closeError && (
+            <div className={s.feedback} role="alert">
+              <span>{error || t.changed}</span>
+              {onRetry && (
+                <button className={s.textButton} onClick={onRetry}>
+                  {t.retry}
+                </button>
+              )}
+            </div>
+          )}
+          <div className={s.lobbyActions}>
+            <button
+              className={s.button}
+              disabled={closeBusy}
+              onClick={() => setClosing(false)}
+            >
+              {t.cancel}
+            </button>
+            <button
+              className={`${s.button} ${s.primary}`}
+              disabled={busy || closeBusy || !host}
+              onClick={async () => {
+                if (!onCloseRoom || closeBusy || !host) return;
+                setCloseBusy(true);
+                setCloseError(false);
+                try {
+                  if ((await onCloseRoom()) === false) setCloseError(true);
+                } catch {
+                  setCloseError(true);
+                } finally {
+                  setCloseBusy(false);
+                }
+              }}
+            >
+              {closeBusy ? t.busy : t.closeRoom}
             </button>
           </div>
         </DoudizhuDialog>

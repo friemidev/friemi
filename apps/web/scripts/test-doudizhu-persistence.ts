@@ -70,6 +70,10 @@ try {
   view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "CHARACTER", catId: "artist" }));
   host = await get(0); check(host.seats.every(s => s.ready), "Cosmetic character preserves readiness");
   check(host.seats[0].catId === "artist", "Character is persisted independently");
+  await prisma.userProfile.update({ where: { id: profiles[2] }, data: { status: "DELETED" } });
+  check((await server.commandDdzRoom(roomId, profiles[0], command(host, { type: "START" }))).error === "PLAYERS_NOT_READY", "A deleted account's recent ready heartbeat cannot start a new game");
+  check((await get(0)).state.phase === "LOBBY", "Inactive participant rejection never deals private cards");
+  await prisma.userProfile.update({ where: { id: profiles[2] }, data: { status: "ACTIVE" } });
   const start = command(host, { type: "START" });
   const starts = await Promise.all([server.commandDdzRoom(roomId, profiles[0], start), server.commandDdzRoom(roomId, profiles[0], start)]);
   check(starts.every(r => r.room), "Duplicate start acknowledges same game");
@@ -256,6 +260,15 @@ try {
   check(await prisma.ddzRound.count({ where: { roomId } }) === 13, "Duplicate settlement produces one persisted row per room game");
   host = await get(0);
   check((await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "CLOSE" })).ok, "Complete-match fixture closes cleanly");
+  const personalHistory = await server.getDdzPlayerHistory(profiles[0]);
+  check(personalHistory.rounds.length === 15 && new Set(personalHistory.rounds.map(round => round.roomId)).size === 2, "Personal history includes all own rounds across both closed rooms");
+  check(personalHistory.rounds.every((round, index, rows) => !index || Date.parse(rows[index - 1].finishedAt) >= Date.parse(round.finishedAt)), "Personal history is newest-first across independent room game numbers");
+  check(personalHistory.rounds[0].match?.status === "COMPLETE" && personalHistory.rounds[0].match.rounds.length === 12, "Personal history retains the complete match after room closure");
+  check((await server.getDdzPlayerHistory(profiles[3])).rounds.length === 0, "A later occupant cannot inherit another account's global history");
+  check(!JSON.stringify(personalHistory).includes("profileId") && !JSON.stringify(personalHistory).includes('"hands"') && !JSON.stringify(personalHistory).includes(profiles[1]), "Personal history does not expose account IDs or private hands");
+  // Private room retention must not erase the original account's summaries.
+  await prisma.gameToolRoom.delete({ where: { id: roomId } });
+  check((await server.getDdzPlayerHistory(profiles[1])).rounds.length === 15, "Personal history survives deletion of the underlying private room");
   const emptyCreation = await server.createDdzRoom({ commandId: randomUUID(), profileId: profiles[3], name: "Newcomer", locale: "en" });
   check(emptyCreation.roomId, "Create empty-lobby cleanup fixture"); const emptyId = emptyCreation.roomId; rooms.push(emptyId);
   const emptyHost = view(await server.getDdzRoomView(emptyId, profiles[3]));

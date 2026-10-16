@@ -1,8 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowRight, UsersRound, Play } from "lucide-react";
+import { ArrowRight, UsersRound, Play, History } from "lucide-react";
 import { getDoudizhuCopy, doudizhuErrorMessage } from "../doudizhuCopy";
 import { sendDdzRoomWrite, type DdzPendingWrite } from "../doudizhuRoomRequest";
+import { clearDdzRoomShortcuts } from "../doudizhuRoomStorage";
+import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT } from "../activeGameToolRoomStorage";
+import type { DdzRoundSummary } from "../doudizhuRoomTypes";
+import { DoudizhuHistoryDialog } from "./DoudizhuHistoryDialog";
 import { DoudizhuCardFace } from "./DoudizhuCard";
 import { DoudizhuCat, DoudizhuHeader } from "./DoudizhuChrome";
 import { DoudizhuAudioControls } from "./DoudizhuAudioControls";
@@ -14,29 +18,41 @@ export function DoudizhuEntryClient({
   preview = false,
   onPreviewRoom,
   initialClerkUserId,
+  initialResume = null,
+  onHistory,
 }: {
   locale: string;
   initialCode?: string;
   preview?: boolean;
   onPreviewRoom?: () => void;
   initialClerkUserId?: string;
+  initialResume?: { id: string; code: string } | null;
+  onHistory?: () => Promise<DdzRoundSummary[]>;
 }) {
   const t = getDoudizhuCopy(locale),
     [code, setCode] = useState(initialCode),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [uncertain, setUncertain] = useState(false),
-    [signIn, setSignIn] = useState(false);
+    [signIn, setSignIn] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false);
   const pending = useRef<DdzPendingWrite | null>(null),
-    inFlight = useRef(false);
+    inFlight = useRef(false),
+    mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const pendingKey = initialClerkUserId
     ? `friemi:ddz:entry-pending:${initialClerkUserId}`
     : null;
   const [resume, setResume] = useState<{ id: string; code: string } | null>(
-    null,
+    initialResume,
   );
   useEffect(() => {
-    if (!initialClerkUserId) return;
+    if (!initialClerkUserId || initialResume) return;
     try {
       const value = JSON.parse(
         localStorage.getItem(`friemi:ddz:resume:${initialClerkUserId}`) ??
@@ -49,7 +65,7 @@ export function DoudizhuEntryClient({
       )
         setResume(value);
     } catch {}
-  }, [initialClerkUserId]);
+  }, [initialClerkUserId, initialResume]);
   useEffect(() => {
     if (!pendingKey) return;
     try {
@@ -77,6 +93,7 @@ export function DoudizhuEntryClient({
     } catch {}
     const result = await sendDdzRoomWrite("/api/game-tools/doudizhu", write);
     inFlight.current = false;
+    if (!mounted.current) return;
     setBusy(false);
     if (result.status === "uncertain") {
       setUncertain(true);
@@ -89,6 +106,25 @@ export function DoudizhuEntryClient({
     } catch {}
     setUncertain(false);
     if (result.status === "rejected") {
+      if (
+        write.path === "/join" &&
+        result.error === "ROOM_NOT_FOUND" &&
+        resume &&
+        write.body.expectedRoomId === resume.id
+      ) {
+        try {
+          if (
+            initialClerkUserId &&
+            clearDdzRoomShortcuts(localStorage, initialClerkUserId, resume.id)
+          )
+            window.dispatchEvent(
+              new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT),
+            );
+        } catch {
+          /* Storage is optional. */
+        }
+        setResume(null);
+      }
       setError(doudizhuErrorMessage(result.error, locale));
       setSignIn(result.error === "SIGN_IN_REQUIRED");
       return;
@@ -121,6 +157,17 @@ export function DoudizhuEntryClient({
       },
     });
   }
+  async function loadHistory() {
+    if (onHistory) return onHistory();
+    const response = await fetch("/api/game-tools/doudizhu/history", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    const data = await response.json();
+    if (!response.ok || !Array.isArray(data.rounds))
+      throw new Error("HISTORY_UNAVAILABLE");
+    return data.rounds as DdzRoundSummary[];
+  }
   return (
     <div className={s.game}>
       <GameToolsMobileChrome />
@@ -151,7 +198,6 @@ export function DoudizhuEntryClient({
           </span>
         </div>
         <div className={s.entryCopy}>
-          <span className={s.eyebrow}>FRIEMI TABLE GAMES</span>
           <h1>{t.title}</h1>
           <p>{t.subtitle}</p>
           <div className={s.entryTags}>
@@ -185,7 +231,7 @@ export function DoudizhuEntryClient({
           )}
           <button
             type="button"
-            className={`${s.button} ${s.primary}`}
+            className={`${s.button} ${!resume && !initialCode ? s.primary : ""}`}
             disabled={busy || uncertain}
             onClick={() => openRoom(false)}
           >
@@ -216,7 +262,7 @@ export function DoudizhuEntryClient({
               />
               <button
                 type="submit"
-                className={s.button}
+                className={`${s.button} ${initialCode ? s.primary : ""}`}
                 disabled={busy || uncertain || code.trim().length < 6}
               >
                 {t.join}
@@ -224,6 +270,14 @@ export function DoudizhuEntryClient({
               </button>
             </div>
           </form>
+          {(initialClerkUserId || onHistory) && (
+            <button
+              className={s.textButton}
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History size={17} /> {t.history}
+            </button>
+          )}
           {error && (
             <div className={s.inlineError} role="alert">
               {error}
@@ -261,6 +315,13 @@ export function DoudizhuEntryClient({
           )}
         </div>
       </main>
+      {historyOpen && (
+        <DoudizhuHistoryDialog
+          locale={locale}
+          onClose={() => setHistoryOpen(false)}
+          onLoad={loadHistory}
+        />
+      )}
     </div>
   );
 }

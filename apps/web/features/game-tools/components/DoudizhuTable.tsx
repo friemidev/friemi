@@ -38,6 +38,7 @@ import {
 } from "./DoudizhuAudioControls";
 import { DoudizhuPlayEffects } from "./DoudizhuPlayEffects";
 import { DoudizhuScoreboard } from "./DoudizhuScoreboard";
+import { DoudizhuHistoryDialog } from "./DoudizhuHistoryDialog";
 import s from "./DoudizhuGame.module.css";
 
 type Props = {
@@ -79,15 +80,15 @@ export function DoudizhuTable({
     [leaving, setLeaving] = useState(false),
     [notice, setNotice] = useState(""),
     [reactions, setReactions] = useState(false),
-    [history, setHistory] = useState<DdzRoundSummary[] | null>(null),
-    [historyBusy, setHistoryBusy] = useState(false),
-    [historyError, setHistoryError] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
     [now, setNow] = useState(room.serverNow),
     [reactionUntil, setReactionUntil] = useState(0),
     [passTick, setPassTick] = useState(0);
   const clock = useRef({ server: room.serverNow, local: performance.now() }),
     hintIndex = useRef(0),
     hintKey = useRef("");
+  const toolsRef = useRef<HTMLDivElement>(null),
+    menuButton = useRef<HTMLButtonElement>(null);
   const presentation = useDoudizhuPresentation(),
     passArea = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -136,7 +137,39 @@ export function DoudizhuTable({
     setSelected([]);
     setNotice("");
     setExpanded(false);
+    setReactions(false);
+    setHistoryOpen(false);
+    setScoreboardOpen(false);
   }, [room.id, room.viewerSeat, state.gameNo, state.dealNo]);
+  useEffect(() => {
+    if (!["BIDDING", "PLAYING"].includes(state.phase) || managed) {
+      setExpanded(false);
+      setReactions(false);
+    }
+  }, [state.phase, managed]);
+  useEffect(() => {
+    if (!reactions) return;
+    const dismiss = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !toolsRef.current?.contains(event.target)
+      )
+        setReactions(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]"))
+        return;
+      event.preventDefault();
+      setReactions(false);
+      menuButton.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [reactions]);
   const handKey = state.hand.map((c) => c.id).join(",");
   useEffect(() => {
     const ids = new Set(state.hand.map((c) => c.id));
@@ -194,17 +227,10 @@ export function DoudizhuTable({
       setNotice("");
     }
   }
-  async function showHistory() {
-    setHistory([]);
-    setHistoryBusy(true);
-    setHistoryError(false);
-    try {
-      setHistory((await onHistory?.()) ?? []);
-    } catch {
-      setHistoryError(true);
-    } finally {
-      setHistoryBusy(false);
-    }
+  function showHistory() {
+    if (toolsRef.current?.contains(document.activeElement))
+      menuButton.current?.focus({ preventScroll: true });
+    setHistoryOpen(true);
   }
   const selectionText =
     notice ||
@@ -269,7 +295,7 @@ export function DoudizhuTable({
           </span>
         )}
         <div className={s.playerInfo}>
-          <strong>{p.name}</strong>
+          <strong title={p.name}>{p.name}</strong>
           {view.gameRole && (
             <span className={s.badge}>
               {view.gameRole === "landlord" ? t.landlord : t.farmer}
@@ -621,7 +647,7 @@ export function DoudizhuTable({
             <div className={s.tableSelf}>
               <DoudizhuCat catId={self?.catId} size={52} />
               <div className={s.tableSelfCopy}>
-                <strong>
+                <strong title={`${self?.name ?? ""} · ${t.you}`}>
                   {self?.name} · {t.you}
                 </strong>
                 <span
@@ -698,7 +724,17 @@ export function DoudizhuTable({
                 </button>
               </div>
             )}
-            <div className={s.tableTools}>
+            <div
+              ref={toolsRef}
+              className={s.tableTools}
+              onBlur={(event) => {
+                if (
+                  event.relatedTarget instanceof Node &&
+                  !event.currentTarget.contains(event.relatedTarget)
+                )
+                  setReactions(false);
+              }}
+            >
               {selected.length > 0 && (
                 <button
                   className={s.iconButton}
@@ -723,12 +759,57 @@ export function DoudizhuTable({
               </button>
               <button
                 className={s.iconButton}
+                ref={menuButton}
                 aria-label={`${t.manage} · ${t.history} · ${t.reaction}`}
                 aria-expanded={reactions}
+                aria-controls="ddz-table-tools"
                 onClick={() => setReactions((value) => !value)}
               >
                 <MoreHorizontal size={22} />
               </button>
+              {reactions && (
+                <div id="ddz-table-tools" className={s.tableUtility}>
+                  {onReact && (
+                    <div className={s.tableReactionButtons}>
+                      {(["wave", "clap", "cheer"] as const).map((kind, i) => (
+                        <button
+                          key={kind}
+                          className={s.iconButton}
+                          disabled={busy || now < reactionUntil}
+                          aria-label={[t.smile, t.applause, t.surprise][i]}
+                          onClick={() => {
+                            onReact(kind);
+                            setReactionUntil(now + 3000);
+                            setReactions(false);
+                          }}
+                        >
+                          {["👋", "👏", "✨"][i]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    className={s.textButton}
+                    disabled={busy}
+                    title={t.timerNote}
+                    onClick={() => {
+                      void onAction({ type: "SET_MANAGED", managed: !managed });
+                      setReactions(false);
+                    }}
+                  >
+                    {managed ? t.takeOver : t.manage}
+                  </button>
+                  <button
+                    className={s.textButton}
+                    onClick={() => {
+                      void showHistory();
+                      setReactions(false);
+                    }}
+                  >
+                    {t.history}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <DoudizhuHand
@@ -742,49 +823,6 @@ export function DoudizhuTable({
               setNotice("");
             }}
           />
-          {reactions && (
-            <div className={s.tableUtility}>
-              {onReact && (
-                <div className={s.tableReactionButtons}>
-                  {(["wave", "clap", "cheer"] as const).map((kind, i) => (
-                    <button
-                      key={kind}
-                      className={s.iconButton}
-                      disabled={busy || now < reactionUntil}
-                      aria-label={[t.smile, t.applause, t.surprise][i]}
-                      onClick={() => {
-                        onReact(kind);
-                        setReactionUntil(now + 3000);
-                        setReactions(false);
-                      }}
-                    >
-                      {["👋", "👏", "✨"][i]}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button
-                className={s.textButton}
-                disabled={busy}
-                title={t.timerNote}
-                onClick={() => {
-                  void onAction({ type: "SET_MANAGED", managed: !managed });
-                  setReactions(false);
-                }}
-              >
-                {managed ? t.takeOver : t.manage}
-              </button>
-              <button
-                className={s.textButton}
-                onClick={() => {
-                  void showHistory();
-                  setReactions(false);
-                }}
-              >
-                {t.history}
-              </button>
-            </div>
-          )}
         </main>
       )}
       {scoreboardOpen && (
@@ -796,7 +834,11 @@ export function DoudizhuTable({
         />
       )}
       {expanded && (
-        <DoudizhuDialog title={t.hand} onClose={() => setExpanded(false)}>
+        <DoudizhuDialog
+          title={t.hand}
+          closeLabel={t.close}
+          onClose={() => setExpanded(false)}
+        >
           <div className={`${s.turn} ${isTurn ? s.ownTurn : ""}`}>
             <span>{turnText}</span>
             <span
@@ -841,7 +883,21 @@ export function DoudizhuTable({
         </DoudizhuDialog>
       )}
       {leaving && (
-        <DoudizhuDialog title={t.leaveTitle} onClose={() => setLeaving(false)}>
+        <DoudizhuDialog
+          title={t.leaveTitle}
+          closeLabel={t.close}
+          onClose={() => setLeaving(false)}
+        >
+          {error && (
+            <div className={s.feedback} role="alert">
+              <span>{error}</span>
+              {onRetry && (
+                <button className={s.textButton} onClick={onRetry}>
+                  {t.retry}
+                </button>
+              )}
+            </div>
+          )}
           <p className={s.help}>
             {["BIDDING", "PLAYING"].includes(state.phase)
               ? t.leaveActive
@@ -861,64 +917,12 @@ export function DoudizhuTable({
           </div>
         </DoudizhuDialog>
       )}
-      {history !== null && (
-        <DoudizhuDialog title={t.history} onClose={() => setHistory(null)}>
-          {historyBusy ? (
-            <p>{t.busy}</p>
-          ) : historyError ? (
-            <div className={s.feedback}>
-              <span>{t.reconnecting}</span>
-              <button
-                className={s.textButton}
-                onClick={() => void showHistory()}
-              >
-                {t.refresh}
-              </button>
-            </div>
-          ) : !history.length ? (
-            <p className={s.help}>{t.noHistory}</p>
-          ) : (
-            <ol className={s.historyList}>
-              {history.map((round) => (
-                <li className={s.historyItem} key={round.gameNo}>
-                  <details>
-                    <summary>
-                      <span>
-                        #{round.gameNo} ·{" "}
-                        {round.result.winnerSide === "landlord"
-                          ? t.landlordWin
-                          : t.farmersWin}
-                      </span>
-                      <time className={s.help}>
-                        {new Date(round.finishedAt).toLocaleDateString(locale)}
-                      </time>
-                    </summary>
-                    <div className={s.scoreDetails}>
-                      {round.players.map((p) => (
-                        <span key={p.seat}>
-                          {p.name}:{" "}
-                          <b>
-                            {
-                              round.result.scores.find((x) => x.seat === p.seat)
-                                ?.delta
-                            }
-                          </b>
-                        </span>
-                      ))}
-                    </div>
-                    <p className={s.help}>
-                      {t.base} {round.result.baseScore} · {t.multiplier} ×
-                      {round.result.multiplier}
-                      {round.result.spring
-                        ? ` · ${round.result.spring === "spring" ? t.spring : t.antiSpring}`
-                        : ""}
-                    </p>
-                  </details>
-                </li>
-              ))}
-            </ol>
-          )}
-        </DoudizhuDialog>
+      {historyOpen && (
+        <DoudizhuHistoryDialog
+          locale={locale}
+          onClose={() => setHistoryOpen(false)}
+          onLoad={onHistory}
+        />
       )}
     </>
   );
