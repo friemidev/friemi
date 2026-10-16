@@ -2,38 +2,36 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { getNowKind, type NowKind } from "./now";
+import { getNowKind, isNowKind, type NowKind } from "./now";
 
-const artwork: Partial<Record<NowKind, { motion: string; still: string }>> = {
-  COFFEE: {
-    motion: "/now/artwork/coffee-motion.webp",
-    still: "/now/artwork/coffee-still.webp",
-  },
-  DRINK: {
-    motion: "/now/artwork/drink-motion.webp",
-    still: "/now/artwork/drink-still.webp",
-  },
-  EXHIBITION: {
-    motion: "/now/artwork/exhibition-motion.webp",
-    still: "/now/artwork/exhibition-still.webp",
-  },
-  PARK: {
-    motion: "/now/artwork/park-motion.webp",
-    still: "/now/artwork/park-still.webp",
-  },
-  WALK: {
-    motion: "/now/artwork/walk-motion.webp",
-    still: "/now/artwork/walk-still.webp",
-  },
+const artworkNames: Record<NowKind, string> = {
+  COFFEE: "coffee",
+  FOOD: "food",
+  DRINK: "drink",
+  TEA: "tea",
+  PARK: "park",
+  WALK: "walk",
+  SHOP: "shop",
+  EXHIBITION: "exhibition",
+  MOVIE: "movie",
+  SHOW: "show",
+  GAME: "game",
+  SPORT: "sport",
+  CHAT: "chat",
+  ADVENTURE: "adventure",
+  SOCIAL: "social",
+  OTHER: "other",
 };
 
-// Accent colors come from the two NOW palettes; the primary action keeps Friemi green.
+// The backdrop files come from the updated NOW artwork set. Keep the countdown
+// ring separate so its progress remains readable over every illustration.
 const tonePalette = {
-  amber: { ring: "#FFC857", wash: "#FFF5E6", ink: "#156240" },
-  coral: { ring: "#F09182", wash: "#FFE5E6", ink: "#B5301F" },
-  rose: { ring: "#FF6B6B", wash: "#FFE5E6", ink: "#B5301F" },
-  green: { ring: "#369758", wash: "#F1F2E3", ink: "#156240" },
-  blue: { ring: "#99B7F5", wash: "#DEEBFF", ink: "#156240" },
+  amber: { ring: "#FFC857", wash: "#FFF9EC", ink: "#156240", backdrop: "yellow" },
+  coral: { ring: "#F09182", wash: "#FFF6F7", ink: "#B5301F", backdrop: "pink" },
+  rose: { ring: "#FF6B6B", wash: "#FFEEEE", ink: "#B5301F", backdrop: "red" },
+  green: { ring: "#369758", wash: "#F2F7F2", ink: "#156240", backdrop: "green" },
+  blue: { ring: "#99B7F5", wash: "#FBFDFF", ink: "#156240", backdrop: "blue" },
+  purple: { ring: "#A790EA", wash: "#F5F2FD", ink: "#624A8B", backdrop: "purple" },
 } as const;
 
 export function getNowTonePalette(tone: string) {
@@ -47,12 +45,14 @@ export function NowKindArtwork({
   category: string;
   className?: string;
 }) {
-  const visual = artwork[category as NowKind];
+  const kind = isNowKind(category) ? category : "OTHER";
+  const artworkName = artworkNames[kind];
+  const backdrop = getNowTonePalette(getNowKind(kind).tone).backdrop;
   const nodeRef = useRef<HTMLSpanElement>(null);
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
-    if (!visual || !nodeRef.current) return;
+    if (!nodeRef.current) return;
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     let inView = false;
     const update = () =>
@@ -72,7 +72,7 @@ export function NowKindArtwork({
       motionPreference.removeEventListener("change", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [visual]);
+  }, []);
 
   return (
     <span
@@ -80,19 +80,24 @@ export function NowKindArtwork({
       aria-hidden="true"
       className={`relative inline-grid shrink-0 place-items-center ${className}`}
     >
-      {visual ? (
-        <Image
-          alt=""
-          className="object-contain"
-          fill
-          sizes="96px"
-          src={animate ? visual.motion : visual.still}
-          unoptimized
-          draggable={false}
-        />
-      ) : (
-        <span className="leading-none">{getNowKind(category).emoji}</span>
-      )}
+      <Image
+        alt=""
+        className="object-contain"
+        fill
+        sizes="96px"
+        src={`/now/artwork/ring-${backdrop}.webp`}
+        unoptimized
+        draggable={false}
+      />
+      <Image
+        alt=""
+        className="object-contain p-[5%]"
+        fill
+        sizes="96px"
+        src={`/now/artwork/${artworkName}-${animate ? "motion" : "still"}.webp`}
+        unoptimized
+        draggable={false}
+      />
     </span>
   );
 }

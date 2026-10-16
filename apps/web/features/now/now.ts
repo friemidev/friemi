@@ -85,7 +85,7 @@ const kindDetails: Record<
     zh: "玩桌游",
     en: "Board games",
     fr: "Jeux",
-    tone: "blue",
+    tone: "purple",
   },
   SPORT: { emoji: "🏃", zh: "运动", en: "Sport", fr: "Sport", tone: "green" },
   CHAT: {
@@ -107,14 +107,14 @@ const kindDetails: Record<
     zh: "想热闹一下",
     en: "Something social",
     fr: "Voir du monde",
-    tone: "coral",
+    tone: "purple",
   },
   OTHER: {
     emoji: "🎈",
     zh: "随便说说",
     en: "Say anything",
     fr: "Dire quelque chose",
-    tone: "rose",
+    tone: "green",
   },
 };
 

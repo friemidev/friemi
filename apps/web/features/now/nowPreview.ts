@@ -82,10 +82,85 @@ const samples: Pick<
     interestCount: 1,
     size: "small",
   },
+  {
+    id: "preview-food",
+    category: "FOOD",
+    intentWindow: "TONIGHT",
+    title: "一起吃饭",
+    area: "Belleville",
+    interestCount: 2,
+    size: "medium",
+  },
+  {
+    id: "preview-shop",
+    category: "SHOP",
+    intentWindow: "LATER",
+    title: "逛逛街",
+    area: "Le Marais",
+    interestCount: 1,
+    size: "small",
+  },
+  {
+    id: "preview-show",
+    category: "SHOW",
+    intentWindow: "TONIGHT",
+    title: "看场演出",
+    area: "Bastille",
+    interestCount: 3,
+    size: "medium",
+  },
+  {
+    id: "preview-sport",
+    category: "SPORT",
+    intentWindow: "TODAY",
+    title: "一起运动",
+    area: "Canal",
+    interestCount: 2,
+    size: "medium",
+  },
+  {
+    id: "preview-chat",
+    category: "CHAT",
+    intentWindow: "NOW",
+    title: "想聊天",
+    area: "République",
+    interestCount: 1,
+    size: "small",
+  },
+  {
+    id: "preview-adventure",
+    category: "ADVENTURE",
+    intentWindow: "LATER",
+    title: "出去走走",
+    area: "Buttes-Chaumont",
+    interestCount: 2,
+    size: "medium",
+  },
+  {
+    id: "preview-social",
+    category: "SOCIAL",
+    intentWindow: "TONIGHT",
+    title: "想热闹一下",
+    area: "Oberkampf",
+    interestCount: 4,
+    size: "large",
+  },
+  {
+    id: "preview-other",
+    category: "OTHER",
+    intentWindow: "NOW",
+    title: "随便说说",
+    area: "Bastille",
+    interestCount: 0,
+    size: "small",
+  },
 ];
 
 export function getNowPreviewInvites(now: number): NowBubbleItem[] {
-  const remainingMinutes = [38, 76, 114, 152, 190, 228, 682, 701];
+  const remainingMinutes = [
+    38, 76, 114, 152, 190, 228, 682, 701, 263, 307, 356, 401, 449, 503,
+    558, 614,
+  ];
   return samples.map((sample, index) => ({
     ...sample,
     avatars: [
