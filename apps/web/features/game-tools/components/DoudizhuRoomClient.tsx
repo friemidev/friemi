@@ -409,9 +409,11 @@ function DoudizhuRoomSession({
     : error || (offline ? t.reconnecting : "");
   return (
     <DoudizhuAudioProvider
+      locale={locale}
       roomKey={room.id}
       state={accessError ? null : room.state}
       serverNow={room.serverNow}
+      connected={!offline}
     >
       <div ref={motionRoot} className={s.game}>
         <GameToolsMobileChrome />

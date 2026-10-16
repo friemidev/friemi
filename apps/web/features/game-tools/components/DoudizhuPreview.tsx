@@ -180,6 +180,8 @@ export function DoudizhuPreview({
     );
   return (
     <DoudizhuAudioProvider
+      locale={locale}
+      freezeClock
       roomKey={room.id}
       state={view}
       serverNow={room.serverNow}

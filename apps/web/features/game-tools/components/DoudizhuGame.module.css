@@ -1613,6 +1613,8 @@
   line-height: 1.2;
   white-space: nowrap;
   box-shadow: 0 3px 0 color-mix(in srgb, var(--ddz-ink) 10%, transparent);
+}
+.passAnimated {
   animation: ddzPassAppear 160ms ease-out both;
 }
 .passMarker[data-position="left"] {

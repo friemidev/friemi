@@ -5,14 +5,11 @@ import { createPortal } from "react-dom";
 import { doudizhuPatternName } from "../doudizhuCopy";
 import {
   canShowDdzPlayEffect,
-  consumeDdzPlayEffect,
-  ddzPlayEffectRemaining,
-  resumeDdzPlayEffectCursor,
   type DdzPlayEffect,
-  type DdzPlayEffectCursor,
   type DdzPlayEffectKind,
 } from "../doudizhuPlayEffects";
 import type { DdzViewerState } from "../doudizhuTypes";
+import { useDoudizhuPresentation } from "./DoudizhuAudioControls";
 import s from "./DoudizhuPlayEffects.module.css";
 
 type Props = {
@@ -251,19 +248,15 @@ function Artwork({ kind }: { kind: DdzPlayEffectKind }) {
 }
 
 /** Keep mounted beside the Table phase switch, including PLAY → RESULT. */
-export function DoudizhuPlayEffects({
-  state,
-  serverNow,
-  roomKey,
-  locale,
-  freezeClock = false,
-}: Props) {
+export function DoudizhuPlayEffects({ state, roomKey, locale }: Props) {
   const marker = useRef<HTMLSpanElement>(null);
-  const cursor = useRef<DdzPlayEffectCursor | null>(null);
+  const timeline = useDoudizhuPresentation();
+  const stage = useRef<HTMLDivElement>(null);
+  const consumed = useRef<string | null>(null);
   const reduced = useRef(false);
   const active = useRef<Presentation | null>(null);
-  const current = useRef({ state, serverNow, roomKey, freezeClock });
-  current.current = { state, serverNow, roomKey, freezeClock };
+  const current = useRef({ state, timeline });
+  current.current = { state, timeline };
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
 
@@ -327,39 +320,20 @@ export function DoudizhuPlayEffects({
   useLayoutEffect(() => {
     const media = matchMedia("(prefers-reduced-motion: reduce)");
     reduced.current = media.matches;
-    const cancel = () => clear();
-    const reconnect = () => {
-      const latest = current.current;
-      cursor.current = resumeDdzPlayEffectCursor(
-        latest.state,
-        latest.roomKey,
-        performance.now(),
-        latest.freezeClock,
-      );
+    const cancel = () => {
+      consumed.current = current.current.timeline?.sourceKey ?? null;
       clear();
-    };
-    let surfaceVisible = isVisible(area());
-    const check = () => {
-      const nextVisible = isVisible(area());
-      if (
-        document.hidden ||
-        reduced.current ||
-        !nextVisible ||
-        nextVisible !== surfaceVisible
-      )
-        reconnect();
-      surfaceVisible = nextVisible;
     };
     const preference = () => {
       reduced.current = media.matches;
-      reconnect();
+      cancel();
     };
-    document.addEventListener("visibilitychange", reconnect);
+    const check = () => {
+      if (document.hidden || reduced.current || !isVisible(area())) cancel();
+    };
+    document.addEventListener("visibilitychange", cancel);
     document.addEventListener("fullscreenchange", cancel);
     window.addEventListener("resize", cancel);
-    window.addEventListener("orientationchange", reconnect);
-    window.addEventListener("online", reconnect);
-    window.addEventListener("offline", reconnect);
     window.addEventListener("scroll", cancel, true);
     media.addEventListener("change", preference);
     const observer = new MutationObserver(check);
@@ -370,7 +344,6 @@ export function DoudizhuPlayEffects({
         subtree: true,
         attributeFilter: ["inert", "hidden", "style", "class"],
       });
-    // The landscape gate sets inert on the ancestor containing this marker.
     for (let node = root?.parentElement; node; node = node.parentElement)
       observer.observe(node, {
         attributes: true,
@@ -381,12 +354,9 @@ export function DoudizhuPlayEffects({
       active.current?.anchor.removeAttribute("data-ddz-effect-active");
       active.current = null;
       observer.disconnect();
-      document.removeEventListener("visibilitychange", reconnect);
+      document.removeEventListener("visibilitychange", cancel);
       document.removeEventListener("fullscreenchange", cancel);
       window.removeEventListener("resize", cancel);
-      window.removeEventListener("orientationchange", reconnect);
-      window.removeEventListener("online", reconnect);
-      window.removeEventListener("offline", reconnect);
       window.removeEventListener("scroll", cancel, true);
       media.removeEventListener("change", preference);
     };
@@ -394,20 +364,27 @@ export function DoudizhuPlayEffects({
 
   useLayoutEffect(() => {
     const anchor = area(),
-      visible = isVisible(anchor),
-      observedAt = performance.now();
-    const projection = consumeDdzPlayEffect(
-      cursor.current,
-      state,
-      roomKey,
-      serverNow,
-      observedAt,
-      { visible, hidden: document.hidden, reduced: reduced.current },
-    );
-    cursor.current = projection.cursor;
-    if (projection.clear) clear();
-    if (projection.effect && visible) {
-      const next = locate(projection.effect, observedAt, anchor);
+      visible = isVisible(anchor);
+    if (!timeline) {
+      consumed.current = null;
+      clear();
+      return;
+    }
+    if (timeline.sourceKey !== consumed.current) {
+      consumed.current = timeline.sourceKey;
+      clear();
+      if (
+        !timeline.effect ||
+        !visible ||
+        !canShowDdzPlayEffect(state.phase, {
+          visible,
+          hidden: document.hidden,
+          reduced: reduced.current,
+        }) ||
+        performance.now() >= timeline.startAt + timeline.effect.duration
+      )
+        return;
+      const next = locate(timeline.effect, timeline.startAt, anchor);
       if (next.result) anchor.setAttribute("data-ddz-effect-active", "true");
       active.current = next;
       setPresentation(next);
@@ -426,15 +403,12 @@ export function DoudizhuPlayEffects({
       active.current = next;
       setPresentation(next);
     }
-  }, [state, serverNow, roomKey]);
+  }, [timeline, state.phase, roomKey]);
 
   useLayoutEffect(() => {
     if (!presentation) return;
-    const remaining = ddzPlayEffectRemaining(
-      presentation.effect.duration,
-      presentation.startedAt,
-      performance.now(),
-    );
+    const remaining =
+      presentation.startedAt + presentation.effect.duration - performance.now();
     if (
       remaining <= 0 ||
       !canShowDdzPlayEffect(current.current.state.phase, {
@@ -446,6 +420,14 @@ export function DoudizhuPlayEffects({
       clear();
       return;
     }
+    // CSS stagger delays remain intact; every animation uses the audio's origin.
+    const origin =
+      Number(document.timeline.currentTime ?? performance.now()) +
+      presentation.startedAt -
+      performance.now();
+    for (const animation of stage.current?.getAnimations({ subtree: true }) ??
+      [])
+      animation.startTime = origin;
     timer.current = setTimeout(clear, remaining);
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -464,11 +446,14 @@ export function DoudizhuPlayEffects({
       {presentation &&
         createPortal(
           <div
+            ref={stage}
             key={`${roomKey}:${presentation.effect.gameNo}:${presentation.effect.eventId}`}
             className={`${s.stage} ${presentation.result ? s.result : ""}`}
             aria-hidden="true"
             data-ddz-play-effect={presentation.effect.kind}
             data-ddz-effect-event={presentation.effect.eventId}
+            data-ddz-presentation-event-id={presentation.effect.eventId}
+            data-ddz-presentation-start-at={presentation.startedAt}
             style={
               {
                 left: presentation.x,

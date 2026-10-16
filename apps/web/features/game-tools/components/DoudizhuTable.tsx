@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Maximize2,
   Sparkles,
@@ -25,7 +25,10 @@ import { getDdzPassFeedback } from "../doudizhuPassFeedback";
 import { DoudizhuCardFace, doudizhuCardLabel } from "./DoudizhuCard";
 import { DoudizhuCat, DoudizhuDialog, DoudizhuHeader } from "./DoudizhuChrome";
 import { DoudizhuHand } from "./DoudizhuHand";
-import { DoudizhuAudioControls } from "./DoudizhuAudioControls";
+import {
+  DoudizhuAudioControls,
+  useDoudizhuPresentation,
+} from "./DoudizhuAudioControls";
 import { DoudizhuPlayEffects } from "./DoudizhuPlayEffects";
 import s from "./DoudizhuGame.module.css";
 
@@ -74,6 +77,20 @@ export function DoudizhuTable({
   const clock = useRef({ server: room.serverNow, local: performance.now() }),
     hintIndex = useRef(0),
     hintKey = useRef("");
+  const presentation = useDoudizhuPresentation(),
+    passArea = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (presentation?.event.kind !== "PASS") return;
+    const node = passArea.current?.querySelector<HTMLElement>(
+      `[data-ddz-pass-event="${presentation.event.id}"]`,
+    );
+    const origin =
+      Number(document.timeline.currentTime ?? performance.now()) +
+      presentation.startAt -
+      performance.now();
+    for (const animation of node?.getAnimations() ?? [])
+      animation.startTime = origin;
+  }, [presentation]);
   useEffect(() => {
     clock.current = { server: room.serverNow, local: performance.now() };
     setNow(room.serverNow);
@@ -486,12 +503,25 @@ export function DoudizhuTable({
                 <span className={s.emptyPlay}>{`${t.bidScore} 1 · 2 · 3`}</span>
               )}
             </section>
-            <div className={s.passFeedback} role="status" aria-live="polite">
+            <div
+              ref={passArea}
+              className={s.passFeedback}
+              role="status"
+              aria-live="polite"
+            >
               {passFeedback.map(({ seat, eventId }) => (
                 <span
                   key={eventId}
-                  className={s.passMarker}
+                  className={`${s.passMarker} ${presentation?.event.kind === "PASS" && presentation.event.id === eventId ? s.passAnimated : ""}`}
                   data-ddz-pass-seat={seat}
+                  data-ddz-pass-event={eventId}
+                  data-ddz-presentation-event-id={eventId}
+                  data-ddz-presentation-start-at={
+                    presentation?.event.kind === "PASS" &&
+                    presentation.event.id === eventId
+                      ? presentation.startAt
+                      : undefined
+                  }
                   data-position={
                     seat === room.viewerSeat
                       ? "self"
