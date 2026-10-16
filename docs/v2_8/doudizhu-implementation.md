@@ -101,7 +101,7 @@ DDZ_TEST_ALLOW_LOCAL=true \
 ## 尚需独立验收
 
 - 大厅关闭确认、入口个人历史、大厅/牌桌房间历史均已接入。摘要包含胜方、日期时间、各人分数、叫分、倍数、炸弹与春天；入口跨房间只返回本人参与的最近20局。独立历史页、历史房规版本展示及完整回放不在首版已交付范围。当前整场的累计分和逐局明细可从大厅、牌桌及结果页的记分板查看。
-- Clerk真实三账号浏览器联网、Supabase订阅授权及失效、调度worker部署后的实际运行。
+- Clerk真实三账号浏览器联网、Supabase订阅授权及失效。Preview 独立调度已通过到期空房关闭与跟牌超时自动不出的实测；三名真人全程离线、重连等完整场景仍需独立验收。
 - iOS Safari、Android Chrome与两端WebView的安全区、软件键盘、声音解锁、横竖屏切换；桌面浏览器模拟不能代替真机。
 - 真人整局游戏节奏、猫动作与语音/音效/音乐的实际听感；已提供合成语音包与专属音效，手机扬声器和耳机听感仍需实机验收，不能以文件峰值和调度测试代替。
 - 跨旧游戏同时开局：DDZ内相同账号的并发启动有锁；旧UNO等服务尚未遵循同一账号锁约定，不能宣称全站所有游戏的占位互斥已完全保证。
@@ -145,4 +145,8 @@ DDZ_TEST_ALLOW_LOCAL=true \
 
 游戏目录与入口共用新的三猫围坐牌桌 SVG，复用现有云朵喵、芒果喵、桃桃喵角色渲染及原配色，保持无文字图形。复现：在 `apps/web` 运行 `npm run doudizhu:logo`。中英法 × 390×844、568×320、1280×800 共9个入口检查无页面溢出或控制台错误；游戏工具466项测试与完整生产构建通过。
 
-Preview 目标入口：`https://friemi-git-codex-doudizhu-sichuan-mahjong-friemi.vercel.app/zh-CN/game-tools/doudizhu`。独立调度配置脚本为 `scripts/configure-doudizhu-preview-cron.mjs`，严格限制该 Preview 域名和数据库，预检成功后才写入 Vault 和三个专属 cron 任务；每2秒只对有到期房间的场景请求扫描，另有每日保留期维护与7天调度历史清理。线上部署与调度结果以部署后的验证记录为准，不将本地截图当作已上线证明。
+Preview 入口：[斗地主测试环境](https://friemi-git-codex-doudizhu-sichuan-mahjong-friemi.vercel.app/zh-CN/game-tools/doudizhu)。提交 `b0e27ca6` 的 Vercel 部署于 2026-10-16 15:09:32 UTC 完成。线上 SVG 的 SHA-256 与本地一致；中英法各验证三个尺寸，共9个线上入口，无页面溢出、图片加载失败或控制台错误。三种语言的游戏目录均为可点击入口。未登录创建房间、读取历史及调用调度接口均返回401，开放测试入口后仍保留身份校验。浏览器证据为 `output/playwright/doudizhu-preview-live-verification.json` 及同前缀截图。
+
+独立调度配置脚本为 `scripts/configure-doudizhu-preview-cron.mjs`，严格限制该 Preview 域名和数据库，预检成功后才写入 Vault 和三个专属 cron 任务。三个任务已启用：每2秒仅在有到期房间时请求扫描、每日保留期维护、7天调度历史清理。使用独立创建的测试档案和房间，在不调用房间读取接口、不手动调用扫描接口的情况下，只观察数据库：到期空房间约4170ms后自动关闭；已正常建房、准备、叫3分并首出的对局，跟牌截止时间加速到期后约2111ms自动产生 TIMEOUT 与 PASS，回合推进且手牌不减少。两组专属测试房间及四个测试档案已删除。私有记录为备份目录内的 `worker-verification.json`、`worker-live-probe.json` 与 `worker-turn-probe.json`，不含任何真实玩家操作；这不等同于真实三账号联网或手机真机验收。
+
+用户后续明确要求只有收到“推送”指令才执行 `git push`，已写入根目录 `AGENTS.md`。上述代码推送早于该指令；其后的推送规则与部署验证文档仅作本地提交。
