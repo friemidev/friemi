@@ -1,0 +1,482 @@
+.stage {
+  position: fixed;
+  width: clamp(230px, 32vw, 330px);
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  color: var(--ddz-ink);
+  contain: layout style;
+}
+.stage * {
+  pointer-events: none;
+}
+.frame {
+  display: grid;
+  justify-items: center;
+  animation: presentation var(--effect-duration) linear both;
+}
+.art {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.label {
+  display: block;
+  max-width: 100%;
+  margin-top: -4px;
+  padding: 4px 17px 6px;
+  border: 1.5px solid var(--ddz-ink);
+  border-radius: 50% 42% 46% 40% / 34% 42% 38% 46%;
+  background: var(--ddz-paper);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--ddz-ink) 17%, transparent);
+  color: var(--ddz-ink);
+  font:
+    850 clamp(17px, 2vw, 23px) / 1.2 var(--font-sans),
+    sans-serif;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+.rail {
+  stroke: var(--ddz-sky);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawRail 700ms cubic-bezier(0.2, 0.65, 0.25, 1) both;
+}
+.railLight {
+  stroke: var(--ddz-butter);
+  stroke-width: 7;
+  stroke-dasharray: 0.16 0.84;
+  stroke-dashoffset: 1;
+  opacity: 0.8;
+  animation: drawLight 800ms ease-out both;
+}
+.flowCard {
+  color: var(--ddz-sky);
+  opacity: 0;
+  animation: cardFlow 650ms cubic-bezier(0.18, 0.7, 0.2, 1)
+    calc(var(--i) * 48ms) both;
+}
+.paperCard {
+  fill: var(--ddz-paper);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.cardShadow {
+  fill: color-mix(in srgb, var(--ddz-ink) 16%, transparent);
+}
+.cardShine {
+  stroke: var(--ddz-sky);
+  stroke-width: 1.5;
+}
+.pairLink {
+  stroke: var(--ddz-sky);
+  stroke-width: 3;
+  stroke-dasharray: 3 5;
+  animation: pairLink 800ms ease-out calc(var(--i) * 70ms) both;
+}
+.spark {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-sky);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sparkle 650ms ease-out calc(180ms + var(--i) * 55ms) both;
+}
+.airflow path {
+  stroke: var(--ddz-sky);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.7;
+  animation: airTrace 1050ms ease-out both;
+}
+.airflow path:nth-child(2) {
+  stroke: var(--ddz-paper);
+  stroke-width: 4;
+  animation-delay: 55ms;
+}
+.airflow path:nth-child(3) {
+  stroke: var(--ddz-sky);
+  opacity: 0.4;
+  animation-delay: 95ms;
+}
+.plane {
+  color: var(--ddz-sky);
+  transform-origin: 180px 60px;
+  animation: planeFly 1200ms cubic-bezier(0.19, 0.65, 0.22, 1) both;
+}
+.planeShadow {
+  fill: color-mix(in srgb, var(--ddz-ink) 14%, transparent);
+}
+.planePaper {
+  fill: var(--ddz-paper);
+  stroke: var(--ddz-ink);
+  stroke-width: 2;
+}
+.planeFold {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.planeEar {
+  fill: var(--ddz-paper);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.bomb {
+  color: var(--ddz-ink);
+  transform-origin: 160px 85px;
+  animation: bombPop 800ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+}
+.bombBody {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-ink);
+  stroke-width: 2;
+}
+.bombHighlight {
+  stroke: var(--ddz-paper);
+  stroke-width: 5;
+}
+.fuse {
+  stroke: var(--ddz-ink);
+  stroke-width: 3;
+}
+.bombNeck {
+  fill: var(--ddz-sky);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.burstRing {
+  transform-origin: 160px 78px;
+  animation: ringBurst 720ms ease-out 100ms both;
+}
+.burstRing ellipse {
+  stroke: var(--ddz-sky);
+  stroke-width: 2;
+}
+.burstRing ellipse:last-child {
+  stroke: var(--ddz-butter);
+  stroke-width: 3;
+  stroke-dasharray: 10 12;
+}
+.rocket {
+  color: var(--ddz-sky);
+  animation: rocketLift 1150ms cubic-bezier(0.2, 0.7, 0.2, 1)
+    calc(var(--i) * 55ms) both;
+}
+.rocketBody {
+  fill: var(--ddz-paper);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.7;
+}
+.rocketGold {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.7;
+}
+.rocketFin {
+  fill: var(--ddz-sky);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.flame {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-sky);
+  stroke-width: 1.5;
+}
+.crown {
+  fill: var(--ddz-butter);
+  stroke: var(--ddz-ink);
+  stroke-width: 1.5;
+}
+.catEye {
+  fill: var(--ddz-ink);
+}
+.catFace {
+  stroke: var(--ddz-ink);
+  stroke-width: 1.1;
+}
+.rocketTrail {
+  stroke: var(--ddz-sky);
+  stroke-width: 3;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: airTrace 1000ms ease-out 100ms both;
+}
+.royalBurst {
+  transform-origin: 160px 60px;
+  animation: royalBurst 1050ms ease-out 180ms both;
+}
+.royalBurst path {
+  fill: color-mix(in srgb, var(--ddz-butter) 40%, transparent);
+  stroke: var(--ddz-sky);
+  stroke-width: 1.2;
+}
+.royalBurst circle {
+  stroke: var(--ddz-sky);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 9;
+}
+.result {
+  width: max-content;
+  max-width: min(330px, 78vw);
+}
+.result .frame {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  animation: none;
+}
+.result .art {
+  width: 65px;
+  height: 36px;
+  flex: none;
+}
+.result .art * {
+  animation: none;
+}
+.result .flowCard,
+.result .pairLink {
+  opacity: 1;
+}
+.result .rail,
+.result .airflow path,
+.result .rocketTrail {
+  stroke-dashoffset: 0;
+}
+.result .spark,
+.result .railLight,
+.result .burstRing,
+.result .royalBurst {
+  display: none;
+}
+.result .label {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  font-size: 18px;
+  background: none;
+}
+@keyframes presentation {
+  0% {
+    opacity: 0;
+  }
+  7%,
+  77% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes drawRail {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes drawLight {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    stroke-dashoffset: -0.16;
+    opacity: 0;
+  }
+}
+@keyframes cardFlow {
+  0% {
+    opacity: 0;
+    transform: translate(-24px, 12px) rotate(-12deg) scale(0.8);
+  }
+  32% {
+    opacity: 1;
+    transform: translate(0, -4px) rotate(3deg);
+  }
+  60%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes pairLink {
+  0% {
+    opacity: 0;
+  }
+  30%,
+  100% {
+    opacity: 0.7;
+  }
+}
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-18deg);
+  }
+  35%,
+  62% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes airTrace {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.65;
+  }
+  70% {
+    stroke-dashoffset: 0;
+    opacity: 0.6;
+  }
+  100% {
+    stroke-dashoffset: -0.3;
+    opacity: 0;
+  }
+}
+@keyframes planeFly {
+  0% {
+    opacity: 0;
+    transform: translate(-96px, 38px) rotate(-12deg) scale(0.75);
+  }
+  23% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-6px, 1px) rotate(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(70px, -26px) rotate(-8deg) scale(0.85);
+  }
+}
+@keyframes bombPop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.55) rotate(-12deg);
+  }
+  28% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.08) rotate(4deg);
+  }
+  48%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+@keyframes ringBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.25);
+  }
+  28% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+@keyframes rocketLift {
+  0% {
+    opacity: 0;
+    transform: translateY(47px) rotate(8deg) scale(0.7);
+  }
+  24% {
+    opacity: 1;
+    transform: translateY(6px) rotate(-3deg) scale(1);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-4px) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-51px) scale(0.85);
+  }
+}
+@keyframes royalBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-12deg);
+  }
+  25%,
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.27) rotate(8deg);
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .stage {
+    width: min(350px, 54vw);
+    height: min(76px, var(--effect-safe-height));
+    overflow: clip;
+  }
+  .frame {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    gap: 2px;
+  }
+  .art {
+    width: min(170px, 28vw);
+    height: 100%;
+    flex: none;
+    overflow: hidden;
+  }
+  .label {
+    font-size: 17px;
+    margin: 0;
+    padding: 3px 9px 4px;
+    white-space: normal;
+    text-align: center;
+    max-width: 165px;
+  }
+  .result {
+    width: max-content;
+    height: 22px;
+    overflow: visible;
+  }
+  .result .frame {
+    gap: 4px;
+  }
+  .result .art {
+    width: 47px;
+    height: 22px;
+  }
+  .result .label {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    display: none;
+  }
+  .stage * {
+    animation: none;
+  }
+}

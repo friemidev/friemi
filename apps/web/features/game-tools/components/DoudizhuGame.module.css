@@ -791,6 +791,20 @@
   letter-spacing: -0.04em;
   margin: 8px 0 20px;
 }
+.resultEyebrow {
+  display: block;
+  height: 20px;
+  line-height: 20px;
+}
+.resultEffectArea {
+  display: inline-block;
+  min-width: 210px;
+  height: inherit;
+  line-height: inherit;
+}
+.resultEffectArea[data-ddz-effect-active="true"] [data-ddz-effect-copy] {
+  visibility: hidden;
+}
 .resultPlayers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1503,6 +1517,7 @@
   .result > .eyebrow {
     font-size: 11px;
     line-height: 15px;
+    height: 15px;
   }
   .result h1 {
     margin: 2px 0 4px;
@@ -1578,6 +1593,55 @@
 .tableArena {
   position: relative;
   height: var(--ddz-arena-height);
+}
+.passFeedback {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.passMarker {
+  position: absolute;
+  top: 48%;
+  color: var(--ddz-ink);
+  background: var(--ddz-paper);
+  border: 1px solid var(--ddz-border);
+  border-radius: 18px 18px 18px 5px;
+  padding: 6px 14px;
+  font-size: 23px;
+  font-weight: 850;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--ddz-ink) 10%, transparent);
+  animation: ddzPassAppear 160ms ease-out both;
+}
+.passMarker[data-position="left"] {
+  left: 17%;
+}
+.passMarker[data-position="right"] {
+  right: 17%;
+  border-radius: 18px 18px 5px 18px;
+}
+.passMarker[data-position="self"] {
+  top: auto;
+  bottom: 8px;
+  left: 50%;
+  translate: -50% 0;
+}
+@keyframes ddzPassAppear {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .passMarker {
+    animation: none;
+  }
 }
 .tableClassic .tableMeta {
   position: absolute;
@@ -1855,6 +1919,22 @@
   }
   .tableClassic::before {
     inset: 9px 3% 23px;
+  }
+  .passMarker {
+    top: 48px;
+    padding: 4px 10px;
+    font-size: 20px;
+    border-radius: 14px 14px 14px 4px;
+  }
+  .passMarker[data-position="left"] {
+    left: 112px;
+  }
+  .passMarker[data-position="right"] {
+    right: 112px;
+    border-radius: 14px 14px 4px 14px;
+  }
+  .passMarker[data-position="self"] {
+    bottom: 4px;
   }
   .tableClassic .tableMeta {
     top: 0;

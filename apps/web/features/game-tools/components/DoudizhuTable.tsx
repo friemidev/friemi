@@ -20,15 +20,13 @@ import {
   getDdzCard,
   listDdzHints,
 } from "../doudizhuEngine";
-import { getDoudizhuCopy, doudizhuPatternName } from "../doudizhuCopy";
-import {
-  DoudizhuCardFace,
-  doudizhuCardLabel,
-  doudizhuCardRank,
-} from "./DoudizhuCard";
+import { getDoudizhuCopy } from "../doudizhuCopy";
+import { getDdzPassFeedback } from "../doudizhuPassFeedback";
+import { DoudizhuCardFace, doudizhuCardLabel } from "./DoudizhuCard";
 import { DoudizhuCat, DoudizhuDialog, DoudizhuHeader } from "./DoudizhuChrome";
 import { DoudizhuHand } from "./DoudizhuHand";
 import { DoudizhuAudioControls } from "./DoudizhuAudioControls";
+import { DoudizhuPlayEffects } from "./DoudizhuPlayEffects";
 import s from "./DoudizhuGame.module.css";
 
 type Props = {
@@ -71,7 +69,8 @@ export function DoudizhuTable({
     [historyBusy, setHistoryBusy] = useState(false),
     [historyError, setHistoryError] = useState(false),
     [now, setNow] = useState(room.serverNow),
-    [reactionUntil, setReactionUntil] = useState(0);
+    [reactionUntil, setReactionUntil] = useState(0),
+    [passTick, setPassTick] = useState(0);
   const clock = useRef({ server: room.serverNow, local: performance.now() }),
     hintIndex = useRef(0),
     hintKey = useRef("");
@@ -88,6 +87,23 @@ export function DoudizhuTable({
     );
     return () => clearInterval(timer);
   }, [freezeClock]);
+  // Visual holds keep their own monotonic elapsed time, even in manual preview.
+  const passNow = Math.max(
+      room.serverNow,
+      clock.current.server + performance.now() - clock.current.local,
+    ),
+    passFeedback = getDdzPassFeedback(state, passNow),
+    passExpiresAt = passFeedback.find(
+      (item) => item.expiresAt !== null,
+    )?.expiresAt;
+  useEffect(() => {
+    if (passExpiresAt === null || passExpiresAt === undefined) return;
+    const timer = setTimeout(
+      () => setPassTick((tick) => tick + 1),
+      Math.max(0, passExpiresAt - passNow) + 10,
+    );
+    return () => clearTimeout(timer);
+  }, [passExpiresAt, room.serverNow, passTick]);
   useEffect(() => {
     setSelected([]);
     setNotice("");
@@ -134,7 +150,7 @@ export function DoudizhuTable({
     }
     setSelected(choices[hintIndex.current % choices.length].cardIds);
     hintIndex.current += 1;
-    setNotice(t.chooseHint);
+    setNotice("");
   }
   async function play() {
     if (!canBeat || !isTurn || busy) return;
@@ -163,10 +179,20 @@ export function DoudizhuTable({
   const selectionText =
     notice ||
     (selected.length
-      ? pattern
-        ? `${t.selected}: ${doudizhuPatternName(pattern.type, locale)}${pattern.mainRank < 16 ? ` · ${doudizhuCardRank({ id: "", rank: pattern.mainRank, suit: null })}` : ""}${!canBeat ? ` · ${t.cannotBeat}` : ""}`
-        : t.invalid
-      : t.choose);
+      ? !pattern
+        ? t.invalid
+        : !canBeat
+          ? t.cannotBeat
+          : ""
+      : "");
+  const selectionLabel =
+    selectionText === t.invalid
+      ? t.invalidShort
+      : selectionText === t.cannotBeat
+        ? t.cannotBeatShort
+        : selectionText === t.noHint
+          ? t.noHintShort
+          : selectionText;
   const turnText = isTurn
     ? state.phase === "PLAYING" && !state.targetPlay
       ? t.lead
@@ -177,15 +203,7 @@ export function DoudizhuTable({
     const p = room.seats.find((x) => x.seat === seat),
       view = state.players.find((x) => x.seat === seat);
     if (!p || !view) return null;
-    const last = [...state.events]
-        .reverse()
-        .find(
-          (e) =>
-            e.seat === seat &&
-            e.gameNo === state.gameNo &&
-            e.dealNo === state.dealNo &&
-            ["BID", "PLAY", "PASS"].includes(e.kind),
-        ),
+    const bid = state.bid.bids.find((bid) => bid.seat === seat),
       reaction = room.reactions.find(
         (r) => r.seat === seat && r.expiresAt > now,
       );
@@ -236,17 +254,11 @@ export function DoudizhuTable({
               ? ` · ${t.disconnected}`
               : ""}
         </span>
-        <span className={s.lastAction}>
-          {last?.kind === "PASS"
-            ? t.pass
-            : last?.kind === "BID"
-              ? last.score
-                ? `${t.bidScore} ${last.score}`
-                : t.noBid
-              : last?.play
-                ? doudizhuPatternName(last.play.type, locale)
-                : ""}
-        </span>
+        {state.phase === "BIDDING" && bid && (
+          <span className={s.lastAction}>
+            {bid.score ? `${t.bidScore} ${bid.score}` : t.noBid}
+          </span>
+        )}
       </section>
     );
   }
@@ -265,6 +277,13 @@ export function DoudizhuTable({
           serverNow={room.serverNow}
         />
       </DoudizhuHeader>
+      <DoudizhuPlayEffects
+        state={state}
+        serverNow={room.serverNow}
+        roomKey={room.id}
+        locale={locale}
+        freezeClock={freezeClock}
+      />
       {error && (
         <div className={s.feedback} role="alert">
           <span>{error}</span>
@@ -287,8 +306,12 @@ export function DoudizhuTable({
         </main>
       ) : result && state.phase === "RESULT" ? (
         <main className={s.result}>
-          <span className={s.eyebrow}>
-            {t.result} · {state.gameNo}
+          <span className={`${s.eyebrow} ${s.resultEyebrow}`}>
+            <span className={s.resultEffectArea} data-ddz-effects-area="result">
+              <span data-ddz-effect-copy="result">
+                {t.result} · {state.gameNo}
+              </span>
+            </span>
           </span>
           <h1>
             {result.winnerSide === "landlord" ? t.landlordWin : t.farmersWin}
@@ -374,7 +397,7 @@ export function DoudizhuTable({
         </main>
       ) : (
         <main className={`${s.table} ${s.tableClassic}`}>
-          <div className={s.tableArena}>
+          <div className={s.tableArena} data-ddz-effects-area="table">
             <div className={s.tableMeta}>
               <div
                 className={s.bottomCards}
@@ -459,24 +482,32 @@ export function DoudizhuTable({
                   </span>
                 ))}
               </div>
-              {state.targetPlay ? (
-                <span className={s.playTitle}>
-                  {
-                    room.seats.find((p) => p.seat === state.targetPlay?.seat)
-                      ?.name
-                  }{" "}
-                  · {doudizhuPatternName(state.targetPlay.type, locale)}
-                </span>
-              ) : (
-                <span className={s.emptyPlay}>
-                  {state.phase === "BIDDING"
-                    ? `${t.bidScore} 1 · 2 · 3`
-                    : isTurn
-                      ? t.lead
-                      : t.emptyTarget}
-                </span>
+              {!state.targetPlay && state.phase === "BIDDING" && (
+                <span className={s.emptyPlay}>{`${t.bidScore} 1 · 2 · 3`}</span>
               )}
             </section>
+            <div className={s.passFeedback} role="status" aria-live="polite">
+              {passFeedback.map(({ seat, eventId }) => (
+                <span
+                  key={eventId}
+                  className={s.passMarker}
+                  data-ddz-pass-seat={seat}
+                  data-position={
+                    seat === room.viewerSeat
+                      ? "self"
+                      : seat === (room.viewerSeat + 2) % 3
+                        ? "left"
+                        : "right"
+                  }
+                >
+                  <span className="sr-only">
+                    {room.seats.find((player) => player.seat === seat)?.name}{" "}
+                    ·{" "}
+                  </span>
+                  {t.pass}
+                </span>
+              ))}
+            </div>
           </div>
           <div className={s.decisionRow}>
             <div className={s.tableSelf}>
@@ -489,14 +520,15 @@ export function DoudizhuTable({
                   className={s.tableSelection}
                   role="status"
                   title={selectionText}
+                  aria-label={selectionText || undefined}
                 >
-                  {selected.length || notice
-                    ? selectionText
+                  {selectionText
+                    ? selectionLabel
                     : state.landlordSeat !== null
                       ? state.landlordSeat === room.viewerSeat
                         ? t.landlord
                         : t.farmer
-                      : t.hand}
+                      : ""}
                 </span>
               </div>
             </div>
@@ -661,9 +693,11 @@ export function DoudizhuTable({
               setNotice("");
             }}
           />
-          <p className={s.help} role="status">
-            {selectionText}
-          </p>
+          {selectionText && (
+            <p className={s.help} role="status">
+              {selectionText}
+            </p>
+          )}
           <button
             className={`${s.button} ${s.primary}`}
             style={{ width: "100%" }}

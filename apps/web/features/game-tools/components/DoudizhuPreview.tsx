@@ -52,9 +52,12 @@ function lobby(locale: string) {
 export function DoudizhuPreview({
   locale,
   initialScene = "table",
+  initialDeck,
 }: {
   locale: string;
   initialScene?: "entry" | "lobby" | "table";
+  /** Local preview fixtures only; online rooms always use server shuffling. */
+  initialDeck?: string[];
 }) {
   const t = getDoudizhuCopy(locale),
     motionRoot = useRef<HTMLDivElement>(null),
@@ -63,7 +66,7 @@ export function DoudizhuPreview({
     [state, setState] = useState<DdzState>(() =>
       initialScene === "table"
         ? startDdzGame(lobby(locale), Date.now(), {
-            deck: deck(211),
+            deck: initialDeck ?? deck(211),
             firstBidSeat: 0,
           }).state
         : lobby(locale),
