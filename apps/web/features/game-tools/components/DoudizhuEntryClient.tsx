@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ArrowRight, UsersRound, Play, History } from "lucide-react";
 import { getDoudizhuCopy, doudizhuErrorMessage } from "../doudizhuCopy";
 import { sendDdzRoomWrite, type DdzPendingWrite } from "../doudizhuRoomRequest";
@@ -7,8 +8,7 @@ import { clearDdzRoomShortcuts } from "../doudizhuRoomStorage";
 import { ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT } from "../activeGameToolRoomStorage";
 import type { DdzRoundSummary } from "../doudizhuRoomTypes";
 import { DoudizhuHistoryDialog } from "./DoudizhuHistoryDialog";
-import { DoudizhuCardFace } from "./DoudizhuCard";
-import { DoudizhuCat, DoudizhuHeader } from "./DoudizhuChrome";
+import { DoudizhuHeader } from "./DoudizhuChrome";
 import { DoudizhuAudioControls } from "./DoudizhuAudioControls";
 import { GameToolsMobileChrome } from "./GameToolsMobileChrome";
 import s from "./DoudizhuGame.module.css";
@@ -176,26 +176,15 @@ export function DoudizhuEntryClient({
       </DoudizhuHeader>
       <main className={s.entryMain}>
         <div className={s.entryArt} aria-hidden="true">
-          <span className={s.artCircle} />
-          <span className={s.entrySpark}>✦</span>
-          {[
-            { id: "s14", rank: 14, suit: "spades" },
-            { id: "h13", rank: 13, suit: "hearts" },
-            { id: "c12", rank: 12, suit: "clubs" },
-          ].map((card, i) => (
-            <div
-              key={card.id}
-              className={s.heroCard}
-              style={{ "--i": i } as CSSProperties}
-            >
-              <DoudizhuCardFace
-                card={card as Parameters<typeof DoudizhuCardFace>[0]["card"]}
-              />
-            </div>
-          ))}
-          <span className={s.entryCat}>
-            <DoudizhuCat catId="baker" size={155} />
-          </span>
+          <Image
+            src="/game-tools/doudizhu/logo.svg"
+            alt=""
+            width={360}
+            height={260}
+            className={s.entryIllustration}
+            priority
+            unoptimized
+          />
         </div>
         <div className={s.entryCopy}>
           <h1>{t.title}</h1>

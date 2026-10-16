@@ -1,6 +1,6 @@
 # 斗地主实施与验收记录
 
-日期：2026-10-16。分支：`二游`。基线：`origin/dev` 的 `1b3d9c8b`。
+日期：2026-10-16。当前分支：`codex/doudizhu-sichuan-mahjong`（原本地名 `二游`）。基线：`origin/dev` 的 `1b3d9c8b`。
 
 工作目录：`/home/ubuntu23/Bureau/friemi-worktrees/eryou`。从完整 Friemi 仓库创建独立 Git worktree，原 `dev` 工作目录中的未提交修改未被移入或覆盖。完整设计与三个既有游戏 Agent 的经验汇总见[开发与设计方案](doudizhu-development-design-plan.md)；用户要求参考欢乐斗地主/JJ斗地主后的改版依据见[牌桌参考与UI改版记录](doudizhu-table-reference-study.md)。
 
@@ -52,7 +52,7 @@ npm run doudizhu:preview --workspace=apps/web
 2. 确认 Prisma 使用服务端数据库角色；浏览器只能走API。共享 Prisma 默认省略新字段，DDZ服务显式选取，避免功能关闭时破坏尚未迁移的其他游戏。
 3. 配置现有 Clerk 与 Supabase Third-Party Auth，验证登录JWT的 `sub`/`authenticated` 角色可用于私有频道。普通Postgres没有Realtime schema时迁移跳过频道策略、快照轮询仍可工作。
 4. 配置 `CRON_SECRET`，使用独立worker调用 `/api/cron/doudizhu-deadlines`。默认每2秒，不重叠请求；一次房间事务只推进一个行动。
-5. 测试部署设置 `DOUDIZHU_ENABLED=true`。默认只有本机 `NODE_ENV=development` 开启；生产/托管预览默认关闭，`false`可明确关闭。
+5. 按用户要求，`VERCEL_ENV=preview/development` 默认开放斗地主，本机开发也开放；Production与无标识生产构建仍默认关闭。`DOUDIZHU_ENABLED=false` 可明确关闭，显式 `true` 的发布开关仍可使用。新测试数据库应先完成迁移和独立调度再接收真实玩家。
 6. 完成三账号、三设备、全员离线到期、掉线恢复和声音检查后，再决定公开上线。
 
 ```bash
@@ -138,3 +138,11 @@ DDZ_TEST_ALLOW_LOCAL=true \
 最终游戏工具测试 **466 项通过**，TypeScript 与完整 Next.js 生产构建通过；真实本机 PostgreSQL **459 项检查通过**。新增 120 局混合动作模拟守恒和结算检查通过。实际组件的独立浏览器 harness 以模拟 Clerk/API 验证关房/离席丢响应、选猫 500 后重试、切账号晚响应，不冒充真实三账号联网。
 
 浏览器完整走过建房、1局/30秒、准备、叫分、58次到期动作到结算、返厅查记录、关闭取消/确认、入口查看已关闭房间记录。中英法入口和大厅各验证390/1280宽；牌桌另验证667×375、844×390及1280×800的菜单、音频、转屏退出、长名和手势取消。证据索引见审计报告；手机真机、多人真实网络、私有频道和worker部署仍待单独验收。本轮未部署。
+
+## Preview 开放与三猫 logo（2026-10-16）
+
+用户授权在测试环境开放斗地主。已备份并仅在 Preview 数据库 `dryhbxognbrljslzciuh` 应用两条斗地主迁移，核对校验和、三张私有表的 RLS、客户端零直接授权、三条房间限制策略和五条实时频道策略。未加载或修改 Production 数据库连接。私有备份及验证记录位于 `~/.local/share/friemi/database-sync/20261016-doudizhu-preview/`，不纳入 Git。
+
+游戏目录与入口共用新的三猫围坐牌桌 SVG，复用现有云朵喵、芒果喵、桃桃喵角色渲染及原配色，保持无文字图形。复现：在 `apps/web` 运行 `npm run doudizhu:logo`。中英法 × 390×844、568×320、1280×800 共9个入口检查无页面溢出或控制台错误；游戏工具466项测试与完整生产构建通过。
+
+Preview 目标入口：`https://friemi-git-codex-doudizhu-sichuan-mahjong-friemi.vercel.app/zh-CN/game-tools/doudizhu`。独立调度配置脚本为 `scripts/configure-doudizhu-preview-cron.mjs`，严格限制该 Preview 域名和数据库，预检成功后才写入 Vault 和三个专属 cron 任务；每2秒只对有到期房间的场景请求扫描，另有每日保留期维护与7天调度历史清理。线上部署与调度结果以部署后的验证记录为准，不将本地截图当作已上线证明。

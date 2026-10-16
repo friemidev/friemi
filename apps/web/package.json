@@ -34,6 +34,7 @@
     "draw-guess:preview-cron": "node scripts/configure-draw-guess-preview-cron.mjs",
     "draw-guess:production-cron": "node scripts/configure-draw-guess-production-cron.mjs",
     "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts",
+    "doudizhu:logo": "esbuild scripts/generate-doudizhu-logo.tsx --bundle --platform=node --packages=external --jsx=automatic --format=esm --outfile=../../output/playwright/doudizhu-logo-generator.mjs && node ../../output/playwright/doudizhu-logo-generator.mjs",
     "doudizhu:preview": "node scripts/build-doudizhu-preview.mjs && node scripts/serve-doudizhu-preview.mjs",
     "doudizhu:deadlines": "node scripts/run-doudizhu-deadlines.mjs",
     "doudizhu:test-persistence": "node --conditions=react-server --import tsx scripts/test-doudizhu-persistence.ts"

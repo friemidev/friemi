@@ -2946,3 +2946,10 @@
     margin-block: 14px;
   }
 }
+
+.entryIllustration {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
