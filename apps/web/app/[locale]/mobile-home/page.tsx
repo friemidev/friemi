@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CalendarPlus,
   Clock3,
+  Gamepad2,
   MapPin,
   Search,
   UsersRound,
@@ -270,6 +271,20 @@ export const dynamic = "force-dynamic";
 
 function getMobileHomeCopy(locale: string) {
   return mobileHomeCopy[locale] ?? mobileHomeCopy["zh-CN"];
+}
+
+function HomeGamesLink({ locale }: { locale: string }) {
+  const label =
+    locale === "zh-CN" ? "玩游戏" : locale === "fr" ? "Jouer" : "Play games";
+  return (
+    <Link
+      href={withLocale(locale, "/game-tools?from=home")}
+      className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sand bg-paper px-3.5 text-[13px] font-semibold text-forest transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest active:scale-[.97] motion-reduce:transition-none"
+    >
+      <Gamepad2 size={18} aria-hidden="true" />
+      {label}
+    </Link>
+  );
 }
 
 function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
@@ -664,12 +679,17 @@ function MobileHomeV23Experience({
               {getNowPreviewLabel(locale)}
             </p>
           ) : null}
-          <h1 className="text-[24px] font-bold leading-tight tracking-normal text-[#111210]">
-            {copy.greeting}
-          </h1>
-          <p className="mt-0.5 text-[12px] font-medium leading-5 text-[#111210]/72">
-            {copy.subtitle}
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="break-words text-[24px] font-bold leading-tight tracking-normal text-[#111210]">
+                {copy.greeting}
+              </h1>
+              <p className="mt-0.5 text-[12px] font-medium leading-5 text-[#111210]/72">
+                {copy.subtitle}
+              </p>
+            </div>
+            <HomeGamesLink locale={locale} />
+          </div>
         </section>
 
         <NowBubbleField
@@ -903,9 +923,12 @@ function MobileHomeExperience({
               } as CSSProperties
             }
           >
-            <p className="text-xs font-semibold uppercase tracking-normal text-forest">
-              {mobile.featureKicker}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-normal text-forest">
+                {mobile.featureKicker}
+              </p>
+              <HomeGamesLink locale={locale} />
+            </div>
             <h1 className="mt-4 max-w-3xl font-serif text-[clamp(3.3rem,7vw,6.7rem)] leading-[0.9] text-[#0E2A66]">
               {mobile.featureBadge}
             </h1>

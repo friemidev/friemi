@@ -23,6 +23,7 @@ type GameToolsPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{ from?: string }>;
 };
 
 const metadataCopy = {
@@ -111,8 +112,12 @@ export async function generateMetadata({
   });
 }
 
-export default async function GameToolsPage({ params }: GameToolsPageProps) {
+export default async function GameToolsPage({
+  params,
+  searchParams,
+}: GameToolsPageProps) {
   const { locale } = await params;
+  const fromHome = (await searchParams)?.from === "home";
   const copy = getGameToolHubCopy(locale);
   const mobileCopy = getMobileGameToolsCopy(locale);
   const drawGuessAvailable = isDrawGuessChainEnabled() || isDrawGuessClassicEnabled();
@@ -124,7 +129,10 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
         <div className="mx-auto w-full max-w-[430px] px-5">
           <header className="space-y-6">
             <GameToolBackButton
-              fallbackHref={withLocale(locale, "/activities/new")}
+              fallbackHref={withLocale(
+                locale,
+                fromHome ? "/mobile-home" : "/activities/new",
+              )}
               locale={locale}
             />
             <h1 className="text-[31px] font-bold leading-none tracking-normal">
@@ -211,6 +219,12 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
       </main>
 
       <PageContainer className="friemi-native-app-desktop-only hidden max-w-[94rem] space-y-6 pb-28 pt-4 md:block sm:pb-14 sm:pt-7">
+        {fromHome ? (
+          <GameToolBackButton
+            fallbackHref={withLocale(locale, "/mobile-home")}
+            locale={locale}
+          />
+        ) : null}
         <section className="relative isolate overflow-hidden rounded-[2.1rem] border border-[#8AB68E]/40 bg-[#FEFFF9] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.12)] sm:p-7 lg:p-9">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F09182]/18 blur-3xl" />
           <div className="absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-[#DEEBFF]/55 blur-3xl" />
