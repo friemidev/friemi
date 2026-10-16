@@ -209,35 +209,37 @@ export function DoudizhuEntryClient({
           </div>
         </div>
         <div className={s.entryActions}>
-          {resume && (
+          <div className={s.entryPrimaryActions}>
+            {resume && (
+              <button
+                className={`${s.button} ${!initialCode ? s.primary : ""}`}
+                disabled={busy || uncertain}
+                onClick={() =>
+                  void submit({
+                    path: "/join",
+                    method: "POST",
+                    body: {
+                      commandId: crypto.randomUUID(),
+                      code: resume.code,
+                      expectedRoomId: resume.id,
+                    },
+                  })
+                }
+              >
+                {t.resume} · {resume.code}
+                <ArrowRight size={18} />
+              </button>
+            )}
             <button
-              className={`${s.button} ${s.primary}`}
+              type="button"
+              className={`${s.button} ${!resume && !initialCode ? s.primary : ""}`}
               disabled={busy || uncertain}
-              onClick={() =>
-                void submit({
-                  path: "/join",
-                  method: "POST",
-                  body: {
-                    commandId: crypto.randomUUID(),
-                    code: resume.code,
-                    expectedRoomId: resume.id,
-                  },
-                })
-              }
+              onClick={() => openRoom(false)}
             >
-              {t.resume} · {resume.code}
-              <ArrowRight size={18} />
+              {busy ? t.busy : t.create}
+              <ArrowRight size={21} />
             </button>
-          )}
-          <button
-            type="button"
-            className={`${s.button} ${!resume && !initialCode ? s.primary : ""}`}
-            disabled={busy || uncertain}
-            onClick={() => openRoom(false)}
-          >
-            {busy ? t.busy : t.create}
-            <ArrowRight size={21} />
-          </button>
+          </div>
           <form
             className={s.joinForm}
             onSubmit={(e) => {
@@ -254,6 +256,7 @@ export function DoudizhuEntryClient({
                 placeholder={t.codePlaceholder}
                 autoComplete="off"
                 autoCapitalize="characters"
+                enterKeyHint="go"
                 spellCheck={false}
                 maxLength={8}
                 minLength={6}
@@ -270,16 +273,28 @@ export function DoudizhuEntryClient({
               </button>
             </div>
           </form>
-          {(initialClerkUserId || onHistory) && (
-            <button
-              className={s.textButton}
-              onClick={() => setHistoryOpen(true)}
-            >
-              <History size={17} /> {t.history}
-            </button>
-          )}
+          <div className={s.entryUtility}>
+            {(initialClerkUserId || onHistory) && (
+              <button
+                className={s.textButton}
+                onClick={() => setHistoryOpen(true)}
+              >
+                <History size={17} /> {t.history}
+              </button>
+            )}
+            {preview && (
+              <a
+                className={s.previewLink}
+                href={`/${locale}/game-tools/doudizhu/preview`}
+              >
+                <Play size={16} />
+                {t.preview}
+                <ArrowRight size={16} />
+              </a>
+            )}
+          </div>
           {error && (
-            <div className={s.inlineError} role="alert">
+            <div className={`${s.inlineError} ${s.entryFeedback}`} role="alert">
               {error}
               {uncertain && (
                 <button
@@ -302,16 +317,6 @@ export function DoudizhuEntryClient({
                 </a>
               )}
             </div>
-          )}
-          {preview && (
-            <a
-              className={s.previewLink}
-              href={`/${locale}/game-tools/doudizhu/preview`}
-            >
-              <Play size={16} />
-              {t.preview}
-              <ArrowRight size={16} />
-            </a>
           )}
         </div>
       </main>

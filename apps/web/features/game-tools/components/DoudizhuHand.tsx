@@ -81,16 +81,24 @@ export function DoudizhuHand({
     if (!node || layout === "grid") return;
     const measure = () => {
       setWidth(node.clientWidth);
+      const tableHeight =
+        node.closest("main")?.clientHeight ?? window.innerHeight;
+      const short = window.matchMedia(
+        "(max-height: 500px) and (orientation: landscape)",
+      ).matches;
       setCardWidth(
-        window.matchMedia("(max-height: 500px) and (orientation: landscape)")
-          .matches
-          ? 72
+        short
+          ? Math.max(
+              56,
+              Math.min(72, ((tableHeight - 78 - 44 - 24) * 72) / 104),
+            )
           : Math.max(96, Math.min(128, window.innerHeight * 0.14)),
       );
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
+    if (node.closest("main")) observer.observe(node.closest("main")!);
     window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();

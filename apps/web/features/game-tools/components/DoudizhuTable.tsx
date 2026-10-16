@@ -77,6 +77,7 @@ export function DoudizhuTable({
   const [selected, setSelected] = useState<string[]>([]),
     [expanded, setExpanded] = useState(false),
     [scoreboardOpen, setScoreboardOpen] = useState(false),
+    [remainingOpen, setRemainingOpen] = useState(false),
     [leaving, setLeaving] = useState(false),
     [notice, setNotice] = useState(""),
     [reactions, setReactions] = useState(false),
@@ -89,6 +90,31 @@ export function DoudizhuTable({
     hintKey = useRef("");
   const toolsRef = useRef<HTMLDivElement>(null),
     menuButton = useRef<HTMLButtonElement>(null);
+  const tableRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) return;
+    const game = table.closest<HTMLElement>(`.${s.game}`);
+    const measure = () => {
+      const top = table.getBoundingClientRect().top + window.scrollY;
+      const bottom = game
+        ? parseFloat(getComputedStyle(game).paddingBottom) || 0
+        : 0;
+      table.style.setProperty(
+        "--ddz-table-height",
+        `${Math.max(200, window.innerHeight - top - bottom)}px`,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(table);
+    if (game) observer.observe(game);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [state.phase]);
   const presentation = useDoudizhuPresentation(),
     passArea = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -461,49 +487,40 @@ export function DoudizhuTable({
               {result.capped && <span>{t.capped}</span>}
             </div>
           )}
-          <button
-            className={`${s.button} ${s.primary}`}
-            disabled={busy || room.returnedToLobby}
-            onClick={onReturn}
-          >
-            {room.returnedToLobby ? t.returning : t.returnLobby}
-            <ArrowRight size={18} />
-          </button>
-          <div className={s.belowTable}>
+          <div className={s.resultActions}>
+            <button
+              className={`${s.button} ${s.primary}`}
+              disabled={busy || room.returnedToLobby}
+              onClick={onReturn}
+            >
+              {room.returnedToLobby ? t.returning : t.returnLobby}
+              <ArrowRight size={18} />
+            </button>
+            <div className={s.belowTable}>
+              <button
+                className={s.textButton}
+                onClick={() => setScoreboardOpen(true)}
+              >
+                <ListOrdered size={16} />
+                {t.scoreboard}
+              </button>
+              <button
+                className={s.textButton}
+                onClick={() => void showHistory()}
+              >
+                <History size={16} /> {t.history}
+              </button>
+            </div>
             <button
               className={s.textButton}
-              onClick={() => setScoreboardOpen(true)}
+              onClick={() => setRemainingOpen(true)}
             >
-              <ListOrdered size={16} />
-              {t.scoreboard}
-            </button>
-            <button className={s.textButton} onClick={() => void showHistory()}>
-              <History size={16} /> {t.history}
+              {t.remaining}
             </button>
           </div>
-          <details>
-            <summary className={s.textButton}>{t.remaining}</summary>
-            {state.remainingHands?.map((x) => (
-              <div key={x.seat} style={{ margin: "12px 0" }}>
-                <p className={s.help}>
-                  {room.seats.find((p) => p.seat === x.seat)?.name}
-                </p>
-                <div className={s.playedCards}>
-                  {x.cards.map((card) => (
-                    <span key={card.id} className={s.playedCard}>
-                      <DoudizhuCardFace card={card} />
-                      <span className="sr-only">
-                        {doudizhuCardLabel(card, locale)}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </details>
         </main>
       ) : (
-        <main className={`${s.table} ${s.tableClassic}`}>
+        <main ref={tableRef} className={`${s.table} ${s.tableClassic}`}>
           <div className={s.tableArena} data-ddz-effects-area="table">
             <div className={s.tableMeta}>
               <div
@@ -838,6 +855,26 @@ export function DoudizhuTable({
           title={t.hand}
           closeLabel={t.close}
           onClose={() => setExpanded(false)}
+          footer={
+            <>
+              <button
+                className={s.button}
+                disabled={busy || selected.length === 0}
+                onClick={() => {
+                  setSelected([]);
+                  setNotice("");
+                }}
+              >
+                {t.clear}
+              </button>
+              <button
+                className={`${s.button} ${s.primary}`}
+                onClick={() => setExpanded(false)}
+              >
+                {t.collapse}
+              </button>
+            </>
+          }
         >
           <div className={`${s.turn} ${isTurn ? s.ownTurn : ""}`}>
             <span>{turnText}</span>
@@ -873,13 +910,6 @@ export function DoudizhuTable({
               {selectionText}
             </p>
           )}
-          <button
-            className={`${s.button} ${s.primary}`}
-            style={{ width: "100%" }}
-            onClick={() => setExpanded(false)}
-          >
-            {t.collapse}
-          </button>
         </DoudizhuDialog>
       )}
       {leaving && (
@@ -887,6 +917,20 @@ export function DoudizhuTable({
           title={t.leaveTitle}
           closeLabel={t.close}
           onClose={() => setLeaving(false)}
+          footer={
+            <div className={s.lobbyActions}>
+              <button className={s.button} onClick={() => setLeaving(false)}>
+                {t.cancel}
+              </button>
+              <button
+                className={`${s.button} ${s.primary}`}
+                disabled={busy}
+                onClick={onLeave}
+              >
+                {t.leave}
+              </button>
+            </div>
+          }
         >
           {error && (
             <div className={s.feedback} role="alert">
@@ -903,18 +947,31 @@ export function DoudizhuTable({
               ? t.leaveActive
               : t.leaveLobby}
           </p>
-          <div className={s.lobbyActions}>
-            <button className={s.button} onClick={() => setLeaving(false)}>
-              {t.cancel}
-            </button>
-            <button
-              className={`${s.button} ${s.primary}`}
-              disabled={busy}
-              onClick={onLeave}
-            >
-              {t.leave}
-            </button>
-          </div>
+        </DoudizhuDialog>
+      )}
+      {remainingOpen && state.phase === "RESULT" && (
+        <DoudizhuDialog
+          title={t.remaining}
+          closeLabel={t.close}
+          onClose={() => setRemainingOpen(false)}
+        >
+          {state.remainingHands?.map((x) => (
+            <div key={x.seat} style={{ margin: "12px 0" }}>
+              <p className={s.help}>
+                {room.seats.find((p) => p.seat === x.seat)?.name}
+              </p>
+              <div className={s.playedCards}>
+                {x.cards.map((card) => (
+                  <span key={card.id} className={s.playedCard}>
+                    <DoudizhuCardFace card={card} />
+                    <span className="sr-only">
+                      {doudizhuCardLabel(card, locale)}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
         </DoudizhuDialog>
       )}
       {historyOpen && (

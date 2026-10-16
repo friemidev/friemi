@@ -1,4 +1,11 @@
 .game {
+  --ddz-safe-top: var(--app-top-safe-area, env(safe-area-inset-top, 0px));
+  --ddz-safe-bottom: var(
+    --app-bottom-safe-area,
+    env(safe-area-inset-bottom, 0px)
+  );
+  --ddz-safe-left: var(--app-left-safe-area, env(safe-area-inset-left, 0px));
+  --ddz-safe-right: var(--app-right-safe-area, env(safe-area-inset-right, 0px));
   --ddz-ink: #30425c;
   --ddz-muted: #52657e;
   --ddz-sky: #3c73b0;
@@ -9,8 +16,8 @@
   color: var(--ddz-ink);
   background: var(--ddz-mist);
   min-height: 100dvh;
-  padding: 0 max(12px, env(safe-area-inset-right))
-    max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  padding: var(--ddz-safe-top) max(12px, var(--ddz-safe-right))
+    max(20px, var(--ddz-safe-bottom)) max(12px, var(--ddz-safe-left));
   font-family: var(--font-sans), sans-serif;
   font-size: 16px;
   overflow-x: clip;
@@ -723,6 +730,13 @@
   --ddz-butter: #ffe7b1;
   --ddz-paper: #fffcf5;
   --ddz-border: #ccd0d3;
+  --ddz-safe-left: var(--app-left-safe-area, env(safe-area-inset-left, 0px));
+  --ddz-safe-right: var(--app-right-safe-area, env(safe-area-inset-right, 0px));
+  --ddz-safe-top: var(--app-top-safe-area, env(safe-area-inset-top, 0px));
+  --ddz-safe-bottom: var(
+    --app-bottom-safe-area,
+    env(safe-area-inset-bottom, 0px)
+  );
   color: var(--ddz-ink);
   background: var(--ddz-paper);
   border: 1.5px solid var(--ddz-border);
@@ -2283,5 +2297,652 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+/* A real viewport budget: the hand and controls keep their size, the arena flexes. */
+.table.tableClassic {
+  height: var(--ddz-table-height, auto);
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+.tableClassic .tableArena {
+  height: auto;
+  min-height: 78px;
+  flex: 1 1 auto;
+}
+.tableClassic .decisionRow {
+  flex: 0 0 auto;
+}
+.tableClassic > [data-ddz-hand-layout="fan"] {
+  flex: 0 0 auto;
+}
+.entryPrimaryActions {
+  display: grid;
+  gap: 12px;
+}
+.entryUtility {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+.lobbySeatInfo {
+  min-width: 0;
+}
+.lobbySecondaryActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.lobbyInvite,
+.lobbyClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.dialog {
+  overflow: hidden;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialogHeader {
+  flex: none;
+  min-height: 44px;
+}
+.dialogBody {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 3px;
+  margin: -3px;
+}
+.dialogFooter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+}
+.dialogFooter .lobbyActions {
+  margin: 0;
+}
+.dialogFooter > .button {
+  min-height: 44px;
+}
+.dialogFooter .feedback {
+  margin: 0;
+}
+
+@media (orientation: landscape) {
+  .game {
+    box-sizing: border-box;
+    padding-top: var(--ddz-safe-top);
+    padding-bottom: max(4px, var(--ddz-safe-bottom));
+  }
+  .game:has(.tableClassic) {
+    padding-bottom: max(2px, var(--ddz-safe-bottom));
+  }
+  .dialog {
+    width: min(
+      640px,
+      calc(100vw - var(--ddz-safe-left) - var(--ddz-safe-right) - 8px)
+    );
+    max-height: calc(
+      100dvh - 8px - var(--ddz-safe-top) - var(--ddz-safe-bottom)
+    );
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .header {
+    min-height: 46px;
+    padding-block: 1px;
+  }
+  .entryMain {
+    grid-template-columns: minmax(150px, 0.85fr) minmax(0, 1.15fr);
+    grid-template-rows: auto auto;
+    gap: 6px 24px;
+    margin: 0 auto;
+    max-width: 1000px;
+    align-items: center;
+  }
+  .entryCopy {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .entryCopy h1 {
+    font-size: clamp(25px, 4vw, 34px);
+    margin: 0 0 4px;
+    line-height: 1.15;
+  }
+  .entryCopy p {
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 0 0 7px;
+  }
+  .entryTags {
+    gap: 3px 10px;
+    font-size: 12px;
+  }
+  .entryArt {
+    grid-column: 1;
+    grid-row: 2;
+    height: clamp(112px, calc(100dvh - 190px), 255px);
+  }
+  .artCircle {
+    width: clamp(110px, calc(100dvh - 185px), 240px);
+    height: clamp(110px, calc(100dvh - 185px), 240px);
+  }
+  .heroCard {
+    width: clamp(54px, calc(100dvh * 0.18), 95px);
+    transform: translate(calc((var(--i) - 1) * clamp(38px, 7vw, 62px)), -12px)
+      rotate(calc((var(--i) - 1) * 16deg));
+  }
+  .entryCat {
+    bottom: 0;
+    right: 4px;
+  }
+  .entryCat [data-cat],
+  .entryCat svg {
+    width: clamp(72px, calc(100dvh * 0.23), 120px) !important;
+    height: clamp(72px, calc(100dvh * 0.23), 120px) !important;
+  }
+  .entrySpark {
+    top: 3px;
+    right: 8px;
+    font-size: 23px;
+  }
+  .entryActions {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    gap: 10px;
+    align-self: center;
+  }
+  .entryPrimaryActions {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .entryPrimaryActions .button {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 14px !important;
+    line-height: 1.25;
+  }
+  .entryUtility {
+    gap: 0 10px;
+  }
+  .entryUtility .textButton,
+  .entryUtility .previewLink {
+    font-size: 13px !important;
+    margin: 0;
+  }
+  .joinForm {
+    gap: 5px;
+  }
+  .joinForm input,
+  .joinForm .button {
+    min-height: 44px;
+    padding-block: 8px;
+  }
+  .joinForm > div > .button {
+    min-width: 88px;
+    padding-inline: 10px;
+    font-size: 14px !important;
+  }
+  .entryFeedback {
+    margin: 0;
+    font-size: 13px;
+  }
+  .lobbyMain {
+    max-width: 1050px;
+  }
+  .lobbyTopRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 48px;
+  }
+  .lobbyIntro {
+    text-align: left;
+    padding: 0;
+    min-width: 0;
+  }
+  .lobbyIntro .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .lobbyIntro h1 {
+    font-size: 21px;
+    line-height: 1.15;
+    margin: 2px 0;
+  }
+  .lobbySettingsBar {
+    flex: none;
+    margin: 0;
+    gap: 3px;
+    flex-wrap: nowrap;
+  }
+  .lobbySettingsBar > .textButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 6px;
+  }
+  .settingsSummary {
+    padding: 7px 9px;
+    gap: 6px;
+    font-size: 13px !important;
+  }
+  .lobbyToolLabel,
+  .lobbyInviteLabel,
+  .lobbyCloseLabel {
+    display: none;
+  }
+  .lobbyInvite {
+    padding: 7px 9px;
+    font-size: 13px !important;
+    gap: 5px;
+  }
+  .lobbySeats {
+    margin: 6px auto;
+    max-width: none;
+    gap: 10px;
+  }
+  .lobbySeat {
+    min-height: 0;
+    padding: 7px 9px 2px;
+    border-radius: 18px;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-content: center;
+    gap: 0 5px;
+    text-align: left;
+  }
+  .lobbySeat > [data-cat],
+  .lobbySeat > [data-cat] svg {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .lobbySeat > [data-cat] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .lobbySeatInfo {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: center;
+    gap: 0 2px;
+  }
+  .lobbySeat h2 {
+    width: 100%;
+    font-size: 14px;
+    line-height: 18px;
+    margin: 0 0 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lobbySeat .badge {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+  .lobbySeat .readyLabel {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .lobbySeat > .lastAction {
+    position: absolute;
+    left: 44px;
+    top: 2px;
+    margin: 0;
+  }
+  .lobbySeatAction {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    padding: 6px 0;
+    font-size: 13px !important;
+  }
+  .lobbySeat:not(:has(.lobbySeatAction)) {
+    padding-bottom: 46px;
+  }
+  .lobbySeat.emptySeat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 7px;
+  }
+  .emptySeat p {
+    font-size: 13px;
+    margin: 0;
+  }
+  .lobbyHint {
+    margin: 1px 0;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .lobbyFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .lobbyFooter .lobbyActions {
+    margin: 0;
+    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+  .lobbyFooter .button {
+    min-height: 44px;
+    padding: 7px 12px;
+    font-size: 14px !important;
+  }
+  .lobbySecondaryActions {
+    gap: 4px;
+  }
+  .lobbySecondaryActions .belowTable {
+    margin: 0;
+    gap: 0;
+  }
+  .lobbyClose {
+    width: 44px;
+    padding: 0;
+  }
+  .dialog {
+    padding: 8px;
+    border-radius: 20px;
+  }
+  .dialogHeader {
+    margin-bottom: 6px;
+  }
+  .dialogHeader h2 {
+    font-size: 20px;
+  }
+  .dialogFooter {
+    padding-top: 8px;
+  }
+  .dialogFooter .button {
+    min-height: 44px;
+    padding-block: 8px;
+  }
+  .dialogBody > .turn {
+    min-height: 28px;
+    margin: 0;
+    font-size: 14px;
+  }
+  .dialogBody > .turn .turnTime {
+    padding: 2px 8px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+}
+@media (max-height: 340px) and (orientation: landscape) {
+  .tableClassic .player [data-cat],
+  .tableClassic .player svg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .tableClassic .player {
+    width: 84px;
+  }
+  .tableClassic .playerInfo strong {
+    max-width: 76px;
+  }
+  .tableClassic .playerInfo {
+    flex-wrap: nowrap;
+  }
+  .tableClassic .playerInfo .badge {
+    position: absolute;
+    top: 16px;
+    right: -2px;
+  }
+  .tableClassic .tableMeta {
+    max-width: calc(100% - 176px);
+    gap: 6px;
+  }
+  .tableClassic .turnName {
+    max-width: 52px;
+  }
+  .tableClassic .playedCard {
+    width: 34px;
+    margin-left: -20px;
+  }
+  .tableClassic .playedCards {
+    min-height: 49px;
+  }
+  .tableClassic .playArea,
+  .tableClassic .playArea[data-source="self"] {
+    top: 28px;
+  }
+  .tableClassic .playArea[data-source="left"] {
+    left: 90px;
+  }
+  .tableClassic .playArea[data-source="right"] {
+    right: 90px;
+  }
+  .tableClassic .playArea {
+    max-width: calc(100% - 180px);
+  }
+  .passMarker {
+    top: 37px;
+    font-size: 18px;
+  }
+  .passMarker[data-position="left"] {
+    left: 92px;
+  }
+  .passMarker[data-position="right"] {
+    right: 92px;
+  }
+  .tableSelf [data-cat],
+  .tableSelf svg {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .tableSelfCopy > strong {
+    max-width: 50px;
+  }
+  .tableClassic .bidActions {
+    width: 280px;
+  }
+  .lobbySeat {
+    grid-template-columns: 48px minmax(0, 1fr);
+    padding: 2px 6px 0;
+  }
+  .lobbySeat:not(:has(.lobbySeatAction)) {
+    padding-bottom: 44px;
+  }
+  .lobbySeat > [data-cat],
+  .lobbySeat > [data-cat] svg {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .lobbyTopRow {
+    min-height: 44px;
+  }
+  .lobbyIntro h1 {
+    font-size: 19px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lobbyIntro .eyebrow {
+    display: block;
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .lobbySeats {
+    margin-block: 1px;
+  }
+}
+
+/* Secondary result details stay in dialogs so returning never needs page scroll. */
+.game {
+  padding-left: max(10px, var(--ddz-safe-left));
+  padding-right: max(10px, var(--ddz-safe-right));
+}
+.resultActions > .belowTable {
+  margin-block: 0;
+}
+.dialogBody:empty {
+  display: none;
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .result {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 174px;
+    grid-template-rows: 20px auto minmax(0, 1fr) auto;
+    column-gap: 12px;
+    padding: 8px 12px;
+    margin: 2px auto;
+    max-width: 900px;
+    border-radius: 20px;
+  }
+  .resultEyebrow,
+  .result h1,
+  .resultPlayers,
+  .result > .scoreDetails {
+    grid-column: 1;
+  }
+  .result h1 {
+    font-size: 22px;
+    line-height: 26px;
+    margin: 0 0 4px;
+  }
+  .resultPlayers {
+    margin: 0;
+    gap: 8px;
+    align-items: center;
+  }
+  .resultPlayer > [data-cat],
+  .resultPlayer svg {
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .resultPlayer strong {
+    font-size: 13px;
+    line-height: 18px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .resultPlayer .help {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .resultPlayer .delta {
+    margin: 0;
+    font-size: 22px;
+    line-height: 27px;
+  }
+  .result > .scoreDetails {
+    padding: 3px 0 0;
+    gap: 2px 10px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .resultActions {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    gap: 4px;
+  }
+  .resultActions > .belowTable {
+    display: contents;
+  }
+  .resultActions .button,
+  .resultActions .textButton {
+    width: 100%;
+    min-height: 44px;
+    padding: 5px 8px;
+    font-size: 14px !important;
+    line-height: 1.25;
+  }
+  .catGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px 6px;
+  }
+  .catOption {
+    min-height: 64px;
+    padding: 2px;
+    border-radius: 12px;
+    justify-content: center;
+    line-height: 16px;
+  }
+  .catOption > [data-cat],
+  .catOption svg {
+    width: 43px !important;
+    height: 43px !important;
+  }
+  .catOption span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (min-height: 601px) and (orientation: landscape) {
+  .lobbySeat {
+    min-height: 0;
+    padding: 12px;
+  }
+  .lobbySeat > [data-cat],
+  .lobbySeat > [data-cat] svg {
+    width: clamp(80px, 10dvh, 110px) !important;
+    height: clamp(80px, 10dvh, 110px) !important;
+  }
+  .lobbySeat > .lastAction {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+  }
+  .lobbySeat h2 {
+    margin-block: 4px;
+  }
+  .lobbyTopRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .lobbyIntro {
+    text-align: left;
+    padding-block: 8px;
+  }
+  .lobbySettingsBar {
+    justify-content: flex-end;
+    margin-block: 0;
+    max-width: 65%;
+  }
+  .lobbyFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .lobbyFooter .lobbyActions,
+  .lobbySecondaryActions .belowTable {
+    margin-block: 0;
+  }
+  .lobbySeats {
+    margin-block: 14px;
   }
 }

@@ -99,3 +99,16 @@
 .grid .card:disabled {
   opacity: 1;
 }
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .grid {
+    grid-template-columns: repeat(10, minmax(44px, 1fr));
+    gap: 8px 1px;
+    padding: 6px 0 0;
+  }
+  .grid .card {
+    width: min(100%, clamp(44px, calc((100dvh - 195px) * 0.3), 60px));
+    height: auto;
+    aspect-ratio: 72 / 104;
+  }
+}

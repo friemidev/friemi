@@ -16,11 +16,13 @@ export function DoudizhuDialog({
   children,
   onClose,
   closeLabel = "Close",
+  footer,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   closeLabel?: string;
+  footer?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     heading = useRef<HTMLHeadingElement>(null),
@@ -116,7 +118,8 @@ export function DoudizhuDialog({
           <X size={20} />
         </button>
       </div>
-      {children}
+      <div className={s.dialogBody}>{children}</div>
+      {footer && <div className={s.dialogFooter}>{footer}</div>}
     </dialog>
   );
 }
@@ -182,18 +185,20 @@ export function DoudizhuHeader({
           title={t.rules}
           closeLabel={t.close}
           onClose={() => setRules(false)}
+          footer={
+            <button
+              className={`${s.button} ${s.primary}`}
+              onClick={() => setRules(false)}
+            >
+              {t.close}
+            </button>
+          }
         >
           <ol className={s.rulesList}>
             {t.rulesLines.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ol>
-          <button
-            className={`${s.button} ${s.primary}`}
-            onClick={() => setRules(false)}
-          >
-            {t.close}
-          </button>
         </DoudizhuDialog>
       )}
     </>
@@ -285,21 +290,27 @@ export function DoudizhuCatPicker({
     }
   }
   return (
-    <DoudizhuDialog title={t.chooseCat} closeLabel={t.close} onClose={onClose}>
-      {failed && (
-        <div className={s.feedback} role="alert">
-          <span>{error || t.changed}</span>
-          {onRetry && (
-            <button
-              className={s.textButton}
-              disabled={submitting}
-              onClick={onRetry}
-            >
-              {t.retry}
-            </button>
-          )}
-        </div>
-      )}
+    <DoudizhuDialog
+      title={t.chooseCat}
+      closeLabel={t.close}
+      onClose={onClose}
+      footer={
+        failed && (
+          <div className={s.feedback} role="alert">
+            <span>{error || t.changed}</span>
+            {onRetry && (
+              <button
+                className={s.textButton}
+                disabled={submitting}
+                onClick={onRetry}
+              >
+                {t.retry}
+              </button>
+            )}
+          </div>
+        )
+      }
+    >
       <div className={s.catGrid}>
         {DRAW_GUESS_CATS.map((cat) => (
           <button
@@ -315,13 +326,6 @@ export function DoudizhuCatPicker({
           </button>
         ))}
       </div>
-      <button
-        className={`${s.button} ${s.primary}`}
-        style={{ marginTop: 16, width: "100%" }}
-        onClick={onClose}
-      >
-        {t.close}
-      </button>
     </DoudizhuDialog>
   );
 }

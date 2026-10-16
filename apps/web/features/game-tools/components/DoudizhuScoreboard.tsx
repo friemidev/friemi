@@ -76,21 +76,25 @@ export function DoudizhuScoreboard({
                     </span>
                   </td>
                   <th scope="row">
-                    <span className={s.playerName}>{player.name}</span>
-                    {player.seat === viewerSeat && (
-                      <span className={s.you}>{t.you}</span>
-                    )}
-                    <span className={s.wins}>
-                      {t.wins}{" "}
-                      {
-                        match.rounds.filter(
-                          (round) =>
-                            (round.result.scores.find(
-                              (score) => score.seat === player.seat,
-                            )?.delta ?? 0) > 0,
-                        ).length
-                      }
-                    </span>
+                    <div className={s.standingPlayer}>
+                      <span className={s.playerName} title={player.name}>
+                        {player.name}
+                      </span>
+                      {player.seat === viewerSeat && (
+                        <span className={s.you}>{t.you}</span>
+                      )}
+                      <span className={s.wins}>
+                        {t.wins}{" "}
+                        {
+                          match.rounds.filter(
+                            (round) =>
+                              (round.result.scores.find(
+                                (score) => score.seat === player.seat,
+                              )?.delta ?? 0) > 0,
+                          ).length
+                        }
+                      </span>
+                    </div>
                   </th>
                   <td
                     className={s.total}

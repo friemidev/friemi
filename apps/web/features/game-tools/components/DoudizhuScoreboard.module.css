@@ -192,17 +192,57 @@
 }
 @media (max-height: 500px) and (orientation: landscape) {
   .progress {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
+    line-height: 20px;
+  }
+  .standings {
+    table-layout: fixed;
+  }
+  .standings thead th {
+    padding-bottom: 5px;
+  }
+  .standings thead th:first-child {
+    width: 44px;
+  }
+  .standings thead th:nth-child(n + 3) {
+    width: 20%;
+  }
+  .standings thead th:last-child {
+    width: 25%;
   }
   .standings tbody th,
   .standings tbody td {
-    padding-block: 9px;
+    padding-block: 6px;
+  }
+  .standingPlayer {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .playerName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .you {
+    margin-left: 0;
+  }
+  .you,
+  .standingPlayer .wins {
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-top: 0;
   }
   .total {
     font-size: 21px;
   }
   .details {
-    margin-top: 10px;
+    margin-top: 6px;
+  }
+  .empty {
+    margin-top: 6px;
   }
 }
 

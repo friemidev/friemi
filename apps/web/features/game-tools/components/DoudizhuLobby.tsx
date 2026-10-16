@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Check,
   Copy,
@@ -9,6 +9,7 @@ import {
   ListOrdered,
   LockKeyhole,
   History,
+  DoorClosed,
 } from "lucide-react";
 import type {
   DdzReaction,
@@ -68,6 +69,7 @@ export function DoudizhuLobby({
   onCloseRoom?: () => Promise<boolean> | boolean | void;
   onHistory?: () => Promise<DdzRoundSummary[]>;
 }) {
+  const settingsFormId = useId();
   const t = getDoudizhuCopy(locale),
     [catPicker, setCatPicker] = useState(false),
     [leaving, setLeaving] = useState(false),
@@ -178,29 +180,77 @@ export function DoudizhuLobby({
           serverNow={room.serverNow}
         />
       </DoudizhuHeader>
-      <main className={s.main}>
-        <div className={s.lobbyIntro}>
-          <span className={s.eyebrow}>
-            {match.status === "COMPLETE"
-              ? t.matchComplete
-              : match.status === "ACTIVE"
-                ? `${t.nextRound} · ${doudizhuRoundLabel(upcomingRound, match.roundCount, locale)}`
-                : t.players}
-          </span>
-          <h1>{match.status === "COMPLETE" ? t.newMatch : t.waiting}</h1>
-          <button
-            className={`${s.button} ${s.small}`}
-            onClick={() => void invite()}
-          >
-            <Copy size={16} />
-            {t.invite}
-            <span>{room.code}</span>
-          </button>
-          {copied && (
-            <p role="status" className={s.help}>
-              {copied}
-            </p>
-          )}
+      <main className={`${s.main} ${s.lobbyMain}`}>
+        <div className={s.lobbyTopRow}>
+          <div className={s.lobbyIntro}>
+            <span className={s.eyebrow}>
+              {match.status === "COMPLETE"
+                ? t.matchComplete
+                : match.status === "ACTIVE"
+                  ? `${t.nextRound} · ${doudizhuRoundLabel(upcomingRound, match.roundCount, locale)}`
+                  : t.players}
+            </span>
+            <h1>{match.status === "COMPLETE" ? t.newMatch : t.waiting}</h1>
+            {copied && (
+              <p role="status" className={s.help}>
+                {copied}
+              </p>
+            )}
+          </div>
+          <div className={s.lobbySettingsBar}>
+            <button
+              className={`${s.button} ${s.small} ${s.lobbyInvite}`}
+              aria-label={`${t.invite} ${room.code}`}
+              title={`${t.invite} ${room.code}`}
+              onClick={() => void invite()}
+            >
+              <Copy size={16} />
+              <span className={s.lobbyInviteLabel}>{t.invite}</span>
+              <span>{room.code}</span>
+            </button>
+
+            <button
+              className={s.settingsSummary}
+              aria-label={`${t.roomSettings} · ${doudizhuRoundCountLabel(settings.roundCount, locale)} · ${settings.playSeconds} ${t.secondsUnit}`}
+              onClick={() => {
+                submittedSettings.current = null;
+                setSettingsDraft(settings);
+                setSettingsError(false);
+                setSettingsOpen(true);
+              }}
+            >
+              {settingsUnlocked ? (
+                <SlidersHorizontal size={18} />
+              ) : (
+                <LockKeyhole size={17} />
+              )}
+              <span>
+                {doudizhuRoundCountLabel(settings.roundCount, locale)}
+                <span aria-hidden="true"> · </span>
+                {settings.playSeconds} {t.timeShort}
+              </span>
+            </button>
+            <button
+              className={s.textButton}
+              aria-label={t.scoreboard}
+              title={t.scoreboard}
+              onClick={() => setScoreboardOpen(true)}
+            >
+              <ListOrdered size={18} />
+              <span className={s.lobbyToolLabel}>{t.scoreboard}</span>
+            </button>
+            {onHistory && (
+              <button
+                className={s.textButton}
+                aria-label={t.history}
+                title={t.history}
+                onClick={() => setHistoryOpen(true)}
+              >
+                <History size={18} />{" "}
+                <span className={s.lobbyToolLabel}>{t.history}</span>
+              </button>
+            )}
+          </div>
         </div>
         {error && (
           <div className={s.feedback} role="alert">
@@ -212,51 +262,15 @@ export function DoudizhuLobby({
             )}
           </div>
         )}
-        <div className={s.lobbySettingsBar}>
-          <button
-            className={s.settingsSummary}
-            aria-label={`${t.roomSettings} · ${doudizhuRoundCountLabel(settings.roundCount, locale)} · ${settings.playSeconds} ${t.secondsUnit}`}
-            onClick={() => {
-              submittedSettings.current = null;
-              setSettingsDraft(settings);
-              setSettingsError(false);
-              setSettingsOpen(true);
-            }}
-          >
-            {settingsUnlocked ? (
-              <SlidersHorizontal size={18} />
-            ) : (
-              <LockKeyhole size={17} />
-            )}
-            <span>
-              {doudizhuRoundCountLabel(settings.roundCount, locale)}
-              <span aria-hidden="true"> · </span>
-              {settings.playSeconds} {t.timeShort}
-            </span>
-          </button>
-          <button
-            className={s.textButton}
-            onClick={() => setScoreboardOpen(true)}
-          >
-            <ListOrdered size={18} />
-            {t.scoreboard}
-          </button>
-          {onHistory && (
-            <button
-              className={s.textButton}
-              onClick={() => setHistoryOpen(true)}
-            >
-              <History size={18} /> {t.history}
-            </button>
-          )}
-        </div>
         {settingsNotice && (
-          <p className={`${s.help} ${s.center}`} role="status">
+          <p className={`${s.help} ${s.center} ${s.lobbyHint}`} role="status">
             {settingsNotice}
           </p>
         )}
         {match.status === "COMPLETE" && (
-          <p className={`${s.help} ${s.center}`}>{t.newMatchNote}</p>
+          <p className={`${s.help} ${s.center} ${s.lobbyHint}`}>
+            {t.newMatchNote}
+          </p>
         )}
         <div className={s.lobbySeats}>
           {[0, 1, 2].map((seat) => {
@@ -290,26 +304,28 @@ export function DoudizhuLobby({
                             ? "👋"
                             : ""}
                     </span>
-                    <h2 title={player.name}>
-                      {player.name}
-                      {player.seat === room.viewerSeat ? ` · ${t.you}` : ""}
-                    </h2>
-                    {player.seat === room.hostSeat && (
-                      <span className={s.badge}>{t.host}</span>
-                    )}
-                    <span className={s.readyLabel}>
-                      {player.connected && !player.left && player.ready && (
-                        <Check size={15} />
+                    <div className={s.lobbySeatInfo}>
+                      <h2 title={player.name}>
+                        {player.name}
+                        {player.seat === room.viewerSeat ? ` · ${t.you}` : ""}
+                      </h2>
+                      {player.seat === room.hostSeat && (
+                        <span className={s.badge}>{t.host}</span>
                       )}
-                      {!player.connected || player.left
-                        ? t.disconnected
-                        : player.ready
-                          ? t.ready
-                          : t.notReady}
-                    </span>
+                      <span className={s.readyLabel}>
+                        {player.connected && !player.left && player.ready && (
+                          <Check size={15} />
+                        )}
+                        {!player.connected || player.left
+                          ? t.disconnected
+                          : player.ready
+                            ? t.ready
+                            : t.notReady}
+                      </span>
+                    </div>
                     {player.seat === room.viewerSeat ? (
                       <button
-                        className={s.textButton}
+                        className={`${s.textButton} ${s.lobbySeatAction}`}
                         disabled={busy}
                         onClick={() => setCatPicker(true)}
                       >
@@ -317,7 +333,7 @@ export function DoudizhuLobby({
                       </button>
                     ) : host && onRemove ? (
                       <button
-                        className={s.textButton}
+                        className={`${s.textButton} ${s.lobbySeatAction}`}
                         disabled={busy}
                         onClick={() => setRemoving(player.seat)}
                       >
@@ -335,70 +351,77 @@ export function DoudizhuLobby({
             );
           })}
         </div>
-        <div className={s.lobbyActions}>
-          <button
-            className={`${s.button} ${!self?.ready ? s.primary : ""}`}
-            onClick={() => onReady(!self?.ready)}
-            disabled={busy}
-          >
-            {self?.ready ? t.unready : t.readyAction}
-            {!self?.ready && <Check size={18} />}
-          </button>
-          {host && (
-            <button
-              className={`${s.button} ${self?.ready ? s.primary : ""}`}
-              disabled={busy || !canStart}
-              onClick={onStart}
-            >
-              {match.status === "COMPLETE"
-                ? t.newMatch
-                : match.status === "ACTIVE"
-                  ? `${t.continueRound} ${upcomingRound}${locale === "zh-CN" ? " 局" : ""}`
-                  : t.start}
-              <ArrowRight size={18} />
-            </button>
-          )}
-        </div>
-        {onReact && (
-          <div className={s.belowTable}>
-            {(["wave", "clap", "cheer"] as const).map((kind, i) => (
-              <button
-                key={kind}
-                className={s.iconButton}
-                disabled={busy || now < reactionUntil}
-                aria-label={[t.smile, t.applause, t.surprise][i]}
-                onClick={() => {
-                  onReact(kind);
-                  setReactionUntil(Date.now() + 3000);
-                }}
-              >
-                {["👋", "👏", "✨"][i]}
-              </button>
-            ))}
-          </div>
-        )}
         {host && !canStart && (
-          <p className={`${s.help} ${s.center}`}>
+          <p className={`${s.help} ${s.center} ${s.lobbyHint}`}>
             {room.seats.length === 3 &&
             room.seats.some((player) => !player.connected || player.left)
               ? t.startOffline
               : t.startNeed}
           </p>
         )}
-        {host && onCloseRoom && (
-          <div className={s.belowTable}>
+        <div className={s.lobbyFooter}>
+          <div className={s.lobbyActions}>
             <button
-              className={s.textButton}
+              className={`${s.button} ${!self?.ready ? s.primary : ""}`}
+              onClick={() => onReady(!self?.ready)}
               disabled={busy}
-              onClick={() => {
-                setCloseError(false);
-                setClosing(true);
-              }}
             >
-              {t.closeRoom}
+              {self?.ready ? t.unready : t.readyAction}
+              {!self?.ready && <Check size={18} />}
             </button>
+            {host && (
+              <button
+                className={`${s.button} ${self?.ready ? s.primary : ""}`}
+                disabled={busy || !canStart}
+                onClick={onStart}
+              >
+                {match.status === "COMPLETE"
+                  ? t.newMatch
+                  : match.status === "ACTIVE"
+                    ? `${t.continueRound} ${upcomingRound}${locale === "zh-CN" ? " 局" : ""}`
+                    : t.start}
+                <ArrowRight size={18} />
+              </button>
+            )}
           </div>
-        )}
+          <div className={s.lobbySecondaryActions}>
+            {onReact && (
+              <div className={s.belowTable}>
+                {(["wave", "clap", "cheer"] as const).map((kind, i) => (
+                  <button
+                    key={kind}
+                    className={s.iconButton}
+                    disabled={busy || now < reactionUntil}
+                    aria-label={[t.smile, t.applause, t.surprise][i]}
+                    onClick={() => {
+                      onReact(kind);
+                      setReactionUntil(Date.now() + 3000);
+                    }}
+                  >
+                    {["👋", "👏", "✨"][i]}
+                  </button>
+                ))}
+              </div>
+            )}
+            {host && onCloseRoom && (
+              <div className={s.belowTable}>
+                <button
+                  className={`${s.textButton} ${s.lobbyClose}`}
+                  aria-label={t.closeRoom}
+                  title={t.closeRoom}
+                  disabled={busy}
+                  onClick={() => {
+                    setCloseError(false);
+                    setClosing(true);
+                  }}
+                >
+                  <DoorClosed size={18} />
+                  <span className={s.lobbyCloseLabel}>{t.closeRoom}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
       {historyOpen && (
         <DoudizhuHistoryDialog
@@ -422,8 +445,38 @@ export function DoudizhuLobby({
           onClose={() => {
             if (!settingsSaving) setSettingsOpen(false);
           }}
+          footer={
+            host &&
+            settingsUnlocked && (
+              <div className={s.lobbyActions}>
+                <button
+                  type="button"
+                  className={s.button}
+                  disabled={settingsSaving}
+                  onClick={() => setSettingsOpen(false)}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  type="submit"
+                  form={settingsFormId}
+                  className={`${s.button} ${s.primary}`}
+                  disabled={
+                    busy ||
+                    settingsSaving ||
+                    !onSettings ||
+                    (settingsDraft.roundCount === settings.roundCount &&
+                      settingsDraft.playSeconds === settings.playSeconds)
+                  }
+                >
+                  {settingsSaving ? t.busy : t.saveSettings}
+                </button>
+              </div>
+            )
+          }
         >
           <form
+            id={settingsFormId}
             onSubmit={(event) => {
               event.preventDefault();
               void saveSettings();
@@ -498,31 +551,6 @@ export function DoudizhuLobby({
                 )}
               </div>
             )}
-            {host && settingsUnlocked && (
-              <div className={s.lobbyActions}>
-                <button
-                  type="button"
-                  className={s.button}
-                  disabled={settingsSaving}
-                  onClick={() => setSettingsOpen(false)}
-                >
-                  {t.cancel}
-                </button>
-                <button
-                  type="submit"
-                  className={`${s.button} ${s.primary}`}
-                  disabled={
-                    busy ||
-                    settingsSaving ||
-                    !onSettings ||
-                    (settingsDraft.roundCount === settings.roundCount &&
-                      settingsDraft.playSeconds === settings.playSeconds)
-                  }
-                >
-                  {settingsSaving ? t.busy : t.saveSettings}
-                </button>
-              </div>
-            )}
           </form>
         </DoudizhuDialog>
       )}
@@ -542,6 +570,20 @@ export function DoudizhuLobby({
           title={t.leaveTitle}
           closeLabel={t.close}
           onClose={() => setLeaving(false)}
+          footer={
+            <div className={s.lobbyActions}>
+              <button className={s.button} onClick={() => setLeaving(false)}>
+                {t.cancel}
+              </button>
+              <button
+                className={`${s.button} ${s.primary}`}
+                disabled={busy}
+                onClick={onLeave}
+              >
+                {t.leave}
+              </button>
+            </div>
+          }
         >
           <p className={s.help}>{t.leaveLobby}</p>
           {error && (
@@ -554,18 +596,6 @@ export function DoudizhuLobby({
               )}
             </div>
           )}
-          <div className={s.lobbyActions}>
-            <button className={s.button} onClick={() => setLeaving(false)}>
-              {t.cancel}
-            </button>
-            <button
-              className={`${s.button} ${s.primary}`}
-              disabled={busy}
-              onClick={onLeave}
-            >
-              {t.leave}
-            </button>
-          </div>
         </DoudizhuDialog>
       )}
       {removing !== null && (
@@ -573,22 +603,25 @@ export function DoudizhuLobby({
           title={t.confirmRemove}
           closeLabel={t.close}
           onClose={() => setRemoving(null)}
+          footer={
+            <div className={s.lobbyActions}>
+              <button className={s.button} onClick={() => setRemoving(null)}>
+                {t.cancel}
+              </button>
+              <button
+                className={`${s.button} ${s.primary}`}
+                disabled={busy}
+                onClick={() => {
+                  onRemove?.(removing);
+                  setRemoving(null);
+                }}
+              >
+                {t.remove}
+              </button>
+            </div>
+          }
         >
-          <div className={s.lobbyActions}>
-            <button className={s.button} onClick={() => setRemoving(null)}>
-              {t.cancel}
-            </button>
-            <button
-              className={`${s.button} ${s.primary}`}
-              disabled={busy}
-              onClick={() => {
-                onRemove?.(removing);
-                setRemoving(null);
-              }}
-            >
-              {t.remove}
-            </button>
-          </div>
+          {null}
         </DoudizhuDialog>
       )}
       {closing && (
@@ -598,6 +631,35 @@ export function DoudizhuLobby({
           onClose={() => {
             if (!closeBusy) setClosing(false);
           }}
+          footer={
+            <div className={s.lobbyActions}>
+              <button
+                className={s.button}
+                disabled={closeBusy}
+                onClick={() => setClosing(false)}
+              >
+                {t.cancel}
+              </button>
+              <button
+                className={`${s.button} ${s.primary}`}
+                disabled={busy || closeBusy || !host}
+                onClick={async () => {
+                  if (!onCloseRoom || closeBusy || !host) return;
+                  setCloseBusy(true);
+                  setCloseError(false);
+                  try {
+                    if ((await onCloseRoom()) === false) setCloseError(true);
+                  } catch {
+                    setCloseError(true);
+                  } finally {
+                    setCloseBusy(false);
+                  }
+                }}
+              >
+                {closeBusy ? t.busy : t.closeRoom}
+              </button>
+            </div>
+          }
         >
           <p className={s.help}>{t.closeRoomNote}</p>
           {closeError && (
@@ -610,33 +672,6 @@ export function DoudizhuLobby({
               )}
             </div>
           )}
-          <div className={s.lobbyActions}>
-            <button
-              className={s.button}
-              disabled={closeBusy}
-              onClick={() => setClosing(false)}
-            >
-              {t.cancel}
-            </button>
-            <button
-              className={`${s.button} ${s.primary}`}
-              disabled={busy || closeBusy || !host}
-              onClick={async () => {
-                if (!onCloseRoom || closeBusy || !host) return;
-                setCloseBusy(true);
-                setCloseError(false);
-                try {
-                  if ((await onCloseRoom()) === false) setCloseError(true);
-                } catch {
-                  setCloseError(true);
-                } finally {
-                  setCloseBusy(false);
-                }
-              }}
-            >
-              {closeBusy ? t.busy : t.closeRoom}
-            </button>
-          </div>
         </DoudizhuDialog>
       )}
     </>

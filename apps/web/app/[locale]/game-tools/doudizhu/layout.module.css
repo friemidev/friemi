@@ -1,0 +1,26 @@
+.route {
+  min-width: 0;
+}
+
+:global(html):has(.route),
+:global(body):has(.route) {
+  overscroll-behavior: none;
+}
+
+/* The game owns its viewport and safe-area spacing. Keep these overrides
+   scoped to the rendered route so cached CSS cannot affect other products. */
+:global(.app-layout-shell):has(.route) {
+  min-height: 100dvh;
+  padding-bottom: 0 !important;
+}
+
+:global(.app-layout-shell):has(.route) > :global(.app-desktop-navigation),
+:global(.app-layout-shell):has(.route) > :global(.app-mobile-nav),
+:global(.app-layout-shell):has(.route) :global([data-mobile-scroll-progress]) {
+  display: none !important;
+}
+
+/* The game applies all four native insets itself, including fullscreen. */
+:global(html[data-friemi-android-app="true"]):has(.route) :global(body) {
+  padding-inline: 0;
+}
