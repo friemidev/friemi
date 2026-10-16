@@ -4,7 +4,7 @@ import { getDrawGuessInkTopic, DRAW_GUESS_INK_EVENT } from "@/features/game-tool
 import { getOptionalRedis } from "@/lib/redis";
 import { getRedisRuntimeConfig } from "@/lib/redisConfig";
 import { prisma } from "@/lib/prisma";
-import type { DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import type { DrawGuessInkCursor, DrawStroke } from "@/features/game-tools/drawGuessEngine";
 
 export type DrawGuessInkBatch = {
   gameNumber: number;
@@ -13,6 +13,7 @@ export type DrawGuessInkBatch = {
   stroke: DrawStroke;
   strokeIndex: number;
   turnIndex: number;
+  inkCursor?: DrawGuessInkCursor;
 };
 
 export async function getAuthorizedDrawGuessInkArtist(input: {

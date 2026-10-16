@@ -5,7 +5,6 @@ import {
   ArrowDownLeft,
   ArrowLeft,
   ArrowRight,
-  ArrowUpRight,
   BedDouble,
   Camera,
   CarFront,
@@ -156,7 +155,7 @@ function getStatusTone(status: string) {
 function transactionIcon(type: string) {
   if (type === "INCOME") return ArrowDownLeft;
   if (type === "TRANSFER") return ArrowRight;
-  return ArrowUpRight;
+  return ArrowRight;
 }
 
 function categoryIcon(name: string) {

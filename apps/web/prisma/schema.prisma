@@ -377,7 +377,9 @@ enum PlanetMembershipStatus {
 
 enum GameToolKind {
   AVALON
+  DICE
   DRAW_GUESS
+  UNO
   STORYTELLER
   WEREWOLF
 }
@@ -841,6 +843,7 @@ model Activity {
   coManagers        ActivityCoManager[]
   managementLogs    ActivityManagementLog[]
   roomMessages      ActivityRoomMessage[]
+  roomWelcomeTemplate String?                    @db.Text
   roomReadStates    ActivityRoomReadState[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
@@ -951,7 +954,8 @@ model ActivityManagementLog {
 model ActivityRoomMessage {
   id                  String       @id @default(cuid())
   activityId          String
-  senderId            String
+  senderId            String?
+  assistantWelcomeKey String?      @unique
   body                String       @db.Text
   imageUrls           String[]     @default([])
   mentionedProfileIds String[]     @default([])
@@ -964,7 +968,7 @@ model ActivityRoomMessage {
   deletedAt           DateTime?
   deletedById         String?
   activity            Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  sender              UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  sender              UserProfile? @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   deletedBy           UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -1263,6 +1267,7 @@ model Coupon {
   claimedCount           Int                    @default(0)
   publishedAt            DateTime?
   unlistedAt             DateTime?
+  archivedAt             DateTime?
   sourceRedemptionItemId String?                @unique
   sourceRedemptionItem   CouponWalletItem?      @relation("PostRedemptionGiftSource", fields: [sourceRedemptionItemId], references: [id], onDelete: SetNull)
   claimCodes             CouponClaimCode[]
@@ -1273,6 +1278,7 @@ model Coupon {
 
   @@unique([merchantId, slug])
   @@index([merchantId, campaignStatus, createdAt])
+  @@index([merchantId, archivedAt, createdAt])
   @@index([templateId, campaignStatus])
   @@index([expiresAt])
 }
@@ -1530,6 +1536,7 @@ model InventoryItemDefinition {
   title              String                @db.VarChar(120)
   description        String?               @db.Text
   imageUrl           String?               @db.Text
+  archivedAt         DateTime?
   isGiftable         Boolean               @default(false)
   totalSupply        Int
   issuedCount        Int                   @default(0)
@@ -1546,6 +1553,7 @@ model InventoryItemDefinition {
   updatedAt          DateTime              @updatedAt
 
   @@index([kind, createdAt])
+  @@index([kind, archivedAt, createdAt])
   @@index([merchantId, kind, createdAt])
 }
 
@@ -1886,6 +1894,37 @@ model ContentTranslation {
   @@unique([entityType, entityId, field, locale, sourceHash])
   @@index([entityType, entityId, locale])
   @@index([locale, createdAt])
+  @@index([sourceHash, field, locale])
+}
+
+model ContentTranslationTask {
+  id             String   @id @default(cuid())
+  entityType     String
+  entityId       String
+  field          String
+  locale         String
+  sourceHash     String
+  sourceText     String   @db.Text
+  status         String   @default("PENDING")
+  lockToken      String?
+  lockedUntil    DateTime?
+  nextAttemptAt  DateTime @default(now())
+  attempts       Int      @default(0)
+  lastError      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([entityType, entityId, field, locale])
+  @@index([status, nextAttemptAt, lockedUntil])
+}
+
+model ContentTranslationBudget {
+  id             String   @id
+  usedCharacters Int      @default(0)
+  pausedUntil    DateTime?
+  pauseReason    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Notification {
@@ -2608,6 +2647,7 @@ model GameToolRoom {
   finishedAt          DateTime?
   cancelledAt         DateTime?
   drawGuessDeadlineAt DateTime?
+  unoDeadlineAt       DateTime?
   wordBankId          String?                @db.VarChar(64)
   wordBank            DrawGuessWordBank?     @relation(fields: [wordBankId], references: [id], onDelete: SetNull)
   revision            Int                    @default(0)
@@ -2620,14 +2660,48 @@ model GameToolRoom {
   drawGuessArtworks   DrawGuessArtwork[]
   drawGuessCommands   DrawGuessCommand[]
   drawGuessReports    DrawGuessReport[]
+  unoCommands         UnoCommand[]
+  unoRounds           UnoRound[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
   @@index([kind, status, drawGuessDeadlineAt])
+  @@index([kind, status, unoDeadlineAt])
   @@index([wordBankId])
   @@index([code])
+}
+
+model UnoCommand {
+  id             String       @id @default(cuid())
+  roomId         String
+  room           GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  matchNumber    Int
+  roundNumber    Int
+  commandId      String       @db.VarChar(64)
+  actorProfileId String
+  actionHash     String       @db.VarChar(64)
+  result         Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([roomId, commandId])
+  @@index([roomId, matchNumber, roundNumber, createdAt])
+  @@index([actorProfileId, createdAt])
+}
+
+model UnoRound {
+  id          String       @id @default(cuid())
+  roomId      String
+  room        GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  matchNumber Int
+  roundNumber Int
+  summary     Json
+  finishedAt  DateTime
+  createdAt   DateTime     @default(now())
+
+  @@unique([roomId, matchNumber, roundNumber])
+  @@index([roomId, finishedAt])
 }
 
 model DrawGuessWordBank {

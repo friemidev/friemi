@@ -106,6 +106,8 @@ public final class MainActivity extends ComponentActivity {
     private String authBrowserPackage;
     private boolean webBackRequested;
     private boolean pageLoading;
+    private boolean mainFrameFailed;
+    private FriemiInstallReferrer installReferrer;
     private final Runnable slowLoadNoticeRunnable = () -> {
         if (!pageLoading || loadingOverlay.getVisibility() != View.VISIBLE) {
             return;
@@ -128,18 +130,33 @@ public final class MainActivity extends ComponentActivity {
         configureWindow();
         setupViews();
         setupWebView();
-        loadUrl(buildLaunchUrl(getIntent()));
+        String launchUrl = buildLaunchUrl(getIntent());
+        loadUrl(launchUrl != null ? launchUrl : buildDefaultHomeUrl());
+        installReferrer = new FriemiInstallReferrer(preferences);
+        if (savedInstanceState == null && launchUrl == null) {
+            final String initialUrl = currentUrl;
+            installReferrer.start(this, resolveLocale(null), target -> {
+                if (!isFinishing() && !isDestroyed() && webView != null && initialUrl.equals(currentUrl)) {
+                    loadUrl(getBaseUrl() + target);
+                }
+            });
+        } else {
+            installReferrer.consume();
+        }
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (installReferrer != null) installReferrer.consume();
         setIntent(intent);
+        // A launcher resume has no destination. Keep the mounted page and draft.
         loadUrl(buildLaunchUrl(intent));
     }
 
     @Override
     protected void onPause() {
+        if (installReferrer != null) installReferrer.consume();
         dispatchAppLifecycleEvent("friemi:android-pause");
         if (webView != null) {
             webView.onPause();
@@ -162,6 +179,7 @@ public final class MainActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        if (installReferrer != null) installReferrer.close();
         mainHandler.removeCallbacksAndMessages(null);
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
@@ -184,6 +202,12 @@ public final class MainActivity extends ComponentActivity {
             oldWebView.destroy();
         }
         super.onDestroy();
+    }
+
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        if (installReferrer != null) installReferrer.consume();
     }
 
     private void destroyPopupWebView(WebView popupWebView) {
@@ -504,6 +528,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void loadUrl(String url) {
+        if (url == null || webView == null) return;
         if (isBrowserAuthCompletion(Uri.parse(url))) {
             // Verified App Links can intercept the browser's authenticated
             // callback. Keep that step in the same browser, never the WebView.
@@ -524,9 +549,13 @@ public final class MainActivity extends ComponentActivity {
         }
         try {
             Uri uri = Uri.parse(url);
-            if ("friemi".equalsIgnoreCase(uri.getScheme())
-                || (isHttp(uri) && isFriemiHost(uri.getHost()))) {
+            if ("friemi".equalsIgnoreCase(uri.getScheme())) {
                 loadUrl(normalizeIncomingUri(uri));
+                return true;
+            }
+            String internal = FriemiAppLinks.resolveWebNavigation(url, getBaseUrl(), resolveLocale(null));
+            if (internal != null) {
+                loadUrl(internal);
                 return true;
             }
         } catch (Exception ignored) {
@@ -537,10 +566,15 @@ public final class MainActivity extends ComponentActivity {
 
     private String buildLaunchUrl(Intent intent) {
         Uri data = intent != null ? intent.getData() : null;
-        if (data == null) {
-            return buildDefaultHomeUrl();
+        if (data != null) return normalizeIncomingUri(data);
+        if (intent == null) return null;
+        // Background FCM notification taps deliver the destination in extras,
+        // unlike foreground notifications, which use a data URI.
+        for (String key : new String[]{"url", "deepLink", "path"}) {
+            String resolved = FriemiAppLinks.resolveNotification(intent.getStringExtra(key), getBaseUrl(), resolveLocale(null));
+            if (resolved != null) return resolved;
         }
-        return normalizeIncomingUri(data);
+        return null;
     }
 
     private String buildDefaultHomeUrl() {
@@ -548,67 +582,10 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private String normalizeIncomingUri(Uri uri) {
-        if ("friemi".equalsIgnoreCase(uri.getScheme())) {
-            if (AUTH_COMPLETE_HOST.equalsIgnoreCase(uri.getHost())) {
-                return buildUrlFromAuthCompleteTarget(uri.getQueryParameter("target"));
-            }
-            String route = buildRouteFromCustomScheme(uri);
-            return getBaseUrl() + "/" + resolveLocale(null) + route;
+        if ("friemi".equalsIgnoreCase(uri.getScheme()) && AUTH_COMPLETE_HOST.equalsIgnoreCase(uri.getHost())) {
+            return buildUrlFromAuthCompleteTarget(uri.getQueryParameter("target"));
         }
-
-        if (isHttp(uri) && isFriemiHost(uri.getHost())) {
-            String localeFromUri = getLocaleFromPath(uri.getPath());
-            String locale = localeFromUri != null ? localeFromUri : resolveLocale(null);
-            if (localeFromUri != null) {
-                return uri.toString();
-            }
-            return uri.buildUpon().path("/" + locale + normalizePath(uri.getPath())).build().toString();
-        }
-
-        return buildDefaultHomeUrl();
-    }
-
-    private String buildRouteFromCustomScheme(Uri uri) {
-        String host = uri.getHost();
-        String path = uri.getPath();
-        StringBuilder route = new StringBuilder();
-        if (!isBlank(host)) {
-            route.append("/").append(host);
-        }
-        if (!isBlank(path)) {
-            route.append(path);
-        }
-        if (route.length() == 0 || "/home".contentEquals(route)) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-        return normalizeCustomSchemeRoute(route.toString());
-    }
-
-    private String normalizeCustomSchemeRoute(String route) {
-        String normalized = normalizePath(route);
-        if (normalized.startsWith("/activity/")) {
-            return "/activities/" + normalized.substring("/activity/".length());
-        }
-        if (normalized.startsWith("/team/")) {
-            return "/activities/" + normalized.substring("/team/".length());
-        }
-        if (normalized.equals("/hall")) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-        if (normalized.equals("/lobby")) {
-            return "/lobby";
-        }
-        if (normalized.equals("/messages") || normalized.equals("/notifications")) {
-            return normalized;
-        }
-        return normalized;
-    }
-
-    private String normalizePath(String path) {
-        if (isBlank(path) || "/".equals(path)) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-        return path.startsWith("/") ? path : "/" + path;
+        return FriemiAppLinks.resolve(uri.toString(), getBaseUrl(), resolveLocale(null));
     }
 
     private String buildUrlFromAuthCompleteTarget(String target) {
@@ -636,34 +613,8 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private String normalizeAuthCompleteTarget(String target) {
-        if (isBlank(target)) {
-            return BuildConfig.FRIEMI_DEFAULT_PATH;
-        }
-
-        String trimmed = target.trim();
-        String lowerTarget = trimmed.toLowerCase(Locale.ROOT);
-        if (lowerTarget.startsWith("http://") || lowerTarget.startsWith("https://") || trimmed.startsWith("//")) {
-            try {
-                Uri uri = Uri.parse(trimmed);
-                if (!isFriemiHost(uri.getHost())) {
-                    return BuildConfig.FRIEMI_DEFAULT_PATH;
-                }
-                String path = normalizePath(uri.getPath());
-                if (isAuthPath(path)) {
-                    return BuildConfig.FRIEMI_DEFAULT_PATH;
-                }
-                String query = uri.getQuery();
-                String fragment = uri.getFragment();
-                return path
-                    + (isBlank(query) ? "" : "?" + query)
-                    + (isBlank(fragment) ? "" : "#" + fragment);
-            } catch (Exception ignored) {
-                return BuildConfig.FRIEMI_DEFAULT_PATH;
-            }
-        }
-
-        String path = normalizePath(trimmed);
-        return isAuthPath(path) ? BuildConfig.FRIEMI_DEFAULT_PATH : path;
+        String normalized = FriemiAppLinks.normalizeAuthTarget(target, getBaseUrl(), resolveLocale(null));
+        return normalized != null ? normalized : BuildConfig.FRIEMI_DEFAULT_PATH;
     }
 
     private String resolveLocale(String explicitLocale) {
@@ -786,6 +737,7 @@ public final class MainActivity extends ComponentActivity {
 
     private void showLoading() {
         pageLoading = true;
+        mainFrameFailed = false;
         mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setProgress(10);
@@ -823,6 +775,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void showError(String message) {
+        mainFrameFailed = true;
         pageLoading = false;
         mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         hideLoading();
@@ -1084,6 +1037,19 @@ public final class MainActivity extends ComponentActivity {
                 openExternal(url);
             }
         });
+    }
+
+    boolean openHostLinkFromBridge(String value) {
+        if (isBlank(value) || isFinishing() || isDestroyed()) {
+            return false;
+        }
+        Uri uri = Uri.parse(value.trim());
+        if (!"https".equalsIgnoreCase(uri.getScheme())
+            || isBlank(uri.getHost()) || !isBlank(uri.getUserInfo())) {
+            return false;
+        }
+        mainHandler.post(() -> openHostBrowser(uri));
+        return true;
     }
 
     void copyTextFromBridge(String text) {
@@ -1369,6 +1335,43 @@ public final class MainActivity extends ComponentActivity {
         }
     }
 
+    private void openHostBrowser(Uri uri) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        String browserPackage = CustomTabsClient.getPackageName(this, null);
+        if (browserPackage == null) {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://"));
+            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            ResolveInfo browser = getPackageManager().resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY);
+            if (browser != null && browser.activityInfo != null
+                && !getPackageName().equals(browser.activityInfo.packageName)
+                && !"android".equals(browser.activityInfo.packageName)) {
+                browserPackage = browser.activityInfo.packageName;
+            }
+        }
+        if (browserPackage == null) {
+            Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+        CustomTabColorSchemeParams colors = new CustomTabColorSchemeParams.Builder()
+            .setToolbarColor(getColorCompat(R.color.friemi_mist))
+            .setNavigationBarColor(getColorCompat(R.color.friemi_mist))
+            .build();
+        CustomTabsIntent browser = new CustomTabsIntent.Builder()
+            .setColorScheme(CustomTabsIntent.COLOR_SCHEME_LIGHT)
+            .setDefaultColorSchemeParams(colors)
+            .setShowTitle(true)
+            .build();
+        browser.intent.setPackage(browserPackage);
+        try {
+            // The Friemi WebView stays mounted with its original URL and scroll.
+            browser.launchUrl(this, uri);
+        } catch (ActivityNotFoundException error) {
+            Toast.makeText(this, R.string.auth_browser_unavailable, Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void openAuthBrowser(String url) {
         if (isBlank(url)) {
             return;
@@ -1465,14 +1468,17 @@ public final class MainActivity extends ComponentActivity {
                 return true;
             }
 
-            if (isFriemiHost(uri.getHost()) && getLocaleFromPath(uri.getPath()) == null) {
-                String localizedUrl = uri
-                    .buildUpon()
-                    .path("/" + resolveLocale(null) + normalizePath(uri.getPath()))
-                    .build()
-                    .toString();
-                view.loadUrl(localizedUrl);
+            if ("/open".equals(uri.getPath())) {
+                loadUrl(FriemiAppLinks.resolve(uri.toString(), getBaseUrl(), resolveLocale(null)));
                 return true;
+            }
+
+            if (isFriemiHost(uri.getHost()) && getLocaleFromPath(uri.getPath()) == null) {
+                String localizedUrl = FriemiAppLinks.resolveWebNavigation(uri.toString(), getBaseUrl(), resolveLocale(null));
+                if (localizedUrl != null && !localizedUrl.equals(uri.toString())) {
+                    view.loadUrl(localizedUrl);
+                    return true;
+                }
             }
 
             return false;
@@ -1480,6 +1486,7 @@ public final class MainActivity extends ComponentActivity {
 
         @Override
         public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            mainFrameFailed = false;
             currentUrl = url;
             progressBar.setVisibility(View.VISIBLE);
             progressBar.setProgress(20);
@@ -1490,8 +1497,13 @@ public final class MainActivity extends ComponentActivity {
             currentUrl = url;
             CookieManager.getInstance().flush();
             hideLoading();
-            hideError();
+            if (!mainFrameFailed) hideError();
             injectAndroidAppContext(true);
+        }
+
+        @Override
+        public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+            currentUrl = url;
         }
 
         @Override
@@ -1577,7 +1589,7 @@ public final class MainActivity extends ComponentActivity {
                     }
                     Uri uri = request.getUrl();
                     if ("friemi".equalsIgnoreCase(uri.getScheme())) {
-                        webView.loadUrl(normalizeIncomingUri(uri));
+                        loadUrl(normalizeIncomingUri(uri));
                         destroyPopupWebView(popupView);
                         return true;
                     }
@@ -1601,7 +1613,7 @@ public final class MainActivity extends ComponentActivity {
                     }
 
                     if (shouldStayInWebView(uri)) {
-                        webView.loadUrl(normalizeIncomingUri(uri));
+                        loadUrl(FriemiAppLinks.resolveWebNavigation(uri.toString(), getBaseUrl(), resolveLocale(null)));
                     } else {
                         openExternal(uri.toString());
                     }

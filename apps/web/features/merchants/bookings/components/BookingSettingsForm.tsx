@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   Plus,
+  Save,
   X,
 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -80,10 +81,10 @@ function DateCollection({
         </button>
       </div>
       {dates.length ? (
-        <ul className="divide-y divide-fog">
+        <ul className="space-y-2">
           {dates.map((date) => (
             <li
-              className="flex min-h-12 items-center justify-between gap-3 py-1"
+              className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-fog px-3 py-2"
               key={date}
             >
               <input name={name} type="hidden" value={date} />
@@ -97,7 +98,7 @@ function DateCollection({
               </span>
               <button
                 aria-label={`${copy.removeDate} ${date}`}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink/70 focus-visible:outline-2 focus-visible:outline-forest"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-ink/70 hover:bg-danger/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-forest"
                 onClick={() =>
                   onDatesChange(dates.filter((value) => value !== date))
                 }
@@ -150,6 +151,7 @@ export function BookingSettingsForm({
     settings?.coverImageUrl ?? "",
   );
   const [enabled, setEnabled] = useState(settings?.enabled ?? true);
+  const [enabledChanged, setEnabledChanged] = useState(false);
   const [weekdays, setWeekdays] = useState(settings?.weekdays ?? [5, 6]);
   const [specificDates, setSpecificDates] = useState(
     settings?.specificDates ?? [],
@@ -164,7 +166,7 @@ export function BookingSettingsForm({
     mode === "DATES" && specificDates.some(outsideRange);
   const missingWeekdays = mode === "WEEKLY" && !weekdays.length;
   const missingDates = mode === "DATES" && !specificDates.length;
-  const values = JSON.stringify({
+  const formValues = {
     title,
     description,
     coverImageUrl,
@@ -175,14 +177,27 @@ export function BookingSettingsForm({
     specificDates,
     closedDates,
     enabled,
-  });
+  };
+  const values = JSON.stringify(formValues);
+  const submittedPayload = useRef<typeof formValues | null>(null);
   const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(
     saveBookingSettingsAction,
     {} as BookingActionState,
   );
   useEffect(() => {
-    if (state.success) router.refresh();
+    if (!state.success) return;
+    if (state.acceptanceEnabled !== undefined) {
+      setEnabled(state.acceptanceEnabled);
+      setEnabledChanged(false);
+      if (submittedPayload.current) {
+        setSubmittedValues(JSON.stringify({
+          ...submittedPayload.current,
+          enabled: state.acceptanceEnabled,
+        }));
+      }
+    }
+    router.refresh();
   }, [state, router]);
   useEffect(() => {
     if (lastStep.current !== step) panelHeading.current?.focus();
@@ -206,7 +221,7 @@ export function BookingSettingsForm({
   return (
     <form
       action={action}
-      className="flex flex-col gap-6 pt-4"
+      className="flex flex-col gap-6 pt-5"
       onSubmit={(event) => {
         if (step === 0) {
           event.preventDefault();
@@ -223,16 +238,18 @@ export function BookingSettingsForm({
           event.preventDefault();
           return;
         }
+        submittedPayload.current = formValues;
         setSubmittedValues(values);
       }}
     >
       <input name="locale" type="hidden" value={locale} />
-      <nav aria-label={flow.steps} className="flex gap-5">
+      <input name="enabledChanged" type="hidden" value={String(enabledChanged)} />
+      <nav aria-label={flow.steps} className="grid grid-cols-2 gap-1 rounded-xl bg-fog p-1">
         {([copy.identity, copy.availability] as const).map((label, index) => (
           <button
             aria-current={step === index ? "step" : undefined}
             aria-label={label}
-            className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 px-1 pb-3 text-sm font-semibold transition-colors focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-forest disabled:opacity-50 ${step === index ? "border-forest text-forest" : "border-transparent text-ink/70 hover:text-forest"}`}
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:cursor-not-allowed disabled:opacity-50 ${step === index ? "bg-forest text-white" : "text-ink/70 hover:bg-white/70"}`}
             disabled={pending || uploading}
             key={label}
             onClick={() => changeStep(index as 0 | 1)}
@@ -240,7 +257,7 @@ export function BookingSettingsForm({
           >
             <span
               aria-hidden="true"
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs ${step === index ? "bg-forest text-white" : "bg-fog text-ink/70"}`}
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs ${step === index ? "bg-white/20 text-white" : "bg-white text-forest"}`}
             >
               {index === 0 && step === 1 ? (
                 <Check className="h-3.5 w-3.5" />
@@ -252,7 +269,7 @@ export function BookingSettingsForm({
           </button>
         ))}
       </nav>
-      <h2 className="sr-only" ref={panelHeading} tabIndex={-1}>
+      <h2 className="text-lg font-bold text-forest outline-none" ref={panelHeading} tabIndex={-1}>
         {step === 0 ? copy.identity : copy.availability}
       </h2>
       {step === 0 ? (
@@ -353,7 +370,7 @@ export function BookingSettingsForm({
                   ] as const
                 ).map(([value, label]) => (
                   <label
-                    className={`relative flex min-h-12 cursor-pointer items-center justify-center rounded-lg px-2 text-center text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-forest ${mode === value ? "bg-white text-forest" : "text-ink/70"}`}
+                    className={`relative flex min-h-12 cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-forest ${mode === value ? "bg-white text-forest" : "text-ink/70 hover:bg-white/60"}`}
                     key={value}
                   >
                     <input
@@ -379,7 +396,7 @@ export function BookingSettingsForm({
             {mode === "WEEKLY" ? (
               <fieldset>
                 <legend className="sr-only">{copy.weekly}</legend>
-                <div className="grid grid-cols-4 gap-1 min-[375px]:grid-cols-7">
+                <div className="grid grid-cols-4 gap-2 min-[375px]:grid-cols-7">
                   {[1, 2, 3, 4, 5, 6, 0].map((day) => (
                     <label
                       className="flex min-h-12 cursor-pointer items-center justify-center whitespace-nowrap rounded-xl bg-fog px-1 text-sm font-semibold text-ink/75 has-[:checked]:bg-forest has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-forest"
@@ -413,7 +430,8 @@ export function BookingSettingsForm({
                 ) : null}
               </fieldset>
             ) : null}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-1 gap-4 pt-2 min-[375px]:grid-cols-2">
+              <h3 className="text-base font-bold min-[375px]:col-span-2">{flow.range}</h3>
               <div className="grid content-start gap-2">
                 <label
                   className="text-sm font-semibold"
@@ -450,7 +468,7 @@ export function BookingSettingsForm({
                   type="date"
                 />
               </div>
-              <p className="col-span-2 text-xs leading-5 text-ink/70">
+              <p className="text-xs leading-5 text-ink/70 min-[375px]:col-span-2">
                 {flow.noEnd}
               </p>
             </div>
@@ -476,7 +494,7 @@ export function BookingSettingsForm({
               className="group pt-1"
               open={invalidClosedDates || undefined}
             >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-forest [&::-webkit-details-marker]:hidden focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-forest">
+              <summary className={`${secondaryClass} w-full cursor-pointer list-none justify-between [&::-webkit-details-marker]:hidden`}>
                 <span>
                   {flow.exceptions}
                   {closedDates.length ? ` · ${closedDates.length}` : ""}
@@ -486,7 +504,7 @@ export function BookingSettingsForm({
                   className="h-4 w-4 transition-transform group-open:rotate-180"
                 />
               </summary>
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-4">
                 <p className="text-sm leading-6 text-ink/70">
                   {copy.exceptionsHint}
                 </p>
@@ -502,11 +520,15 @@ export function BookingSettingsForm({
             </details>
           </section>
           {settings ? (
-            <label className="flex min-h-16 cursor-pointer items-start gap-3">
+            <label className="flex min-h-16 cursor-pointer items-start gap-3 rounded-2xl bg-fog p-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-forest">
               <input
                 className="mt-1 h-5 w-5 accent-forest"
                 checked={enabled}
-                onChange={(event) => setEnabled(event.target.checked)}
+                disabled={pending}
+                onChange={(event) => {
+                  setEnabled(event.target.checked);
+                  setEnabledChanged(true);
+                }}
                 name="enabled"
                 type="checkbox"
               />
@@ -531,15 +553,17 @@ export function BookingSettingsForm({
         {step === 1 &&
         state.success &&
         !pending &&
+        !enabledChanged &&
         submittedValues === values ? (
-          <div className="space-y-2" role="status">
-            <p className="text-sm font-bold text-forest">{copy.saved}</p>
-            {state.activityId ? (
+          <div className="space-y-3 rounded-xl bg-meadow/10 p-4" role="status">
+            <p className="flex items-center gap-2 text-sm font-bold text-forest"><Check aria-hidden="true" className="h-4 w-4" />{copy.saved}</p>
+            {state.activityId && enabled ? (
               <Link
-                className="inline-flex min-h-11 items-center text-sm font-bold text-forest underline underline-offset-4"
+                className={`${secondaryClass} bg-white hover:bg-white/80`}
                 href={getLocalizedActivityDetailPath(locale, state.activityId)}
               >
                 {copy.viewSpace}
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </Link>
             ) : null}
           </div>
@@ -547,7 +571,7 @@ export function BookingSettingsForm({
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           {step === 1 ? (
             <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-ink/70 focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-forest disabled:opacity-50"
+              className={secondaryClass}
               type="button"
               disabled={pending || uploading}
               onClick={() => changeStep(0)}
@@ -579,6 +603,7 @@ export function BookingSettingsForm({
               disabled={pending || uploading}
               type="submit"
             >
+              <Save aria-hidden="true" className="h-4 w-4" />
               {pending ? copy.saving : settings ? copy.save : copy.create}
             </button>
           )}

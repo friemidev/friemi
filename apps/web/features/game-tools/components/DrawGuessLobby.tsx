@@ -6,11 +6,13 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, BookOpen, Check, ChevronDown, Clock3, Copy, LoaderCircle, Play, QrCode, RotateCw, Search, Settings2, Sparkles, UserMinus, UsersRound, Volume2, X } from "lucide-react";
 import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCatSprite";
+import { GameToolBrand } from "@/features/game-tools/components/GameToolBrand";
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import { DrawGuessSoundToggle } from "@/features/game-tools/components/DrawGuessSoundToggle";
 import { DrawGuessMusicToggle } from "@/features/game-tools/components/DrawGuessMusicToggle";
 import { DrawGuessVolumeControls } from "@/features/game-tools/components/DrawGuessVolumeControls";
 import { playDrawGuessSound } from "@/features/game-tools/drawGuessSound";
+import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
 import { DRAW_GUESS_CATS, getDrawGuessCatName, type DrawGuessCatDirection } from "@/features/game-tools/drawGuessCats";
 import { DRAW_GUESS_DRAW_SECONDS, DRAW_GUESS_GUESS_SECONDS, DRAW_GUESS_ROUND_COUNTS, estimateDrawGuessDurationSeconds, type DrawGuessRoundCount, type DrawGuessTiming, type DrawGuessWordBankSnapshot } from "@/features/game-tools/drawGuessEngine";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
@@ -146,9 +148,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
     if (preview) { setBanks(preview.wordBanks); return; }
     if (banks) return;
     try {
-      const response = await fetch(`/api/game-tools/draw-guess/word-banks?locale=${encodeURIComponent(locale)}`);
-      if (!response.ok) throw new Error("BANKS");
-      const result = await response.json() as { wordBanks: DrawGuessWordBankSnapshot[] };
+      const { response, data: result } = await fetchDrawGuessResponse<{ wordBanks: DrawGuessWordBankSnapshot[] }>(`/api/game-tools/draw-guess/word-banks?locale=${encodeURIComponent(locale)}`);
+      if (!response.ok || !result?.wordBanks) throw new Error("BANKS");
       setBanks(result.wordBanks);
     } catch { setError(t.retry); }
   }
@@ -167,6 +168,7 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
   function closeCharacter() { setCharacterOpen(false); setError(""); }
 
   async function mutate(path: string, method: "POST" | "PATCH", body: unknown, close?: "bank" | "settings" | "character" | "kick") {
+    if (busy || leaving) return;
     setBusy(true);
     setError("");
     try {
@@ -192,9 +194,8 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
         if (close === "kick") setKickTarget(null);
         return;
       }
-      const response = await fetch(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-      const result = await response.json();
-      if (!response.ok || !result.ok) throw new Error(result.error ?? "UNKNOWN");
+      const { response, data: result } = await fetchDrawGuessResponse<{ ok?: boolean; error?: string }>(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!response.ok || !result?.ok) throw new Error(result?.error ?? "UNKNOWN");
       await onRefresh();
       if (close === "bank") setBankOpen(false);
       if (close === "settings") setSettingsOpen(false);
@@ -210,13 +211,13 @@ export function DrawGuessLobby({ locale, room, onRefresh, onLeave, preview }: { 
   }
 
   return <div className="draw-guess-theme mx-auto w-full max-w-3xl space-y-4 pb-8">
-    <div className="flex items-center justify-between gap-2">
-      <button disabled={leaving} type="button" aria-label={t.back} onClick={() => { setLeaving(true); void onLeave().catch(() => { setLeaving(false); setError(t.retry); }); }} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#63758D] transition-colors hover:text-[#3E6FA8] disabled:opacity-50 sm:gap-1.5 sm:text-sm"><ArrowLeft className="h-4 w-4" /><span>{t.back}</span></button>
-      <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 min-[541px]:flex-nowrap">
+      <div className="flex min-w-0 items-center gap-3 max-[540px]:w-full"><button disabled={leaving} type="button" aria-label={t.back} onClick={() => { setLeaving(true); void onLeave().catch(() => { setLeaving(false); setError(t.retry); }); }} className="draw-guess-btn draw-guess-btn--milk grid h-11 min-h-11 w-11 shrink-0 place-items-center"><ArrowLeft className="h-5 w-5" /></button><GameToolBrand game={locale === "zh-CN" ? "你画我猜" : locale === "fr" ? "Dessine et devine" : "Draw & Guess"} showGameOnNarrow /></div>
+      <div className="flex min-w-0 items-center gap-1.5 max-[540px]:w-full max-[540px]:justify-end sm:gap-2">
         <DrawGuessSoundToggle locale={locale} />
         <DrawGuessMusicToggle locale={locale} />
-        <button ref={bankTrigger} aria-label={t.bank} type="button" onClick={() => void openBank()} className="draw-guess-btn draw-guess-btn--blush group min-h-10 shrink-0 whitespace-nowrap px-3 text-xs max-[374px]:w-11 max-[374px]:px-0 sm:px-4 sm:text-sm"><BookOpen className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:-rotate-12" /><span className="max-[374px]:sr-only">{t.bank}</span></button>
-        <button ref={settingsTrigger} aria-label={t.settings} type="button" onClick={openSettings} className="draw-guess-btn draw-guess-btn--milk group min-h-10 shrink-0 whitespace-nowrap px-3 text-xs max-[374px]:w-11 max-[374px]:px-0 sm:px-4 sm:text-sm"><Settings2 className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:rotate-12" /><span className="max-[374px]:sr-only">{t.settings}</span></button>
+        <button ref={bankTrigger} aria-label={t.bank} type="button" onClick={() => void openBank()} className="draw-guess-btn draw-guess-btn--blush group min-h-11 shrink-0 whitespace-nowrap px-3 text-sm max-[374px]:w-11 max-[374px]:px-0 sm:px-4"><BookOpen className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:-rotate-12" /><span className="max-[374px]:sr-only">{t.bank}</span></button>
+        <button ref={settingsTrigger} aria-label={t.settings} type="button" onClick={openSettings} className="draw-guess-btn draw-guess-btn--milk group min-h-11 shrink-0 whitespace-nowrap px-3 text-sm max-[374px]:w-11 max-[374px]:px-0 sm:px-4"><Settings2 className="h-4 w-4 shrink-0 transition-transform motion-safe:group-hover:rotate-12" /><span className="max-[374px]:sr-only">{t.settings}</span></button>
       </div>
     </div>
     <header className="draw-guess-lobby-in flex items-center justify-between gap-3 px-1">

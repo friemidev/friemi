@@ -393,6 +393,7 @@ async function fetchMobileLobbyPage(
   page: number,
   signal: AbortSignal,
   status: "ongoing" | "ended" = "ongoing",
+  locale = "zh-CN",
 ) {
   const params = new URLSearchParams({
     page: String(page),
@@ -403,6 +404,7 @@ async function fetchMobileLobbyPage(
     credentials: "same-origin",
     headers: {
       Accept: "application/json",
+      "x-friemi-locale": locale,
     },
     signal,
   });
@@ -654,11 +656,13 @@ function MobileLobbyV23RecommendationSection({
   className,
   copy,
   locale,
+  onBookingUpdated,
 }: {
   activities: ActivityCardViewModel[];
   className?: string;
   copy: MobileLobbyV23Copy;
   locale: string;
+  onBookingUpdated: () => void;
 }) {
   if (activities.length === 0) {
     return null;
@@ -675,6 +679,7 @@ function MobileLobbyV23RecommendationSection({
             activity={activity}
             key={getActivityKey(activity)}
             locale={locale}
+            onBookingUpdated={onBookingUpdated}
           />
         ))}
       </div>
@@ -848,13 +853,15 @@ export function MobileLobbyV23View({
           tab,
           nextPage,
           controller.signal,
+          "ongoing",
+          locale,
         );
         // Revalidate all retained pages before swapping the list. Refreshing
         // only page one would remove the user's scroll range on return.
         if (background && !loadNext && currentPage) {
           const refreshed = [...result.activities];
           for (let page = 2; page <= currentPage.page && result.hasMore; page += 1) {
-            result = await fetchMobileLobbyPage(tab, page, controller.signal);
+            result = await fetchMobileLobbyPage(tab, page, controller.signal, "ongoing", locale);
             refreshed.push(...result.activities);
           }
           result = { ...result, activities: refreshed };
@@ -912,6 +919,10 @@ export function MobileLobbyV23View({
     },
     [tabCacheKey],
   );
+  const handleBookingUpdated = useCallback(() => {
+    // Keep retained pages (and the sheet's owning card) while updating counts.
+    void loadTabPage(displayedActiveTab, false, true);
+  }, [displayedActiveTab, loadTabPage]);
   const loadEndedTabPage = useCallback(
     async (tab: MobileLobbyV23TabId, loadNext = false) => {
       const currentPage = endedTabPagesRef.current[tab];
@@ -937,6 +948,7 @@ export function MobileLobbyV23View({
           nextPage,
           controller.signal,
           "ended",
+          locale,
         );
         const previous = endedTabPagesRef.current[tab];
         const nextTabPage = {
@@ -1307,6 +1319,7 @@ export function MobileLobbyV23View({
                   key={getActivityKey(activity)}
                   locale={locale}
                   prioritizeImage={index < 4}
+                  onBookingUpdated={handleBookingUpdated}
                   showHostedBadge={
                     displayedActiveTab === "mine" &&
                     Boolean(viewerProfileId) &&
@@ -1328,6 +1341,7 @@ export function MobileLobbyV23View({
                   activity={activity}
                   key={getActivityKey(activity)}
                   locale={locale}
+                  onBookingUpdated={handleBookingUpdated}
                 />
               ))}
             </div>
@@ -1337,6 +1351,7 @@ export function MobileLobbyV23View({
                   activities={coldStartSwipeActivities}
                   copy={copy}
                   locale={locale}
+                  onBookingUpdated={handleBookingUpdated}
                 />
               </div>
             ) : null}
@@ -1362,6 +1377,7 @@ export function MobileLobbyV23View({
                   activities={coldStartSwipeActivities}
                   copy={copy}
                   locale={locale}
+                  onBookingUpdated={handleBookingUpdated}
                 />
               </div>
             ) : null}

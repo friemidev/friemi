@@ -8,6 +8,10 @@ const DAY = 86_400_000;
 /** Finished games keep their score and artwork history, but no longer need live-room writes. */
 export async function pruneEmptyFinishedDrawGuessRoom(roomId: string) {
   return prisma.$transaction(async (tx) => {
+    // A rematch must not start between the eligibility check and live-data cleanup.
+    await tx.$queryRaw`
+      SELECT "id" FROM "GameToolRoom" WHERE "id" = ${roomId} FOR UPDATE
+    `;
     const room = await tx.gameToolRoom.findFirst({
       where: {
         id: roomId,
@@ -75,6 +79,7 @@ export async function maintainDrawGuessData(now = Date.now()) {
           id: room.id,
           kind: "DRAW_GUESS",
           status: { in: ["IN_PROGRESS", "FINISHED"] },
+          config: { path: ["drawGuessAbandonedAt"], lt: new Date(now - DAY).toISOString() },
           members: { none: { leftAt: null } },
           drawGuessReports: { none: { status: "OPEN" } },
         },
@@ -112,17 +117,20 @@ export async function maintainDrawGuessData(now = Date.now()) {
   });
   for (const room of emptyFinished) await pruneEmptyFinishedDrawGuessRoom(room.id);
 
+  const expiredRoomWhere: Prisma.GameToolRoomWhereInput = {
+    kind: "DRAW_GUESS",
+    drawGuessReports: { none: { status: "OPEN" } },
+    OR: [
+      { status: "FINISHED", finishedAt: { lt: new Date(now - 365 * DAY) } },
+      { status: "CANCELLED", cancelledAt: { lt: new Date(now - 365 * DAY) } },
+    ],
+  };
   const oldRooms = await prisma.gameToolRoom.findMany({
-    where: {
-      kind: "DRAW_GUESS",
-      drawGuessReports: { none: { status: "OPEN" } },
-      OR: [
-        { status: "FINISHED", finishedAt: { lt: new Date(now - 365 * DAY) } },
-        { status: "CANCELLED", cancelledAt: { lt: new Date(now - 365 * DAY) } },
-      ],
-    },
+    where: expiredRoomWhere,
     orderBy: { updatedAt: "asc" }, select: { id: true }, take: 50,
   });
-  if (oldRooms.length) await prisma.gameToolRoom.deleteMany({ where: { id: { in: oldRooms.map((room) => room.id) } } });
-  return { commandsDeleted: commands.length, draftsDeleted, roomsCleared, roomsDeleted: oldRooms.length };
+  const deleted = oldRooms.length ? await prisma.gameToolRoom.deleteMany({
+    where: { ...expiredRoomWhere, id: { in: oldRooms.map((room) => room.id) } },
+  }) : { count: 0 };
+  return { commandsDeleted: commands.length, draftsDeleted, roomsCleared, roomsDeleted: deleted.count };
 }

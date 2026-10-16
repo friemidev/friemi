@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import {
   CalendarDays,
   ChevronRight,
-  ExternalLink,
+  ArrowRight,
   Globe2,
   Mail,
   MapPin,
@@ -144,7 +144,7 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
               >
                 <Globe2 className="h-4 w-4 shrink-0" />
                 <span className="min-w-0 truncate">{t.merchant.website}</span>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" />
               </Link>
             ) : null}
             {merchant.contactEmail ? (

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "translations:test-db": "node --conditions=react-server --import tsx scripts/test-content-translations.ts",
+    "translations:backfill": "node --conditions=react-server --import tsx scripts/backfill-content-translations.ts",
     "aa:preview": "node scripts/build-aa-preview.mjs && node scripts/serve-aa-preview.mjs",
     "dev": "next dev",
     "ios:sync": "cap sync ios && npm run ios:verify-keyboard",
@@ -27,6 +29,8 @@
     "db:backfill-ticket-links": "tsx prisma/backfill-open-data-ticket-links.ts",
     "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts",
     "draw-guess:deadlines": "node scripts/run-draw-guess-deadlines.mjs",
+    "uno:deadlines": "node scripts/run-uno-deadlines.mjs",
+    "uno:test-persistence": "node --conditions=react-server --import tsx scripts/test-uno-persistence.ts",
     "draw-guess:preview-cron": "node scripts/configure-draw-guess-preview-cron.mjs",
     "draw-guess:production-cron": "node scripts/configure-draw-guess-production-cron.mjs",
     "draw-guess:preview-cron-probe": "node --conditions=react-server --import tsx scripts/probe-draw-guess-preview-cron.ts"

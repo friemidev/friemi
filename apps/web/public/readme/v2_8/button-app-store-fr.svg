@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="230" height="68" viewBox="0 0 230 68" role="img" aria-labelledby="title">
+  <title id="title">App Store — télécharger pour iOS</title>
+  <rect x="1" y="1" width="228" height="66" rx="14" fill="#1D1D1B" stroke="#8E8383" stroke-width="2"/>
+  <g fill="none" stroke="#FEFFF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="23" y="18" width="20" height="32" rx="4"/>
+    <path d="M29 23h8M30 44h6"/>
+  </g>
+  <g fill="#FEFFF9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif">
+    <text x="62" y="31" font-size="19" font-weight="700">App Store</text>
+    <text x="62" y="51" font-size="12">Télécharger pour iOS</text>
+  </g>
+</svg>

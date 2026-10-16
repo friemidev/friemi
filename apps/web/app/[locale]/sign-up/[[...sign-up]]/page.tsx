@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
+import { AppHandoff } from "@/features/mobile/components/AppHandoff";
 import {
   authRedirectParamName,
   getAuthRedirectFallback,
@@ -82,7 +83,7 @@ export default async function SignUpPage({
   if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
-        <WechatWebViewGuide locale={locale} />
+        <WechatWebViewGuide locale={locale} target={redirectTarget} mode="sign-up" />
       </PageContainer>
     );
   }
@@ -105,6 +106,7 @@ export default async function SignUpPage({
   return (
     <PageContainer className="auth-page-shell min-h-svh max-w-none overflow-x-hidden overflow-y-auto bg-white px-5 pb-[calc(1rem+var(--app-bottom-safe-area))] pt-[calc(1.2rem+var(--app-top-safe-area))] sm:px-6">
       <section className="mx-auto flex min-h-[calc(100svh-2.2rem)] w-full max-w-[24rem] flex-col justify-start py-5 sm:justify-center">
+        <AppHandoff locale={locale} target={redirectTarget} userAgent={userAgent ?? ""} compact />
         <ClerkAuthMountGuard
           exitUrl={withLocale(locale, "/mobile-home")}
           fallbackRedirectUrl={fallbackRedirectUrl}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   CalendarDays,
   Plus,
   Users,
@@ -136,7 +136,7 @@ export function OwnerResidencyOverview({
                       ) : null}
                     </span>
                   </span>
-                  <ArrowUpRight
+                  <ArrowRight
                     aria-hidden="true"
                     className="h-5 w-5 shrink-0 text-forest"
                   />
@@ -224,7 +224,7 @@ export function OwnerResidencyDetail({
             )}
           >
             {copy.createActivity}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : null}
         {slot.status === "CONFIRMED" && !canPublish ? (
@@ -236,7 +236,7 @@ export function OwnerResidencyDetail({
             href={getLocalizedActivityDetailPath(locale, slot.activityId)}
           >
             {copy.viewActivity}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : null}
         {slot.status === "REJECTED" ? (

@@ -4,20 +4,27 @@ import { useSession } from "@clerk/nextjs";
 import { createClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
-import { isValidStroke, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { isValidDrawGuessInkCursor, isValidStroke, type DrawGuessInkCursor, type DrawStroke } from "@/features/game-tools/drawGuessEngine";
+import { createDrawGuessInkBuffer, getDrawGuessInkDrawing, mergeDrawGuessInkBatch, mergeDrawGuessInkSnapshot } from "@/features/game-tools/drawGuessInkBuffer";
+import { fetchDrawGuessResponse } from "@/features/game-tools/drawGuessRequest";
 import { DRAW_GUESS_INK_EVENT, getDrawGuessInkTopic, getDrawGuessRealtimeBrowserConfig } from "@/features/game-tools/drawGuessRealtime";
 
-type InkEvent = { gameNumber: number; roomId: string; seq: number; stroke: DrawStroke; strokeIndex: number; turnIndex: number };
+type InkEvent = { gameNumber: number; inkCursor?: DrawGuessInkCursor; roomId: string; seq: number; stroke: DrawStroke; strokeIndex: number; turnIndex: number };
 
 function isInkEvent(value: unknown): value is InkEvent {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<InkEvent>;
   return typeof item.roomId === "string" && Number.isSafeInteger(item.gameNumber) && Number.isSafeInteger(item.turnIndex) &&
     Number.isSafeInteger(item.seq) && (item.seq ?? 0) > 0 && Number.isSafeInteger(item.strokeIndex) &&
-    (item.strokeIndex ?? -1) >= 0 && (item.strokeIndex ?? 120) < 120 && isValidStroke(item.stroke);
+    (item.strokeIndex ?? -1) >= 0 && (item.strokeIndex ?? 120) < 120 && isValidStroke(item.stroke) &&
+    (item.inkCursor === undefined || isValidDrawGuessInkCursor(item.inkCursor));
 }
 
-export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: DrawGuessRoomView) => void) {
+function inkSnapshot(room: DrawGuessRoomView) {
+  return { drawing: room.view.drawing ?? [], inkCursor: room.view.inkCursor, revision: room.revision, seq: room.view.inkSeq ?? 0 };
+}
+
+export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: DrawGuessRoomView) => void, enabled = true) {
   const { session } = useSession();
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -26,40 +33,33 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
   const [drawing, setDrawing] = useState<DrawStroke[]>(room.view.drawing ?? []);
   const [connected, setConnected] = useState(false);
   const channelReadyRef = useRef(false);
-  const eventsRef = useRef<InkEvent[]>([]);
-  const baseRef = useRef<DrawStroke[]>(room.view.drawing ?? []);
-  const baseSeqRef = useRef(room.view.inkSeq ?? 0);
+  const publisherId = useRef<string | null>(null);
+  const publishSequence = useRef(0);
+  const publishedCursor = useRef<{ topic: string; cursor: DrawGuessInkCursor } | null>(null);
+  const bufferRef = useRef(createDrawGuessInkBuffer(inkSnapshot(room)));
   const roomRef = useRef(room);
   roomRef.current = room;
-  const active = room.mode === "CLASSIC" && room.view.phase === "DRAW_GUESS";
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+  const active = enabled && room.mode === "CLASSIC" && room.view.phase === "DRAW_GUESS";
   const topicKey = active ? getDrawGuessInkTopic(room.id, room.view.gameNumber, room.view.turnIndex) : "";
 
   const rebuild = useCallback(() => {
-    const next = [...baseRef.current];
-    for (const event of eventsRef.current) {
-      if (event.seq <= baseSeqRef.current) continue;
-      if (event.strokeIndex > next.length) continue;
-      next[event.strokeIndex] = event.stroke;
-    }
-    setDrawing(next);
+    setDrawing(getDrawGuessInkDrawing(bufferRef.current));
   }, []);
 
   useEffect(() => {
-    eventsRef.current = [];
-    baseRef.current = roomRef.current.view.drawing ?? [];
-    baseSeqRef.current = roomRef.current.view.inkSeq ?? 0;
+    bufferRef.current = createDrawGuessInkBuffer(inkSnapshot(roomRef.current));
     channelReadyRef.current = false;
-    setDrawing(baseRef.current);
+    setDrawing(bufferRef.current.drawing);
     setConnected(false);
   }, [topicKey]);
 
   useEffect(() => {
     if (!active) { setDrawing(room.view.drawing ?? []); return; }
-    baseRef.current = room.view.drawing ?? [];
-    baseSeqRef.current = room.view.inkSeq ?? 0;
-    eventsRef.current = eventsRef.current.filter((event) => event.seq > baseSeqRef.current);
+    bufferRef.current = mergeDrawGuessInkSnapshot(bufferRef.current, inkSnapshot(room));
     rebuild();
-  }, [active, rebuild, room.revision, room.view.drawing, room.view.inkSeq]);
+  }, [active, rebuild, room.revision, room.view.drawing, room.view.inkCursor, room.view.inkSeq]);
 
   useEffect(() => {
     const config = getDrawGuessRealtimeBrowserConfig();
@@ -67,7 +67,8 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
     let disposed = false;
     let ready = false;
     let channelSubscribed = false;
-    let snapshotRunning = false;
+    let connectionVersion = 0;
+    let snapshotVersion: number | null = null;
     let snapshotRetry: number | null = null;
     const client = createClient(config.url, config.publishableKey, {
       accessToken: async () => sessionRef.current?.getToken() ?? null,
@@ -75,31 +76,41 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
     });
     let channel: ReturnType<typeof client.channel> | null = null;
     const syncSnapshot = async () => {
-      if (snapshotRunning || disposed || !channelSubscribed) return;
+      if (snapshotVersion === connectionVersion || disposed || !channelSubscribed) return;
       if (snapshotRetry !== null) { window.clearTimeout(snapshotRetry); snapshotRetry = null; }
-      snapshotRunning = true;
+      const requestedVersion = connectionVersion;
+      snapshotVersion = requestedVersion;
       try {
-        const response = await fetch(`/api/game-tools/draw-guess/rooms/${roomRef.current.id}`, { cache: "no-store" });
+        const { response, data: result } = await fetchDrawGuessResponse<{ room?: DrawGuessRoomView }>(`/api/game-tools/draw-guess/rooms/${roomRef.current.id}`, { cache: "no-store" });
         if (!response.ok) throw new Error("SNAPSHOT_UNAVAILABLE");
-        const result = await response.json() as { room?: DrawGuessRoomView };
-        if (!result.room || disposed || !channelSubscribed || result.room.view.phase !== "DRAW_GUESS" ||
+        const current = roomRef.current;
+        if (!result?.room || disposed || !channelSubscribed || requestedVersion !== connectionVersion || result.room.view.phase !== "DRAW_GUESS" ||
+            current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" ||
+            getDrawGuessInkTopic(current.id, current.view.gameNumber, current.view.turnIndex) !== topicKey ||
             getDrawGuessInkTopic(result.room.id, result.room.view.gameNumber, result.room.view.turnIndex) !== topicKey) return;
-        baseRef.current = result.room.view.drawing ?? [];
-        baseSeqRef.current = result.room.view.inkSeq ?? 0;
-        eventsRef.current = eventsRef.current.filter((event) => event.seq > baseSeqRef.current);
-        onSnapshotRef.current(result.room);
+        // Room polling or a clear/undo response can already be newer than this
+        // request. Check before updating the private ink base, not only in the
+        // room callback, which cannot undo a stale local buffer mutation.
+        bufferRef.current = mergeDrawGuessInkSnapshot(bufferRef.current, inkSnapshot(current));
+        const next = mergeDrawGuessInkSnapshot(bufferRef.current, inkSnapshot(result.room));
+        if (next !== bufferRef.current) {
+          bufferRef.current = next;
+          onSnapshotRef.current(result.room);
+        }
         ready = true;
         channelReadyRef.current = true;
         rebuild();
         setConnected(true);
       } catch {
-        if (!disposed && channelSubscribed) {
+        if (!disposed && channelSubscribed && requestedVersion === connectionVersion) {
           ready = false;
           channelReadyRef.current = false;
           setConnected(false);
           snapshotRetry = window.setTimeout(() => { snapshotRetry = null; void syncSnapshot(); }, 2_000);
         }
-      } finally { snapshotRunning = false; }
+      } finally {
+        if (snapshotVersion === requestedVersion) snapshotVersion = null;
+      }
     };
     const authTimer = window.setInterval(() => {
       const currentSession = sessionRef.current;
@@ -117,23 +128,23 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
         .on("broadcast", { event: DRAW_GUESS_INK_EVENT }, (message) => {
           const event = message.payload;
           const current = roomRef.current;
-          if (!isInkEvent(event) || event.roomId !== current.id || event.gameNumber !== current.view.gameNumber ||
+          if (disposed || !isInkEvent(event) || event.roomId !== current.id || event.gameNumber !== current.view.gameNumber ||
               event.turnIndex !== current.view.turnIndex || current.view.phase !== "DRAW_GUESS") return;
-          if (eventsRef.current.some((item) => item.seq === event.seq)) return;
-          eventsRef.current.push(event);
-          eventsRef.current.sort((a, b) => a.seq - b.seq);
-          if (eventsRef.current.length > 128) eventsRef.current = eventsRef.current.slice(-128);
+          bufferRef.current = mergeDrawGuessInkBatch(bufferRef.current, event);
           if (ready) rebuild();
         })
         .subscribe((status) => {
           if (disposed) return;
+          // Rejoins start a fresh request immediately, even if the previous
+          // connection's snapshot is still pending.
+          connectionVersion += 1;
           channelSubscribed = status === "SUBSCRIBED";
+          ready = false;
+          channelReadyRef.current = false;
+          setConnected(false);
           if (!channelSubscribed) {
             if (snapshotRetry !== null) window.clearTimeout(snapshotRetry);
             snapshotRetry = null;
-            ready = false;
-            channelReadyRef.current = false;
-            setConnected(false);
             return;
           }
           void syncSnapshot();
@@ -144,22 +155,41 @@ export function useDrawGuessInk(room: DrawGuessRoomView, onSnapshot: (room: Draw
 
   const publishStroke = useCallback(async (stroke: DrawStroke, strokeIndex: number) => {
     const current = roomRef.current;
-    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return null;
+    if (!enabledRef.current || current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS" || current.viewerSeat !== current.view.turnIndex) return null;
+    const isCurrentTurn = () => {
+      const latest = roomRef.current;
+      return enabledRef.current && latest.id === current.id && latest.mode === "CLASSIC" && latest.view.phase === "DRAW_GUESS" &&
+        latest.view.gameNumber === current.view.gameNumber && latest.view.turnIndex === current.view.turnIndex &&
+        latest.viewerSeat === latest.view.turnIndex;
+    };
     try {
-      const response = await fetch(`/api/game-tools/draw-guess/rooms/${current.id}/ink`, {
-        body: JSON.stringify({ gameNumber: current.view.gameNumber, stroke, strokeIndex, turnIndex: current.view.turnIndex }),
+      publisherId.current ??= crypto.randomUUID();
+      const inkCursor = { clientId: publisherId.current, seq: ++publishSequence.current };
+      // Record dispatch, not acknowledgement: a timed-out POST may still be
+      // broadcast by the server after a clear/undo snapshot has been saved.
+      publishedCursor.current = { topic: getDrawGuessInkTopic(current.id, current.view.gameNumber, current.view.turnIndex), cursor: inkCursor };
+      const { response, data: result } = await fetchDrawGuessResponse<{ seq?: number }>(`/api/game-tools/draw-guess/rooms/${current.id}/ink`, {
+        body: JSON.stringify({ gameNumber: current.view.gameNumber, inkCursor, stroke, strokeIndex, turnIndex: current.view.turnIndex }),
         headers: { "content-type": "application/json" }, method: "POST",
       });
+      if (!isCurrentTurn()) return null;
       if (!response.ok) { setConnected(false); return null; }
-      const result = await response.json() as { seq?: number };
-      if (Number.isSafeInteger(result.seq) && (result.seq ?? 0) > 0) {
+      if (Number.isSafeInteger(result?.seq) && (result?.seq ?? 0) > 0) {
         if (channelReadyRef.current) setConnected(true);
-        return result.seq!;
+        return result!.seq!;
       }
       setConnected(false);
       return null;
-    } catch { setConnected(false); return null; }
+    } catch { if (isCurrentTurn()) setConnected(false); return null; }
   }, []);
 
-  return { connected, drawing, publishStroke };
+  const getPublishedInkCursor = useCallback(() => {
+    const current = roomRef.current;
+    if (current.mode !== "CLASSIC" || current.view.phase !== "DRAW_GUESS") return undefined;
+    const published = publishedCursor.current;
+    return published?.topic === getDrawGuessInkTopic(current.id, current.view.gameNumber, current.view.turnIndex)
+      ? published.cursor : undefined;
+  }, []);
+
+  return { connected, drawing, getPublishedInkCursor, publishStroke };
 }

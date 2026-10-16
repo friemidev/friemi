@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, History, ImagePlus, ScanLine, Send, Users } from "lucide-react";
+import { ArrowRight, History, ImagePlus, ScanLine, Send, Users } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminItemPageFrame } from "@/features/inventory/components/AdminItemPageFrame";
@@ -55,11 +55,11 @@ export default async function AdminItemDetailPage({
       icon: ScanLine,
       label: copy.detail.redeemLabel,
     },
-  ];
+  ].filter((link) => !definition.archivedAt || link.href !== `/admin/items/${definitionId}/issue`);
 
   return (
     <AdminItemPageFrame
-      backHref="/admin/merchants?view=items"
+      backHref={definition.archivedAt ? "/admin/merchants?view=items&archived=1" : "/admin/merchants?view=items"}
       backLabel={copy.frame.backToList}
       definition={definition}
       locale={locale}
@@ -86,7 +86,7 @@ export default async function AdminItemDetailPage({
                 {description}
               </span>
             </span>
-            <ArrowUpRight
+            <ArrowRight
               aria-hidden="true"
               className="h-5 w-5 shrink-0 text-ink/50 group-hover:text-forest"
             />

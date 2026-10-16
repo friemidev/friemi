@@ -40,6 +40,12 @@ import { ActivityPlacePicker } from "./ActivityPlacePicker";
 import { ActivityTextImportPanel } from "./ActivityTextImportPanel";
 import { ActivityPlanetPickerField } from "./ActivityPlanetPickerField";
 import type { LinkablePlanetOption } from "../queries/getLinkablePlanets";
+import {
+  activityHostLinkKinds,
+  getActivityHostLinkCopy,
+  getInitialActivityHostLinkKind,
+  type ActivityHostLinkKind,
+} from "../utils/activityHostLink";
 
 type NewActivityFormProps = {
   activityId?: string;
@@ -357,52 +363,6 @@ function getPriceModeCopy(locale: string) {
     paid: "收费",
     paidAmount: "金额",
   };
-}
-
-type TicketLinkKind = "" | "RESERVE_SPOT" | "VIEW_DETAILS";
-
-function getTicketLinkKindCopy(locale: string) {
-  if (locale === "fr") {
-    return {
-      details: "Lien de détails",
-      detailsCta: "Voir les détails",
-      reserve: "Lien de réservation",
-      reserveCta: "Réserver une place",
-      title: "Lien externe",
-    };
-  }
-
-  if (locale === "en") {
-    return {
-      details: "Details link",
-      detailsCta: "View details",
-      reserve: "Spot link",
-      reserveCta: "Save a spot",
-      title: "External link",
-    };
-  }
-
-  return {
-    details: "详情链接",
-    detailsCta: "查看详情",
-    reserve: "抢位置链接",
-    reserveCta: "抢位置",
-    title: "外部链接",
-  };
-}
-
-function getInitialTicketLinkKind(
-  values?: Partial<ActivityFormValues>,
-): TicketLinkKind {
-  if (!values?.ticketUrl) {
-    return "";
-  }
-
-  if (values.ticketLabel === "VIEW_DETAILS") {
-    return "VIEW_DETAILS";
-  }
-
-  return "RESERVE_SPOT";
 }
 
 function normalizePriceTypeForSimpleMode(priceType?: string) {
@@ -2282,8 +2242,8 @@ export function NewActivityForm({
   const [priceType, setPriceType] = useState(
     normalizePriceTypeForSimpleMode(values?.priceType ?? "FREE"),
   );
-  const [ticketLinkKind, setTicketLinkKind] = useState<TicketLinkKind>(() =>
-    getInitialTicketLinkKind(values),
+  const [ticketLinkKind, setTicketLinkKind] = useState(() =>
+    getInitialActivityHostLinkKind(values),
   );
   const [ticketUrl, setTicketUrl] = useState(values?.ticketUrl ?? "");
   const [selectedPlanetIds, setSelectedPlanetIds] = useState<string[]>(
@@ -2302,7 +2262,7 @@ export function NewActivityForm({
   const publicEventTeamFormCopy = values?.publicEventId
     ? getPublicEventTeamFormCopy(locale)
     : null;
-  const ticketLinkCopy = getTicketLinkKindCopy(locale);
+  const ticketLinkCopy = getActivityHostLinkCopy(locale);
   const isPublicEventTeam = Boolean(publicEventTeamFormCopy);
   const isLobbyCandidateCreation =
     values?.creationContext === DESKTOP_LOBBY_CANDIDATE_CONTEXT;
@@ -2369,7 +2329,7 @@ export function NewActivityForm({
     setVisibility(draftValues.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC");
     setPriceType(normalizePriceTypeForSimpleMode(draftValues.priceType));
     setTicketUrl(draftValues.ticketUrl ?? "");
-    setTicketLinkKind(getInitialTicketLinkKind(draftValues));
+    setTicketLinkKind(getInitialActivityHostLinkKind(draftValues));
     setSelectedPlanetIds(draftValues.planetIds ?? []);
     setIsCapacityLimited(
       draftValues.capacityLimitEnabled ?? Number(draftValues.capacity ?? 0) > 0,
@@ -2486,9 +2446,7 @@ export function NewActivityForm({
 
     if (draft.ticketUrl) {
       setTicketUrl(draft.ticketUrl);
-      setTicketLinkKind(
-        draft.ticketLabel === "VIEW_DETAILS" ? "VIEW_DETAILS" : "RESERVE_SPOT",
-      );
+      setTicketLinkKind(getInitialActivityHostLinkKind(draft));
     } else if (draft.ticketLabel) {
       setTicketLinkKind(draft.ticketLabel);
     }
@@ -2993,55 +2951,41 @@ export function NewActivityForm({
               </div>
 
               <div className="grid gap-3" data-field-name="ticketUrl">
-                <span className="text-base font-semibold text-zinc-700 sm:text-lg">
-                  {ticketLinkCopy.title}
-                </span>
-                <input
-                  name="ticketLabel"
-                  type="hidden"
-                  value={ticketLinkKind}
-                />
+                <label className="grid min-w-0 gap-2">
+                  <span className="text-base font-semibold text-zinc-700 sm:text-lg">
+                    {ticketLinkCopy.title}
+                  </span>
+                  <select
+                    className={cn(selectClassName, "min-w-0 max-w-full")}
+                    name="ticketLabel"
+                    value={ticketLinkKind}
+                    onChange={(event) => setTicketLinkKind(event.target.value)}
+                  >
+                    <option value="">{ticketLinkCopy.none}</option>
+                    {activityHostLinkKinds.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {kind === "HOST_LINK"
+                          ? ticketLinkCopy.otherPurpose
+                          : ticketLinkCopy[kind]}
+                      </option>
+                    ))}
+                    {ticketLinkKind &&
+                    !activityHostLinkKinds.includes(
+                      ticketLinkKind as ActivityHostLinkKind,
+                    ) ? (
+                      <option value={ticketLinkKind}>{ticketLinkKind}</option>
+                    ) : null}
+                  </select>
+                </label>
                 {!ticketLinkKind ? (
                   <>
                     <input name="ticketUrl" type="hidden" value="" />
                   </>
                 ) : null}
 
-                <div className="grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      ["RESERVE_SPOT", ticketLinkCopy.reserve],
-                      ["VIEW_DETAILS", ticketLinkCopy.details],
-                    ] as const
-                  ).map(([value, label]) => {
-                    const active = ticketLinkKind === value;
-
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        className={cn(
-                          "min-w-0 overflow-hidden rounded-full border px-3 py-2.5 text-sm font-semibold leading-tight transition sm:text-base",
-                          active
-                            ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
-                            : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
-                        )}
-                        aria-pressed={active}
-                        onClick={() =>
-                          setTicketLinkKind((currentKind) =>
-                            currentKind === value ? "" : value,
-                          )
-                        }
-                      >
-                        <span className="block truncate">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
                 {ticketLinkKind ? (
                   <label className="grid gap-2">
-                    <span className="sr-only">{t.form.ticketUrl}</span>
+                    <span className="sr-only">{ticketLinkCopy.title}</span>
                     <Input
                       className={cn(
                         compactInputClassName,
@@ -3052,7 +2996,7 @@ export function NewActivityForm({
                       aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
                       inputMode="url"
                       onChange={(event) => setTicketUrl(event.target.value)}
-                      placeholder={t.form.ticketUrlPlaceholder}
+                      placeholder={ticketLinkCopy.urlPlaceholder}
                       required
                       type="url"
                       value={ticketUrl}

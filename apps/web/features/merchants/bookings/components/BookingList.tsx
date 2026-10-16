@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, Users, X } from "lucide-react";
 import { useState } from "react";
 import { withLocale } from "@/lib/routes";
 import { getBookingCopy } from "../copy";
@@ -65,7 +65,7 @@ export function BookingList({
           <button
             aria-controls={`booking-panel-${value}`}
             aria-selected={tab === value}
-            className={`flex min-h-12 items-center justify-center gap-1 rounded-lg px-2 text-center text-sm font-semibold focus-visible:outline-2 focus-visible:outline-forest ${value === tab ? "bg-white text-forest" : "text-ink/70"}`}
+            className={`flex min-h-12 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-lg px-2 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${value === tab ? "bg-forest text-white" : "text-ink/70 hover:bg-white/70"}`}
             id={`booking-tab-${value}`}
             key={value}
             onClick={() => {
@@ -97,7 +97,7 @@ export function BookingList({
           >
             {!owner && value === "pending" ? copy.awaiting : copy[value]}
             {groups[value].length > 0 ? (
-              <span className="text-xs tabular-nums">
+              <span className={`grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-xs tabular-nums ${value === tab ? "bg-white/15 text-white" : "bg-white text-ink/70"}`}>
                 {groups[value].length}
               </span>
             ) : null}
@@ -105,36 +105,47 @@ export function BookingList({
         ))}
       </div>
       {owner && groups[tab].length > 0 ? (
-        <div className="mt-5 flex items-center justify-end gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <label
-            className="text-xs font-semibold text-ink/70"
+            className="flex items-center gap-2 text-sm font-semibold text-ink/70"
             htmlFor="booking-date-filter"
           >
+            <CalendarDays aria-hidden="true" className="h-4 w-4" />
             {copy.selectedDate}
           </label>
           <input
-            className="min-h-11 min-w-0 rounded-xl bg-fog px-3 text-base text-ink focus-visible:outline-2 focus-visible:outline-forest"
+            className="min-h-12 min-w-0 flex-1 rounded-xl bg-fog px-3 text-base text-ink sm:ml-auto sm:max-w-52 focus-visible:outline-2 focus-visible:outline-forest"
             id="booking-date-filter"
             lang={locale}
             onChange={(event) => setDate(event.target.value)}
             type="date"
             value={date}
           />
+          {date ? (
+            <button
+              aria-label={copy.clearDate}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-fog text-forest hover:bg-sand/30 focus-visible:outline-2 focus-visible:outline-forest"
+              onClick={() => setDate("")}
+              type="button"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
       ) : null}
       <section
         aria-labelledby={`booking-tab-${tab}`}
-        className="pt-7"
+        className="pt-5"
         id={`booking-panel-${tab}`}
         role="tabpanel"
       >
         {visible.length ? (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {dates.map((day) => (
               <div key={day}>
-                <h2 className="text-sm font-bold text-forest">
+                <h3 className="text-sm font-bold text-forest">
                   {formatBookingDate(day, locale)}
-                </h2>
+                </h3>
                 {owner ? (
                   <p className="mt-1 text-xs text-ink/70">
                     {copy.count(
@@ -151,13 +162,13 @@ export function BookingList({
                     )}
                   </p>
                 ) : null}
-                <ol className="mt-2 divide-y divide-fog">
+                <ol className="mt-3 space-y-2">
                   {visible
                     .filter((booking) => booking.date === day)
                     .map((booking) => (
                       <li key={booking.id}>
                         <Link
-                          className="flex min-h-24 items-center gap-3 rounded-lg py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                          className="flex min-h-24 items-center gap-3 rounded-xl bg-fog/70 px-4 py-4 transition-colors hover:bg-fog focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
                           href={withLocale(
                             locale,
                             owner
@@ -165,6 +176,9 @@ export function BookingList({
                               : `/profile/bookings/${booking.id}`,
                           )}
                         >
+                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-forest">
+                            <Users aria-hidden="true" className="h-4 w-4" />
+                          </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-base font-semibold">
                               {owner
@@ -195,13 +209,14 @@ export function BookingList({
             ))}
           </div>
         ) : (
-          <p className="px-3 py-12 text-center text-sm text-ink/70">
-            {tab === "pending"
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-fog/60 px-4 py-10 text-center">
+            <CalendarDays aria-hidden="true" className="h-6 w-6 text-forest/70" />
+            <p className="text-sm text-ink/70">{date ? copy.noOnDate : tab === "pending"
               ? copy.noPending
               : tab === "upcoming"
                 ? copy.noUpcoming
-                : copy.noHistory}
-          </p>
+                : copy.noHistory}</p>
+          </div>
         )}
       </section>
     </div>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReportStatus, ReportTargetType } from "@prisma/client";
 import {
   Clock3,
-  ExternalLink,
+  ArrowRight,
   Flag,
   MousePointerClick,
   ShieldCheck,
@@ -307,7 +307,7 @@ function ReportCard({
             data-detail-source-target={`report:${report.id}`}
           >
             {t.admin.openTarget}
-            <ExternalLink className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
           </ContextualDetailLink>
         ) : null}
       </div>

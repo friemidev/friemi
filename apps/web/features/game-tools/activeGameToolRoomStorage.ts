@@ -11,9 +11,37 @@ export type StoredActiveGameToolRoom = {
   code: string;
   href: string;
   id: string;
-  kind: "AVALON" | "DRAW_GUESS" | "STORYTELLER" | "WEREWOLF";
+  kind: "AVALON" | "DICE" | "DRAW_GUESS" | "STORYTELLER" | "UNO" | "WEREWOLF";
   locale: string;
   privateSeatHref: string | null;
+  /** Required for Draw & Guess, Dice and UNO shortcuts; older games retain their format. */
+  profileId?: string | null;
   seatNumber: number | null;
   title: string;
 };
+
+export function canUseStoredActiveGameToolRoom(
+  room: Pick<StoredActiveGameToolRoom, "kind" | "profileId">,
+  profileId?: string | null,
+) {
+  return !["DRAW_GUESS", "DICE", "UNO"].includes(room.kind) || Boolean(profileId && room.profileId === profileId);
+}
+
+export function parseStoredActiveGameToolRoom(raw: string | null, locale: string, profileId?: string | null): StoredActiveGameToolRoom | null {
+  try {
+    const parsed = JSON.parse(raw ?? "null") as Partial<StoredActiveGameToolRoom> | null;
+    if (!parsed || parsed.locale !== locale || !parsed.id || !parsed.href || !parsed.kind || !parsed.title ||
+      !canUseStoredActiveGameToolRoom({ kind: parsed.kind, profileId: parsed.profileId }, profileId)) return null;
+    return {
+      code: parsed.code ?? "",
+      href: parsed.href,
+      id: parsed.id,
+      kind: parsed.kind,
+      locale: parsed.locale,
+      privateSeatHref: parsed.privateSeatHref ?? null,
+      ...(parsed.profileId ? { profileId: parsed.profileId } : {}),
+      seatNumber: typeof parsed.seatNumber === "number" ? parsed.seatNumber : null,
+      title: parsed.title,
+    };
+  } catch { return null; }
+}

@@ -44,7 +44,9 @@ test("keeps the Chinese Werewolf role labels explicit", () => {
     cupid: "丘比特",
     dream_catcher: "摄梦人",
     elder: "长老",
+    evil_spirit_knight: "恶灵骑士",
     fox: "狐狸",
+    gargoyle: "石像鬼",
     gravedigger: "守墓人",
     guard: "守卫",
     hunter: "猎人",
@@ -54,8 +56,12 @@ test("keeps the Chinese Werewolf role labels explicit", () => {
     little_girl: "小女孩",
     magician: "魔术师",
     mechanical_wolf: "机械狼",
+    medium: "通灵师",
+    miracle_merchant: "奇迹商人",
     nightmare_shadow: "噩梦之影",
+    nine_tailed_fox: "九尾狐",
     pied_piper: "吹笛者",
+    raven: "乌鸦",
     seer: "预言家",
     silencing_elder: "禁言长老",
     thief: "盗贼",
@@ -70,13 +76,33 @@ test("keeps the Chinese Werewolf role labels explicit", () => {
 });
 
 test("accepts every available role and recognizes wolf kings as wolves", () => {
-  assert.equal(werewolfRoleKeys.length, 27);
+  assert.equal(werewolfRoleKeys.length, 33);
   assert.equal(isWerewolfRoleKey("lovers"), false);
   assert.equal(normalizeWerewolfRoleKey("lovers"), "villager");
   assert.equal(getWerewolfRoleLabel("zh-CN", "lovers"), "平民");
   assert.equal(werewolfRoleAlignments.wolf_king, "werewolf");
   assert.equal(werewolfRoleAlignments.white_wolf_king, "werewolf");
+  assert.equal(werewolfRoleAlignments.evil_spirit_knight, "werewolf");
+  assert.equal(werewolfRoleAlignments.gargoyle, "werewolf");
   assert.equal(werewolfRoleAlignments.pied_piper, "third_party");
+  assert.deepEqual(
+    normalizeWerewolfRoleDeck([
+      "evil_spirit_knight",
+      "gargoyle",
+      "medium",
+      "miracle_merchant",
+      "nine_tailed_fox",
+      "raven",
+    ]),
+    [
+      "evil_spirit_knight",
+      "gargoyle",
+      "medium",
+      "miracle_merchant",
+      "nine_tailed_fox",
+      "raven",
+    ],
+  );
   assert.deepEqual(
     normalizeWerewolfRoleDeck([
       "wolf_king",

@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
     },
   },
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  outputFileTracingIncludes: {
+    "/*/game-tools/dice/**": [
+      "./features/game-tools/dice-preview/runtime/**/*",
+    ],
+  },
   transpilePackages: ["@chill-club/shared", "@chill-club/ui"],
 };
 

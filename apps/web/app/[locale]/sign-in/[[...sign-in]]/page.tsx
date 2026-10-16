@@ -7,6 +7,7 @@ import { BrandLockup } from "@/components/brand/BrandLockup";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
+import { AppHandoff } from "@/features/mobile/components/AppHandoff";
 import {
   authRedirectParamName,
   getAuthRedirectFallback,
@@ -90,7 +91,7 @@ export default async function SignInPage({
   if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
-        <WechatWebViewGuide locale={locale} />
+        <WechatWebViewGuide locale={locale} target={redirectTarget} />
       </PageContainer>
     );
   }
@@ -128,6 +129,7 @@ export default async function SignInPage({
           </Link>
         </header>
 
+        <AppHandoff locale={locale} target={redirectTarget} userAgent={userAgent ?? ""} compact />
         <ClerkAuthMountGuard
           exitUrl={withLocale(locale, "/mobile-home")}
           fallbackRedirectUrl={fallbackRedirectUrl}

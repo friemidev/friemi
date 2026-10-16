@@ -9,6 +9,7 @@ type AndroidBridge = {
   getAppInfo?: () => string;
   getStoredPushToken?: () => string;
   openExternal?: (url: string) => void;
+  openHostLink?: (url: string) => boolean;
   openMap?: (url: string) => void;
   registerPushToken?: () => string;
   saveLocale?: (locale: string) => void;

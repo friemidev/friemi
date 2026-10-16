@@ -16,6 +16,7 @@ export async function getMerchantCouponDetail(profileId: string, couponId: strin
     },
     select: {
       accentColor: true,
+      archivedAt: true,
       backgroundColor: true,
       campaignStatus: true,
       claimToken: true,
@@ -39,6 +40,7 @@ export async function getMerchantCouponDetail(profileId: string, couponId: strin
     merchant,
     campaign: {
       ...campaign,
+      archivedAt: campaign.archivedAt?.toISOString() ?? null,
       claimAvailability: getCouponClaimAvailability(campaign),
       expiresAt: campaign.expiresAt?.toISOString() ?? null,
       imageUrl: template?.imageUrl ?? null,

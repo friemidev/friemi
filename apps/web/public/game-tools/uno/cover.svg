@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" fill="none">
+  <rect width="720" height="480" rx="32" fill="#DCECF9"/>
+  <ellipse cx="360" cy="391" rx="211" ry="23" fill="#B6D3EB"/>
+  <g stroke="#30425C" stroke-width="4" stroke-linejoin="round">
+    <g transform="translate(154 117) rotate(-18 94 137)">
+      <rect x="0" y="6" width="188" height="274" rx="21" fill="#B6D3EB" stroke="none"/>
+      <rect width="188" height="274" rx="21" fill="#FFFCF5"/>
+      <rect x="11" y="11" width="166" height="252" rx="13" fill="#E76859" stroke="none"/>
+      <ellipse cx="94" cy="137" rx="62" ry="86" fill="#FFFCF5" stroke="none" transform="rotate(30 94 137)"/>
+      <path d="M61 91h66l-44 94" stroke="#E76859" stroke-width="20" stroke-linecap="round"/>
+      <path d="M24 28h19L30 55m134 191h-19l13-27" stroke="#FFFCF5" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="28" cy="68" r="5" fill="#FFFCF5" stroke="none"/>
+    </g>
+    <g transform="translate(379 99) rotate(18 94 137)">
+      <rect x="0" y="6" width="188" height="274" rx="21" fill="#B6D3EB" stroke="none"/>
+      <rect width="188" height="274" rx="21" fill="#FFFCF5"/>
+      <rect x="11" y="11" width="166" height="252" rx="13" fill="#459E86" stroke="none"/>
+      <ellipse cx="94" cy="137" rx="62" ry="86" fill="#FFFCF5" stroke="none" transform="rotate(30 94 137)"/>
+      <circle cx="94" cy="137" r="36" stroke="#459E86" stroke-width="13"/>
+      <path d="m70 162 49-49" stroke="#459E86" stroke-width="13" stroke-linecap="round"/>
+      <circle cx="33" cy="38" r="12" stroke="#FFFCF5" stroke-width="4"/>
+      <path d="m25 47 17-17" stroke="#FFFCF5" stroke-width="4"/>
+      <rect x="27" y="62" width="11" height="11" rx="1" fill="#FFFCF5" stroke="none"/>
+    </g>
+    <g transform="translate(267 101) rotate(-3 94 137)">
+      <rect x="0" y="7" width="188" height="274" rx="21" fill="#9CBBD4" stroke="none"/>
+      <rect width="188" height="274" rx="21" fill="#FFFCF5"/>
+      <rect x="11" y="11" width="166" height="252" rx="13" fill="#30425C" stroke="none"/>
+      <rect x="22" y="22" width="144" height="230" rx="10" stroke="#9AB6D2" stroke-width="2" stroke-dasharray="3 7"/>
+      <path d="M35 66c0-11 8-19 19-19h78c12 0 21 8 21 19v27c0 12-9 20-21 20H96l-22 17 1-17H54c-11 0-19-8-19-20Z" fill="#FFFCF5" stroke="none"/>
+      <g fill="#30425C" stroke="none">
+        <text x="94" y="91" font-family="system-ui,sans-serif" font-size="35" font-weight="800" letter-spacing="-2" text-anchor="middle" transform="rotate(-5 94 81)">friemi</text>
+      </g>
+      <g transform="translate(97 175) rotate(14)" stroke-width="3">
+        <path d="M0 0C-39 9-45-23-25-36C-10-45 10-34 0 0Z" fill="#E76859"/>
+        <path d="M0 0C-9-39 23-45 36-25C45-10 34 10 0 0Z" fill="#F2C756"/>
+        <path d="M0 0C39-9 45 23 25 36C10 45-10 34 0 0Z" fill="#477FCA"/>
+        <path d="M0 0C9 39-23 45-36 25C-45 10-34-10 0 0Z" fill="#459E86"/>
+        <circle r="7" fill="#FFFCF5"/>
+      </g>
+      <text x="94" y="237" fill="#FFFCF5" stroke="none" font-family="system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="3" text-anchor="middle">CARD CLUB</text>
+    </g>
+  </g>
+  <g stroke="#3C73B0" stroke-width="5" stroke-linecap="round">
+    <path d="m123 172-22-5m32-25-14-17m13 226-19 12m493-187 19-8m-33-18 9-15m-58 215 14 15"/>
+    <path d="M353 62V44m-9 9h18"/>
+  </g>
+  <path d="m546 82 7 10 13-3-7 11 7 12-13-3-7 10-1-14-12-5 12-4Z" fill="#F2C756"/>
+  <path d="m159 393 7 9 11-2-6 10 6 10-11-2-7 9-1-12-10-5 10-5Z" fill="#E76859"/>
+  <circle cx="596" cy="286" r="6" fill="#459E86"/>
+  <circle cx="92" cy="264" r="5" fill="#F2C756"/>
+</svg>

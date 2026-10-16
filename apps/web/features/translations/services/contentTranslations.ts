@@ -1,9 +1,23 @@
-import { createHash } from "node:crypto";
-import type { ActivityVisibility, ParticipantStatus, Prisma } from "@prisma/client";
-import { auth } from "@clerk/nextjs/server";
+import type {
+  ActivityVisibility,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hasClerkKeys } from "@/lib/clerk";
-import { translateTextWithDeepL } from "./deepl";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { buildPrivateActivityFriendAccessWhere } from "@/features/activities/utils/activityShareAccess";
+import { isLegacyActivityInfoSource } from "@/features/activities/utils/activityInfoSource";
+import {
+  createSourceHash,
+  isContentLocale,
+  reusableTranslationProviders,
+} from "./translationPolicy";
+import {
+  enqueueTranslations,
+  processTranslationQueue,
+} from "./translationQueue";
+import { TranslationProviderError } from "./cloudflare";
 import {
   translatableFieldsByEntity,
   type TranslationEntityType,
@@ -16,7 +30,7 @@ const participantAccessStatuses: ParticipantStatus[] = [
   "PENDING",
 ];
 const publicVisibility: ActivityVisibility[] = ["PUBLIC"];
-const maxTranslationSourceLength = 4000;
+const maxTranslationSourceLength = 100_000;
 
 export class TranslationRequestError extends Error {
   status: number;
@@ -26,10 +40,6 @@ export class TranslationRequestError extends Error {
     this.name = "TranslationRequestError";
     this.status = status;
   }
-}
-
-function createSourceHash(text: string) {
-  return createHash("sha256").update(text).digest("hex");
 }
 
 function isAllowedField(entityType: TranslationEntityType, field: string) {
@@ -60,10 +70,14 @@ async function getViewerProfileId() {
   let userId: string | null = null;
 
   try {
+    const { auth } = await import("@clerk/nextjs/server");
     const authState = await auth();
     userId = authState.userId;
   } catch (error) {
-    console.warn("Translation request continuing without Clerk auth context", error);
+    console.warn(
+      "Translation request continuing without Clerk auth context",
+      error,
+    );
     return null;
   }
 
@@ -74,6 +88,7 @@ async function getViewerProfileId() {
   const profile = await prisma.userProfile.findUnique({
     where: {
       clerkUserId: userId,
+      status: "ACTIVE",
     },
     select: {
       id: true,
@@ -86,9 +101,11 @@ async function getViewerProfileId() {
 function buildActivityTranslationAccessWhere({
   accessToken,
   viewerProfileId,
+  viewerFriendIds = [],
 }: {
   accessToken?: string | null;
   viewerProfileId?: string | null;
+  viewerFriendIds?: string[];
 }): Prisma.ActivityWhereInput {
   return {
     OR: [
@@ -102,6 +119,8 @@ function buildActivityTranslationAccessWhere({
             {
               organizerId: viewerProfileId,
             },
+            { coManagers: { some: { managerProfileId: viewerProfileId } } },
+            ...buildPrivateActivityFriendAccessWhere(viewerFriendIds),
             {
               participants: {
                 some: {
@@ -175,7 +194,7 @@ function getPublicEventFieldValue(
   }
 }
 
-async function getTranslationSource({
+export async function getTranslationSource({
   accessToken,
   entityId,
   entityType,
@@ -192,6 +211,57 @@ async function getTranslationSource({
     throw new TranslationRequestError("UNSUPPORTED_FIELD", 400);
   }
 
+  // Chat content is read from the database only after checking the viewer's
+  // existing chat permissions, including deletions and recalled messages.
+  if (
+    ["direct_message", "activity_room_message", "planet_message"].includes(
+      entityType,
+    )
+  ) {
+    if (!viewerProfileId)
+      throw new TranslationRequestError("AUTH_REQUIRED", 401);
+    if (entityType === "direct_message") {
+      const message = await prisma.directMessage.findFirst({
+        where: {
+          id: entityId,
+          recalledAt: null,
+          deletions: { none: { profileId: viewerProfileId } },
+          conversation: {
+            OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
+          },
+        },
+        select: { body: true },
+      });
+      if (!message) throw new TranslationRequestError("ENTITY_NOT_FOUND", 404);
+      return getNormalizedSourceText(message.body);
+    }
+    if (entityType === "activity_room_message") {
+      const message = await prisma.activityRoomMessage.findFirst({
+        where: { id: entityId, deletedAt: null },
+        select: { activityId: true, body: true },
+      });
+      const { canViewActivityRoomChat } =
+        await import("@/features/activity-room-chat/services/activityRoomChat");
+      if (
+        !message ||
+        !(await canViewActivityRoomChat(viewerProfileId, message.activityId))
+      )
+        throw new TranslationRequestError("ENTITY_NOT_FOUND", 404);
+      return getNormalizedSourceText(message.body);
+    }
+    const message = await prisma.planetMessage.findFirst({
+      where: {
+        id: entityId,
+        planet: {
+          members: { some: { profileId: viewerProfileId, status: "APPROVED" } },
+        },
+      },
+      select: { content: true },
+    });
+    if (!message) throw new TranslationRequestError("ENTITY_NOT_FOUND", 404);
+    return getNormalizedSourceText(message.content);
+  }
+
   if (entityType === "activity") {
     const activity = await prisma.activity.findFirst({
       where: {
@@ -202,6 +272,9 @@ async function getTranslationSource({
         ...buildActivityTranslationAccessWhere({
           accessToken,
           viewerProfileId,
+          viewerFriendIds: viewerProfileId
+            ? await getViewerFriendIds(viewerProfileId)
+            : [],
         }),
       },
       select: {
@@ -238,7 +311,9 @@ async function getTranslationSource({
       throw new TranslationRequestError("ENTITY_NOT_FOUND", 404);
     }
 
-    return getNormalizedSourceText(getPublicEventFieldValue(publicEvent, field));
+    return getNormalizedSourceText(
+      getPublicEventFieldValue(publicEvent, field),
+    );
   }
 
   const comment = await prisma.comment.findFirst({
@@ -255,6 +330,9 @@ async function getTranslationSource({
         ...buildActivityTranslationAccessWhere({
           accessToken,
           viewerProfileId,
+          viewerFriendIds: viewerProfileId
+            ? await getViewerFriendIds(viewerProfileId)
+            : [],
         }),
       },
     },
@@ -299,6 +377,7 @@ export async function getOrCreateContentTranslation({
   const sourceHash = createSourceHash(originalText);
   const cachedTranslation = await prisma.contentTranslation.findUnique({
     where: {
+      provider: { in: reusableTranslationProviders },
       entityType_entityId_field_locale_sourceHash: {
         entityId,
         entityType,
@@ -322,29 +401,24 @@ export async function getOrCreateContentTranslation({
     };
   }
 
-  const translated = await translateTextWithDeepL({
-    locale,
-    text: originalText,
+  if (!isContentLocale(locale))
+    throw new TranslationRequestError("UNSUPPORTED_LOCALE");
+  await enqueueTranslations({
+    entityId,
+    entityType,
+    fields: { [field]: originalText },
+    locales: [locale],
   });
-  const createdTranslation = await prisma.contentTranslation.upsert({
-    create: {
-      detectedSourceLocale: translated.detectedSourceLocale,
-      entityId,
-      entityType,
-      field,
-      locale,
-      provider: "deepl",
-      sourceHash,
-      sourceText: originalText,
-      translatedText: translated.translatedText,
-    },
-    update: {
-      detectedSourceLocale: translated.detectedSourceLocale,
-      provider: "deepl",
-      sourceText: originalText,
-      translatedText: translated.translatedText,
-    },
+  const result = await processTranslationQueue({
+    entityId,
+    entityType,
+    locale,
+    field,
+    limit: 1,
+  });
+  const createdTranslation = await prisma.contentTranslation.findUnique({
     where: {
+      provider: { in: reusableTranslationProviders },
       entityType_entityId_field_locale_sourceHash: {
         entityId,
         entityType,
@@ -354,6 +428,8 @@ export async function getOrCreateContentTranslation({
       },
     },
   });
+  if (!createdTranslation)
+    throw new TranslationProviderError(result.paused ?? "TRANSLATION_PENDING");
 
   return {
     cached: false,
@@ -364,5 +440,84 @@ export async function getOrCreateContentTranslation({
     locale,
     originalText,
     translatedText: createdTranslation.translatedText,
+  };
+}
+
+// Read and authorize the ORIGINAL fields before enqueueing. Never trust content
+// supplied by the browser, even when it is displayed on the current page.
+export async function warmupViewedContent({
+  entityId,
+  entityType,
+  locale,
+  accessToken,
+}: {
+  entityId: string;
+  entityType: "activity" | "public_event";
+  locale: string;
+  accessToken?: string | null;
+}) {
+  if (!isContentLocale(locale))
+    throw new TranslationRequestError("UNSUPPORTED_LOCALE");
+  const viewerProfileId = await getViewerProfileId();
+  const fields: Record<string, string | null> = {};
+  for (const field of ["title", "description"]) {
+    fields[field] = await getTranslationSource({
+      entityId,
+      entityType,
+      field,
+      accessToken,
+      viewerProfileId,
+    });
+  }
+  const activitySource =
+    entityType === "activity"
+      ? await prisma.activity.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            type: true,
+            publicEventId: true,
+            source: true,
+            sourceUrl: true,
+            externalSource: true,
+            externalId: true,
+            externalUrl: true,
+            importedAt: true,
+            sourcePayload: true,
+          },
+        })
+      : null;
+  const isGathering =
+    activitySource &&
+    activitySource.type !== "PUBLIC_EVENT" &&
+    !isLegacyActivityInfoSource(activitySource);
+  await enqueueTranslations({
+    entityId,
+    entityType,
+    fields,
+    locales: isGathering ? ["zh-CN", "en", "fr"] : [locale],
+  });
+  const result = await processTranslationQueue({
+    entityId,
+    entityType,
+    locale,
+    limit: 2,
+  });
+  const keys = Object.entries(fields)
+    .filter(([, text]) => text)
+    .map(([field, text]) => ({ field, sourceHash: createSourceHash(text!) }));
+  const cached = await prisma.contentTranslation.count({
+    where: {
+      entityId,
+      entityType,
+      locale,
+      OR: keys,
+      provider: { in: reusableTranslationProviders },
+    },
+  });
+  return {
+    ready: cached === keys.length,
+    paused: result.paused,
+    retryAfterSeconds: 60,
   };
 }

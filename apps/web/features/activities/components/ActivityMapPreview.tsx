@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 
 type ActivityMapPreviewProps = {
@@ -88,7 +88,7 @@ export function ActivityMapPreview({
           rel="noreferrer"
         >
           {openLabel}
-          <ExternalLink className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3.5 w-3.5" />
         </a>
       </div>
       {embedUrl ? (

@@ -4,6 +4,7 @@ import {
   Brush,
   Crown,
   Dice5,
+  Layers3,
   Moon,
   Sparkles,
   UsersRound,
@@ -12,14 +13,17 @@ import {
 export type GameToolKind =
   | "AVALON"
   | "BOTC"
+  | "DICE"
   | "DRAW_GUESS"
   | "OTHER"
   | "STORYTELLER"
+  | "UNO"
   | "WEREWOLF";
 
 export type GameToolDefinition = {
   accent: string;
   availability: "available" | "planned";
+  earlyAccess?: boolean;
   description: Record<string, string>;
   href: string;
   icon: LucideIcon;
@@ -70,7 +74,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     imageSrc: "/game-tools/draw-guess/logo.png",
     kind: "DRAW_GUESS",
     maxPlayers: 10,
-    minPlayers: 3,
+    minPlayers: 2,
     phase: {
       "zh-CN": "已开放",
       en: "Open",
@@ -81,6 +85,41 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       en: "Draw & Guess",
       fr: "Dessine et devine",
     },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "available",
+    description: {
+      "zh-CN": "自由摇骰，或和朋友开一桌吹牛。",
+      en: "Roll dice freely or play Liar’s Dice with friends.",
+      fr: "Lancez les dés ou jouez au Perudo avec vos amis.",
+    },
+    href: "/game-tools/dice",
+    icon: Dice5,
+    imageSrc: "/game-tools/dice/logo.webp",
+    kind: "DICE",
+    maxPlayers: 6,
+    minPlayers: 1,
+    phase: { "zh-CN": "已开放", en: "Open", fr: "Ouvert" },
+    title: { "zh-CN": "摇骰子", en: "Dice", fr: "Dés" },
+  },
+  {
+    accent: "#3C73B0",
+    availability: "available",
+    description: {
+      "zh-CN": "按颜色或数字出牌，先出完手牌获胜。",
+      en: "Match colors or numbers. Be the first to play every card.",
+      fr: "Associez les couleurs ou les chiffres. Jouez toutes vos cartes en premier.",
+    },
+    href: "/game-tools/uno",
+    icon: Layers3,
+    imageSrc: "/game-tools/uno/logo.png",
+    kind: "UNO",
+    earlyAccess: true,
+    minPlayers: 2,
+    maxPlayers: 10,
+    phase: { "zh-CN": "抢先体验", en: "Early access", fr: "Accès anticipé" },
+    title: { "zh-CN": "UNO", en: "UNO", fr: "UNO" },
   },
   {
     accent: "#F09182",
@@ -133,31 +172,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       fr: "Blood on the Clocktower",
     },
   },
-  {
-    accent: "#156240",
-    availability: "planned",
-    description: {
-      "zh-CN": "更多线下桌游工具会继续接入。",
-      en: "More offline table tools will be added later.",
-      fr: "D'autres outils de table seront ajoutés plus tard.",
-    },
-    href: "/game-tools",
-    icon: Sparkles,
-    imageSrc: "/game-tools/avalon/states/public-screen-token.svg",
-    kind: "OTHER",
-    maxPlayers: 20,
-    minPlayers: 5,
-    phase: {
-      "zh-CN": "敬请期待",
-      en: "Coming soon",
-      fr: "Bientôt",
-    },
-    title: {
-      "zh-CN": "其他工具",
-      en: "Other tools",
-      fr: "Autres outils",
-    },
-  },
+
 ];
 
 export function getGameToolDefinition(kind: GameToolKind) {

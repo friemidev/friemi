@@ -2,6 +2,10 @@
   "regions": ["cdg1"],
   "crons": [
     {
+      "path": "/api/cron/content-translations",
+      "schedule": "30 5 * * *"
+    },
+    {
       "path": "/api/cron/import-public-activities",
       "schedule": "0 3 * * *"
     },

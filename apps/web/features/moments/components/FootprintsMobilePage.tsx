@@ -47,8 +47,10 @@ import {
   X,
 } from "lucide-react";
 import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
+import { getActivityRoomMessageSenderName } from "@/features/activity-room-chat/assistant";
 import { ChatRosterDismissButton } from "@/features/chat/components/ChatRosterDismissButton";
 import { ChatNavigationPending } from "@/features/chat/components/ChatNavigationPending";
+import { consumeChatRosterVisits } from "@/features/chat/chatRosterReturn";
 import {
   chatRosterWakeEvent,
   type ChatRealtimeScope,
@@ -2768,7 +2770,8 @@ function FootprintsMessageList({
         room.title,
         room.city,
         room.lastMessage?.body,
-        room.lastMessage?.senderName,
+        room.lastMessage &&
+          getActivityRoomMessageSenderName(room.lastMessage, locale),
       ]
         .filter(Boolean)
         .join(" "),
@@ -2857,6 +2860,7 @@ function FootprintsMessageList({
   }, [
     activityRoomChats,
     friends,
+    locale,
     officialFeedbackInbox,
     officialMessages,
     planetChats,
@@ -3284,6 +3288,9 @@ function FootprintsRoomChatRow({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = room.lastMessage;
+  const senderName = lastMessage
+    ? getActivityRoomMessageSenderName(lastMessage, locale)
+    : "";
   const unreadCount = room.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const showUnreadBadge = unreadCount > 0 && !room.isMuted;
@@ -3294,7 +3301,7 @@ function FootprintsRoomChatRow({
   const preview =
     mentionPreview ??
     (lastMessage
-      ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+      ? `${lastMessage.isMine ? t.youPrefix : `${senderName}: `}${
           lastMessage.body.trim() || t.imageMessage
         }`
       : t.roomChatEmptyPreview);
@@ -3814,9 +3821,8 @@ export function FootprintsMobilePage({
       planetChats,
     ],
   );
-  const { unreadDirectMessageCount } = useNotificationBadge(
-    initialUnreadMessageCount,
-  );
+  const { unreadDirectMessageCount, setUnreadDirectMessageCount } =
+    useNotificationBadge(initialUnreadMessageCount);
   const [hasMountedUnreadCount, setHasMountedUnreadCount] = useState(false);
   const lastRosterRefreshUnreadCountRef = useRef(initialUnreadMessageCount);
   const displayedUnreadMessageCount = hasMountedUnreadCount
@@ -3944,6 +3950,18 @@ export function FootprintsMobilePage({
         setOfficialMessages(nextSnapshot.officialMessages);
         setActivityRoomChats(nextSnapshot.activityRoomChats);
         setPlanetChats(nextSnapshot.planetChats);
+        setUnreadDirectMessageCount(
+          [
+            ...nextSnapshot.friends,
+            ...nextSnapshot.activityRoomChats,
+            ...nextSnapshot.planetChats,
+          ].reduce(
+            (total, chat) => total + (chat.isMuted ? 0 : chat.unreadCount),
+            0,
+          ) +
+            (nextSnapshot.officialMessages?.unreadCount ?? 0) +
+            (nextSnapshot.officialFeedbackInbox?.unreadCount ?? 0),
+        );
         setMessageRosterHasError(false);
         setLoadedTabs((current) => ({ ...current, message: true }));
       } catch (error) {
@@ -3983,6 +4001,7 @@ export function FootprintsMobilePage({
       officialMessages,
       planetChats,
       profileId,
+      setUnreadDirectMessageCount,
     ],
   );
 
@@ -4257,6 +4276,15 @@ export function FootprintsMobilePage({
       return;
     }
 
+    const visitedScopes = consumeChatRosterVisits();
+
+    if (visitedScopes.length > 0) {
+      void refreshMessageRoster(
+        visitedScopes.length === 1 ? visitedScopes[0] : undefined,
+      );
+      return;
+    }
+
     const cachedSnapshot = messageRosterCacheKey
       ? messageRosterMemoryCache.get(messageRosterCacheKey)
       : null;
@@ -4297,10 +4325,33 @@ export function FootprintsMobilePage({
 
     window.addEventListener(chatRosterWakeEvent, handleRosterWake);
 
+    const handleHistoryReturn = () => {
+      if (
+        activeTab !== "message" ||
+        window.location.pathname !== withLocale(locale, "/footprints") ||
+        getFootprintsTabFromSearch(window.location.search) !== "message"
+      ) {
+        return;
+      }
+
+      const visitedScopes = consumeChatRosterVisits();
+
+      if (visitedScopes.length > 0) {
+        void refreshMessageRoster(
+          visitedScopes.length === 1 ? visitedScopes[0] : undefined,
+        );
+      }
+    };
+
+    window.addEventListener("popstate", handleHistoryReturn);
+    window.addEventListener("pageshow", handleHistoryReturn);
+
     return () => {
       window.removeEventListener(chatRosterWakeEvent, handleRosterWake);
+      window.removeEventListener("popstate", handleHistoryReturn);
+      window.removeEventListener("pageshow", handleHistoryReturn);
     };
-  }, [activeTab, messageRosterCacheKey, profileId, refreshMessageRoster]);
+  }, [activeTab, locale, messageRosterCacheKey, profileId, refreshMessageRoster]);
 
   useEffect(
     () => () => {

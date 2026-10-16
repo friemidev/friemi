@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { werewolfRoleKeys } from "./werewolfConfig";
 import {
@@ -47,6 +47,25 @@ test("every active role has a localized card face", () => {
     getWerewolfRoleCardImage("lovers", "zh-CN"),
     "/game-tools/werewolf/recto/chinese/villager.png",
   );
+});
+
+test("every localized card face belongs to an available role", () => {
+  const expectedFiles = [...werewolfRoleKeys, "villager_female"]
+    .map((role) => `${role}.png`)
+    .sort();
+
+  for (const language of ["chinese", "english"]) {
+    const files = readdirSync(
+      new URL(
+        `../../public/game-tools/werewolf/recto/${language}/`,
+        import.meta.url,
+      ),
+    )
+      .filter((file) => file.endsWith(".png"))
+      .sort();
+
+    assert.deepEqual(files, expectedFiles, language);
+  }
 });
 
 test("keeps the atmosphere selected when a Werewolf room is created", () => {

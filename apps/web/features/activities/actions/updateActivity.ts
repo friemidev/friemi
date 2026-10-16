@@ -11,6 +11,7 @@ import { createActivitySchema } from "@/features/activities/schemas/activitySche
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 import { withLocale } from "@/lib/routes";
 import type { ParticipantStatus } from "@prisma/client";
 import {
@@ -377,6 +378,8 @@ export async function updateActivityAction(
       "保存活动失败，请稍后重试。",
     );
   }
+
+  await scheduleGatheringTranslations(activityId);
 
   revalidatePath(withLocale(locale, getActivityDetailPath(activityId)));
   revalidatePath(withLocale(locale, "/activities"));

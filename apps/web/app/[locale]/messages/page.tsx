@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NoConversationSelected } from "@/features/direct-messages/components/DirectMessagesPanel";
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
 import { MobileFriendChatRoster } from "@/features/direct-messages/components/MobileFriendChatRoster";
+import { MessageRosterOnReturn } from "@/features/direct-messages/components/MessageRosterOnReturn";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
@@ -53,6 +54,7 @@ export default async function MessagesPage({ params }: MessagesPageProps) {
       className="space-y-5 pb-28 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0 lg:pb-8"
       mobileSafeTop
     >
+      <MessageRosterOnReturn locale={locale} />
       {friendRosterResult.error ? (
         <div className="lg:hidden">
           <EmptyState

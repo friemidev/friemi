@@ -1,173 +1,91 @@
-# Friemi
-
 <p align="center">
-  <img src="./apps/web/public/brand/v2_1/friemi-og-default-1200x630.png" alt="Friemi" width="760" />
+  <a href="https://www.friemi.com/zh-CN/home" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./apps/web/public/brand/v2_1/friemi-lockup-horizontal-white.png" />
+      <img src="./apps/web/public/brand/v2_1/friemi-lockup-horizontal-navy.png" alt="Friemi" width="340" />
+    </picture>
+  </a>
 </p>
 
 <p align="center">
-  <strong>在城市里发现活动，发起组局，留下足迹。</strong>
+  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.fr.md">Français</a>
 </p>
 
 <p align="center">
-  <a href="https://www.friemi.com">官网</a>
-  ·
-  <a href="#产品一眼看懂">产品一眼看懂</a>
-  ·
-  <a href="#功能速览">功能速览</a>
-  ·
-  <a href="#体验入口">体验入口</a>
+  <strong>Find events and make plans with people in Paris.</strong>
 </p>
 
-Friemi 是一个面向海外生活场景的活动发现与组局平台。你可以在这里发现城市活动，约朋友一起去，报名别人的计划，也可以用足迹记录一次见面、一场展、一顿饭或一段新关系。
+<p align="center">
+  <a href="https://www.friemi.com/zh-CN/home" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-web.svg" alt="Open the Friemi website" width="220" height="65" /></a>
+  <a href="https://apps.apple.com/fr/app/friemi/id6788944230" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-app-store.svg" alt="App Store — download for iOS" width="220" height="65" /></a>
+  <a href="https://play.google.com/store/apps/details?id=com.friemi.app&amp;hl=en" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/button-google-play.svg" alt="Google Play — download for Android" width="220" height="65" /></a>
+</p>
 
-当前首发城市是巴黎，支持中文、英文和法语。
+Friemi is for finding things to do and people to go with. Browse events, join a hangout, or organise your own: dinner, an exhibition, a walk, a game night. If you meet a group you'd like to see again, you can keep in touch in a Planet and plan the next outing there.
 
-## 产品一眼看懂
+Friemi started in Paris. It's available on the web, iOS and Android, in **English, French and Simplified Chinese**.
 
-Friemi 围绕三件事展开：
+## A look inside
 
-| 发现 | 组局 | 沉淀 |
-| --- | --- | --- |
-| 看看这座城市今天有什么值得去 | 把一个想法变成可报名的计划 | 用足迹、消息和主页留下关系 |
+### On your phone
 
-## 从打开到出门
+Discover, Hangouts and Games.
 
-### 1. 先看看今天能做什么
+<p align="center">
+  <a href="https://www.friemi.com/en/mobile-home" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-discover.png" alt="Friemi Discover on mobile" width="230" /></a>
+  <a href="https://www.friemi.com/en/lobby" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-lobby.png" alt="Friemi Hangouts on mobile" width="230" /></a>
+  <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer"><img src="./apps/web/public/readme/v2_8/mobile-games.png" alt="Friemi Games on mobile" width="230" /></a>
+</p>
 
-<table>
-  <tr>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/mobile-home.png" alt="Friemi 大厅" width="260" />
-    </td>
-    <td>
-      <p>大厅是 Friemi 的第一屏。城市、搜索、热门分类和推荐内容都在这里，用户打开后不用先研究导航，就能直接找到今天的灵感。</p>
-      <p>适合快速浏览：饭局、展览、音乐、桌游、运动、旅行和朋友动态。</p>
-    </td>
-  </tr>
-</table>
+### On your computer
 
-### 2. 找一个有人一起去的组局
+The Friemi homepage.
 
-<table>
-  <tr>
-    <td>
-      <p>组局页像一个轻量的“约人大厅”。你可以看附近、好友、今天和热门，也可以直接发起自己的计划。</p>
-      <p>每条组局都突出最重要的信息：图片、标题、人数、时间和类型。</p>
-    </td>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/lobby.png" alt="Friemi 组局大厅" width="260" />
-    </td>
-  </tr>
-</table>
+![Friemi homepage on desktop](./apps/web/public/readme/v2_8/desktop-home.png)
 
-### 3. 进入详情，决定要不要报名
+Browse hangouts and see what's coming up.
 
-<table>
-  <tr>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/lobby-detail.png" alt="Friemi 组局详情" width="260" />
-    </td>
-    <td>
-      <p>详情页回答几个最真实的问题：这是什么局，谁发起，什么时候，在哪里，还有没有位置。</p>
-      <p>报名按钮、地图和分享入口都在移动端更靠前的位置，方便用户快速行动。</p>
-    </td>
-  </tr>
-</table>
+![Friemi Hangouts on desktop](./apps/web/public/readme/v2_8/desktop-lobby.png)
 
-### 4. 或者自己创建一个组局
+<sub>Screenshots from the live website, taken on 12 October 2026 with the interface set to Chinese.</sub>
 
-不是所有活动都需要专业主办方。Friemi 让普通用户也能轻松发起一个计划：传封面、写标题、选类型、定时间地点、设置人数和费用，然后发布。
+## What you can do
 
-创建组局适合：
+### Find events
 
-- 下班后桌游、饭局、展览同行
-- 朋友间的小范围私密计划
-- 从公开活动出发，约人一起去
-- 需要审核报名的活动
+Browse exhibitions, music, sport, food and other things happening around you. Check the date and location, save something for later, or start a hangout around an event you'd like to attend.
 
-### 5. 浏览城市里的公开活动
+### Make a plan together
 
-<table>
-  <tr>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/activities.png" alt="Friemi 活动大厅" width="260" />
-    </td>
-    <td>
-      <p>活动页承接城市里的公开活动。你可以先发现活动，再选择自己去，或者发起一个组局邀请别人一起去。</p>
-      <p>它把“看到一个活动”和“真的有人一起去”接起来。</p>
-    </td>
-  </tr>
-</table>
+A hangout brings the practical details into one place: when and where to meet, who's coming, and any costs. Hosts manage sign-ups; everyone can use the group chat, share an invitation link or QR code, and vote on plans.
 
-### 6. 从活动详情进入下一步
+The shared expense book records who paid and how costs are split. The group can check balances and track settlement; participants make the actual transfers themselves.
 
-<table>
-  <tr>
-    <td>
-      <p>活动详情页展示图片、标题、时间、地点和外部链接。它不是只给信息，而是鼓励用户继续行动：查看详情、抢位置、收藏，或从这个活动发起组局。</p>
-    </td>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/activity-detail.png" alt="Friemi 活动详情" width="260" />
-    </td>
-  </tr>
-</table>
+### Keep a group going
 
-### 7. 用足迹记录和延续关系
+Planets are communities built around shared interests. Members can chat, post photos and videos, and organise more hangouts. Hosts can manage membership and joining requests.
 
-<table>
-  <tr>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/footprints.png" alt="Friemi 足迹" width="260" />
-    </td>
-    <td>
-      <p>足迹是 Friemi 的轻社交空间。你可以发布图文 Moment，也可以在这里进入消息和个人主页。</p>
-      <p>活动结束后，Friemi 不只是留下一个报名记录，也可以留下朋友、评论和日常片段。</p>
-    </td>
-  </tr>
-</table>
+### Share and stay in touch
 
-### 8. 个人主页让关系可沉淀
+Post photos and updates in the World feed, follow people, or chat privately with mutual followers. Your profile keeps your hangouts, saved items and achievements together. Gifts from friends appear on your gift wall.
 
-主页会展示用户资料、好友码、发起组局、参与记录、收藏和好友关系。对于经常发起活动的人，它也是别人了解你风格和可信度的地方。
+### Book a visit and keep your tickets handy
 
-### 9. 线下桌游也能更顺
+Shops can accept bookings through ongoing hangouts. Choose a date and party size, then follow the shop's response in your bookings. Your Backpack holds coupons and tickets; the Mall is where you send gifts to friends.
 
-<table>
-  <tr>
-    <td>
-      <p>桌游工具服务真实线下局，不替代玩家发言和主持。它负责开房、入座、发身份、看身份、公共屏和复盘，让现场少一点统计和传话。</p>
-      <p>当前包含 Avalon、狼人杀，并预留说书人工具。</p>
-    </td>
-    <td width="38%">
-      <img src="./apps/web/public/readme/v2_4/game-tools.png" alt="Friemi 桌游工具" width="260" />
-    </td>
-  </tr>
-</table>
+## Games
 
-## 功能速览
+| Game         | How it works                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| Werewolf     | Use your phone for roles, host controls and the game record while playing together in person. |
+| Draw & Guess | Draw and guess in turns, or pass words and drawings along a chain.                            |
+| Dice         | Roll freely, practise against the computer, or play Liar's Dice with 2–6 people.              |
+| UNO          | Play with friends using classic scoring or a quick single round.                              |
 
-| 场景 | Friemi 提供 |
-| --- | --- |
-| 发现活动 | 城市活动、分类、搜索、收藏、活动详情 |
-| 发起组局 | 封面、时间地点、人数、费用、公开 / 私密、报名审核 |
-| 报名参加 | 我要报名、取消报名、剩余名额、发起人信息、分享 |
-| 好友消息 | 好友码、好友申请、私聊、图片消息、未读数 |
-| 足迹动态 | 图文动态、点赞、评论、转发、举报、站内通知 |
-| 个人空间 | 资料、发起、参与、收藏、好友关系 |
-| 桌游工具 | 座位、身份、公共屏、死亡标记、结算和复盘 |
-| 多语言 | 中文、英文、法语 |
+See the <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer">Games page</a> for current modes and availability.
 
-## Web 与 App
+## Try Friemi
 
-Friemi 以 Web 为核心，同时适配移动浏览器、微信 WebView、Android WebView、iOS Safari 和桌面浏览器。App 端复用同一套产品能力，并补充系统通知、应用角标、登录回跳和安全区适配。
+<a href="https://www.friemi.com/en/mobile-home" target="_blank" rel="noopener noreferrer">Discover</a> · <a href="https://www.friemi.com/en/lobby" target="_blank" rel="noopener noreferrer">Hangouts</a> · <a href="https://www.friemi.com/en/activities" target="_blank" rel="noopener noreferrer">Events</a> · <a href="https://www.friemi.com/en/planets" target="_blank" rel="noopener noreferrer">Planets</a> · <a href="https://www.friemi.com/en/footprints" target="_blank" rel="noopener noreferrer">World</a> · <a href="https://www.friemi.com/en/game-tools" target="_blank" rel="noopener noreferrer">Games</a>
 
-## 体验入口
-
-- 官网：<https://www.friemi.com>
-- 大厅：<https://www.friemi.com/zh-CN/mobile-home>
-- 组局：<https://www.friemi.com/zh-CN/lobby>
-- 活动：<https://www.friemi.com/zh-CN/activities>
-- 足迹：<https://www.friemi.com/zh-CN/footprints>
-- 桌游：<https://www.friemi.com/zh-CN/game-tools>
-
-Friemi 会继续围绕移动端体验、活动质量、组局发布、足迹社交和线下工具打磨产品。
+You can browse public pages first. Sign in when you're ready to join a hangout, chat or post.

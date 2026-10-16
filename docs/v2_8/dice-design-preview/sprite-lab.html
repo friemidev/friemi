@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FFFCF5" />
+  <title>每一面，都要落得漂亮 · Friemi</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='17' fill='%23DCECF9'/%3E%3Cg fill='%233C73B0'%3E%3Ccircle cx='21' cy='21' r='5'/%3E%3Ccircle cx='43' cy='21' r='5'/%3E%3Ccircle cx='32' cy='32' r='5'/%3E%3Ccircle cx='21' cy='43' r='5'/%3E%3Ccircle cx='43' cy='43' r='5'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="sprite-lab.css" />
+  <script src="sprite-lab.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6M8 12h12" /></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z" /></symbol>
+    <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></symbol>
+    <symbol id="icon-replay" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 2 2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8Z" /></symbol>
+  </svg>
+
+  <div class="lab-shell">
+    <header class="topbar">
+      <a class="back-link" href="index.html"><svg aria-hidden="true"><use href="#icon-arrow" /></svg><span>回到游戏桌</span></a>
+      <a class="brand" href="index.html" aria-label="Friemi 游戏样机">friemi<span>PLAY TOGETHER</span></a>
+      <span class="lab-tag">骰子动作小剧场</span>
+    </header>
+
+    <main>
+      <div class="page-heading">
+        <p class="eyebrow"><span></span> 一点小运气，正在转起来</p>
+        <h1>每一面，都要落得漂亮<svg aria-hidden="true"><use href="#icon-spark" /></svg></h1>
+        <p class="subtitle">翻个身，轻轻一跳。挑一面，看看它怎样落到桌上。</p>
+      </div>
+
+      <div class="workspace">
+        <section class="stage-section" aria-label="骰子动作预览">
+          <div class="stage" id="stage" data-background="blue" aria-busy="true">
+            <div class="stage-note"><span class="little-dot"></span><span id="stage-mode">一颗，仔细看</span></div>
+            <svg class="stage-doodle doodle-left" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4v10M20 26v10M4 20h10M26 20h10M8 8l7 7M25 25l7 7M8 32l7-7M25 15l7-7" /></svg>
+            <svg class="stage-doodle doodle-right" viewBox="0 0 40 40" aria-hidden="true"><path d="m20 4 4 12 12 4-12 4-4 12-4-12-12-4 12-4Z" /></svg>
+            <div class="dice-field" id="dice-field"></div>
+            <div class="stage-caption"><span id="stage-caption">骰子正在来桌上的路上</span><span aria-hidden="true">friemi dice club</span></div>
+          </div>
+
+          <div class="stage-toolbar">
+            <fieldset class="background-picker">
+              <legend>换张桌面</legend>
+              <button class="swatch is-selected" data-background="blue" type="button" aria-pressed="true" aria-label="雾蓝底色"><span></span>雾蓝</button>
+              <button class="swatch" data-background="cream" type="button" aria-pressed="false" aria-label="奶白底色"><span></span>奶白</button>
+              <button class="swatch" data-background="green" type="button" aria-pressed="false" aria-label="绿底色"><span></span>绿底</button>
+            </fieldset>
+            <p class="alpha-note">换底色，看边缘是否干净</p>
+          </div>
+
+          <div class="resource-status" id="resource-status" data-state="loading">
+            <span class="status-mark" aria-hidden="true"></span>
+            <p id="resource-message" role="status">正在加载骰子动作…</p>
+            <button type="button" class="retry-button" id="retry-button" hidden>再试一次</button>
+          </div>
+          <p class="motion-note" id="motion-note" hidden>已按你的偏好静止显示最后一帧。想看动作时，点一下播放即可。</p>
+        </section>
+
+        <section class="controls" aria-label="动作播放控制">
+          <fieldset class="action-picker">
+            <legend>今天看哪段动作？</legend>
+            <div role="group" aria-label="动作分类">
+              <button type="button" data-action="roll" class="is-selected" aria-pressed="true">翻滚落定</button>
+              <button type="button" data-action="spin" aria-pressed="false">循环旋转</button>
+              <button type="button" data-action="wobble" aria-pressed="false">停稳轻摆</button>
+            </div>
+          </fieldset>
+          <fieldset class="face-picker" id="face-picker">
+            <legend><span class="step-dot">01</span>想让哪一面朝上？</legend>
+            <div class="face-buttons" id="face-buttons"></div>
+            <p class="action-hint" id="action-hint" hidden></p>
+          </fieldset>
+
+          <div class="play-mode" role="group" aria-label="预览骰子数量">
+            <button type="button" data-mode="single" class="is-selected" aria-pressed="true">一颗慢慢看</button>
+            <button type="button" data-mode="group" aria-pressed="false">六颗一起摇<span>错峰 40ms</span></button>
+          </div>
+
+          <div class="transport">
+            <button type="button" class="play-button" id="play-button" disabled><svg aria-hidden="true"><use id="play-icon" href="#icon-play" /></svg><span id="play-label">正在加载</span></button>
+            <button type="button" class="replay-button" id="replay-button" disabled><svg aria-hidden="true"><use href="#icon-replay" /></svg><span>重播</span></button>
+          </div>
+
+          <div class="timeline-section">
+            <div class="timeline-heading"><label for="frame-slider"><span class="step-dot">02</span>一帧一帧看</label><output for="frame-slider" id="frame-readout">第 32 / 32 帧</output></div>
+            <input id="frame-slider" type="range" min="0" max="31" value="31" step="1" disabled aria-label="逐帧查看骰子动作" aria-valuetext="第 32 帧，停稳" />
+            <div class="timeline-ticks" aria-hidden="true"><span>开始翻滚</span><span>落得稳稳的</span></div>
+            <div class="phase-readout"><span class="phase-dot" aria-hidden="true"></span><strong id="phase-label">停稳</strong><span id="phase-note">落点已经准备好</span></div>
+          </div>
+
+          <fieldset class="speed-picker">
+            <legend>播放速度</legend>
+            <div role="group" aria-label="选择播放速度">
+              <button type="button" data-speed="0.5" aria-pressed="false">0.5×<span>慢慢看</span></button>
+              <button type="button" data-speed="1" class="is-selected" aria-pressed="true">1×<span>原速</span></button>
+              <button type="button" data-speed="1.5" aria-pressed="false">1.5×<span>快一点</span></button>
+            </div>
+          </fieldset>
+
+          <p class="playback-status sr-only" id="playback-status" role="status"></p>
+          <div class="motion-story" aria-label="动作段落">
+            <span data-phase="0">高速翻滚</span><i aria-hidden="true"></i><span data-phase="1">减速</span><i aria-hidden="true"></i><span data-phase="2">轻弹</span><i aria-hidden="true"></i><span data-phase="3" class="is-current">停稳</span>
+          </div>
+          <p class="control-note" id="control-note">拖动就会暂停，松手停在那一帧。六骰模式下，帧数跟随你选中的点数。</p>
+        </section>
+      </div>
+
+      <footer class="page-footer"><span>先转得开心，再落得认真。</span><span id="sequence-spec">32 帧 · 24 fps · 透明 3D 动作序列</span></footer>
+    </main>
+  </div>
+  <noscript><p class="noscript-note">请启用 JavaScript，才能加载与逐帧播放骰子动作。<a href="index.html">返回游戏样机</a></p></noscript>
+</body>
+</html>

@@ -90,10 +90,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             return false
         }
 
-        return host == "friemi.com" ||
-            host == "www.friemi.com" ||
-            host.hasSuffix(".friemi.com") ||
-            host.hasSuffix(".vercel.app")
+        return FriemiAppLinks.webHosts.contains(host)
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

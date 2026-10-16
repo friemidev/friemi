@@ -1,4 +1,6 @@
 import {
+  androidAuthReturnParamName,
+  androidAuthRetryParamName,
   getAuthRedirectFallback,
   normalizeAuthRedirectTarget,
 } from "../../lib/auth-redirect";
@@ -41,6 +43,19 @@ export function readAndroidAuthAttempt(
 
 export function isAndroidAuthReturnPath(pathname: string) {
   return /^\/(?:zh-CN|en|fr)\/android-auth-return\/?$/.test(pathname);
+}
+
+export function cleanNativeAuthReturnTarget(target: string) {
+  const url = new URL(target, "https://friemi.local");
+  for (const key of [
+    androidAuthReturnParamName,
+    androidAuthRetryParamName,
+    "__friemi_android_auth_ts",
+    "__friemi_ios_auth_ts",
+  ]) {
+    url.searchParams.delete(key);
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function normalizeAndroidAuthTarget(locale: string, target?: string) {

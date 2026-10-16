@@ -8,7 +8,7 @@ import {
   Check,
   CheckCheck,
   Clock3,
-  ExternalLink,
+  ArrowRight,
   Flag,
   Gift,
   Heart,
@@ -29,7 +29,7 @@ import {
   formatFloatingActivityDate,
 } from "@chill-club/shared";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type CSSProperties } from "react";
+import { useEffect, useRef, useState, useTransition, type CSSProperties } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   formatGiftNotificationQuantity,
@@ -53,8 +53,10 @@ import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "./NotificationBadgeProvider";
+import { BookingNotificationSheet } from "@/features/merchants/bookings/components/BookingNotificationSheet";
 import {
   getMerchantReservationNoticeCopy,
+  getMerchantReservationNoticePath,
   isMerchantReservationNotice,
 } from "@/features/merchants/bookings/notifications";
 
@@ -1419,6 +1421,7 @@ function NotificationCard({
   onFollowBack,
   onGiftActivate,
   onOpenGift,
+  onOpenReservation,
   onMarkRead,
   onToggleSelected,
 }: {
@@ -1431,6 +1434,7 @@ function NotificationCard({
   onFollowBack: (notificationId: string) => void;
   onGiftActivate: (notificationId: string) => void;
   onOpenGift: (notificationId: string) => void;
+  onOpenReservation: (notification: NotificationViewModel) => void;
   onMarkRead: (notificationId: string) => void;
   onToggleSelected?: (notificationId: string) => void;
 }) {
@@ -1605,7 +1609,18 @@ function NotificationCard({
                   </button>
                 ) : null}
                 {hasAction ? (
-                  notification.type === "CHARM_GIFT_RECEIVED" ? (
+                  isMerchantReservationNotice(notification.type) &&
+                  notification.merchantBooking ? (
+                    <button
+                      className="inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-1 text-xs font-semibold text-forest transition hover:text-forest/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest disabled:opacity-60"
+                      disabled={pending}
+                      onClick={() => onOpenReservation(notification)}
+                      type="button"
+                    >
+                      {getNotificationActionLabel(notification, locale)}
+                      <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                    </button>
+                  ) : notification.type === "CHARM_GIFT_RECEIVED" ? (
                     <button
                       className={cn(
                         "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-1 text-xs font-semibold text-[#156240] transition hover:text-[#0F5134] focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30 disabled:cursor-not-allowed disabled:opacity-60",
@@ -1615,7 +1630,7 @@ function NotificationCard({
                       type="button"
                     >
                       {getNotificationActionLabel(notification, locale)}
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   ) : (
                     <form action={openNotificationActivityAction}>
@@ -1630,7 +1645,7 @@ function NotificationCard({
                         type="submit"
                       >
                         {getNotificationActionLabel(notification, locale)}
-                        <ExternalLink className="h-3.5 w-3.5" />
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </button>
                     </form>
                   )
@@ -1821,6 +1836,8 @@ export function NotificationsCenterClient({
   const [playedGiftNotificationIds, setPlayedGiftNotificationIds] = useState<
     Set<string>
   >(() => new Set());
+  const [reservationHref, setReservationHref] = useState<string | null>(null);
+  const reservationTriggerRef = useRef<HTMLElement | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filters: NotificationFilter[] = [
@@ -2059,6 +2076,27 @@ export function NotificationsCenterClient({
     }, delayMs);
   }
 
+  function handleOpenReservation(notification: NotificationViewModel) {
+    const target = getMerchantReservationNoticePath({
+      bookingId: notification.merchantBooking?.id,
+      forCustomer: notification.merchantBooking?.forCustomer,
+      type: notification.type,
+    });
+    if (!target || target === "/notifications") return;
+
+    reservationTriggerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    if (notification.readAt === null) handleMarkRead(notification.id);
+    setReservationHref(withLocale(locale, target));
+  }
+
+  function closeReservation() {
+    setReservationHref(null);
+    window.requestAnimationFrame(() => reservationTriggerRef.current?.focus());
+  }
+
   function handleDelete(notificationId: string) {
     if (
       !notifications.some((notification) => notification.id === notificationId)
@@ -2266,6 +2304,11 @@ export function NotificationsCenterClient({
 
   return (
     <>
+      <BookingNotificationSheet
+        href={reservationHref}
+        locale={locale}
+        onClose={closeReservation}
+      />
       {giftCelebration ? (
         <GiftNotificationBurst
           key={giftCelebration.id}
@@ -2452,6 +2495,7 @@ export function NotificationsCenterClient({
               onGiftActivate={handleGiftActivate}
               onMarkRead={handleMarkRead}
               onOpenGift={handleOpenGiftNotification}
+              onOpenReservation={handleOpenReservation}
               onToggleSelected={handleToggleSelection}
               pending={
                 isPending || openingGiftNotificationId === notification.id

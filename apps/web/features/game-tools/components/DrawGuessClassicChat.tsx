@@ -6,6 +6,7 @@ import { DrawGuessCatSprite } from "@/features/game-tools/components/DrawGuessCa
 import { DrawGuessPet } from "@/features/game-tools/components/DrawGuessPet";
 import type { DrawGuessCatMood } from "@/features/game-tools/drawGuessCats";
 import type { DrawGuessRoomView } from "@/features/game-tools/components/DrawGuessRoomClient";
+import { useDrawGuessCompositionGuard } from "@/features/game-tools/hooks/useDrawGuessCompositionGuard";
 import { DRAW_GUESS_REACTIONS, getDrawGuessMessageReactorSeats, type DrawGuessChatMessage, type DrawGuessReactionKind } from "@/features/game-tools/drawGuessEngine";
 
 const COPY = {
@@ -14,8 +15,9 @@ const COPY = {
   fr: { title: "Salon des réponses", hint: "Saisissez votre réponse ici", empty: "Les réponses apparaîtront ici", placeholder: "Votre réponse ici", send: "Envoyer", correct: "a trouvé !", artist: "On devine votre dessin", spectator: "En observation", solved: "Bravo ! Attendons les autres", reveal: "Prochain tour bientôt", pending: "Envoi", react: "Réagir au dessin", received: "Réactions", laugh: "Drôle", comment: "Réactions au mot", noLaughs: "Pas encore de réactions", close: "Fermer", reactions: { "😂": "Drôle", "👏": "Bien dessiné", "👀": "Intrigant", "❓": "Qu'est-ce que c'est ?" } },
 };
 
-export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood, onInputChange, onReactGuess, onReact, onSubmit, pending, room, status }: {
+export function DrawGuessClassicChat({ busy, disabled = false, error, guessed, input, locale, mood, onInputChange, onReactGuess, onReact, onSubmit, pending, room, status }: {
   busy: boolean;
+  disabled?: boolean;
   error: string;
   guessed: boolean;
   input: string;
@@ -30,6 +32,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
   status?: string;
 }) {
   const t = COPY[locale as keyof typeof COPY] ?? COPY.en;
+  const { canSubmit, ...compositionEvents } = useDrawGuessCompositionGuard(`${room.id}:${room.view.gameNumber}:${room.view.roundIndex}:${room.view.turnIndex}:${room.view.phase}`);
   const reactionMenuId = useId();
   const listRef = useRef<HTMLDivElement>(null);
   const reactionRef = useRef<HTMLDivElement>(null);
@@ -49,11 +52,24 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
   const [commentPending, setCommentPending] = useState<string | null>(null);
   const [reactionCooldown, setReactionCooldown] = useState(false);
   const cooldownTimer = useRef<number | null>(null);
+  const reactionScope = `${room.id}:${room.viewerProfileId}:${room.viewerSeat}:${room.view.gameNumber}:${room.view.roundIndex}:${room.view.turnIndex}:${room.view.phase}`;
+  const latestReactionScope = useRef(reactionScope);
+  latestReactionScope.current = reactionScope;
   const reactionCountFor = (kind: DrawGuessReactionKind) => (room.view.reactionCounts?.[kind] ?? 0) +
     (localReactions.includes(kind) && !room.view.myReactions?.includes(kind) ? 1 : 0);
   const reactionTotal = DRAW_GUESS_REACTIONS.reduce((total, kind) => total + reactionCountFor(kind), 0);
   useEffect(() => () => { if (cooldownTimer.current !== null) window.clearTimeout(cooldownTimer.current); }, []);
-  useEffect(() => { setLocalReactions([]); setLocalCommentReactions([]); setReactionOpen(false); setSelectedMessageId(null); }, [room.view.gameNumber, room.view.turnIndex]);
+  useEffect(() => {
+    setLocalReactions([]);
+    setLocalCommentReactions([]);
+    setReactionOpen(false);
+    setSelectedMessageId(null);
+    setReactionPending(null);
+    setCommentPending(null);
+    setReactionCooldown(false);
+    if (cooldownTimer.current !== null) window.clearTimeout(cooldownTimer.current);
+    cooldownTimer.current = null;
+  }, [reactionScope]);
   useEffect(() => {
     if (!selectedMessageId) return;
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setSelectedMessageId(null); };
@@ -89,26 +105,30 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
 
   async function reactGuess(messageId: string, kind: DrawGuessReactionKind) {
     const message = messages.find((item) => item.id === messageId);
-    if (!message || message.seat === room.viewerSeat || room.viewerSeat < 0 || room.view.phase !== "DRAW_GUESS" ||
+    if (disabled || !message || message.seat === room.viewerSeat || room.viewerSeat < 0 || room.view.phase !== "DRAW_GUESS" ||
       commentPending || commentReactionUsed(message, kind) || myCommentReactionCount >= 8) return;
     setCommentPending(`${messageId}:${kind}`);
     setLocalCommentReactions((current) => [...current, { id: messageId, kind }]);
     try {
-      if (!await onReactGuess(messageId, kind)) setLocalCommentReactions((current) => current.filter((item) => item.id !== messageId || item.kind !== kind));
-    } finally { setCommentPending(null); }
+      const accepted = await onReactGuess(messageId, kind);
+      if (latestReactionScope.current === reactionScope && !accepted) setLocalCommentReactions((current) => current.filter((item) => item.id !== messageId || item.kind !== kind));
+    } finally { if (latestReactionScope.current === reactionScope) setCommentPending(null); }
   }
 
   async function react(kind: DrawGuessReactionKind) {
-    if (reactionPending || reactionCooldown || room.view.myReactions?.includes(kind) || localReactions.includes(kind)) return;
+    if (disabled || reactionPending || reactionCooldown || room.view.myReactions?.includes(kind) || localReactions.includes(kind)) return;
     setReactionPending(kind);
     setLocalReactions((current) => [...current, kind]);
     setReactionCooldown(true);
     if (cooldownTimer.current !== null) window.clearTimeout(cooldownTimer.current);
-    cooldownTimer.current = window.setTimeout(() => setReactionCooldown(false), 1_550);
+    cooldownTimer.current = window.setTimeout(() => {
+      if (latestReactionScope.current === reactionScope) setReactionCooldown(false);
+    }, 1_550);
     try {
-      if (!await onReact(kind)) setLocalReactions((current) => current.filter((item) => item !== kind));
+      const accepted = await onReact(kind);
+      if (latestReactionScope.current === reactionScope && !accepted) setLocalReactions((current) => current.filter((item) => item !== kind));
     }
-    finally { setReactionPending(null); }
+    finally { if (latestReactionScope.current === reactionScope) setReactionPending(null); }
   }
 
   useLayoutEffect(() => {
@@ -146,7 +166,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
             const used = room.view.myReactions?.includes(kind) || localReactions.includes(kind);
             const label = t.reactions[kind];
             return isArtist ? <span key={kind} className="relative flex min-h-14 flex-col items-center justify-center rounded-2xl bg-[#EEF5FC] px-1 text-center"><span aria-hidden="true" className="text-xl leading-none">{kind}</span><span className="mt-0.5 text-[10px] font-bold text-[#405875]">{label}</span>{count > 0 ? <span className="absolute -bottom-1 -right-1 rounded-full bg-[#3E70AA] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">×{count}</span> : null}</span>
-              : <button key={kind} type="button" disabled={Boolean(used || reactionPending || reactionCooldown)} onClick={() => void react(kind)} aria-label={`${t.react}：${label}`} aria-pressed={Boolean(used)} className={`relative flex min-h-14 flex-col items-center justify-center rounded-2xl px-1 text-center outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-[#3F74AE] motion-safe:enabled:hover:-translate-y-0.5 motion-safe:enabled:active:scale-95 ${used ? "bg-[#DCEBFA] text-[#315F95]" : "bg-[#F1F6FB] text-[#405875] hover:bg-[#E4F0FA]"} disabled:cursor-default`}><span aria-hidden="true" className={`text-xl leading-none ${reactionPending === kind ? "motion-safe:animate-bounce" : ""}`}>{kind}</span><span className="mt-0.5 text-[10px] font-black">{label}</span>{count > 0 ? <span className="absolute -bottom-1 -right-1 rounded-full bg-[#3E70AA] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">×{count}</span> : null}{used ? <Check aria-hidden="true" className="absolute right-1 top-1 h-3 w-3 stroke-[3]" /> : null}</button>;
+              : <button key={kind} type="button" disabled={disabled || Boolean(used || reactionPending || reactionCooldown)} onClick={() => void react(kind)} aria-label={`${t.react}：${label}`} aria-pressed={Boolean(used)} className={`relative flex min-h-14 flex-col items-center justify-center rounded-2xl px-1 text-center outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-[#3F74AE] motion-safe:enabled:hover:-translate-y-0.5 motion-safe:enabled:active:scale-95 ${used ? "bg-[#DCEBFA] text-[#315F95]" : "bg-[#F1F6FB] text-[#405875] hover:bg-[#E4F0FA]"} disabled:cursor-default`}><span aria-hidden="true" className={`text-xl leading-none ${reactionPending === kind ? "motion-safe:animate-bounce" : ""}`}>{kind}</span><span className="mt-0.5 text-[10px] font-black">{label}</span>{count > 0 ? <span className="absolute -bottom-1 -right-1 rounded-full bg-[#3E70AA] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">×{count}</span> : null}{used ? <Check aria-hidden="true" className="absolute right-1 top-1 h-3 w-3 stroke-[3]" /> : null}</button>;
           })}
         </div> : null}
       </div> : null}
@@ -175,7 +195,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
       {pending ? <div className="draw-guess-chat-bubble flex justify-end"><div className="max-w-[85%]"><p className="mb-0.5 px-2 text-right text-[10px] font-bold text-[#65748A]">{room.seats.find((seat) => seat.number === room.viewerSeat + 1)?.name ?? "—"}</p><div className="rounded-[1.2rem] bg-white px-3 py-1.5 text-sm font-semibold text-[#30425C] opacity-70 shadow-[0_3px_0_#DCE7EF]">{pending.text}<LoaderCircle aria-label={t.pending} className="ml-2 inline h-3.5 w-3.5 animate-spin" /></div></div></div> : null}
     </div>
     <div className="shrink-0 bg-white/85 px-2.5 pb-2.5 pt-2 sm:px-3">
-      {canGuess ? <form onSubmit={onSubmit} className="flex items-center gap-2"><input aria-label={t.hint} autoComplete="off" enterKeyHint="send" maxLength={20} value={input} onChange={(event) => onInputChange(event.target.value)} placeholder={t.placeholder} className="min-h-11 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-4 text-base outline-none focus:border-[#3F74AE]" /><button type="submit" disabled={busy || !input.trim()} className="draw-guess-btn draw-guess-btn--candy min-h-11 shrink-0 px-4 text-sm"><Send className="h-4 w-4" />{t.send}</button></form>
+      {canGuess ? <form onSubmit={(event) => { if (disabled || !canSubmit()) event.preventDefault(); else onSubmit(event); }} className="flex items-center gap-2"><input {...compositionEvents} disabled={disabled} aria-label={t.hint} autoComplete="off" enterKeyHint="send" maxLength={20} value={input} onChange={(event) => onInputChange(event.target.value)} placeholder={t.placeholder} className="min-h-11 min-w-0 flex-1 rounded-full border border-[#D5E4F2] bg-[#FFFCF5] px-4 text-base outline-none focus:border-[#3F74AE]" /><button type="submit" disabled={disabled || busy || !input.trim()} className="draw-guess-btn draw-guess-btn--candy min-h-11 shrink-0 px-4 text-sm"><Send className="h-4 w-4" />{t.send}</button></form>
         : <div role="status" className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-[#ECF4FB] px-3 text-xs font-bold text-[#63758D]"><Check className="h-4 w-4" />{room.view.phase === "TURN_REVEAL" ? t.reveal : room.viewerSeat < 0 ? t.spectator : guessed ? t.solved : t.artist}</div>}
       {error ? <p role="alert" className="mt-2 rounded-xl bg-[#FFF0D2] px-3 py-1.5 text-xs font-semibold text-[#865731]">{error}</p> : null}
     </div>
@@ -188,7 +208,7 @@ export function DrawGuessClassicChat({ busy, error, guessed, input, locale, mood
           const seats = commentReactorSeats(selectedMessage, kind);
           const used = seats.includes(room.viewerSeat);
           const canReact = room.view.phase === "DRAW_GUESS" && room.viewerSeat >= 0 && selectedMessage.seat !== room.viewerSeat;
-          return <button key={kind} type="button" disabled={!canReact || used || Boolean(commentPending) || myCommentReactionCount >= 8} onClick={() => void reactGuess(selectedMessage.id, kind)} aria-label={`${t.comment}：${t.reactions[kind]}`} aria-pressed={used} className={`relative flex min-h-14 flex-col items-center justify-center rounded-2xl px-1 text-[11px] font-black outline-none focus-visible:ring-2 focus-visible:ring-[#3F74AE] ${used ? "bg-[#DCEBFA] text-[#315F95]" : "bg-[#F1F6FB] text-[#405875]"} disabled:cursor-default`}><span aria-hidden="true" className="text-xl">{kind}</span><span className="truncate text-[10px]">{t.reactions[kind]}</span>{seats.length ? <span className="absolute -bottom-1 -right-1 rounded-full bg-[#3E70AA] px-1.5 py-0.5 text-[9px] leading-none text-white">×{seats.length}</span> : null}{used ? <Check aria-hidden="true" className="absolute right-1 top-1 h-3 w-3 stroke-[3]" /> : null}</button>;
+          return <button key={kind} type="button" disabled={disabled || !canReact || used || Boolean(commentPending) || myCommentReactionCount >= 8} onClick={() => void reactGuess(selectedMessage.id, kind)} aria-label={`${t.comment}：${t.reactions[kind]}`} aria-pressed={used} className={`relative flex min-h-14 flex-col items-center justify-center rounded-2xl px-1 text-[11px] font-black outline-none focus-visible:ring-2 focus-visible:ring-[#3F74AE] ${used ? "bg-[#DCEBFA] text-[#315F95]" : "bg-[#F1F6FB] text-[#405875]"} disabled:cursor-default`}><span aria-hidden="true" className="text-xl">{kind}</span><span className="truncate text-[10px]">{t.reactions[kind]}</span>{seats.length ? <span className="absolute -bottom-1 -right-1 rounded-full bg-[#3E70AA] px-1.5 py-0.5 text-[9px] leading-none text-white">×{seats.length}</span> : null}{used ? <Check aria-hidden="true" className="absolute right-1 top-1 h-3 w-3 stroke-[3]" /> : null}</button>;
         })}</div>
         <div className="mt-4 max-h-[min(32vh,12rem)] space-y-2 overflow-y-auto">{DRAW_GUESS_REACTIONS.map((kind) => {
           const seats = commentReactorSeats(selectedMessage, kind);

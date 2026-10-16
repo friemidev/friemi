@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sprite": "apps/web/features/game-tools/components/DrawGuessCatSprite.tsx",
+    "definitions": "apps/web/features/game-tools/drawGuessCats.ts",
+    "picker": "apps/web/features/game-tools/components/DrawGuessLobby.tsx"
+  },
+  "sourceSha256": {
+    "sprite": "fb4955356ce5f21ee9fd203079d03d503f9d8b0f6916217f8870bc6b6e1e0c5b",
+    "definitions": "adf51f88261d0b804d6470de3aa23db51a8a3596c9042ccfee3eb9c6b38f64b2",
+    "picker": "519d269fae8165438fb10904032af0cb143d9475e51708373e67e2b9aa97a6db"
+  },
+  "artwork": "Direct React server-rendered DrawGuessCatSprite; unchanged source vector paths, gradients and colors",
+  "direction": "S",
+  "detail": "full",
+  "sourceSizeProp": 120,
+  "sourceViewBox": "0 0 120 116",
+  "exportViewBox": "-8 -18 136 136",
+  "exportDimensions": {
+    "width": 136,
+    "height": 136
+  },
+  "pngDimensions": {
+    "width": 256,
+    "height": 256
+  },
+  "groundAnchor": {
+    "x": 0.5,
+    "y": 0.9264705882352942
+  },
+  "states": {
+    "idle": {
+      "mood": "idle",
+      "activity": "none",
+      "frame": 0
+    },
+    "thinking": {
+      "mood": "idle",
+      "activity": "thinking",
+      "frame": 8
+    },
+    "happy": {
+      "mood": "happy",
+      "activity": "none",
+      "frame": 5
+    },
+    "sad": {
+      "mood": "sad",
+      "activity": "none",
+      "frame": 5
+    }
+  },
+  "animated": false,
+  "characters": [
+    {
+      "id": "cloud",
+      "previewPlayer": "我",
+      "traits": "奶油白、毛簇、蓬尾",
+      "name": {
+        "zh-CN": "云朵喵",
+        "en": "Cloud",
+        "fr": "Nuage"
+      },
+      "originalPalette": {
+        "fur": "#FFF3DB",
+        "patch": "#EBA770",
+        "outfit": "#FFF3DB"
+      },
+      "files": {
+        "idle": {
+          "svg": "cloud-idle.svg",
+          "png": "cloud-idle.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "none",
+            "frame": 0,
+            "catId": "cloud",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "thinking": {
+          "svg": "cloud-thinking.svg",
+          "png": "cloud-thinking.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "thinking",
+            "frame": 8,
+            "catId": "cloud",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "happy": {
+          "svg": "cloud-happy.svg",
+          "png": "cloud-happy.png",
+          "sourceProps": {
+            "mood": "happy",
+            "activity": "none",
+            "frame": 5,
+            "catId": "cloud",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "sad": {
+          "svg": "cloud-sad.svg",
+          "png": "cloud-sad.png",
+          "sourceProps": {
+            "mood": "sad",
+            "activity": "none",
+            "frame": 5,
+            "catId": "cloud",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        }
+      }
+    },
+    {
+      "id": "baker",
+      "previewPlayer": "桃桃",
+      "traits": "珊瑚粉贝雷帽与围裙、折耳、面包",
+      "name": {
+        "zh-CN": "面包喵",
+        "en": "Baker",
+        "fr": "Boulanger"
+      },
+      "originalPalette": {
+        "fur": "#FFF2D6",
+        "patch": "#D99064",
+        "outfit": "#D97973"
+      },
+      "files": {
+        "idle": {
+          "svg": "baker-idle.svg",
+          "png": "baker-idle.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "none",
+            "frame": 0,
+            "catId": "baker",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "thinking": {
+          "svg": "baker-thinking.svg",
+          "png": "baker-thinking.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "thinking",
+            "frame": 8,
+            "catId": "baker",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "happy": {
+          "svg": "baker-happy.svg",
+          "png": "baker-happy.png",
+          "sourceProps": {
+            "mood": "happy",
+            "activity": "none",
+            "frame": 5,
+            "catId": "baker",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "sad": {
+          "svg": "baker-sad.svg",
+          "png": "baker-sad.png",
+          "sourceProps": {
+            "mood": "sad",
+            "activity": "none",
+            "frame": 5,
+            "catId": "baker",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        }
+      }
+    },
+    {
+      "id": "scholar",
+      "previewPlayer": "小鹿",
+      "traits": "绿色衣服、蓝帽、方眼镜、书",
+      "name": {
+        "zh-CN": "学者喵",
+        "en": "Scholar",
+        "fr": "Savant"
+      },
+      "originalPalette": {
+        "fur": "#EAD5A2",
+        "patch": "#A8875B",
+        "outfit": "#99AD72"
+      },
+      "files": {
+        "idle": {
+          "svg": "scholar-idle.svg",
+          "png": "scholar-idle.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "none",
+            "frame": 0,
+            "catId": "scholar",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "thinking": {
+          "svg": "scholar-thinking.svg",
+          "png": "scholar-thinking.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "thinking",
+            "frame": 8,
+            "catId": "scholar",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "happy": {
+          "svg": "scholar-happy.svg",
+          "png": "scholar-happy.png",
+          "sourceProps": {
+            "mood": "happy",
+            "activity": "none",
+            "frame": 5,
+            "catId": "scholar",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "sad": {
+          "svg": "scholar-sad.svg",
+          "png": "scholar-sad.png",
+          "sourceProps": {
+            "mood": "sad",
+            "activity": "none",
+            "frame": 5,
+            "catId": "scholar",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        }
+      }
+    },
+    {
+      "id": "captain",
+      "previewPlayer": "猫猫",
+      "traits": "青蓝制服、皇冠、高耳、蓬尾",
+      "name": {
+        "zh-CN": "船长喵",
+        "en": "Captain",
+        "fr": "Capitaine"
+      },
+      "originalPalette": {
+        "fur": "#F0B761",
+        "patch": "#C57950",
+        "outfit": "#57A7BD"
+      },
+      "files": {
+        "idle": {
+          "svg": "captain-idle.svg",
+          "png": "captain-idle.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "none",
+            "frame": 0,
+            "catId": "captain",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "thinking": {
+          "svg": "captain-thinking.svg",
+          "png": "captain-thinking.png",
+          "sourceProps": {
+            "mood": "idle",
+            "activity": "thinking",
+            "frame": 8,
+            "catId": "captain",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "happy": {
+          "svg": "captain-happy.svg",
+          "png": "captain-happy.png",
+          "sourceProps": {
+            "mood": "happy",
+            "activity": "none",
+            "frame": 5,
+            "catId": "captain",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        },
+        "sad": {
+          "svg": "captain-sad.svg",
+          "png": "captain-sad.png",
+          "sourceProps": {
+            "mood": "sad",
+            "activity": "none",
+            "frame": 5,
+            "catId": "captain",
+            "direction": "S",
+            "size": 120,
+            "animated": false
+          }
+        }
+      }
+    }
+  ]
+}

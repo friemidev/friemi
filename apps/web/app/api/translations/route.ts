@@ -5,8 +5,10 @@ import {
   TranslationRequestError,
 } from "@/features/translations/services/contentTranslations";
 import { translationEntityTypes } from "@/features/translations/types";
+import { TranslationProviderError } from "@/features/translations/services/cloudflare";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const translationRequestSchema = z.object({
   accessToken: z.string().trim().max(256).optional().nullable(),
@@ -17,6 +19,7 @@ const translationRequestSchema = z.object({
 });
 
 function getErrorStatus(error: unknown) {
+  if (error instanceof TranslationProviderError) return 503;
   if (error instanceof TranslationRequestError) {
     return error.status;
   }
@@ -25,23 +28,16 @@ function getErrorStatus(error: unknown) {
 }
 
 function getErrorCode(error: unknown) {
+  if (error instanceof TranslationProviderError) return error.code;
   if (error instanceof TranslationRequestError) {
     return error.message;
-  }
-
-  if (error instanceof Error && error.name === "DeepLConfigurationError") {
-    return "TRANSLATION_NOT_CONFIGURED";
-  }
-
-  if (error instanceof Error && error.name === "DeepLTranslationError") {
-    return "TRANSLATION_PROVIDER_FAILED";
   }
 
   return "TRANSLATION_FAILED";
 }
 
 export async function POST(request: Request) {
-  const payload = translationRequestSchema.safeParse(await request.json());
+  const payload = translationRequestSchema.safeParse(await request.json().catch(() => null));
 
   if (!payload.success) {
     return NextResponse.json(

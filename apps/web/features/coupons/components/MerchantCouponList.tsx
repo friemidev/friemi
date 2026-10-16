@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useDeferredValue, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
   ChevronRight,
   CirclePlus,
   Search,
@@ -17,7 +17,7 @@ import { withLocale } from "@/lib/routes";
 import { CouponRedemptionScanner } from "./CouponRedemptionScanner";
 import { getCampaignStatus, getCopy, type Campaign } from "./MerchantStoreDashboard";
 
-type CouponFilter = "all" | "active" | "scheduled" | "ended";
+type CouponFilter = "all" | "active" | "scheduled" | "ended" | "archived";
 const pageSize = 20;
 
 function getFilter(campaign: Campaign): Exclude<CouponFilter, "all"> {
@@ -28,30 +28,35 @@ function getFilter(campaign: Campaign): Exclude<CouponFilter, "all"> {
 
 export function MerchantCouponList({
   dashboard,
+  initialFilter = "all",
   locale,
 }: {
   dashboard: MerchantStoreDashboardViewModel;
+  initialFilter?: CouponFilter;
   locale: string;
 }) {
   const copy = getCopy(locale);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(locale));
-  const [filter, setFilter] = useState<CouponFilter>("all");
+  const [filter, setFilter] = useState<CouponFilter>(initialFilter);
+  useEffect(() => setFilter(initialFilter), [initialFilter]);
   const [page, setPage] = useState(1);
   const listRef = useRef<HTMLOListElement>(null);
   const counts = useMemo(
     () => ({
-      all: dashboard.campaigns.length,
-      active: dashboard.campaigns.filter((campaign) => getFilter(campaign) === "active").length,
-      scheduled: dashboard.campaigns.filter((campaign) => getFilter(campaign) === "scheduled").length,
-      ended: dashboard.campaigns.filter((campaign) => getFilter(campaign) === "ended").length,
+      all: dashboard.campaigns.filter((campaign) => !campaign.archivedAt).length,
+      active: dashboard.campaigns.filter((campaign) => !campaign.archivedAt && getFilter(campaign) === "active").length,
+      scheduled: dashboard.campaigns.filter((campaign) => !campaign.archivedAt && getFilter(campaign) === "scheduled").length,
+      ended: dashboard.campaigns.filter((campaign) => !campaign.archivedAt && getFilter(campaign) === "ended").length,
+      archived: dashboard.campaigns.filter((campaign) => Boolean(campaign.archivedAt)).length,
     }),
     [dashboard.campaigns],
   );
   const filteredCampaigns = useMemo(
     () =>
       dashboard.campaigns.filter((campaign) => {
-        if (filter !== "all" && getFilter(campaign) !== filter) return false;
+        if (filter === "archived" ? !campaign.archivedAt : campaign.archivedAt) return false;
+        if (filter !== "all" && filter !== "archived" && getFilter(campaign) !== filter) return false;
         const searchable = `${campaign.title} ${campaign.description} ${campaign.terms ?? ""}`
           .toLocaleLowerCase(locale)
           .trim();
@@ -100,9 +105,9 @@ export function MerchantCouponList({
         <p className="pt-5 text-sm font-semibold text-forest">{dashboard.merchant.name}</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            {copy.campaignList}
+            {filter === "archived" ? copy.archived : copy.campaignList}
           </h2>
-          <span className="text-sm tabular-nums text-ink/65">{counts.all}</span>
+          <span className="text-sm tabular-nums text-ink/65">{counts[filter]}</span>
         </div>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-10">
@@ -114,7 +119,7 @@ export function MerchantCouponList({
               >
                 <span className="flex w-full items-start justify-between">
                   <CirclePlus aria-hidden="true" className="h-5 w-5" />
-                  <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-ink/70" />
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 text-ink/70" />
                 </span>
                 <span className="text-sm font-bold sm:text-base">{copy.publish}</span>
               </Link>
@@ -155,13 +160,10 @@ export function MerchantCouponList({
               </div>
             ) : null}
 
-            {counts.all > 0 ? (
-              <div
-                aria-label={copy.coupons}
-                className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0"
-                role="group"
-              >
-                {filters.map((item) => (
+            {dashboard.campaigns.length > 0 ? (
+              <div aria-label={copy.coupons} className="mt-3" role="group">
+                <div className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+                  {filters.map((item) => (
                   <button
                     aria-pressed={filter === item.key}
                     className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${filter === item.key ? "bg-forest text-white" : "text-ink/70 hover:bg-fog"}`}
@@ -174,7 +176,19 @@ export function MerchantCouponList({
                       {counts[item.key]}
                     </span>
                   </button>
-                ))}
+                  ))}
+                </div>
+                <button
+                  aria-pressed={filter === "archived"}
+                  className={`mt-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${filter === "archived" ? "bg-forest text-white" : "bg-fog text-forest"}`}
+                  onClick={() => { setFilter("archived"); setPage(1); }}
+                  type="button"
+                >
+                  {copy.archived}
+                  <span className={filter === "archived" ? "text-white/75" : "text-ink/70"}>
+                    {counts.archived}
+                  </span>
+                </button>
               </div>
             ) : null}
 
@@ -185,7 +199,9 @@ export function MerchantCouponList({
                 </p>
                 <ol className="mt-3 grid scroll-mt-24 gap-2" ref={listRef}>
                 {visibleCampaigns.map((campaign) => {
-                  const status = getCampaignStatus(campaign, copy);
+                  const status = campaign.archivedAt
+                    ? { className: "bg-fog text-ink/70", label: copy.statusArchived }
+                    : getCampaignStatus(campaign, copy);
                   const remaining = campaign.quantityLimit === null
                     ? null
                     : Math.max(campaign.quantityLimit - campaign.claimedCount, 0);
@@ -251,15 +267,15 @@ export function MerchantCouponList({
               <div className="mt-5 rounded-2xl bg-fog/70 px-5 py-9 text-center">
                 <Ticket aria-hidden="true" className="mx-auto h-6 w-6 text-forest" />
                 <p className="mt-3 text-sm font-medium text-ink/70">
-                  {counts.all === 0 ? copy.noCampaign : copy.empty}
+                  {filter === "all" && counts.all === 0 ? copy.noCampaign : copy.empty}
                 </p>
-                {counts.all === 0 ? (
+                {filter === "all" && counts.all === 0 ? (
                   <Link
                     className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
                     href={withLocale(locale, "/profile/store/coupons/new")}
                   >
                     {copy.publish}
-                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                    <ArrowRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
                 ) : (
                   <button

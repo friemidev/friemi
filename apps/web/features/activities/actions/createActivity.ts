@@ -11,6 +11,7 @@ import {
 import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { scheduleGatheringTranslations } from "@/features/translations/services/translationQueue";
 import { withLocale } from "@/lib/routes";
 import {
   buildActivityErrorState,
@@ -611,6 +612,8 @@ export async function createActivityAction(
       "发布聚吧失败，请稍后重试。",
     );
   }
+
+  await scheduleGatheringTranslations(activityId);
 
   await trackAnalyticsEvent(
     {

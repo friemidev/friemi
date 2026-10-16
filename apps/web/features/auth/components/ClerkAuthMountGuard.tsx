@@ -1,40 +1,15 @@
 "use client";
 
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { SignIn, SignUp, useAuth, useSignIn } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
 import { promoteIOSAuthToMainFrame } from "../iosAuthFrame";
 import { AndroidBrowserSignIn } from "./AndroidBrowserSignIn";
+import { FriemiNavigation } from "@/features/mobile/nativeNavigation";
 
 type NativeAuthProvider = "apple" | "google";
-
-type NativeGoogleSignInResult = {
-  accessToken?: string;
-  email?: string;
-  firstName?: string;
-  idToken: string;
-  lastName?: string;
-  name?: string;
-};
-
-type NativeAppleSignInResult = {
-  authorizationCode?: string;
-  email?: string;
-  firstName?: string;
-  identityToken: string;
-  lastName?: string;
-  userIdentifier?: string;
-};
-
-type FriemiNavigationPlugin = {
-  signInWithApple: () => Promise<NativeAppleSignInResult>;
-  signInWithGoogle: () => Promise<NativeGoogleSignInResult>;
-};
-
-const FriemiNavigation =
-  registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
 
 type ClerkAuthMountGuardProps = {
   exitUrl: string;

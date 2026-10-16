@@ -345,6 +345,40 @@ export async function unlistCouponCampaign({
     : { status: "FORBIDDEN" };
 }
 
+export async function setCouponCampaignArchived({
+  couponId,
+  profileId,
+  archived,
+}: {
+  couponId: string;
+  profileId: string;
+  archived: boolean;
+}): Promise<{ status: "ARCHIVED" | "RESTORED" | "INVALID" | "FORBIDDEN" }> {
+  const updated = await prisma.coupon.updateMany({
+    where: {
+      id: couponId,
+      merchant: { isActive: true, ownerProfileId: profileId },
+      distributionMode: "PUBLIC_QR",
+      archivedAt: archived ? null : { not: null },
+    },
+    data: { archivedAt: archived ? new Date() : null },
+  });
+  if (updated.count) return { status: archived ? "ARCHIVED" : "RESTORED" };
+  const coupon = await prisma.coupon.findUnique({
+    where: { id: couponId },
+    select: {
+      archivedAt: true,
+      distributionMode: true,
+      merchant: { select: { isActive: true, ownerProfileId: true } },
+    },
+  });
+  if (!coupon || coupon.merchant.ownerProfileId !== profileId || !coupon.merchant.isActive)
+    return { status: "FORBIDDEN" };
+  if (coupon.distributionMode !== "PUBLIC_QR" || Boolean(coupon.archivedAt) !== archived)
+    return { status: "INVALID" };
+  return { status: archived ? "ARCHIVED" : "RESTORED" };
+}
+
 export async function claimCouponByToken({
   claimToken,
   profileId,
@@ -395,6 +429,7 @@ export async function claimCouponByToken({
       const inventory = await tx.coupon.updateMany({
         where: {
           id: coupon.id,
+          archivedAt: null,
           campaignStatus: "PUBLISHED",
           distributionMode: "PUBLIC_QR",
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
@@ -404,7 +439,14 @@ export async function claimCouponByToken({
         },
         data: { claimedCount: { increment: 1 } },
       });
-      if (inventory.count === 0) return { status: "SOLD_OUT" } as const;
+      if (inventory.count === 0) {
+        const latest = await tx.coupon.findUnique({ where: { id: coupon.id } });
+        if (!latest) return { status: "INVALID" } as const;
+        const latestAvailability = getCouponClaimAvailability(latest);
+        return {
+          status: latestAvailability === "AVAILABLE" ? "SOLD_OUT" : latestAvailability,
+        } as const;
+      }
 
       const item = await tx.couponWalletItem.create({
         data: { couponId: coupon.id, ownerProfileId: profileId },

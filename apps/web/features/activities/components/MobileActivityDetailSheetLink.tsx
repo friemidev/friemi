@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { LockKeyhole, Maximize2 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
@@ -15,6 +23,8 @@ type MobileActivityDetailSheetLinkProps = {
   label: string;
   locale?: string;
   locked?: boolean;
+  retainOnClose?: boolean;
+  onBookingUpdated?: () => void;
 };
 
 function getLockedCopy(locale: string) {
@@ -74,6 +84,8 @@ export function MobileActivityDetailSheetLink({
   label,
   locale = "zh-CN",
   locked = false,
+  retainOnClose = true,
+  onBookingUpdated,
 }: MobileActivityDetailSheetLinkProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -82,21 +94,28 @@ export function MobileActivityDetailSheetLink({
   const sheetHref = useMemo(() => appendActivitySheetParam(href), [href]);
   const lockedCopy = getLockedCopy(locale);
   const openPageLabel = getOpenPageLabel(locale);
+  const handleBookingUpdated = useCallback(() => {
+    if (onBookingUpdated) {
+      onBookingUpdated();
+    } else {
+      startTransition(() => router.refresh());
+    }
+  }, [onBookingUpdated, router]);
 
   useEffect(() => {
     const key = retentionKey.current;
     setRetained(false);
     return () => detailSheetRetention.release(key);
-  }, [href, locked]);
+  }, [href, locked, retainOnClose]);
 
   useEffect(() => {
-    if (open && !locked) {
+    if (open && !locked && retainOnClose) {
       detailSheetRetention.retain(retentionKey.current, () =>
         setRetained(false),
       );
       setRetained(true);
     }
-  }, [href, locked, open]);
+  }, [href, locked, open, retainOnClose]);
 
   function openFullPage() {
     setOpen(false);
@@ -157,6 +176,8 @@ export function MobileActivityDetailSheetLink({
             label={label}
             locale={locale}
             open={open}
+            onBookingUpdated={handleBookingUpdated}
+            onCloseRequested={() => setOpen(false)}
             onNavigate={() => {
               detailSheetRetention.release(retentionKey.current);
               setRetained(false);

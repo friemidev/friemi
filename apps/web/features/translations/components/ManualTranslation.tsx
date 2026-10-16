@@ -8,6 +8,7 @@ import type {
   TranslationEntityType,
   TranslationResult,
 } from "@/features/translations/types";
+import { TranslationIconButton } from "./TranslationIconButton";
 
 type TranslationFieldItem = {
   field: string;
@@ -62,7 +63,7 @@ export function ManualTranslationBundle({
   accessToken?: string | null;
   className?: string;
   entityId: string;
-  entityType: Exclude<TranslationEntityType, "comment">;
+  entityType: "activity" | "public_event";
   fields: TranslationFieldItem[];
   locale: string;
 }) {
@@ -141,9 +142,7 @@ export function ManualTranslationBundle({
       </div>
 
       {status === "error" ? (
-        <p className="mt-2 text-xs font-medium text-red-600">
-          {t.failed}
-        </p>
+        <p className="mt-2 text-xs font-medium text-red-600">{t.failed}</p>
       ) : null}
 
       {hasTranslations ? (
@@ -196,7 +195,9 @@ export function ManualTranslationText({
 }) {
   const t = getCopy(locale).translation;
   const [status, setStatus] = useState<TranslationStatus>("idle");
-  const [translation, setTranslation] = useState<TranslationResult | null>(null);
+  const [translation, setTranslation] = useState<TranslationResult | null>(
+    null,
+  );
   const [showOriginal, setShowOriginal] = useState(true);
 
   async function translateComment() {
@@ -228,37 +229,33 @@ export function ManualTranslationText({
     translation && !showOriginal ? translation.translatedText : text;
 
   return (
-    <div>
-      <p className={className}>{displayText}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium">
+    <div className={cn("min-w-0", className)}>
+      <div className="flex min-w-0 items-center gap-1">
+        <p
+          aria-live="polite"
+          className="min-w-0 [overflow-wrap:anywhere]"
+        >
+          {displayText}
+        </p>
         {translation ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600 transition hover:bg-zinc-200"
+          <TranslationIconButton
+            active={!showOriginal}
+            label={showOriginal ? t.showTranslation : t.showOriginal}
             onClick={() => setShowOriginal((value) => !value)}
-          >
-            <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-            {showOriginal ? t.showTranslation : t.showOriginal}
-          </button>
+          />
         ) : (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600 transition hover:bg-zinc-200 disabled:cursor-wait disabled:opacity-70"
-            disabled={status === "loading"}
+          <TranslationIconButton
+            label={status === "loading" ? t.translating : t.translate}
+            loading={status === "loading"}
             onClick={translateComment}
-          >
-            {status === "loading" ? (
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            {status === "loading" ? t.translating : t.translate}
-          </button>
+          />
         )}
-        {status === "error" ? (
-          <span className="text-red-600">{t.failed}</span>
-        ) : null}
       </div>
+      {status === "error" ? (
+        <p role="status" className="mt-1 text-xs text-danger">
+          {t.failed}
+        </p>
+      ) : null}
     </div>
   );
 }

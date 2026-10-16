@@ -1,7 +1,10 @@
+import { localizeActivityContentTree } from "@/features/translations/services/localizedContent";
+import { getContentRequestLocale } from "@/features/translations/services/requestLocale";
 import { mergePersistentBookingActivities } from "../utils/persistentBookingActivity";
 import { unstable_cache } from "next/cache";
 import type { ActivityCategory } from "@chill-club/shared";
 import { prisma } from "@/lib/prisma";
+import { attachViewerPendingBookingPartySizes } from "@/features/merchants/bookings/activityParticipantCounts";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
@@ -95,12 +98,21 @@ const getCachedOpenLobbyActivities = unstable_cache(
 );
 
 export type ActivityLobbySectionId =
-  "open" | "created" | "joined" | "favorites" | "friendHosted" | "friendJoined";
+  | "open"
+  | "created"
+  | "joined"
+  | "favorites"
+  | "friendHosted"
+  | "friendJoined";
 
 export type ActivityLobbyFeedStatus = "all" | "ongoing" | "ended";
 
 export type MobileActivityLobbyTabId =
-  "nearby" | "mine" | "friends" | "today" | "popular";
+  | "nearby"
+  | "mine"
+  | "friends"
+  | "today"
+  | "popular";
 
 export type MobileActivityLobbyPage = {
   activities: ActivityCardViewModel[];
@@ -266,7 +278,12 @@ async function decorateLobbyActivities(
     return teamActivityById.get(activity.id) ?? activity;
   });
 
-  return applyOrganizerParticipationDefaults(activitiesWithViewerState);
+  return applyOrganizerParticipationDefaults(
+    await attachViewerPendingBookingPartySizes(
+      activitiesWithViewerState,
+      viewerProfileId,
+    ),
+  );
 }
 
 function mapPublicEventToActivityCard(
@@ -303,14 +320,14 @@ function mapPublicEventToActivityCard(
   };
 }
 
-export async function getLobbySwipePublicEventActivities(
+async function getLobbySwipePublicEventActivitiesUnlocalized(
   viewerProfileId?: string | null,
   options: {
     excludeIds?: string[];
     limit?: number;
   } = {},
 ) {
-  const page = await getLobbySwipePublicEventActivityPage(
+  const page = await getLobbySwipePublicEventActivityPageUnlocalized(
     viewerProfileId,
     options,
   );
@@ -318,7 +335,7 @@ export async function getLobbySwipePublicEventActivities(
   return page.activities;
 }
 
-export async function getLobbySwipePublicEventActivityPage(
+async function getLobbySwipePublicEventActivityPageUnlocalized(
   viewerProfileId?: string | null,
   options: {
     excludeIds?: string[];
@@ -647,7 +664,7 @@ function getMobileHomeTrendingTeamLimit(limit?: number) {
   );
 }
 
-export async function getMobileHomeTrendingTeamActivities(
+async function getMobileHomeTrendingTeamActivitiesUnlocalized(
   viewerProfileId?: string | null,
   options: { limit?: number } = {},
 ) {
@@ -906,7 +923,7 @@ async function getLobbyQueryContext(
   };
 }
 
-export async function getActivityLobbyFeedPage(
+async function getActivityLobbyFeedPageUnlocalized(
   viewerProfileId: string,
   options: {
     category?: ActivityCategory;
@@ -1261,7 +1278,7 @@ async function getFriendJoinedLobbySection(context: ActivityLobbyQueryContext) {
   ).slice(0, activityLobbySectionLimit);
 }
 
-export async function getActivityLobbyInitial(
+async function getActivityLobbyInitialUnlocalized(
   viewerProfileId: string,
 ): Promise<ActivityLobbyViewModel> {
   const [mutualFollowIds, followedProfileIds] = await Promise.all([
@@ -1276,7 +1293,7 @@ export async function getActivityLobbyInitial(
   );
   const [allActivityFeed, openActivities, createdActivities, joinedActivities] =
     await Promise.all([
-      getActivityLobbyFeedPage(viewerProfileId, {
+      getActivityLobbyFeedPageUnlocalized(viewerProfileId, {
         context: feedContext,
         decorate: false,
       }),
@@ -1338,7 +1355,7 @@ export async function getActivityLobbyInitial(
   };
 }
 
-export async function getActivityLobbySection(
+async function getActivityLobbySectionUnlocalized(
   viewerProfileId: string,
   sectionId: ActivityLobbySectionId,
 ) {
@@ -1372,7 +1389,7 @@ export async function getActivityLobbySection(
   );
 }
 
-export async function getActivityLobby(
+async function getActivityLobbyUnlocalized(
   viewerProfileId: string,
 ): Promise<ActivityLobbyViewModel> {
   const [
@@ -1381,10 +1398,10 @@ export async function getActivityLobby(
     friendHostedActivities,
     friendJoinedActivities,
   ] = await Promise.all([
-    getActivityLobbyInitial(viewerProfileId),
-    getActivityLobbySection(viewerProfileId, "favorites"),
-    getActivityLobbySection(viewerProfileId, "friendHosted"),
-    getActivityLobbySection(viewerProfileId, "friendJoined"),
+    getActivityLobbyInitialUnlocalized(viewerProfileId),
+    getActivityLobbySectionUnlocalized(viewerProfileId, "favorites"),
+    getActivityLobbySectionUnlocalized(viewerProfileId, "friendHosted"),
+    getActivityLobbySectionUnlocalized(viewerProfileId, "friendJoined"),
   ]);
 
   const priorityFeedActivities = buildLobbyPriorityFeed({
@@ -1478,7 +1495,7 @@ const getCachedActivityLobbyPreview = unstable_cache(
   { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
 );
 
-export async function getActivityLobbyPreview(category?: ActivityCategory) {
+async function getActivityLobbyPreviewUnlocalized(category?: ActivityCategory) {
   return getCachedActivityLobbyPreview(category);
 }
 
@@ -1512,7 +1529,7 @@ function sortMobileLobbyPageActivities(
   );
 }
 
-export async function getMobileActivityLobbyPage({
+async function getMobileActivityLobbyPageUnlocalized({
   page = 1,
   status = "ongoing",
   tab,
@@ -1637,4 +1654,56 @@ export async function getMobileActivityLobbyPage({
     status,
     tab,
   };
+}
+
+export async function getLobbySwipePublicEventActivities(...args: Parameters<typeof getLobbySwipePublicEventActivitiesUnlocalized>) {
+  const result = await getLobbySwipePublicEventActivitiesUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getLobbySwipePublicEventActivityPage(...args: Parameters<typeof getLobbySwipePublicEventActivityPageUnlocalized>) {
+  const result = await getLobbySwipePublicEventActivityPageUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getMobileHomeTrendingTeamActivities(...args: Parameters<typeof getMobileHomeTrendingTeamActivitiesUnlocalized>) {
+  const result = await getMobileHomeTrendingTeamActivitiesUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityLobbyFeedPage(...args: Parameters<typeof getActivityLobbyFeedPageUnlocalized>) {
+  const result = await getActivityLobbyFeedPageUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityLobbyInitial(...args: Parameters<typeof getActivityLobbyInitialUnlocalized>) {
+  const result = await getActivityLobbyInitialUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityLobbySection(...args: Parameters<typeof getActivityLobbySectionUnlocalized>) {
+  const result = await getActivityLobbySectionUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityLobby(...args: Parameters<typeof getActivityLobbyUnlocalized>) {
+  const result = await getActivityLobbyUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getActivityLobbyPreview(...args: Parameters<typeof getActivityLobbyPreviewUnlocalized>) {
+  const result = await getActivityLobbyPreviewUnlocalized(...args);
+  return localizeActivityContentTree(result, await getContentRequestLocale());
+}
+
+export async function getMobileActivityLobbyPage(
+  options: Parameters<typeof getMobileActivityLobbyPageUnlocalized>[0] & {
+    locale?: string;
+  },
+) {
+  const result = await getMobileActivityLobbyPageUnlocalized(options);
+  return localizeActivityContentTree(
+    result,
+    options.locale ?? (await getContentRequestLocale()),
+  );
 }

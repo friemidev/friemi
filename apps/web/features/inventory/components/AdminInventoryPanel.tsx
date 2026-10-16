@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUpRight,
   PackageOpen,
   Plus,
   Search,
@@ -16,17 +15,20 @@ import { withLocale } from "@/lib/routes";
 type TicketPage = Awaited<ReturnType<typeof getAdminTicketDefinitionPage>>;
 
 export async function AdminInventoryPanel({
+  archived,
   locale,
   page,
   query,
 }: {
+  archived: boolean;
   locale: string;
   page: number;
   query: string;
 }) {
-  const ticketPage = await getAdminTicketDefinitionPage({ page, query });
+  const ticketPage = await getAdminTicketDefinitionPage({ archived, page, query });
   return (
     <AdminInventoryPanelContent
+      archived={archived}
       locale={locale}
       query={query}
       ticketPage={ticketPage}
@@ -35,10 +37,12 @@ export async function AdminInventoryPanel({
 }
 
 export function AdminInventoryPanelContent({
+  archived,
   locale,
   query,
   ticketPage,
 }: {
+  archived: boolean;
   locale: string;
   query: string;
   ticketPage: TicketPage;
@@ -48,8 +52,15 @@ export function AdminInventoryPanelContent({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageHref = (targetPage: number) => {
     const params = new URLSearchParams({ view: "items" });
+    if (archived) params.set("archived", "1");
     if (query) params.set("q", query);
     if (targetPage > 1) params.set("page", String(targetPage));
+    return withLocale(locale, `/admin/merchants?${params.toString()}`);
+  };
+  const filterHref = (showArchived: boolean, keepQuery = true) => {
+    const params = new URLSearchParams({ view: "items" });
+    if (showArchived) params.set("archived", "1");
+    if (keepQuery && query) params.set("q", query);
     return withLocale(locale, `/admin/merchants?${params.toString()}`);
   };
 
@@ -77,6 +88,17 @@ export function AdminInventoryPanelContent({
         </Link>
       </div>
 
+      <nav aria-label={copy.title} className="flex gap-1 rounded-xl bg-fog p-1">
+        {[{ label: copy.currentTab, archived: false }, { label: copy.archivedTab, archived: true }].map((item) => (
+          <Link
+            aria-current={archived === item.archived ? "page" : undefined}
+            className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${archived === item.archived ? "bg-paper text-forest" : "text-ink/70 hover:bg-paper/70"}`}
+            href={filterHref(item.archived)}
+            key={item.label}
+          >{item.label}</Link>
+        ))}
+      </nav>
+
       <form
         action={withLocale(locale, "/admin/merchants")}
         className="flex flex-wrap gap-2"
@@ -84,6 +106,7 @@ export function AdminInventoryPanelContent({
         role="search"
       >
         <input name="view" readOnly type="hidden" value="items" />
+        {archived ? <input name="archived" readOnly type="hidden" value="1" /> : null}
         <label className="relative min-w-0 flex-1 sm:max-w-md">
           <span className="sr-only">{copy.searchAria}</span>
           <Search
@@ -108,7 +131,7 @@ export function AdminInventoryPanelContent({
         {query ? (
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm font-semibold text-forest underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-            href={withLocale(locale, "/admin/merchants?view=items")}
+            href={filterHref(archived, false)}
           >
             {copy.clear}
           </Link>
@@ -154,13 +177,13 @@ export function AdminInventoryPanelContent({
                         <span aria-hidden="true" className="mx-2 text-ink/40">
                           ·
                         </span>
-                        {definition.isGiftable ? copy.giftable : copy.paused}
+                        {archived ? copy.archivedBadge : definition.isGiftable ? copy.giftable : copy.paused}
                       </span>
                       <span className="block text-sm tabular-nums text-ink/70">
                         {copy.remaining(remaining, definition.totalSupply)}
                       </span>
                     </span>
-                    <ArrowUpRight
+                    <ArrowRight
                       aria-hidden="true"
                       className="h-5 w-5 shrink-0 text-ink/50 transition group-hover:text-forest"
                     />
@@ -209,23 +232,23 @@ export function AdminInventoryPanelContent({
           </span>
           <div>
             <h3 className="text-lg font-bold text-ink">
-              {query ? copy.noResultsTitle : copy.emptyTitle}
+              {query ? copy.noResultsTitle : archived ? copy.archivedTab : copy.emptyTitle}
             </h3>
             <p className="mt-1 text-sm leading-6 text-ink/70">
-              {query ? copy.noResultsHint : copy.emptyHint}
+              {query ? copy.noResultsHint : archived ? copy.archivedEmptyHint : copy.emptyHint}
             </p>
           </div>
-          <Link
+          {query || !archived ? <Link
             className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-forest underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
             href={
               query
-                ? withLocale(locale, "/admin/merchants?view=items")
+                ? filterHref(archived, false)
                 : withLocale(locale, "/admin/items/new")
             }
           >
             {query ? copy.viewAll : copy.createFirst}
-            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-          </Link>
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </Link> : null}
         </div>
       )}
     </section>

@@ -2,6 +2,10 @@ import { getPublicBookingSpaceByActivity } from "@/features/merchants/bookings/q
 import { PersistentBookingPage } from "@/features/merchants/bookings/components/PersistentBookingPage";
 import { getPersistentBookingCopy } from "../utils/persistentBookingActivity";
 import type { Metadata } from "next";
+import { hasCachedContent, localizeContent } from "@/features/translations/services/localizedContent";
+import { isTranslationEnabled } from "@/features/translations/services/cloudflare";
+import { ContentTranslationOnView } from "@/features/translations/components/ContentTranslationOnView";
+
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -12,7 +16,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
-  ExternalLink,
+  ArrowRight,
   MapPin,
   Orbit,
   PencilLine,
@@ -87,6 +91,9 @@ import {
   getViewerFriendIds,
 } from "@/features/friends/queries/getViewerFriendIds";
 import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
+import { ActivityHostLink } from "@/features/activities/components/ActivityHostLink";
+import { AppOpenEntry } from "@/features/mobile/components/AppHandoff";
+import { getActivityHostLink } from "@/features/activities/utils/activityHostLink";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -231,7 +238,12 @@ function ActivityLayerHeader({
 }
 
 type DetailViewerParticipationStatus =
-  "JOINED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
+  | "JOINED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED"
+  | null;
 
 const participantAvatarTones = [
   "bg-coral text-white",
@@ -686,7 +698,7 @@ function ProtectedDetailNotice({
   icon?: "address" | "link";
   label: string;
 }) {
-  const Icon = icon === "link" ? ExternalLink : ShieldAlert;
+  const Icon = icon === "link" ? ArrowRight : ShieldAlert;
 
   return (
     <div className="rounded-[1rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2.5 text-sm font-semibold leading-6 text-[#156240] shadow-sm">
@@ -730,10 +742,11 @@ export async function generateActivityDetailMetadata(
     locale,
     getActivityDetailPath(activityId),
   );
-  const [activity, requestHeaders] = await Promise.all([
+  const [originalActivity, requestHeaders] = await Promise.all([
     getActivityShareMetadataById(activityId, accessToken ?? null),
     headers(),
   ]);
+  const activity = originalActivity ? await localizeContent(originalActivity, locale, "activity") : null;
   const requestBaseUrl = getRequestBaseUrl(requestHeaders);
 
   if (!activity) {
@@ -793,6 +806,7 @@ export async function generateActivityDetailMetadata(
         variant: "wechat",
       }),
       title: activity.title,
+      description: activity.description,
     });
 
     return metadata;
@@ -847,6 +861,29 @@ export async function ActivityDetailPageContent({
     viewerProfile?.id,
   );
   if (bookingSpace) {
+    // Booking settings read their text directly from this Activity row, so the
+    // public detail, cards and metadata all share the same translation cache.
+    const originalBookingContent = {
+      id: bookingSpace.settings.activityId,
+      title: bookingSpace.settings.title,
+      description: bookingSpace.settings.description,
+    };
+    const bookingContent = await localizeContent(
+      originalBookingContent,
+      locale,
+      "activity",
+    );
+    const bookingTranslationPending =
+      isTranslationEnabled() &&
+      !(await hasCachedContent(originalBookingContent, locale, "activity"));
+    const localizedBookingSpace = {
+      ...bookingSpace,
+      settings: {
+        ...bookingSpace.settings,
+        title: bookingContent.title,
+        description: bookingContent.description,
+      },
+    };
     const owner = viewerProfile
       ? await prisma.merchant.findFirst({
           where: {
@@ -857,17 +894,28 @@ export async function ActivityDetailPageContent({
         })
       : null;
     return (
-      <PersistentBookingPage
-        data={bookingSpace}
-        locale={locale}
-        isAuthenticated={Boolean(viewerProfile)}
-        isMerchantOwner={Boolean(owner)}
-        viewerName={viewerProfile?.nickname}
-        signInHref={withLocale(
-          locale,
-          `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, getActivityDetailPath(activityId)))}`,
-        )}
-      />
+      <>
+        {bookingTranslationPending ? (
+          <ContentTranslationOnView
+            entityId={bookingSpace.settings.activityId}
+            entityType="activity"
+            locale={locale}
+          />
+        ) : null}
+        <ActivityDetailRefresh validatedAt={Date.now()} />
+        <PersistentBookingPage
+          data={localizedBookingSpace}
+          embedded={isSheetPresentation}
+          locale={locale}
+          isAuthenticated={Boolean(viewerProfile)}
+          isMerchantOwner={Boolean(owner)}
+          viewerName={viewerProfile?.nickname}
+          signInHref={withLocale(
+            locale,
+            `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, getActivityDetailPath(activityId)))}`,
+          )}
+        />
+      </>
     );
   }
   const [viewerFriendIds, viewerFollowedProfileIds]: [string[], string[]] =
@@ -879,7 +927,7 @@ export async function ActivityDetailPageContent({
           ]),
         )
       : [[], []];
-  const [activity, activityIsFavorited] = await Promise.all([
+  const [originalActivity, activityIsFavorited] = await Promise.all([
     perf.measure("activity.primary", () =>
       getActivityById(
         activityId,
@@ -892,6 +940,13 @@ export async function ActivityDetailPageContent({
       getViewerActivityFavorite(activityId, viewerProfile?.id),
     ),
   ]);
+
+  const activity = originalActivity ? await localizeContent(originalActivity, locale, "activity") : null;
+  const translationPending = Boolean(originalActivity && isTranslationEnabled() && !(await hasCachedContent(originalActivity, locale, "activity")));
+  if (activity?.publicEvent) {
+    const localizedEvent = await localizeContent({ ...activity.publicEvent, description: "" }, locale, "public_event");
+    activity.publicEvent = { ...activity.publicEvent, title: localizedEvent.title };
+  }
 
   if (!activity || activity.isPersistent) {
     notFound();
@@ -1075,6 +1130,7 @@ export async function ActivityDetailPageContent({
         className="space-y-5 py-4 sm:space-y-6 sm:py-8"
         mobileSafeTop
       >
+        {translationPending ? <ContentTranslationOnView entityId={activity.id} entityType="activity" locale={locale} accessToken={accessToken} /> : null}
         <ActivityDetailRefresh validatedAt={Date.now()} />
         <MobileNavSectionOverride section="activities" />
         <DetailSourceRestore sourceKey="activity_detail" />
@@ -1111,6 +1167,7 @@ export async function ActivityDetailPageContent({
               favoriteCount={activity.favoriteCount}
               isAuthenticated={Boolean(viewerProfile)}
               isFavorited={activityIsFavorited}
+              viewerProfileId={viewerProfile?.id ?? null}
               locale={locale}
               redirectPath={legacyActivityDetailPath}
               sourceSurface="public_event_detail"
@@ -1160,12 +1217,12 @@ export async function ActivityDetailPageContent({
                   {
                     field: "title",
                     label: t.translation.fields.title,
-                    text: activity.title,
+                    text: originalActivity!.title,
                   },
                   {
                     field: "description",
                     label: t.translation.fields.description,
-                    text: activity.description,
+                    text: originalActivity!.description,
                   },
                   {
                     field: "address",
@@ -1266,7 +1323,7 @@ export async function ActivityDetailPageContent({
               </p>
               {activityAddressUrl ? (
                 <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
-                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                   <span className="min-w-0">
                     <span className="block font-semibold text-[#156240]">
                       {t.activityDetail.onlineLink}
@@ -1288,7 +1345,7 @@ export async function ActivityDetailPageContent({
                     }}
                     href={activityAddressUrl}
                   >
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </AnalyticsExternalLink>
                   <ActivityCopyButton
                     analyticsEvent={{
@@ -1370,7 +1427,7 @@ export async function ActivityDetailPageContent({
                   <span className="min-w-0 leading-tight">
                     {ticketCtaLabel}
                   </span>
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </AnalyticsExternalLink>
               ) : null}
               {activity.officialUrl ? (
@@ -1388,7 +1445,7 @@ export async function ActivityDetailPageContent({
                   href={activity.officialUrl}
                 >
                   {publicEventCopy.officialPage}
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </AnalyticsExternalLink>
               ) : null}
               {canCreateTeam ? (
@@ -1489,14 +1546,26 @@ export async function ActivityDetailPageContent({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const participantPreview = activity.participantPreview ?? [];
-  const ticketUrl =
-    activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
-  const ticketLabel = getTicketCtaLabel(
+  const hostLink = getActivityHostLink({
+    url: activity.ticketUrl ?? activity.publicEvent?.ticketUrl,
+    label: activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
     locale,
-    activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
-  );
-  const canOpenTicketLink =
-    Boolean(ticketUrl) && !isCancelled && !isEndedByTime;
+    isCancelled,
+    isEnded: isEndedByTime,
+  });
+  const hostLinkEntry = hostLink ? (
+    <ActivityHostLink
+      link={hostLink}
+      locale={locale}
+      event={{
+        name: "ticket_link_clicked",
+        entityId: detailAnalyticsEntity.entityId,
+        entityType: detailAnalyticsEntity.entityType,
+        sourceSurface: "activity_detail",
+        properties: { item_kind: detailAnalyticsEntity.itemKind },
+      }}
+    />
+  ) : null;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
   const activityVisibilityLabel =
     activity.visibility === "PRIVATE"
@@ -1737,12 +1806,12 @@ export async function ActivityDetailPageContent({
                 {
                   field: "title",
                   label: t.translation.fields.title,
-                  text: activity.title,
+                  text: originalActivity!.title,
                 },
                 {
                   field: "description",
                   label: t.translation.fields.description,
-                  text: activity.description,
+                  text: originalActivity!.description,
                 },
                 {
                   field: "address",
@@ -1790,7 +1859,7 @@ export async function ActivityDetailPageContent({
             )}
           </span>
           <span className="inline-flex max-w-[8.25rem] shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap py-0.5 text-[12px] font-semibold leading-6 text-[#156240] transition active:scale-[0.98]">
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate leading-6">
               {publicEventCopy.linkedEventTitle}
             </span>
@@ -1817,7 +1886,7 @@ export async function ActivityDetailPageContent({
             )}
           >
             {publicEventCopy.linkedEventCta}
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </details>
@@ -1854,12 +1923,12 @@ export async function ActivityDetailPageContent({
                 {
                   field: "title",
                   label: t.translation.fields.title,
-                  text: activity.title,
+                  text: originalActivity!.title,
                 },
                 {
                   field: "description",
                   label: t.translation.fields.description,
-                  text: activity.description,
+                  text: originalActivity!.description,
                 },
                 {
                   field: "address",
@@ -1900,7 +1969,7 @@ export async function ActivityDetailPageContent({
                 )}
               >
                 {publicEventCopy.linkedEventCta}
-                <ExternalLink className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -1917,6 +1986,7 @@ export async function ActivityDetailPageContent({
           : "app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)]",
       )}
     >
+      {translationPending ? <ContentTranslationOnView entityId={activity.id} entityType="activity" locale={locale} accessToken={accessToken} /> : null}
       <ActivityDetailRefresh validatedAt={Date.now()} />
       {isSheetPresentation ? null : (
         <MobileNavSectionOverride section="lobby" />
@@ -2013,6 +2083,7 @@ export async function ActivityDetailPageContent({
               favoriteCount={activity.favoriteCount}
               isAuthenticated={Boolean(viewerProfile)}
               isFavorited={activityIsFavorited}
+              viewerProfileId={viewerProfile?.id ?? null}
               locale={locale}
               redirectPath={lobbyActivityDetailPath}
               sourceSurface="activity_detail"
@@ -2279,6 +2350,7 @@ export async function ActivityDetailPageContent({
             participants={participantPreview}
             variant="bare"
           />
+          <AppOpenEntry locale={locale} target={participantInvitePath} userAgent={userAgent ?? ""} />
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
               activityId={activity.id}
@@ -2330,6 +2402,7 @@ export async function ActivityDetailPageContent({
               </div>
             </TeamDetailMobileCtaSheet>
           ) : null}
+          {hostLinkEntry}
         </div>
       </div>
 
@@ -2463,7 +2536,7 @@ export async function ActivityDetailPageContent({
                   data-detail-source-target={`merchant:${activity.merchant.slug}`}
                 >
                   {t.merchant.viewProfile}
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </ContextualDetailLink>
               </div>
             </div>
@@ -2654,7 +2727,7 @@ export async function ActivityDetailPageContent({
             {protectedLocationNotice ? (
               <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 text-[#156240]">
                 {protectedLocationIsOnline ? (
-                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 )}
@@ -2664,7 +2737,7 @@ export async function ActivityDetailPageContent({
               </p>
             ) : activityAddressUrl ? (
               <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
-                <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="min-w-0">
                   <span className="block font-semibold text-[#156240]">
                     {t.activityDetail.onlineLink}
@@ -2686,7 +2759,7 @@ export async function ActivityDetailPageContent({
                   }}
                   href={activityAddressUrl}
                 >
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </AnalyticsExternalLink>
                 <ActivityCopyButton
                   analyticsEvent={{
@@ -2760,24 +2833,7 @@ export async function ActivityDetailPageContent({
               </span>
             </p>
 
-            {canOpenTicketLink && ticketUrl ? (
-              <AnalyticsExternalLink
-                className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#369758] px-4 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
-                event={{
-                  name: "ticket_link_clicked",
-                  entityId: detailAnalyticsEntity.entityId,
-                  entityType: detailAnalyticsEntity.entityType,
-                  sourceSurface: "activity_detail",
-                  properties: {
-                    item_kind: detailAnalyticsEntity.itemKind,
-                  },
-                }}
-                href={ticketUrl}
-              >
-                <span className="min-w-0 leading-tight">{ticketLabel}</span>
-                <ExternalLink className="h-4 w-4" />
-              </AnalyticsExternalLink>
-            ) : null}
+            {hostLinkEntry}
 
             {autoCreatedTeam?.isClaimable && !isTeamOperator ? (
               <div className="mt-3 rounded-2xl border border-[#8AB68E] bg-[#FEFFF9] p-3">
@@ -2877,6 +2933,9 @@ function ContactOrganizerForm({
   const label = isAuthenticated
     ? t.activityDetail.contactOrganizer
     : t.activityDetail.contactOrganizerLogin;
+  const shortLabel = isAuthenticated
+    ? t.activityDetail.contactOrganizerShort
+    : t.activityDetail.contactOrganizerLoginShort;
 
   return (
     <ActivityOrganizerContactForm
@@ -2885,6 +2944,7 @@ function ContactOrganizerForm({
       hint={t.activityDetail.contactOrganizerHint}
       isAuthenticated={isAuthenticated}
       label={label}
+      shortLabel={shortLabel}
       locale={locale}
       organizerNickname={organizerNickname}
       organizerProfileId={organizerProfileId}

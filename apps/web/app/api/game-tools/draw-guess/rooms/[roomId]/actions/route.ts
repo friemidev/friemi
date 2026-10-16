@@ -8,6 +8,10 @@ const stroke = z.object({
   points: z.array(z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)])).min(1).max(512),
   width: z.number().min(1).max(24),
 });
+const draftOrder = {
+  draftClientId: z.string().uuid().optional(),
+  draftVersion: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
+};
 const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CHOOSE_WORD"), value: z.string().min(1).max(40) }),
   z.object({ type: z.literal("GUESS"), value: z.string().min(1).max(20) }),
@@ -19,13 +23,18 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ADD_STROKE"), stroke }),
   z.object({ type: z.literal("UNDO_STROKE") }),
   z.object({ type: z.literal("CLEAR_STROKES") }),
-  z.object({ type: z.literal("SAVE_CLASSIC_DRAFT"), strokes: z.array(stroke).max(120), inkSeq: z.number().int().min(0).optional() }),
-  z.object({ type: z.literal("SAVE_DRAFT"), strokes: z.array(stroke).max(120) }),
+  z.object({ type: z.literal("SAVE_CLASSIC_DRAFT"), strokes: z.array(stroke).max(120), inkSeq: z.number().int().min(0).optional(), inkCursor: z.object({ clientId: z.string().uuid(), seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER) }).optional(), ...draftOrder }),
+  z.object({ type: z.literal("SAVE_DRAFT"), strokes: z.array(stroke).max(120), ...draftOrder }),
   z.object({ type: z.literal("SUBMIT_STEP"), value: z.string().max(40).optional(), strokes: z.array(stroke).max(120).optional() }),
   z.object({ type: z.literal("VOTE_ARTWORK"), owner: z.number().int().min(0).max(9), step: z.number().int().min(0).max(9) }),
   z.object({ type: z.literal("VOTE"), owner: z.number().int().min(0).max(9), value: z.boolean() }),
   z.object({ type: z.literal("PICK"), owner: z.number().int().min(0).max(9), step: z.number().int().min(0).max(9) }),
-]);
+]).superRefine((value, context) => {
+  if ((value.type === "SAVE_DRAFT" || value.type === "SAVE_CLASSIC_DRAFT") &&
+    (value.draftClientId === undefined) !== (value.draftVersion === undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Draft client and version must be supplied together." });
+  }
+});
 const command = z.object({
   commandId: z.string().min(8).max(64),
   expectedChainStage: z.number().int().min(0).max(10),

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAdminItemCopy } from "@/features/inventory/adminItemCopy";
 import { AdminItemPageFrame } from "@/features/inventory/components/AdminItemPageFrame";
 import {
+  TicketArchiveControl,
   TicketGiftabilityButton,
   UpdateTicketImageForm,
 } from "@/features/inventory/components/AdminTicketForms";
@@ -70,6 +71,12 @@ export default async function AdminItemSettingsPage({
               isGiftable={definition.isGiftable}
               locale={locale}
             />
+          </div>
+        </section>
+        <section className="rounded-2xl bg-paper p-5 sm:p-6">
+          <h2 className="text-lg font-bold text-ink">{itemCopy.settings.archiveTitle}</h2>
+          <div className="mt-3">
+            <TicketArchiveControl definitionId={definition.id} isArchived={Boolean(definition.archivedAt)} key={definition.id} locale={locale} />
           </div>
         </section>
       </div>

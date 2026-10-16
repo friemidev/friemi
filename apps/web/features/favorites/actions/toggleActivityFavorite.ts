@@ -36,6 +36,7 @@ export type ToggleActivityFavoriteState = {
   isFavorited?: boolean;
   ok?: boolean;
   updatedAt?: number;
+  viewerProfileId?: string;
 };
 
 function getString(formData: FormData, key: string) {
@@ -161,17 +162,17 @@ export async function toggleActivityFavoriteAction(
     ),
     perf.measure("activity_lookup", () =>
       prisma.activity.findFirst({
-      where: {
-        id: activityId,
-        organizer: {
-          status: "ACTIVE",
+        where: {
+          id: activityId,
+          organizer: {
+            status: "ACTIVE",
+          },
         },
-      },
-      select: {
-        id: true,
-        organizerId: true,
-        visibility: true,
-      },
+        select: {
+          id: true,
+          organizerId: true,
+          visibility: true,
+        },
       }),
     ),
   ]);
@@ -242,6 +243,7 @@ export async function toggleActivityFavoriteAction(
   }
 
   let isFavorited = false;
+  let favoriteCount = 0;
 
   try {
     await perf.measure("favorite_write", async () => {
@@ -269,6 +271,21 @@ export async function toggleActivityFavoriteAction(
         isFavorited = false;
       }
     });
+    const snapshot = await perf.measure("favorite_snapshot", () =>
+      prisma.activity.findUnique({
+        where: { id: activityId },
+        select: {
+          _count: { select: { favorites: true } },
+          favorites: {
+            where: { userProfileId: viewerProfileId },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      }),
+    );
+    favoriteCount = snapshot?._count.favorites ?? 0;
+    isFavorited = Boolean(snapshot?.favorites.length);
   } catch (error) {
     recordLatency({
       status: "failed",
@@ -281,7 +298,12 @@ export async function toggleActivityFavoriteAction(
       userProfileId: viewerProfileId,
     });
 
-    throw error;
+    console.error("Failed to toggle activity favorite", error);
+    const commonT = await getTranslations({
+      locale,
+      namespace: "favorites.common",
+    });
+    return { formError: commonT("failed") };
   }
 
   recordLatency({
@@ -296,8 +318,10 @@ export async function toggleActivityFavoriteAction(
 
   return {
     formError: undefined,
+    favoriteCount,
     isFavorited,
     ok: true,
     updatedAt: Date.now(),
+    viewerProfileId,
   };
 }

@@ -127,7 +127,9 @@ export default async function FootprintsPage({
     profile && initialTab === "message"
       ? perf
           .measure("messages.friendRoster", () =>
-            getDirectMessageFriendRoster(profile.id),
+            getDirectMessageFriendRoster(profile.id, {
+              includeActivitySignals: false,
+            }),
           )
           .then((friends) => ({ friends, error: null }))
           .catch((error: unknown) => {

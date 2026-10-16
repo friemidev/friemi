@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
+import { getBookingCopy } from "@/features/merchants/bookings/copy";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
   getActivityDateLabel,
@@ -33,6 +34,7 @@ type MobileActivityListRowProps = {
   activity: ActivityCardViewModel;
   className?: string;
   locale: string;
+  onBookingUpdated?: () => void;
   prioritizeImage?: boolean;
   showHostedBadge?: boolean;
 };
@@ -128,10 +130,12 @@ export function MobileActivityListRow({
   activity,
   className,
   locale,
+  onBookingUpdated,
   prioritizeImage = false,
   showHostedBadge = false,
 }: MobileActivityListRowProps) {
   const copy = getRowCopy(locale);
+  const bookingCopy = getBookingCopy(locale);
   const participantText =
     activity.capacity > 0
       ? `${activity.participantCount} / ${activity.capacity}`
@@ -163,6 +167,8 @@ export function MobileActivityListRow({
       label={activity.title}
       locale={locale}
       locked={isPrivateLocked}
+      retainOnClose={!activity.isPersistent}
+      onBookingUpdated={onBookingUpdated}
     >
       <div
         className={cn(
@@ -218,7 +224,9 @@ export function MobileActivityListRow({
             <span className="min-w-0 truncate">
               {isPublicEvent
                 ? activity.city || activity.address
-                : `${participantText} · ${activity.city || copy.participants}`}
+                : activity.isPersistent
+                  ? `${bookingCopy.publicCount(activity.participantCount)} · ${activity.city || copy.participants}`
+                  : `${participantText} · ${activity.city || copy.participants}`}
             </span>
             {!isPublicEvent && showHostedBadge ? (
               <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-semibold leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
@@ -241,6 +249,11 @@ export function MobileActivityListRow({
           />
           <span className="truncate">{getDateLabel(activity, locale)}</span>
         </p>
+        {activity.isPersistent && activity.viewerPendingBookingPartySize ? (
+          <p className="mt-1.5 text-[11px] font-semibold text-forest">
+            {bookingCopy.pendingCard(activity.viewerPendingBookingPartySize)}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex h-full flex-col items-end justify-between py-1">

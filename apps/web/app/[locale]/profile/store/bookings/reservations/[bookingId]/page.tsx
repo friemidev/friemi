@@ -9,8 +9,10 @@ export const metadata = noIndexMetadata;
 
 export default async function OwnerBookingRecordRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; bookingId: string }>;
+  searchParams: Promise<{ sheet?: string }>;
 }) {
   const { locale, bookingId } = await params;
   const profile = await ensureCurrentUserProfile(
@@ -19,5 +21,13 @@ export default async function OwnerBookingRecordRoute({
   );
   const booking = await getOwnerBookingRecord(profile.id, bookingId);
   if (!booking) notFound();
-  return <BookingRecordPage booking={booking} locale={locale} owner />;
+  const embedded = (await searchParams).sheet === "1";
+  return (
+    <BookingRecordPage
+      booking={booking}
+      embedded={embedded}
+      locale={locale}
+      owner
+    />
+  );
 }

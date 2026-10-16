@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLoader } from "@/components/ui/BrandLoader";
 import {
   androidAuthReturnParamName,
@@ -10,7 +10,10 @@ import {
   authRedirectParamName,
 } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
-import { isAndroidAuthReturnPath } from "../androidAuthFlow";
+import {
+  cleanNativeAuthReturnTarget,
+  isAndroidAuthReturnPath,
+} from "../androidAuthFlow";
 
 type AndroidAuthReturnRefreshProps = {
   locale: string;
@@ -76,18 +79,6 @@ function isFriemiNativeWebView() {
   return isFriemiAndroidWebView() || isFriemiIOSWebView();
 }
 
-function withoutAndroidAuthParams(
-  pathname: string,
-  searchParams: URLSearchParams,
-) {
-  const nextParams = new URLSearchParams(searchParams.toString());
-  nextParams.delete(androidAuthReturnParamName);
-  nextParams.delete(androidAuthRetryParamName);
-
-  const query = nextParams.toString();
-  return `${pathname}${query ? `?${query}` : ""}`;
-}
-
 function withAndroidRetryParam(target: string) {
   const url = new URL(target, window.location.origin);
   url.searchParams.set(androidAuthReturnParamName, "1");
@@ -114,11 +105,6 @@ export function AndroidAuthReturnRefresh({
     !isAndroidAuthReturnPath(pathname);
   const hasRetried = searchParams.get(androidAuthRetryParamName) === "1";
 
-  const cleanTarget = useMemo(
-    () => withoutAndroidAuthParams(pathname, searchParams),
-    [pathname, searchParams],
-  );
-
   useEffect(() => {
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       setVisible(false);
@@ -137,6 +123,9 @@ export function AndroidAuthReturnRefresh({
     if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       return;
     }
+    const cleanTarget = cleanNativeAuthReturnTarget(
+      `${routeKey}${window.location.hash}`,
+    );
 
     if (serverAuthenticated) {
       setPhase("finishing");
@@ -196,7 +185,7 @@ export function AndroidAuthReturnRefresh({
       window.clearTimeout(retryTimer);
     };
   }, [
-    cleanTarget,
+    routeKey,
     hasRetried,
     isAndroidAuthReturn,
     isLoaded,

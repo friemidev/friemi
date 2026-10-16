@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+import { hasCachedContent, localizeContent } from "@/features/translations/services/localizedContent";
+import { isTranslationEnabled } from "@/features/translations/services/cloudflare";
+import { ContentTranslationOnView } from "@/features/translations/components/ContentTranslationOnView";
+import { localizeActivityContentTree } from "@/features/translations/services/localizedContent";
+
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import {
@@ -118,7 +123,8 @@ export async function generateMetadata({
   const { locale, publicEventId } = await params;
   const baseUrl = getCanonicalMetadataBaseUrl();
   const publicEventPath = withLocale(locale, `/public-events/${publicEventId}`);
-  const publicEvent = await getPublicEventShareMetadataById(publicEventId);
+  const originalPublicEvent = await getPublicEventShareMetadataById(publicEventId);
+  const publicEvent = originalPublicEvent ? await localizeContent(originalPublicEvent, locale, "public_event") : null;
 
   if (!publicEvent) {
     return buildFallbackShareMetadata(baseUrl, publicEventPath);
@@ -173,9 +179,13 @@ export default async function PublicEventDetailPage({
     ),
     perf.measure("viewer.admin", () => isCurrentUserAdmin()),
   ]);
-  const publicEvent = await perf.measure("publicEvent.detail", () =>
+  const originalPublicEvent = await perf.measure("publicEvent.detail", () =>
     getPublicEventById(publicEventId, viewerProfile?.id),
   );
+
+  const publicEvent = originalPublicEvent ? await localizeContent(originalPublicEvent, locale, "public_event") : null;
+  const translationPending = Boolean(originalPublicEvent && isTranslationEnabled() && !(await hasCachedContent(originalPublicEvent, locale, "public_event")));
+  if (publicEvent) publicEvent.teams = await localizeActivityContentTree(publicEvent.teams, locale);
 
   if (!publicEvent) {
     const activity = await perf.measure("publicEvent.activityFallback", () =>
@@ -288,6 +298,7 @@ export default async function PublicEventDetailPage({
       mobileSafeBottom={!isSheetPresentation}
       mobileSafeTop={!isSheetPresentation}
     >
+      {translationPending ? <ContentTranslationOnView entityId={publicEvent.id} entityType="public_event" locale={locale} /> : null}
       <ActivityDetailRefresh validatedAt={Date.now()} />
       {isSheetPresentation ? null : (
         <MobileNavSectionOverride section="activities" />
@@ -429,12 +440,12 @@ export default async function PublicEventDetailPage({
                 {
                   field: "title",
                   label: appCopy.translation.fields.title,
-                  text: publicEvent.title,
+                  text: originalPublicEvent!.title,
                 },
                 {
                   field: "description",
                   label: appCopy.translation.fields.description,
-                  text: publicEvent.description,
+                  text: originalPublicEvent!.description,
                 },
                 {
                   field: "address",

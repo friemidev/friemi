@@ -1,0 +1,10 @@
+{
+  "exactSourceComponents": true,
+  "characters": 4,
+  "statesPerCharacter": 4,
+  "svgCount": 16,
+  "pngCount": 16,
+  "emptyPngBorders": true,
+  "completeSvgReferences": true,
+  "uniqueGradientPrefixes": true
+}
