@@ -37,6 +37,7 @@ try {
   check(creates[0].roomId && creates[0].roomId === creates[1].roomId, "Concurrent create has one room"); roomId = creates[0].roomId; rooms.push(roomId);
   check((await server.createDdzRoom({ ...creation, locale: "fr" })).error === "COMMAND_ID_USED", "Creation binds request content");
   let host = await get(0);
+  check(host.state.settings.roundCount === 6 && host.state.settings.playSeconds === 60, "New rooms default to six rounds and sixty-second play");
   check((await server.getDdzRoomView(roomId, profiles[3])).error === "NOT_A_MEMBER", "Outsider cannot read private room");
   for (const actor of [1, 2]) check((await server.joinDdzRoom({ commandId: randomUUID(), code: host.code, profileId: profiles[actor], name: `Player ${actor}` })).roomId === roomId, "Friend joins");
   check((await server.joinDdzRoom({ commandId: randomUUID(), code: host.code, profileId: profiles[3], name: "Outside" })).error === "ROOM_FULL", "Room has exactly 3 seats");
@@ -48,6 +49,22 @@ try {
   check(await prisma.ddzCommand.count({ where: { roomId, commandId: ready.commandId } }) === 1, "Ready receipt persists once");
   check((await server.mutateDdzRoom(roomId, profiles[1], ready)).error === "COMMAND_ID_USED", "Receipt actor binding");
   check((await server.mutateDdzRoom(roomId, profiles[0], { ...ready, ready: false })).error === "COMMAND_ID_USED", "Receipt content binding");
+  host = await get(0);
+  const settings = { ...mutation(host), type: "SETTINGS" as const, settings: { roundCount: 3 as const, playSeconds: 90 as const } };
+  check((await server.mutateDdzRoom(roomId, profiles[1], { ...settings, commandId: randomUUID() })).error === "HOST_ONLY", "Only the current host can save room settings");
+  check((await server.mutateDdzRoom(roomId, profiles[3], { ...settings, commandId: randomUUID() })).error === "NOT_A_MEMBER", "Outsiders cannot save settings");
+  const saves = await Promise.all([server.mutateDdzRoom(roomId, profiles[0], settings), server.mutateDdzRoom(roomId, profiles[0], settings)]);
+  check(saves.every(result => result.room?.state.settings.roundCount === 3), "Duplicate settings save persists one intended value");
+  host = await get(0);
+  check(host.state.settings.playSeconds === 90 && host.seats.every(player => !player.ready), "Actual setting changes clear every player's readiness");
+  check((await prisma.gameToolRoomMember.findMany({ where: { roomId } })).every(member => !member.readyAt), "Setting change clears member readiness too");
+  check(await prisma.ddzCommand.count({ where: { roomId, commandId: settings.commandId } }) === 1, "Settings receipt persists exactly once");
+  check((await server.mutateDdzRoom(roomId, profiles[0], { ...settings, settings: { roundCount: 12, playSeconds: 30 } })).error === "COMMAND_ID_USED", "Settings receipt binds the complete settings body");
+  check((await server.mutateDdzRoom(roomId, profiles[0], { ...settings, commandId: randomUUID() })).error === "STALE_COMMAND", "Stale settings writes cannot overwrite newer state");
+  view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "READY", ready: true }));
+  check(view(await server.mutateDdzRoom(roomId, profiles[0], settings)).seats[0].ready, "Receipt replay does not clear readiness again");
+  host = await get(0);
+  check(view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: host.state.settings })).seats[0].ready, "Saving identical settings preserves readiness");
   for (const actor of [1, 2]) { const r = await get(actor); view(await server.mutateDdzRoom(roomId, profiles[actor], { ...mutation(r), type: "READY", ready: true })); }
   host = await get(0);
   view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "CHARACTER", catId: "artist" }));
@@ -58,6 +75,8 @@ try {
   check(starts.every(r => r.room), "Duplicate start acknowledges same game");
   const views = await Promise.all([get(0), get(1), get(2)]); host = views[0];
   check(host.state.gameNo === 1 && host.state.phase === "BIDDING", "One game started");
+  check(host.state.match.status === "ACTIVE" && host.state.match.roundIndex === 1 && host.state.match.roundCount === 3, "First START creates an active three-round match");
+  check((await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 1, playSeconds: 30 } })).error === "WRONG_PHASE", "Settings cannot change during active play");
   check(new Set(views.flatMap(v => v.state.hand.map(c => c.id))).size === 51, "Three distinct private 17-card hands");
   check(views.every(v => !v.state.bottomCards.length && v.state.bottomCardCount === 3 && !v.state.remainingHands), "Bottom and opponent hands remain hidden");
   check(!JSON.stringify(host).includes('"hands":') && !JSON.stringify(host).includes('"profileId":') && !JSON.stringify(host).includes(profiles[1]), "Private fields and account IDs do not escape");
@@ -67,6 +86,7 @@ try {
   const bid = command(await get(bidSeat), { type: "BID", score: 3 });
   view(await server.commandDdzRoom(roomId, profiles[bidSeat], bid));
   let current = await get(bidSeat);
+  check(current.state.deadlineAt! - current.serverNow > 89_000 && current.state.rules.playSeconds === 90, "Configured play duration reaches the authoritative turn deadline");
   check(current.state.hand.length === 20 && current.state.bottomCards.length === 3, "Landlord receives public bottom cards");
   const firstCard = current.state.hand[0].id;
   const play = command(current, { type: "PLAY", cardIds: [firstCard] });
@@ -108,6 +128,7 @@ try {
   check(finishes.every(r => r.room?.state.phase === "RESULT"), "Concurrent terminal play reaches result once");
   check(await prisma.ddzRound.count({ where: { roomId } }) === 1, "One immutable result summary");
   host = await get(0); check(host.state.remainingHands?.length === 3 && host.state.result?.scores.reduce((sum, s) => sum + s.delta, 0) === 0, "Result reveals remaining hands and zero-sum scores");
+  check(host.state.match.rounds.length === 1 && host.state.match.players.every(player => player.totalScore === host.state.result!.scores.find(score => score.seat === player.seat)!.delta), "Duplicate terminal request adds one cumulative result");
   const history = await server.getDdzRoomHistory(roomId, profiles[1]); check(history.rounds.length === 1 && !JSON.stringify(history).includes('"hands":') && !JSON.stringify(history).includes(profiles[0]), "History only exposes score summary");
   check((await server.getDdzRoomHistory(roomId, profiles[3])).rounds.length === 0, "Outsider cannot read participant history");
   const deadlineRow = await prisma.gameToolRoom.findUniqueOrThrow({ where: { id: roomId }, omit: { ddzDeadlineAt: false } });
@@ -116,10 +137,18 @@ try {
   await server.sweepDueDdzRooms(); host = await get(0);
   check(host.state.phase === "LOBBY" && host.seats.every(s => !s.ready), "Result timeout returns lobby with new readiness required");
   check(host.seats[0].catId === "artist", "Appearance survives round boundary");
+  check(host.state.match.status === "ACTIVE" && host.state.match.rounds.length === 1 && host.state.settings.playSeconds === 90, "Between-round lobby preserves score and settings");
+  check((await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 1, playSeconds: 30 } })).error === "SETTINGS_LOCKED", "Started match settings remain locked between rounds");
+  const scoresBeforeCosmetic = host.state.match.players.map(player => player.totalScore).join(",");
+  view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "READY", ready: true }));
+  host = await get(0);
+  host = view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "CHARACTER", catId: "baker" }));
+  check(host.seats[0].ready && host.state.match.players.map(player => player.totalScore).join(",") === scoresBeforeCosmetic, "A cosmetic cat change preserves ready and cumulative scores");
   check(view(await server.commandDdzRoom(roomId, profiles[0], finish)).state.phase === "LOBBY", "Old accepted command cannot alter next lobby");
   for (const actor of [0, 1, 2]) { const r = await get(actor); view(await server.mutateDdzRoom(roomId, profiles[actor], { ...mutation(r), type: "READY", ready: true })); }
   host = await get(0); view(await server.commandDdzRoom(roomId, profiles[0], command(host, { type: "START" })));
   host = await get(0); check(host.state.gameNo === 2 && host.state.turnId > afterSweep.turnId, "Next game preserves monotonic room turn identity");
+  check(host.state.match.roundIndex === 2 && host.state.match.rounds.length === 1, "Next START advances within the existing match");
   await fixture(s => { s.phase = "PLAYING"; s.currentSeat = 0; s.landlordSeat = 0; s.targetPlay = null; s.consecutivePasses = 0; s.hands = { 0: [deck[0]], 1: [deck[1]], 2: [deck[2]] }; s.playedCards = deck.slice(3); s.bid.highestScore = 1; s.playCounts = { 0: 0, 1: 0, 2: 0 }; s.result = null; s.deadlineAt = Date.now() + 30_000; });
   host = await get(0); view(await server.commandDdzRoom(roomId, profiles[0], command(host, { type: "PLAY", cardIds: [deck[0]] })));
   host = await get(0); const returning = { ...mutation(host), type: "RETURN" as const };
@@ -139,6 +168,10 @@ try {
   check((await server.joinDdzRoom({ commandId: randomUUID(), code: host.code, profileId: profiles[3], name: "Newcomer" })).roomId === roomId, "A new person may occupy a released lobby seat");
   const newcomer = view(await server.getDdzRoomView(roomId, profiles[3]));
   check(newcomer.state.result === null && (await server.getDdzRoomHistory(roomId, profiles[3])).rounds.length === 0, "Reused seat does not inherit old participant result or history");
+  check(newcomer.state.match.status === "READY" && newcomer.state.match.rounds.length === 0 && newcomer.state.match.players.every(player => player.totalScore === 0), "Changed account roster starts an empty score ledger");
+  check(!JSON.stringify(newcomer.state.match).includes(profiles[1]) && !JSON.stringify(newcomer.state.match).includes("profileId") && newcomer.state.settings.roundCount === 3, "Newcomer match contains no old account identity and retains room settings");
+  const departedHistory = await server.getDdzRoomHistory(roomId, profiles[1]);
+  check(departedHistory.rounds[0].match?.rounds.length === 2 && !JSON.stringify(departedHistory).includes("profileId"), "Departed account retains the original cumulative history without account IDs");
   await prisma.gameToolRoomMember.updateMany({ where: { roomId, profileId: profiles[0] }, data: { lastSeenAt: new Date(Date.now() - 90_000) } });
   check(view(await server.getDdzRoomView(roomId, profiles[3])).hostSeat === newcomer.viewerSeat, "Online member takes over a stale host under room lock");
   const staleHost = await get(0);
@@ -154,6 +187,75 @@ try {
   const duplicateClose = await server.mutateDdzRoom(roomId, profiles[3], close);
   check(duplicateClose.ok && !duplicateClose.room, "Closed-room command replay returns minimal receipt");
   check((await server.getDdzRoomView(roomId, profiles[3])).error === "ROOM_NOT_FOUND", "Closed room has no accessible snapshot");
+
+  // Use the actual lock, receipts and settlement persistence for a complete
+  // twelve-round match. Only private hands are shortened in the local fixture.
+  const matchCreation = await server.createDdzRoom({ commandId: randomUUID(), profileId: profiles[0], name: "Peach", locale: "en" });
+  check(matchCreation.roomId, "Create complete-match fixture"); roomId = matchCreation.roomId; rooms.push(roomId);
+  host = await get(0);
+  for (const actor of [1, 2]) check((await server.joinDdzRoom({ commandId: randomUUID(), code: host.code, profileId: profiles[actor], name: `Player ${actor}` })).roomId === roomId, "Complete-match friend joins");
+  async function readyAll() {
+    for (const actor of [0, 1, 2]) {
+      const room = await get(actor);
+      view(await server.mutateDdzRoom(roomId, profiles[actor], { ...mutation(room), type: "READY", ready: true }));
+    }
+  }
+  async function returnAll() {
+    for (const actor of [0, 1, 2]) {
+      const room = await get(actor);
+      view(await server.mutateDdzRoom(roomId, profiles[actor], { ...mutation(room), type: "RETURN" }));
+    }
+    check((await get(0)).state.phase === "LOBBY", "All participants return to one common lobby");
+  }
+  async function finishRound() {
+    await fixture(s => { s.phase = "PLAYING"; s.currentSeat = 0; s.landlordSeat = 0; s.targetPlay = null; s.consecutivePasses = 0; s.hands = { 0: [deck[0]], 1: [deck[1]], 2: [deck[2]] }; s.playedCards = deck.slice(3); s.bid.highestScore = 1; s.playCounts = { 0: 0, 1: 0, 2: 0 }; s.result = null; s.deadlineAt = Date.now() + 30_000; });
+    const ending = command(await get(0), { type: "PLAY", cardIds: [deck[0]] });
+    const outcomes = await Promise.all([server.commandDdzRoom(roomId, profiles[0], ending), server.commandDdzRoom(roomId, profiles[0], ending)]);
+    check(outcomes.every(outcome => outcome.room?.state.phase === "RESULT"), "Duplicate final plays share one settlement");
+    return get(0);
+  }
+  host = await get(0);
+  view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 1, playSeconds: 30 } }));
+  await readyAll(); host = await get(0);
+  const startSettingsRace = await Promise.all([
+    server.commandDdzRoom(roomId, profiles[0], command(host, { type: "START" })),
+    server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 3, playSeconds: 90 } }),
+  ]);
+  check(startSettingsRace.filter(outcome => !outcome.error).length === 1, "START and settings save serialize with one accepted command");
+  host = await get(0);
+  if (host.state.phase === "LOBBY") {
+    check(host.seats.every(seat => !seat.ready), "Winning settings save invalidates all readiness before START");
+    host = view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 1, playSeconds: 30 } }));
+    await readyAll(); host = await get(0);
+    view(await server.commandDdzRoom(roomId, profiles[0], command(host, { type: "START" })));
+  }
+  host = await get(0);
+  check(host.state.match.roundCount === 1 && host.state.rules.playSeconds === 30, "Started round freezes the accepted settings atomically");
+  host = await finishRound();
+  check(host.state.match.status === "COMPLETE" && host.state.match.rounds.length === 1, "One-round match completes on its first settlement");
+  const firstMatchNo = host.state.match.matchNo;
+  await returnAll(); host = await get(0);
+  check(host.state.match.status === "COMPLETE" && host.state.match.rounds.length === 1, "Final return preserves the completed score ledger");
+  host = view(await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "SETTINGS", settings: { roundCount: 12, playSeconds: 60 } }));
+  check(host.state.settings.roundCount === 12 && host.state.match.roundCount === 1, "Completed match allows next-match settings without rewriting past results");
+  for (let roundIndex = 1; roundIndex <= 12; roundIndex++) {
+    await readyAll(); host = await get(0);
+    host = view(await server.commandDdzRoom(roomId, profiles[0], command(host, { type: "START" })));
+    check(host.state.match.matchNo === firstMatchNo + 1 && host.state.match.roundIndex === roundIndex && host.state.match.rounds.length === roundIndex - 1, "Next rounds stay in the same fresh match with a bounded ledger");
+    if (roundIndex === 1) check(host.state.match.players.every(player => player.totalScore === 0), "New match resets every participant's accumulated score");
+    host = await finishRound();
+    check(host.state.match.rounds.length === roundIndex && host.state.match.players.reduce((total, player) => total + player.totalScore, 0) === 0, "Cumulative ledger adds exactly one zero-sum round");
+    check(host.state.match.status === (roundIndex === 12 ? "COMPLETE" : "ACTIVE"), "Only the configured final round completes the match");
+    await returnAll();
+  }
+  const completeHistory = await server.getDdzRoomHistory(roomId, profiles[1]);
+  check(completeHistory.rounds.length === 13 && completeHistory.rounds[0].match?.status === "COMPLETE" && completeHistory.rounds[0].match.rounds.length === 12, "Persisted final summary contains all twelve match rounds");
+  check(completeHistory.rounds.at(-1)?.match?.roundCount === 1, "Prior match history is immutable when room settings change");
+  check(!JSON.stringify(completeHistory).includes("profileId") && !JSON.stringify(completeHistory).includes('"hands"'), "Complete-match history contains no private accounts or hands");
+  check((await server.getDdzRoomHistory(roomId, profiles[3])).rounds.length === 0, "Unrelated account cannot access full-match history");
+  check(await prisma.ddzRound.count({ where: { roomId } }) === 13, "Duplicate settlement produces one persisted row per room game");
+  host = await get(0);
+  check((await server.mutateDdzRoom(roomId, profiles[0], { ...mutation(host), type: "CLOSE" })).ok, "Complete-match fixture closes cleanly");
   const emptyCreation = await server.createDdzRoom({ commandId: randomUUID(), profileId: profiles[3], name: "Newcomer", locale: "en" });
   check(emptyCreation.roomId, "Create empty-lobby cleanup fixture"); const emptyId = emptyCreation.roomId; rooms.push(emptyId);
   const emptyHost = view(await server.getDdzRoomView(emptyId, profiles[3]));

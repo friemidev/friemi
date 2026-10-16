@@ -3,6 +3,11 @@ export { isUnoSameOrigin as isDdzSameOrigin } from "./unoRequest";
 const counter = z.number().int().min(0).max(2_147_483_647);
 export const ddzPhaseSchema = z.enum(["LOBBY", "BIDDING", "PLAYING", "RESULT", "CLOSED"]);
 export const ddzMutationSchema = z.object({ commandId: z.string().uuid(), expectedRevision: counter, gameNo: counter, expectedPhase: ddzPhaseSchema });
+export const ddzRoomSettingsSchema = z.object({
+  roundCount: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]),
+  playSeconds: z.union([z.literal(30), z.literal(60), z.literal(90)]),
+}).strict();
+export const ddzSettingsMutationSchema = ddzMutationSchema.extend({ settings: ddzRoomSettingsSchema }).strict();
 export const ddzCommandSchema = z.object({
   commandId: z.string().uuid(), gameNo: counter, dealNo: counter, turnId: counter, expectedPhase: ddzPhaseSchema,
   handVersion: counter.optional(), expectedRevision: counter.optional(),

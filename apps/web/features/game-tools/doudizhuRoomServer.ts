@@ -4,12 +4,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createGameToolPrivateToken, createUniqueGameToolRoomCode } from "./gameToolRooms";
 import { fallbackDrawGuessCatId, isDrawGuessCatId } from "./drawGuessCats";
-import { advanceDdzDeadline, applyDdzAction, createDdzState, getDdzViewerState, startDdzGame } from "./doudizhuEngine";
+import { advanceDdzDeadline, applyDdzAction, createDdzState, createDdzLobbyState, getDdzViewerState, getDdzMatchView, getDdzRoomSettings, updateDdzRoomSettings, startDdzGame } from "./doudizhuEngine";
 import { createDdzDeck } from "./doudizhuCards";
 import { broadcastDdzRoomChange } from "./doudizhuRealtimeServer";
 import { ddzCommandConflict, ddzMutationConflict, ddzReceiptError, hashDdzRequest } from "./doudizhuProtocol";
 import type { DdzRoomCommand, DdzRoomMutation, DdzRoomView, DdzReaction, DdzRoundSummary } from "./doudizhuRoomTypes";
-import type { DdzState } from "./doudizhuTypes";
+import type { DdzRoomSettings, DdzState } from "./doudizhuTypes";
 
 type Tx = Prisma.TransactionClient;
 const RETRIES = 6, PRESENCE_MS = 35_000, HOST_STALE_MS = 60_000, EMPTY_MS = 30 * 60_000;
@@ -49,8 +49,7 @@ function view(room: Room, actor: string, now: number): DdzRoomView | null {
 function shuffle() { const ids = createDdzDeck().map(c => c.id); for (let i = ids.length - 1; i > 0; i--) { const j = randomInt(i + 1); [ids[i], ids[j]] = [ids[j], ids[i]]; } return ids; }
 function lobbyState(room: Room, seats = room.seats): DdzState {
   const old = stateOf(room)!;
-  const next = createDdzState(seats.map(s => ({ seat: s.seatNumber, name: s.displayName, profileId: s.profileId ?? undefined, catId: cat(s, room.id) })));
-  return { ...next, gameNo: old.gameNo, turnId: old.turnId, eventSeq: old.eventSeq, events: old.events, result: old.result, handVersions: old.handVersions };
+  return createDdzLobbyState(old, seats.map(s => ({ seat: s.seatNumber, name: s.displayName, profileId: s.profileId ?? undefined, catId: cat(s, room.id) })));
 }
 async function persist(tx: Tx, room: Room, next: DdzState, now: number, data: Prisma.GameToolRoomUncheckedUpdateInput = {}) {
   const before = stateOf(room)!;
@@ -64,7 +63,7 @@ async function persist(tx: Tx, room: Room, next: DdzState, now: number, data: Pr
   const events = next.events.filter(event => event.id > before.eventSeq);
   if (events.length) await tx.ddzEvent.createMany({ data: events.map(event => ({ roomId: room.id, eventSeq: event.id, gameNo: event.gameNo, payload: json(event), createdAt: new Date(event.at) })), skipDuplicates: true });
   if (next.result && (!before.result || before.result.gameNo !== next.result.gameNo)) {
-    const summary = { gameNo: next.gameNo, rulesetVersion: next.rulesetVersion, rules: next.rules, result: next.result, players: room.seats.map(s => ({ seat: s.seatNumber, name: s.displayName, catId: cat(s, room.id) })) };
+    const summary = { gameNo: next.gameNo, rulesetVersion: next.rulesetVersion, rules: next.rules, result: next.result, match: getDdzMatchView(next), players: room.seats.map(s => ({ seat: s.seatNumber, name: s.displayName, catId: cat(s, room.id) })) };
     await tx.ddzRound.create({ data: { roomId: room.id, gameNo: next.gameNo, participantProfileIds: room.seats.flatMap(s => s.profileId ? [s.profileId] : []), summary: json(summary), finishedAt: new Date(next.result.finishedAt) } });
   }
 }
@@ -251,7 +250,7 @@ export async function commandDdzRoom(roomId: string, actor: string, command: Ddz
   });
 }
 
-type Mutation = DdzRoomMutation & ({ type: "READY"; ready: boolean } | { type: "CHARACTER"; catId: string } | { type: "LEAVE" } | { type: "RETURN" } | { type: "REMOVE"; targetSeat: number } | { type: "CLOSE" });
+type Mutation = DdzRoomMutation & ({ type: "READY"; ready: boolean } | { type: "SETTINGS"; settings: DdzRoomSettings } | { type: "CHARACTER"; catId: string } | { type: "LEAVE" } | { type: "RETURN" } | { type: "REMOVE"; targetSeat: number } | { type: "CLOSE" });
 export async function mutateDdzRoom(roomId: string, actor: string, mutation: Mutation): Promise<Outcome> {
   const hash = hashDdzRequest("mutation", mutation);
   return transact(roomId, async (tx, original, now) => {
@@ -262,8 +261,8 @@ export async function mutateDdzRoom(roomId: string, actor: string, mutation: Mut
     let room = await expire(tx, await refresh(original, tx), now), state = stateOf(room)!;
     if (!memberSeat(room, actor)) return { error: "NOT_A_MEMBER" };
     let error: string | null = ddzMutationConflict(state, room.revision, mutation);
-    if (!error && ["READY", "CHARACTER", "REMOVE"].includes(mutation.type) && state.phase !== "LOBBY") error = "WRONG_PHASE";
-    if (!error && ["REMOVE", "CLOSE"].includes(mutation.type) && room.hostId !== actor) error = "HOST_ONLY";
+    if (!error && ["READY", "CHARACTER", "REMOVE", "SETTINGS"].includes(mutation.type) && state.phase !== "LOBBY") error = "WRONG_PHASE";
+    if (!error && ["REMOVE", "CLOSE", "SETTINGS"].includes(mutation.type) && room.hostId !== actor) error = "HOST_ONLY";
     if (!error && mutation.type === "CLOSE" && !["LOBBY", "RESULT"].includes(state.phase)) error = "WRONG_PHASE";
     if (!error && mutation.type === "CHARACTER" && !isDrawGuessCatId(mutation.catId)) error = "INVALID_CHARACTER";
     if (!error && mutation.type === "RETURN" && state.phase !== "RESULT") error = "WRONG_PHASE";
@@ -271,6 +270,17 @@ export async function mutateDdzRoom(roomId: string, actor: string, mutation: Mut
       await tx.gameToolRoomMember.updateMany({ where: { roomId, profileId: actor, leftAt: null }, data: { lastSeenAt: new Date(now) } });
       room = await refresh(room, tx);
       switch (mutation.type) {
+        case "SETTINGS": {
+          const changed = updateDdzRoomSettings(state, mutation.settings);
+          if (changed.error) { error = changed.error; break; }
+          const before = getDdzRoomSettings(state), after = getDdzRoomSettings(changed.state);
+          if (before.roundCount !== after.roundCount || before.playSeconds !== after.playSeconds) {
+            await tx.gameToolSeat.updateMany({ where: { roomId }, data: { readyAt: null } });
+            await tx.gameToolRoomMember.updateMany({ where: { roomId }, data: { readyAt: null } });
+            await persist(tx, room, changed.state, now);
+          }
+          break;
+        }
         case "READY":
           await tx.gameToolSeat.update({ where: { id: seat.id }, data: { readyAt: mutation.ready ? new Date(now) : null } });
           await tx.gameToolRoomMember.updateMany({ where: { roomId, profileId: actor }, data: { readyAt: mutation.ready ? new Date(now) : null } });

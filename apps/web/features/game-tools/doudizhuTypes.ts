@@ -9,13 +9,27 @@ export type DdzPatternType = "SINGLE" | "PAIR" | "TRIPLE" | "TRIPLE_SINGLE" | "T
 export type DdzPlay = { type: DdzPatternType; cardIds: DdzCardId[]; mainRank: number; chainLength: number; cardCount: number };
 export type DdzTargetPlay = DdzPlay & { seat: DdzSeat };
 export type DdzPlayer = { seat: DdzSeat; name: string; profileId?: string; catId?: string };
-/** 30 seconds is accepted for active games saved before the 60-second default. */
-export type DdzRules = { bidSeconds: 20; playSeconds: 30 | 60; managedSeconds: 4; resultSeconds: 60; multiplierCap: 64 };
+export type DdzRoundCount = 1 | 3 | 6 | 12;
+export type DdzPlaySeconds = 30 | 60 | 90;
+export type DdzRoomSettings = { roundCount: DdzRoundCount; playSeconds: DdzPlaySeconds };
+export type DdzRules = { bidSeconds: 20; playSeconds: DdzPlaySeconds; managedSeconds: 4; resultSeconds: 60; multiplierCap: 64 };
 export type DdzBidState = { startSeat: DdzSeat; highestScore: 0 | 1 | 2 | 3; highestSeat: DdzSeat | null; bids: { seat: DdzSeat; score: 0 | 1 | 2 | 3 }[] };
 export type DdzResult = {
   gameNo: number; winnerSeat: DdzSeat; winnerSide: "landlord" | "farmers"; landlordSeat: DdzSeat;
   baseScore: number; bombCount: number; spring: "spring" | "antiSpring" | null; multiplier: number; capped: boolean;
   scores: { seat: DdzSeat; delta: number }[]; finishedAt: number;
+};
+export type DdzMatchStatus = "READY" | "ACTIVE" | "COMPLETE";
+export type DdzMatchRound = { roundIndex: number; gameNo: number; result: DdzResult };
+/** Account identity stays in server state; viewers receive only DdzMatchView. */
+export type DdzMatchState = {
+  matchNo: number; status: DdzMatchStatus; roundIndex: number; roundCount: DdzRoundCount;
+  roster: DdzPlayer[]; rounds: DdzMatchRound[];
+};
+export type DdzMatchView = {
+  matchNo: number; status: DdzMatchStatus; roundIndex: number; roundCount: DdzRoundCount;
+  players: { seat: DdzSeat; name: string; catId?: string; totalScore: number; rank: number }[];
+  rounds: DdzMatchRound[];
 };
 export type DdzEvent = {
   id: number; gameNo: number; dealNo: number; turnId: number; at: number;
@@ -24,6 +38,8 @@ export type DdzEvent = {
 };
 export type DdzState = {
   schemaVersion: 1; rulesetVersion: typeof DDZ_RULESET_VERSION; rules: DdzRules;
+  /** Optional only to read rooms persisted before match settings existed. */
+  settings?: DdzRoomSettings; match?: DdzMatchState;
   gameNo: number; dealNo: number; turnId: number; trickId: number; eventSeq: number; phase: DdzPhase;
   players: DdzPlayer[]; hands: Record<number, DdzCardId[]>; handVersions: Record<number, number>;
   bottomCards: DdzCardId[]; landlordSeat: DdzSeat | null; bid: DdzBidState; currentSeat: DdzSeat | null;
@@ -33,6 +49,7 @@ export type DdzState = {
 };
 export type DdzViewerState = {
   schemaVersion: 1; rulesetVersion: typeof DDZ_RULESET_VERSION; rules: DdzRules; phase: DdzPhase;
+  settings: DdzRoomSettings; match: DdzMatchView;
   gameNo: number; dealNo: number; turnId: number; trickId: number; eventSeq: number;
   players: { seat: DdzSeat; name: string; catId?: string; cardCount: number; managed: boolean; gameRole: "landlord" | "farmer" | null }[];
   selfSeat: DdzSeat; hand: DdzCard[]; handVersion: number; bottomCards: DdzCard[]; bottomCardCount: number;
@@ -45,7 +62,7 @@ export type DdzAction =
   | { type: "PLAY"; cardIds: DdzCardId[]; handVersion?: number }
   | { type: "PASS" }
   | { type: "SET_MANAGED"; managed: boolean };
-export type DdzErrorCode = "INVALID_PLAYERS" | "INVALID_DECK" | "RANDOMNESS_REQUIRED" | "WRONG_PHASE" | "NOT_A_PLAYER" | "NOT_YOUR_TURN" | "DEADLINE_EXPIRED" | "STALE_HAND" | "CARD_NOT_FOUND" | "INVALID_COMBINATION" | "CANNOT_BEAT" | "MUST_LEAD" | "INVALID_BID" | "INVALID_ACTION";
+export type DdzErrorCode = "INVALID_PLAYERS" | "INVALID_DECK" | "RANDOMNESS_REQUIRED" | "WRONG_PHASE" | "NOT_A_PLAYER" | "NOT_YOUR_TURN" | "DEADLINE_EXPIRED" | "STALE_HAND" | "CARD_NOT_FOUND" | "INVALID_COMBINATION" | "CANNOT_BEAT" | "MUST_LEAD" | "INVALID_BID" | "INVALID_ACTION" | "INVALID_SETTINGS" | "SETTINGS_LOCKED" | "MATCH_ROUND_PENDING";
 export type DdzActionResult = { state: DdzState; error?: DdzErrorCode };
 /** The server supplies a new, shuffled full deck only when a redeal is accepted. */
 export type DdzDealSource = () => DdzCardId[];

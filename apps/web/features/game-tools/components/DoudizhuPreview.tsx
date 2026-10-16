@@ -6,10 +6,12 @@ import {
   advanceDdzDeadline,
   createDdzDeck,
   createDdzState,
+  createDdzLobbyState,
   getDdzViewerState,
   startDdzGame,
+  updateDdzRoomSettings,
 } from "../doudizhuEngine";
-import type { DdzAction, DdzState } from "../doudizhuTypes";
+import type { DdzAction, DdzRoomSettings, DdzState } from "../doudizhuTypes";
 import type {
   DdzReaction,
   DdzRoomView,
@@ -124,6 +126,7 @@ export function DoudizhuPreview({
         finishedAt: new Date(result.finishedAt).toISOString(),
         rulesetVersion: state.rulesetVersion,
         result,
+        match: view.match,
         players: state.players.map((player) => ({
           seat: player.seat,
           name: player.name,
@@ -132,7 +135,7 @@ export function DoudizhuPreview({
       },
       ...previous,
     ]);
-  }, [state.result, state.rulesetVersion, state.players, cats]);
+  }, [state.result, state.rulesetVersion, state.players, cats, view.match]);
   const room: DdzRoomView = {
     id: "local-preview",
     code: "PREVIEW",
@@ -188,11 +191,10 @@ export function DoudizhuPreview({
     setState(
       startDdzGame(
         {
-          ...lobby(locale),
-          gameNo: state.gameNo,
-          turnId: state.turnId,
-          eventSeq: state.eventSeq,
-          handVersions: state.handVersions,
+          ...createDdzLobbyState(state, state.players),
+          match: undefined,
+          result: null,
+          events: [],
         },
         Date.now(),
         { deck: deck(next), firstBidSeat: 0 },
@@ -203,16 +205,34 @@ export function DoudizhuPreview({
     setEntry(false);
   }
   function returnLobby() {
-    setState({
-      ...lobby(locale),
-      gameNo: state.gameNo,
-      turnId: state.turnId,
-      eventSeq: state.eventSeq,
-      handVersions: state.handVersions,
-    });
+    const next = createDdzLobbyState(state, state.players);
+    // The preview toolbar may abandon a live fixture; RESULT returns keep totals.
+    if (state.phase === "BIDDING" || state.phase === "PLAYING") {
+      next.match = undefined;
+      next.result = null;
+      next.events = [];
+    }
+    setState(next);
     setReady([false, false, false]);
     setError("");
     setReactions([]);
+  }
+  function settings(next: DdzRoomSettings) {
+    if (seat !== room.hostSeat) {
+      setError(doudizhuErrorMessage("HOST_ONLY", locale));
+      return false;
+    }
+    const result = updateDdzRoomSettings(state, next);
+    if (result.error) {
+      setError(doudizhuErrorMessage(result.error, locale));
+      return false;
+    }
+    if (result.state !== state) {
+      setState(result.state);
+      setReady([false, false, false]);
+    }
+    setError("");
+    return true;
   }
   if (entry)
     return (
@@ -277,14 +297,15 @@ export function DoudizhuPreview({
             room={room}
             locale={locale}
             error={error}
+            onSettings={settings}
             onReady={(value) =>
               setReady((prev) => prev.map((v, i) => (i === seat ? value : v)))
             }
             onStart={() => {
-              if (ready.every(Boolean))
+              if (seat === room.hostSeat && ready.every(Boolean))
                 setState(
                   startDdzGame(state, Date.now(), {
-                    deck: deck(seed),
+                    deck: deck(seed + state.gameNo),
                     firstBidSeat: 0,
                   }).state,
                 );
@@ -302,9 +323,17 @@ export function DoudizhuPreview({
                 },
               ])
             }
-            onCharacter={(cat) =>
-              setCats((prev) => prev.map((v, i) => (i === seat ? cat : v)))
-            }
+            onCharacter={(cat) => {
+              setCats((prev) => prev.map((v, i) => (i === seat ? cat : v)));
+              setState((previous) =>
+                createDdzLobbyState(
+                  previous,
+                  previous.players.map((player) =>
+                    player.seat === seat ? { ...player, catId: cat } : player,
+                  ),
+                ),
+              );
+            }}
           />
         ) : (
           <DoudizhuOrientationGate

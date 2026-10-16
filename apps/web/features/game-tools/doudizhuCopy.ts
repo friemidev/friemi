@@ -88,6 +88,31 @@ const en = {
   returnLobby: "Return to lobby",
   returning: "Waiting for everyone to return",
   history: "Round history",
+  roomSettings: "Room settings",
+  roundsSetting: "Rounds per match",
+  playTimeSetting: "Time per turn",
+  saveSettings: "Save settings",
+  settingsSaved: "Settings saved. Everyone must ready up again.",
+  settingsNote: "Saving changes resets everyone’s ready status.",
+  settingsLocked: "Settings are locked until this match ends.",
+  settingsHost: "The host can change these settings before the match.",
+  scoreboard: "Scoreboard",
+  matchResults: "Match standings",
+  matchComplete: "Match complete",
+  newMatch: "Play another match",
+  newMatchNote: "A new match starts with zero points for everyone.",
+  continueRound: "Deal round",
+  nextRound: "Next round",
+  completedRounds: "Rounds completed",
+  ranking: "Rank",
+  player: "Player",
+  totalScore: "Total",
+  wins: "Wins",
+  lastRound: "Last round",
+  roundDetails: "Round by round",
+  noMatchRounds: "The scores will appear after the first round.",
+  matchRoundsUnit: "rounds",
+  secondsUnit: "seconds",
   noHistory: "Your completed rounds will appear here.",
   remaining: "Remaining cards",
   score: "Score",
@@ -125,7 +150,7 @@ const en = {
     "Beat the same type and length with a higher main rank. Four of a kind is a bomb; both jokers form the rocket. Two passes return the lead to the last player who played.",
     "Single airplane wings must have different ranks and cannot include both jokers. Pair wings must be distinct. Four with two singles may use a pair, but not both jokers.",
     "The first empty hand wins for its side. Score = bid × multiplier. Landlord gains or loses twice that amount; each farmer gains or loses once. Bombs, rocket and spring double the multiplier, up to ×64.",
-    "Bidding lasts 20 seconds and a turn 60 seconds. A bidding timeout passes the bid. Play timeouts enable automatic play: always pass when following, or lead the lowest single. Automatic turns take 4 seconds.",
+    "Choose 1, 3, 6 or 12 rounds per match (6 by default). Bidding lasts 20 seconds; play turns allow 30, 60 or 90 seconds (60 by default). A bidding timeout passes the bid. Play timeouts enable automatic play: always pass when following, or lead the lowest single. Automatic turns take 4 seconds.",
   ],
 };
 type Copy = typeof en;
@@ -216,6 +241,31 @@ const zh: Copy = {
   returnLobby: "返回大厅",
   returning: "等待其他玩家返回",
   history: "对局记录",
+  roomSettings: "房间设置",
+  roundsSetting: "每场局数",
+  playTimeSetting: "出牌时限",
+  saveSettings: "保存设置",
+  settingsSaved: "设置已保存，请大家重新准备。",
+  settingsNote: "保存修改后，所有玩家需要重新准备。",
+  settingsLocked: "本场已开始，结束后可调整设置。",
+  settingsHost: "房主可以在本场开始前修改设置。",
+  scoreboard: "记分板",
+  matchResults: "整场排名",
+  matchComplete: "本场结束",
+  newMatch: "再玩一场",
+  newMatchNote: "新场开始时，所有玩家的累计积分清零。",
+  continueRound: "开始第",
+  nextRound: "下一局",
+  completedRounds: "已完成",
+  ranking: "名次",
+  player: "玩家",
+  totalScore: "累计积分",
+  wins: "胜局",
+  lastRound: "本局增减",
+  roundDetails: "各局明细",
+  noMatchRounds: "第一局结束后，这里会记录大家的积分。",
+  matchRoundsUnit: "局",
+  secondsUnit: "秒",
   noHistory: "完成的牌局会记录在这里。",
   remaining: "剩余手牌",
   score: "得分",
@@ -253,7 +303,7 @@ const zh: Copy = {
     "普通牌型须类型和长度相同，以主体点数比较。四张同点数是炸弹，双王是火箭。连续两人不出后，上一位出牌者重新领出。",
     "飞机单翅须不同点数，不能同时带双王；对翅须不同对子。四带二单可以带一对，但不能带双王；四带二对须两组不同对子。",
     "任一玩家出完牌即结束。基础计分 = 叫分 × 倍数；地主赢 / 输两份，农民各输 / 赢一份。每个炸弹、火箭及春天翻倍，总倍数最高 64。",
-    "叫分 20 秒，出牌 60 秒。叫分超时默认不叫；出牌超时后托管，跟牌一律不出，领出时出最小单张。后续托管回合 4 秒。",
+    "每场可选 1 / 3 / 6 / 12 局，默认 6 局；叫分 20 秒，出牌可选 30 / 60 / 90 秒，默认 60 秒。叫分超时默认不叫；出牌超时后托管，跟牌一律不出，领出时出最小单张。后续托管回合 4 秒。",
   ],
 };
 const fr: Copy = {
@@ -344,6 +394,32 @@ const fr: Copy = {
   returnLobby: "Retour au salon",
   returning: "En attendant les autres joueurs",
   history: "Historique",
+  roomSettings: "Réglages de la salle",
+  roundsSetting: "Manches par partie",
+  playTimeSetting: "Temps par tour",
+  saveSettings: "Enregistrer",
+  settingsSaved:
+    "Réglages enregistrés. Chacun doit se déclarer prêt à nouveau.",
+  settingsNote: "Tout changement annule le statut prêt des joueurs.",
+  settingsLocked: "Réglages verrouillés jusqu’à la fin de cette partie.",
+  settingsHost: "L’hôte peut modifier les réglages avant la partie.",
+  scoreboard: "Scores",
+  matchResults: "Classement final",
+  matchComplete: "Partie terminée",
+  newMatch: "Nouvelle partie",
+  newMatchNote: "La prochaine partie remet les points de chacun à zéro.",
+  continueRound: "Distribuer la manche",
+  nextRound: "Manche suivante",
+  completedRounds: "Manches terminées",
+  ranking: "Rang",
+  player: "Joueur",
+  totalScore: "Total",
+  wins: "Victoires",
+  lastRound: "Dernière manche",
+  roundDetails: "Détail des manches",
+  noMatchRounds: "Les scores apparaîtront après la première manche.",
+  matchRoundsUnit: "manches",
+  secondsUnit: "secondes",
   noHistory: "Vos manches terminées apparaîtront ici.",
   remaining: "Cartes restantes",
   score: "Points",
@@ -382,7 +458,7 @@ const fr: Copy = {
     "Battez le même type et la même longueur avec un rang supérieur. Un carré est une bombe ; les deux jokers forment la fusée. Deux passes rendent la main au dernier joueur à avoir joué.",
     "Les ailes simples d’un avion ont des rangs distincts, sans les deux jokers. Les ailes doubles sont des paires distinctes. Un carré peut porter une paire comme deux cartes simples, mais pas les deux jokers.",
     "La première main vide gagne pour son camp. Points = enchère × multiplicateur. Le propriétaire gagne ou perd deux parts ; chaque fermier une part. Bombes, fusée et printemps doublent le multiplicateur, limité à ×64.",
-    "20 secondes pour enchérir, 60 pour jouer. Une enchère expirée vaut un passe. Un tour expiré active le jeu automatique : toujours passer pour répondre, ou ouvrir avec la carte la plus basse. Les tours automatiques durent 4 secondes.",
+    "1, 3, 6 ou 12 manches par partie (6 par défaut). 20 secondes pour enchérir ; 30, 60 ou 90 pour jouer (60 par défaut). Une enchère expirée vaut un passe. Un tour expiré active le jeu automatique : toujours passer pour répondre, ou ouvrir avec la carte la plus basse. Les tours automatiques durent 4 secondes.",
   ],
 };
 export function getDoudizhuCopy(locale: string): Copy {
@@ -391,6 +467,29 @@ export function getDoudizhuCopy(locale: string): Copy {
 export function doudizhuBidLabel(score: number, locale: string): string {
   const t = getDoudizhuCopy(locale);
   return `${score}${locale === "zh-CN" ? "" : " "}${score === 1 ? t.point : t.points}`;
+}
+export function doudizhuRoundLabel(
+  index: number,
+  total: number,
+  locale: string,
+): string {
+  return locale === "zh-CN"
+    ? `第 ${index}/${total} 局`
+    : `${getDoudizhuCopy(locale).round} ${index}/${total}`;
+}
+export function doudizhuRankLabel(
+  rank: number,
+  tied: boolean,
+  locale: string,
+): string {
+  if (locale === "zh-CN") return `${tied ? "并列" : ""}第 ${rank} 名`;
+  if (locale === "fr")
+    return `${rank}${rank === 1 ? "er" : "e"}${tied ? " ex æquo" : ""}`;
+  return `${tied ? "Tied " : ""}#${rank}`;
+}
+export function doudizhuRoundCountLabel(count: number, locale: string): string {
+  if (locale === "zh-CN") return `${count} 局`;
+  return `${count} ${locale === "fr" ? (count === 1 ? "manche" : "manches") : count === 1 ? "round" : "rounds"}`;
 }
 const patterns: Record<DdzPatternType, [string, string, string]> = {
   SINGLE: ["单张", "Single", "Carte seule"],
@@ -415,6 +514,12 @@ export function doudizhuErrorMessage(code: string, locale: string): string {
   const t = getDoudizhuCopy(locale);
   const errors: Record<string, [string, string, string]> = {
     STALE_COMMAND: [t.changed, t.changed, t.changed],
+    SETTINGS_LOCKED: [zh.settingsLocked, en.settingsLocked, fr.settingsLocked],
+    INVALID_SETTINGS: [
+      "请选择有效的局数和出牌时限",
+      "Choose a valid round count and turn time.",
+      "Choisissez un nombre de manches et un délai valides.",
+    ],
     STALE_GAME: [t.changed, t.changed, t.changed],
     GAME_STARTED: [
       "牌局已开始，暂时无法加入",

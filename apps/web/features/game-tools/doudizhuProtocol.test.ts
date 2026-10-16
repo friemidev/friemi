@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { hashDdzRequest, ddzReceiptError, ddzCommandConflict, ddzMutationConflict } from "./doudizhuProtocol";
-import { ddzCommandSchema, ddzMutationSchema, isDdzSameOrigin } from "./doudizhuRequest";
+import { ddzCommandSchema, ddzMutationSchema, ddzSettingsMutationSchema, isDdzSameOrigin } from "./doudizhuRequest";
 import { createDdzState } from "./doudizhuEngine";
 import type { DdzRoomCommand } from "./doudizhuRoomTypes";
 const state = createDdzState([0, 1, 2].map(seat => ({ seat, name: String(seat) })));
@@ -39,4 +39,13 @@ test("write origin validation binds protocol and browser-facing host", () => {
   assert.equal(isDdzSameOrigin(new Request("https://friemi.app/api/game-tools/doudizhu/rooms", { headers: { origin: "https://friemi.app" } })), true);
   assert.equal(isDdzSameOrigin(new Request("https://friemi.app/api/game-tools/doudizhu/rooms", { headers: { origin: "https://evil.example" } })), false);
   assert.equal(isDdzSameOrigin(new Request("https://friemi.app/api/game-tools/doudizhu/rooms")), false);
+});
+test("settings mutations require a bounded full settings value and stale-write identity", () => {
+  const base = { commandId: command.commandId, expectedRevision: 0, gameNo: 0, expectedPhase: "LOBBY", settings: { roundCount: 6, playSeconds: 60 } };
+  assert.equal(ddzSettingsMutationSchema.safeParse(base).success, true);
+  for (const roundCount of [0, 2, 4, 100]) assert.equal(ddzSettingsMutationSchema.safeParse({ ...base, settings: { ...base.settings, roundCount } }).success, false);
+  for (const playSeconds of [0, 20, 61, 300]) assert.equal(ddzSettingsMutationSchema.safeParse({ ...base, settings: { ...base.settings, playSeconds } }).success, false);
+  assert.equal(ddzSettingsMutationSchema.safeParse({ ...base, settings: { roundCount: 6 } }).success, false);
+  assert.equal(ddzSettingsMutationSchema.safeParse({ ...base, settings: { ...base.settings, profileId: "other" } }).success, false);
+  assert.equal(ddzSettingsMutationSchema.safeParse({ ...base, expectedRevision: undefined }).success, false);
 });

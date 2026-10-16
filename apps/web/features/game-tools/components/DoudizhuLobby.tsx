@@ -1,9 +1,28 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Check, Copy, UserRoundPlus, ArrowRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Copy,
+  UserRoundPlus,
+  ArrowRight,
+  SlidersHorizontal,
+  ListOrdered,
+  LockKeyhole,
+} from "lucide-react";
 import type { DdzReaction, DdzRoomView } from "../doudizhuRoomTypes";
 import type { DrawGuessCatId } from "../drawGuessCats";
-import { getDoudizhuCopy } from "../doudizhuCopy";
+import {
+  doudizhuRoundCountLabel,
+  doudizhuRoundLabel,
+  getDoudizhuCopy,
+} from "../doudizhuCopy";
+import {
+  canChangeDdzRoomSettings,
+  getDdzMatchView,
+  getDdzRoomSettings,
+} from "../doudizhuEngine";
+import type { DdzRoomSettings } from "../doudizhuTypes";
+import { DoudizhuScoreboard } from "./DoudizhuScoreboard";
 import {
   DoudizhuCat,
   DoudizhuCatPicker,
@@ -24,6 +43,7 @@ export function DoudizhuLobby({
   onRemove,
   onRetry,
   onReact,
+  onSettings,
 }: {
   room: DdzRoomView;
   locale: string;
@@ -36,12 +56,27 @@ export function DoudizhuLobby({
   onRemove?: (seat: number) => void;
   onRetry?: () => void;
   onReact?: (kind: DdzReaction["kind"]) => void;
+  onSettings?: (settings: DdzRoomSettings) => Promise<boolean> | boolean | void;
 }) {
   const t = getDoudizhuCopy(locale),
     [catPicker, setCatPicker] = useState(false),
     [leaving, setLeaving] = useState(false),
     [removing, setRemoving] = useState<number | null>(null),
     [copied, setCopied] = useState("");
+  const settings = getDdzRoomSettings(room.state),
+    match = getDdzMatchView(room.state),
+    settingsUnlocked = canChangeDdzRoomSettings(room.state),
+    upcomingRound =
+      match.status === "ACTIVE"
+        ? Math.min(match.roundIndex + 1, match.roundCount)
+        : 1;
+  const [settingsOpen, setSettingsOpen] = useState(false),
+    [scoreboardOpen, setScoreboardOpen] = useState(false),
+    [settingsDraft, setSettingsDraft] = useState<DdzRoomSettings>(settings),
+    [settingsSaving, setSettingsSaving] = useState(false),
+    [settingsError, setSettingsError] = useState(false),
+    [settingsNotice, setSettingsNotice] = useState("");
+  const submittedSettings = useRef<DdzRoomSettings | null>(null);
   const [now, setNow] = useState(Date.now()),
     [reactionUntil, setReactionUntil] = useState(0);
   useEffect(() => {
@@ -54,6 +89,57 @@ export function DoudizhuLobby({
     canStart =
       room.seats.length === 3 &&
       room.seats.every((x) => x.ready && x.connected && !x.left);
+  useEffect(() => {
+    if (settingsOpen && (!host || !settingsUnlocked))
+      setSettingsDraft(settings);
+  }, [
+    settings.roundCount,
+    settings.playSeconds,
+    settingsOpen,
+    host,
+    settingsUnlocked,
+  ]);
+  useEffect(() => {
+    if (
+      settingsOpen &&
+      settingsError &&
+      !busy &&
+      submittedSettings.current !== null &&
+      settings.roundCount === submittedSettings.current.roundCount &&
+      settings.playSeconds === submittedSettings.current.playSeconds
+    ) {
+      setSettingsOpen(false);
+      setSettingsError(false);
+      setSettingsNotice(t.settingsSaved);
+    }
+  }, [
+    settingsOpen,
+    settingsError,
+    busy,
+    settings.roundCount,
+    settings.playSeconds,
+    t.settingsSaved,
+  ]);
+  async function saveSettings() {
+    if (!onSettings || busy || settingsSaving || !host || !settingsUnlocked)
+      return;
+    setSettingsSaving(true);
+    setSettingsError(false);
+    const submitted = { ...settingsDraft };
+    submittedSettings.current = submitted;
+    try {
+      const saved = await onSettings(submitted);
+      if (saved === false) setSettingsError(true);
+      else {
+        setSettingsOpen(false);
+        setSettingsNotice(t.settingsSaved);
+      }
+    } catch {
+      setSettingsError(true);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
   async function invite() {
     try {
       await navigator.clipboard.writeText(
@@ -80,8 +166,14 @@ export function DoudizhuLobby({
       </DoudizhuHeader>
       <main className={s.main}>
         <div className={s.lobbyIntro}>
-          <span className={s.eyebrow}>{t.players}</span>
-          <h1>{t.waiting}</h1>
+          <span className={s.eyebrow}>
+            {match.status === "COMPLETE"
+              ? t.matchComplete
+              : match.status === "ACTIVE"
+                ? `${t.nextRound} · ${doudizhuRoundLabel(upcomingRound, match.roundCount, locale)}`
+                : t.players}
+          </span>
+          <h1>{match.status === "COMPLETE" ? t.newMatch : t.waiting}</h1>
           <button
             className={`${s.button} ${s.small}`}
             onClick={() => void invite()}
@@ -105,6 +197,44 @@ export function DoudizhuLobby({
               </button>
             )}
           </div>
+        )}
+        <div className={s.lobbySettingsBar}>
+          <button
+            className={s.settingsSummary}
+            aria-label={`${t.roomSettings} · ${doudizhuRoundCountLabel(settings.roundCount, locale)} · ${settings.playSeconds} ${t.secondsUnit}`}
+            onClick={() => {
+              submittedSettings.current = null;
+              setSettingsDraft(settings);
+              setSettingsError(false);
+              setSettingsOpen(true);
+            }}
+          >
+            {settingsUnlocked ? (
+              <SlidersHorizontal size={18} />
+            ) : (
+              <LockKeyhole size={17} />
+            )}
+            <span>
+              {doudizhuRoundCountLabel(settings.roundCount, locale)}
+              <span aria-hidden="true"> · </span>
+              {settings.playSeconds} {t.timeShort}
+            </span>
+          </button>
+          <button
+            className={s.textButton}
+            onClick={() => setScoreboardOpen(true)}
+          >
+            <ListOrdered size={18} />
+            {t.scoreboard}
+          </button>
+        </div>
+        {settingsNotice && (
+          <p className={`${s.help} ${s.center}`} role="status">
+            {settingsNotice}
+          </p>
+        )}
+        {match.status === "COMPLETE" && (
+          <p className={`${s.help} ${s.center}`}>{t.newMatchNote}</p>
         )}
         <div className={s.lobbySeats}>
           {[0, 1, 2].map((seat) => {
@@ -192,7 +322,11 @@ export function DoudizhuLobby({
               disabled={busy || !canStart}
               onClick={onStart}
             >
-              {t.start}
+              {match.status === "COMPLETE"
+                ? t.newMatch
+                : match.status === "ACTIVE"
+                  ? `${t.continueRound} ${upcomingRound}${locale === "zh-CN" ? " 局" : ""}`
+                  : t.start}
               <ArrowRight size={18} />
             </button>
           )}
@@ -219,6 +353,125 @@ export function DoudizhuLobby({
           <p className={`${s.help} ${s.center}`}>{t.startNeed}</p>
         )}
       </main>
+      {scoreboardOpen && (
+        <DoudizhuScoreboard
+          match={match}
+          locale={locale}
+          viewerSeat={room.viewerSeat}
+          onClose={() => setScoreboardOpen(false)}
+        />
+      )}
+      {settingsOpen && (
+        <DoudizhuDialog
+          title={t.roomSettings}
+          onClose={() => {
+            if (!settingsSaving) setSettingsOpen(false);
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveSettings();
+            }}
+          >
+            <div className={s.roomSettingsFields}>
+              <label>
+                {t.roundsSetting}
+                <select
+                  value={settingsDraft.roundCount}
+                  disabled={
+                    !host || !settingsUnlocked || busy || settingsSaving
+                  }
+                  onChange={(event) =>
+                    setSettingsDraft((draft) => ({
+                      ...draft,
+                      roundCount: Number(
+                        event.target.value,
+                      ) as DdzRoomSettings["roundCount"],
+                    }))
+                  }
+                >
+                  {[1, 3, 6, 12].map((count) => (
+                    <option key={count} value={count}>
+                      {doudizhuRoundCountLabel(count, locale)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t.playTimeSetting}
+                <select
+                  value={settingsDraft.playSeconds}
+                  disabled={
+                    !host || !settingsUnlocked || busy || settingsSaving
+                  }
+                  onChange={(event) =>
+                    setSettingsDraft((draft) => ({
+                      ...draft,
+                      playSeconds: Number(
+                        event.target.value,
+                      ) as DdzRoomSettings["playSeconds"],
+                    }))
+                  }
+                >
+                  {[30, 60, 90].map((seconds) => (
+                    <option key={seconds} value={seconds}>
+                      {seconds} {t.secondsUnit}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className={s.help}>
+              {!settingsUnlocked
+                ? t.settingsLocked
+                : !host
+                  ? t.settingsHost
+                  : t.settingsNote}
+            </p>
+            {settingsError && (
+              <div className={s.feedback} role="alert">
+                <span>{error || t.changed}</span>
+                {onRetry && (
+                  <button
+                    type="button"
+                    className={s.textButton}
+                    disabled={busy}
+                    onClick={onRetry}
+                  >
+                    {t.retry}
+                  </button>
+                )}
+              </div>
+            )}
+            {host && settingsUnlocked && (
+              <div className={s.lobbyActions}>
+                <button
+                  type="button"
+                  className={s.button}
+                  disabled={settingsSaving}
+                  onClick={() => setSettingsOpen(false)}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  type="submit"
+                  className={`${s.button} ${s.primary}`}
+                  disabled={
+                    busy ||
+                    settingsSaving ||
+                    !onSettings ||
+                    (settingsDraft.roundCount === settings.roundCount &&
+                      settingsDraft.playSeconds === settings.playSeconds)
+                  }
+                >
+                  {settingsSaving ? t.busy : t.saveSettings}
+                </button>
+              </div>
+            )}
+          </form>
+        </DoudizhuDialog>
+      )}
       {catPicker && (
         <DoudizhuCatPicker
           locale={locale}

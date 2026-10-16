@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   X,
   History,
+  ListOrdered,
 } from "lucide-react";
 import type { DdzAction } from "../doudizhuTypes";
 import type {
@@ -18,9 +19,15 @@ import {
   beatsDdzPlay,
   classifyDdzPlay,
   getDdzCard,
+  getDdzMatchView,
   listDdzHints,
 } from "../doudizhuEngine";
-import { doudizhuBidLabel, getDoudizhuCopy } from "../doudizhuCopy";
+import {
+  doudizhuBidLabel,
+  doudizhuRankLabel,
+  doudizhuRoundLabel,
+  getDoudizhuCopy,
+} from "../doudizhuCopy";
 import { getDdzPassFeedback } from "../doudizhuPassFeedback";
 import { DoudizhuCardFace, doudizhuCardLabel } from "./DoudizhuCard";
 import { DoudizhuCat, DoudizhuDialog, DoudizhuHeader } from "./DoudizhuChrome";
@@ -30,6 +37,7 @@ import {
   useDoudizhuPresentation,
 } from "./DoudizhuAudioControls";
 import { DoudizhuPlayEffects } from "./DoudizhuPlayEffects";
+import { DoudizhuScoreboard } from "./DoudizhuScoreboard";
 import s from "./DoudizhuGame.module.css";
 
 type Props = {
@@ -60,11 +68,14 @@ export function DoudizhuTable({
 }: Props) {
   const t = getDoudizhuCopy(locale),
     state = room.state,
+    match = getDdzMatchView(state),
+    matchComplete = match.status === "COMPLETE",
     self = room.seats.find((x) => x.seat === room.viewerSeat),
     isTurn = state.currentSeat === room.viewerSeat,
     managed = state.managedSeats.includes(room.viewerSeat);
   const [selected, setSelected] = useState<string[]>([]),
     [expanded, setExpanded] = useState(false),
+    [scoreboardOpen, setScoreboardOpen] = useState(false),
     [leaving, setLeaving] = useState(false),
     [notice, setNotice] = useState(""),
     [reactions, setReactions] = useState(false),
@@ -290,6 +301,18 @@ export function DoudizhuTable({
         code={room.code}
         onBack={() => setLeaving(true)}
       >
+        <button
+          className={s.matchButton}
+          onClick={() => setScoreboardOpen(true)}
+          aria-label={`${doudizhuRoundLabel(Math.max(1, match.roundIndex), match.roundCount, locale)} · ${t.scoreboard}`}
+          title={`${doudizhuRoundLabel(Math.max(1, match.roundIndex), match.roundCount, locale)} · ${t.scoreboard}`}
+          data-ddz-round={`${match.roundIndex}/${match.roundCount}`}
+        >
+          <ListOrdered size={18} />
+          <span>
+            {Math.max(1, match.roundIndex)}/{match.roundCount}
+          </span>
+        </button>
         <DoudizhuAudioControls
           locale={locale}
           roomKey={room.id}
@@ -330,22 +353,45 @@ export function DoudizhuTable({
           <span className={`${s.eyebrow} ${s.resultEyebrow}`}>
             <span className={s.resultEffectArea} data-ddz-effects-area="result">
               <span data-ddz-effect-copy="result">
-                {t.result} · {state.gameNo}
+                {t.result} ·{" "}
+                {doudizhuRoundLabel(match.roundIndex, match.roundCount, locale)}
               </span>
             </span>
           </span>
           <h1>
-            {result.winnerSide === "landlord" ? t.landlordWin : t.farmersWin}
+            {matchComplete
+              ? t.matchResults
+              : result.winnerSide === "landlord"
+                ? t.landlordWin
+                : t.farmersWin}
           </h1>
           <div className={s.resultPlayers}>
-            {room.seats.map((player) => {
+            {(matchComplete
+              ? [...room.seats].sort(
+                  (a, b) =>
+                    (match.players.find((p) => p.seat === a.seat)?.rank ?? 3) -
+                    (match.players.find((p) => p.seat === b.seat)?.rank ?? 3),
+                )
+              : room.seats
+            ).map((player) => {
               const delta =
                 result.scores.find((x) => x.seat === player.seat)?.delta ?? 0;
+              const standing = match.players.find(
+                (p) => p.seat === player.seat,
+              );
+              const tied =
+                !!standing &&
+                match.players.some(
+                  (p) => p.seat !== player.seat && p.rank === standing.rank,
+                );
+              const displayedScore = matchComplete
+                ? (standing?.totalScore ?? 0)
+                : delta;
               return (
                 <section className={s.resultPlayer} key={player.seat}>
                   <DoudizhuCat
                     catId={player.catId}
-                    winner={delta > 0}
+                    winner={matchComplete ? standing?.rank === 1 : delta > 0}
                     size={106}
                   />
                   <strong>
@@ -353,35 +399,42 @@ export function DoudizhuTable({
                     {player.seat === room.viewerSeat ? ` · ${t.you}` : ""}
                   </strong>
                   <span className={s.help}>
-                    {player.seat === result.landlordSeat
-                      ? t.landlord
-                      : t.farmer}
+                    {matchComplete
+                      ? doudizhuRankLabel(standing?.rank ?? 3, tied, locale)
+                      : player.seat === result.landlordSeat
+                        ? t.landlord
+                        : t.farmer}
                   </span>
-                  <span className={`${s.delta} ${delta > 0 ? s.positive : ""}`}>
-                    {delta > 0 ? "+" : ""}
-                    {delta}
+                  <span
+                    className={`${s.delta} ${displayedScore > 0 ? s.positive : ""}`}
+                    aria-label={`${matchComplete ? t.totalScore : t.score}: ${displayedScore}`}
+                  >
+                    {displayedScore > 0 ? "+" : ""}
+                    {displayedScore}
                   </span>
                 </section>
               );
             })}
           </div>
-          <div className={s.scoreDetails}>
-            <span>
-              {t.base} <b>{result.baseScore}</b>
-            </span>
-            <span>
-              {t.bombs} <b>{result.bombCount}</b>
-            </span>
-            <span>
-              {t.multiplier} <b>×{result.multiplier}</b>
-            </span>
-            {result.spring && (
+          {!matchComplete && (
+            <div className={s.scoreDetails}>
               <span>
-                {result.spring === "spring" ? t.spring : t.antiSpring}
+                {t.base} <b>{result.baseScore}</b>
               </span>
-            )}
-            {result.capped && <span>{t.capped}</span>}
-          </div>
+              <span>
+                {t.bombs} <b>{result.bombCount}</b>
+              </span>
+              <span>
+                {t.multiplier} <b>×{result.multiplier}</b>
+              </span>
+              {result.spring && (
+                <span>
+                  {result.spring === "spring" ? t.spring : t.antiSpring}
+                </span>
+              )}
+              {result.capped && <span>{t.capped}</span>}
+            </div>
+          )}
           <button
             className={`${s.button} ${s.primary}`}
             disabled={busy || room.returnedToLobby}
@@ -391,6 +444,13 @@ export function DoudizhuTable({
             <ArrowRight size={18} />
           </button>
           <div className={s.belowTable}>
+            <button
+              className={s.textButton}
+              onClick={() => setScoreboardOpen(true)}
+            >
+              <ListOrdered size={16} />
+              {t.scoreboard}
+            </button>
             <button className={s.textButton} onClick={() => void showHistory()}>
               <History size={16} /> {t.history}
             </button>
@@ -726,6 +786,14 @@ export function DoudizhuTable({
             </div>
           )}
         </main>
+      )}
+      {scoreboardOpen && (
+        <DoudizhuScoreboard
+          match={match}
+          locale={locale}
+          viewerSeat={room.viewerSeat}
+          onClose={() => setScoreboardOpen(false)}
+        />
       )}
       {expanded && (
         <DoudizhuDialog title={t.hand} onClose={() => setExpanded(false)}>

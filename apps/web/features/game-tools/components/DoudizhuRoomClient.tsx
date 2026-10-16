@@ -378,7 +378,7 @@ function DoudizhuRoomSession({
     extra: Record<string, unknown> = {},
     method: "POST" | "PATCH" = "POST",
   ) {
-    if (pending.current || inFlight.current) return;
+    if (pending.current || inFlight.current) return false;
     return submit({
       path,
       method,
@@ -431,6 +431,7 @@ function DoudizhuRoomSession({
             busy={busy || offline || unresolved}
             error={feedback}
             onReady={(ready) => void mutate("/ready", { ready })}
+            onSettings={(settings) => mutate("/settings", { settings }, "PATCH")}
             onStart={() => void command({ type: "START" })}
             onLeave={() => void mutate("/leave")}
             onCharacter={(catId) =>

@@ -1,0 +1,229 @@
+.scoreboard {
+  color: var(--ddz-ink);
+}
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  color: var(--ddz-muted);
+  font-size: 14px;
+}
+.progress strong {
+  color: var(--ddz-ink);
+  font-variant-numeric: tabular-nums;
+}
+.complete {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--ddz-ink);
+  background: var(--ddz-butter);
+  font-size: 12px;
+  font-weight: 700;
+}
+.standings,
+.rounds {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.standings thead th {
+  padding: 0 8px 10px;
+  font-size: 12px;
+  color: var(--ddz-muted);
+  font-weight: 500;
+}
+.standings thead th:nth-child(n + 3) {
+  text-align: right;
+}
+.standings tbody th,
+.standings tbody td {
+  padding: 13px 8px;
+  border-top: 1px solid var(--ddz-border);
+}
+.standings tbody th {
+  font-weight: 650;
+  font-size: 15px;
+  max-width: 200px;
+}
+.standings tbody tr[data-self] {
+  background: color-mix(in srgb, var(--ddz-mist) 40%, transparent);
+}
+.rank {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  font-weight: 750;
+  font-size: 18px;
+}
+.playerName {
+  overflow-wrap: anywhere;
+}
+.you {
+  display: inline-block;
+  margin-left: 5px;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--ddz-muted);
+}
+.total {
+  font-size: 23px;
+  text-align: right;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.last {
+  font-size: 14px;
+  text-align: right;
+  color: var(--ddz-muted);
+  white-space: nowrap;
+}
+.total[data-positive],
+.rounds td[data-positive] {
+  color: var(--ddz-sky);
+}
+.empty {
+  color: var(--ddz-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 22px 0 4px;
+}
+.details {
+  margin-top: 18px;
+  border-top: 1px solid var(--ddz-border);
+}
+.details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+}
+.details summary::before {
+  content: "+";
+  font-size: 20px;
+  font-weight: 400;
+}
+.details[open] summary::before {
+  content: "−";
+}
+.details summary span {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ddz-muted);
+}
+.details summary:focus-visible,
+.roundsScroll:focus-visible {
+  outline: 3px solid var(--ddz-sky);
+  outline-offset: 3px;
+  border-radius: 5px;
+}
+.roundsScroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 4px;
+}
+.rounds {
+  font-size: 13px;
+  table-layout: fixed;
+}
+.rounds th,
+.rounds td {
+  padding: 10px 5px;
+  border-bottom: 1px solid var(--ddz-border);
+  text-align: right;
+}
+.rounds th:first-child {
+  width: 30%;
+  text-align: left;
+  font-weight: 500;
+}
+.rounds thead th {
+  font-weight: 600;
+  color: var(--ddz-muted);
+}
+.rounds thead th span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 420px) {
+  .standings thead th {
+    padding-inline: 4px;
+    font-size: 11px;
+  }
+  .standings tbody th,
+  .standings tbody td {
+    padding-inline: 4px;
+  }
+  .standings tbody th {
+    font-size: 14px;
+  }
+  .total {
+    font-size: 21px;
+  }
+  .rank {
+    min-width: 22px;
+    font-size: 16px;
+  }
+  .last {
+    font-size: 13px;
+  }
+  .rounds {
+    font-size: 12px;
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .progress {
+    margin-bottom: 10px;
+  }
+  .standings tbody th,
+  .standings tbody td {
+    padding-block: 9px;
+  }
+  .total {
+    font-size: 21px;
+  }
+  .details {
+    margin-top: 10px;
+  }
+}
+
+.rounds .roundMeta td {
+  padding-top: 0;
+  text-align: left;
+  color: var(--ddz-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.rounds tr:has(+ .roundMeta) th,
+.rounds tr:has(+ .roundMeta) td {
+  border-bottom: 0;
+  padding-bottom: 5px;
+}
+
+.wins {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 3px;
+  color: var(--ddz-muted);
+  font-weight: 400;
+}

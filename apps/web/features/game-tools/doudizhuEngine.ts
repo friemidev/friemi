@@ -1,7 +1,9 @@
 import { getDdzCard, isDdzDeck, sortDdzCards } from "./doudizhuCards";
 import { beatsDdzPlay, classifyDdzPlay } from "./doudizhuPatterns";
-import { DDZ_RULESET_VERSION, type DdzAction, type DdzActionResult, type DdzDealSource, type DdzEvent, type DdzPlayer, type DdzResult, type DdzStartDeal, type DdzState, type DdzViewerState } from "./doudizhuTypes";
+import { createDdzLobbyState, getDdzMatchState, getDdzMatchView, getDdzRoomSettings, isDdzRoomSettings, prepareDdzMatchRound, recordDdzMatchResult } from "./doudizhuMatch";
+import { DDZ_RULESET_VERSION, type DdzAction, type DdzActionResult, type DdzDealSource, type DdzEvent, type DdzPlayer, type DdzResult, type DdzRoomSettings, type DdzStartDeal, type DdzState, type DdzViewerState } from "./doudizhuTypes";
 export * from "./doudizhuTypes";
+export { DDZ_ROUND_COUNTS, DDZ_PLAY_SECONDS, DEFAULT_DDZ_ROOM_SETTINGS, canChangeDdzRoomSettings, createDdzLobbyState, getDdzMatchView, getDdzRoomSettings, isDdzRoomSettings, updateDdzRoomSettings } from "./doudizhuMatch";
 export { createDdzDeck, getDdzCard, sortDdzCards } from "./doudizhuCards";
 export { beatsDdzPlay, classifyDdzPlay } from "./doudizhuPatterns";
 export { listDdzHints } from "./doudizhuHints";
@@ -45,10 +47,13 @@ function chooseLandlord(state: DdzState, seat: number, score: 1 | 2 | 3, now: nu
   emit(state, now, { kind: "LANDLORD", seat, score });
 }
 
-export function createDdzState(players: DdzPlayer[]): DdzState {
+export function createDdzState(players: DdzPlayer[], settings?: DdzRoomSettings): DdzState {
+  if (settings !== undefined && !isDdzRoomSettings(settings)) throw new Error("INVALID_SETTINGS");
+  const roomSettings = getDdzRoomSettings({ settings });
   return {
     schemaVersion: 1, rulesetVersion: DDZ_RULESET_VERSION,
-    rules: { bidSeconds: 20, playSeconds: 60, managedSeconds: 4, resultSeconds: 60, multiplierCap: 64 },
+    rules: { bidSeconds: 20, playSeconds: roomSettings.playSeconds, managedSeconds: 4, resultSeconds: 60, multiplierCap: 64 },
+    settings: roomSettings, match: { matchNo: 0, status: "READY", roundIndex: 0, roundCount: roomSettings.roundCount, roster: [], rounds: [] },
     phase: "LOBBY", players: structuredClone(players), gameNo: 0, dealNo: 0, turnId: 0, trickId: 0, eventSeq: 0,
     hands: seatRecord(() => []), handVersions: seatRecord(() => 0), bottomCards: [], landlordSeat: null,
     bid: { startSeat: 0, highestScore: 0, highestSeat: null, bids: [] }, currentSeat: null, targetPlay: null,
@@ -61,9 +66,9 @@ export function startDdzGame(state: DdzState, now: number, firstDeal: DdzStartDe
   if (state.phase !== "LOBBY") return { state, error: "WRONG_PHASE" };
   if (state.players.length !== 3 || new Set(state.players.map((player) => player.seat)).size !== 3 || !state.players.every((player) => [0, 1, 2].includes(player.seat))) return { state, error: "INVALID_PLAYERS" };
   if (!firstDeal || ![0, 1, 2].includes(firstDeal.firstBidSeat) || !isDdzDeck(firstDeal.deck)) return { state, error: "INVALID_DECK" };
-  const next = structuredClone(state);
-  // Adopt the current default at a new game boundary; active saved games retain their clock.
-  next.rules.playSeconds = 60;
+  const prepared = prepareDdzMatchRound(state);
+  if (prepared.error) return prepared;
+  const next = prepared.state;
   next.gameNo += 1;
   next.dealNo = 1;
   next.trickId = 0;
@@ -103,6 +108,8 @@ export function applyDdzAction(state: DdzState, seat: number, action: DdzAction,
 function applyCurrentAction(state: DdzState, seat: number, action: DdzAction, now: number, redealDeck?: DdzDealSource): DdzActionResult {
   if (!action || typeof action !== "object") return { state, error: "INVALID_ACTION" };
   const next = structuredClone(state);
+  next.settings = getDdzRoomSettings(state);
+  next.match = getDdzMatchState(state);
   if (action.type === "SET_MANAGED") {
     if (typeof action.managed !== "boolean") return { state, error: "INVALID_ACTION" };
     next.managedSeats = action.managed ? [...new Set([...next.managedSeats, seat])] : next.managedSeats.filter((managed) => managed !== seat);
@@ -162,6 +169,7 @@ function applyCurrentAction(state: DdzState, seat: number, action: DdzAction, no
   emit(next, now, { kind: "PLAY", seat, play });
   if (next.hands[seat].length === 0) {
     next.result = settleDdzGame(next, seat, now);
+    next.match = recordDdzMatchResult(next);
     next.multiplier = next.result.multiplier;
     next.phase = "RESULT";
     next.currentSeat = null;
@@ -176,18 +184,7 @@ function applyCurrentAction(state: DdzState, seat: number, action: DdzAction, no
 export function advanceDdzDeadline(state: DdzState, now: number, redealDeck?: DdzDealSource): DdzState {
   if (state.deadlineAt === null || now < state.deadlineAt) return state;
   if (state.phase === "RESULT") {
-    const next = structuredClone(state);
-    next.phase = "LOBBY";
-    next.deadlineAt = null;
-    next.currentSeat = null;
-    next.targetPlay = null;
-    next.hands = seatRecord(() => []);
-    next.handVersions = seatRecord((seat) => next.handVersions[seat] + 1);
-    next.bottomCards = [];
-    next.managedSeats = [];
-    next.landlordSeat = null;
-    next.bid = { startSeat: 0, highestScore: 0, highestSeat: null, bids: [] };
-    next.consecutivePasses = 0;
+    const next = createDdzLobbyState(state, state.players);
     emit(next, now, { kind: "LOBBY" });
     return next;
   }
@@ -210,6 +207,7 @@ export function getDdzViewerState(state: DdzState, selfSeat: number): DdzViewerS
   // Deliberate allowlist: never spread server state or roster account identifiers.
   return structuredClone({
     schemaVersion: state.schemaVersion, rulesetVersion: state.rulesetVersion, rules: state.rules, phase: state.phase,
+    settings: getDdzRoomSettings(state), match: getDdzMatchView(state),
     gameNo: state.gameNo, dealNo: state.dealNo, turnId: state.turnId, trickId: state.trickId, eventSeq: state.eventSeq,
     players: state.players.map((player) => ({ seat: player.seat, name: player.name, ...(player.catId ? { catId: player.catId } : {}), cardCount: state.hands[player.seat]?.length ?? 0, managed: state.managedSeats.includes(player.seat), gameRole: state.landlordSeat === null ? null : state.landlordSeat === player.seat ? "landlord" as const : "farmer" as const })),
     selfSeat, hand: cards(state.hands[selfSeat] ?? []), handVersion: state.handVersions[selfSeat] ?? 0,
